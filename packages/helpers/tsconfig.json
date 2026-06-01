@@ -2,6 +2,6 @@
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "ES2024"]
-  }
+    "lib": ["DOM", "ES2024"],
+  },
 }

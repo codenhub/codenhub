@@ -3,12 +3,28 @@
   "private": false,
   "type": "module",
   "version": "0.1.0",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./scripts": "./src/scripts/index.ts",
-    "./styles": "./src/styles/index.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./scripts": {
+      "types": "./dist/scripts/index.d.ts",
+      "import": "./dist/scripts/index.js"
+    },
+    "./styles": "./dist/styles/index.css"
   },
   "scripts": {
+    "build": "pnpm build:scripts && pnpm build:styles",
+    "build:scripts": "tsup src/index.ts src/scripts/index.ts --format esm --dts --clean",
+    "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -17,8 +33,12 @@
     "@codenhub/helpers": "workspace:*"
   },
   "devDependencies": {
+    "jsdom": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
