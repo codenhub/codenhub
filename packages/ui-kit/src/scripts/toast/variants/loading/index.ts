@@ -1,0 +1,23 @@
+import { Toast } from "../../core";
+import type { ToastOptions } from "../../types";
+
+type WithoutLoadingPreset<T> = T extends unknown ? Omit<T, "icon" | "role"> : never;
+type LoadingToastOptions = WithoutLoadingPreset<ToastOptions>;
+
+const LOADING_TOAST_ROOT_CLASS_NAME =
+  "rounded-xl border-2 border-border text-sm font-medium font-default pointer-events-auto flex items-center min-w-44 p-3 gap-2 bg-surface text-text";
+
+export class LoadingToast extends Toast {
+  protected static getPresetOptions() {
+    return {
+      defaultAutoDismiss: false,
+      icon: "loader",
+      role: "status",
+      rootClassName: LOADING_TOAST_ROOT_CLASS_NAME,
+    } as const;
+  }
+
+  public constructor(options: LoadingToastOptions) {
+    super(options);
+  }
+}

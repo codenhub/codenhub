@@ -1,0 +1,21 @@
+{
+  "name": "codenhub",
+  "private": true,
+  "version": "0.1.0",
+  "description": "",
+  "license": "MIT",
+  "author": "coden.agency",
+  "type": "module",
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "test:watch": "pnpm -r --if-present test:watch",
+    "lint:check": "prettier --check .",
+    "lint:fix": "prettier --write .",
+    "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

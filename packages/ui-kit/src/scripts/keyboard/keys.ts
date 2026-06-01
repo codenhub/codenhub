@@ -1,0 +1,81 @@
+const LETTER_KEYS = {
+  a: "a",
+  b: "b",
+  c: "c",
+  d: "d",
+  e: "e",
+  f: "f",
+  g: "g",
+  h: "h",
+  i: "i",
+  j: "j",
+  k: "k",
+  l: "l",
+  m: "m",
+  n: "n",
+  o: "o",
+  p: "p",
+  q: "q",
+  r: "r",
+  s: "s",
+  t: "t",
+  u: "u",
+  v: "v",
+  w: "w",
+  x: "x",
+  y: "y",
+  z: "z",
+} as const;
+
+const NUMBER_KEYS = {
+  digit0: "0",
+  digit1: "1",
+  digit2: "2",
+  digit3: "3",
+  digit4: "4",
+  digit5: "5",
+  digit6: "6",
+  digit7: "7",
+  digit8: "8",
+  digit9: "9",
+} as const;
+
+const FUNCTION_KEYS = {
+  f1: "F1",
+  f2: "F2",
+  f3: "F3",
+  f4: "F4",
+  f5: "F5",
+  f6: "F6",
+  f7: "F7",
+  f8: "F8",
+  f9: "F9",
+  f10: "F10",
+  f11: "F11",
+  f12: "F12",
+} as const;
+
+export const KEYS = {
+  escape: "Escape",
+  enter: "Enter",
+  tab: "Tab",
+  space: " ",
+  arrowUp: "ArrowUp",
+  arrowDown: "ArrowDown",
+  arrowLeft: "ArrowLeft",
+  arrowRight: "ArrowRight",
+  home: "Home",
+  end: "End",
+  pageUp: "PageUp",
+  pageDown: "PageDown",
+  backspace: "Backspace",
+  delete: "Delete",
+  insert: "Insert",
+  ...LETTER_KEYS,
+  ...NUMBER_KEYS,
+  ...FUNCTION_KEYS,
+} as const;
+
+export type KeyboardKey = (typeof KEYS)[keyof typeof KEYS];
+
+export const KEY_VALUES = Object.values(KEYS) as KeyboardKey[];

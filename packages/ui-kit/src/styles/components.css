@@ -1,0 +1,96 @@
+@layer components {
+  .sect {
+    @apply flex flex-col items-center justify-center gap-8 px-4 py-16;
+  }
+
+  .sect-container {
+    @apply flex w-full max-w-7xl flex-col items-center gap-12;
+  }
+
+  .btn {
+    @apply relative flex w-fit items-center justify-center gap-2 rounded-md px-4 py-2 font-semibold whitespace-nowrap transition-colors duration-400 [&.loading]:text-transparent!;
+    --color-loading-spinner: var(--color-text);
+
+    &.loading::after {
+      @apply absolute inset-1/2 size-4 -translate-1/2 animate-spin rounded-full border-2;
+      border-color: var(--color-loading-spinner);
+      border-bottom-color: transparent;
+      content: "";
+    }
+
+    &[disabled],
+    &.disabled {
+      @apply cursor-not-allowed opacity-60;
+    }
+
+    &.primary {
+      @apply bg-primary not-disabled:hover:bg-primary-hover text-primary-contrast;
+      --color-loading-spinner: var(--color-primary-contrast);
+    }
+
+    &.secondary {
+      @apply bg-accent not-disabled:hover:bg-accent-hover text-accent-contrast;
+      --color-loading-spinner: var(--color-accent-contrast);
+    }
+
+    &.success {
+      @apply bg-success text-success-contrast;
+      --color-loading-spinner: var(--color-success-contrast);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      @apply bg-destructive text-destructive-contrast;
+      --color-loading-spinner: var(--color-destructive-contrast);
+    }
+
+    &.warning {
+      @apply bg-warning text-warning-contrast;
+      --color-loading-spinner: var(--color-warning-contrast);
+    }
+
+    &.info {
+      @apply bg-info text-info-contrast;
+      --color-loading-spinner: var(--color-info-contrast);
+    }
+  }
+
+  .card {
+    @apply bg-background border-border hover:border-border-hover flex flex-col gap-4 rounded-xl border p-8 transition-colors duration-400;
+  }
+
+  .ipt {
+    @apply border-border focus:ring-primary flex min-h-10 w-full rounded-md border p-2 transition duration-400 focus:ring-2 focus:outline-none;
+  }
+
+  .tooltip {
+    @apply relative;
+
+    &.icon {
+      @apply bg-surface text-text size-5 cursor-default items-center justify-center rounded-full text-sm font-semibold;
+    }
+
+    &[data-tooltip-position="top"]::after {
+      @apply -top-2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full;
+    }
+    &[data-tooltip-position="bottom"]::after {
+      @apply -bottom-2 left-1/2 origin-top -translate-x-1/2 translate-y-full;
+    }
+    &[data-tooltip-position="left"]::after {
+      @apply top-1/2 -left-2 origin-right -translate-x-full -translate-y-1/2;
+    }
+    &[data-tooltip-position="right"]::after {
+      @apply top-1/2 -right-2 origin-left translate-x-full -translate-y-1/2;
+    }
+
+    &::after {
+      content: attr(data-tooltip);
+      @apply bg-surface text-text pointer-events-none absolute z-50 w-max max-w-3xs scale-0 rounded-md p-2 text-sm font-normal shadow-sm transition-transform duration-200;
+    }
+
+    &:hover::after {
+      @apply scale-100;
+    }
+  }
+}

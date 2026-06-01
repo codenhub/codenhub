@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "lib": ["DOM", "ES2024"]
+  }
+}

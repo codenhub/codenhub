@@ -1,0 +1,24 @@
+{
+  "name": "@codenhub/ui-kit",
+  "private": false,
+  "type": "module",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./scripts": "./src/scripts/index.ts",
+    "./styles": "./src/styles/index.css"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codenhub/helpers": "workspace:*"
+  },
+  "devDependencies": {
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
