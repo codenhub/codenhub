@@ -3,6 +3,6 @@
     "module": "Preserve",
     "moduleResolution": "bundler",
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
-    "ignoreDeprecations": "6.0",
-  },
+    "ignoreDeprecations": "6.0"
+  }
 }

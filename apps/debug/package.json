@@ -1,0 +1,22 @@
+{
+  "name": "@codenhub/test",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codenhub/helpers": "0.0.1",
+    "@codenhub/ui-kit": "0.0.1"
+  },
+  "devDependencies": {
+    "@codenhub/vite-plugins": "0.0.1",
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}
