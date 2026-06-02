@@ -53,14 +53,12 @@ const waitForOrAbort = (delayMs: number, signal?: AbortSignal): Promise<void> =>
       return;
     }
 
-    let timeoutId: ReturnType<typeof setTimeout>;
-
     const onAbort = (): void => {
       clearTimeout(timeoutId);
       reject(new DOMException("The operation was aborted.", "AbortError"));
     };
 
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort);
       resolve();
     }, delayMs);

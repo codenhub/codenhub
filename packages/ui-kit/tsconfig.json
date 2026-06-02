@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "lib": ["DOM", "DOM.Iterable", "ES2022"]
   },
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.json"
 }
