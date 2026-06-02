@@ -107,6 +107,14 @@ describe("iconsPlugin", () => {
     expect(await runTransformIndexHtml(html)).toBe(html);
   });
 
+  it("should resolve alternative icon names", async () => {
+    const transformed = await runTransformIndexHtml(`<button><i class="ic-dismiss size-4"></i></button>`);
+
+    expect(transformed).toContain(`<svg class="size-4"`);
+    expect(transformed).toContain(`<path d="M18 6 6 18"`);
+    expect(transformed).not.toContain("ic-dismiss");
+  });
+
   it("should not leak regex state across calls", async () => {
     const first = await runTransformIndexHtml(`<div><i class="ic-success"></i></div>`);
     const second = await runTransformIndexHtml(`<div><i class="ic-error"></i></div>`);

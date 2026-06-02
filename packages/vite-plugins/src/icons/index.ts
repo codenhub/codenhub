@@ -3,20 +3,38 @@ import type { Plugin } from "vite";
 import { icons } from "./data";
 import { ICON_MARKER_PREFIX, ICON_TAG_REGEX, PLUGIN_NAME, TRANSFORM_EXTENSIONS } from "./constants";
 
-type IconName = keyof typeof icons;
 interface ResolvedIcon {
   iconClass: string;
-  iconName: IconName;
+  markup: string;
 }
 
-const ICON_NAME_SET = new Set<IconName>(Object.keys(icons) as IconName[]);
+function getIconMarkup(iconDefinition: (typeof icons)[keyof typeof icons]): string {
+  return typeof iconDefinition === "string" ? iconDefinition : iconDefinition.markup;
+}
+
+function getAlternativeNames(iconDefinition: (typeof icons)[keyof typeof icons]): readonly string[] {
+  return typeof iconDefinition === "string" ? [] : (iconDefinition.alternativeNames ?? []);
+}
+
+function createIconMarkupMap(): Map<string, string> {
+  const iconMarkupMap = new Map<string, string>();
+
+  for (const [iconName, iconDefinition] of Object.entries(icons)) {
+    const markup = getIconMarkup(iconDefinition);
+    const names = [iconName, ...getAlternativeNames(iconDefinition)];
+
+    for (const name of names) {
+      iconMarkupMap.set(name, markup);
+    }
+  }
+
+  return iconMarkupMap;
+}
+
+const ICON_MARKUP_MAP = createIconMarkupMap();
 
 function splitClasses(classValue: string): string[] {
   return classValue.split(/\s+/).filter(Boolean);
-}
-
-function isIconName(value: string): value is IconName {
-  return ICON_NAME_SET.has(value as IconName);
 }
 
 function resolveIcon(classValue: string): ResolvedIcon | null {
@@ -26,9 +44,10 @@ function resolveIcon(classValue: string): ResolvedIcon | null {
     if (!className.startsWith(ICON_MARKER_PREFIX)) continue;
 
     const iconNameCandidate = className.slice(ICON_MARKER_PREFIX.length);
-    if (!isIconName(iconNameCandidate)) continue;
+    const markup = ICON_MARKUP_MAP.get(iconNameCandidate);
+    if (!markup) continue;
 
-    return { iconClass: className, iconName: iconNameCandidate };
+    return { iconClass: className, markup };
   }
 
   return null;
@@ -63,7 +82,7 @@ function buildSvgReplacement(
   const classAttr = extraClasses ? ` class="${extraClasses}"` : "";
   const passthroughAttrStr = joinPassthroughAttributes(attrsBeforeClass, attrsAfterClass);
 
-  return icons[icon.iconName].replace(/^<svg\b/i, `<svg${classAttr}${passthroughAttrStr}`);
+  return icon.markup.replace(/^<svg\b/i, `<svg${classAttr}${passthroughAttrStr}`);
 }
 
 function replaceIconTags(source: string): string {
