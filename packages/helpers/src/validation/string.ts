@@ -64,7 +64,8 @@ export function string(val: unknown): StringValidators {
 
     fileType(allowed: string[]): Result<string> {
       const ext = v.split(".").pop()?.toLowerCase();
-      const normalized = allowed.map((e) => e.toLowerCase().replace(/^\./, ""));
+      const normalized = allowed.map((e) => e.toLowerCase().replace(/^\./, "")).filter((e) => e.length > 0);
+      if (normalized.length === 0) return err("Allowed file types cannot be empty");
       if (!ext || !normalized.includes(ext)) {
         return err(`File type "${ext}" not allowed. Allowed: ${normalized.join(", ")}`);
       }

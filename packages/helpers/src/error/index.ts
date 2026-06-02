@@ -1,19 +1,24 @@
-import {
-  KNOWN_ERROR_FEEDBACK_BY_CODE,
-  KNOWN_ERROR_FEEDBACK_BY_MESSAGE,
-  KNOWN_ERROR_FEEDBACK_BY_NAME,
-  KNOWN_ERROR_PREFIX_DEFINITIONS,
-  UNEXPECTED_ERROR_DEFINITIONS,
-  type ErrorFeedback,
-  type ErrorFeedbackSource,
-} from "./errors";
-
 export interface AppErrorOptions {
   fallbackMessage?: string;
 }
 
 export type AppErrorType = "known" | "unexpected" | "unknown";
-export type AppErrorSource = ErrorFeedbackSource | null;
+export type AppErrorSource = string | null;
+
+export interface ErrorFeedback {
+  message: string;
+  messageKey?: string;
+  source?: string;
+  retryable?: boolean;
+}
+
+interface RegisteredPrefixError extends ErrorFeedback {
+  prefix: string;
+}
+
+interface RegisteredPatternError extends ErrorFeedback {
+  pattern: RegExp;
+}
 
 interface NormalizedError {
   code: string | null;
@@ -24,8 +29,8 @@ interface NormalizedError {
 interface ErrorClassification {
   type: Exclude<AppErrorType, "unknown">;
   message: string;
-  messageKey: string;
-  source: ErrorFeedbackSource;
+  messageKey: string | null;
+  source: AppErrorSource;
   retryable: boolean;
 }
 
@@ -44,6 +49,72 @@ const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
 const ERROR_UNWRAP_MAX_DEPTH = 3;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error"] as const;
 
+const createFeedbackMapBucket = () => {
+  const entries = new Map<string, ErrorFeedback>();
+
+  return {
+    add(identifier: string, feedback: ErrorFeedback): void {
+      entries.set(identifier, feedback);
+    },
+    clear(): void {
+      entries.clear();
+    },
+    get(identifier: string): ErrorFeedback | undefined {
+      return entries.get(identifier);
+    },
+    values(): IterableIterator<[string, ErrorFeedback]> {
+      return entries.entries();
+    },
+  };
+};
+
+const createPrefixBucket = () => {
+  const entries: RegisteredPrefixError[] = [];
+
+  return {
+    add(prefix: string, feedback: ErrorFeedback): void {
+      entries.push({ ...feedback, prefix: normalizeErrorIdentifier(prefix) });
+    },
+    clear(): void {
+      entries.length = 0;
+    },
+    values(): readonly RegisteredPrefixError[] {
+      return entries;
+    },
+  };
+};
+
+const createPatternBucket = () => {
+  const entries: RegisteredPatternError[] = [];
+
+  return {
+    add(pattern: RegExp, feedback: ErrorFeedback): void {
+      entries.push({ ...feedback, pattern: new RegExp(pattern.source, pattern.flags) });
+    },
+    clear(): void {
+      entries.length = 0;
+    },
+    values(): readonly RegisteredPatternError[] {
+      return entries;
+    },
+  };
+};
+
+export const AppErrorRegistry = {
+  codes: createFeedbackMapBucket(),
+  names: createFeedbackMapBucket(),
+  messages: createFeedbackMapBucket(),
+  prefixes: createPrefixBucket(),
+  patterns: createPatternBucket(),
+  clear(): void {
+    this.codes.clear();
+    this.names.clear();
+    this.messages.clear();
+    this.prefixes.clear();
+    this.patterns.clear();
+  },
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
 };
@@ -57,9 +128,21 @@ const normalizeErrorIdentifier = (identifier: string): string => {
   return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "");
 };
 
-const NORMALIZED_KNOWN_MESSAGES: ReadonlyMap<string, ErrorFeedback> = new Map(
-  Object.entries(KNOWN_ERROR_FEEDBACK_BY_MESSAGE).map(([key, value]) => [normalizeErrorIdentifier(key), value]),
-);
+const toKnownClassification = (feedback: ErrorFeedback): ErrorClassification => ({
+  type: "known",
+  message: feedback.message,
+  messageKey: feedback.messageKey ?? null,
+  source: feedback.source ?? null,
+  retryable: feedback.retryable ?? false,
+});
+
+const toUnexpectedClassification = (feedback: ErrorFeedback): ErrorClassification => ({
+  type: "unexpected",
+  message: feedback.message,
+  messageKey: feedback.messageKey ?? null,
+  source: feedback.source ?? null,
+  retryable: feedback.retryable ?? false,
+});
 
 const normalizeError = (error: unknown): NormalizedError => {
   if (typeof error === "string") {
@@ -125,19 +208,13 @@ const getErrorCandidates = (error: unknown): unknown[] => {
 const getKnownMessageFeedback = (message: string): ErrorClassification | null => {
   const normalizedMessage = normalizeErrorIdentifier(message);
 
-  const exactFeedback = NORMALIZED_KNOWN_MESSAGES.get(normalizedMessage);
-
-  if (exactFeedback !== undefined) {
-    return {
-      type: "known",
-      message: exactFeedback.feedback,
-      messageKey: exactFeedback.feedbackKey,
-      source: exactFeedback.source,
-      retryable: exactFeedback.retryable ?? false,
-    };
+  for (const [registeredMessage, feedback] of AppErrorRegistry.messages.values()) {
+    if (normalizeErrorIdentifier(registeredMessage) === normalizedMessage) {
+      return toKnownClassification(feedback);
+    }
   }
 
-  const prefixDefinition = KNOWN_ERROR_PREFIX_DEFINITIONS.find((definition) => {
+  const prefixDefinition = AppErrorRegistry.prefixes.values().find((definition) => {
     return normalizedMessage.startsWith(definition.prefix);
   });
 
@@ -145,41 +222,23 @@ const getKnownMessageFeedback = (message: string): ErrorClassification | null =>
     return null;
   }
 
-  return {
-    type: "known",
-    message: prefixDefinition.feedback,
-    messageKey: prefixDefinition.feedbackKey,
-    source: prefixDefinition.source,
-    retryable: prefixDefinition.retryable ?? false,
-  };
+  return toKnownClassification(prefixDefinition);
 };
 
 const resolveDeterministicKnownError = ({ code, message, name }: NormalizedError): ErrorClassification | null => {
   if (code !== null) {
-    const feedback = KNOWN_ERROR_FEEDBACK_BY_CODE[code];
+    const feedback = AppErrorRegistry.codes.get(code);
 
     if (feedback !== undefined) {
-      return {
-        type: "known",
-        message: feedback.feedback,
-        messageKey: feedback.feedbackKey,
-        source: feedback.source,
-        retryable: feedback.retryable ?? false,
-      };
+      return toKnownClassification(feedback);
     }
   }
 
   if (name !== null) {
-    const feedback = KNOWN_ERROR_FEEDBACK_BY_NAME[name];
+    const feedback = AppErrorRegistry.names.get(name);
 
     if (feedback !== undefined) {
-      return {
-        type: "known",
-        message: feedback.feedback,
-        messageKey: feedback.feedbackKey,
-        source: feedback.source,
-        retryable: feedback.retryable ?? false,
-      };
+      return toKnownClassification(feedback);
     }
   }
 
@@ -199,21 +258,15 @@ const resolveHeuristicUnexpectedError = ({ message }: NormalizedError): ErrorCla
     return null;
   }
 
-  const definition = UNEXPECTED_ERROR_DEFINITIONS.find((currentDefinition) => {
-    return currentDefinition.pattern.test(message);
+  const definition = AppErrorRegistry.patterns.values().find((currentDefinition) => {
+    return new RegExp(currentDefinition.pattern.source, currentDefinition.pattern.flags).test(message);
   });
 
   if (definition === undefined) {
     return null;
   }
 
-  return {
-    type: "unexpected",
-    message: definition.feedback,
-    messageKey: definition.feedbackKey,
-    source: definition.source,
-    retryable: definition.retryable ?? false,
-  };
+  return toUnexpectedClassification(definition);
 };
 
 const classifyNormalizedError = (normalizedError: NormalizedError): ErrorClassification | null => {

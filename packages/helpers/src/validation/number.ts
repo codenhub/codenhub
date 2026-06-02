@@ -3,8 +3,11 @@ import { ok, err, Result } from "../result";
 interface NumberValidators {
   positive(): Result<number>;
   negative(): Result<number>;
+  nonNegative(): Result<number>;
+  nonPositive(): Result<number>;
   nonZero(): Result<number>;
   int(): Result<number>;
+  safeInt(): Result<number>;
   range(opts: { min?: number; max?: number }): Result<number>;
   finite(): Result<number>;
   port(): Result<number>;
@@ -17,8 +20,11 @@ export function number(val: unknown): NumberValidators {
     return {
       positive: fail,
       negative: fail,
+      nonNegative: fail,
+      nonPositive: fail,
       nonZero: fail,
       int: fail,
+      safeInt: fail,
       range: fail,
       finite: fail,
       port: fail,
@@ -31,8 +37,11 @@ export function number(val: unknown): NumberValidators {
     return {
       positive: fail,
       negative: fail,
+      nonNegative: fail,
+      nonPositive: fail,
       nonZero: fail,
       int: fail,
+      safeInt: fail,
       range: fail,
       finite: fail,
       port: fail,
@@ -52,6 +61,16 @@ export function number(val: unknown): NumberValidators {
       return ok(v);
     },
 
+    nonNegative(): Result<number> {
+      if (v < 0) return err("Must be zero or greater");
+      return ok(v);
+    },
+
+    nonPositive(): Result<number> {
+      if (v > 0) return err("Must be zero or less");
+      return ok(v);
+    },
+
     nonZero(): Result<number> {
       if (v === 0) return err("Must not be zero");
       return ok(v);
@@ -59,6 +78,11 @@ export function number(val: unknown): NumberValidators {
 
     int(): Result<number> {
       if (!Number.isInteger(v)) return err("Must be an integer");
+      return ok(v);
+    },
+
+    safeInt(): Result<number> {
+      if (!Number.isSafeInteger(v)) return err("Must be a safe integer");
       return ok(v);
     },
 

@@ -3,6 +3,6 @@
     "module": "Preserve",
     "moduleResolution": "bundler",
     "lib": ["DOM", "ES2024"],
-    "ignoreDeprecations": "6.0"
-  }
+  },
+  "extends": "../../tsconfig.json",
 }

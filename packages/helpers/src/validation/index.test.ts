@@ -81,6 +81,14 @@ describe("validation helper", () => {
       expect(val.string("README").fileType(["readme"])).toEqual({ ok: true, value: "readme" });
       expect(val.string("avatar.PNG").fileType(["png"])).toEqual({ ok: true, value: "png" });
     });
+
+    it("should reject empty allowed file types", () => {
+      expectErr(val.string("avatar.png").fileType([]), "Allowed file types cannot be empty");
+    });
+
+    it("should reject empty file type tokens", () => {
+      expectErr(val.string("avatar.png").fileType(["."]), "Allowed file types cannot be empty");
+    });
   });
 
   describe("string length validators", () => {
@@ -177,6 +185,49 @@ describe("validation helper", () => {
       [{ min: 10, max: 0 }, "Range minimum cannot be greater than maximum"],
     ] as const)("should reject invalid range options %#", (opts, error) => {
       expectErr(val.number(5).range(opts), error);
+    });
+
+    it("should validate safe integers", () => {
+      expect(val.number(10).safeInt()).toEqual({ ok: true, value: 10 });
+      expectErr(val.number(Number.MAX_SAFE_INTEGER + 1).safeInt(), "Must be a safe integer");
+    });
+
+    it("should validate non-negative and non-positive numbers", () => {
+      expect(val.number(0).nonNegative()).toEqual({ ok: true, value: 0 });
+      expect(val.number(0).nonPositive()).toEqual({ ok: true, value: 0 });
+      expectErr(val.number(-1).nonNegative(), "Must be zero or greater");
+      expectErr(val.number(1).nonPositive(), "Must be zero or less");
+    });
+  });
+
+  describe("object validators", () => {
+    it("should validate plain objects", () => {
+      expect(val.object({ name: "Ada" }).plain()).toEqual({ ok: true, value: { name: "Ada" } });
+      expectErr(val.object([]).plain(), "Expected object, got array");
+      expectErr(val.object(null).plain(), "Expected object, got null");
+      expectErr(val.object(new Date()).plain(), "Expected plain object");
+    });
+
+    it("should validate required keys", () => {
+      expect(val.object({ name: "Ada" }).hasKeys(["name"])).toEqual({ ok: true, value: { name: "Ada" } });
+      expectErr(val.object({ name: "Ada" }).hasKeys(["email"]), "Missing required key: email");
+    });
+
+    it("should reject inherited required keys", () => {
+      expectErr(val.object({ name: "Ada" }).hasKeys(["toString"]), "Missing required key: toString");
+    });
+  });
+
+  describe("array validators", () => {
+    it("should validate array length", () => {
+      expect(val.array([1, 2]).minLength(2)).toEqual({ ok: true, value: [1, 2] });
+      expectErr(val.array([1]).minLength(2), "Must contain at least 2 items");
+      expectErr(val.array([1, 2, 3]).maxLength(2), "Must contain at most 2 items");
+    });
+
+    it("should validate non-empty arrays", () => {
+      expect(val.array([1]).notEmpty()).toEqual({ ok: true, value: [1] });
+      expectErr(val.array([]).notEmpty(), "Array cannot be empty");
     });
   });
 });
