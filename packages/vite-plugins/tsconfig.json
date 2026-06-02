@@ -2,6 +2,6 @@
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "ignoreDeprecations": "6.0"
-  }
+    "ignoreDeprecations": "6.0",
+  },
 }
