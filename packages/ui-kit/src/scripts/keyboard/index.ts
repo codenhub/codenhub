@@ -1,4 +1,4 @@
-import { err } from "@codenhub/helpers";
+import { err } from "@codenhub/helpers/result";
 import { feedback } from "../feedback";
 import { KEY_VALUES, type KeyboardKey } from "./keys";
 
