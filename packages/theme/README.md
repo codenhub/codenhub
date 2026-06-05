@@ -61,15 +61,15 @@ new Theme({
 });
 ```
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `themes` | `ThemeDefinition[]` | Defines available themes. Each theme has only `name` and `colorScheme`.
-| `defaultTheme` | `string` | The theme to use when browser APIs are unavailable.
-| `systemTheme` | `SystemThemeMap` | Maps OS light and dark preferences to configured theme names.
-| `storageKey` | `string` | Stores the explicit user preference in `localStorage`.
-| `attribute` | `string` | Sets the active theme name on `document.documentElement`.
-| `tailwindcss` | `boolean` | Toggles the `dark` class on `document.documentElement` when the active theme has `colorScheme: "dark"`.
-| `applyClass` | `boolean` or `(definition: ThemeDefinition) => string` | Adds a custom class to `document.documentElement` when the active theme is applied.
+| Option         | Type                                                   | Description                                                                                             |
+| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `themes`       | `ThemeDefinition[]`                                    | Defines available themes. Each theme has only `name` and `colorScheme`.                                 |
+| `defaultTheme` | `string`                                               | The theme to use when browser APIs are unavailable.                                                     |
+| `systemTheme`  | `SystemThemeMap`                                       | Maps OS light and dark preferences to configured theme names.                                           |
+| `storageKey`   | `string`                                               | Stores the explicit user preference in `localStorage`.                                                  |
+| `attribute`    | `string`                                               | Sets the active theme name on `document.documentElement`.                                               |
+| `tailwindcss`  | `boolean`                                              | Toggles the `dark` class on `document.documentElement` when the active theme has `colorScheme: "dark"`. |
+| `applyClass`   | `boolean` or `(definition: ThemeDefinition) => string` | Adds a custom class to `document.documentElement` when the active theme is applied.                     |
 
 ## More Themes
 

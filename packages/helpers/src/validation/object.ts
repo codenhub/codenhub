@@ -1,4 +1,4 @@
-import { ok, err, Result } from "../result";
+import { ok, err, type Result } from "../result";
 
 type PlainObject = Record<string, unknown>;
 

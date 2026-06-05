@@ -12,6 +12,12 @@ export default defineConfig([
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { js },
     extends: ["js/recommended"],
+    rules: {
+      curly: ["error", "all"],
+      eqeqeq: ["error", "always"],
+      "no-var": "error",
+      "prefer-const": "error",
+    },
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
@@ -20,6 +26,8 @@ export default defineConfig([
   {
     files: ["**/*.{ts,mts,cts}"],
     rules: {
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+      "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },

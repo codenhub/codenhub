@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AppError, AppErrorRegistry, DEFAULT_APP_ERROR_MESSAGE } from "@codenhub/helpers/error";
+import { AppErrorRegistry, DEFAULT_APP_ERROR_MESSAGE, type AppError } from "@codenhub/helpers/error";
 import { err, ok, type Result } from "@codenhub/helpers/result";
 import { getI18nInstance, I18n, setI18nInstance, type I18nConfig } from "../i18n";
 import { feedback, type FeedbackEntry } from "./index";

@@ -1,4 +1,4 @@
-import { ok, err, Result } from "../result";
+import { ok, err, type Result } from "../result";
 
 const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
 const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;

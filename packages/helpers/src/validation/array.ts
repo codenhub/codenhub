@@ -1,4 +1,4 @@
-import { ok, err, Result } from "../result";
+import { ok, err, type Result } from "../result";
 
 interface ArrayValidators<T> {
   minLength(n: number): Result<T[]>;

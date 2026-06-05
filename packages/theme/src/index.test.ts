@@ -67,9 +67,9 @@ describe("Theme config", () => {
   });
 
   it("should reject default theme classes that are not single DOM tokens", () => {
-    expect(() => new Theme({ themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }] })).toThrow(
-      "Theme name cannot be used as a default theme class: high contrast.",
-    );
+    expect(
+      () => new Theme({ themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }] }),
+    ).toThrow("Theme name cannot be used as a default theme class: high contrast.");
   });
 });
 
@@ -171,7 +171,9 @@ describe("Theme behavior", () => {
     document.documentElement.setAttribute("data-theme", "server");
     document.documentElement.style.colorScheme = "dark";
 
-    const theme = new Theme({ applyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light") });
+    const theme = new Theme({
+      applyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
+    });
 
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: dark.");
     expect(document.documentElement.getAttribute("data-theme")).toBe("server");

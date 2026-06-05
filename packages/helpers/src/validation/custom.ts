@@ -1,4 +1,4 @@
-import { err, Result } from "../result";
+import { err, type Result } from "../result";
 
 export function custom<T>(val: unknown, fn: (val: unknown) => Result<T>): Result<T> {
   try {

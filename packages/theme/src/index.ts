@@ -162,7 +162,10 @@ export class Theme {
   }
 
   toggle(): ThemeDefinition {
-    const nextName = this.get().name === this.#options.systemTheme.dark ? this.#options.systemTheme.light : this.#options.systemTheme.dark;
+    const nextName =
+      this.get().name === this.#options.systemTheme.dark
+        ? this.#options.systemTheme.light
+        : this.#options.systemTheme.dark;
     return this.#activate(nextName, "toggle", { shouldStore: true });
   }
 
@@ -189,7 +192,9 @@ export class Theme {
       return this.#getTheme(this.#options.defaultTheme);
     }
 
-    const name = window.matchMedia(PREFERS_DARK_QUERY).matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
+    const name = window.matchMedia(PREFERS_DARK_QUERY).matches
+      ? this.#options.systemTheme.dark
+      : this.#options.systemTheme.light;
     return this.#getTheme(name);
   }
 
