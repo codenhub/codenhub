@@ -4,7 +4,7 @@
 **Last updated:** 2026-06-05
 **Scope:** README files for workspace packages.
 
-This document defines what package README files MUST and MAY contain.
+This document defines the expected structure and content for package README files.
 
 ## Compliance
 
@@ -14,24 +14,63 @@ Private packages and apps MAY follow this spec when it improves maintainability,
 
 ## Purpose
 
-A package README is the package usage contract for humans. It should explain what the package does, how to use it, what it exports, and what constraints users must know before depending on it.
+A package README is the public package usage contract. It should explain what the package does, how to use it, what it exports, and what constraints users must know before depending on it.
 
 The README SHOULD document public behavior, not internal implementation details.
 
-## Required sections
+## Required structure
 
-Each public package README MUST include these sections or equivalent content with clear headings:
+Public package README files MUST follow this structure unless a section is explicitly omitted under the omission rules.
 
-- Title: package name exactly as published, such as `# @codenhub/theme`.
-- Description: one short paragraph explaining purpose and primary use case.
-- Install or import: how consumers import the package or its subpaths.
-- Quick start: one minimal working example for the main use case.
-- API or reference: exported functions, classes, types, options, subpaths, CSS files, or plugin entrypoints users are expected to use.
-- Examples: examples for the main supported workflows, beyond quick start when needed.
-- Runtime requirements: browser, Node, SSR, framework, peer dependency, CSS, storage, DOM, or build-tool requirements.
-- Limitations and non-goals: important things the package does not do.
+1. Title: package name exactly as published, such as `# @codenhub/theme`.
+2. Description: one short paragraph explaining purpose and primary use case.
+3. Installation: package manager command, when the package is installed directly.
+4. Usage: at least one minimal working example for the main use case.
+5. API reference: documented public exports users are expected to call, instantiate, import, configure, or style against.
+6. Examples: common workflows beyond quick start, when useful.
+7. Runtime requirements: browser, Node, SSR, framework, peer dependency, CSS, storage, DOM, or build-tool requirements.
+8. Limitations and non-goals: important things the package does not do.
 
-Sections MAY be merged when the package is very small and clarity improves. For example, `Quick start` and `API` MAY be combined for a package with one export.
+Headings SHOULD use these names when practical. Small wording changes are allowed when they improve clarity for the package, but the section purpose MUST stay recognizable.
+
+## API reference
+
+The API reference MUST document every supported public export listed in `package.json` `exports`, except exports that are fully covered by another required section such as `Imports`.
+
+Document only public behavior. Do not document private files, implementation details, or exports that consumers should not use.
+
+For each applicable API item, include:
+
+- Name and kind: function, class, type, interface, constant, event, CSS file, plugin, config object, or asset.
+- Import path.
+- Signature or shape, when applicable.
+- Parameters, properties, or fields users need to provide or read.
+- Return value, emitted value, generated output, or side effect.
+- Error or failure behavior, when applicable.
+- A short example when the item is not obvious from quick start.
+
+## Omission rules
+
+README files SHOULD stay concise, but they MUST NOT hide public behavior to save space.
+
+A section or API category MAY be omitted only when it truly does not apply to the package:
+
+- Omit `Install` only when the package is never installed directly by consumers.
+- Omit functions when the package has no public functions.
+- Omit classes when the package has no public classes.
+- Omit methods when the package has no public methods.
+- Omit events when the package emits, listens to, or documents no public events.
+- Omit types or interfaces when the package exposes no public consumer-facing types.
+- Omit CSS, assets, or plugin entrypoints when the package exposes none.
+- Omit examples beyond quick start when there is only one meaningful workflow.
+
+Very small packages MAY have fewer headings only when all required information remains present and easy to scan.
+
+Large packages MAY move deep guides to package-level `.docs/`, but README MUST still cover the public usage contract and link to those guides.
+
+## Template
+
+Use [packages-readme-template.md](packages-readme-template.md) as the starting point for public package README files. Remove only sections that are allowed by the omission rules.
 
 ## Package type requirements
 
@@ -93,7 +132,3 @@ If an example omits setup for brevity, the omission MUST be obvious or stated.
 Deprecated packages MUST state they are deprecated near the top and point to the replacement when one exists.
 
 Experimental packages MUST state what is unstable: API shape, behavior, build output, or support level.
-
-Very small packages MAY use fewer headings when all required information remains present and easy to scan.
-
-Large packages MAY move deep guides to package-level `.docs/`, but README MUST still cover the public usage contract and link to those guides.
