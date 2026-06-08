@@ -98,13 +98,17 @@ Returns a `Store<TSchema>` instance. `createStore()` does not read or write stor
 Object returned by `createStore()`.
 
 ```ts
+type OptionalKeys<TSchema extends object> = {
+  [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
+}[keyof TSchema];
+
 interface Store<TSchema extends object> {
   get(): TSchema;
   set(nextState: TSchema): boolean;
   patch(partialState: Partial<TSchema>): TSchema;
   getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined;
   setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema;
-  removeItem<TKey extends keyof TSchema>(key: TKey): TSchema;
+  removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema;
   clear(): void;
 }
 ```
@@ -169,10 +173,10 @@ Returns the full updated state. If persistence fails, the returned value still i
 Removes one key from the current state and attempts to persist the result.
 
 ```ts
-function removeItem<TKey extends keyof TSchema>(key: TKey): TSchema;
+function removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema;
 ```
 
-Returns the updated state without the removed key. If persistence fails, the returned value still reflects the removal, but later reads may not.
+Returns the updated state without the removed key. Only optional schema keys can be removed; required keys must remain present to preserve the typed store shape. If persistence fails, the returned value still reflects the removal, but later reads may not.
 
 ##### `clear()`
 
