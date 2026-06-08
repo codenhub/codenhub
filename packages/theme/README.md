@@ -1,27 +1,16 @@
 # @codenhub/theme
 
-Small zero-dependency theme preference helper for browser apps. It applies a theme name to the document and leaves tokens, variables, and visual styles to your CSS.
+Small zero-dependency theme preference helper for browser apps. It applies a theme name to the document, updates `document.documentElement.style.colorScheme`, and leaves tokens, variables, and visual styles to your CSS.
 
-## Install
+## Installation
 
 ```sh
 pnpm add @codenhub/theme
 ```
 
-## Imports
+## Usage
 
-```ts
-import { Theme, darkTheme, lightTheme, THEME_CHANGE_EVENT } from "@codenhub/theme";
-import type { ThemeChangeDetail, ThemeDefinition, ThemeOptions } from "@codenhub/theme";
-```
-
-Supported import paths:
-
-| Path              | Description                         |
-| ----------------- | ----------------------------------- |
-| `@codenhub/theme` | Main JavaScript and TypeScript API. |
-
-## Quick Start
+By default, `init()` uses a valid stored preference first. If there is no valid stored preference, it maps the OS color scheme to `light` or `dark`.
 
 ```ts
 import { Theme } from "@codenhub/theme";
@@ -33,13 +22,36 @@ theme.set("dark");
 theme.toggle();
 ```
 
-By default, `init()` uses a valid stored preference first. If there is no valid stored preference, it maps the OS color scheme to `light` or `dark`.
+Call `destroy()` during app or test cleanup when the instance is no longer used.
 
-## API Reference
+## Reference
 
-### `Theme`
+### `@codenhub/theme`
 
-Manages the active theme, storage preference, DOM attributes/classes, system preference listener, and change notifications.
+Primary entrypoint for the theme preference API.
+
+```ts
+import { Theme, darkTheme, lightTheme, THEME_CHANGE_EVENT } from "@codenhub/theme";
+import type {
+  SystemThemeMap,
+  ThemeChangeDetail,
+  ThemeChangeListener,
+  ThemeChangeSource,
+  ThemeClassResolver,
+  ThemeDefinition,
+  ThemeOptions,
+} from "@codenhub/theme";
+```
+
+Supported import paths:
+
+| Path              | Description                         |
+| ----------------- | ----------------------------------- |
+| `@codenhub/theme` | Main JavaScript and TypeScript API. |
+
+#### `Theme`
+
+Manages the active theme, storage preference, DOM attribute, `colorScheme` style, classes, system preference listener, and change notifications.
 
 ```ts
 class Theme {
@@ -60,15 +72,17 @@ Import from `@codenhub/theme`.
 
 The constructor throws `Error` when configured theme names are empty, duplicated, invalid for CSS class application, or referenced by `defaultTheme` or `systemTheme` without being configured.
 
-#### `init()`
+##### `init()`
 
 Registers the system preference listener, resolves the initial theme, applies it, and emits a change with source `"init"`.
+
+Repeated calls do not register duplicate system preference listeners.
 
 ```ts
 function init(): this;
 ```
 
-#### `get()`
+##### `get()`
 
 Returns the active theme definition.
 
@@ -76,7 +90,7 @@ Returns the active theme definition.
 function get(): ThemeDefinition;
 ```
 
-#### `set()`
+##### `set()`
 
 Activates a configured theme by name and stores the explicit preference when browser storage is available.
 
@@ -86,7 +100,7 @@ function set(name: string): ThemeDefinition;
 
 Throws `Error` when `name` is not configured.
 
-#### `toggle()`
+##### `toggle()`
 
 Toggles between the configured system light and dark theme names, then stores the explicit preference when browser storage is available.
 
@@ -94,7 +108,7 @@ Toggles between the configured system light and dark theme names, then stores th
 function toggle(): ThemeDefinition;
 ```
 
-#### `clearPreference()`
+##### `clearPreference()`
 
 Removes the stored preference and activates the current system theme.
 
@@ -102,7 +116,7 @@ Removes the stored preference and activates the current system theme.
 function clearPreference(): ThemeDefinition;
 ```
 
-#### `getStored()`
+##### `getStored()`
 
 Returns the stored theme name when it exists and is configured.
 
@@ -110,9 +124,9 @@ Returns the stored theme name when it exists and is configured.
 function getStored(): string | null;
 ```
 
-Returns `null` during SSR, when storage is unavailable, or when the stored name is not configured.
+Returns `null` during SSR, when storage is unavailable, when storage access throws, or when the stored name is not configured.
 
-#### `getSystem()`
+##### `getSystem()`
 
 Returns the configured theme for the current `prefers-color-scheme` value.
 
@@ -122,7 +136,7 @@ function getSystem(): ThemeDefinition;
 
 Returns the default theme during SSR or when `matchMedia` is unavailable.
 
-#### `subscribe()`
+##### `subscribe()`
 
 Registers an in-process listener for theme changes.
 
@@ -132,7 +146,7 @@ function subscribe(listener: ThemeChangeListener): () => void;
 
 Returns an unsubscribe function.
 
-#### `destroy()`
+##### `destroy()`
 
 Removes the system preference listener and clears in-process subscribers.
 
@@ -142,7 +156,7 @@ function destroy(): void;
 
 Call this during app or test cleanup when the instance is no longer used.
 
-### `ThemeOptions`
+#### `ThemeOptions`
 
 ```ts
 interface ThemeOptions {
@@ -166,7 +180,9 @@ interface ThemeOptions {
 | `tailwindcss`  | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
 | `applyClass`   | `boolean` or `(theme: ThemeDefinition) => string` | `true`                             | Adds `theme-${name}`, no class, or a resolver-provided class to `document.documentElement`. |
 
-### `ThemeDefinition`
+When class application is enabled, each theme application removes classes for all configured themes, then adds the class for the active theme.
+
+#### `ThemeDefinition`
 
 ```ts
 interface ThemeDefinition {
@@ -175,7 +191,12 @@ interface ThemeDefinition {
 }
 ```
 
-### `SystemThemeMap`
+| Field         | Type                | Description                                                      |
+| ------------- | ------------------- | ---------------------------------------------------------------- |
+| `name`        | `string`            | Unique theme name used for storage, attributes, and class names. |
+| `colorScheme` | `"light" \| "dark"` | Browser color scheme applied through `style.colorScheme`.        |
+
+#### `SystemThemeMap`
 
 ```ts
 interface SystemThemeMap {
@@ -184,7 +205,12 @@ interface SystemThemeMap {
 }
 ```
 
-### `ThemeClassResolver`
+| Field   | Type     | Description                                                 |
+| ------- | -------- | ----------------------------------------------------------- |
+| `light` | `string` | Configured theme name used when the OS preference is light. |
+| `dark`  | `string` | Configured theme name used when the OS preference is dark.  |
+
+#### `ThemeClassResolver`
 
 Returns the class name applied to `document.documentElement` for a theme.
 
@@ -194,7 +220,9 @@ type ThemeClassResolver = (theme: ThemeDefinition) => string;
 
 The returned class name must be a single non-empty class token without whitespace.
 
-### `ThemeChangeListener`
+`init()`, `set()`, `toggle()`, `clearPreference()`, or system preference changes throw `Error` if the resolver returns an empty class name or a class name containing whitespace.
+
+#### `ThemeChangeListener`
 
 Listener passed to `theme.subscribe()`.
 
@@ -202,7 +230,7 @@ Listener passed to `theme.subscribe()`.
 type ThemeChangeListener = (detail: ThemeChangeDetail) => void;
 ```
 
-### `THEME_CHANGE_EVENT`
+#### `THEME_CHANGE_EVENT`
 
 Window event name dispatched after theme changes in browser environments.
 
@@ -210,7 +238,7 @@ Window event name dispatched after theme changes in browser environments.
 const THEME_CHANGE_EVENT = "themechange";
 ```
 
-### `ThemeChangeDetail`
+#### `ThemeChangeDetail`
 
 ```ts
 interface ThemeChangeDetail {
@@ -220,7 +248,13 @@ interface ThemeChangeDetail {
 }
 ```
 
-### `ThemeChangeSource`
+| Field    | Type                | Description                               |
+| -------- | ------------------- | ----------------------------------------- |
+| `name`   | `string`            | Active theme name after the change.       |
+| `theme`  | `ThemeDefinition`   | Active theme definition after the change. |
+| `source` | `ThemeChangeSource` | Reason the theme change was emitted.      |
+
+#### `ThemeChangeSource`
 
 Reason a theme change was emitted.
 
@@ -228,7 +262,15 @@ Reason a theme change was emitted.
 type ThemeChangeSource = "init" | "set" | "toggle" | "clearPreference" | "system";
 ```
 
-### `lightTheme` And `darkTheme`
+| Value               | Emitted when                                       |
+| ------------------- | -------------------------------------------------- |
+| `"init"`            | `init()` resolves and applies the initial theme.   |
+| `"set"`             | `set()` applies an explicit theme preference.      |
+| `"toggle"`          | `toggle()` switches between system light and dark. |
+| `"clearPreference"` | `clearPreference()` removes stored preference.     |
+| `"system"`          | OS color scheme changes with no stored preference. |
+
+#### Built-In Themes
 
 Built-in theme definitions.
 
@@ -295,14 +337,16 @@ unsubscribe();
 theme.destroy();
 ```
 
-## Runtime Requirements
+## Requirements
 
-- Browser integration uses `document.documentElement`, `window.matchMedia`, `localStorage`, and `CustomEvent`.
+- Browser integration uses `document.documentElement`, `document.documentElement.style.colorScheme`, `window.matchMedia`, `localStorage`, and `CustomEvent`.
 - SSR is supported; DOM, storage, media query, and event work is skipped when browser APIs are unavailable.
+- System preference changes update the active theme only when there is no valid stored preference.
+- `localStorage` read, write, and remove errors are ignored and treated as unavailable storage.
 - Consumers own CSS variables, selectors, visual tokens, and persistence consent requirements.
 - No CSS file, design tokens, framework adapter, or peer dependency is provided.
 
-## Limitations And Non-Goals
+## Notes
 
 - Does not provide design tokens or generated CSS.
 - Does not provide React, Vue, or other framework bindings.
