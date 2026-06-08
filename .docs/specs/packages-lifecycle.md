@@ -66,7 +66,7 @@ Generated output MUST NOT be treated as source of truth. Source, docs, and tests
 
 Public packages MUST use explicit `exports`.
 
-Every supported import path MUST be listed in `exports` and documented in the package README.
+Every supported import path MUST be listed in `exports`. Import paths that are part of default or common consumer usage MUST be documented in the package README. Advanced or uncommon import paths MAY be documented in package-level `.docs/` files when README coverage would make the README noisy or harder to scan.
 
 Packages MUST NOT rely on consumers importing private files from `dist` or `src`.
 
@@ -116,7 +116,7 @@ Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
 Package README files MUST follow `.docs/specs/packages-readme.md`.
 
-README exports and examples MUST match `package.json` `exports`.
+README exports and examples MUST match `package.json` `exports` for the public import paths they document.
 
 When `exports` changes, README import examples and API/reference sections MUST be reviewed in the same change.
 
