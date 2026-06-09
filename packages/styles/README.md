@@ -88,14 +88,14 @@ Component-only Tailwind source CSS:
 
 ### Import Paths
 
-| Path                             | Kind                | Contents                                                           |
-| -------------------------------- | ------------------- | ------------------------------------------------------------------ |
-| `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.       |
-| `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.         |
-| `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                               |
+| Path                             | Kind                | Contents                                                            |
+| -------------------------------- | ------------------- | ------------------------------------------------------------------- |
+| `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.        |
+| `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.          |
+| `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                                |
 | `@codenhub/styles/tw`            | Tailwind source CSS | Full Tailwind v4 source: theme, base styles, components, utilities. |
-| `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.           |
-| `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                               |
+| `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.            |
+| `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                                |
 
 ### Theme Tokens
 
@@ -175,41 +175,41 @@ With Tailwind source CSS, tokens are available through Tailwind utilities and `@
 
 The full entrypoints add global base styles:
 
-| Selector | Styles |
-| -------- | ------ |
-| `::-webkit-scrollbar` | Uses Codenhub spacing and primary/background colors. |
-| `html, body` | Applies background, text color, default font, flex column layout, full viewport minimum height, and hidden horizontal overflow. |
-| `button` | Uses pointer cursor when not disabled. |
-| `img` | Disables selection. |
-| `::selection` | Uses primary/primary-contrast colors. |
-| `.selection-contrast::selection`, `.selection-contrast *::selection` | Reverses selection colors. |
-| `p`, `li`, `a` | Applies `.text-body`. |
+| Selector                                                             | Styles                                                                                                                          |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `::-webkit-scrollbar`                                                | Uses Codenhub spacing and primary/background colors.                                                                            |
+| `html, body`                                                         | Applies background, text color, default font, flex column layout, full viewport minimum height, and hidden horizontal overflow. |
+| `button`                                                             | Uses pointer cursor when not disabled.                                                                                          |
+| `img`                                                                | Disables selection.                                                                                                             |
+| `::selection`                                                        | Uses primary/primary-contrast colors.                                                                                           |
+| `.selection-contrast::selection`, `.selection-contrast *::selection` | Reverses selection colors.                                                                                                      |
+| `p`, `li`, `a`                                                       | Applies `.text-body`.                                                                                                           |
 
 ### Component Classes
 
 Component entrypoints define these classes:
 
-| Class or Pattern | Purpose |
-| ---------------- | ------- |
-| `.sect` | Centered section layout with vertical spacing and padding. |
-| `.sect-container` | Full-width centered container with `max-w-7xl` and vertical spacing. |
-| `.btn` | Button base: inline flex layout, rounded shape, padding, font weight, color transition, loading support. |
-| `.btn.loading` | Hides button text and shows spinner using `::after`. |
-| `.btn[disabled]`, `.btn.disabled` | Applies disabled cursor and opacity. |
-| `.btn.primary` | Primary button colors and hover color. |
-| `.btn.secondary` | Accent button colors and hover color. |
-| `.btn.success` | Success button colors. |
-| `.btn.destructive`, `.btn.danger`, `.btn.error` | Destructive button colors. |
-| `.btn.warning` | Warning button colors. |
-| `.btn.info` | Info button colors. |
-| `.card` | Bordered rounded surface with padding, gap, and hover border transition. |
-| `.ipt` | Input shape, border, padding, focus ring, and focus outline removal. |
-| `.tooltip` | Relative tooltip host using `data-tooltip` content. |
-| `.tooltip.icon` | Circular icon-style tooltip trigger. |
-| `[data-tooltip-position="top"]` | Positions tooltip above host. |
-| `[data-tooltip-position="bottom"]` | Positions tooltip below host. |
-| `[data-tooltip-position="left"]` | Positions tooltip left of host. |
-| `[data-tooltip-position="right"]` | Positions tooltip right of host. |
+| Class or Pattern                                | Purpose                                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `.sect`                                         | Centered section layout with vertical spacing and padding.                                               |
+| `.sect-container`                               | Full-width centered container with `max-w-7xl` and vertical spacing.                                     |
+| `.btn`                                          | Button base: inline flex layout, rounded shape, padding, font weight, color transition, loading support. |
+| `.btn.loading`                                  | Hides button text and shows spinner using `::after`.                                                     |
+| `.btn[disabled]`, `.btn.disabled`               | Applies disabled cursor and opacity.                                                                     |
+| `.btn.primary`                                  | Primary button colors and hover color.                                                                   |
+| `.btn.secondary`                                | Accent button colors and hover color.                                                                    |
+| `.btn.success`                                  | Success button colors.                                                                                   |
+| `.btn.destructive`, `.btn.danger`, `.btn.error` | Destructive button colors.                                                                               |
+| `.btn.warning`                                  | Warning button colors.                                                                                   |
+| `.btn.info`                                     | Info button colors.                                                                                      |
+| `.card`                                         | Bordered rounded surface with padding, gap, and hover border transition.                                 |
+| `.ipt`                                          | Input shape, border, padding, focus ring, and focus outline removal.                                     |
+| `.tooltip`                                      | Relative tooltip host using `data-tooltip` content.                                                      |
+| `.tooltip.icon`                                 | Circular icon-style tooltip trigger.                                                                     |
+| `[data-tooltip-position="top"]`                 | Positions tooltip above host.                                                                            |
+| `[data-tooltip-position="bottom"]`              | Positions tooltip below host.                                                                            |
+| `[data-tooltip-position="left"]`                | Positions tooltip left of host.                                                                          |
+| `[data-tooltip-position="right"]`               | Positions tooltip right of host.                                                                         |
 
 ### Typography Utilities
 
@@ -286,12 +286,12 @@ import "./index.css";
 
 ## Requirements
 
-| Requirement     | Details |
-| --------------- | ------- |
-| CSS imports     | Consumer tooling must support package CSS imports. |
-| Tailwind CSS    | Required only for `@codenhub/styles/tw` entrypoints. Version 4 or newer. |
-| Browser runtime | Styles target browsers. There is no JavaScript runtime behavior. |
-| Dark mode       | Consumers apply or remove `.dark`; package CSS reacts to that class. |
+| Requirement     | Details                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| CSS imports     | Consumer tooling must support package CSS imports.                                         |
+| Tailwind CSS    | Required only for `@codenhub/styles/tw` entrypoints. Version 4 or newer.                   |
+| Browser runtime | Styles target browsers. There is no JavaScript runtime behavior.                           |
+| Dark mode       | Consumers apply or remove `.dark`; package CSS reacts to that class.                       |
 | Accessibility   | Styles do not provide semantic HTML, labels, ARIA, keyboard behavior, or focus management. |
 
 ## Notes
