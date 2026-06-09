@@ -1,0 +1,41 @@
+{
+  "name": "@codenhub/styles",
+  "private": false,
+  "type": "module",
+  "version": "0.0.1",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": "./dist/index.css",
+    "./theme": "./dist/theme.css",
+    "./components": "./dist/components.css",
+    "./tw": "./src/index.css",
+    "./tw/theme": "./src/theme.css",
+    "./tw/components": "./src/components.css"
+  },
+  "scripts": {
+    "build": "pnpm build:styles",
+    "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components.css -o ./dist/components.css --minify",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "test": "pnpm typecheck",
+    "test:watch": "pnpm typecheck --watch",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
