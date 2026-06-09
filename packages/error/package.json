@@ -1,0 +1,45 @@
+{
+  "name": "@codenhub/error",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./registries": {
+      "types": "./dist/registries/index.d.ts",
+      "import": "./dist/registries/index.js"
+    },
+    "./registries/browser": {
+      "types": "./dist/registries/browser.d.ts",
+      "import": "./dist/registries/browser.js"
+    },
+    "./registries/supabase": {
+      "types": "./dist/registries/supabase.d.ts",
+      "import": "./dist/registries/supabase.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --dts --clean",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
