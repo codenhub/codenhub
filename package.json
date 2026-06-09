@@ -20,7 +20,7 @@
     "@tailwindcss/cli": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "tsup": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
