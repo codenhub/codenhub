@@ -86,8 +86,18 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 
 - Comments explain WHY, not WHAT or HOW.
 - Remove and avoid redundant comments, decorations and outdated docs.
-- Use JSDoc/TSDoc for exported public APIs when the signature alone is not enough.
+- Public package APIs MUST have JSDoc/TSDoc in source, even when the README also documents them.
 - Package READMEs MUST follow `.docs/specs/packages-readme.md` when the package is public.
+
+For `private: false` packages under `packages/*`, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
+
+Public API JSDoc/TSDoc MUST describe consumer-facing purpose, important inputs or properties, return values or side effects, and observable error or failure behavior. It MUST NOT restate the type signature in prose or document private implementation details.
+
+Internal exports used only to compose package entrypoints SHOULD stay unexported from public entrypoints. If an internal export is necessary, mark it with `@internal` and keep it out of package README examples.
+
+When changing package `exports`, public symbols, public behavior, or observable failure behavior, update source JSDoc/TSDoc and the package README/reference material in the same change.
+
+Oxlint validates JSDoc structure and tag quality where supported, but current Oxlint rules do not fully detect missing docs for package public exports. Code authors and reviewers MUST enforce public API JSDoc/TSDoc coverage during implementation and review until a dedicated lint rule or custom plugin exists.
 
 ## Formatting, linting, and type checking
 
