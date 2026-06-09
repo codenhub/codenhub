@@ -1,11 +1,11 @@
 {
   "name": "@codenhub/ui-kit",
-  "private": false,
-  "type": "module",
   "version": "0.0.1",
+  "private": false,
   "files": [
     "dist"
   ],
+  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,6 +19,9 @@
       "import": "./dist/scripts/index.js"
     },
     "./styles": "./dist/styles/index.css"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "pnpm build:scripts && pnpm build:styles",
@@ -37,8 +40,5 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

@@ -41,11 +41,15 @@ function resolveIcon(classValue: string): ResolvedIcon | null {
   const classes = splitClasses(classValue);
 
   for (const className of classes) {
-    if (!className.startsWith(ICON_MARKER_PREFIX)) continue;
+    if (!className.startsWith(ICON_MARKER_PREFIX)) {
+      continue;
+    }
 
     const iconNameCandidate = className.slice(ICON_MARKER_PREFIX.length);
     const markup = ICON_MARKUP_MAP.get(iconNameCandidate);
-    if (!markup) continue;
+    if (!markup) {
+      continue;
+    }
 
     return { iconClass: className, markup };
   }
@@ -76,7 +80,9 @@ function buildSvgReplacement(
   attrsAfterClass: string,
 ): string {
   const icon = resolveIcon(classValue);
-  if (!icon) return match;
+  if (!icon) {
+    return match;
+  }
 
   const extraClasses = stripIconClass(classValue, icon.iconClass);
   const classAttr = extraClasses ? ` class="${extraClasses}"` : "";
@@ -105,11 +111,17 @@ export default function iconsPlugin(): Plugin {
 
     transform(code: string, id: string) {
       const fileId = id.split("?", 1)[0];
-      if (!TRANSFORM_EXTENSIONS.test(fileId)) return null;
-      if (!code.includes(ICON_MARKER_PREFIX)) return null;
+      if (!TRANSFORM_EXTENSIONS.test(fileId)) {
+        return null;
+      }
+      if (!code.includes(ICON_MARKER_PREFIX)) {
+        return null;
+      }
 
       const transformed = replaceIconTags(code);
-      if (transformed === code) return null;
+      if (transformed === code) {
+        return null;
+      }
 
       return { code: transformed, map: null };
     },

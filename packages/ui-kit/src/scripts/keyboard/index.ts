@@ -351,9 +351,15 @@ export class Keyboard {
   }
 
   private getModifierState(event: KeyboardEvent, mod: ModifierKey): boolean {
-    if (mod === "ctrl") return event.ctrlKey;
-    if (mod === "alt") return event.altKey;
-    if (mod === "shift") return event.shiftKey;
+    if (mod === "ctrl") {
+      return event.ctrlKey;
+    }
+    if (mod === "alt") {
+      return event.altKey;
+    }
+    if (mod === "shift") {
+      return event.shiftKey;
+    }
     return event.metaKey;
   }
 

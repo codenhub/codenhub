@@ -1,8 +1,0 @@
-dist
-node_modules
-package-lock.json
-pnpm-lock.yaml
-bun.lock
-test-results
-**/test-results
-**/tests/**/output.css

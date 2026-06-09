@@ -24,19 +24,29 @@ export function array<T = unknown>(val: unknown): ArrayValidators<T> {
 
   return {
     minLength(n: number): Result<T[]> {
-      if (!isValidLengthLimit(n)) return err("Minimum length must be a finite non-negative number");
-      if (v.length < n) return err(`Must contain at least ${n} items`);
+      if (!isValidLengthLimit(n)) {
+        return err("Minimum length must be a finite non-negative number");
+      }
+      if (v.length < n) {
+        return err(`Must contain at least ${n} items`);
+      }
       return ok(v);
     },
 
     maxLength(n: number): Result<T[]> {
-      if (!isValidLengthLimit(n)) return err("Maximum length must be a finite non-negative number");
-      if (v.length > n) return err(`Must contain at most ${n} items`);
+      if (!isValidLengthLimit(n)) {
+        return err("Maximum length must be a finite non-negative number");
+      }
+      if (v.length > n) {
+        return err(`Must contain at most ${n} items`);
+      }
       return ok(v);
     },
 
     notEmpty(): Result<T[]> {
-      if (v.length === 0) return err("Array cannot be empty");
+      if (v.length === 0) {
+        return err("Array cannot be empty");
+      }
       return ok(v);
     },
   };

@@ -3,6 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { feedback } from "../feedback";
 import { KEYS, keyboard } from "./index";
 
+interface KeyboardTestAccess {
+  getDefaultTarget(): EventTarget | undefined;
+}
+
 vi.mock("../feedback", () => ({
   feedback: {
     register: vi.fn((result) => result),
@@ -214,8 +218,7 @@ describe("Keyboard", () => {
   it("should report missing target errors silently", () => {
     const handler = vi.fn();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.spyOn(keyboard as any, "getDefaultTarget").mockReturnValueOnce(undefined);
+    vi.spyOn(keyboard as unknown as KeyboardTestAccess, "getDefaultTarget").mockReturnValueOnce(undefined);
     const reg = keyboard.register(KEYS.escape, handler);
 
     reg.unregister();

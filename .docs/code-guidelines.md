@@ -1,7 +1,7 @@
 # Coding guidelines
 
 **Status:** APPROVED
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-09
 
 This document outlines patterns, conventions and guidelines to follow when working on this codebase.
 
@@ -94,5 +94,5 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Code MUST pass `pnpm format:check`.
 - Code MUST pass `pnpm lint:check`.
 - Code MUST pass `pnpm typecheck` for changed packages or the full workspace when practical.
-- Formatting is owned by Prettier. Do not manually fight formatter output.
+- Formatting is owned by Oxfmt. Do not manually fight formatter output.
 - Lint rules are enforceable project policy. Change the rule or document an exception instead of ignoring it broadly.

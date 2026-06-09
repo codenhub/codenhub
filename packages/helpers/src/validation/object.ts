@@ -8,13 +8,19 @@ interface ObjectValidators {
 }
 
 const getObjectType = (val: unknown): string => {
-  if (val === null) return "null";
-  if (Array.isArray(val)) return "array";
+  if (val === null) {
+    return "null";
+  }
+  if (Array.isArray(val)) {
+    return "array";
+  }
   return typeof val;
 };
 
 const isPlainObject = (val: unknown): val is PlainObject => {
-  if (typeof val !== "object" || val === null || Array.isArray(val)) return false;
+  if (typeof val !== "object" || val === null || Array.isArray(val)) {
+    return false;
+  }
 
   const prototype = Object.getPrototypeOf(val);
   return prototype === Object.prototype || prototype === null;
@@ -50,7 +56,9 @@ export function object(val: unknown): ObjectValidators {
 
     hasKeys(keys: string[]): Result<PlainObject> {
       const missingKey = keys.find((key) => !Object.hasOwn(v, key));
-      if (missingKey !== undefined) return err(`Missing required key: ${missingKey}`);
+      if (missingKey !== undefined) {
+        return err(`Missing required key: ${missingKey}`);
+      }
       return ok(v);
     },
   };

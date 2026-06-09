@@ -1,12 +1,12 @@
 {
   "name": "@codenhub/styles",
-  "private": false,
-  "type": "module",
   "version": "0.0.1",
+  "private": false,
   "files": [
     "dist",
     "src"
   ],
+  "type": "module",
   "exports": {
     ".": "./dist/index.css",
     "./theme": "./dist/theme.css",
@@ -14,6 +14,9 @@
     "./tw": "./src/index.css",
     "./tw/theme": "./src/theme.css",
     "./tw/components": "./src/components.css"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "pnpm build:styles",
@@ -27,6 +30,11 @@
     "test:watch": "playwright test --ui",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:"
+  },
   "peerDependencies": {
     "tailwindcss": ">=4.0.0"
   },
@@ -34,13 +42,5 @@
     "tailwindcss": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@playwright/test": "catalog:",
-    "tailwindcss": "catalog:",
-    "typescript": "catalog:"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }
