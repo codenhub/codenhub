@@ -19,8 +19,12 @@
     "build": "pnpm build:styles",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components.css -o ./dist/components.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
-    "test": "pnpm typecheck",
-    "test:watch": "pnpm typecheck --watch",
+    "test": "pnpm typecheck && pnpm test:build && pnpm test:visual",
+    "test:build": "pnpm build && pnpm test:build:vanilla && pnpm test:build:tw",
+    "test:build:tw": "tailwindcss -i ./tests/build/index.css -o ./tests/build/output.css --minify",
+    "test:build:vanilla": "tailwindcss -i ./tests/vanilla/index.css -o ./tests/vanilla/output.css --minify",
+    "test:visual": "playwright test",
+    "test:watch": "playwright test --ui",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "peerDependencies": {
@@ -32,6 +36,7 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:"
   },
