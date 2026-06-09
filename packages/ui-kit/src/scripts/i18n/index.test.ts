@@ -290,7 +290,10 @@ describe("I18n", () => {
     expect(document.querySelector("p")?.textContent).toBe("Saiba mais");
     expect(localStorage.getItem("test-i18n")).toBe(JSON.stringify({ locale: "pt-BR" }));
     expect(listener).toHaveBeenCalledTimes(1);
-    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
+    const event = listener.mock.calls[0]?.[0];
+
+    expect(event).toBeInstanceOf(CustomEvent);
+    expect((event as CustomEvent).detail).toEqual({
       locale: "pt-BR",
       previousLocale: "en-US",
     });
@@ -338,7 +341,10 @@ describe("I18n", () => {
     await i18n.init();
 
     expect(listener).toHaveBeenCalledTimes(1);
-    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
+    const event = listener.mock.calls[0]?.[0];
+
+    expect(event).toBeInstanceOf(CustomEvent);
+    expect((event as CustomEvent).detail).toEqual({
       locale: "en-US",
       translationsAvailable: true,
     });
@@ -355,7 +361,10 @@ describe("I18n", () => {
     await initPromise;
 
     expect(i18n.ready).toBe(true);
-    expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
+    const event = listener.mock.calls[0]?.[0];
+
+    expect(event).toBeInstanceOf(CustomEvent);
+    expect((event as CustomEvent).detail).toEqual({
       locale: "en-US",
       translationsAvailable: false,
     });
