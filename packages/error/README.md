@@ -117,7 +117,7 @@ interface ErrorRegistry {
 }
 ```
 
-Code, name, exact message, and prefix matches are deterministic known errors. Pattern matches are heuristic and should be treated as unexpected errors with better user-facing feedback.
+Code, name, exact message, and prefix matches are deterministic known errors. When multiple prefixes match the same message, the longest normalized prefix wins. Pattern matches are heuristic and should be treated as unexpected errors with better user-facing feedback.
 
 `AppError.registry` is mutable and starts empty. `createErrorRegistry()` creates another empty registry with the same bucket API.
 

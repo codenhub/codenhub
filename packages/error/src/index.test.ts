@@ -235,6 +235,18 @@ describe("AppError", () => {
     expect(appError.message).toBe("Surface failure.");
   });
 
+  it("uses the longest matching prefix when prefixes overlap", () => {
+    const registry = createErrorRegistry();
+
+    registry.prefixes.add("Upload failed", { message: "Upload failed." });
+    registry.prefixes.add("Upload failed: image", { message: "Image upload failed." });
+
+    const appError = new AppError(new Error("Upload failed: image too large"), { registry });
+
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Image upload failed.");
+  });
+
   it("returns existing AppError details when wrapping AppError", () => {
     const registry = createErrorRegistry();
 

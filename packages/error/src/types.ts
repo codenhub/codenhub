@@ -50,7 +50,7 @@ export interface ErrorPatternDefinition extends ErrorFeedback {
   pattern: RegExp;
 }
 
-/** Registry bucket for known errors matched by message prefix. */
+/** Registry bucket for known errors matched by longest normalized message prefix. */
 export interface ErrorPrefixRegistryBucket {
   /** Adds prefix feedback after normalizing trailing sentence punctuation. */
   add(prefix: string, feedback: ErrorFeedback): void;

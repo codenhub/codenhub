@@ -113,9 +113,10 @@ const getKnownMessageFeedback = (registry: ErrorRegistry, message: string): Erro
     }
   }
 
-  const prefixDefinition = registry.prefixes.values().find((definition) => {
-    return normalizedMessage.startsWith(definition.prefix);
-  });
+  const prefixDefinition = registry.prefixes
+    .values()
+    .filter((definition) => normalizedMessage.startsWith(definition.prefix))
+    .sort((firstDefinition, secondDefinition) => secondDefinition.prefix.length - firstDefinition.prefix.length)[0];
 
   if (prefixDefinition === undefined) {
     return null;

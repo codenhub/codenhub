@@ -99,6 +99,12 @@ importers:
 
   packages/error:
     devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
