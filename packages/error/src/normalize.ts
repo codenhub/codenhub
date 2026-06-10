@@ -22,8 +22,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
 };
 
+const getRecordField = (source: Record<string, unknown>, key: string): unknown => {
+  try {
+    return source[key];
+  } catch {
+    return undefined;
+  }
+};
+
 const getStringField = (source: Record<string, unknown>, key: string): string | null => {
-  const value = source[key];
+  const value = getRecordField(source, key);
   return typeof value === "string" ? value : null;
 };
 
@@ -64,7 +72,7 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
     return [];
   }
 
-  return ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => error[fieldName]).filter(
+  return ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => getRecordField(error, fieldName)).filter(
     (value) => value !== undefined && value !== null,
   );
 };

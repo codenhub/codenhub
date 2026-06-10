@@ -26,13 +26,13 @@ export interface ErrorFeedback {
 
 /** Registry bucket for exact string identifiers such as error codes, names, or messages. */
 export interface ErrorRegistryBucket {
-  /** Adds or replaces feedback for one identifier. */
+  /** Adds or replaces feedback for one normalized non-empty identifier, throwing `TypeError` for invalid input. */
   add(identifier: string, feedback: ErrorFeedback): void;
-  /** Adds or replaces feedback for multiple identifiers. */
+  /** Adds or replaces feedback for multiple normalized identifiers, throwing `TypeError` when any entry is invalid. */
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
   /** Removes all entries from this bucket. */
   clear(): void;
-  /** Returns a defensive copy of feedback for an identifier when present. */
+  /** Returns a defensive copy of feedback for a normalized identifier when present. */
   get(identifier: string): ErrorFeedback | undefined;
   /** Returns defensive copies of all bucket entries. */
   values(): IterableIterator<[string, ErrorFeedback]>;
@@ -52,9 +52,9 @@ export interface ErrorPatternDefinition extends ErrorFeedback {
 
 /** Registry bucket for known errors matched by longest normalized message prefix. */
 export interface ErrorPrefixRegistryBucket {
-  /** Adds prefix feedback after normalizing trailing sentence punctuation. */
+  /** Adds prefix feedback after normalization, throwing `TypeError` for empty prefixes or invalid feedback. */
   add(prefix: string, feedback: ErrorFeedback): void;
-  /** Adds multiple prefix feedback entries. */
+  /** Adds multiple prefix feedback entries, throwing `TypeError` when any entry is invalid. */
   addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
   /** Removes all prefix entries. */
   clear(): void;
@@ -64,9 +64,9 @@ export interface ErrorPrefixRegistryBucket {
 
 /** Registry bucket for unexpected errors matched heuristically by message pattern. */
 export interface ErrorPatternRegistryBucket {
-  /** Adds pattern feedback. The regular expression is cloned before storage. */
+  /** Adds pattern feedback, throwing `TypeError` for non-`RegExp` patterns or invalid feedback. */
   add(pattern: RegExp, feedback: ErrorFeedback): void;
-  /** Adds multiple pattern feedback entries. */
+  /** Adds multiple pattern feedback entries, throwing `TypeError` when any entry is invalid. */
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
   /** Removes all pattern entries. */
   clear(): void;

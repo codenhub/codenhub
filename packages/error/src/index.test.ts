@@ -148,6 +148,18 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
+  it("matches exact identifiers after registry normalization", () => {
+    const registry = createErrorRegistry();
+
+    registry.codes.add(" invalid_credentials. ", { message: "Invalid email or password." });
+
+    expect(registry.codes.get("invalid_credentials")).toEqual({ message: "Invalid email or password." });
+    expect(new AppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
+      type: "known",
+      message: "Invalid email or password.",
+    });
+  });
+
   it("merges mappings from ready or app-owned registries", () => {
     const sourceRegistry = createErrorRegistry();
     const targetRegistry = createErrorRegistry();
@@ -221,6 +233,22 @@ describe("AppError", () => {
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Known failure.");
     expect(appError.originalError).toBe(originalError);
+  });
+
+  it("does not throw when unknown error fields have throwing accessors", () => {
+    const error = {
+      get message(): string {
+        throw new Error("Getter failed.");
+      },
+    };
+
+    expect(() => new AppError(error)).not.toThrow();
+
+    const appError = new AppError(error);
+
+    expect(appError.type).toBe("unknown");
+    expect(appError.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
+    expect(appError.originalError).toBe(error);
   });
 
   it("keeps surface classifications before nested wrapper errors", () => {

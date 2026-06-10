@@ -50,7 +50,7 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
     assertNonEmptyIdentifier(identifier, "identifier");
     assertFeedback(feedback);
 
-    entries.set(identifier, cloneFeedback(feedback));
+    entries.set(normalizeErrorIdentifier(identifier), cloneFeedback(feedback));
   };
 
   return {
@@ -64,7 +64,7 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
       entries.clear();
     },
     get(identifier: string): ErrorFeedback | undefined {
-      const feedback = entries.get(identifier);
+      const feedback = entries.get(normalizeErrorIdentifier(identifier));
       return feedback === undefined ? undefined : cloneFeedback(feedback);
     },
     values(): IterableIterator<[string, ErrorFeedback]> {

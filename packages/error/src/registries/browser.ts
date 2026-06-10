@@ -1,6 +1,9 @@
 import { AppError } from "../index";
 
-/** Opt-in registry preset for common browser and Web API errors. */
+/**
+ * Opt-in mutable registry preset for common browser and Web API errors.
+ * Importing this preset does not mutate `AppError.registry` and does not require browser globals.
+ */
 export const browserErrorRegistry = AppError.createRegistry();
 
 browserErrorRegistry.names.addList([

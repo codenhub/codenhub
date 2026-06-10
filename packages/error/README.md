@@ -149,6 +149,8 @@ interface ErrorPatternRegistryBucket {
 
 `values()` returns defensive copies. Pattern buckets clone `RegExp` values so global or sticky regex state does not leak across classifications.
 
+`add()` and `addList()` validate entries immediately and throw `TypeError` for invalid input. Exact and prefix identifiers must be non-empty strings after trimming whitespace and trailing sentence punctuation. Exact identifiers are stored and looked up in that normalized form. Feedback must be an object with a non-empty `message`; optional `messageKey` and `source` values must be strings, and optional `retryable` must be a boolean. Pattern buckets only accept `RegExp` patterns.
+
 #### `ErrorFeedback`
 
 Feedback stored in registry buckets.
@@ -266,6 +268,8 @@ import { browserErrorRegistry, supabaseErrorRegistry } from "@codenhub/error/reg
 
 Ready registries are plain `ErrorRegistry` values intended to be merged into `AppError.registry` or another app-owned registry. Importing a preset does not mutate `AppError.registry`.
 
+The preset registry objects are mutable like any other `ErrorRegistry`. Treat imported presets as shared read-only inputs and merge them into an app-owned registry before adding app-specific mappings.
+
 ### `@codenhub/error/registries/browser`
 
 Browser and Web API error mappings.
@@ -276,6 +280,8 @@ import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 
 Use this preset when normalizing `DOMException`, fetch, storage, abort, permissions, quota, and other browser API errors.
 
+Importing this preset does not require `window`, `document`, `DOMException`, or other browser globals to exist.
+
 ### `@codenhub/error/registries/supabase`
 
 Supabase error mappings.
@@ -285,6 +291,8 @@ import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 ```
 
 Use this preset when normalizing Supabase Auth, PostgREST, Storage, Realtime, and Edge Functions errors.
+
+Importing this preset only creates static error mappings. It does not contact Supabase services or require Supabase client packages.
 
 ## Examples
 
