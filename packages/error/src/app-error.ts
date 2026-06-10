@@ -26,6 +26,7 @@ export class AppError extends Error {
 
   /** Classification assigned after registry lookup and fallback handling. */
   readonly type: AppErrorType;
+  /** User-facing message resolved from registry feedback or fallback handling. */
   declare readonly message: string;
   /** Optional localization key from matched registry feedback. */
   readonly messageKey: string | null;

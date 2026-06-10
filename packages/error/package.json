@@ -4,8 +4,12 @@
   "private": false,
   "description": "Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/error"
+  },
   "files": [
-    "NOTICE",
     "dist"
   ],
   "type": "module",
