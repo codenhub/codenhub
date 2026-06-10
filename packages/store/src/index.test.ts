@@ -60,27 +60,39 @@ describe("Store", () => {
       expect(store.get()).toEqual({ count: 7 });
     });
 
-    it("should fall back to initialState and warn when stored JSON is malformed", () => {
+    it("should fall back to initialState and report an error when stored JSON is malformed", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const onError = vi.fn();
       localStorage.setItem("key-get-malformed", "{{not valid json}}");
 
-      const store = createStore({ storageKey: "key-get-malformed", initialState: { name: "fallback" } });
+      const store = createStore({ storageKey: "key-get-malformed", initialState: { name: "fallback" }, onError });
       expect(store.get()).toEqual({ name: "fallback" });
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to parse stored JSON"), expect.anything());
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-parse-failed",
+        message: 'Failed to parse stored JSON for key "key-get-malformed".',
+        storageKey: "key-get-malformed",
+        cause: expect.anything(),
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it("should fall back to initialState and warn when localStorage.getItem throws", () => {
+    it("should fall back to initialState and report an error when localStorage.getItem throws", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const error = new Error("SecurityError");
+      const onError = vi.fn();
       vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-        throw new Error("SecurityError");
+        throw error;
       });
 
-      const store = createStore({ storageKey: "key-get-throws", initialState: { name: "fallback" } });
+      const store = createStore({ storageKey: "key-get-throws", initialState: { name: "fallback" }, onError });
       expect(store.get()).toEqual({ name: "fallback" });
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to read from localStorage"),
-        expect.anything(),
-      );
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-read-failed",
+        message: 'Failed to read from localStorage for key "key-get-throws".',
+        storageKey: "key-get-throws",
+        cause: error,
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
     it("should fall back to initialState when localStorage is unavailable", () => {
@@ -107,19 +119,24 @@ describe("Store", () => {
       expect(store.get()).toEqual({ a: 99, b: 99 });
     });
 
-    it("should return false and warn when localStorage.setItem throws", () => {
+    it("should return false and report an error when localStorage.setItem throws", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const error = new DOMException("QuotaExceededError");
+      const onError = vi.fn();
       vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
-        throw new DOMException("QuotaExceededError");
+        throw error;
       });
 
-      const store = createStore({ storageKey: "key-set-fail", initialState: { count: 0 } });
+      const store = createStore({ storageKey: "key-set-fail", initialState: { count: 0 }, onError });
       const didWrite = store.set({ count: 1 });
       expect(didWrite).toBe(false);
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to write to localStorage"),
-        expect.anything(),
-      );
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-write-failed",
+        message: 'Failed to write to localStorage for key "key-set-fail".',
+        storageKey: "key-set-fail",
+        cause: error,
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
     it("should return false when localStorage is unavailable", () => {
@@ -261,15 +278,23 @@ describe("Store", () => {
       expect(store.get()).toEqual({ value: "stored" });
     });
 
-    it("should warn and not throw when localStorage.removeItem throws", () => {
+    it("should report an error and not throw when localStorage.removeItem throws", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const error = new Error("SecurityError");
+      const onError = vi.fn();
       vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
-        throw new Error("SecurityError");
+        throw error;
       });
 
-      const store = createStore({ storageKey: "key-clear-throws", initialState: { value: "x" } });
+      const store = createStore({ storageKey: "key-clear-throws", initialState: { value: "x" }, onError });
       expect(() => store.clear()).not.toThrow();
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Failed to clear localStorage"), expect.anything());
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-clear-failed",
+        message: 'Failed to clear localStorage for key "key-clear-throws".',
+        storageKey: "key-clear-throws",
+        cause: error,
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
     it("should do nothing when localStorage is unavailable", () => {
@@ -295,8 +320,9 @@ describe("Store", () => {
       expect(store.get()).toEqual({ name: "valid" });
     });
 
-    it("should fall back to initialState and warn when the validator rejects stored value", () => {
+    it("should fall back to initialState and report an error when the validator rejects stored value", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const onError = vi.fn();
 
       localStorage.setItem("key-validate-fail", JSON.stringify({ wrong: "shape" }));
 
@@ -304,9 +330,15 @@ describe("Store", () => {
         storageKey: "key-validate-fail",
         initialState: { name: "default" },
         validate: isValidSchema,
+        onError,
       });
       expect(store.get()).toEqual({ name: "default" });
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("failed schema validation"));
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-validation-failed",
+        message: 'Stored value for key "key-validate-fail" failed schema validation.',
+        storageKey: "key-validate-fail",
+      });
+      expect(warnSpy).not.toHaveBeenCalled();
     });
 
     it("should accept stored values without a validator", () => {

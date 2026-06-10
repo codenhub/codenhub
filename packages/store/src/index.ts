@@ -2,6 +2,23 @@ type OptionalKeys<TSchema extends object> = {
   [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
 }[keyof TSchema];
 
+/** Recoverable store failure reported through `CreateStoreOptions.onError`. */
+export interface StoreErrorEvent {
+  /** Stable error code describing which storage operation failed. */
+  code:
+    | "storage-read-failed"
+    | "storage-write-failed"
+    | "storage-clear-failed"
+    | "storage-parse-failed"
+    | "storage-validation-failed";
+  /** Human-readable diagnostic message safe for logs or developer tooling. */
+  message: string;
+  /** localStorage key associated with the failed operation. */
+  storageKey: string;
+  /** Original thrown value when the failure came from an exception. */
+  cause?: unknown;
+}
+
 /**
  * Keys that can be removed from a store without violating the schema shape.
  *
@@ -24,7 +41,7 @@ export interface Store<TSchema extends object> {
    *
    * When storage is empty, unavailable, unreadable, invalid JSON, or rejected by `validate`,
    * the store falls back to the initial state. Recoverable read, parse, and validation
-   * failures are reported with `console.warn`.
+   * failures are reported through `CreateStoreOptions.onError` when provided.
    *
    * @returns Current state object.
    */
@@ -78,7 +95,8 @@ export interface Store<TSchema extends object> {
    * Removes the stored entry for this store key from localStorage.
    *
    * After clearing, subsequent reads return the initial state. If storage is unavailable,
-   * the method does nothing; if removal fails, it reports the failure with `console.warn`.
+   * the method does nothing; if removal fails, it reports the failure through
+   * `CreateStoreOptions.onError` when provided.
    */
   clear(): void;
 }
@@ -111,6 +129,16 @@ export interface CreateStoreOptions<TSchema extends object> {
    * @returns `true` if the value matches the expected schema.
    */
   validate?: (raw: unknown) => raw is TSchema;
+
+  /**
+   * Optional hook for recoverable storage, parsing, and validation failures.
+   *
+   * The store does not log by default. Use this hook for diagnostics, telemetry,
+   * user feedback, or app-owned error normalization.
+   *
+   * @param error - Store-owned error event with a stable code, storage key, message, and optional cause.
+   */
+  onError?: (error: StoreErrorEvent) => void;
 }
 
 /**
@@ -133,6 +161,10 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
   const { storageKey } = options;
   const initialState = structuredClone(options.initialState);
 
+  const reportError = (error: StoreErrorEvent): void => {
+    options.onError?.(error);
+  };
+
   const isStorageAvailable = (): boolean => {
     try {
       return typeof localStorage !== "undefined" && localStorage !== null;
@@ -148,7 +180,12 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       try {
         raw = localStorage.getItem(storageKey);
       } catch (error) {
-        console.warn(`[Store] Failed to read from localStorage for key "${storageKey}":`, error);
+        reportError({
+          code: "storage-read-failed",
+          message: `Failed to read from localStorage for key "${storageKey}".`,
+          storageKey,
+          cause: error,
+        });
       }
     }
 
@@ -160,15 +197,22 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       const parsed: unknown = JSON.parse(raw);
 
       if (options.validate !== undefined && !options.validate(parsed)) {
-        console.warn(
-          `[Store] Stored value for key "${storageKey}" failed schema validation. Falling back to initial state.`,
-        );
+        reportError({
+          code: "storage-validation-failed",
+          message: `Stored value for key "${storageKey}" failed schema validation.`,
+          storageKey,
+        });
         return structuredClone(initialState);
       }
 
       return structuredClone(parsed as TSchema);
     } catch (error) {
-      console.warn(`[Store] Failed to parse stored JSON for key "${storageKey}":`, error);
+      reportError({
+        code: "storage-parse-failed",
+        message: `Failed to parse stored JSON for key "${storageKey}".`,
+        storageKey,
+        cause: error,
+      });
       return structuredClone(initialState);
     }
   };
@@ -182,7 +226,12 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       localStorage.setItem(storageKey, JSON.stringify(state));
       return true;
     } catch (error) {
-      console.warn(`[Store] Failed to write to localStorage for key "${storageKey}":`, error);
+      reportError({
+        code: "storage-write-failed",
+        message: `Failed to write to localStorage for key "${storageKey}".`,
+        storageKey,
+        cause: error,
+      });
       return false;
     }
   };
@@ -222,7 +271,12 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       try {
         localStorage.removeItem(storageKey);
       } catch (error) {
-        console.warn(`[Store] Failed to clear localStorage for key "${storageKey}":`, error);
+        reportError({
+          code: "storage-clear-failed",
+          message: `Failed to clear localStorage for key "${storageKey}".`,
+          storageKey,
+          cause: error,
+        });
       }
     },
   };

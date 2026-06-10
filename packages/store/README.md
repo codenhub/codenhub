@@ -1,6 +1,6 @@
 # @codenhub/store
 
-Typed localStorage-backed state stores for browser apps. The package creates small object stores scoped by a storage key, persists JSON to `localStorage`, returns cloned state snapshots, snapshots the initial fallback state at store creation, and falls back safely when browser storage is empty, invalid, blocked, or unavailable.
+Typed localStorage-backed state stores for browser apps. The package creates small object stores scoped by a storage key, persists JSON to `localStorage`, returns cloned state snapshots, snapshots the initial fallback state at store creation, falls back safely when browser storage is empty, invalid, blocked, or unavailable, and reports recoverable failures only through an optional `onError` hook.
 
 ## Installation
 
@@ -54,10 +54,15 @@ const settings = createStore<UserSettings>({
   storageKey: "app:user-settings",
   initialState: { density: "comfortable" },
   validate: isUserSettings,
+  onError(error) {
+    console.warn(error.message, error.cause);
+  },
 });
 
 const current = settings.get();
 ```
+
+`@codenhub/store` does not log by default. Provide `onError` when the app should report recoverable storage, parsing, or validation failures.
 
 ## Reference
 
@@ -67,7 +72,7 @@ Primary entrypoint for the store API.
 
 ```ts
 import { createStore } from "@codenhub/store";
-import type { CreateStoreOptions, RemovableStoreKey, Store } from "@codenhub/store";
+import type { CreateStoreOptions, RemovableStoreKey, Store, StoreErrorEvent } from "@codenhub/store";
 ```
 
 Supported import paths:
@@ -118,7 +123,7 @@ Behavior:
 
 - Returns a cloned copy of the stored state when storage contains valid JSON.
 - Returns a cloned copy of the initial-state snapshot when storage is empty.
-- Returns a cloned copy of the initial-state snapshot and logs a warning when storage reads throw, stored JSON is malformed, or `options.validate` rejects the parsed value.
+- Returns a cloned copy of the initial-state snapshot and calls `options.onError` when provided if storage reads throw, stored JSON is malformed, or `options.validate` rejects the parsed value.
 - Does not remove invalid stored values.
 
 ##### `set()`
@@ -129,7 +134,7 @@ Replaces the full persisted state.
 function set(nextState: TSchema): boolean;
 ```
 
-Returns `true` when `nextState` is serialized and written to `localStorage`. Returns `false` when storage is unavailable. Returns `false` and logs a warning when writing fails, including serialization errors and storage quota errors.
+Returns `true` when `nextState` is serialized and written to `localStorage`. Returns `false` when storage is unavailable. Returns `false` and calls `options.onError` when provided if writing fails, including serialization errors and storage quota errors.
 
 ##### `patch()`
 
@@ -179,7 +184,7 @@ Removes this store's `localStorage` entry.
 function clear(): void;
 ```
 
-After `clear()`, `get()` returns a cloned copy of the initial-state snapshot. If storage is unavailable, `clear()` does nothing. If removal throws, `clear()` logs a warning and does not rethrow.
+After `clear()`, `get()` returns a cloned copy of the initial-state snapshot. If storage is unavailable, `clear()` does nothing. If removal throws, `clear()` calls `options.onError` when provided and does not rethrow.
 
 #### `RemovableStoreKey<TSchema>`
 
@@ -202,16 +207,38 @@ interface CreateStoreOptions<TSchema extends object> {
   storageKey: string;
   initialState: TSchema;
   validate?: (raw: unknown) => raw is TSchema;
+  onError?: (error: StoreErrorEvent) => void;
 }
 ```
 
-| Property       | Type                               | Default     | Description                                                                            |
-| -------------- | ---------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
-| `storageKey`   | `string`                           | Required    | Key used for the `localStorage` entry.                                                 |
-| `initialState` | `TSchema`                          | Required    | Fallback state snapshotted at creation and returned when no valid stored state exists. |
-| `validate`     | `(raw: unknown) => raw is TSchema` | `undefined` | Optional guard used to validate parsed stored JSON before it is returned.              |
+| Property       | Type                               | Default     | Description                                                                                             |
+| -------------- | ---------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------- |
+| `storageKey`   | `string`                           | Required    | Key used for the `localStorage` entry.                                                                  |
+| `initialState` | `TSchema`                          | Required    | Fallback state snapshotted at creation and returned when no valid stored state exists.                  |
+| `validate`     | `(raw: unknown) => raw is TSchema` | `undefined` | Optional guard used to validate parsed stored JSON before it is returned.                               |
+| `onError`      | `(error: StoreErrorEvent) => void` | `undefined` | Optional hook for recoverable storage, parsing, and validation failures. No logging happens by default. |
 
 The validator only runs for values read from storage. It does not validate values passed to `set()`, `patch()`, or `setItem()`.
+
+#### `StoreErrorEvent`
+
+Event passed to `CreateStoreOptions.onError` for recoverable failures.
+
+```ts
+interface StoreErrorEvent {
+  code:
+    | "storage-read-failed"
+    | "storage-write-failed"
+    | "storage-clear-failed"
+    | "storage-parse-failed"
+    | "storage-validation-failed";
+  message: string;
+  storageKey: string;
+  cause?: unknown;
+}
+```
+
+`message` is intended for diagnostics. `code` is the stable field to branch on. `cause` is present when the failure came from a thrown value.
 
 ## Examples
 
@@ -242,6 +269,45 @@ if (!didSave) {
   // Storage may be blocked, full, or unavailable.
   // Keep using app-owned in-memory state if persistence matters.
 }
+```
+
+### Handle Store Errors
+
+Use `onError` for app-owned logging or telemetry. This package does not call `console.warn` unless the app provides that behavior.
+
+```ts
+import { createStore } from "@codenhub/store";
+
+const draft = createStore({
+  storageKey: "app:draft",
+  initialState: { body: "" },
+  onError(error) {
+    console.warn(error.message, error.cause);
+  },
+});
+
+draft.get();
+```
+
+Apps that use `@codenhub/error` can normalize the original cause without coupling `@codenhub/store` to the error package.
+
+```ts
+import { AppError } from "@codenhub/error";
+import { createStore } from "@codenhub/store";
+
+const preferences = createStore({
+  storageKey: "app:preferences",
+  initialState: { colorScheme: "light" },
+  onError(error) {
+    const appError = new AppError(error.cause ?? error, {
+      fallbackMessage: error.message,
+    });
+
+    console.warn(appError.message, appError);
+  },
+});
+
+preferences.get();
 ```
 
 ### Optional Keys
@@ -277,4 +343,4 @@ console.log(session.getItem("token"));
 - `patch()` is a shallow merge.
 - The package does not synchronize state across tabs, windows, components, or subscribers.
 - The package does not encrypt, redact, or secure stored data. Do not store secrets or sensitive personal data in `localStorage`.
-- Warnings are logged with `console.warn` for recoverable storage and parsing failures.
+- The package does not log by default. Use `onError` for app-owned logging, telemetry, user feedback, or error normalization.
