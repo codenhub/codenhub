@@ -13,11 +13,13 @@
     "lint:check": "oxlint",
     "lint:fix": "oxlint --fix",
     "test": "pnpm -r --if-present test",
+    "test:coverage": "pnpm -r --if-present test:coverage",
     "test:watch": "pnpm -r --if-present test:watch",
     "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "tsdown": "catalog:",

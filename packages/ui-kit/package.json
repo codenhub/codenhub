@@ -29,6 +29,7 @@
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },

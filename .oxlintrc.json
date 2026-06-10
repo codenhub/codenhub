@@ -1,6 +1,13 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "ignorePatterns": ["dist/**", "coverage/**", "test-results/**", "**/test-results/**", "**/tests/**/output.css"],
+  "ignorePatterns": [
+    "dist/**",
+    "coverage/**",
+    "**/coverage/**",
+    "test-results/**",
+    "**/test-results/**",
+    "**/tests/**/output.css"
+  ],
   "env": {
     "browser": true,
     "node": true

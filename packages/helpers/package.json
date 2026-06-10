@@ -34,6 +34,7 @@
     "build": "tsdown src/index.ts src/error/index.ts src/result/index.ts src/validation/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
