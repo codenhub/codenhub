@@ -1,3 +1,4 @@
+/** Window event name dispatched with `ThemeChangeDetail` after a theme change is applied in browser environments. */
 export const THEME_CHANGE_EVENT = "themechange";
 
 const DEFAULT_STORAGE_KEY = "app-theme-preference";
@@ -6,42 +7,66 @@ const DARK_CLASS = "dark";
 const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 const CLASS_TOKEN_WHITESPACE = /\s/;
 
+/** Theme option stored, applied to the configured DOM attribute, and mapped to the browser color scheme. */
 export interface ThemeDefinition {
+  /** Unique configured theme name used for storage, DOM attributes, and generated default classes. */
   name: string;
+  /** Browser color scheme applied to `document.documentElement.style.colorScheme`. */
   colorScheme: "light" | "dark";
 }
 
+/** Mapping from OS color-scheme preferences to configured theme names. */
 export interface SystemThemeMap {
+  /** Configured theme name used when the OS preference is light or no dark preference is detected. */
   light: string;
+  /** Configured theme name used when the OS preference is dark. */
   dark: string;
 }
 
+/** Resolves the single DOM class token applied for a theme when custom class application is enabled. */
 export type ThemeClassResolver = (theme: ThemeDefinition) => string;
+
+/** Reason a theme change notification was emitted. */
 export type ThemeChangeSource = "init" | "set" | "toggle" | "clearPreference" | "system";
 
+/** Payload passed to subscribers and the browser `themechange` event after a theme change. */
 export interface ThemeChangeDetail {
+  /** Active theme name after the change. */
   name: string;
+  /** Active theme definition after the change. */
   theme: ThemeDefinition;
+  /** Operation or browser signal that caused the change notification. */
   source: ThemeChangeSource;
 }
 
+/** In-process callback registered with `Theme.subscribe()` for applied theme changes. */
 export type ThemeChangeListener = (detail: ThemeChangeDetail) => void;
 
+/** Configuration for theme definitions, persistence, DOM application, and system preference mapping. */
 export interface ThemeOptions {
+  /** Available themes. Names must be unique, non-empty, and valid default class tokens when `applyClass` is `true`. */
   themes?: readonly ThemeDefinition[];
+  /** Configured theme name used before initialization and when browser APIs are unavailable. */
   defaultTheme?: string;
+  /** Configured theme names selected for OS light and dark color-scheme preferences. */
   systemTheme?: SystemThemeMap;
+  /** `localStorage` key used for explicit user preferences. */
   storageKey?: string;
+  /** Attribute set on `document.documentElement` with the active theme name. */
   attribute?: string;
+  /** Whether to toggle Tailwind CSS's `dark` class for themes with `colorScheme: "dark"`. */
   tailwindcss?: boolean;
+  /** Whether and how to apply a theme-specific class to `document.documentElement`. */
   applyClass?: boolean | ThemeClassResolver;
 }
 
+/** Built-in light theme used by default and available for custom theme lists. */
 export const lightTheme: ThemeDefinition = {
   name: "light",
   colorScheme: "light",
 };
 
+/** Built-in dark theme used by default and available for custom theme lists. */
 export const darkTheme: ThemeDefinition = {
   name: "dark",
   colorScheme: "dark",
@@ -123,6 +148,12 @@ const assertThemeConfig = (options: ResolvedThemeOptions): void => {
   }
 };
 
+/**
+ * Manages theme preference, DOM application, system preference changes, and change notifications.
+ *
+ * The constructor validates configured theme names, default and system mappings, and default class tokens.
+ * Theme application throws `Error` when a requested theme is missing or a class resolver returns an invalid class token.
+ */
 export class Theme {
   #options: ResolvedThemeOptions;
   #activeName: string;
@@ -137,6 +168,7 @@ export class Theme {
     this.#activate(name, "system", { shouldStore: false });
   };
 
+  /** Creates a theme manager with default light/dark themes unless overridden. */
   constructor(options: ThemeOptions = {}) {
     this.#options = {
       ...defaultOptions,
@@ -147,20 +179,24 @@ export class Theme {
     this.#activeName = this.#options.defaultTheme;
   }
 
+  /** Registers system preference handling, applies the initial theme, emits an `init` change, and returns this instance. */
   init(): this {
     this.#registerSystemListener();
     this.#activate(this.getStored() ?? this.getSystem().name, "init", { shouldStore: false });
     return this;
   }
 
+  /** Returns the currently active theme definition. */
   get(): ThemeDefinition {
     return this.#getTheme(this.#activeName) ?? this.#getTheme(this.#options.defaultTheme);
   }
 
+  /** Applies a configured theme by name, stores it when possible, emits a `set` change, and throws `Error` for unknown names. */
   set(name: string): ThemeDefinition {
     return this.#activate(name, "set", { shouldStore: true });
   }
 
+  /** Toggles between the configured system light and dark themes, stores the preference when possible, and emits a `toggle` change. */
   toggle(): ThemeDefinition {
     const nextName =
       this.get().name === this.#options.systemTheme.dark
@@ -169,11 +205,13 @@ export class Theme {
     return this.#activate(nextName, "toggle", { shouldStore: true });
   }
 
+  /** Removes the stored preference when possible, applies the current system theme, and emits a `clearPreference` change. */
   clearPreference(): ThemeDefinition {
     this.#removeStored();
     return this.#activate(this.getSystem().name, "clearPreference", { shouldStore: false });
   }
 
+  /** Returns the stored configured theme name, or `null` during SSR, storage failures, or invalid stored preferences. */
   getStored(): string | null {
     if (!isBrowser()) {
       return null;
@@ -187,6 +225,7 @@ export class Theme {
     }
   }
 
+  /** Returns the configured theme for the current OS color-scheme preference, or the default theme without browser support. */
   getSystem(): ThemeDefinition {
     if (!isBrowser() || typeof window.matchMedia !== "function") {
       return this.#getTheme(this.#options.defaultTheme);
@@ -198,6 +237,7 @@ export class Theme {
     return this.#getTheme(name);
   }
 
+  /** Registers a listener for in-process theme changes and returns an unsubscribe function. */
   subscribe(listener: ThemeChangeListener): () => void {
     this.#listeners.add(listener);
     return () => {
@@ -205,6 +245,7 @@ export class Theme {
     };
   }
 
+  /** Removes the system preference listener and clears in-process subscribers. */
   destroy(): void {
     if (this.#mediaQueryList !== null) {
       this.#mediaQueryList.removeEventListener("change", this.#handleSystemChange);
