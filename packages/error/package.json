@@ -40,6 +40,8 @@
   "scripts": {
     "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@codenhub/helpers": "0.0.1",
+    "@codenhub/theme": "0.0.1",
     "@codenhub/ui-kit": "0.0.1"
   },
   "devDependencies": {

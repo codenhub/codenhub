@@ -1,7 +1,7 @@
 # Package lifecycle spec
 
 **Status:** APPROVED
-**Last updated:** 2026-06-05
+**Last updated:** 2026-06-10
 **Scope:** Workspace packages under `packages/*`.
 
 This document defines how packages are structured, built, tested, exported, and prepared for publishing.
@@ -39,6 +39,8 @@ Public packages MUST define:
 - `test`: runs tests once.
 - `test:watch`: runs tests in watch mode.
 - `prepublishOnly`: runs at least `pnpm build && pnpm typecheck`.
+- `status:npm`: checks published registry metadata, dist tags, and access status for the package.
+- `status:pack`: checks publishable package contents with `npm pack --dry-run`.
 
 Packages MAY omit `test` and `test:watch` only when they contain no executable code and the exception is documented.
 
@@ -49,6 +51,8 @@ Root workspace scripts MUST keep supporting:
 - `pnpm format:fix`
 - `pnpm lint:check`
 - `pnpm lint:fix`
+- `pnpm status:npm`
+- `pnpm status:pack`
 - `pnpm test`
 - `pnpm typecheck`
 
@@ -95,6 +99,9 @@ Before publishing a public package, run:
 - `pnpm typecheck`
 - `pnpm test`
 - Package `prepublishOnly`
+- Package `status:pack`
+
+After publishing a public package, run package `status:npm` to confirm the registry version, dist tags, and package access status. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
 
 Published packages MUST NOT include secrets, local paths, test fixtures that are not useful to consumers, or build artifacts outside `files`.
 

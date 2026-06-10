@@ -77,6 +77,9 @@ importers:
       '@codenhub/helpers':
         specifier: 0.0.1
         version: 0.0.1
+      '@codenhub/theme':
+        specifier: ^0.0.1
+        version: 0.0.1
       '@codenhub/ui-kit':
         specifier: 0.0.1
         version: 0.0.1
@@ -253,6 +256,9 @@ packages:
 
   '@codenhub/helpers@0.0.1':
     resolution: {integrity: sha512-z/UEjKXmrLHyHnaoSLLR1IsraZ+po5xtz03OlVCm1d9HlgC4HWT/YQ06C7i5LxYf8kwT3HbmmHBSk7AeFZzgIQ==}
+
+  '@codenhub/theme@0.0.1':
+    resolution: {integrity: sha512-UAufq7dlSRwu0GUUSDx1V/ZLLeTKM6ibFQ/cZLQ/c+dgRFzEyYtSku018uN0EtuEy251caXad6MRU3007QNRyg==}
 
   '@codenhub/ui-kit@0.0.1':
     resolution: {integrity: sha512-6bbcvzMNQquWZjFF6Itosfjf6iSc7mMEeBRVYcDAF4uDnA4kFrStT4iTt4TjWFtbBWW2MQKeL+s7URKGCR5aeg==}
@@ -1868,6 +1874,8 @@ snapshots:
       css-tree: 3.2.1
 
   '@codenhub/helpers@0.0.1': {}
+
+  '@codenhub/theme@0.0.1': {}
 
   '@codenhub/ui-kit@0.0.1':
     dependencies:

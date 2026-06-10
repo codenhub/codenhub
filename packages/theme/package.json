@@ -29,6 +29,8 @@
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/theme version dist-tags time --json && npm dist-tag ls @codenhub/theme && npm access get status @codenhub/theme",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
