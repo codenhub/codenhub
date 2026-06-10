@@ -59,8 +59,17 @@ import {
   err,
   ok,
   type AppErrorOptions,
+  type AppErrorSource,
+  type AppErrorType,
+  type Err,
   type ErrorFeedback,
+  type ErrorPatternDefinition,
+  type ErrorPatternRegistryBucket,
+  type ErrorPrefixDefinition,
+  type ErrorPrefixRegistryBucket,
   type ErrorRegistry,
+  type ErrorRegistryBucket,
+  type Ok,
   type Result,
 } from "@codenhub/error";
 ```
@@ -84,6 +93,14 @@ function createErrorRegistry(): ErrorRegistry;
 
 Use isolated registries for tests, request scopes, tenant-specific mappings, or integrations where mappings should not use the app-level `AppError.registry`.
 
+#### `DEFAULT_APP_ERROR_MESSAGE`
+
+Default fallback message used when an error has no registry match and no `fallbackMessage` was provided.
+
+```ts
+const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
+```
+
 #### `ErrorRegistry`
 
 Stores deterministic and heuristic mappings used by `AppError`.
@@ -102,6 +119,8 @@ interface ErrorRegistry {
 
 Code, name, exact message, and prefix matches are deterministic known errors. Pattern matches are heuristic and should be treated as unexpected errors with better user-facing feedback.
 
+`AppError.registry` is mutable and starts empty. `createErrorRegistry()` creates another empty registry with the same bucket API.
+
 Registry buckets support adding one mapping at a time or a tuple list:
 
 ```ts
@@ -110,14 +129,56 @@ interface ErrorRegistryBucket {
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
   clear(): void;
   get(identifier: string): ErrorFeedback | undefined;
+  values(): IterableIterator<[string, ErrorFeedback]>;
+}
+
+interface ErrorPrefixRegistryBucket {
+  add(prefix: string, feedback: ErrorFeedback): void;
+  addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
+  clear(): void;
+  values(): readonly ErrorPrefixDefinition[];
 }
 
 interface ErrorPatternRegistryBucket {
   add(pattern: RegExp, feedback: ErrorFeedback): void;
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
   clear(): void;
+  values(): readonly ErrorPatternDefinition[];
 }
 ```
+
+`values()` returns defensive copies. Pattern buckets clone `RegExp` values so global or sticky regex state does not leak across classifications.
+
+#### `ErrorFeedback`
+
+Feedback stored in registry buckets.
+
+```ts
+interface ErrorFeedback {
+  message: string;
+  messageKey?: string;
+  source?: string;
+  retryable?: boolean;
+}
+```
+
+`message` should be safe to show to users. `messageKey`, `source`, and `retryable` are optional metadata copied onto matched `AppError` instances.
+
+#### `ErrorPrefixDefinition` and `ErrorPatternDefinition`
+
+Entries returned by `prefixes.values()` and `patterns.values()`.
+
+```ts
+interface ErrorPrefixDefinition extends ErrorFeedback {
+  prefix: string;
+}
+
+interface ErrorPatternDefinition extends ErrorFeedback {
+  pattern: RegExp;
+}
+```
+
+Most consumers only need these when inspecting, copying, or testing registry contents.
 
 #### `AppError`
 
@@ -142,6 +203,15 @@ class AppError extends Error {
 
 `AppError` does not throw during construction. If no registry mapping matches, it uses `DEFAULT_APP_ERROR_MESSAGE` or `fallbackMessage` and classifies the value as `"unknown"`.
 
+#### `AppErrorType` and `AppErrorSource`
+
+Reusable property types for consumers that store or pass around normalized error metadata.
+
+```ts
+type AppErrorType = "known" | "unexpected" | "unknown";
+type AppErrorSource = string | null;
+```
+
 #### `AppErrorOptions`
 
 ```ts
@@ -164,6 +234,8 @@ Creates a successful result.
 function ok<T>(value: T): { ok: true; value: T };
 ```
 
+The returned shape is also exported as `Ok<T>`.
+
 #### `err()`
 
 Creates a failed result containing an `AppError`.
@@ -173,6 +245,8 @@ function err(error: unknown, options?: AppErrorOptions): { ok: false; error: App
 ```
 
 String errors are also used as the fallback message, so `err("Missing user id")` produces that message when no registry entry matches.
+
+The returned shape is also exported as `Err`.
 
 #### `Result<T>`
 

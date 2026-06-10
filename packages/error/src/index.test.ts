@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import AppError, { DEFAULT_APP_ERROR_MESSAGE, createErrorRegistry, err, ok, type Result } from "./index";
+import { AppError, DEFAULT_APP_ERROR_MESSAGE, createErrorRegistry, err, ok, type Result } from "./index";
 
 afterEach(() => {
   AppError.registry.clear();

@@ -1,5 +1,6 @@
 import { AppError } from "../index";
 
+/** Opt-in registry preset for common Supabase Auth, database, and function errors. */
 export const supabaseErrorRegistry = AppError.createRegistry();
 
 supabaseErrorRegistry.codes.addList([
