@@ -2,6 +2,14 @@
   "name": "@codenhub/store",
   "version": "0.0.1",
   "private": false,
+  "description": "Typed localStorage-backed state stores for browser TypeScript apps.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/store",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/store"
+  },
   "files": [
     "dist"
   ],
@@ -21,13 +29,17 @@
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/store version dist-tags time --json && npm dist-tag ls @codenhub/store && npm access get status @codenhub/store",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

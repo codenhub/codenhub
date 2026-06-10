@@ -3,6 +3,15 @@ type OptionalKeys<TSchema extends object> = {
 }[keyof TSchema];
 
 /**
+ * Keys that can be removed from a store without violating the schema shape.
+ *
+ * Required schema keys are excluded so `removeItem()` cannot create an invalid state object.
+ *
+ * @typeParam TSchema - Object shape persisted by the store.
+ */
+export type RemovableStoreKey<TSchema extends object> = OptionalKeys<TSchema>;
+
+/**
  * Typed localStorage-backed store API.
  *
  * Each store instance is scoped by its own `storageKey` and schema type.
@@ -13,7 +22,9 @@ export interface Store<TSchema extends object> {
   /**
    * Returns the full persisted state.
    *
-   * When storage is empty or invalid, the store falls back to the initial state.
+   * When storage is empty, unavailable, unreadable, invalid JSON, or rejected by `validate`,
+   * the store falls back to the initial state. Recoverable read, parse, and validation
+   * failures are reported with `console.warn`.
    *
    * @returns Current state object.
    */
@@ -23,15 +34,15 @@ export interface Store<TSchema extends object> {
    * Replaces the full persisted state.
    *
    * @param nextState - Full next state to persist.
-   * @returns `true` if the state was successfully persisted, `false` otherwise.
+   * @returns `true` if the state was successfully persisted; `false` when storage is unavailable or writing fails.
    */
   set(nextState: TSchema): boolean;
 
   /**
-   * Merges a partial object into the current state and persists the result.
+   * Merges a partial object into the current state and attempts to persist the result.
    *
    * @param partialState - Partial state fields to merge.
-   * @returns The merged and persisted state.
+   * @returns The merged state, even when persistence fails and later reads may not include the merge.
    */
   patch(partialState: Partial<TSchema>): TSchema;
 
@@ -45,38 +56,49 @@ export interface Store<TSchema extends object> {
   getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined;
 
   /**
-   * Sets a single typed value, persists it, and returns the next state.
+   * Sets a single typed value, attempts to persist it, and returns the next state.
    *
    * @typeParam TKey - Key of the target field in the schema.
    * @param key - Field name to write.
    * @param value - Typed value for the field.
-   * @returns Updated and persisted state.
+   * @returns Updated state, even when persistence fails and later reads may not include the change.
    */
   setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema;
 
   /**
-   * Removes a key from the state object, persists, and returns the next state.
+   * Removes a key from the state object, attempts to persist, and returns the next state.
    *
    * @typeParam TKey - Key of the target field in the schema.
    * @param key - Field name to remove.
-   * @returns Updated and persisted state.
+   * @returns Updated state, even when persistence fails and later reads may not include the removal.
    */
-  removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema;
+  removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema;
 
   /**
    * Removes the stored entry for this store key from localStorage.
    *
-   * After clearing, subsequent reads return the initial state.
+   * After clearing, subsequent reads return the initial state. If storage is unavailable,
+   * the method does nothing; if removal fails, it reports the failure with `console.warn`.
    */
   clear(): void;
 }
 
 /**
- * Options for configuring a store instance.
+ * Options for creating a store instance.
  *
  * @typeParam TSchema - Object shape persisted by the store.
  */
-export interface StoreOptions<TSchema extends object> {
+export interface CreateStoreOptions<TSchema extends object> {
+  /**
+   * localStorage key used to persist this store.
+   */
+  storageKey: string;
+
+  /**
+   * Fallback state snapshotted at store creation and returned when storage is empty, unavailable, invalid, or rejected by `validate`.
+   */
+  initialState: TSchema;
+
   /**
    * Optional runtime validator for parsed JSON.
    *
@@ -94,21 +116,23 @@ export interface StoreOptions<TSchema extends object> {
 /**
  * Creates a simple, strictly typed localStorage store for a module.
  *
- * If storage is empty or contains invalid JSON, reads fall back to `initialState`.
+ * The initial state is snapshotted at creation so later caller mutations do not
+ * affect fallback reads. If storage is empty or contains invalid JSON, reads fall
+ * back to that snapshot.
  * If a `validate` option is provided, stored values that fail the check are also
- * discarded and the store falls back to `initialState`.
+ * discarded and the store falls back to the initial-state snapshot.
+ * Store creation throws if `structuredClone` is unavailable or the initial state
+ * is not structured-cloneable.
  *
  * @typeParam TSchema - Object shape persisted by the store.
- * @param storageKey - localStorage key used to persist the store.
- * @param initialState - Fallback state used when nothing valid is stored.
- * @param options - Optional configuration for the store instance.
+ * @param options - Configuration for the store instance, including storage key, initial state, and optional validation.
  * @returns A typed store instance bound to the provided key.
+ * @throws When the initial state cannot be cloned with `structuredClone`.
  */
-export function createStore<TSchema extends object>(
-  storageKey: string,
-  initialState: TSchema,
-  options: StoreOptions<TSchema> = {},
-): Store<TSchema> {
+export function createStore<TSchema extends object>(options: CreateStoreOptions<TSchema>): Store<TSchema> {
+  const { storageKey } = options;
+  const initialState = structuredClone(options.initialState);
+
   const isStorageAvailable = (): boolean => {
     try {
       return typeof localStorage !== "undefined" && localStorage !== null;
@@ -183,7 +207,7 @@ export function createStore<TSchema extends object>(
       writeState(nextState);
       return nextState;
     },
-    removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema {
+    removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema {
       const currentState = readState();
       const nextState = { ...currentState };
       delete nextState[key];

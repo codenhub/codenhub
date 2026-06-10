@@ -1,6 +1,6 @@
 # @codenhub/store
 
-Typed localStorage-backed state stores for browser apps. The package creates small object stores scoped by a storage key, persists JSON to `localStorage`, returns cloned state snapshots, and falls back safely when browser storage is empty, invalid, blocked, or unavailable.
+Typed localStorage-backed state stores for browser apps. The package creates small object stores scoped by a storage key, persists JSON to `localStorage`, returns cloned state snapshots, snapshots the initial fallback state at store creation, and falls back safely when browser storage is empty, invalid, blocked, or unavailable.
 
 ## Installation
 
@@ -10,7 +10,7 @@ pnpm add @codenhub/store
 
 ## Usage
 
-Create one store per persisted state object. The `storageKey` owns the `localStorage` entry, and `initialState` is the fallback returned when nothing valid is stored.
+Create one store per persisted state object. The `storageKey` owns the `localStorage` entry, and `initialState` is cloned when the store is created so later mutations to the original object do not affect fallback reads.
 
 ```ts
 import { createStore } from "@codenhub/store";
@@ -20,9 +20,12 @@ interface PreferencesState {
   sidebarOpen: boolean;
 }
 
-const preferences = createStore<PreferencesState>("app:preferences", {
-  colorScheme: "light",
-  sidebarOpen: true,
+const preferences = createStore<PreferencesState>({
+  storageKey: "app:preferences",
+  initialState: {
+    colorScheme: "light",
+    sidebarOpen: true,
+  },
 });
 
 preferences.set({ colorScheme: "dark", sidebarOpen: false });
@@ -47,11 +50,11 @@ const isUserSettings = (raw: unknown): raw is UserSettings => {
   return value === "compact" || value === "comfortable";
 };
 
-const settings = createStore<UserSettings>(
-  "app:user-settings",
-  { density: "comfortable" },
-  { validate: isUserSettings },
-);
+const settings = createStore<UserSettings>({
+  storageKey: "app:user-settings",
+  initialState: { density: "comfortable" },
+  validate: isUserSettings,
+});
 
 const current = settings.get();
 ```
@@ -64,7 +67,7 @@ Primary entrypoint for the store API.
 
 ```ts
 import { createStore } from "@codenhub/store";
-import type { Store, StoreOptions } from "@codenhub/store";
+import type { CreateStoreOptions, RemovableStoreKey, Store } from "@codenhub/store";
 ```
 
 Supported import paths:
@@ -78,37 +81,27 @@ Supported import paths:
 Creates a typed store bound to one `localStorage` key.
 
 ```ts
-function createStore<TSchema extends object>(
-  storageKey: string,
-  initialState: TSchema,
-  options?: StoreOptions<TSchema>,
-): Store<TSchema>;
+function createStore<TSchema extends object>(options: CreateStoreOptions<TSchema>): Store<TSchema>;
 ```
 
-| Parameter      | Type                    | Description                                                |
-| -------------- | ----------------------- | ---------------------------------------------------------- |
-| `storageKey`   | `string`                | Key used for the `localStorage` entry.                     |
-| `initialState` | `TSchema`               | Fallback state returned when no valid stored state exists. |
-| `options`      | `StoreOptions<TSchema>` | Optional runtime validation settings.                      |
+| Parameter | Type                          | Description                                                            |
+| --------- | ----------------------------- | ---------------------------------------------------------------------- |
+| `options` | `CreateStoreOptions<TSchema>` | Store configuration, including storage key, fallback state, and guard. |
 
-Returns a `Store<TSchema>` instance. `createStore()` does not read or write storage immediately; storage is accessed by store methods.
+Returns a `Store<TSchema>` instance. `createStore()` snapshots `initialState` immediately with `structuredClone`, but does not read or write storage until store methods are called. Store creation throws if `structuredClone` is unavailable or `initialState` is not structured-cloneable.
 
 #### `Store<TSchema>`
 
 Object returned by `createStore()`.
 
 ```ts
-type OptionalKeys<TSchema extends object> = {
-  [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
-}[keyof TSchema];
-
 interface Store<TSchema extends object> {
   get(): TSchema;
   set(nextState: TSchema): boolean;
   patch(partialState: Partial<TSchema>): TSchema;
   getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined;
   setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema;
-  removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema;
+  removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema;
   clear(): void;
 }
 ```
@@ -124,8 +117,8 @@ function get(): TSchema;
 Behavior:
 
 - Returns a cloned copy of the stored state when storage contains valid JSON.
-- Returns a cloned copy of `initialState` when storage is empty.
-- Returns a cloned copy of `initialState` and logs a warning when storage reads throw, stored JSON is malformed, or `options.validate` rejects the parsed value.
+- Returns a cloned copy of the initial-state snapshot when storage is empty.
+- Returns a cloned copy of the initial-state snapshot and logs a warning when storage reads throw, stored JSON is malformed, or `options.validate` rejects the parsed value.
 - Does not remove invalid stored values.
 
 ##### `set()`
@@ -146,7 +139,7 @@ Merges a partial object into the current state and attempts to persist the resul
 function patch(partialState: Partial<TSchema>): TSchema;
 ```
 
-Returns the merged state. If persistence fails, the returned value still reflects the attempted merge, but later reads may fall back to the last stored state or `initialState`.
+Returns the merged state. If persistence fails, the returned value still reflects the attempted merge, but later reads may fall back to the last stored state or the initial-state snapshot.
 
 ##### `getItem()`
 
@@ -173,7 +166,7 @@ Returns the full updated state. If persistence fails, the returned value still i
 Removes one key from the current state and attempts to persist the result.
 
 ```ts
-function removeItem<TKey extends OptionalKeys<TSchema>>(key: TKey): TSchema;
+function removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema;
 ```
 
 Returns the updated state without the removed key. Only optional schema keys can be removed; required keys must remain present to preserve the typed store shape. If persistence fails, the returned value still reflects the removal, but later reads may not.
@@ -186,21 +179,37 @@ Removes this store's `localStorage` entry.
 function clear(): void;
 ```
 
-After `clear()`, `get()` returns a cloned copy of `initialState`. If storage is unavailable, `clear()` does nothing. If removal throws, `clear()` logs a warning and does not rethrow.
+After `clear()`, `get()` returns a cloned copy of the initial-state snapshot. If storage is unavailable, `clear()` does nothing. If removal throws, `clear()` logs a warning and does not rethrow.
 
-#### `StoreOptions<TSchema>`
+#### `RemovableStoreKey<TSchema>`
+
+Type alias for keys that can be removed from a store without violating its schema shape.
+
+```ts
+type RemovableStoreKey<TSchema extends object> = {
+  [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
+}[keyof TSchema];
+```
+
+Use this type when writing helpers that accept keys passed to `removeItem()`.
+
+#### `CreateStoreOptions<TSchema>`
 
 Options passed to `createStore()`.
 
 ```ts
-interface StoreOptions<TSchema extends object> {
+interface CreateStoreOptions<TSchema extends object> {
+  storageKey: string;
+  initialState: TSchema;
   validate?: (raw: unknown) => raw is TSchema;
 }
 ```
 
-| Property   | Type                               | Default     | Description                                                               |
-| ---------- | ---------------------------------- | ----------- | ------------------------------------------------------------------------- |
-| `validate` | `(raw: unknown) => raw is TSchema` | `undefined` | Optional guard used to validate parsed stored JSON before it is returned. |
+| Property       | Type                               | Default     | Description                                                                            |
+| -------------- | ---------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| `storageKey`   | `string`                           | Required    | Key used for the `localStorage` entry.                                                 |
+| `initialState` | `TSchema`                          | Required    | Fallback state snapshotted at creation and returned when no valid stored state exists. |
+| `validate`     | `(raw: unknown) => raw is TSchema` | `undefined` | Optional guard used to validate parsed stored JSON before it is returned.              |
 
 The validator only runs for values read from storage. It does not validate values passed to `set()`, `patch()`, or `setItem()`.
 
@@ -211,7 +220,7 @@ The validator only runs for values read from storage. It does not validate value
 ```ts
 import { createStore } from "@codenhub/store";
 
-const filters = createStore("app:filters", { query: "", page: 1 });
+const filters = createStore({ storageKey: "app:filters", initialState: { query: "", page: 1 } });
 
 filters.patch({ query: "design systems", page: 2 });
 filters.clear();
@@ -225,7 +234,7 @@ console.log(filters.get());
 ```ts
 import { createStore } from "@codenhub/store";
 
-const draft = createStore("app:draft", { body: "" });
+const draft = createStore({ storageKey: "app:draft", initialState: { body: "" } });
 
 const didSave = draft.set({ body: "Unsaved text" });
 
@@ -244,7 +253,7 @@ interface SessionState {
   token?: string;
 }
 
-const session = createStore<SessionState>("app:session", {});
+const session = createStore<SessionState>({ storageKey: "app:session", initialState: {} });
 
 session.setItem("token", "abc123");
 session.removeItem("token");
@@ -256,8 +265,8 @@ console.log(session.getItem("token"));
 ## Requirements
 
 - Browser `localStorage` is used for persistence.
-- Server-side and storage-restricted environments are supported by falling back to `initialState` for reads and `false` for direct writes.
-- `structuredClone` is required because returned state is cloned to avoid leaking consumer mutations into future reads.
+- Server-side and storage-restricted environments are supported by falling back to the initial-state snapshot for reads and `false` for direct writes.
+- `structuredClone` is required because `initialState` is snapshotted at store creation and returned state is cloned to avoid leaking consumer mutations into future reads.
 - Stored state must be JSON-serializable for persistence and structured-cloneable for reads.
 - No framework, CSS, DOM rendering, or external runtime dependency is required.
 
