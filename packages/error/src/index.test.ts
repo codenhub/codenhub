@@ -108,6 +108,46 @@ describe("createErrorRegistry", () => {
     });
   });
 
+  it("rejects empty exact-match identifiers", () => {
+    const registry = createErrorRegistry();
+
+    expect(() => {
+      registry.codes.add("   ", { message: "Invalid email or password." });
+    }).toThrow(TypeError);
+  });
+
+  it("rejects prefixes that normalize to empty strings", () => {
+    const registry = createErrorRegistry();
+
+    expect(() => {
+      registry.prefixes.add("!!!", { message: "Invalid email or password." });
+    }).toThrow(TypeError);
+  });
+
+  it("rejects feedback without a non-empty message", () => {
+    const registry = createErrorRegistry();
+
+    expect(() => {
+      registry.codes.add("invalid_credentials", {} as never);
+    }).toThrow(TypeError);
+  });
+
+  it("rejects invalid optional feedback fields", () => {
+    const registry = createErrorRegistry();
+
+    expect(() => {
+      registry.codes.add("invalid_credentials", { message: "Invalid email or password.", retryable: "yes" } as never);
+    }).toThrow(TypeError);
+  });
+
+  it("rejects non-RegExp patterns", () => {
+    const registry = createErrorRegistry();
+
+    expect(() => {
+      registry.patterns.add("failed to fetch" as never, { message: "Network request failed." });
+    }).toThrow(TypeError);
+  });
+
   it("merges mappings from ready or app-owned registries", () => {
     const sourceRegistry = createErrorRegistry();
     const targetRegistry = createErrorRegistry();

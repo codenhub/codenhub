@@ -14,11 +14,42 @@ export const normalizeErrorIdentifier = (identifier: string): string => {
   return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "");
 };
 
+const assertNonEmptyIdentifier = (identifier: string, label: string): void => {
+  if (typeof identifier !== "string" || normalizeErrorIdentifier(identifier).length === 0) {
+    throw new TypeError(`Error registry ${label} must be a non-empty string.`);
+  }
+};
+
+const assertFeedback = (feedback: ErrorFeedback): void => {
+  if (typeof feedback !== "object" || feedback === null) {
+    throw new TypeError("Error registry feedback must be an object.");
+  }
+
+  if (typeof feedback.message !== "string" || feedback.message.trim().length === 0) {
+    throw new TypeError("Error registry feedback.message must be a non-empty string.");
+  }
+
+  if (feedback.messageKey !== undefined && typeof feedback.messageKey !== "string") {
+    throw new TypeError("Error registry feedback.messageKey must be a string when provided.");
+  }
+
+  if (feedback.source !== undefined && typeof feedback.source !== "string") {
+    throw new TypeError("Error registry feedback.source must be a string when provided.");
+  }
+
+  if (feedback.retryable !== undefined && typeof feedback.retryable !== "boolean") {
+    throw new TypeError("Error registry feedback.retryable must be a boolean when provided.");
+  }
+};
+
 const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => ({ ...feedback });
 
 const createFeedbackMapBucket = (): ErrorRegistryBucket => {
   const entries = new Map<string, ErrorFeedback>();
   const add = (identifier: string, feedback: ErrorFeedback): void => {
+    assertNonEmptyIdentifier(identifier, "identifier");
+    assertFeedback(feedback);
+
     entries.set(identifier, cloneFeedback(feedback));
   };
 
@@ -48,6 +79,9 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
 const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   const entries: ErrorPrefixDefinition[] = [];
   const add = (prefix: string, feedback: ErrorFeedback): void => {
+    assertNonEmptyIdentifier(prefix, "prefix");
+    assertFeedback(feedback);
+
     entries.push({ ...cloneFeedback(feedback), prefix: normalizeErrorIdentifier(prefix) });
   };
 
@@ -70,6 +104,12 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
 const createPatternBucket = (): ErrorPatternRegistryBucket => {
   const entries: ErrorPatternDefinition[] = [];
   const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
+    if (!(pattern instanceof RegExp)) {
+      throw new TypeError("Error registry pattern must be a RegExp.");
+    }
+
+    assertFeedback(feedback);
+
     entries.push({ ...cloneFeedback(feedback), pattern: new RegExp(pattern.source, pattern.flags) });
   };
 
