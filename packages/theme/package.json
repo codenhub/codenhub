@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/theme",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "description": "Zero-dependency browser theme preference helper for TypeScript apps.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/theme",
