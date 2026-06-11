@@ -1,7 +1,7 @@
 # Styles Test Strategy
 
 **Status:** APPROVED
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-11
 **Scope:** `@codenhub/styles` package test strategy.
 
 ## Goal
@@ -18,20 +18,25 @@ Keep tests package-local and focused on visual confidence plus build compatibili
 ```text
 packages/styles/
   tests/
+    preview/
     vanilla/
     build/
     browser/
+  scripts/
 ```
 
-## `tests/vanilla`
+## `tests/preview`
 
-Manual preview for compiled CSS consumers.
+Shared manual and automated preview page for both supported consumer paths.
 
-Use built package CSS only:
+Open with one of these URLs when running the package dev server:
 
-```css
-@import "../../dist/index.css";
+```text
+http://localhost:5173/tests/preview/index.html?env=vanilla
+http://localhost:5173/tests/preview/index.html?env=build
 ```
+
+The page loads `tests/vanilla/output.css` for `env=vanilla` and `tests/build/output.css` for `env=build`.
 
 Cover:
 
@@ -40,6 +45,19 @@ Cover:
 - Buttons: variants, disabled, loading.
 - Cards, inputs, tooltips, sections.
 - Selection and base styles.
+- Tailwind token utilities, dark variants, and responsive variants.
+
+Purpose: keep one HTML fixture while validating both real CSS outputs.
+
+## `tests/vanilla`
+
+Compiled CSS output for vanilla consumers.
+
+Use built package CSS only:
+
+```css
+@import "../../dist/index.css";
+```
 
 Purpose: confirm canonical `@codenhub/styles` output looks right with no Tailwind consumer build.
 
@@ -53,7 +71,7 @@ Use source entrypoint:
 @import "tailwindcss";
 @import "@codenhub/styles/tw";
 
-@source "./index.html";
+@source "../preview/index.html";
 ```
 
 Cover:
@@ -71,6 +89,8 @@ Purpose: confirm `@codenhub/styles/tw` works in consumer Tailwind builds.
 Cross-browser automation for visual and computed-style confidence.
 
 Use Playwright by default.
+
+Tests load the same preview page twice with different `env` query values.
 
 Cover:
 
@@ -91,12 +111,16 @@ Default package checks:
 {
   "test": "pnpm typecheck && pnpm test:build && pnpm test:visual",
   "test:build": "pnpm build && pnpm test:build:vanilla && pnpm test:build:tw",
-  "test:visual": "playwright test"
+  "test:visual": "playwright test",
+  "dev": "node ./scripts/dev.mjs"
 }
 ```
 
+`pnpm dev` starts a local static server and watches both CSS test builds.
+
 ## Priority
 
-1. Add `tests/vanilla` for compiled CSS preview.
-2. Add `tests/build` for Tailwind source build validation.
-3. Add `tests/browser` for Playwright cross-browser validation.
+1. Keep `tests/preview` as the single shared HTML fixture.
+2. Keep `tests/vanilla` for compiled CSS output.
+3. Keep `tests/build` for Tailwind source build validation.
+4. Keep `tests/browser` for Playwright cross-browser validation.

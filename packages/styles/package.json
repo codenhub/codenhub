@@ -19,6 +19,7 @@
     "access": "public"
   },
   "scripts": {
+    "dev": "node ./scripts/dev.js",
     "build": "pnpm build:styles",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components.css -o ./dist/components.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",

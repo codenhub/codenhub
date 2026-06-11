@@ -1,8 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const vanillaPreviewUrl = pathToFileURL(fileURLToPath(new URL("../vanilla/index.html", import.meta.url))).toString();
-const tailwindBuildUrl = pathToFileURL(fileURLToPath(new URL("../build/index.html", import.meta.url))).toString();
+const previewUrl = pathToFileURL(fileURLToPath(new URL("../preview/index.html", import.meta.url))).toString();
+const vanillaPreviewUrl = `${previewUrl}?env=vanilla`;
+const tailwindBuildUrl = `${previewUrl}?env=build`;
 
 test.describe("compiled CSS preview", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {
@@ -57,7 +58,7 @@ test.describe("Tailwind source build", () => {
     await page.setViewportSize({ width: 520, height: 700 });
     await page.goto(tailwindBuildUrl);
 
-    await expect(page.getByTestId("build-root")).toBeVisible();
+    await expect(page.getByTestId("preview-root")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Build-time tokens" })).toBeVisible();
 
     const cardStyles = await page.getByTestId("responsive-card").evaluate((element) => {
@@ -83,10 +84,10 @@ test.describe("Tailwind source build", () => {
     const darkVariantColor = await page
       .getByTestId("dark-variant-text")
       .evaluate((element) => getComputedStyle(element).color);
-    const darkCardColor = await page
-      .getByTestId("build-dark-card")
-      .evaluate((element) => getComputedStyle(element).color);
+    const darkPrimaryBackground = await page
+      .getByTestId("dark-primary-button")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
 
-    expect(darkVariantColor).toBe(darkCardColor);
+    expect(darkVariantColor).toBe(darkPrimaryBackground);
   });
 });
