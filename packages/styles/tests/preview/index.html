@@ -7,45 +7,83 @@
     <script>
       const params = new URLSearchParams(window.location.search);
       const env = params.get("env") === "build" ? "build" : "vanilla";
-      const href = env === "build" ? "../build/output.css" : "../vanilla/output.css";
+      const href =
+        env === "build" ? "../build/output.css" : "../vanilla/output.css";
       document.write(`<link rel="stylesheet" href="${href}" />`);
       document.documentElement.dataset.env = env;
     </script>
   </head>
   <body>
-    <main class="sect bg-background text-text font-default" data-testid="preview-root">
-      <div class="sect-container">
-        <section class="card selection-contrast bg-foreground xs:bg-surface 2xl:bg-background" data-testid="light-card">
-          <p class="text-label text-text-secondary">Shared preview</p>
-          <h1 class="text-display">Light tokens</h1>
-          <p class="text-body">Base styles, typography utilities, cards, inputs, tooltips, and selection styles.</p>
-          <label class="text-label" for="preview-input">Email</label>
-          <input id="preview-input" class="ipt" value="hello@codenhub.test" />
-          <div>
-            <button class="btn primary" data-testid="primary-button">Primary</button>
-            <button class="btn secondary">Secondary</button>
-            <button class="btn success loading" aria-label="Saving">Saving</button>
-            <button class="btn destructive" disabled>Disabled</button>
-          </div>
-          <span class="tooltip icon" data-tooltip="Shared preview tooltip" data-tooltip-position="top">?</span>
-        </section>
+    <main
+      class="sect bg-background text-text font-default"
+      style="gap: 4rem"
+      data-testid="preview-root"
+    >
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Typography</h2>
+        <div style="display: inline-flex; flex-direction: column; gap: 16px">
+          <h1 class="text-display">1. Display</h1>
+          <h2 class="text-title-lg">2. Large Title</h2>
+          <h3 class="text-title">3. Title: Lorem ipsum dolor sit amet.</h3>
+          <h4 class="text-title-sm">
+            4. Small Title: Lorem ipsum dolor sit amet.
+          </h4>
+          <h5 class="text-label-lg">
+            5. Large Label: Lorem ipsum dolor sit amet.
+          </h5>
+          <h6 class="text-label">6. Label: Lorem ipsum dolor sit amet.</h6>
+          <p>
+            Body text: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+            Integer malesuada, felis nec congue sagittis, risus nunc sodales
+            felis, ut maximus neque risus vitae dolor.
+          </p>
+        </div>
+      </section>
 
-        <section class="card bg-foreground xs:bg-surface 2xl:bg-background" data-testid="responsive-card">
-          <p class="text-label text-text-secondary">Tailwind source CSS</p>
-          <h2 class="text-title-lg">Build-time tokens</h2>
-          <p class="text-body">Consumer builds can process token utilities and component classes.</p>
-          <input class="ipt" value="Tailwind build" />
-          <button class="btn info loading" aria-label="Loading">Loading</button>
-          <span class="tooltip icon" data-tooltip="Tailwind source tooltip" data-tooltip-position="right">?</span>
-        </section>
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Buttons</h2>
+        <div style="display: inline-flex; gap: 16px">
+          <button class="btn primary">Primary</button>
+          <button class="btn secondary">Secondary</button>
+          <button class="btn outline">Outline</button>
+          <button class="btn outline fill">Outline fill</button>
+          <button class="btn primary loading" disabled>Loading</button>
+          <button class="btn success">Success</button>
+          <button class="btn destructive">Destructive</button>
+          <button class="btn warning">Warning</button>
+          <button class="btn info">Info</button>
+        </div>
+      </section>
 
-        <section class="dark card bg-background text-text" data-testid="dark-card">
-          <p class="text-title-sm">Dark tokens</p>
-          <p class="text-body">Styles support dark mode with a local <code>.dark</code> class.</p>
-          <p class="dark:text-primary text-text-secondary" data-testid="dark-variant-text">Dark variant text</p>
-          <button class="btn primary" data-testid="dark-primary-button">Dark primary</button>
-        </section>
-      </div>
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Tooltips</h2>
+        <div style="display: inline-flex; gap: 16px">
+          <span
+            class="tooltip icon"
+            data-tooltip="Left tooltip"
+            data-tooltip-position="left"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Top tooltip"
+            data-tooltip-position="top"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Bottom tooltip"
+            data-tooltip-position="bottom"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Right tooltip"
+            data-tooltip-position="right"
+            >?</span
+          >
+        </div>
+      </section>
     </main>
   </body>
 </html>

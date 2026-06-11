@@ -6,8 +6,20 @@
     @apply flex flex-col items-center justify-center gap-8 px-4 py-16;
   }
 
-  .sect-container {
-    @apply flex w-full max-w-7xl flex-col items-center gap-12;
+  .sect-inn {
+    @apply flex w-full max-w-7xl flex-col items-start gap-12;
+
+    &.left {
+      @apply items-start;
+    }
+
+    &.right {
+      @apply items-end;
+    }
+
+    &.center {
+      @apply items-center;
+    }
   }
 
   .btn {
@@ -34,6 +46,14 @@
     &.secondary {
       @apply bg-accent not-disabled:hover:bg-accent-hover text-accent-contrast;
       --color-loading-spinner: var(--color-accent-contrast);
+    }
+
+    &.outline {
+      @apply bg-transparent text-primary border border-primary hover:[:not(.fill)]:bg-primary/8;
+
+      &.fill {
+        @apply hover:bg-primary hover:text-primary-contrast;
+      }
     }
 
     &.success {
@@ -71,7 +91,7 @@
     @apply relative;
 
     &.icon {
-      @apply bg-surface text-text size-5 cursor-default items-center justify-center rounded-full text-sm font-semibold;
+      @apply bg-surface text-text size-5 cursor-default flex items-center justify-center rounded-full text-sm font-semibold;
     }
 
     &[data-tooltip-position="top"]::after {

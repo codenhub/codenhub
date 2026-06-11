@@ -43,7 +43,7 @@
 
   html,
   body {
-    @apply bg-background text-text font-default flex min-h-screen flex-col overflow-x-hidden;
+    @apply bg-background text-text font-default;
   }
 
   button {
