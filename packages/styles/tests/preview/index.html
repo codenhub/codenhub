@@ -7,35 +7,25 @@
     <script>
       const params = new URLSearchParams(window.location.search);
       const env = params.get("env") === "build" ? "build" : "vanilla";
-      const href =
-        env === "build" ? "../build/output.css" : "../vanilla/output.css";
+      const href = env === "build" ? "../build/output.css" : "../vanilla/output.css";
       document.write(`<link rel="stylesheet" href="${href}" />`);
       document.documentElement.dataset.env = env;
     </script>
   </head>
   <body>
-    <main
-      class="sect bg-background text-text font-default"
-      style="gap: 4rem"
-      data-testid="preview-root"
-    >
+    <main class="sect bg-background text-text font-default" style="gap: 4rem" data-testid="preview-root">
       <section class="sect-inn">
         <h2 class="text-title-lg">Typography</h2>
         <div style="display: inline-flex; flex-direction: column; gap: 16px">
           <h1 class="text-display">1. Display</h1>
           <h2 class="text-title-lg">2. Large Title</h2>
           <h3 class="text-title">3. Title: Lorem ipsum dolor sit amet.</h3>
-          <h4 class="text-title-sm">
-            4. Small Title: Lorem ipsum dolor sit amet.
-          </h4>
-          <h5 class="text-label-lg">
-            5. Large Label: Lorem ipsum dolor sit amet.
-          </h5>
+          <h4 class="text-title-sm">4. Small Title: Lorem ipsum dolor sit amet.</h4>
+          <h5 class="text-label-lg">5. Large Label: Lorem ipsum dolor sit amet.</h5>
           <h6 class="text-label">6. Label: Lorem ipsum dolor sit amet.</h6>
           <p>
-            Body text: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            Integer malesuada, felis nec congue sagittis, risus nunc sodales
-            felis, ut maximus neque risus vitae dolor.
+            Body text: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer malesuada, felis nec congue
+            sagittis, risus nunc sodales felis, ut maximus neque risus vitae dolor.
           </p>
         </div>
       </section>
@@ -46,7 +36,7 @@
           <button class="btn primary">Primary</button>
           <button class="btn secondary">Secondary</button>
           <button class="btn outline">Outline</button>
-          <button class="btn outline fill">Outline fill</button>
+          <button class="btn fill outline">Outline fill</button>
           <button class="btn primary loading" disabled>Loading</button>
           <button class="btn success">Success</button>
           <button class="btn destructive">Destructive</button>
@@ -58,30 +48,10 @@
       <section class="sect-inn">
         <h2 class="text-title-lg">Tooltips</h2>
         <div style="display: inline-flex; gap: 16px">
-          <span
-            class="tooltip icon"
-            data-tooltip="Left tooltip"
-            data-tooltip-position="left"
-            >?</span
-          >
-          <span
-            class="tooltip icon"
-            data-tooltip="Top tooltip"
-            data-tooltip-position="top"
-            >?</span
-          >
-          <span
-            class="tooltip icon"
-            data-tooltip="Bottom tooltip"
-            data-tooltip-position="bottom"
-            >?</span
-          >
-          <span
-            class="tooltip icon"
-            data-tooltip="Right tooltip"
-            data-tooltip-position="right"
-            >?</span
-          >
+          <span class="tooltip icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
+          <span class="tooltip icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
+          <span class="tooltip icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
+          <span class="tooltip icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
         </div>
       </section>
     </main>

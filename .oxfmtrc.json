@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "bracketSpacing": true,
+  "htmlWhitespaceSensitivity": "ignore",
   "ignorePatterns": [
     "dist/**",
     "coverage/**",
@@ -12,5 +13,6 @@
   "printWidth": 120,
   "semi": true,
   "singleQuote": false,
+  "sortTailwindcss": true,
   "trailingComma": "all"
 }

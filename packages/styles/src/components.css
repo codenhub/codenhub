@@ -49,7 +49,7 @@
     }
 
     &.outline {
-      @apply bg-transparent text-primary border border-primary hover:[:not(.fill)]:bg-primary/8;
+      @apply text-primary border-primary hover:[:not(.fill)]:bg-primary/8 border bg-transparent;
 
       &.fill {
         @apply hover:bg-primary hover:text-primary-contrast;
@@ -91,7 +91,7 @@
     @apply relative;
 
     &.icon {
-      @apply bg-surface text-text size-5 cursor-default flex items-center justify-center rounded-full text-sm font-semibold;
+      @apply bg-surface text-text flex size-5 cursor-default items-center justify-center rounded-full text-sm font-semibold;
     }
 
     &[data-tooltip-position="top"]::after {
