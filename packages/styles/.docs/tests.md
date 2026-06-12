@@ -1,7 +1,7 @@
 # Styles Test Strategy
 
 **Status:** APPROVED
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 **Scope:** `@codenhub/styles` package test strategy.
 
 ## Goal
@@ -42,8 +42,8 @@ Cover:
 
 - Tokens in light and dark mode.
 - Typography utilities.
-- Buttons: variants, disabled, loading.
-- Cards, inputs, tooltips, sections.
+- Buttons: intent, presentation, disabled, and loading states.
+- Layout helpers, surfaces, forms, feedback, tooltips, and sections.
 - Selection and base styles.
 - Tailwind token utilities, dark variants, and responsive variants.
 
@@ -112,7 +112,7 @@ Default package checks:
   "test": "pnpm typecheck && pnpm test:build && pnpm test:visual",
   "test:build": "pnpm build && pnpm test:build:vanilla && pnpm test:build:tw",
   "test:visual": "playwright test",
-  "dev": "node ./scripts/dev.mjs"
+  "dev": "node ./scripts/dev.js"
 }
 ```
 

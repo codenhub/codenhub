@@ -2,8 +2,10 @@
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "ES2024"]
+    "lib": ["DOM", "ESNext"],
+    "types": ["node"]
   },
   "extends": "../../tsconfig.json",
-  "files": []
+  "include": ["playwright.config.ts", "tests/**/*.ts"],
+  "exclude": ["dist", "node_modules", "test-results"]
 }

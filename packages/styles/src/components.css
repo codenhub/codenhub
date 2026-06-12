@@ -1,119 +1,479 @@
 @import "tailwindcss";
 @import "./theme.css";
 
+@keyframes codenhub-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @layer components {
   .sect {
-    @apply flex flex-col items-center justify-center gap-8 px-4 py-16;
+    @apply flex flex-col items-center justify-center gap-[clamp(2rem,5vw,4rem)] px-[var(--layout-gutter)] py-[var(--layout-section-block)];
   }
 
+  .sect-container,
   .sect-inn {
-    @apply flex w-full max-w-7xl flex-col items-start gap-12;
+    @apply mx-auto flex w-full flex-col gap-[clamp(1.5rem,4vw,3rem)];
 
-    &.left {
-      @apply items-start;
-    }
-
-    &.right {
-      @apply items-end;
-    }
-
-    &.center {
-      @apply items-center;
-    }
+    max-width: var(--container-max);
   }
 
-  .btn {
-    @apply relative flex w-fit items-center justify-center gap-2 rounded-md px-4 py-2 font-semibold whitespace-nowrap transition-colors duration-400 [&.loading]:text-transparent!;
-    --color-loading-spinner: var(--color-text);
+  .sect-container.narrow,
+  .sect-inn.narrow {
+    max-width: var(--container-narrow);
+  }
 
-    &.loading::after {
-      @apply absolute inset-1/2 size-4 -translate-1/2 animate-spin rounded-full border-2;
-      border-color: var(--color-loading-spinner);
-      border-bottom-color: transparent;
-      content: "";
-    }
+  .sect-container.wide,
+  .sect-inn.wide {
+    max-width: var(--container-wide);
+  }
 
-    &[disabled],
-    &.disabled {
-      @apply cursor-not-allowed opacity-60;
-    }
+  .sect-container.left,
+  .sect-inn.left {
+    @apply items-start;
+  }
 
-    &.primary {
-      @apply bg-primary not-disabled:hover:bg-primary-hover text-primary-contrast;
-      --color-loading-spinner: var(--color-primary-contrast);
-    }
+  .sect-container.right,
+  .sect-inn.right {
+    @apply items-end;
+  }
 
-    &.secondary {
-      @apply bg-accent not-disabled:hover:bg-accent-hover text-accent-contrast;
-      --color-loading-spinner: var(--color-accent-contrast);
-    }
+  .sect-container.center,
+  .sect-inn.center {
+    @apply items-center;
+  }
 
-    &.outline {
-      @apply text-primary border-primary hover:[:not(.fill)]:bg-primary/8 border bg-transparent;
+  .stack {
+    @apply flex flex-col gap-[var(--layout-stack-gap)];
+  }
 
-      &.fill {
-        @apply hover:bg-primary hover:text-primary-contrast;
-      }
-    }
+  .stack.tight {
+    --layout-stack-gap: 0.5rem;
+  }
 
-    &.success {
-      @apply bg-success text-success-contrast;
-      --color-loading-spinner: var(--color-success-contrast);
-    }
+  .stack.loose {
+    --layout-stack-gap: 1.5rem;
+  }
 
-    &.destructive,
-    &.danger,
-    &.error {
-      @apply bg-destructive text-destructive-contrast;
-      --color-loading-spinner: var(--color-destructive-contrast);
-    }
+  .cluster {
+    @apply flex flex-wrap items-center gap-[var(--layout-cluster-gap)];
+  }
 
-    &.warning {
-      @apply bg-warning text-warning-contrast;
-      --color-loading-spinner: var(--color-warning-contrast);
-    }
+  .cluster.between {
+    @apply justify-between;
+  }
 
-    &.info {
-      @apply bg-info text-info-contrast;
-      --color-loading-spinner: var(--color-info-contrast);
-    }
+  .auto-grid {
+    @apply grid gap-[var(--layout-stack-gap)];
+
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+  }
+
+  .card,
+  .panel {
+    --surface-bg: var(--color-background);
+    --surface-border: var(--color-border);
+    --surface-border-hover: var(--color-border-hover);
+    --surface-radius: var(--radius-surface);
+    --surface-shadow: var(--shadow-surface);
+
+    @apply text-text flex flex-col gap-4 rounded-[var(--surface-radius)] border border-[var(--surface-border)] bg-[var(--surface-bg)] p-[clamp(1rem,3vw,2rem)] shadow-[var(--surface-shadow)] transition-[border-color,box-shadow,transform] duration-[var(--motion-duration)] ease-[var(--motion-ease)];
   }
 
   .card {
-    @apply bg-background border-border hover:border-border-hover flex flex-col gap-4 rounded-xl border p-8 transition-colors duration-400;
+    --surface-bg: var(--color-background);
   }
 
-  .ipt {
-    @apply border-border focus:ring-primary flex min-h-10 w-full rounded-md border p-2 transition duration-400 focus:ring-2 focus:outline-none;
+  .panel {
+    --surface-bg: var(--color-foreground);
+  }
+
+  .card.interactive,
+  .panel.interactive {
+    @apply cursor-pointer;
+  }
+
+  .card.interactive:hover,
+  .panel.interactive:hover,
+  .card[data-state="open"],
+  .panel[data-state="open"] {
+    transform: translateY(-1px);
+    border-color: var(--surface-border-hover);
+  }
+
+  .btn {
+    --button-bg: var(--color-primary);
+    --button-fg: var(--color-primary-contrast);
+    --button-border: var(--button-bg);
+    --button-hover-bg: var(--color-primary-hover);
+    --button-hover-fg: var(--button-fg);
+    --button-hover-border: var(--button-hover-bg);
+    --button-ghost-fg: var(--color-text);
+    --button-ghost-hover-bg: color-mix(in srgb, var(--button-bg) 12%, transparent);
+    --button-spinner: var(--button-fg);
+
+    @apply relative inline-flex min-h-[var(--control-height,2.5rem)] w-fit items-center justify-center gap-2 rounded-[var(--radius-control)] border border-[var(--button-border)] bg-[var(--button-bg)] px-4 py-2 font-semibold whitespace-nowrap text-[var(--button-fg)] no-underline transition-[background-color,border-color,color,opacity,transform] duration-[var(--motion-duration)] ease-[var(--motion-ease)] select-none;
+  }
+
+  .btn.primary {
+    --button-bg: var(--color-primary);
+    --button-fg: var(--color-primary-contrast);
+    --button-hover-bg: var(--color-primary-hover);
+  }
+
+  .btn.secondary {
+    --button-bg: var(--color-accent);
+    --button-fg: var(--color-accent-contrast);
+    --button-hover-bg: var(--color-accent-hover);
+  }
+
+  .btn.success {
+    --button-bg: var(--color-success);
+    --button-fg: var(--color-success-contrast);
+    --button-hover-bg: color-mix(in srgb, var(--color-success) 82%, var(--color-success-dark));
+  }
+
+  .btn.warning {
+    --button-bg: var(--color-warning);
+    --button-fg: var(--color-warning-contrast);
+    --button-hover-bg: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-dark));
+  }
+
+  .btn.destructive,
+  .btn.danger,
+  .btn.error {
+    --button-bg: var(--color-destructive);
+    --button-fg: var(--color-destructive-contrast);
+    --button-hover-bg: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-dark));
+  }
+
+  .btn.info {
+    --button-bg: var(--color-info);
+    --button-fg: var(--color-info-contrast);
+    --button-hover-bg: color-mix(in srgb, var(--color-info) 82%, var(--color-info-dark));
+  }
+
+  .btn.outline {
+    --button-spinner: var(--button-bg);
+
+    @apply border-[var(--button-bg)] bg-transparent text-[var(--button-bg)];
+  }
+
+  .btn.ghost {
+    --button-spinner: var(--button-ghost-fg);
+
+    @apply border-transparent bg-transparent text-[var(--button-ghost-fg)];
+  }
+
+  .btn.soft {
+    --button-spinner: var(--button-bg);
+
+    @apply border-transparent bg-[color-mix(in_srgb,var(--button-bg)_14%,transparent)] text-[var(--button-bg)];
+  }
+
+  .btn.sm {
+    @apply min-h-8 px-3 py-1 text-sm;
+  }
+
+  .btn.lg {
+    @apply min-h-12 px-5 py-2.5 text-[1.0625rem];
+  }
+
+  .btn.icon {
+    @apply aspect-square min-w-[var(--control-height,2.5rem)] p-2;
+
+    aspect-ratio: 1;
+  }
+
+  .btn:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+    @apply border-[var(--button-hover-border)] bg-[var(--button-hover-bg)] text-[var(--button-hover-fg)];
+  }
+
+  .btn.outline:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover,
+  .btn.ghost:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+    @apply border-transparent bg-[var(--button-ghost-hover-bg)] text-[var(--button-ghost-fg)];
+  }
+
+  .btn.outline:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+    @apply border-[var(--button-bg)] text-[var(--button-bg)];
+  }
+
+  .btn.outline.fill:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover,
+  .btn.fill.outline:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+    @apply bg-[var(--button-bg)] text-[var(--button-fg)];
+  }
+
+  .btn:disabled,
+  .btn.disabled,
+  .btn[aria-disabled="true"],
+  .btn[data-disabled] {
+    @apply cursor-not-allowed;
+
+    opacity: 0.58;
+  }
+
+  .btn.loading {
+    @apply pointer-events-none !text-transparent;
+  }
+
+  .btn.loading::after {
+    @apply absolute top-[calc(50%+var(--border-width))] left-[calc(50%+var(--border-width))] block size-4 -translate-x-1/2 -translate-y-1/2 animate-spin rounded-full;
+
+    border: 2px solid var(--button-spinner);
+    border-bottom-color: transparent;
+    content: "";
+  }
+
+  .field {
+    @apply flex w-full flex-col gap-1.5;
+  }
+
+  .label {
+    @apply text-text text-sm font-semibold;
+  }
+
+  .hint {
+    @apply text-text-secondary text-[0.8125rem];
+  }
+
+  .field .error:not(.btn),
+  .field-error {
+    @apply text-destructive text-[0.8125rem] font-medium;
+  }
+
+  .ipt,
+  .textarea,
+  .select {
+    --control-bg: var(--color-background);
+    --control-border: var(--color-border);
+    --control-border-active: var(--color-primary);
+    --control-fg: var(--color-text);
+    --control-placeholder: var(--color-text-secondary);
+
+    @apply min-h-[var(--control-height,2.5rem)] w-full rounded-[var(--radius-control)] border border-[var(--control-border)] bg-[var(--control-bg)] px-3 py-2 text-[var(--control-fg)] transition-[border-color,box-shadow,color,opacity] duration-[var(--motion-duration)] ease-[var(--motion-ease)];
+  }
+
+  .textarea {
+    @apply min-h-28 resize-y;
+  }
+
+  .select {
+    appearance: base-select;
+  }
+
+  .ipt::placeholder,
+  .textarea::placeholder {
+    color: var(--control-placeholder);
+  }
+
+  .ipt:focus,
+  .textarea:focus,
+  .select:focus {
+    @apply outline-none;
+  }
+
+  .ipt:focus-visible,
+  .textarea:focus-visible,
+  .select:focus-visible {
+    border-color: var(--control-border-active);
+    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+  }
+
+  .ipt[aria-invalid="true"],
+  .textarea[aria-invalid="true"],
+  .select[aria-invalid="true"] {
+    --control-border: var(--color-destructive);
+    --control-border-active: var(--color-destructive);
+  }
+
+  .ipt:disabled,
+  .textarea:disabled,
+  .select:disabled,
+  .ipt[aria-disabled="true"],
+  .textarea[aria-disabled="true"],
+  .select[aria-disabled="true"],
+  .ipt[data-disabled],
+  .textarea[data-disabled],
+  .select[data-disabled] {
+    @apply cursor-not-allowed;
+
+    opacity: 0.58;
+  }
+
+  .alert,
+  .toast,
+  .badge {
+    --feedback-color: var(--color-info);
+    --feedback-contrast: var(--color-info-contrast);
+    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
+    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
+
+    @apply border border-[var(--feedback-border)] text-[var(--feedback-color)];
+  }
+
+  .alert.success,
+  .toast.success,
+  .badge.success {
+    --feedback-color: var(--color-success);
+    --feedback-contrast: var(--color-success-contrast);
+  }
+
+  .alert.warning,
+  .toast.warning,
+  .badge.warning {
+    --feedback-color: var(--color-warning);
+    --feedback-contrast: var(--color-warning-contrast);
+  }
+
+  .alert.destructive,
+  .alert.danger,
+  .alert.error,
+  .toast.destructive,
+  .toast.danger,
+  .toast.error,
+  .badge.destructive,
+  .badge.danger,
+  .badge.error {
+    --feedback-color: var(--color-destructive);
+    --feedback-contrast: var(--color-destructive-contrast);
+  }
+
+  .alert.info,
+  .toast.info,
+  .badge.info {
+    --feedback-color: var(--color-info);
+    --feedback-contrast: var(--color-info-contrast);
+  }
+
+  .alert {
+    @apply flex gap-3 rounded-[var(--radius-surface)] bg-[var(--feedback-surface)] p-4;
+  }
+
+  .toast {
+    @apply fixed top-4 right-4 z-[var(--z-toast)] max-w-[min(24rem,calc(100vw-2rem))] rounded-[var(--radius-overlay)] bg-[color-mix(in_srgb,var(--color-background)_92%,var(--feedback-color))] px-4 py-3.5 shadow-[var(--shadow-overlay)];
+  }
+
+  .badge {
+    @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-[var(--feedback-surface)] px-2.5 text-xs font-bold;
+  }
+
+  .spinner {
+    @apply inline-block size-4 animate-spin rounded-full;
+
+    border: 2px solid var(--color-primary);
+    border-bottom-color: transparent;
+  }
+
+  .skeleton {
+    @apply min-h-4 w-full rounded-[var(--radius-control)];
+
+    animation: codenhub-skeleton var(--motion-duration-slow) linear infinite;
+    background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
+    background-size: 200% 100%;
+  }
+
+  .progress {
+    @apply bg-surface h-2.5 w-full overflow-hidden rounded-full;
+  }
+
+  .progress > * {
+    @apply bg-primary block h-full transition-[width] duration-[var(--motion-duration)] ease-[var(--motion-ease)];
+
+    width: var(--progress-value, 0%);
+  }
+
+  .empty-state {
+    @apply text-text-secondary flex flex-col items-center gap-3 p-[clamp(2rem,8vw,5rem)] text-center;
   }
 
   .tooltip {
+    --tooltip-bg: var(--color-surface);
+    --tooltip-fg: var(--color-text);
+    --tooltip-gap: 0.5rem;
+    --tooltip-top: calc(var(--tooltip-gap) * -1);
+    --tooltip-right: auto;
+    --tooltip-bottom: auto;
+    --tooltip-left: 50%;
+    --tooltip-origin: bottom;
+    --tooltip-transform: translate(-50%, -100%);
+
     @apply relative;
+  }
 
-    &.icon {
-      @apply bg-surface text-text flex size-5 cursor-default items-center justify-center rounded-full text-sm font-semibold;
+  .tooltip.icon {
+    @apply bg-surface text-text inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
+  }
+
+  .tooltip[data-tooltip-position="bottom"] {
+    --tooltip-top: auto;
+    --tooltip-bottom: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: top;
+    --tooltip-transform: translate(-50%, 100%);
+  }
+
+  .tooltip[data-tooltip-position="left"] {
+    --tooltip-top: 50%;
+    --tooltip-left: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: right;
+    --tooltip-transform: translate(-100%, -50%);
+  }
+
+  .tooltip[data-tooltip-position="right"] {
+    --tooltip-top: 50%;
+    --tooltip-left: auto;
+    --tooltip-right: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: left;
+    --tooltip-transform: translate(100%, -50%);
+  }
+
+  .tooltip::after {
+    @apply pointer-events-none absolute z-[var(--z-popover)] w-max max-w-72 rounded-[var(--radius-control)] bg-[var(--tooltip-bg)] px-2.5 py-2 text-sm font-normal whitespace-normal text-[var(--tooltip-fg)] opacity-0 shadow-[var(--shadow-surface)] transition-[opacity,transform] duration-[var(--motion-duration)] ease-[var(--motion-ease)];
+    content: attr(data-tooltip);
+    left: var(--tooltip-left);
+    right: var(--tooltip-right);
+    top: var(--tooltip-top);
+    bottom: var(--tooltip-bottom);
+    transform: var(--tooltip-transform) scale(0.96);
+    transform-origin: var(--tooltip-origin);
+  }
+
+  .tooltip:hover::after,
+  .tooltip:focus-visible::after,
+  .tooltip[data-state="open"]::after {
+    opacity: 1;
+    transform: var(--tooltip-transform) scale(1);
+  }
+
+  [aria-current="page"] {
+    @apply text-primary font-bold;
+  }
+
+  @media (width < 40rem) {
+    .sect {
+      @apply items-stretch;
     }
 
-    &[data-tooltip-position="top"]::after {
-      @apply -top-2 left-1/2 origin-bottom -translate-x-1/2 -translate-y-full;
+    .toast {
+      @apply right-4 left-4 max-w-none;
     }
-    &[data-tooltip-position="bottom"]::after {
-      @apply -bottom-2 left-1/2 origin-top -translate-x-1/2 translate-y-full;
-    }
-    &[data-tooltip-position="left"]::after {
-      @apply top-1/2 -left-2 origin-right -translate-x-full -translate-y-1/2;
-    }
-    &[data-tooltip-position="right"]::after {
-      @apply top-1/2 -right-2 origin-left translate-x-full -translate-y-1/2;
-    }
+  }
 
-    &::after {
-      content: attr(data-tooltip);
-      @apply bg-surface text-text pointer-events-none absolute z-50 w-max max-w-3xs scale-0 rounded-md p-2 text-sm font-normal shadow-sm transition-transform duration-200;
-    }
-
-    &:hover::after {
-      @apply scale-100;
+  @media (forced-colors: active) {
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .card,
+    .panel,
+    .alert,
+    .toast,
+    .badge {
+      border-color: CanvasText;
     }
   }
 }

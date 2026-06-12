@@ -78,7 +78,7 @@ importers:
         specifier: 0.0.1
         version: 0.0.1
       '@codenhub/theme':
-        specifier: ^0.0.1
+        specifier: 0.0.1
         version: 0.0.1
       '@codenhub/ui-kit':
         specifier: 0.0.1
@@ -126,9 +126,15 @@ importers:
 
   packages/store:
     devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -141,6 +147,12 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0
+      '@tailwindcss/cli':
+        specifier: 'catalog:'
+        version: 4.3.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.0
@@ -172,6 +184,21 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/validation:
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

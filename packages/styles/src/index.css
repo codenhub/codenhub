@@ -43,7 +43,11 @@
 
   html,
   body {
-    @apply bg-background text-text font-default;
+    @apply bg-background text-text font-default min-h-dvh overflow-x-hidden;
+  }
+
+  body {
+    @apply flex flex-col;
   }
 
   button {
@@ -63,6 +67,22 @@
   .selection-contrast *::selection {
     background: var(--color-primary-contrast);
     color: var(--color-primary);
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   p,

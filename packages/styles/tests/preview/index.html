@@ -15,6 +15,33 @@
   <body>
     <main class="sect bg-background text-text font-default" style="gap: 4rem" data-testid="preview-root">
       <section class="sect-inn">
+        <h2 class="text-title-lg">Light tokens</h2>
+        <div class="auto-grid">
+          <article class="card" data-testid="light-card">
+            <h3 class="text-title-sm">Light card</h3>
+            <p>Default token surface.</p>
+          </article>
+          <article class="card dark" data-testid="dark-card">
+            <h3 class="text-title-sm">Dark card</h3>
+            <p>Dark token surface.</p>
+            <button class="btn primary" data-testid="dark-primary-button">Dark primary</button>
+            <span class="dark:text-primary" data-testid="dark-variant-text">Dark utility text</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Build-time tokens</h2>
+        <article
+          class="xs:flex border-border bg-background font-default hidden flex-col rounded-md border p-4"
+          data-testid="responsive-card"
+        >
+          <h3 class="text-title-sm">Responsive card</h3>
+          <p>Tailwind source entrypoint fixture.</p>
+        </article>
+      </section>
+
+      <section class="sect-inn">
         <h2 class="text-title-lg">Typography</h2>
         <div style="display: inline-flex; flex-direction: column; gap: 16px">
           <h1 class="text-display">1. Display</h1>
@@ -32,22 +59,66 @@
 
       <section class="sect-inn">
         <h2 class="text-title-lg">Buttons</h2>
-        <div style="display: inline-flex; gap: 16px">
-          <button class="btn primary">Primary</button>
-          <button class="btn secondary">Secondary</button>
+        <div style="display: flex; flex-wrap: wrap; gap: 16px">
+          <button class="btn primary" data-testid="primary-button">Primary</button>
+          <button class="btn secondary" data-testid="secondary-button">Secondary</button>
           <button class="btn outline">Outline</button>
           <button class="btn fill outline">Outline fill</button>
-          <button class="btn primary loading" disabled>Loading</button>
-          <button class="btn success">Success</button>
+          <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
+          <button class="btn success" data-testid="success-button">Success</button>
+          <button class="btn success outline" data-testid="success-outline-button">Success outline</button>
+          <button class="btn destructive ghost" data-testid="secondary-ghost-button">Secondary ghost</button>
+          <button class="btn icon primary" aria-label="Create">+</button>
+          <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
           <button class="btn destructive">Destructive</button>
+          <button class="btn error" data-testid="error-button">Error alias</button>
           <button class="btn warning">Warning</button>
           <button class="btn info">Info</button>
+        </div>
+      </section>
+
+      <section class="sect-container stack" data-testid="layout-section">
+        <h2 class="text-title-lg">Layout</h2>
+        <div class="cluster" data-testid="cluster-layout">
+          <span class="badge">Neutral</span>
+          <span class="badge success">Live</span>
+          <span class="badge warning">Queued</span>
+        </div>
+        <div class="auto-grid" data-testid="auto-grid-layout">
+          <article class="panel">Panel</article>
+          <article class="card interactive">Interactive card</article>
+        </div>
+      </section>
+
+      <section class="sect-container narrow stack">
+        <h2 class="text-title-lg">Forms and feedback</h2>
+        <label class="field">
+          <span class="label">Email</span>
+          <input class="ipt" placeholder="you@example.com" />
+          <span class="hint">Use a work email.</span>
+        </label>
+        <label class="field">
+          <span class="label">Broken email</span>
+          <input class="ipt" value="bad" aria-invalid="true" data-testid="invalid-input" />
+          <span class="error">Enter a valid email.</span>
+          <button class="btn error" type="button" data-testid="field-error-button">Fix error</button>
+        </label>
+        <textarea class="textarea" placeholder="Message"></textarea>
+        <select class="select" aria-label="Status">
+          <option>Ready</option>
+        </select>
+        <div class="alert success" role="status" data-testid="success-alert">Saved.</div>
+        <div class="toast info" role="status" data-testid="info-toast">Status updated.</div>
+        <div class="skeleton" aria-hidden="true" data-testid="skeleton-block"></div>
+        <div class="progress" aria-label="Progress" data-testid="progress-bar">
+          <span style="--progress-value: 64%"></span>
         </div>
       </section>
 
       <section class="sect-inn">
         <h2 class="text-title-lg">Tooltips</h2>
         <div style="display: inline-flex; gap: 16px">
+          <span class="tooltip icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
           <span class="tooltip icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
           <span class="tooltip icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
           <span class="tooltip icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>

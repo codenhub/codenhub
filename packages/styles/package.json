@@ -1,8 +1,17 @@
 {
   "name": "@codenhub/styles",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
+  "description": "CSS-only Codenhub design tokens, base styles, and composable UI helper classes.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/styles",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/styles"
+  },
   "files": [
+    ".docs",
     "dist",
     "src"
   ],
@@ -23,6 +32,8 @@
     "build": "pnpm build:styles",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components.css -o ./dist/components.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
+    "status:pack": "npm pack --dry-run",
     "test": "pnpm typecheck && pnpm test:build && pnpm test:visual",
     "test:build": "pnpm build && pnpm test:build:vanilla && pnpm test:build:tw",
     "test:build:tw": "tailwindcss -i ./tests/build/index.css -o ./tests/build/output.css --minify",
@@ -33,6 +44,8 @@
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
+    "@tailwindcss/cli": "catalog:",
+    "@types/node": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:"
   },

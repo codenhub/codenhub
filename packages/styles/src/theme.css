@@ -40,6 +40,37 @@
 
 :root {
   color-scheme: light;
+
+  --container-narrow: 48rem;
+  --container-max: 80rem;
+  --container-wide: 90rem;
+  --layout-gutter: clamp(1rem, 4vw, 2rem);
+  --layout-section-block: clamp(4rem, 9vw, 7rem);
+  --layout-stack-gap: 1rem;
+  --layout-cluster-gap: 0.75rem;
+  --layout-grid-min: 16rem;
+
+  --radius-control: 0.5rem;
+  --radius-surface: 0.875rem;
+  --radius-overlay: 0.75rem;
+  --control-height: 2.5rem;
+  --border-width: 1px;
+  --border-width-strong: 2px;
+
+  --shadow-surface: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
+  --shadow-overlay: 0 24px 48px rgb(15 23 42 / 0.18);
+
+  --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
+  --focus-ring-offset: 2px;
+  --focus-ring-width: 3px;
+
+  --motion-duration: 180ms;
+  --motion-duration-slow: 420ms;
+  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --backdrop-overlay: blur(16px);
+  --z-popover: 40;
+  --z-toast: 60;
 }
 
 .dark {
