@@ -5,6 +5,83 @@ const previewUrl = pathToFileURL(fileURLToPath(new URL("../preview/index.html", 
 const vanillaPreviewUrl = `${previewUrl}?env=vanilla`;
 const tailwindBuildUrl = `${previewUrl}?env=build`;
 
+interface LinearColor {
+  blue: number;
+  green: number;
+  red: number;
+}
+
+const parseColor = (color: string): LinearColor => {
+  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
+
+  if (rgbMatch) {
+    const [red = 0, green = 0, blue = 0] = rgbMatch[1]
+      .split(/[,\s/]+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .map(Number);
+
+    return {
+      blue: toLinearRgbChannel(blue / 255),
+      green: toLinearRgbChannel(green / 255),
+      red: toLinearRgbChannel(red / 255),
+    };
+  }
+
+  const oklchMatch = color.match(/oklch\(([^)]+)\)/);
+
+  if (oklchMatch) {
+    const [lightness = 0, chroma = 0, hue = 0] = oklchMatch[1]
+      .split(/[,\s/]+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .map(Number);
+
+    return oklchToLinearRgb({ chroma, hue, lightness });
+  }
+
+  throw new Error(`Unsupported color format: ${color}`);
+};
+
+const toLinearRgbChannel = (channel: number) =>
+  channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+
+const oklchToLinearRgb = ({
+  chroma,
+  hue,
+  lightness,
+}: {
+  chroma: number;
+  hue: number;
+  lightness: number;
+}): LinearColor => {
+  const hueRadians = (hue * Math.PI) / 180;
+  const a = chroma * Math.cos(hueRadians);
+  const b = chroma * Math.sin(hueRadians);
+  const long = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const medium = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const short = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
+
+  return {
+    blue: clampLinearRgb(-0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short),
+    green: clampLinearRgb(-1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short),
+    red: clampLinearRgb(4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short),
+  };
+};
+
+const clampLinearRgb = (channel: number) => Math.min(1, Math.max(0, channel));
+
+const getRelativeLuminance = ({ blue, green, red }: LinearColor) => 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+const getContrastRatio = (foreground: string, background: string) => {
+  const foregroundLuminance = getRelativeLuminance(parseColor(foreground));
+  const backgroundLuminance = getRelativeLuminance(parseColor(background));
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
 test.describe("compiled CSS preview", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {
     await page.goto(vanillaPreviewUrl);
@@ -37,18 +114,62 @@ test.describe("compiled CSS preview", () => {
         containerMax: styles.getPropertyValue("--container-max").trim(),
         controlHeight: styles.getPropertyValue("--control-height").trim(),
         focusRing: styles.getPropertyValue("--focus-ring").trim(),
-        motionDuration: styles.getPropertyValue("--motion-duration").trim(),
+        motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
+        motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
         radiusControl: styles.getPropertyValue("--radius-control").trim(),
-        shadowSurface: styles.getPropertyValue("--shadow-surface").trim(),
+        elevationLow: styles.getPropertyValue("--elevation-low").trim(),
       };
     });
 
     expect(tokenValues.containerMax).not.toBe("");
     expect(tokenValues.controlHeight).not.toBe("");
     expect(tokenValues.focusRing).not.toBe("");
-    expect(tokenValues.motionDuration).not.toBe("");
+    expect(tokenValues.motionDurationFast).not.toBe("");
+    expect(tokenValues.motionDurationNormal).not.toBe("");
     expect(tokenValues.radiusControl).not.toBe("");
-    expect(tokenValues.shadowSurface).not.toBe("");
+    expect(tokenValues.elevationLow).not.toBe("");
+  });
+
+  test("does not expose legacy root tokens", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const tokenValues = await page.evaluate(() => {
+      const styles = getComputedStyle(document.documentElement);
+
+      return {
+        motionDuration: styles.getPropertyValue("--motion-duration").trim(),
+        shadowOverlay: styles.getPropertyValue("--shadow-overlay").trim(),
+        shadowSurface: styles.getPropertyValue("--shadow-surface").trim(),
+      };
+    });
+
+    expect(tokenValues.motionDuration).toBe("");
+    expect(tokenValues.shadowOverlay).toBe("");
+    expect(tokenValues.shadowSurface).toBe("");
+  });
+
+  test("keeps filled semantic button text readable", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const buttonColors = await page.evaluate(() =>
+      [
+        ...document.querySelectorAll(
+          ".btn.success:not(.outline):not(.ghost):not(.soft), .btn.warning:not(.outline):not(.ghost):not(.soft), .btn.destructive:not(.outline):not(.ghost):not(.soft), .btn.info:not(.outline):not(.ghost):not(.soft)",
+        ),
+      ].map((button) => {
+        const styles = getComputedStyle(button);
+
+        return {
+          backgroundColor: styles.backgroundColor,
+          color: styles.color,
+          label: button.textContent?.trim() ?? button.className,
+        };
+      }),
+    );
+
+    for (const button of buttonColors) {
+      expect(getContrastRatio(button.color, button.backgroundColor), button.label).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   test("composes button intent classes with presentation classes", async ({ page }) => {
@@ -57,6 +178,8 @@ test.describe("compiled CSS preview", () => {
     const styles = await page.evaluate(() => {
       const successButton = document.querySelector('[data-testid="success-button"]');
       const successOutlineButton = document.querySelector('[data-testid="success-outline-button"]');
+      const successSoftButton = document.querySelector('[data-testid="success-soft-button"]');
+      const primaryPillButton = document.querySelector('[data-testid="primary-pill-button"]');
       const secondaryGhostButton = document.querySelector('[data-testid="secondary-ghost-button"]');
       const secondaryButton = document.querySelector('[data-testid="secondary-button"]');
       const loadingButton = document.querySelector('[data-testid="loading-button"]');
@@ -67,6 +190,8 @@ test.describe("compiled CSS preview", () => {
       if (
         !successButton ||
         !successOutlineButton ||
+        !successSoftButton ||
+        !primaryPillButton ||
         !secondaryGhostButton ||
         !secondaryButton ||
         !loadingButton ||
@@ -79,6 +204,8 @@ test.describe("compiled CSS preview", () => {
 
       const successButtonStyles = getComputedStyle(successButton);
       const successOutlineStyles = getComputedStyle(successOutlineButton);
+      const successSoftStyles = getComputedStyle(successSoftButton);
+      const primaryPillStyles = getComputedStyle(primaryPillButton);
       const secondaryGhostStyles = getComputedStyle(secondaryGhostButton);
       const secondaryButtonStyles = getComputedStyle(secondaryButton);
       const loadingButtonStyles = getComputedStyle(loadingButton, "::after");
@@ -108,15 +235,20 @@ test.describe("compiled CSS preview", () => {
         successOutlineBackground: successOutlineStyles.backgroundColor,
         successOutlineBorder: successOutlineStyles.borderColor,
         successOutlineColor: successOutlineStyles.color,
+        successSoftBackground: successSoftStyles.backgroundColor,
+        successSoftColor: successSoftStyles.color,
+        primaryPillBorderRadius: primaryPillStyles.borderRadius,
       };
     });
 
-    expect(styles.successOutlineBorder).toBe(styles.successBackground);
-    expect(styles.successOutlineColor).toBe(styles.successBackground);
+    expect(styles.successOutlineBorder).not.toBe("rgba(0, 0, 0, 0)");
+    expect(styles.successOutlineColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.successOutlineBackground).toBe("rgba(0, 0, 0, 0)");
     expect(styles.ghostBackground).toBe("rgba(0, 0, 0, 0)");
-    expect(styles.ghostColor).not.toBe(styles.secondaryBackground);
     expect(styles.ghostColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(styles.successSoftBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(styles.successSoftColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(Number.parseFloat(styles.primaryPillBorderRadius)).toBeGreaterThan(20);
     expect(styles.loadingSpinnerAnimation).not.toBe("none");
     expect(Number.parseFloat(styles.loadingSpinnerTop)).toBeCloseTo(styles.loadingButtonHeight / 2, 1);
     expect(Number.parseFloat(styles.loadingSpinnerLeft)).toBeCloseTo(styles.loadingButtonWidth / 2, 1);
@@ -146,6 +278,7 @@ test.describe("compiled CSS preview", () => {
       const autoGridLayout = document.querySelector('[data-testid="auto-grid-layout"]');
       const invalidInput = document.querySelector('[data-testid="invalid-input"]');
       const successAlert = document.querySelector('[data-testid="success-alert"]');
+      const warningBanner = document.querySelector('[data-testid="warning-banner"]');
       const infoToast = document.querySelector('[data-testid="info-toast"]');
       const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
       const progressBar = document.querySelector('[data-testid="progress-bar"]');
@@ -156,6 +289,7 @@ test.describe("compiled CSS preview", () => {
         !autoGridLayout ||
         !invalidInput ||
         !successAlert ||
+        !warningBanner ||
         !infoToast ||
         !skeletonBlock ||
         !progressBar
@@ -168,6 +302,7 @@ test.describe("compiled CSS preview", () => {
       const autoGridStyles = getComputedStyle(autoGridLayout);
       const invalidInputStyles = getComputedStyle(invalidInput);
       const successAlertStyles = getComputedStyle(successAlert);
+      const warningBannerStyles = getComputedStyle(warningBanner);
       const infoToastStyles = getComputedStyle(infoToast);
       const skeletonStyles = getComputedStyle(skeletonBlock);
       const progressStyles = getComputedStyle(progressBar);
@@ -175,6 +310,9 @@ test.describe("compiled CSS preview", () => {
       return {
         alertBorderWidth: successAlertStyles.borderWidth,
         alertColor: successAlertStyles.color,
+        bannerWidth: warningBanner.getBoundingClientRect().width,
+        bannerBorderLeftWidth: warningBannerStyles.borderLeftWidth,
+        bannerBorderTopWidth: warningBannerStyles.borderTopWidth,
         autoGridDisplay: autoGridStyles.display,
         clusterDisplay: clusterStyles.display,
         invalidBorderColor: invalidInputStyles.borderColor,
@@ -193,6 +331,8 @@ test.describe("compiled CSS preview", () => {
     expect(styles.invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.alertBorderWidth).not.toBe("0px");
     expect(styles.alertColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(styles.bannerBorderLeftWidth).toBe("0px");
+    expect(styles.bannerBorderTopWidth).not.toBe("0px");
     expect(styles.toastPosition).toBe("fixed");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");

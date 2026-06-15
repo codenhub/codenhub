@@ -1,7 +1,7 @@
 # @codenhub/styles Overview
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-13
 **Scope:** `@codenhub/styles` package.
 
 `@codenhub/styles` is a CSS-only styling foundation for Codenhub interfaces. It provides tokens, base styles, typography utilities, layout helpers, component helper classes, and Tailwind CSS v4 source entrypoints.
@@ -41,15 +41,15 @@ Button example:
 
 ## Token Model
 
-Component classes use CSS variables for shape, motion, focus, surface, and state behavior. This keeps class names stable while allowing future aesthetic profiles to override tokens on an ancestor class.
+Component classes use public foundation tokens for shape, motion, focus, surface, and state behavior. Internal scoped variables may exist to compose class variants, but they are not the public customization contract.
 
 Example future-ready profile shape:
 
 ```css
 .custom-profile {
   --radius-surface: 1.25rem;
-  --shadow-surface: 0 24px 60px rgb(0 0 0 / 0.18);
-  --motion-duration: 240ms;
+  --elevation-low: 0 24px 60px rgb(0 0 0 / 0.18);
+  --motion-duration-normal: 240ms;
 }
 ```
 
@@ -59,7 +59,7 @@ Aesthetic profile classes such as `.glassmorphism` or `.brutalism` are not part 
 
 | Document                            | Purpose                                                   |
 | ----------------------------------- | --------------------------------------------------------- |
-| [Tokens](./tokens.md)               | Theme, foundation, and component variable contracts.      |
+| [Tokens](./tokens.md)               | Theme and foundation variable contracts.                  |
 | [Classes](./classes.md)             | Public helper class behavior and composition rules.       |
 | [Accessibility](./accessibility.md) | CSS accessibility hooks and responsibilities outside CSS. |
 | [Tests](./tests.md)                 | Build and browser validation strategy.                    |

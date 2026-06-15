@@ -85,7 +85,7 @@ Detailed package reference ships with the package under `.docs/`:
 | Document                                  | Purpose                                                       |
 | ----------------------------------------- | ------------------------------------------------------------- |
 | [Overview](./.docs/index.md)              | Package model, entrypoints, and class model.                  |
-| [Tokens](./.docs/tokens.md)               | Color, foundation, and component tokens.                      |
+| [Tokens](./.docs/tokens.md)               | Color and foundation token contracts.                         |
 | [Classes](./.docs/classes.md)             | Layout, surface, action, form, feedback, and tooltip helpers. |
 | [Accessibility](./.docs/accessibility.md) | CSS accessibility hooks and non-goals.                        |
 | [Tests](./.docs/tests.md)                 | Build and browser validation strategy.                        |

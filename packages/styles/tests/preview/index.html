@@ -5,15 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@codenhub/styles preview</title>
     <script>
+      const doc = document.documentElement;
       const params = new URLSearchParams(window.location.search);
       const env = params.get("env") === "build" ? "build" : "vanilla";
-      const href = env === "build" ? "../build/output.css" : "../vanilla/output.css";
+      const href =
+        env === "build" ? "../build/output.css" : "../vanilla/output.css";
       document.write(`<link rel="stylesheet" href="${href}" />`);
-      document.documentElement.dataset.env = env;
+      doc.dataset.env = env;
+      document.addEventListener("DOMContentLoaded", () => {
+        let isDarkTheme = localStorage.getItem("theme") === "dark";
+        doc.classList.toggle("dark", isDarkTheme);
+        document
+          .getElementById("theme-toggle")
+          .addEventListener("click", () => {
+            doc.classList.toggle("dark");
+            isDarkTheme = doc.classList.contains("dark");
+            localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
+          });
+      });
     </script>
   </head>
   <body>
-    <main class="sect bg-background text-text font-default" style="gap: 4rem" data-testid="preview-root">
+    <main
+      class="sect bg-background text-text font-default"
+      style="gap: 4rem"
+      data-testid="preview-root"
+    >
       <section class="sect-inn">
         <h2 class="text-title-lg">Light tokens</h2>
         <div class="auto-grid">
@@ -24,8 +41,12 @@
           <article class="card dark" data-testid="dark-card">
             <h3 class="text-title-sm">Dark card</h3>
             <p>Dark token surface.</p>
-            <button class="btn primary" data-testid="dark-primary-button">Dark primary</button>
-            <span class="dark:text-primary" data-testid="dark-variant-text">Dark utility text</span>
+            <button class="btn primary" data-testid="dark-primary-button">
+              Dark primary
+            </button>
+            <span class="dark:text-primary" data-testid="dark-variant-text"
+              >Dark utility text</span
+            >
           </article>
         </div>
       </section>
@@ -47,12 +68,17 @@
           <h1 class="text-display">1. Display</h1>
           <h2 class="text-title-lg">2. Large Title</h2>
           <h3 class="text-title">3. Title: Lorem ipsum dolor sit amet.</h3>
-          <h4 class="text-title-sm">4. Small Title: Lorem ipsum dolor sit amet.</h4>
-          <h5 class="text-label-lg">5. Large Label: Lorem ipsum dolor sit amet.</h5>
+          <h4 class="text-title-sm">
+            4. Small Title: Lorem ipsum dolor sit amet.
+          </h4>
+          <h5 class="text-label-lg">
+            5. Large Label: Lorem ipsum dolor sit amet.
+          </h5>
           <h6 class="text-label">6. Label: Lorem ipsum dolor sit amet.</h6>
           <p>
-            Body text: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer malesuada, felis nec congue
-            sagittis, risus nunc sodales felis, ut maximus neque risus vitae dolor.
+            Body text: Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+            Integer malesuada, felis nec congue sagittis, risus nunc sodales
+            felis, ut maximus neque risus vitae dolor.
           </p>
         </div>
       </section>
@@ -60,18 +86,57 @@
       <section class="sect-inn">
         <h2 class="text-title-lg">Buttons</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 16px">
-          <button class="btn primary" data-testid="primary-button">Primary</button>
-          <button class="btn secondary" data-testid="secondary-button">Secondary</button>
+          <button class="btn primary" data-testid="primary-button">
+            Primary
+          </button>
+          <button class="btn secondary" data-testid="secondary-button">
+            Secondary
+          </button>
           <button class="btn outline">Outline</button>
           <button class="btn fill outline">Outline fill</button>
-          <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
-          <button class="btn success" data-testid="success-button">Success</button>
-          <button class="btn success outline" data-testid="success-outline-button">Success outline</button>
-          <button class="btn destructive ghost" data-testid="secondary-ghost-button">Secondary ghost</button>
+          <button
+            class="btn primary loading"
+            disabled
+            data-testid="loading-button"
+          >
+            Loading
+          </button>
+          <button class="btn success" data-testid="success-button">
+            Success
+          </button>
+          <button
+            class="btn success outline"
+            data-testid="success-outline-button"
+          >
+            Success outline
+          </button>
+          <button class="btn success soft" data-testid="success-soft-button">
+            Success soft
+          </button>
+          <button
+            class="btn secondary ghost"
+            data-testid="secondary-ghost-button"
+          >
+            Secondary ghost
+          </button>
+          <button class="btn success ghost" data-testid="success-ghost-button">
+            Success ghost
+          </button>
+          <button class="btn primary pill" data-testid="primary-pill-button">
+            Primary pill
+          </button>
           <button class="btn icon primary" aria-label="Create">+</button>
-          <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
+          <button
+            class="btn primary"
+            aria-disabled="true"
+            data-testid="aria-disabled-button"
+          >
+            Disabled
+          </button>
           <button class="btn destructive">Destructive</button>
-          <button class="btn error" data-testid="error-button">Error alias</button>
+          <button class="btn error" data-testid="error-button">
+            Error alias
+          </button>
           <button class="btn warning">Warning</button>
           <button class="btn info">Info</button>
         </div>
@@ -99,17 +164,39 @@
         </label>
         <label class="field">
           <span class="label">Broken email</span>
-          <input class="ipt" value="bad" aria-invalid="true" data-testid="invalid-input" />
+          <input
+            class="ipt"
+            value="bad"
+            aria-invalid="true"
+            data-testid="invalid-input"
+          />
           <span class="error">Enter a valid email.</span>
-          <button class="btn error" type="button" data-testid="field-error-button">Fix error</button>
+          <button
+            class="btn error"
+            type="button"
+            data-testid="field-error-button"
+          >
+            Fix error
+          </button>
         </label>
         <textarea class="textarea" placeholder="Message"></textarea>
         <select class="select" aria-label="Status">
           <option>Ready</option>
         </select>
-        <div class="alert success" role="status" data-testid="success-alert">Saved.</div>
-        <div class="toast info" role="status" data-testid="info-toast">Status updated.</div>
-        <div class="skeleton" aria-hidden="true" data-testid="skeleton-block"></div>
+        <div class="alert success" role="status" data-testid="success-alert">
+          Saved.
+        </div>
+        <div class="banner warning" role="status" data-testid="warning-banner">
+          A new version is available.
+        </div>
+        <div class="toast info" role="status" data-testid="info-toast">
+          Status updated.
+        </div>
+        <div
+          class="skeleton"
+          aria-hidden="true"
+          data-testid="skeleton-block"
+        ></div>
         <div class="progress" aria-label="Progress" data-testid="progress-bar">
           <span style="--progress-value: 64%"></span>
         </div>
@@ -118,13 +205,117 @@
       <section class="sect-inn">
         <h2 class="text-title-lg">Tooltips</h2>
         <div style="display: inline-flex; gap: 16px">
-          <span class="tooltip icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
-          <span class="tooltip icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
-          <span class="tooltip icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
-          <span class="tooltip icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
-          <span class="tooltip icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
+          <span
+            class="tooltip icon"
+            data-tooltip="Fallback tooltip"
+            data-testid="fallback-tooltip"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Left tooltip"
+            data-tooltip-position="left"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Top tooltip"
+            data-tooltip-position="top"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Bottom tooltip"
+            data-tooltip-position="bottom"
+            >?</span
+          >
+          <span
+            class="tooltip icon"
+            data-tooltip="Right tooltip"
+            data-tooltip-position="right"
+            >?</span
+          >
         </div>
       </section>
     </main>
+
+    <div
+      style="
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        display: inline-flex;
+        gap: 0.5rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <button
+        class="tooltip"
+        data-tooltip="Change environment"
+        data-tooltip-position="left"
+        style="
+          height: 2.5rem;
+          width: 2.5rem;
+          padding: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-surface);
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--color-text);
+        "
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"
+          />
+          <path d="M10 21.9V14L2.1 9.1" />
+          <path d="m10 14 11.9-6.9" />
+          <path d="M14 19.8v-8.1" />
+          <path d="M18 17.5V9.4" />
+        </svg>
+      </button>
+      <button
+        id="theme-toggle"
+        class="tooltip"
+        data-tooltip="Toggle theme"
+        data-tooltip-position="left"
+        style="
+          height: 2.5rem;
+          width: 2.5rem;
+          padding: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-surface);
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--color-text);
+        "
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
+        </svg>
+      </button>
+    </div>
   </body>
 </html>

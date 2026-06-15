@@ -6,9 +6,13 @@
   --color-primary: var(--color-neutral-950);
   --color-primary-contrast: var(--color-neutral-50);
   --color-primary-hover: var(--color-neutral-700);
+  --color-primary-light: var(--color-neutral-100);
+  --color-primary-dark: var(--color-neutral-900);
   --color-accent: var(--color-neutral-300);
   --color-accent-contrast: var(--color-neutral-950);
   --color-accent-hover: var(--color-neutral-400);
+  --color-accent-light: var(--color-neutral-200);
+  --color-accent-dark: var(--color-neutral-800);
   --color-border: var(--color-neutral-300);
   --color-border-hover: var(--color-neutral-600);
   --color-background: var(--color-neutral-50);
@@ -18,19 +22,19 @@
   --color-text-secondary: var(--color-neutral-700);
 
   --color-success: var(--color-emerald-500);
-  --color-success-contrast: var(--color-emerald-50);
+  --color-success-contrast: var(--color-neutral-950);
   --color-success-light: var(--color-emerald-100);
   --color-success-dark: var(--color-emerald-800);
   --color-warning: var(--color-amber-500);
-  --color-warning-contrast: var(--color-amber-50);
+  --color-warning-contrast: var(--color-neutral-950);
   --color-warning-light: var(--color-amber-100);
   --color-warning-dark: var(--color-amber-800);
-  --color-destructive: var(--color-rose-500);
-  --color-destructive-contrast: var(--color-rose-50);
+  --color-destructive: var(--color-rose-700);
+  --color-destructive-contrast: var(--color-neutral-50);
   --color-destructive-light: var(--color-rose-100);
   --color-destructive-dark: var(--color-rose-800);
   --color-info: var(--color-sky-500);
-  --color-info-contrast: var(--color-sky-50);
+  --color-info-contrast: var(--color-neutral-950);
   --color-info-light: var(--color-sky-100);
   --color-info-dark: var(--color-sky-800);
 
@@ -55,17 +59,19 @@
   --radius-overlay: 0.75rem;
   --control-height: 2.5rem;
   --border-width: 1px;
-  --border-width-strong: 2px;
 
-  --shadow-surface: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
-  --shadow-overlay: 0 24px 48px rgb(15 23 42 / 0.18);
+  --elevation-low: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
+  --elevation-mid: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.08);
+  --elevation-high: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.1);
+  --elevation-overlay: 0 24px 48px rgb(15 23 42 / 0.18);
 
   --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
   --focus-ring-offset: 2px;
   --focus-ring-width: 3px;
 
-  --motion-duration: 180ms;
-  --motion-duration-slow: 420ms;
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 200ms;
+  --motion-duration-slow: 400ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 
   --backdrop-overlay: blur(16px);
@@ -79,9 +85,13 @@
   --color-primary: var(--color-neutral-50);
   --color-primary-contrast: var(--color-neutral-950);
   --color-primary-hover: var(--color-neutral-200);
+  --color-primary-light: var(--color-neutral-100);
+  --color-primary-dark: var(--color-neutral-900);
   --color-accent: var(--color-neutral-700);
   --color-accent-contrast: var(--color-neutral-50);
   --color-accent-hover: var(--color-neutral-500);
+  --color-accent-light: var(--color-neutral-200);
+  --color-accent-dark: var(--color-neutral-800);
   --color-border: var(--color-neutral-700);
   --color-border-hover: var(--color-neutral-500);
   --color-background: var(--color-neutral-950);
@@ -91,19 +101,19 @@
   --color-text-secondary: var(--color-neutral-400);
 
   --color-success: var(--color-emerald-500);
-  --color-success-contrast: var(--color-emerald-50);
+  --color-success-contrast: var(--color-neutral-950);
   --color-success-light: var(--color-emerald-100);
   --color-success-dark: var(--color-emerald-800);
   --color-warning: var(--color-amber-500);
-  --color-warning-contrast: var(--color-amber-50);
+  --color-warning-contrast: var(--color-neutral-950);
   --color-warning-light: var(--color-amber-100);
   --color-warning-dark: var(--color-amber-800);
-  --color-destructive: var(--color-rose-500);
-  --color-destructive-contrast: var(--color-rose-50);
+  --color-destructive: var(--color-rose-700);
+  --color-destructive-contrast: var(--color-neutral-50);
   --color-destructive-light: var(--color-rose-100);
   --color-destructive-dark: var(--color-rose-800);
   --color-info: var(--color-sky-500);
-  --color-info-contrast: var(--color-sky-50);
+  --color-info-contrast: var(--color-neutral-950);
   --color-info-light: var(--color-sky-100);
   --color-info-dark: var(--color-sky-800);
 }

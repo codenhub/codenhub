@@ -55,6 +55,7 @@ Presentation and size classes:
 | `.outline`                                                             | Transparent button with intent-colored border and text.                   |
 | `.ghost`                                                               | Transparent button with readable text, no visible border, and soft hover. |
 | `.soft`                                                                | Low-emphasis filled button using a mixed intent surface.                  |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                   |
 | `.fill` with `.outline`                                                | Filled hover treatment for outline buttons.                               |
 | `.sm`                                                                  | Smaller button.                                                           |
 | `.lg`                                                                  | Larger button.                                                            |
@@ -104,6 +105,7 @@ Example:
 | Class       | Purpose                                               |
 | ----------- | ----------------------------------------------------- |
 | `.alert`    | Inline feedback surface.                              |
+| `.banner`   | Full-width feedback strip. No side borders.           |
 | `.toast`    | Fixed overlay feedback surface.                       |
 | `.badge`    | Compact status pill.                                  |
 | `.spinner`  | Inline loading spinner.                               |
@@ -112,10 +114,13 @@ Example:
 
 Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
 
+`.banner` extends `.alert` with `border-radius: 0` and removes side borders, making it suitable for full-width application-level feedback strips. `.toast` uses `--elevation-overlay` for its shadow.
+
 Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
+<div class="banner warning" role="status">Your session expires in 5 minutes.</div>
 <div class="toast info" role="status">Ready.</div>
 <span class="badge warning">Queued</span>
 <span class="spinner" aria-hidden="true"></span>
