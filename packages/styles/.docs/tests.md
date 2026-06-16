@@ -1,7 +1,7 @@
 # Styles Test Strategy
 
 **Status:** APPROVED
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-16
 **Scope:** `@codenhub/styles` package test strategy.
 
 ## Goal
@@ -37,6 +37,8 @@ http://localhost:5173/tests/preview/index.html?env=build
 ```
 
 The page loads `tests/vanilla/output.css` for `env=vanilla` and `tests/build/output.css` for `env=build`.
+
+The floating environment toggle switches the `env` query value between `vanilla` and `build`. Its tooltip names the target environment with `See build` or `See vanilla`.
 
 Cover:
 

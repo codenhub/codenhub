@@ -356,6 +356,30 @@ test.describe("compiled CSS preview", () => {
     expect(tooltipStyles.transformOrigin).not.toBe("");
   });
 
+  test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See build");
+
+    await page.goto(tailwindBuildUrl);
+
+    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
+  });
+
+  test("switches between preview environments from the environment toggle", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    await page.getByTestId("environment-toggle").click();
+
+    await expect(page).toHaveURL(/env=build/);
+    await expect(page.locator("html")).toHaveAttribute("data-env", "build");
+
+    await page.getByTestId("environment-toggle").click();
+
+    await expect(page).toHaveURL(/env=vanilla/);
+    await expect(page.locator("html")).toHaveAttribute("data-env", "vanilla");
+  });
+
   test("applies dark tokens through the dark class", async ({ page }) => {
     await page.goto(vanillaPreviewUrl);
 
