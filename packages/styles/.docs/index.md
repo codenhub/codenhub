@@ -1,7 +1,7 @@
 # @codenhub/styles Overview
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-13
+**Last updated:** 2026-06-16
 **Scope:** `@codenhub/styles` package.
 
 `@codenhub/styles` is a CSS-only styling foundation for Codenhub interfaces. It provides tokens, base styles, typography utilities, layout helpers, component helper classes, and Tailwind CSS v4 source entrypoints.
@@ -37,7 +37,7 @@ Button example:
 <button class="btn primary loading" disabled>Saving</button>
 ```
 
-`outline` and `ghost` are presentation choices. They are not tied to one color intent.
+`outline`, `ghost`, and `soft` are presentation choices. They consume the active intent tokens instead of carrying a fixed color intent; for example, `.btn.success.soft` uses success companion tones.
 
 ## Token Model
 

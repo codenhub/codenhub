@@ -1,7 +1,7 @@
 # @codenhub/styles Classes
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-16
 **Scope:** Public helper classes for `@codenhub/styles`.
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
@@ -52,9 +52,9 @@ Presentation and size classes:
 
 | Class                                                                  | Purpose                                                                   |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `.outline`                                                             | Transparent button with intent-colored border and text.                   |
-| `.ghost`                                                               | Transparent button with readable text, no visible border, and soft hover. |
-| `.soft`                                                                | Low-emphasis filled button using a mixed intent surface.                  |
+| `.outline`                                                             | Transparent button with intent companion-tone border and text.            |
+| `.ghost`                                                               | Transparent button with intent companion-tone text and soft hover.        |
+| `.soft`                                                                | Low-emphasis filled button using intent companion surface and text tones. |
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                   |
 | `.fill` with `.outline`                                                | Filled hover treatment for outline buttons.                               |
 | `.sm`                                                                  | Smaller button.                                                           |

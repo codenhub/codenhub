@@ -11,6 +11,20 @@ interface LinearColor {
   red: number;
 }
 
+interface ButtonIntentToken {
+  className: string;
+  tokenName: string;
+}
+
+const buttonIntentTokens = [
+  { className: "primary", tokenName: "primary" },
+  { className: "secondary", tokenName: "accent" },
+  { className: "success", tokenName: "success" },
+  { className: "warning", tokenName: "warning" },
+  { className: "destructive", tokenName: "destructive" },
+  { className: "info", tokenName: "info" },
+] as const satisfies readonly ButtonIntentToken[];
+
 const parseColor = (color: string): LinearColor => {
   const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
 
@@ -267,6 +281,89 @@ test.describe("compiled CSS preview", () => {
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
     expect(ghostHoverBackground).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("uses semantic companion tones for button presentation classes", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const buttonPresentationStyles = await page.evaluate((intents) => {
+      const resolveTokenColor = ({ host, tokenName }: { host: Element; tokenName: string }) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        host.append(probe);
+
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+
+        return color;
+      };
+
+      const readButtonStyles = ({
+        host,
+        intent,
+        theme,
+      }: {
+        host: Element;
+        intent: ButtonIntentToken;
+        theme: "dark" | "light";
+      }) => {
+        const toneName = theme === "dark" ? `${intent.tokenName}-light` : `${intent.tokenName}-dark`;
+        const surfaceName = theme === "dark" ? `${intent.tokenName}-dark` : `${intent.tokenName}-light`;
+        const outlineButton = document.createElement("button");
+        const ghostButton = document.createElement("button");
+        const softButton = document.createElement("button");
+
+        outlineButton.className = `btn ${intent.className} outline`;
+        ghostButton.className = `btn ${intent.className} ghost`;
+        softButton.className = `btn ${intent.className} soft`;
+        host.append(outlineButton, ghostButton, softButton);
+
+        const outlineStyles = getComputedStyle(outlineButton);
+        const ghostStyles = getComputedStyle(ghostButton);
+        const softStyles = getComputedStyle(softButton);
+
+        const styles = {
+          expectedSoftBackground: resolveTokenColor({ host, tokenName: surfaceName }),
+          expectedTone: resolveTokenColor({ host, tokenName: toneName }),
+          ghostColor: ghostStyles.color,
+          intent: intent.className,
+          outlineBorderColor: outlineStyles.borderColor,
+          outlineColor: outlineStyles.color,
+          softBackground: softStyles.backgroundColor,
+          softColor: softStyles.color,
+          theme,
+        };
+
+        outlineButton.remove();
+        ghostButton.remove();
+        softButton.remove();
+
+        return styles;
+      };
+
+      const darkHost = document.createElement("section");
+      darkHost.className = "dark";
+      document.body.append(darkHost);
+
+      const styles = intents.flatMap((intent) => [
+        readButtonStyles({ host: document.body, intent, theme: "light" }),
+        readButtonStyles({ host: darkHost, intent, theme: "dark" }),
+      ]);
+
+      darkHost.remove();
+
+      return styles;
+    }, buttonIntentTokens);
+
+    for (const styles of buttonPresentationStyles) {
+      const label = `${styles.theme} ${styles.intent}`;
+
+      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedTone);
+      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedTone);
+      expect(styles.ghostColor, `${label} ghost color`).toBe(styles.expectedTone);
+      expect(styles.softColor, `${label} soft color`).toBe(styles.expectedTone);
+      expect(styles.softBackground, `${label} soft background`).toBe(styles.expectedSoftBackground);
+    }
   });
 
   test("styles layout, form, and feedback helper classes", async ({ page }) => {

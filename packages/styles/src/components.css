@@ -112,9 +112,24 @@
     --button-hover-bg: var(--color-primary-hover);
     --button-hover-fg: var(--button-fg);
     --button-hover-border: var(--button-hover-bg);
-    --button-text: var(--button-bg);
-    --button-soft-bg: color-mix(in srgb, var(--button-text) 14%, transparent);
+    --button-text: var(--color-primary-dark);
+    --button-soft-bg: var(--color-primary-light);
+    --button-subtle-hover-bg: color-mix(
+      in srgb,
+      var(--button-soft-bg) 60%,
+      transparent
+    );
+    --button-soft-hover-bg: color-mix(
+      in srgb,
+      var(--button-soft-bg) 84%,
+      var(--button-text)
+    );
     --button-spinner: var(--button-fg);
+
+    .dark & {
+      --button-text: var(--color-primary-light);
+      --button-soft-bg: var(--color-primary-dark);
+    }
 
     @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) border border-(--button-border) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-fast) ease-(--motion-ease) select-none;
 
@@ -122,7 +137,13 @@
       --button-bg: var(--color-primary);
       --button-fg: var(--color-primary-contrast);
       --button-hover-bg: var(--color-primary-hover);
-      --button-text: var(--color-primary);
+      --button-text: var(--color-primary-dark);
+      --button-soft-bg: var(--color-primary-light);
+
+      .dark & {
+        --button-text: var(--color-primary-light);
+        --button-soft-bg: var(--color-primary-dark);
+      }
     }
 
     &.secondary {
@@ -130,9 +151,11 @@
       --button-fg: var(--color-accent-contrast);
       --button-hover-bg: var(--color-accent-hover);
       --button-text: var(--color-accent-dark);
+      --button-soft-bg: var(--color-accent-light);
 
       .dark & {
         --button-text: var(--color-accent-light);
+        --button-soft-bg: var(--color-accent-dark);
       }
     }
 
@@ -145,9 +168,11 @@
         var(--color-success-dark)
       );
       --button-text: var(--color-success-dark);
+      --button-soft-bg: var(--color-success-light);
 
       .dark & {
         --button-text: var(--color-success-light);
+        --button-soft-bg: var(--color-success-dark);
       }
     }
 
@@ -160,9 +185,11 @@
         var(--color-warning-dark)
       );
       --button-text: var(--color-warning-dark);
+      --button-soft-bg: var(--color-warning-light);
 
       .dark & {
         --button-text: var(--color-warning-light);
+        --button-soft-bg: var(--color-warning-dark);
       }
     }
 
@@ -177,9 +204,11 @@
         var(--color-destructive-dark)
       );
       --button-text: var(--color-destructive-dark);
+      --button-soft-bg: var(--color-destructive-light);
 
       .dark & {
         --button-text: var(--color-destructive-light);
+        --button-soft-bg: var(--color-destructive-dark);
       }
     }
 
@@ -192,16 +221,18 @@
         var(--color-info-dark)
       );
       --button-text: var(--color-info-dark);
+      --button-soft-bg: var(--color-info-light);
 
       .dark & {
         --button-text: var(--color-info-light);
+        --button-soft-bg: var(--color-info-dark);
       }
     }
 
     &.outline {
-      --button-spinner: var(--button-text);
+      --button-spinner: var(--button-bg);
 
-      @apply border-(--button-text) bg-transparent text-(--button-text);
+      @apply border-(--button-bg) bg-transparent text-(--button-bg);
 
       &:not(
           :disabled,
@@ -209,7 +240,7 @@
           [aria-disabled="true"],
           [data-disabled]
         ):hover {
-        @apply border-(--button-text) bg-[color-mix(in_srgb,var(--button-text)_10%,transparent)] text-(--button-text);
+        @apply border-(--button-text) bg-(--button-subtle-hover-bg) text-(--button-text);
       }
 
       &.fill {
@@ -219,7 +250,7 @@
             [aria-disabled="true"],
             [data-disabled]
           ):hover {
-          @apply border-(--button-border) bg-(--button-bg) text-(--button-fg);
+          @apply bg-(--button-bg) border-(--button-bg) text-(--button-text);
         }
       }
     }
@@ -235,7 +266,7 @@
           [aria-disabled="true"],
           [data-disabled]
         ):hover {
-        @apply border-transparent bg-[color-mix(in_srgb,var(--button-text)_10%,transparent)] text-(--button-text);
+        @apply border-transparent bg-(--button-subtle-hover-bg) text-(--button-text);
       }
     }
 
@@ -250,7 +281,7 @@
           [aria-disabled="true"],
           [data-disabled]
         ):hover {
-        @apply border-transparent bg-[color-mix(in_srgb,var(--button-text)_20%,transparent)] text-(--button-text);
+        @apply border-transparent bg-(--button-soft-hover-bg) text-(--button-text);
       }
     }
 

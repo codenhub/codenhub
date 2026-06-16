@@ -1,7 +1,7 @@
 # @codenhub/styles Tokens
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-13
+**Last updated:** 2026-06-16
 **Scope:** Public CSS variable contract for `@codenhub/styles`.
 
 Tokens are CSS custom properties. Light values apply by default. Dark values apply inside `.dark`.
@@ -50,7 +50,7 @@ Tokens are CSS custom properties. Light values apply by default. Dark values app
 | `--color-info-light`           | Light companion for info. Always a literal light value.                                                  |
 | `--color-info-dark`            | Dark companion for info. Always a literal dark value.                                                    |
 
-> **Companion token contract**: `*-light` and `*-dark` companion tokens are static, literal colors. They do not invert when the theme changes. Components consume the appropriate companion depending on context — for example, a ghost button in a light context uses `*-dark` for readable text, while the same button inside `.dark` uses `*-light`.
+> **Companion token contract**: `*-light` and `*-dark` companion tokens are static, literal colors. They do not invert when the theme changes. Components consume the appropriate companion depending on context. For example, ghost and outline buttons use `*-dark` text in a light context and `*-light` text inside `.dark`; soft buttons pair that readable text with the opposite companion surface.
 
 ## Foundation Tokens
 

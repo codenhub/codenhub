@@ -1,7 +1,7 @@
 # Roadmap
 
 **Status:** APPROVED
-**Last updated:** 2026-06-13
+**Last updated:** 2026-06-16
 **Scope:** `@codenhub/styles` package direction.
 
 ## Purpose
@@ -19,7 +19,7 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Refactored component helpers toward Tailwind-first source usage with `@apply` for static utility-like styling.
 - Preserved composable button intent classes and presentation classes, including `.btn.error` inside `.field`.
 - Reduced selector leakage by nesting related component styles where CSS nesting clearly scopes variants, states, pseudo-elements, and descendants to their owning helper class.
-- Improved button presentation compatibility: `.ghost`, `.outline`, and `.soft` now use `--button-text` derived from intent-appropriate companion tokens (`*-dark` in light context, `*-light` in dark context), ensuring visible and accessible contrast for all intent colors.
+- Improved button presentation compatibility: `.ghost` and `.outline` now use intent companion text tones, while `.soft` pairs intent companion text and surface tones (`*-dark`/`*-light`) for light and dark contexts.
 - Added `.soft` and `.pill` as formally supported presentation classes with consistent docs and tests.
 - Added `.banner` as a full-width, border-x-0 static feedback surface that extends the `.alert` token foundation.
 - Refactored `.toast` so it shares the feedback token foundation with `.alert`, adds placement and overlay-specific treatment, and uses `--elevation-overlay` for its shadow.
@@ -28,12 +28,11 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Added an internal theme toggle to the preview, fixed in the bottom-right corner.
 - Tightened public token roles by removing legacy root tokens and treating component-scoped variables as internal implementation details.
 - Updated semantic contrast tokens so filled intent buttons meet normal text contrast requirements.
-- Added regression coverage for filled semantic button contrast and legacy token removal.
+- Added regression coverage for filled semantic button contrast, presentation/intent companion tone composition, and legacy token removal.
 
 ## Planned
 
 - Consider adding more presentation classes for buttons (e.g. `loading` state enhancements) once component APIs stabilize.
-- Make presentation classes smarter about intent compatibility. Document unsupported combinations instead of silently producing inaccessible output.
 - Add more explicit compatibility tests for intent and presentation combinations when new combinations are supported.
 
 ## Later / Possible

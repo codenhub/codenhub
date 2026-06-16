@@ -94,7 +94,7 @@ Detailed package reference ships with the package under `.docs/`:
 
 ### Composed Buttons
 
-Intent classes set color meaning. Presentation classes set visual treatment.
+Intent classes set color meaning. Presentation classes set visual treatment and consume the active intent tones.
 
 ```html
 <button class="btn primary">Primary</button>
