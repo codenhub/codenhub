@@ -12,7 +12,11 @@ export interface NavigateOptions {
   state?: unknown;
 }
 
-/** Path parameters keyed by route parameter name. */
+/**
+ * Path parameters keyed by route parameter name. Captured names are own data
+ * properties; use `Object.hasOwn()` for presence checks because parameter names
+ * can overlap object method names.
+ */
 export type RouteParams = Record<string, string>;
 
 /** Information for the route that matched the current navigation target. */
@@ -50,17 +54,17 @@ export type RouterListener = (match: RouterMatch | null) => void;
 
 /** Browser router with route registration, matching, navigation, and subscriptions. */
 export interface Router {
-  /** Registers a route handler and returns the router for chaining; throws when the route path is invalid. */
+  /** Registers a route handler and returns the router for chaining; throws when the route path is invalid or contains dot segments. */
   on(path: string, handler: RouteHandler): Router;
   /** Replaces the fallback handler used when navigation has no matching route. */
   notFound(handler: NotFoundHandler): Router;
   /** Starts browser history integration and matches the current browser location when available; throws during active navigation. */
   start(): RouterMatch | null;
-  /** Navigates to an app-local path, writing browser history when available; throws when the target is invalid or navigation is already running. */
+  /** Navigates to an app-local path, writing browser history when available; throws when the target is invalid, contains dot segments, or navigation is already running. */
   navigate(to: string, options?: NavigateOptions): RouterMatch | null;
-  /** Matches an app-local path without side effects; throws when the target is invalid. */
+  /** Matches an app-local path without side effects; throws when the target is invalid or contains dot segments. */
   match(to: string): RouterMatch | null;
-  /** Builds a browser href for an app-local path without navigating; throws when the target is invalid. */
+  /** Builds a browser href for an app-local path without navigating; throws when the target is invalid or contains dot segments. */
   href(to: string): string;
   /** Registers a listener called after navigation and returns an unsubscribe function. */
   subscribe(listener: RouterListener): () => void;

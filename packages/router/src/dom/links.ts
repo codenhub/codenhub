@@ -3,7 +3,11 @@ import type { ConnectRouterLinksOptions } from "./types";
 
 const DEFAULT_LINK_SELECTOR = "a[href]";
 
-/** Enables delegated SPA navigation for same-origin app-local anchors and returns a disconnect function. */
+/**
+ * Enables delegated SPA navigation for same-origin app-local anchors inside the
+ * delegated root and returns a disconnect function. Browser selector and DOM API
+ * errors, plus errors from intercepted navigation, are not caught.
+ */
 export function connectRouterLinks(options: ConnectRouterLinksOptions): () => void {
   const root = options.root ?? document;
   const selector = options.selector ?? DEFAULT_LINK_SELECTOR;
@@ -13,7 +17,12 @@ export function connectRouterLinks(options: ConnectRouterLinksOptions): () => vo
     }
 
     const anchor = findAnchor(event.target, selector);
-    if (anchor === null || shouldKeepNativeAnchor(anchor)) {
+    if (
+      anchor === null ||
+      !isInsideDelegatedRoot(anchor, root) ||
+      shouldKeepNativeAnchor(anchor) ||
+      shouldKeepNativeSameDocumentAnchor(anchor)
+    ) {
       return;
     }
 
@@ -50,6 +59,20 @@ function shouldKeepNativeAnchor(anchor: HTMLAnchorElement): boolean {
   );
 }
 
+function shouldKeepNativeSameDocumentAnchor(anchor: HTMLAnchorElement): boolean {
+  if (!anchor.getAttribute("href")?.includes("#")) {
+    return false;
+  }
+
+  const url = new URL(anchor.href, window.location.href);
+
+  return (
+    url.origin === window.location.origin &&
+    normalizePercentEscapes(url.pathname) === normalizePercentEscapes(window.location.pathname) &&
+    url.search === window.location.search
+  );
+}
+
 function findAnchor(target: EventTarget | null, selector: string): HTMLAnchorElement | null {
   if (!(target instanceof Node)) {
     return null;
@@ -59,6 +82,10 @@ function findAnchor(target: EventTarget | null, selector: string): HTMLAnchorEle
   const anchor = element?.closest(selector);
 
   return anchor instanceof HTMLAnchorElement ? anchor : null;
+}
+
+function isInsideDelegatedRoot(anchor: HTMLAnchorElement, root: ParentNode): boolean {
+  return root instanceof Node && root.contains(anchor);
 }
 
 function toAppPath(href: string, rootHref: string): string | null {

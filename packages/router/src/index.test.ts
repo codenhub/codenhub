@@ -2,15 +2,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRouter } from ".";
+import type { Router } from ".";
 
 describe("createRouter", () => {
+  const startedRouters: Router[] = [];
+
   beforeEach(() => {
     history.replaceState(null, "", "/");
   });
 
   afterEach(() => {
+    for (const router of startedRouters.splice(0)) {
+      router.destroy();
+    }
     vi.restoreAllMocks();
   });
+
+  function trackStartedRouter(router: Router): Router {
+    startedRouters.push(router);
+
+    return router;
+  }
 
   it("matches registered routes in order with decoded params, query strings, and hashes", () => {
     const firstHandler = vi.fn();
@@ -32,7 +44,7 @@ describe("createRouter", () => {
 
   it("strips base paths on browser starts and restores them for hrefs and history navigation", () => {
     const handler = vi.fn();
-    const router = createRouter({ basePath: "/app" }).on("/settings", handler);
+    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler));
 
     history.replaceState(null, "", "/app/settings?tab=profile#details");
 
@@ -57,7 +69,7 @@ describe("createRouter", () => {
     const handler = vi.fn();
     const fallback = vi.fn();
     const listener = vi.fn();
-    const router = createRouter({ basePath: "/app" }).on("/settings", handler).notFound(fallback);
+    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler).notFound(fallback));
 
     router.subscribe(listener);
     history.replaceState(null, "", "/settings?from=outside#details");
@@ -143,6 +155,15 @@ describe("createRouter", () => {
     expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
   });
 
+  it("returns route params as ordinary objects", () => {
+    const router = createRouter().on("/users/:id", vi.fn());
+
+    const match = router.navigate("/users/alice");
+
+    expect(Object.getPrototypeOf(match?.params)).toBe(Object.prototype);
+    expect(match?.params.hasOwnProperty("id")).toBe(true);
+  });
+
   it("treats malformed encoded path parameters as misses", () => {
     const handler = vi.fn();
     const fallback = vi.fn();
@@ -188,7 +209,7 @@ describe("createRouter", () => {
   it("removes browser listeners and subscribers when destroyed", () => {
     const handler = vi.fn();
     const listener = vi.fn();
-    const router = createRouter().on("/next", handler);
+    const router = trackStartedRouter(createRouter().on("/next", handler));
 
     router.subscribe(listener);
     router.start();
@@ -220,5 +241,17 @@ describe("createRouter", () => {
     expect(() => router.navigate("/\\example.com/settings")).toThrow(Error);
     expect(() => router.href("//example.com/settings")).toThrow(Error);
     expect(() => router.href("/settings\\profile")).toThrow(Error);
+  });
+
+  it("rejects dot path segments before URL normalization", () => {
+    const router = createRouter();
+    const handler = vi.fn();
+
+    expect(() => createRouter({ basePath: "/admin/../app" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "/admin/./app" })).toThrow(Error);
+    expect(() => router.on("/admin/../users", handler)).toThrow(Error);
+    expect(() => router.on("/admin/./users", handler)).toThrow(Error);
+    expect(() => router.navigate("/admin/../users")).toThrow(Error);
+    expect(() => router.href("/admin/%2e%2e/users")).toThrow(Error);
   });
 });

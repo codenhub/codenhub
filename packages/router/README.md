@@ -150,6 +150,9 @@ interface CreateRouterOptions {
 | ---------- | -------- | ------- | ----------------------------------------------------------- |
 | `basePath` | `string` | `""`    | Prefix stripped before matching and restored in navigation. |
 
+When provided, `basePath` must be an app-local path prefix without a trailing
+slash, backslashes, query string, hash, or `.`/`..` path segments.
+
 #### `Router`
 
 Router instance returned by `createRouter()`.
@@ -182,9 +185,9 @@ included. Static route segments are normalized with browser URL encoding, so
 literal non-ASCII characters match their equivalent percent-encoded browser
 pathname.
 
-`on()` throws `Error` when the path is empty, does not start with `/`, or
-contains a query string, hash, empty path parameter name, or duplicate path
-parameter name.
+`on()` throws `Error` when the path is empty, does not start with `/`, starts
+with `//`, or contains backslashes, `.`/`..` path segments, a query string,
+hash, empty path parameter name, or duplicate path parameter name.
 
 ##### `notFound()`
 
@@ -230,8 +233,8 @@ matches the new location. Without `window`, it matches `to` without writing
 browser history.
 
 Returns the active `RouterMatch`, or `null` when no route matches. It throws
-`Error` when `to` is not an app-local path or another navigation is already
-being handled.
+`Error` when `to` is not an app-local path, contains backslashes or `.`/`..`
+path segments, or another navigation is already being handled.
 
 ##### `href()`
 
@@ -242,8 +245,8 @@ function href(to: string): string;
 ```
 
 `href()` applies the router `basePath` so anchors keep native browser behavior,
-including middle-click, copy link, and new tab. It throws `Error` when `to` is
-not an app-local path.
+including middle-click, copy link, and new tab. It uses the same path validation
+as `navigate()` and throws `Error` when `to` is invalid.
 
 ##### `match()`
 
@@ -255,7 +258,8 @@ function match(to: string): RouterMatch | null;
 ```
 
 Returns `RouterMatch` for the first matching route, or `null` when no route
-matches. It throws `Error` when `to` is not an app-local path.
+matches. It uses the same path validation as `navigate()` and throws `Error`
+when `to` is invalid.
 
 Named parameters are decoded with `decodeURIComponent`. Malformed encoded
 parameter segments are treated as no match.
@@ -355,6 +359,12 @@ interface RouterMiss {
 }
 ```
 
+| Property       | Type              | Description                                                       |
+| -------------- | ----------------- | ----------------------------------------------------------------- |
+| `pathname`     | `string`          | Unmatched pathname after `basePath` is removed when applicable.   |
+| `searchParams` | `URLSearchParams` | Query string as browser-native search params for the missed path. |
+| `hash`         | `string`          | URL hash, including the leading `#` when one is present.          |
+
 #### `RouteParams`
 
 Path parameters from a route match.
@@ -362,6 +372,11 @@ Path parameters from a route match.
 ```ts
 type RouteParams = Record<string, string>;
 ```
+
+`RouteParams` is an ordinary object. Special parameter names such as
+`__proto__` are captured as own data properties. Because route parameter names
+can overlap object method names, use `Object.hasOwn(params, name)` instead of
+`params.hasOwnProperty(name)` for presence checks.
 
 #### `RouterListener`
 
@@ -399,6 +414,10 @@ import type {
 } from "@codenhub/router/dom";
 ```
 
+`NavigateOptions` and `Router` are re-exported from the core entrypoint for DOM
+consumers that need to type navigation options or link integrations without an
+extra import.
+
 #### `definePageRoute()`
 
 Defines a page route.
@@ -429,13 +448,13 @@ interface DefinePageRouteOptions {
 }
 ```
 
-| Property  | Type                              | Description                                       |
-| --------- | --------------------------------- | ------------------------------------------------- |
-| `path`    | `string`                          | Route path using the same syntax as core routes.  |
-| `page`    | `PageOptions`                     | Optional element defaults for this route.         |
-| `render`  | `(context: PageContext) => void`  | Creates page contents by mutating `context.page`. |
-| `destroy` | `(context: PageContext) => void`  | Optional cleanup before the page is removed.      |
-| `title`   | `string \| ((context) => string)` | Optional document title for matched pages.        |
+| Property  | Type                              | Description                                                                          |
+| --------- | --------------------------------- | ------------------------------------------------------------------------------------ |
+| `path`    | `string`                          | Route path using the same syntax as core routes.                                     |
+| `page`    | `PageOptions`                     | Optional element defaults for this route.                                            |
+| `render`  | `(context: PageContext) => void`  | Creates page contents by mutating `context.page`.                                    |
+| `destroy` | `(context: PageContext) => void`  | Optional cleanup before the page is removed.                                         |
+| `title`   | `string \| ((context) => string)` | Optional document title or factory for matched pages. Factory errors are not caught. |
 
 #### `PageRoute`
 
@@ -487,7 +506,9 @@ type PageContext<TRoute extends PageRoute = PageRoute> = PageMatch<TRoute> & {
 `render()` owns page content and mutates `page`. Return values from `render()`
 are ignored. `destroy()` receives the same page and route match before the
 mounted router removes the page from the outlet. `router` exposes navigation
-helpers that are safe for page code.
+helpers that are safe for page code. During `destroy()`, `router.match()` and
+`router.href()` remain available for cleanup code that needs route metadata or
+base-path-aware links.
 
 Starting navigation synchronously from `render()` or `destroy()` throws `Error`
 because the current page lifecycle is still being handled. Schedule redirects or
@@ -521,6 +542,13 @@ type PageMatch<TRoute extends PageRoute = PageRoute> = RouterMatch & {
 };
 ```
 
+`PageMatch` includes every `RouterMatch` field plus `route`, the page route
+metadata that matched the target path.
+
+| Property | Type     | Description                                    |
+| -------- | -------- | ---------------------------------------------- |
+| `route`  | `TRoute` | Page route metadata associated with the match. |
+
 #### `PageRouterListener`
 
 Listener called after DOM router navigation.
@@ -548,7 +576,9 @@ matched route `destroy()` runs when present.
 
 It throws `Error` when the outlet selector has no matching element, `basePath`
 is invalid, or a route path is invalid. Invalid page tags, route `render()`
-errors, and route `destroy()` errors are not caught by the router.
+errors, route `destroy()` errors, and title factory errors are not caught by the
+router. When cleanup fails during teardown, the outlet is still cleared before
+the error is rethrown.
 
 #### `MountRouterOptions`
 
@@ -606,11 +636,12 @@ interface MountedRouter {
 ```
 
 `destroy()` removes router-owned listeners, disconnects delegated link handling,
-runs `destroy()` for the active route when present, and clears the outlet.
-After `destroy()`, controller methods throw `Error` except repeated `destroy()`
-calls, which are allowed. `match()` and `href()` validate app-local paths without
-navigating. `start()` and `navigate()` also throw while another navigation is
-already being handled.
+runs `destroy()` for the active route when present, and clears the outlet. Active
+route cleanup errors are rethrown after the outlet is cleared. After `destroy()`,
+controller methods throw `Error` except repeated `destroy()` calls, which are
+allowed. `match()` and `href()` validate app-local paths without navigating.
+`start()` and `navigate()` also throw while another navigation is already being
+handled.
 
 #### `connectRouterLinks()`
 
@@ -620,11 +651,12 @@ Enables SPA navigation for native anchors.
 function connectRouterLinks(options: ConnectRouterLinksOptions): () => void;
 ```
 
-It listens for clicks on anchors matching `a[href]`, preserves normal browser
-behavior for external links, downloads, non-primary clicks, modifier keys,
-non-`_self` targets, anchors with `data-router-ignore`, and same-origin links
-outside the router `basePath`, and calls `router.navigate()` for safe app-local
-links.
+It listens for clicks on anchors matching `a[href]` inside the delegated `root`,
+preserves normal browser behavior for external links, downloads, non-primary
+clicks, modifier keys, non-`_self` targets, anchors with `data-router-ignore`,
+same-document hash links, matching ancestor anchors outside the delegated root,
+and same-origin links outside the router `basePath`, and calls
+`router.navigate()` for safe app-local links.
 
 Link handling is delegated from `root`, so anchors added by route `render()`
 work without reconnecting link handling.

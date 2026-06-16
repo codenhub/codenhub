@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createRouter } from "..";
 import { connectRouterLinks, definePageRoute, mountRouter } from ".";
-import type { PageOptions, PageRoute } from ".";
+import type { MountedRouter, MountRouterOptions, PageOptions, PageRoute } from ".";
 
 type Equal<Actual, Expected> =
   (<Value>() => Value extends Actual ? 1 : 2) extends <Value>() => Value extends Expected ? 1 : 2 ? true : false;
@@ -45,6 +45,8 @@ describe("definePageRoute", () => {
 });
 
 describe("mountRouter", () => {
+  const mountedRouters: MountedRouter[] = [];
+
   beforeEach(() => {
     document.body.innerHTML = '<main id="app"></main>';
     document.title = "";
@@ -52,8 +54,18 @@ describe("mountRouter", () => {
   });
 
   afterEach(() => {
+    for (const app of mountedRouters.splice(0)) {
+      app.destroy();
+    }
     vi.restoreAllMocks();
   });
+
+  function mountTestRouter(options: MountRouterOptions): MountedRouter {
+    const app = mountRouter(options);
+    mountedRouters.push(app);
+
+    return app;
+  }
 
   it("renders matched page routes with params, page options, titles, and cleanup", () => {
     const homeDestroy = vi.fn();
@@ -74,7 +86,7 @@ describe("mountRouter", () => {
         page.textContent = `${params["id"]}:${searchParams.get("tab")}:${router.href("/")}`;
       },
     });
-    const app = mountRouter({
+    const app = mountTestRouter({
       routes: [homeRoute, userRoute],
       outlet: "#app",
       basePath: "/app",
@@ -106,7 +118,7 @@ describe("mountRouter", () => {
       },
       destroy: routeDestroy,
     });
-    const app = mountRouter({ routes: [route], outlet: document.querySelector("#app") as Element });
+    const app = mountTestRouter({ routes: [route], outlet: document.querySelector("#app") as Element });
     const listener = vi.fn();
 
     app.subscribe(listener);
@@ -133,7 +145,7 @@ describe("mountRouter", () => {
 
   it("rejects controller operations after destroy", () => {
     const route = definePageRoute({ path: "/", render: vi.fn() });
-    const app = mountRouter({ routes: [route], outlet: "#app" });
+    const app = mountTestRouter({ routes: [route], outlet: "#app" });
 
     app.destroy();
 
@@ -158,7 +170,7 @@ describe("mountRouter", () => {
         router.navigate("/redirected");
       },
     });
-    const app = mountRouter({ routes: [startRoute, redirectedRoute], outlet: "#app" });
+    const app = mountTestRouter({ routes: [startRoute, redirectedRoute], outlet: "#app" });
     const listener = vi.fn();
 
     app.subscribe(listener);
@@ -167,6 +179,69 @@ describe("mountRouter", () => {
     expect(location.pathname).toBe("/start");
     expect(document.querySelector("#app")?.innerHTML).toBe("");
     expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("allows page cleanup to inspect router matches and hrefs", () => {
+    const cleanupValues: string[] = [];
+    const route = definePageRoute({
+      path: "/known",
+      render({ page }) {
+        page.textContent = "Known";
+      },
+      destroy({ router }) {
+        cleanupValues.push(router.href("/"));
+        cleanupValues.push(router.match("/known")?.route.path ?? "missing");
+      },
+    });
+    const app = mountTestRouter({ routes: [route], outlet: "#app", basePath: "/app" });
+
+    app.navigate("/known");
+
+    expect(() => app.destroy()).not.toThrow();
+    expect(cleanupValues).toEqual(["/app/", "/known"]);
+  });
+
+  it("rejects page navigation started during page cleanup", () => {
+    const redirectedRoute = definePageRoute({
+      path: "/redirected",
+      render({ page }) {
+        page.textContent = "Redirected";
+      },
+    });
+    const startRoute = definePageRoute({
+      path: "/start",
+      render({ page }) {
+        page.textContent = "Start";
+      },
+      destroy({ router }) {
+        router.navigate("/redirected");
+      },
+    });
+    const app = mountTestRouter({ routes: [startRoute, redirectedRoute], outlet: "#app" });
+
+    app.navigate("/start");
+
+    expect(() => app.destroy()).toThrow("Router navigation is already running.");
+    expect(document.querySelector("#app")?.innerHTML).toBe("");
+  });
+
+  it("clears the outlet when page cleanup fails during destroy", () => {
+    const route = definePageRoute({
+      path: "/start",
+      render({ page }) {
+        page.textContent = "Start";
+      },
+      destroy() {
+        throw new Error("Cleanup failed.");
+      },
+    });
+    const app = mountTestRouter({ routes: [route], outlet: "#app" });
+
+    app.navigate("/start");
+
+    expect(() => app.destroy()).toThrow("Cleanup failed.");
+    expect(document.querySelector("#app")?.innerHTML).toBe("");
+    expect(() => app.destroy()).not.toThrow();
   });
 });
 
@@ -225,6 +300,20 @@ describe("connectRouterLinks", () => {
     disconnect();
   });
 
+  it("preserves native behavior for same-document hash links", () => {
+    document.body.insertAdjacentHTML("beforeend", '<a id="hash-link" href="#details">Details</a>');
+    const router = createRouter({ basePath: "/app" }).on("/", vi.fn());
+    const navigateSpy = vi.spyOn(router, "navigate");
+    const disconnect = connectRouterLinks({ router });
+
+    const isHashLinkPrevented = clickLink("#hash-link");
+
+    expect(isHashLinkPrevented).toBe(false);
+    expect(navigateSpy).not.toHaveBeenCalled();
+
+    disconnect();
+  });
+
   it("intercepts base-path links when percent escapes use different casing", () => {
     document.body.innerHTML = '<a id="encoded-link" href="/caf%c3%a9/settings">Settings</a>';
     history.replaceState(null, "", "/caf%C3%A9/");
@@ -237,6 +326,30 @@ describe("connectRouterLinks", () => {
 
     expect(isEncodedLinkPrevented).toBe(true);
     expect(navigateSpy).toHaveBeenCalledWith("/settings");
+
+    disconnect();
+  });
+
+  it("preserves native behavior for anchors outside the delegated root", () => {
+    document.body.innerHTML = `
+      <a id="outside-root-link" href="/app/users/42">
+        <span id="link-root"><button id="inside-root-button" type="button">Open</button></span>
+      </a>
+    `;
+    history.replaceState(null, "", "/app");
+
+    const root = document.querySelector("#link-root");
+    const router = createRouter({ basePath: "/app" }).on("/users/:id", vi.fn());
+    const navigateSpy = vi.spyOn(router, "navigate");
+    if (root === null) {
+      throw new Error("Missing delegated root.");
+    }
+    const disconnect = connectRouterLinks({ router, root });
+
+    const isOutsideRootLinkPrevented = clickLink("#inside-root-button");
+
+    expect(isOutsideRootLinkPrevented).toBe(false);
+    expect(navigateSpy).not.toHaveBeenCalled();
 
     disconnect();
   });

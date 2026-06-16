@@ -1,7 +1,9 @@
 import type { RouteParams } from "./types";
 
 const ROUTER_URL_BASE = "http://router.local";
+const PATHNAME_END_PATTERN = /[?#]/;
 const PERCENT_ESCAPE_PATTERN = /%[0-9a-fA-F]{2}/g;
+const ENCODED_DOT_PATTERN = /%2e/gi;
 
 interface StaticRouteSegment {
   kind: "static";
@@ -42,6 +44,7 @@ export function normalizeBasePath(basePath = ""): string {
   if (basePath.includes("?") || basePath.includes("#")) {
     throw new Error("Router basePath must not include a query string or hash.");
   }
+  assertNoDotPathSegments(basePath, "Router basePath");
 
   const pathname = toUrlPathname(basePath);
   if (pathname.endsWith("/")) {
@@ -142,7 +145,12 @@ export function matchRoute(pattern: RoutePattern, target: ParsedPath): RoutePara
       return null;
     }
 
-    params[segment.name] = paramValue;
+    Object.defineProperty(params, segment.name, {
+      configurable: true,
+      enumerable: true,
+      value: paramValue,
+      writable: true,
+    });
   }
 
   return params;
@@ -158,6 +166,7 @@ function assertRoutePath(path: string): void {
   if (path.includes("?") || path.includes("#")) {
     throw new Error("Route paths must not include a query string or hash.");
   }
+  assertNoDotPathSegments(path, "Route paths");
 }
 
 function assertAppPath(to: string): void {
@@ -167,6 +176,7 @@ function assertAppPath(to: string): void {
   if (to.includes("\\")) {
     throw new Error("Router navigation targets must not include backslashes.");
   }
+  assertNoDotPathSegments(to, "Router navigation targets");
 }
 
 function parseUrlPath(url: URL): ParsedPath {
@@ -193,7 +203,19 @@ export function normalizePercentEscapes(pathname: string): string {
 }
 
 function createRouteParams(): RouteParams {
-  return Object.create(null) as RouteParams;
+  return {};
+}
+
+function assertNoDotPathSegments(value: string, subject: string): void {
+  const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
+  const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);
+
+  for (const segment of pathname.split("/")) {
+    const normalizedSegment = segment.replace(ENCODED_DOT_PATTERN, ".");
+    if (normalizedSegment === "." || normalizedSegment === "..") {
+      throw new Error(`${subject} must not include "." or ".." path segments.`);
+    }
+  }
 }
 
 function decodeRouteParam(segment: string): string | null {
