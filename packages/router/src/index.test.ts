@@ -1,0 +1,224 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createRouter } from ".";
+
+describe("createRouter", () => {
+  beforeEach(() => {
+    history.replaceState(null, "", "/");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("matches registered routes in order with decoded params, query strings, and hashes", () => {
+    const firstHandler = vi.fn();
+    const secondHandler = vi.fn();
+    const router = createRouter().on("/users/:id", firstHandler).on("/users/settings", secondHandler);
+
+    const match = router.navigate("/users/alice%2042?tab=posts#activity");
+
+    expect(match).toMatchObject({
+      path: "/users/:id",
+      pathname: "/users/alice%2042",
+      params: { id: "alice 42" },
+      hash: "#activity",
+    });
+    expect(match?.searchParams.get("tab")).toBe("posts");
+    expect(firstHandler).toHaveBeenCalledWith(match);
+    expect(secondHandler).not.toHaveBeenCalled();
+  });
+
+  it("strips base paths on browser starts and restores them for hrefs and history navigation", () => {
+    const handler = vi.fn();
+    const router = createRouter({ basePath: "/app" }).on("/settings", handler);
+
+    history.replaceState(null, "", "/app/settings?tab=profile#details");
+
+    const startedMatch = router.start();
+
+    expect(startedMatch).toMatchObject({ path: "/settings", pathname: "/settings", hash: "#details" });
+    expect(startedMatch?.searchParams.get("tab")).toBe("profile");
+    expect(router.href("/settings")).toBe("/app/settings");
+
+    const navigatedMatch = router.navigate("/settings?tab=billing", {
+      replace: true,
+      state: { source: "test" },
+    });
+
+    expect(navigatedMatch?.pathname).toBe("/settings");
+    expect(location.pathname).toBe("/app/settings");
+    expect(location.search).toBe("?tab=billing");
+    expect(history.state).toEqual({ source: "test" });
+  });
+
+  it("does not match browser locations outside the configured base path", () => {
+    const handler = vi.fn();
+    const fallback = vi.fn();
+    const listener = vi.fn();
+    const router = createRouter({ basePath: "/app" }).on("/settings", handler).notFound(fallback);
+
+    router.subscribe(listener);
+    history.replaceState(null, "", "/settings?from=outside#details");
+
+    const match = router.start();
+
+    expect(match).toBeNull();
+    expect(handler).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledWith({
+      pathname: "/settings",
+      searchParams: expect.any(URLSearchParams),
+      hash: "#details",
+    });
+    expect(fallback.mock.calls[0]?.[0].searchParams.get("from")).toBe("outside");
+    expect(listener).toHaveBeenCalledWith(null);
+  });
+
+  it("calls fallback handlers and subscribers for misses", () => {
+    const fallback = vi.fn();
+    const listener = vi.fn();
+    const router = createRouter().on("/known", vi.fn()).notFound(fallback);
+    const unsubscribe = router.subscribe(listener);
+
+    const match = router.navigate("/missing?from=test#empty");
+
+    expect(match).toBeNull();
+    expect(fallback).toHaveBeenCalledWith({
+      pathname: "/missing",
+      searchParams: expect.any(URLSearchParams),
+      hash: "#empty",
+    });
+    expect(fallback.mock.calls[0]?.[0].searchParams.get("from")).toBe("test");
+    expect(listener).toHaveBeenCalledWith(null);
+
+    unsubscribe();
+    router.navigate("/known");
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches static route paths using browser URL encoding", () => {
+    const handler = vi.fn();
+    const routePath = "/caf\u00e9";
+    const router = createRouter().on(routePath, handler);
+
+    const match = router.navigate(routePath);
+
+    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
+    expect(handler).toHaveBeenCalledWith(match);
+  });
+
+  it("matches static route paths with equivalent percent-escape casing", () => {
+    const handler = vi.fn();
+    const routePath = "/caf\u00e9";
+    const router = createRouter().on(routePath, handler);
+
+    const match = router.navigate("/caf%c3%a9");
+
+    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
+    expect(handler).toHaveBeenCalledWith(match);
+  });
+
+  it("normalizes encoded base paths for browser starts and hrefs", () => {
+    const handler = vi.fn();
+    const router = createRouter({ basePath: "/caf\u00e9" }).on("/settings", handler);
+
+    history.replaceState(null, "", "/caf%c3%a9/settings?tab=profile");
+
+    const match = router.start();
+
+    expect(match).toMatchObject({ path: "/settings", pathname: "/settings" });
+    expect(match?.searchParams.get("tab")).toBe("profile");
+    expect(handler).toHaveBeenCalledWith(match);
+    expect(router.href("/settings")).toBe("/caf%C3%A9/settings");
+  });
+
+  it("captures parameter names that overlap object prototype fields", () => {
+    const router = createRouter().on("/users/:__proto__", vi.fn());
+
+    const match = router.navigate("/users/alice");
+
+    expect(match?.params["__proto__"]).toBe("alice");
+    expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
+  });
+
+  it("treats malformed encoded path parameters as misses", () => {
+    const handler = vi.fn();
+    const fallback = vi.fn();
+    const router = createRouter().on("/users/:id", handler).notFound(fallback);
+
+    const match = router.navigate("/users/%E0%A4%A");
+
+    expect(match).toBeNull();
+    expect(handler).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledWith({
+      pathname: "/users/%E0%A4%A",
+      searchParams: expect.any(URLSearchParams),
+      hash: "",
+    });
+  });
+
+  it("rejects route paths with queries, hashes, and duplicate parameter names", () => {
+    const router = createRouter();
+    const handler = vi.fn();
+
+    expect(() => router.on("/users?tab=active", handler)).toThrow(Error);
+    expect(() => router.on("/users#active", handler)).toThrow(Error);
+    expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
+  });
+
+  it("rejects navigation started while another navigation is running", () => {
+    const router = createRouter();
+    const handler = vi.fn(() => {
+      router.navigate("/redirected");
+    });
+    const redirectedHandler = vi.fn();
+    const listener = vi.fn();
+
+    router.on("/start", handler).on("/redirected", redirectedHandler);
+    router.subscribe(listener);
+
+    expect(() => router.navigate("/start")).toThrow("Router navigation is already running.");
+    expect(location.pathname).toBe("/start");
+    expect(redirectedHandler).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("removes browser listeners and subscribers when destroyed", () => {
+    const handler = vi.fn();
+    const listener = vi.fn();
+    const router = createRouter().on("/next", handler);
+
+    router.subscribe(listener);
+    router.start();
+    listener.mockClear();
+    router.destroy();
+
+    history.pushState(null, "", "/next");
+    dispatchEvent(new PopStateEvent("popstate"));
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it("validates base paths, route paths, and navigation targets", () => {
+    const router = createRouter();
+    const handler = vi.fn();
+
+    expect(() => createRouter({ basePath: "app" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "//example.com" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "/\\example.com" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "/app?tab=settings" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "/app#settings" })).toThrow(Error);
+    expect(() => createRouter({ basePath: "/app/" })).toThrow(Error);
+    expect(() => router.on("", handler)).toThrow(Error);
+    expect(() => router.on("users/:id", handler)).toThrow(Error);
+    expect(() => router.on("/users\\:id", handler)).toThrow(Error);
+    expect(() => router.on("/users/:", handler)).toThrow(Error);
+    expect(() => router.navigate("settings")).toThrow(Error);
+    expect(() => router.navigate("/\\example.com/settings")).toThrow(Error);
+    expect(() => router.href("//example.com/settings")).toThrow(Error);
+    expect(() => router.href("/settings\\profile")).toThrow(Error);
+  });
+});
