@@ -9,8 +9,8 @@
   "scripts": {
     "cloc": "cloc --exclude-dir=node_modules,dist,coverage,test-results,.git --exclude-ext=yaml,json",
     "build": "pnpm -r --if-present build",
-    "format:check": "oxfmt --check .",
-    "format:fix": "oxfmt .",
+    "format:check": "oxfmt --check",
+    "format:fix": "oxfmt",
     "lint:check": "oxlint",
     "lint:fix": "oxlint --fix",
     "status:npm": "pnpm -r --if-present status:npm",

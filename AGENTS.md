@@ -15,7 +15,7 @@ If APPROVED or IMPLEMENTED docs conflict with code, treat code as legacy unless 
 
 ## Commands
 
-Run relevant checks after changes:
+Run relevant checks after changes from the repository root:
 
 ```sh
 pnpm format:check
@@ -24,7 +24,17 @@ pnpm typecheck
 pnpm test
 ```
 
-Use package-level commands when a full workspace check is unnecessary, but full workspace checks are preferred before final delivery when practical.
+Format and lint scripts can run repo-wide or against a root-relative path:
+
+```sh
+pnpm format:check
+pnpm format:check packages/error
+pnpm lint:fix packages/error/src
+```
+
+When checking or running scripts for one package, use `pnpm --filter=<package-dir> <script>` from the repository root, where `<package-dir>` is the directory name under `packages/`. For example, use `pnpm --filter=error typecheck` or `pnpm --filter=error test`. Do not change into a package directory to run package scripts.
+
+Use package-filtered commands when a full workspace check is unnecessary, but full workspace checks are preferred before final delivery when practical.
 
 ## Change rules
 

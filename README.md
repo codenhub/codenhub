@@ -14,7 +14,7 @@ This repository is docs-first: durable decisions live in `.docs/` and code shoul
 
 ## Commands
 
-Use pnpm from the repository root:
+Use pnpm from the repository root. Run workspace-wide commands with no package filter:
 
 ```sh
 pnpm build
@@ -24,6 +24,22 @@ pnpm lint:check
 pnpm lint:fix
 pnpm test
 pnpm typecheck
+```
+
+Format and lint scripts accept an optional root-relative path:
+
+```sh
+pnpm format:check
+pnpm format:check packages/error
+pnpm lint:fix packages/error/src
+```
+
+When working on one package, run package scripts with `--filter` from the repository root. Use the directory name under `packages/` as the filter value:
+
+```sh
+pnpm --filter=error build
+pnpm --filter=styles test
+pnpm --filter=theme typecheck
 ```
 
 Before publishing or merging package behavior changes, run at least:
