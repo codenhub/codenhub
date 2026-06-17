@@ -1,7 +1,7 @@
 # Roadmap
 
 **Status:** APPROVED
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-17
 **Scope:** `@codenhub/styles` package direction.
 
 ## Purpose
@@ -19,7 +19,7 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Refactored component helpers toward Tailwind-first source usage with `@apply` for static utility-like styling.
 - Preserved composable button intent classes and presentation classes, including `.btn.error` inside `.field`.
 - Reduced selector leakage by nesting related component styles where CSS nesting clearly scopes variants, states, pseudo-elements, and descendants to their owning helper class.
-- Improved button presentation compatibility: `.ghost` and `.outline` now use intent companion text tones, while `.soft` pairs intent companion text and surface tones (`*-dark`/`*-light`) for light and dark contexts.
+- Improved button presentation compatibility: `.ghost` and `.out` now use intent companion text tones, while `.soft` pairs intent companion text and surface tones (`*-dark`/`*-light`) for light and dark contexts.
 - Added `.soft` and `.pill` as formally supported presentation classes with consistent docs and tests.
 - Added `.banner` as a full-width, border-x-0 static feedback surface that extends the `.alert` token foundation.
 - Refactored `.toast` so it shares the feedback token foundation with `.alert`, adds placement and overlay-specific treatment, and uses `--elevation-overlay` for its shadow.

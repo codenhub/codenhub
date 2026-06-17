@@ -1,7 +1,7 @@
 # @codenhub/styles Overview
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-17
 **Scope:** `@codenhub/styles` package.
 
 `@codenhub/styles` is a CSS-only styling foundation for Codenhub interfaces. It provides tokens, base styles, typography utilities, layout helpers, component helper classes, and Tailwind CSS v4 source entrypoints.
@@ -26,18 +26,18 @@ The package has no JavaScript runtime. It does not create DOM nodes, attach even
 Helper classes are designed as small composable CSS contracts:
 
 - Intent classes define meaning, such as `.primary`, `.success`, `.warning`, `.destructive`, and `.info`.
-- Presentation classes define treatment, such as `.outline`, `.ghost`, `.soft`, `.sm`, `.lg`, and `.icon`.
+- Presentation classes define treatment, such as `.out`, `.ghost`, `.soft`, `.sm`, `.lg`, and `.icon`.
 - State classes or attributes define current state, such as `.loading`, `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, `[aria-invalid="true"]`, and `[data-state="open"]`.
 
 Button example:
 
 ```html
-<button class="btn success outline">Success outline</button>
+<button class="btn success out">Success outline</button>
 <button class="btn destructive ghost">Danger ghost</button>
 <button class="btn primary loading" disabled>Saving</button>
 ```
 
-`outline`, `ghost`, and `soft` are presentation choices. They consume the active intent tokens instead of carrying a fixed color intent; for example, `.btn.success.soft` uses success companion tones.
+`out`, `ghost`, and `soft` are presentation choices. They consume the active intent tokens instead of carrying a fixed color intent; for example, `.btn.success.soft` uses success companion tones.
 
 ## Token Model
 

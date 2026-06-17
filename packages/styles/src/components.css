@@ -66,10 +66,7 @@
   .auto-grid {
     @apply grid gap-(--layout-stack-gap);
 
-    grid-template-columns: repeat(
-      auto-fit,
-      minmax(min(var(--layout-grid-min), 100%), 1fr)
-    );
+    grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
   }
 
   .card,
@@ -114,16 +111,8 @@
     --button-hover-border: var(--button-hover-bg);
     --button-text: var(--color-primary-dark);
     --button-soft-bg: var(--color-primary-light);
-    --button-subtle-hover-bg: color-mix(
-      in srgb,
-      var(--button-soft-bg) 60%,
-      transparent
-    );
-    --button-soft-hover-bg: color-mix(
-      in srgb,
-      var(--button-soft-bg) 84%,
-      var(--button-text)
-    );
+    --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 60%, transparent);
+    --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
     --button-spinner: var(--button-fg);
 
     .dark & {
@@ -162,11 +151,7 @@
     &.success {
       --button-bg: var(--color-success);
       --button-fg: var(--color-success-contrast);
-      --button-hover-bg: color-mix(
-        in srgb,
-        var(--color-success) 82%,
-        var(--color-success-dark)
-      );
+      --button-hover-bg: color-mix(in srgb, var(--color-success) 82%, var(--color-success-dark));
       --button-text: var(--color-success-dark);
       --button-soft-bg: var(--color-success-light);
 
@@ -179,11 +164,7 @@
     &.warning {
       --button-bg: var(--color-warning);
       --button-fg: var(--color-warning-contrast);
-      --button-hover-bg: color-mix(
-        in srgb,
-        var(--color-warning) 82%,
-        var(--color-warning-dark)
-      );
+      --button-hover-bg: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-dark));
       --button-text: var(--color-warning-dark);
       --button-soft-bg: var(--color-warning-light);
 
@@ -198,11 +179,7 @@
     &.error {
       --button-bg: var(--color-destructive);
       --button-fg: var(--color-destructive-contrast);
-      --button-hover-bg: color-mix(
-        in srgb,
-        var(--color-destructive) 82%,
-        var(--color-destructive-dark)
-      );
+      --button-hover-bg: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-dark));
       --button-text: var(--color-destructive-dark);
       --button-soft-bg: var(--color-destructive-light);
 
@@ -215,11 +192,7 @@
     &.info {
       --button-bg: var(--color-info);
       --button-fg: var(--color-info-contrast);
-      --button-hover-bg: color-mix(
-        in srgb,
-        var(--color-info) 82%,
-        var(--color-info-dark)
-      );
+      --button-hover-bg: color-mix(in srgb, var(--color-info) 82%, var(--color-info-dark));
       --button-text: var(--color-info-dark);
       --button-soft-bg: var(--color-info-light);
 
@@ -229,28 +202,18 @@
       }
     }
 
-    &.outline {
+    &.out {
       --button-spinner: var(--button-bg);
 
-      @apply border-(--button-bg) bg-transparent text-(--button-bg);
+      @apply border-(--button-text) bg-transparent text-(--button-text);
 
-      &:not(
-          :disabled,
-          .disabled,
-          [aria-disabled="true"],
-          [data-disabled]
-        ):hover {
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
         @apply border-(--button-text) bg-(--button-subtle-hover-bg) text-(--button-text);
       }
 
       &.fill {
-        &:not(
-            :disabled,
-            .disabled,
-            [aria-disabled="true"],
-            [data-disabled]
-          ):hover {
-          @apply bg-(--button-bg) border-(--button-bg) text-(--button-text);
+        &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+          @apply border-(--button-bg) bg-(--button-bg) text-(--button-text);
         }
       }
     }
@@ -260,12 +223,7 @@
 
       @apply border-transparent bg-transparent text-(--button-text);
 
-      &:not(
-          :disabled,
-          .disabled,
-          [aria-disabled="true"],
-          [data-disabled]
-        ):hover {
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
         @apply border-transparent bg-(--button-subtle-hover-bg) text-(--button-text);
       }
     }
@@ -275,12 +233,7 @@
 
       @apply border-transparent bg-(--button-soft-bg) text-(--button-text);
 
-      &:not(
-          :disabled,
-          .disabled,
-          [aria-disabled="true"],
-          [data-disabled]
-        ):hover {
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
         @apply border-transparent bg-(--button-soft-hover-bg) text-(--button-text);
       }
     }
@@ -304,7 +257,7 @@
     }
 
     &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-      &:not(.outline, .ghost, .soft) {
+      &:not(.out, .ghost, .soft) {
         @apply border-(--button-hover-border) bg-(--button-hover-bg) text-(--button-hover-fg);
       }
     }
@@ -399,16 +352,8 @@
   .badge,
   .banner {
     --feedback-color: var(--color-info);
-    --feedback-surface: color-mix(
-      in srgb,
-      var(--feedback-color) 12%,
-      var(--color-background)
-    );
-    --feedback-border: color-mix(
-      in srgb,
-      var(--feedback-color) 42%,
-      var(--color-border)
-    );
+    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
+    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
     @apply border border-(--feedback-border) text-(--feedback-color);
 
@@ -464,12 +409,7 @@
     @apply min-h-4 w-full rounded-(--radius-control);
 
     animation: codenhub-skeleton var(--motion-duration-slow) linear infinite;
-    background: linear-gradient(
-      90deg,
-      var(--color-surface),
-      var(--color-foreground),
-      var(--color-surface)
-    );
+    background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
     background-size: 200% 100%;
   }
 

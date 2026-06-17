@@ -98,7 +98,7 @@ Intent classes set color meaning. Presentation classes set visual treatment and 
 
 ```html
 <button class="btn primary">Primary</button>
-<button class="btn success outline">Success outline</button>
+<button class="btn success out">Success outline</button>
 <button class="btn destructive ghost">Ghost danger</button>
 <button class="btn secondary loading" disabled>Saving</button>
 ```

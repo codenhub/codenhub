@@ -168,7 +168,7 @@ test.describe("compiled CSS preview", () => {
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ".btn.success:not(.outline):not(.ghost):not(.soft), .btn.warning:not(.outline):not(.ghost):not(.soft), .btn.destructive:not(.outline):not(.ghost):not(.soft), .btn.info:not(.outline):not(.ghost):not(.soft)",
+          ".btn.success:not(.out):not(.ghost):not(.soft), .btn.warning:not(.out):not(.ghost):not(.soft), .btn.destructive:not(.out):not(.ghost):not(.soft), .btn.info:not(.out):not(.ghost):not(.soft)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -313,7 +313,7 @@ test.describe("compiled CSS preview", () => {
         const ghostButton = document.createElement("button");
         const softButton = document.createElement("button");
 
-        outlineButton.className = `btn ${intent.className} outline`;
+        outlineButton.className = `btn ${intent.className} out`;
         ghostButton.className = `btn ${intent.className} ghost`;
         softButton.className = `btn ${intent.className} soft`;
         host.append(outlineButton, ghostButton, softButton);

@@ -1,7 +1,7 @@
 # @codenhub/styles Classes
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-17
 **Scope:** Public helper classes for `@codenhub/styles`.
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
@@ -52,11 +52,11 @@ Presentation and size classes:
 
 | Class                                                                  | Purpose                                                                   |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `.outline`                                                             | Transparent button with intent companion-tone border and text.            |
+| `.out`                                                                 | Transparent button with intent companion-tone border and text.            |
 | `.ghost`                                                               | Transparent button with intent companion-tone text and soft hover.        |
 | `.soft`                                                                | Low-emphasis filled button using intent companion surface and text tones. |
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                   |
-| `.fill` with `.outline`                                                | Filled hover treatment for outline buttons.                               |
+| `.fill` with `.out`                                                    | Filled hover treatment for outline buttons.                               |
 | `.sm`                                                                  | Smaller button.                                                           |
 | `.lg`                                                                  | Larger button.                                                            |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.                       |
@@ -67,7 +67,7 @@ Examples:
 
 ```html
 <button class="btn primary">Primary</button>
-<button class="btn success outline">Success outline</button>
+<button class="btn success out">Success outline</button>
 <button class="btn warning soft">Warning soft</button>
 <button class="btn destructive ghost">Danger ghost</button>
 <button class="btn icon primary" aria-label="Create">+</button>
