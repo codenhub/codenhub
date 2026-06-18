@@ -60,38 +60,35 @@ Tokens are CSS custom properties. Default values apply by default. `.dark` may o
 
 Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-| Token                      | Purpose                                                                      |
-| -------------------------- | ---------------------------------------------------------------------------- |
-| `--font-default`           | Default app font family.                                                     |
-| `--container-narrow`       | Narrow content width.                                                        |
-| `--container-max`          | Default content width.                                                       |
-| `--container-wide`         | Wide content width.                                                          |
-| `--layout-gutter`          | Responsive inline page padding.                                              |
-| `--layout-section-block`   | Responsive section vertical padding.                                         |
-| `--layout-stack-gap`       | Default vertical stack gap.                                                  |
-| `--layout-cluster-gap`     | Default horizontal/wrapped cluster gap.                                      |
-| `--layout-grid-min`        | Minimum column width for `.auto-grid`.                                       |
-| `--radius-control`         | Radius for buttons, inputs, tooltips, and compact UI.                        |
-| `--radius-surface`         | Radius for cards, panels, and alerts.                                        |
-| `--radius-overlay`         | Radius for overlays such as toasts.                                          |
-| `--control-height`         | Default minimum height for controls.                                         |
-| `--border-width`           | Default border width.                                                        |
-| `--elevation-low`          | Elevation for surface-level components such as cards and panels.             |
-| `--elevation-mid`          | Elevation for elevated components such as dropdowns and floating containers. |
-| `--elevation-high`         | Elevation for tooltips and inline overlays.                                  |
-| `--elevation-overlay`      | Elevation for full-screen overlays and toasts.                               |
-| `--focus-ring`             | Focus-visible ring color.                                                    |
-| `--focus-ring-offset`      | Focus-visible outline offset.                                                |
-| `--focus-ring-width`       | Focus-visible outline/ring width.                                            |
-| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                |
-| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                           |
-| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).             |
-| `--motion-ease`            | Default easing curve.                                                        |
-| `--backdrop-overlay`       | Backdrop filter value for overlay-like surfaces.                             |
-| `--z-popover`              | Popover/tooltip z-index.                                                     |
-| `--z-toast`                | Toast z-index.                                                               |
-| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                  |
-| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                               |
+| Token                       | Purpose                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `--font-default`            | Default app font family.                                                     |
+| `--container-narrow`        | Narrow content width.                                                        |
+| `--container-max`           | Default content width.                                                       |
+| `--container-wide`          | Wide content width.                                                          |
+| `--layout-gutter`           | Responsive inline page padding.                                              |
+| `--layout-section-block`    | Responsive section vertical padding.                                         |
+| `--layout-stack-gap`        | Default vertical stack gap.                                                  |
+| `--layout-cluster-gap`      | Default horizontal/wrapped cluster gap.                                      |
+| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
+| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
+| `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
+| `--control-height`          | Default minimum height for controls.                                         |
+| `--border-width`            | Default border width.                                                        |
+| `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
+| `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
+| `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
+| `--focus-ring`              | Focus-visible ring color.                                                    |
+| `--focus-ring-offset`       | Focus-visible outline offset.                                                |
+| `--focus-ring-width`        | Focus-visible outline/ring width.                                            |
+| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).                |
+| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                           |
+| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).             |
+| `--motion-ease`             | Default easing curve.                                                        |
+| `--z-popover`               | Popover/tooltip z-index.                                                     |
+| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
+| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
+| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
 
 ## Component Internals
 

@@ -60,14 +60,12 @@
 
   --radius-control: 0.5rem;
   --radius-surface: 0.875rem;
-  --radius-overlay: 0.75rem;
   --control-height: 2.5rem;
   --border-width: 1px;
 
   --elevation-low: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
   --elevation-mid: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.08);
   --elevation-high: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.1);
-  --elevation-overlay: 0 24px 48px rgb(15 23 42 / 0.18);
 
   --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
   --focus-ring-offset: 2px;
@@ -78,9 +76,9 @@
   --motion-duration-slow: 400ms;
   --motion-ease: cubic-bezier(0.2, 0, 0, 1);
 
-  --backdrop-overlay: blur(16px);
   --z-popover: 40;
-  --z-toast: 60;
+
+  --surface-hover-transform: translateY(-1px);
 }
 
 .dark {
