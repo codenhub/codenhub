@@ -30,6 +30,21 @@ const watchers = [
     shell: true,
     stdio: "inherit",
   }),
+  spawn("pnpm", ["exec", "tailwindcss", "-i", "./src/index.css", "-o", "./dist/index.css", "--watch"], {
+    cwd: ROOT,
+    shell: true,
+    stdio: "inherit",
+  }),
+  spawn("pnpm", ["exec", "tailwindcss", "-i", "./src/theme.css", "-o", "./dist/theme.css", "--watch"], {
+    cwd: ROOT,
+    shell: true,
+    stdio: "inherit",
+  }),
+  spawn("pnpm", ["exec", "tailwindcss", "-i", "./src/components.css", "-o", "./dist/components.css", "--watch"], {
+    cwd: ROOT,
+    shell: true,
+    stdio: "inherit",
+  }),
 ];
 
 const server = createServer(async (request, response) => {

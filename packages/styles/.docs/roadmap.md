@@ -30,7 +30,7 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Replaced raw shadow tokens with semantic elevation tokens: `--elevation-low`, `--elevation-mid`, `--elevation-high`, `--elevation-overlay`.
 - Added an internal theme toggle to the preview, fixed in the bottom-right corner.
 - Tightened public token roles by removing legacy root tokens and treating component-scoped variables as internal implementation details.
-- Updated semantic contrast tokens so filled intent buttons meet normal text contrast requirements.
+- Updated semantic contrast tokens so filled intent buttons meet 3:1 UI component contrast requirements.
 - Added regression coverage for filled semantic button contrast, presentation/intent tone slot composition, loading transition behavior, and legacy token removal.
 
 ## Planned

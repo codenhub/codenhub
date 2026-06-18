@@ -316,11 +316,11 @@
   }
 
   .select {
-    appearance: base-select;
+    appearance: none;
   }
 
   input[type="checkbox"].checkbox {
-    @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm border border-(--color-border) bg-(--color-background) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
+    @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm border border-(--color-border) bg-(--color-background) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     &:hover {
       @apply border-(--color-border-hover);
@@ -334,16 +334,20 @@
       @apply border-(--color-primary) shadow-[0_0_0_var(--focus-ring-width)_var(--focus-ring)];
     }
 
+    &::after {
+      @apply block size-3 bg-(--color-primary-contrast) opacity-0 transition-opacity duration-(--motion-duration-normal) ease-(--motion-ease);
+      content: "";
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+      mask-size: contain;
+      -webkit-mask-size: contain;
+    }
+
     &:checked {
       @apply border-(--color-primary) bg-(--color-primary);
 
       &::after {
-        @apply block size-3 bg-(--color-primary-contrast);
-        content: "";
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
-        mask-size: contain;
-        -webkit-mask-size: contain;
+        @apply opacity-100;
       }
     }
 
@@ -359,10 +363,10 @@
   }
 
   input[type="checkbox"].switch {
-    @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
+    @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     &::after {
-      @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,background-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+      @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
       content: "";
     }
 
