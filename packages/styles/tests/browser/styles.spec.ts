@@ -428,7 +428,6 @@ test.describe("compiled CSS preview", () => {
       const invalidInput = document.querySelector('[data-testid="invalid-input"]');
       const successAlert = document.querySelector('[data-testid="success-alert"]');
       const warningBanner = document.querySelector('[data-testid="warning-banner"]');
-      const infoToast = document.querySelector('[data-testid="info-toast"]');
       const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
       const progressBar = document.querySelector('[data-testid="progress-bar"]');
 
@@ -439,7 +438,6 @@ test.describe("compiled CSS preview", () => {
         !invalidInput ||
         !successAlert ||
         !warningBanner ||
-        !infoToast ||
         !skeletonBlock ||
         !progressBar
       ) {
@@ -452,7 +450,6 @@ test.describe("compiled CSS preview", () => {
       const invalidInputStyles = getComputedStyle(invalidInput);
       const successAlertStyles = getComputedStyle(successAlert);
       const warningBannerStyles = getComputedStyle(warningBanner);
-      const infoToastStyles = getComputedStyle(infoToast);
       const skeletonStyles = getComputedStyle(skeletonBlock);
       const progressStyles = getComputedStyle(progressBar);
 
@@ -469,7 +466,6 @@ test.describe("compiled CSS preview", () => {
         layoutMaxWidth: layoutStyles.maxWidth,
         progressOverflow: progressStyles.overflow,
         skeletonAnimationName: skeletonStyles.animationName,
-        toastPosition: infoToastStyles.position,
       };
     });
 
@@ -480,9 +476,8 @@ test.describe("compiled CSS preview", () => {
     expect(styles.invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.alertBorderWidth).not.toBe("0px");
     expect(styles.alertColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.bannerBorderLeftWidth).toBe("0px");
+    expect(styles.bannerBorderLeftWidth).not.toBe("0px");
     expect(styles.bannerBorderTopWidth).not.toBe("0px");
-    expect(styles.toastPosition).toBe("fixed");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
   });
@@ -569,13 +564,17 @@ test.describe("compiled CSS preview", () => {
 
       const getCheckedBg = (testId: string) => {
         const el = document.querySelector(`[data-testid="${testId}"]`) as HTMLInputElement | null;
-        if (!el) throw new Error(`Missing fixture: ${testId}`);
+        if (!el) {
+          throw new Error(`Missing fixture: ${testId}`);
+        }
         return getComputedStyle(el).backgroundColor;
       };
 
       const getProgressFill = (testId: string) => {
         const el = document.querySelector(`[data-testid="${testId}"] > *`) as HTMLElement | null;
-        if (!el) throw new Error(`Missing fixture: ${testId}`);
+        if (!el) {
+          throw new Error(`Missing fixture: ${testId}`);
+        }
         return getComputedStyle(el).backgroundColor;
       };
 

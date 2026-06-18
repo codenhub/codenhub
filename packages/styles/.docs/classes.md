@@ -129,8 +129,7 @@ Example:
 | Class       | Purpose                                               |
 | ----------- | ----------------------------------------------------- |
 | `.alert`    | Inline feedback surface.                              |
-| `.banner`   | Full-width feedback strip. No side borders.           |
-| `.toast`    | Fixed overlay feedback surface.                       |
+| `.banner`   | Subclass of `.alert`. Full-width feedback strip.      |
 | `.badge`    | Compact status pill.                                  |
 | `.spinner`  | Inline loading spinner.                               |
 | `.skeleton` | Ambient loading placeholder.                          |
@@ -138,14 +137,13 @@ Example:
 
 Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
 
-`.banner` extends `.alert` with `border-radius: 0` and removes side borders, making it suitable for full-width application-level feedback strips. `.toast` uses `--elevation-overlay` for its shadow.
+`.banner` is a subclass of `.alert`. When applied as `.alert.banner`, it sets the alert to be a full-width static feedback strip.
 
 Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
-<div class="banner warning" role="status">Your session expires in 5 minutes.</div>
-<div class="toast info" role="status">Ready.</div>
+<div class="alert banner warning" role="status">Your session expires in 5 minutes.</div>
 <span class="badge warning">Queued</span>
 <span class="spinner" aria-hidden="true"></span>
 <div class="progress" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>

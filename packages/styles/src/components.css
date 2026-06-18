@@ -460,15 +460,12 @@
     }
   }
 
-  .alert,
-  .toast,
-  .badge,
-  .banner {
+  .alert {
     --feedback-color: var(--color-info);
     --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
     --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
-    @apply border border-(--feedback-border) text-(--feedback-color);
+    @apply flex gap-3 rounded-(--radius-surface) border border-(--feedback-border) bg-(--feedback-surface) p-4 text-(--feedback-color);
 
     &.success {
       --feedback-color: var(--color-success);
@@ -487,28 +484,36 @@
     &.info {
       --feedback-color: var(--color-info);
     }
-  }
 
-  .alert,
-  .toast,
-  .banner {
-    @apply flex gap-3 p-4;
-  }
-
-  .alert {
-    @apply rounded-(--radius-surface) bg-(--feedback-surface);
-  }
-
-  .toast {
-    @apply fixed top-4 right-4 z-(--z-toast) max-w-[min(24rem,calc(100vw-2rem))] rounded-(--radius-overlay) bg-[color-mix(in_srgb,var(--color-background)_92%,var(--feedback-color))] shadow-(--elevation-overlay);
-  }
-
-  .banner {
-    @apply rounded-none border-x-0 bg-(--feedback-surface);
+    &.banner {
+      @apply w-full;
+    }
   }
 
   .badge {
-    @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold;
+    --feedback-color: var(--color-info);
+    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
+    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
+
+    @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full border border-(--feedback-border) bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-color);
+
+    &.success {
+      --feedback-color: var(--color-success);
+    }
+
+    &.warning {
+      --feedback-color: var(--color-warning);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      --feedback-color: var(--color-destructive);
+    }
+
+    &.info {
+      --feedback-color: var(--color-info);
+    }
   }
 
   .spinner {
@@ -635,10 +640,6 @@
     .sect {
       @apply items-stretch;
     }
-
-    .toast {
-      @apply right-4 left-4 max-w-none;
-    }
   }
 
   @media (forced-colors: active) {
@@ -649,7 +650,6 @@
     .card,
     .panel,
     .alert,
-    .toast,
     .badge {
       border-color: CanvasText;
     }
