@@ -89,6 +89,8 @@ Examples:
 | `.ipt`                                                                | Input control styling.              |
 | `.textarea`                                                           | Textarea control styling.           |
 | `.select`                                                             | Select control styling.             |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.    |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.      |
 | `[aria-invalid="true"]` on controls                                   | Destructive border and focus color. |
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                   |
 

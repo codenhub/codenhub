@@ -159,6 +159,34 @@
         <select class="select" aria-label="Status">
           <option>Ready</option>
         </select>
+        <div class="cluster" style="gap: 1rem">
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="checkbox" data-testid="checkbox-test" />
+            <span class="text-body font-medium">Accept terms</span>
+          </label>
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="checkbox" checked data-testid="checkbox-checked-test" />
+            <span class="text-body font-medium">Checked</span>
+          </label>
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="checkbox" disabled />
+            <span class="text-body font-medium">Disabled</span>
+          </label>
+        </div>
+        <div class="cluster" style="gap: 1rem">
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="switch" data-testid="switch-test" />
+            <span class="text-body font-medium">Enable notifications</span>
+          </label>
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="switch" checked data-testid="switch-checked-test" />
+            <span class="text-body font-medium">Checked</span>
+          </label>
+          <label class="cluster" style="gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" class="switch" disabled />
+            <span class="text-body font-medium">Disabled</span>
+          </label>
+        </div>
         <div class="alert success" role="status" data-testid="success-alert">Saved.</div>
         <div class="banner warning" role="status" data-testid="warning-banner">A new version is available.</div>
         <div class="toast info" role="status" data-testid="info-toast">Status updated.</div>

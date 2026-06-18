@@ -66,7 +66,10 @@
   .auto-grid {
     @apply grid gap-(--layout-stack-gap);
 
-    grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(var(--layout-grid-min), 100%), 1fr)
+    );
   }
 
   .card,
@@ -116,8 +119,16 @@
     --button-hover-border: var(--button-hover-bg);
     --button-text: var(--button-strong);
     --button-soft-bg: var(--button-subtle);
-    --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 80%, transparent);
-    --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
+    --button-subtle-hover-bg: color-mix(
+      in srgb,
+      var(--button-soft-bg) 80%,
+      transparent
+    );
+    --button-soft-hover-bg: color-mix(
+      in srgb,
+      var(--button-soft-bg) 84%,
+      var(--button-text)
+    );
     --button-spinner: var(--button-fg);
 
     @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) border border-(--button-border) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-fast) ease-(--motion-ease) select-none;
@@ -177,12 +188,22 @@
 
       @apply border-2 border-(--button-text) bg-transparent text-(--button-text);
 
-      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+      &:not(
+          :disabled,
+          .disabled,
+          [aria-disabled="true"],
+          [data-disabled]
+        ):hover {
         @apply border-(--button-text) bg-(--button-subtle-hover-bg) text-(--button-text);
       }
 
       &.fill {
-        &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+        &:not(
+            :disabled,
+            .disabled,
+            [aria-disabled="true"],
+            [data-disabled]
+          ):hover {
           @apply border-(--button-color) bg-(--button-color) text-(--button-contrast);
         }
       }
@@ -193,7 +214,12 @@
 
       @apply border-transparent bg-transparent text-(--button-text);
 
-      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+      &:not(
+          :disabled,
+          .disabled,
+          [aria-disabled="true"],
+          [data-disabled]
+        ):hover {
         @apply border-transparent bg-(--button-subtle-hover-bg) text-(--button-text);
       }
     }
@@ -203,7 +229,12 @@
 
       @apply border-transparent bg-(--button-soft-bg) text-(--button-text);
 
-      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+      &:not(
+          :disabled,
+          .disabled,
+          [aria-disabled="true"],
+          [data-disabled]
+        ):hover {
         @apply border-transparent bg-(--button-soft-hover-bg) text-(--button-text);
       }
     }
@@ -317,13 +348,99 @@
     appearance: base-select;
   }
 
+  input[type="checkbox"].checkbox {
+    @apply appearance-none size-4 border border-(--color-border) rounded-sm bg-(--color-background) inline-grid place-content-center cursor-pointer transition-[background-color,border-color,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
+
+    &:hover {
+      @apply border-(--color-border-hover);
+    }
+
+    &:focus {
+      @apply outline-none;
+    }
+
+    &:focus-visible {
+      @apply border-(--color-primary) shadow-[0_0_0_var(--focus-ring-width)_var(--focus-ring)];
+    }
+
+    &:checked {
+      @apply bg-(--color-primary) border-(--color-primary);
+
+      &::after {
+        @apply block size-3 bg-(--color-primary-contrast);
+        content: "";
+        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+        mask-size: contain;
+        -webkit-mask-size: contain;
+      }
+    }
+
+    &[aria-invalid="true"] {
+      @apply border-(--color-destructive);
+    }
+
+    &:disabled,
+    &[aria-disabled="true"],
+    &[data-disabled] {
+      @apply cursor-not-allowed opacity-[0.58];
+    }
+  }
+
+  input[type="checkbox"].switch {
+    @apply appearance-none w-9 h-4.5 rounded-full bg-(--color-surface) relative cursor-pointer transition-[background-color,border-color,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
+
+    &::after {
+      @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,background-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+      content: "";
+    }
+
+    &:hover {
+      @apply border-(--color-border-hover);
+    }
+
+    &:focus {
+      @apply outline-none;
+    }
+
+    &:focus-visible {
+      @apply border-(--color-primary) shadow-[0_0_0_var(--focus-ring-width)_var(--focus-ring)];
+    }
+
+    &:checked {
+      @apply bg-(--color-primary) border-(--color-primary);
+
+      &::after {
+        @apply translate-x-4.5 bg-(--color-primary-contrast);
+      }
+    }
+
+    &[aria-invalid="true"] {
+      @apply border-(--color-destructive);
+    }
+
+    &:disabled,
+    &[aria-disabled="true"],
+    &[data-disabled] {
+      @apply cursor-not-allowed opacity-[0.58];
+    }
+  }
+
   .alert,
   .toast,
   .badge,
   .banner {
     --feedback-color: var(--color-info);
-    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
-    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
+    --feedback-surface: color-mix(
+      in srgb,
+      var(--feedback-color) 12%,
+      var(--color-background)
+    );
+    --feedback-border: color-mix(
+      in srgb,
+      var(--feedback-color) 42%,
+      var(--color-border)
+    );
 
     @apply border border-(--feedback-border) text-(--feedback-color);
 
@@ -379,7 +496,12 @@
     @apply min-h-4 w-full rounded-(--radius-control);
 
     animation: codenhub-skeleton var(--motion-duration-slow) linear infinite;
-    background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
+    background: linear-gradient(
+      90deg,
+      var(--color-surface),
+      var(--color-foreground),
+      var(--color-surface)
+    );
     background-size: 200% 100%;
   }
 

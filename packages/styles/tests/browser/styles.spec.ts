@@ -544,6 +544,50 @@ test.describe("compiled CSS preview", () => {
     expect(colors.darkBackground).not.toBe(colors.lightBackground);
     expect(colors.darkButtonBackground).not.toBe(colors.lightButtonBackground);
   });
+
+  test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const checkbox = page.getByTestId("checkbox-test");
+    const checkboxChecked = page.getByTestId("checkbox-checked-test");
+    const switchElement = page.getByTestId("switch-test");
+    const switchChecked = page.getByTestId("switch-checked-test");
+
+    await expect(checkbox).toBeVisible();
+    await expect(checkboxChecked).toBeVisible();
+    await expect(switchElement).toBeVisible();
+    await expect(switchChecked).toBeVisible();
+
+    const checkboxStyles = await checkbox.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        appearance: styles.appearance,
+        width: styles.width,
+        height: styles.height,
+        cursor: styles.cursor,
+      };
+    });
+
+    expect(checkboxStyles.appearance).toBe("none");
+    expect(checkboxStyles.width).toBe("16px");
+    expect(checkboxStyles.height).toBe("16px");
+    expect(checkboxStyles.cursor).toBe("pointer");
+
+    const switchStyles = await switchElement.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        appearance: styles.appearance,
+        width: styles.width,
+        height: styles.height,
+        cursor: styles.cursor,
+      };
+    });
+
+    expect(switchStyles.appearance).toBe("none");
+    expect(switchStyles.width).toBe("36px");
+    expect(switchStyles.height).toBe("20px");
+    expect(switchStyles.cursor).toBe("pointer");
+  });
 });
 
 test.describe("Tailwind source build", () => {
