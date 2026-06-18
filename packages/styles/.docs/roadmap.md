@@ -24,8 +24,6 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Renamed companion tone tokens from light/dark to subtle/strong so their names describe role instead of theme luminance.
 - Kept loading buttons from animating color-related transitions so spinner and surface colors stay synchronized during theme changes.
 - Added `.soft` and `.pill` as formally supported presentation classes with consistent docs and tests.
-- Added `.banner` as a full-width, border-x-0 static feedback surface that extends the `.alert` token foundation.
-- Refactored `.toast` so it shares the feedback token foundation with `.alert`, adds placement and overlay-specific treatment, and uses `--elevation-overlay` for its shadow.
 - Split motion tokens by use case: `--motion-duration-fast` for buttons and inputs, `--motion-duration-normal` for layout and modals, `--motion-duration-slow` for skeleton and progress transitions.
 - Replaced raw shadow tokens with semantic elevation tokens: `--elevation-low`, `--elevation-mid`, `--elevation-high`, `--elevation-overlay`.
 - Added an internal theme toggle to the preview, fixed in the bottom-right corner.

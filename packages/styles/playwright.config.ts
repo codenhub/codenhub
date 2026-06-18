@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: true,
-  reporter: "list",
+  reporter: [["list"], ["./tests/browser/exit-reporter.ts"]],
   projects: [
     {
       name: "chromium",

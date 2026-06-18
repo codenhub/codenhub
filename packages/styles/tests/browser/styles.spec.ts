@@ -352,6 +352,10 @@ test.describe("compiled CSS preview", () => {
             host,
             tokenName: `${intent.tokenName}-strong`,
           }),
+          expectedOutlineColor: resolveTokenColor({
+            host,
+            tokenName: intent.tokenName,
+          }),
           expectedSoftBackground: resolveTokenColor({
             host,
             tokenName: `${intent.tokenName}-subtle`,
@@ -389,8 +393,8 @@ test.describe("compiled CSS preview", () => {
     for (const styles of buttonPresentationStyles) {
       const label = `${styles.theme} ${styles.intent}`;
 
-      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedPresentationText);
-      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedPresentationText);
+      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedOutlineColor);
+      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedOutlineColor);
       expect(styles.ghostColor, `${label} ghost color`).toBe(styles.expectedPresentationText);
       expect(styles.softColor, `${label} soft color`).toBe(styles.expectedPresentationText);
       expect(styles.softBackground, `${label} soft background`).toBe(styles.expectedSoftBackground);
@@ -427,7 +431,7 @@ test.describe("compiled CSS preview", () => {
       const autoGridLayout = document.querySelector('[data-testid="auto-grid-layout"]');
       const invalidInput = document.querySelector('[data-testid="invalid-input"]');
       const successAlert = document.querySelector('[data-testid="success-alert"]');
-      const warningBanner = document.querySelector('[data-testid="warning-banner"]');
+      const successAlertIcon = document.querySelector('[data-testid="success-alert-icon"]');
       const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
       const progressBar = document.querySelector('[data-testid="progress-bar"]');
 
@@ -437,7 +441,7 @@ test.describe("compiled CSS preview", () => {
         !autoGridLayout ||
         !invalidInput ||
         !successAlert ||
-        !warningBanner ||
+        !successAlertIcon ||
         !skeletonBlock ||
         !progressBar
       ) {
@@ -449,16 +453,15 @@ test.describe("compiled CSS preview", () => {
       const autoGridStyles = getComputedStyle(autoGridLayout);
       const invalidInputStyles = getComputedStyle(invalidInput);
       const successAlertStyles = getComputedStyle(successAlert);
-      const warningBannerStyles = getComputedStyle(warningBanner);
+      const successAlertIconStyles = getComputedStyle(successAlertIcon);
       const skeletonStyles = getComputedStyle(skeletonBlock);
       const progressStyles = getComputedStyle(progressBar);
 
       return {
         alertBorderWidth: successAlertStyles.borderWidth,
         alertColor: successAlertStyles.color,
-        bannerWidth: warningBanner.getBoundingClientRect().width,
-        bannerBorderLeftWidth: warningBannerStyles.borderLeftWidth,
-        bannerBorderTopWidth: warningBannerStyles.borderTopWidth,
+        alertPaddingLeft: successAlertStyles.paddingLeft,
+        alertIconPaddingLeft: successAlertIconStyles.paddingLeft,
         autoGridDisplay: autoGridStyles.display,
         clusterDisplay: clusterStyles.display,
         invalidBorderColor: invalidInputStyles.borderColor,
@@ -476,8 +479,7 @@ test.describe("compiled CSS preview", () => {
     expect(styles.invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.alertBorderWidth).not.toBe("0px");
     expect(styles.alertColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.bannerBorderLeftWidth).not.toBe("0px");
-    expect(styles.bannerBorderTopWidth).not.toBe("0px");
+    expect(styles.alertIconPaddingLeft).toBe("44px");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
   });
