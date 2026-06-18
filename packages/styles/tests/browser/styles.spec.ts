@@ -430,8 +430,8 @@ test.describe("compiled CSS preview", () => {
       const clusterLayout = document.querySelector('[data-testid="cluster-layout"]');
       const autoGridLayout = document.querySelector('[data-testid="auto-grid-layout"]');
       const invalidInput = document.querySelector('[data-testid="invalid-input"]');
-      const successAlert = document.querySelector('[data-testid="success-alert"]');
-      const successAlertIcon = document.querySelector('[data-testid="success-alert-icon"]');
+      const successAlert = document.querySelector('[data-testid="default-success-alert"]');
+      const successAlertIcon = document.querySelector('[data-testid="default-success-alert-icon"]');
       const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
       const progressBar = document.querySelector('[data-testid="progress-bar"]');
 
@@ -482,6 +482,78 @@ test.describe("compiled CSS preview", () => {
     expect(styles.alertIconPaddingLeft).toBe("44px");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
+  });
+
+  test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    // Flat info alert
+    const flatInfoStyles = await page.getByTestId("flat-info-alert").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        borderColor: styles.borderColor,
+      };
+    });
+    expect(flatInfoStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(flatInfoStyles.color).not.toBe(flatInfoStyles.backgroundColor);
+
+    // Left accent success alert
+    const leftAccentSuccessStyles = await page.getByTestId("left-accent-success-alert").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        borderLeftWidth: styles.borderLeftWidth,
+        borderTopColor: styles.borderTopColor,
+        borderRightColor: styles.borderRightColor,
+      };
+    });
+    expect(leftAccentSuccessStyles.borderLeftWidth).toBe("4px");
+    expect(leftAccentSuccessStyles.borderTopColor).toBe("rgba(0, 0, 0, 0)");
+    expect(leftAccentSuccessStyles.borderRightColor).toBe("rgba(0, 0, 0, 0)");
+
+    // Soft warning alert
+    const softWarningStyles = await page.getByTestId("soft-warning-alert").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        borderColor: styles.borderColor,
+      };
+    });
+    expect(softWarningStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(softWarningStyles.color).not.toBe(softWarningStyles.backgroundColor);
+    expect(softWarningStyles.borderColor).toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("renders flat and soft badge variants with correct styles", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    // Flat badge: background = intent color, border = intent color (non-transparent)
+    const flatBadgeStyles = await page.getByTestId("badge-flat-info").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        borderColor: styles.borderColor,
+      };
+    });
+    expect(flatBadgeStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(flatBadgeStyles.color).not.toBe(flatBadgeStyles.backgroundColor);
+    expect(flatBadgeStyles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+
+    // Soft badge: tinted background, no border
+    const softBadgeStyles = await page.getByTestId("badge-soft-success").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        borderColor: styles.borderColor,
+      };
+    });
+    expect(softBadgeStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(softBadgeStyles.borderColor).toBe("rgba(0, 0, 0, 0)");
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {

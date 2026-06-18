@@ -139,12 +139,22 @@ Feedback helpers accept the same intent classes as buttons: `.success`, `.warnin
 
 `.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG icon matching the alert's intent (success, warning, error, info).
 
+`.badge` also accepts presentation variant classes:
+
+| Class    | Purpose                                                                            |
+| -------- | ---------------------------------------------------------------------------------- |
+| _(none)_ | Default. Tinted surface, intent-colored text, subtle intent-tinted border.         |
+| `.flat`  | Filled with the intent color; uses contrast text. Border matches the intent color. |
+| `.soft`  | Tinted surface and intent-colored text with no border (border is transparent).     |
+
 Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
 <div class="alert success icon" role="status">Saved successfully with icon.</div>
 <span class="badge warning">Queued</span>
+<span class="badge success flat">Live</span>
+<span class="badge info soft">Draft</span>
 <span class="spinner" aria-hidden="true"></span>
 <div class="progress" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
 <div class="progress success" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>

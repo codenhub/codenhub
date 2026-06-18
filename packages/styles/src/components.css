@@ -467,6 +467,7 @@
 
   .alert {
     --feedback-color: var(--color-info);
+    --feedback-contrast: var(--color-info-contrast);
     --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
     --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
@@ -475,20 +476,39 @@
 
     &.success {
       --feedback-color: var(--color-success);
+      --feedback-contrast: var(--color-success-contrast);
     }
 
     &.warning {
       --feedback-color: var(--color-warning);
+      --feedback-contrast: var(--color-warning-contrast);
     }
 
     &.destructive,
     &.danger,
     &.error {
       --feedback-color: var(--color-destructive);
+      --feedback-contrast: var(--color-destructive-contrast);
     }
 
     &.info {
       --feedback-color: var(--color-info);
+      --feedback-contrast: var(--color-info-contrast);
+    }
+
+    &.flat {
+      @apply bg-(--feedback-color) text-(--feedback-contrast);
+      border-color: var(--feedback-color);
+    }
+
+    &.soft {
+      @apply border-transparent bg-(--feedback-surface) text-(--feedback-color);
+    }
+
+    &.left-accent {
+      @apply border-y-transparent border-r-transparent bg-(--feedback-surface) text-(--feedback-color);
+      border-left-width: 4px;
+      border-left-color: var(--feedback-color);
     }
 
     &.icon {
@@ -556,6 +576,31 @@
 
     &.info {
       --feedback-color: var(--color-info);
+    }
+
+    &.flat {
+      --feedback-contrast: var(--color-info-contrast);
+
+      @apply bg-(--feedback-color) text-(--feedback-contrast);
+      border-color: var(--feedback-color);
+    }
+
+    &.success.flat {
+      --feedback-contrast: var(--color-success-contrast);
+    }
+
+    &.warning.flat {
+      --feedback-contrast: var(--color-warning-contrast);
+    }
+
+    &.destructive.flat,
+    &.danger.flat,
+    &.error.flat {
+      --feedback-contrast: var(--color-destructive-contrast);
+    }
+
+    &.soft {
+      @apply border-transparent;
     }
   }
 

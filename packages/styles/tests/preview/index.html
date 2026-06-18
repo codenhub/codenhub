@@ -136,6 +136,18 @@
           <span class="badge success">Live</span>
           <span class="badge warning">Queued</span>
         </div>
+        <div class="cluster" data-testid="badge-flat-cluster">
+          <span class="badge flat" data-testid="badge-flat-info">Info flat</span>
+          <span class="badge success flat" data-testid="badge-flat-success">Success flat</span>
+          <span class="badge warning flat" data-testid="badge-flat-warning">Warning flat</span>
+          <span class="badge error flat" data-testid="badge-flat-error">Error flat</span>
+        </div>
+        <div class="cluster" data-testid="badge-soft-cluster">
+          <span class="badge soft" data-testid="badge-soft-info">Info soft</span>
+          <span class="badge success soft" data-testid="badge-soft-success">Success soft</span>
+          <span class="badge warning soft" data-testid="badge-soft-warning">Warning soft</span>
+          <span class="badge error soft" data-testid="badge-soft-error">Error soft</span>
+        </div>
         <div class="auto-grid" data-testid="auto-grid-layout">
           <article class="panel">Panel</article>
           <article class="card interactive">Interactive card</article>
@@ -219,11 +231,68 @@
             <span class="text-body font-medium">Info</span>
           </label>
         </div>
-        <div class="alert success" role="status" data-testid="success-alert">Saved.</div>
-        <div class="alert success icon" role="status" data-testid="success-alert-icon">Saved.</div>
-        <div class="alert icon" role="status" data-testid="lorem-alert-icon">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla consectetur leo eget mauris fringilla, vel
-          mattis arcu vehicula.
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem">
+          <h3 class="text-title-sm">Default Alerts</h3>
+          <div class="alert success" role="status" data-testid="default-success-alert">Saved.</div>
+          <div class="alert success icon" role="status" data-testid="default-success-alert-icon">Saved.</div>
+          <div class="alert info icon" role="status" data-testid="default-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert warning icon" role="status" data-testid="default-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon" role="status" data-testid="default-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem">
+          <h3 class="text-title-sm">Flat Alerts</h3>
+          <div class="alert info icon flat" role="status" data-testid="flat-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert success icon flat" role="status" data-testid="flat-success-alert">
+            Success! Your changes have been saved.
+          </div>
+          <div class="alert warning icon flat" role="status" data-testid="flat-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon flat" role="status" data-testid="flat-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem">
+          <h3 class="text-title-sm">Soft Alerts</h3>
+          <div class="alert info icon soft" role="status" data-testid="soft-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert success icon soft" role="status" data-testid="soft-success-alert">
+            Success! Your changes have been saved.
+          </div>
+          <div class="alert warning icon soft" role="status" data-testid="soft-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon soft" role="status" data-testid="soft-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem">
+          <h3 class="text-title-sm">Left Accent Alerts</h3>
+          <div class="alert info icon left-accent" role="status" data-testid="left-accent-info-alert">
+            A new version is available. Update now for the latest features.
+          </div>
+          <div class="alert success icon left-accent" role="status" data-testid="left-accent-success-alert">
+            Payment received. Your invoice is ready to download.
+          </div>
+          <div class="alert warning icon left-accent" role="status" data-testid="left-accent-warning-alert">
+            Disk space is running low. Free up some storage.
+          </div>
+          <div class="alert error icon left-accent" role="status" data-testid="left-accent-error-alert">
+            Authentication failed. Invalid credentials provided.
+          </div>
         </div>
         <div class="skeleton" aria-hidden="true" data-testid="skeleton-block"></div>
         <div class="progress" aria-label="Progress" data-testid="progress-bar">
