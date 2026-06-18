@@ -35,36 +35,10 @@
         });
       });
     </script>
+    <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
     <main class="sect bg-background text-text font-default" style="gap: 4rem" data-testid="preview-root">
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Light tokens</h2>
-        <div class="auto-grid">
-          <article class="card" data-testid="light-card">
-            <h3 class="text-title-sm">Light card</h3>
-            <p>Default token surface.</p>
-          </article>
-          <article class="card dark" data-testid="dark-card">
-            <h3 class="text-title-sm">Dark card</h3>
-            <p>Dark token surface.</p>
-            <button class="btn primary" data-testid="dark-primary-button">Dark primary</button>
-            <span class="dark:text-primary" data-testid="dark-variant-text">Dark utility text</span>
-          </article>
-        </div>
-      </section>
-
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Build-time tokens</h2>
-        <article
-          class="xs:flex border-border bg-background font-default hidden flex-col rounded-md border p-4"
-          data-testid="responsive-card"
-        >
-          <h3 class="text-title-sm">Responsive card</h3>
-          <p>Tailwind source entrypoint fixture.</p>
-        </article>
-      </section>
-
       <section class="sect-inn">
         <h2 class="text-title-lg">Typography</h2>
         <div style="display: inline-flex; flex-direction: column; gap: 16px">

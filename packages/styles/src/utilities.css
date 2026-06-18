@@ -1,0 +1,39 @@
+/*
+ * @utility registers each class with Tailwind's JIT, enabling variant support
+ * (e.g. md:stack, dark:selection-contrast). @layer utilities would place them
+ * in the utilities cascade layer but strip variant awareness — not equivalent.
+ */
+
+@utility stack {
+  @apply flex flex-col gap-(--layout-stack-gap);
+
+  &.tight {
+    --layout-stack-gap: 0.5rem;
+  }
+
+  &.loose {
+    --layout-stack-gap: 1.5rem;
+  }
+}
+
+@utility cluster {
+  @apply flex flex-wrap items-center gap-(--layout-cluster-gap);
+
+  &.between {
+    @apply justify-between;
+  }
+}
+
+@utility auto-grid {
+  @apply grid gap-(--layout-stack-gap);
+
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+}
+
+@utility selection-contrast {
+  &::selection,
+  & *::selection {
+    background: var(--color-primary-contrast);
+    color: var(--color-primary);
+  }
+}

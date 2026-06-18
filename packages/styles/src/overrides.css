@@ -1,0 +1,16 @@
+@layer components {
+  [aria-current="page"] {
+    @apply text-primary font-bold;
+  }
+
+  @media (forced-colors: active) {
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .alert,
+    .badge {
+      border-color: CanvasText;
+    }
+  }
+}

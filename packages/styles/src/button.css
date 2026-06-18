@@ -1,0 +1,157 @@
+@layer components {
+  .btn {
+    --button-color: var(--color-primary);
+    --button-contrast: var(--color-primary-contrast);
+    --button-hover: var(--color-primary-hover);
+    --button-subtle: var(--color-primary-subtle);
+    --button-strong: var(--color-primary-strong);
+    --button-bg: var(--button-color);
+    --button-fg: var(--button-contrast);
+    --button-border: var(--button-bg);
+    --button-hover-bg: var(--button-hover);
+    --button-hover-fg: var(--button-fg);
+    --button-hover-border: var(--button-hover-bg);
+    --button-text: var(--button-strong);
+    --button-soft-bg: var(--button-subtle);
+    --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 80%, transparent);
+    --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
+    --button-spinner: var(--button-fg);
+
+    @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-fast) ease-(--motion-ease) select-none;
+    border: var(--border-width) solid var(--button-border);
+
+    &.primary {
+      --button-color: var(--color-primary);
+      --button-contrast: var(--color-primary-contrast);
+      --button-hover: var(--color-primary-hover);
+      --button-subtle: var(--color-primary-subtle);
+      --button-strong: var(--color-primary-strong);
+    }
+
+    &.secondary {
+      --button-color: var(--color-accent);
+      --button-contrast: var(--color-accent-contrast);
+      --button-hover: var(--color-accent-hover);
+      --button-subtle: var(--color-accent-subtle);
+      --button-strong: var(--color-accent-strong);
+    }
+
+    &.success {
+      --button-color: var(--color-success);
+      --button-contrast: var(--color-success-contrast);
+      --button-hover: var(--color-success-hover);
+      --button-subtle: var(--color-success-subtle);
+      --button-strong: var(--color-success-strong);
+    }
+
+    &.warning {
+      --button-color: var(--color-warning);
+      --button-contrast: var(--color-warning-contrast);
+      --button-hover: var(--color-warning-hover);
+      --button-subtle: var(--color-warning-subtle);
+      --button-strong: var(--color-warning-strong);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      --button-color: var(--color-destructive);
+      --button-contrast: var(--color-destructive-contrast);
+      --button-hover: var(--color-destructive-hover);
+      --button-subtle: var(--color-destructive-subtle);
+      --button-strong: var(--color-destructive-strong);
+    }
+
+    &.info {
+      --button-color: var(--color-info);
+      --button-contrast: var(--color-info-contrast);
+      --button-hover: var(--color-info-hover);
+      --button-subtle: var(--color-info-subtle);
+      --button-strong: var(--color-info-strong);
+    }
+
+    &.out {
+      --button-spinner: var(--button-text);
+
+      @apply bg-transparent text-(--button-color);
+      border: calc(var(--border-width) * 2) solid var(--button-color);
+
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+        @apply border-(--button-color) bg-(--button-subtle) text-(--button-color);
+      }
+
+      &.fill {
+        &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+          @apply border-(--button-color) bg-(--button-color) text-(--button-contrast);
+        }
+      }
+    }
+
+    &.ghost {
+      --button-spinner: var(--button-text);
+
+      @apply border-transparent bg-transparent text-(--button-text);
+
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+        @apply border-transparent bg-(--button-subtle-hover-bg) text-(--button-text);
+      }
+    }
+
+    &.soft {
+      --button-spinner: var(--button-text);
+
+      @apply border-transparent bg-(--button-soft-bg) text-(--button-text);
+
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+        @apply border-transparent bg-(--button-soft-hover-bg) text-(--button-text);
+      }
+    }
+
+    &.sm {
+      @apply min-h-8 px-3 py-1 text-sm;
+    }
+
+    &.lg {
+      @apply min-h-12 px-5 py-2.5 text-[1.0625rem];
+    }
+
+    &.icon {
+      @apply aspect-square min-w-(--control-height,2.5rem) p-2;
+
+      aspect-ratio: 1;
+    }
+
+    &.pill {
+      @apply rounded-full;
+    }
+
+    &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+      &:not(.out, .ghost, .soft) {
+        @apply border-(--button-hover-border) bg-(--button-hover-bg) text-(--button-hover-fg);
+      }
+    }
+
+    &:disabled,
+    &.disabled,
+    &[aria-disabled="true"],
+    &[data-disabled] {
+      @apply cursor-not-allowed;
+
+      opacity: 0.58;
+    }
+
+    &.loading {
+      @apply pointer-events-none text-transparent! transition-[opacity,transform];
+
+      &::after {
+        @apply absolute top-[calc(50%+var(--border-width))] left-[calc(50%+var(--border-width))] block size-4 -translate-1/2 rounded-full bg-(--button-spinner);
+
+        content: "";
+        mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+        mask-size: contain;
+        -webkit-mask-size: contain;
+      }
+    }
+  }
+}

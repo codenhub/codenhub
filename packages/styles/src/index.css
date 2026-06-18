@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @import "./components.css";
+@import "./utilities.css";
 
 @utility text-display {
   @apply text-6xl font-bold tracking-tight md:text-8xl;
@@ -61,12 +62,6 @@
   ::selection {
     background: var(--color-primary);
     color: var(--color-primary-contrast);
-  }
-
-  .selection-contrast::selection,
-  .selection-contrast *::selection {
-    background: var(--color-primary-contrast);
-    color: var(--color-primary);
   }
 
   :focus-visible {

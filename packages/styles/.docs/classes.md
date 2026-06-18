@@ -8,30 +8,22 @@ Helper classes are CSS-only. They provide presentation and state styling, not se
 
 ## Layout
 
-| Class                                             | Purpose                                                                  |
-| ------------------------------------------------- | ------------------------------------------------------------------------ |
-| `.sect`                                           | Responsive section wrapper with centered column layout and page gutters. |
-| `.sect-container`                                 | Centered section container using `--container-max`.                      |
-| `.sect-inn`                                       | Section inner container using the same behavior as `.sect-container`.    |
-| `.sect-container.narrow`, `.sect-inn.narrow`      | Use `--container-narrow`.                                                |
-| `.sect-container.wide`, `.sect-inn.wide`          | Use `--container-wide`.                                                  |
-| `.left`, `.right`, `.center` on container helpers | Align container contents.                                                |
-| `.stack`                                          | Vertical flex stack using `--layout-stack-gap`.                          |
-| `.stack.tight`                                    | Smaller stack gap.                                                       |
-| `.stack.loose`                                    | Larger stack gap.                                                        |
-| `.cluster`                                        | Wrapping horizontal flex cluster using `--layout-cluster-gap`.           |
-| `.cluster.between`                                | Cluster with `space-between` alignment.                                  |
-| `.auto-grid`                                      | Responsive auto-fit grid using `--layout-grid-min`.                      |
+`.stack`, `.cluster`, and `.auto-grid` are `@utility` classes. They are available in both the full stylesheet and the Tailwind source entrypoints, and participate in Tailwind's JIT pipeline.
+
+| Class              | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `.stack`           | Vertical flex stack using `--layout-stack-gap`.                |
+| `.stack.tight`     | Smaller stack gap.                                             |
+| `.stack.loose`     | Larger stack gap.                                              |
+| `.cluster`         | Wrapping horizontal flex cluster using `--layout-cluster-gap`. |
+| `.cluster.between` | Cluster with `space-between` alignment.                        |
+| `.auto-grid`       | Responsive auto-fit grid using `--layout-grid-min`.            |
 
 ## Surfaces
 
-| Class                                                   | Purpose                                                                         |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `.card`                                                 | Raised content surface with border, radius, padding, shadow, and column layout. |
-| `.panel`                                                | Subtle foreground surface with the same structure as `.card`.                   |
-| `.card.interactive`, `.panel.interactive`               | Adds pointer cursor and hover affordance.                                       |
-| `.card[data-state="open"]`, `.panel[data-state="open"]` | Applies open-state border/affordance.                                           |
-| `.empty-state`                                          | Centered empty-state layout with muted color.                                   |
+| Class          | Purpose                                       |
+| -------------- | --------------------------------------------- |
+| `.empty-state` | Centered empty-state layout with muted color. |
 
 ## Buttons
 
@@ -185,12 +177,15 @@ CSS pseudo-element tooltips are presentational. They are not a complete accessib
 
 ## Typography Utilities
 
-| Class            | Purpose                        |
-| ---------------- | ------------------------------ |
-| `.text-display`  | Large display headings.        |
-| `.text-title-lg` | Large section titles.          |
-| `.text-title`    | Default section titles.        |
-| `.text-title-sm` | Smaller titles or card titles. |
-| `.text-label-lg` | Large label text.              |
-| `.text-label`    | Default label text.            |
-| `.text-body`     | Default body copy.             |
+All typography classes and `.selection-contrast` are `@utility` classes.
+
+| Class                 | Purpose                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| `.text-display`       | Large display headings.                                      |
+| `.text-title-lg`      | Large section titles.                                        |
+| `.text-title`         | Default section titles.                                      |
+| `.text-title-sm`      | Smaller titles or card titles.                               |
+| `.text-label-lg`      | Large label text.                                            |
+| `.text-label`         | Default label text.                                          |
+| `.text-body`          | Default body copy.                                           |
+| `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
