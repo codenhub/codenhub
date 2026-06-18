@@ -175,10 +175,10 @@
     &.out {
       --button-spinner: var(--button-text);
 
-      @apply border-2 border-(--button-text) bg-transparent text-(--button-text);
+      @apply border-2 border-(--button-color) bg-transparent text-(--button-color);
 
       &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-        @apply border-(--button-text) bg-(--button-subtle-hover-bg) text-(--button-text);
+        @apply border-(--button-color) bg-(--button-subtle) text-(--button-color);
       }
 
       &.fill {
