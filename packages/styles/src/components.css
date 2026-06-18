@@ -320,6 +320,9 @@
   }
 
   input[type="checkbox"].checkbox {
+    --control-color: var(--color-primary);
+    --control-contrast: var(--color-primary-contrast);
+
     @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm border border-(--color-border) bg-(--color-background) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     &:hover {
@@ -331,11 +334,14 @@
     }
 
     &:focus-visible {
-      @apply border-(--color-primary) shadow-[0_0_0_var(--focus-ring-width)_var(--focus-ring)];
+      border-color: var(--control-color);
+      box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
     }
 
     &::after {
-      @apply block size-3 bg-(--color-primary-contrast) opacity-0 transition-opacity duration-(--motion-duration-normal) ease-(--motion-ease);
+      @apply block size-3 opacity-0 transition-opacity duration-(--motion-duration-normal) ease-(--motion-ease);
+
+      background-color: var(--control-contrast);
       content: "";
       mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
       -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
@@ -344,11 +350,34 @@
     }
 
     &:checked {
-      @apply border-(--color-primary) bg-(--color-primary);
+      border-color: var(--control-color);
+      background-color: var(--control-color);
 
       &::after {
         @apply opacity-100;
       }
+    }
+
+    &.success {
+      --control-color: var(--color-success);
+      --control-contrast: var(--color-success-contrast);
+    }
+
+    &.warning {
+      --control-color: var(--color-warning);
+      --control-contrast: var(--color-warning-contrast);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      --control-color: var(--color-destructive);
+      --control-contrast: var(--color-destructive-contrast);
+    }
+
+    &.info {
+      --control-color: var(--color-info);
+      --control-contrast: var(--color-info-contrast);
     }
 
     &[aria-invalid="true"] {
@@ -363,10 +392,14 @@
   }
 
   input[type="checkbox"].switch {
+    --control-color: var(--color-primary);
+    --control-contrast: var(--color-primary-contrast);
+
     @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     &::after {
       @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+
       content: "";
     }
 
@@ -379,15 +412,41 @@
     }
 
     &:focus-visible {
-      @apply border-(--color-primary) shadow-[0_0_0_var(--focus-ring-width)_var(--focus-ring)];
+      border-color: var(--control-color);
+      box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
     }
 
     &:checked {
-      @apply border-(--color-primary) bg-(--color-primary);
+      border-color: var(--control-color);
+      background-color: var(--control-color);
 
       &::after {
-        @apply translate-x-4.5 bg-(--color-primary-contrast);
+        @apply translate-x-4.5;
+
+        background-color: var(--control-contrast);
       }
+    }
+
+    &.success {
+      --control-color: var(--color-success);
+      --control-contrast: var(--color-success-contrast);
+    }
+
+    &.warning {
+      --control-color: var(--color-warning);
+      --control-contrast: var(--color-warning-contrast);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      --control-color: var(--color-destructive);
+      --control-contrast: var(--color-destructive-contrast);
+    }
+
+    &.info {
+      --control-color: var(--color-info);
+      --control-contrast: var(--color-info-contrast);
     }
 
     &[aria-invalid="true"] {
@@ -471,12 +530,38 @@
   }
 
   .progress {
-    @apply bg-surface h-2.5 w-full overflow-hidden rounded-full;
+    --progress-color: var(--color-primary);
+    --progress-surface: var(--color-surface);
+
+    @apply h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
 
     > * {
-      @apply bg-primary block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+      @apply block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
+      background-color: var(--progress-color);
       width: var(--progress-value, 0%);
+    }
+
+    &.success {
+      --progress-color: var(--color-success);
+      --progress-surface: color-mix(var(--color-success-subtle) 60%, transparent);
+    }
+
+    &.warning {
+      --progress-color: var(--color-warning);
+      --progress-surface: color-mix(var(--color-warning-subtle) 60%, transparent);
+    }
+
+    &.destructive,
+    &.danger,
+    &.error {
+      --progress-color: var(--color-destructive);
+      --progress-surface: color-mix(var(--color-destructive-subtle) 60%, transparent);
+    }
+
+    &.info {
+      --progress-color: var(--color-info);
+      --progress-surface: color-mix(var(--color-info-subtle) 60%, transparent);
     }
   }
 

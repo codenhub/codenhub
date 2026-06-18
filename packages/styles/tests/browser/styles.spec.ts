@@ -554,6 +554,65 @@ test.describe("compiled CSS preview", () => {
     expect(colors.darkButtonBackground).not.toBe(colors.lightButtonBackground);
   });
 
+  test("applies intent classes to checkbox, switch, and progress bar", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const intentStyles = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      const getCheckedBg = (testId: string) => {
+        const el = document.querySelector(`[data-testid="${testId}"]`) as HTMLInputElement | null;
+        if (!el) throw new Error(`Missing fixture: ${testId}`);
+        return getComputedStyle(el).backgroundColor;
+      };
+
+      const getProgressFill = (testId: string) => {
+        const el = document.querySelector(`[data-testid="${testId}"] > *`) as HTMLElement | null;
+        if (!el) throw new Error(`Missing fixture: ${testId}`);
+        return getComputedStyle(el).backgroundColor;
+      };
+
+      return {
+        checkboxSuccess: getCheckedBg("checkbox-success"),
+        checkboxWarning: getCheckedBg("checkbox-warning"),
+        checkboxDestructive: getCheckedBg("checkbox-destructive"),
+        checkboxInfo: getCheckedBg("checkbox-info"),
+        switchSuccess: getCheckedBg("switch-success"),
+        switchWarning: getCheckedBg("switch-warning"),
+        switchDestructive: getCheckedBg("switch-destructive"),
+        switchInfo: getCheckedBg("switch-info"),
+        progressSuccess: getProgressFill("progress-bar-success"),
+        progressWarning: getProgressFill("progress-bar-warning"),
+        progressDestructive: getProgressFill("progress-bar-destructive"),
+        progressInfo: getProgressFill("progress-bar-info"),
+        tokenSuccess: resolveToken("success"),
+        tokenWarning: resolveToken("warning"),
+        tokenDestructive: resolveToken("destructive"),
+        tokenInfo: resolveToken("info"),
+      };
+    });
+
+    expect(intentStyles.checkboxSuccess).toBe(intentStyles.tokenSuccess);
+    expect(intentStyles.checkboxWarning).toBe(intentStyles.tokenWarning);
+    expect(intentStyles.checkboxDestructive).toBe(intentStyles.tokenDestructive);
+    expect(intentStyles.checkboxInfo).toBe(intentStyles.tokenInfo);
+    expect(intentStyles.switchSuccess).toBe(intentStyles.tokenSuccess);
+    expect(intentStyles.switchWarning).toBe(intentStyles.tokenWarning);
+    expect(intentStyles.switchDestructive).toBe(intentStyles.tokenDestructive);
+    expect(intentStyles.switchInfo).toBe(intentStyles.tokenInfo);
+    expect(intentStyles.progressSuccess).toBe(intentStyles.tokenSuccess);
+    expect(intentStyles.progressWarning).toBe(intentStyles.tokenWarning);
+    expect(intentStyles.progressDestructive).toBe(intentStyles.tokenDestructive);
+    expect(intentStyles.progressInfo).toBe(intentStyles.tokenInfo);
+  });
+
   test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
     await page.goto(vanillaPreviewUrl);
 

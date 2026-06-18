@@ -94,6 +94,16 @@ Examples:
 | `[aria-invalid="true"]` on controls                                   | Destructive border and focus color. |
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                   |
 
+`.checkbox` and `.switch` accept the same intent classes as buttons to set the checked color:
+
+| Class                               | Meaning            |
+| ----------------------------------- | ------------------ |
+| _(default)_                         | Primary color.     |
+| `.success`                          | Success color.     |
+| `.warning`                          | Warning color.     |
+| `.destructive`, `.danger`, `.error` | Destructive color. |
+| `.info`                             | Info color.        |
+
 Example:
 
 ```html
@@ -102,7 +112,17 @@ Example:
   <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
   <span class="error" id="email-error">Enter a valid email.</span>
 </label>
+<label style="display: flex; gap: 0.5rem; align-items: center">
+  <input type="checkbox" class="checkbox success" />
+  <span>Accept terms</span>
+</label>
+<label style="display: flex; gap: 0.5rem; align-items: center">
+  <input type="checkbox" class="switch destructive" />
+  <span>Enable</span>
+</label>
 ```
+
+`.progress` also accepts the same intent classes to color the fill bar:
 
 ## Feedback
 
@@ -129,6 +149,7 @@ Examples:
 <span class="badge warning">Queued</span>
 <span class="spinner" aria-hidden="true"></span>
 <div class="progress" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
+<div class="progress success" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
 ```
 
 ## Tooltips
