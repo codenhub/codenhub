@@ -52,18 +52,18 @@ Intent classes:
 
 Presentation and size classes:
 
-| Class                                                                  | Purpose                                                                   |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `.out`                                                                 | Transparent button with intent readable-tone border and text.             |
-| `.ghost`                                                               | Transparent button with intent readable-tone text and soft hover.         |
+| Class                                                                  | Purpose                                                                       |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `.out`                                                                 | Transparent button with intent readable-tone border and text.                 |
+| `.ghost`                                                               | Transparent button with intent readable-tone text and soft hover.             |
 | `.soft`                                                                | Low-emphasis filled button using intent subtle surface and strong text tones. |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                   |
-| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.              |
-| `.sm`                                                                  | Smaller button.                                                           |
-| `.lg`                                                                  | Larger button.                                                            |
-| `.icon`                                                                | Square icon button. Use an accessible name in HTML.                       |
-| `.loading`                                                             | Loading state. Hides text and shows CSS spinner.                          |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                         |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                       |
+| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.                  |
+| `.sm`                                                                  | Smaller button.                                                               |
+| `.lg`                                                                  | Larger button.                                                                |
+| `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
+| `.loading`                                                             | Loading state. Hides text and shows CSS spinner.                              |
+| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
 
 Examples:
 

@@ -36,23 +36,23 @@ Tokens are CSS custom properties. Default values apply by default. `.dark` may o
 | `--color-success`              | Success state color.                                                                                     |
 | `--color-success-contrast`     | Text/icon color on success filled surface. Meets normal text contrast against `--color-success`.         |
 | `--color-success-hover`        | Success hover tone.                                                                                      |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                               |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                 |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                                |
 | `--color-warning`              | Warning state color.                                                                                     |
 | `--color-warning-contrast`     | Text/icon color on warning filled surface. Meets normal text contrast against `--color-warning`.         |
 | `--color-warning-hover`        | Warning hover tone.                                                                                      |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                               |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                 |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                |
 | `--color-destructive`          | Destructive/error state color.                                                                           |
 | `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets normal text contrast against `--color-destructive`. |
 | `--color-destructive-hover`    | Destructive hover tone.                                                                                  |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                            |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                           |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                             |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                            |
 | `--color-info`                 | Informational state color.                                                                               |
 | `--color-info-contrast`        | Text/icon color on info filled surface. Meets normal text contrast against `--color-info`.               |
 | `--color-info-hover`           | Info hover tone.                                                                                         |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                   |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                  |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                    |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                   |
 
 > **Intent token contract**: color intent tokens own meaning and tone variants. Components map an intent palette into scoped component slots, and presentation classes decide which slots to consume. Theme changes belong in token values such as `.dark`, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
