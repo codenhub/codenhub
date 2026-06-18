@@ -5,6 +5,23 @@ const STYLESHEET_RE =
 const STYLESHEET_REL_ATTR_RE = /\brel\s*=\s*(?:"stylesheet"|'stylesheet'|stylesheet(?=[\s>]))/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
 
+/**
+ * Vite plugin that converts `<link rel="stylesheet">` tags in HTML entry
+ * points to non-render-blocking preloads, then swaps them back to stylesheets
+ * once loaded. A `<noscript>` fallback is inserted for browsers with
+ * JavaScript disabled.
+ *
+ * Runs with `enforce: "post"` so it acts on the final HTML output after all
+ * other transforms. Does not affect CSS imported through JavaScript modules.
+ *
+ * @example
+ * ```ts
+ * // vite.config.ts
+ * import { deferCssPlugin } from "@codenhub/vite-plugins";
+ *
+ * export default { plugins: [deferCssPlugin()] };
+ * ```
+ */
 export default function deferCssPlugin(): Plugin {
   return {
     name: "vite-plugin-defer-css",

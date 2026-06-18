@@ -10,8 +10,8 @@ interface MinimalIndexHtmlTransformContext {
 type IndexHtmlHandler = (this: unknown, html: string, context: MinimalIndexHtmlTransformContext) => unknown;
 type TransformHandler = (this: unknown, code: string, id: string) => unknown;
 
-function getTransformIndexHtmlHandler(): IndexHtmlHandler {
-  const plugin = iconsPlugin();
+function getTransformIndexHtmlHandler(options?: Parameters<typeof iconsPlugin>[0]): IndexHtmlHandler {
+  const plugin = iconsPlugin(options);
   const { transformIndexHtml } = plugin;
 
   if (!transformIndexHtml) {
@@ -25,8 +25,8 @@ function getTransformIndexHtmlHandler(): IndexHtmlHandler {
   return transformIndexHtml.handler as IndexHtmlHandler;
 }
 
-function getTransformHook(): TransformHandler {
-  const plugin = iconsPlugin();
+function getTransformHook(options?: Parameters<typeof iconsPlugin>[0]): TransformHandler {
+  const plugin = iconsPlugin(options);
   const { transform } = plugin;
 
   if (!transform) {
@@ -40,8 +40,8 @@ function getTransformHook(): TransformHandler {
   return transform.handler as TransformHandler;
 }
 
-async function runTransformIndexHtml(html: string): Promise<string> {
-  const transformIndexHtml = getTransformIndexHtmlHandler();
+async function runTransformIndexHtml(html: string, options?: Parameters<typeof iconsPlugin>[0]): Promise<string> {
+  const transformIndexHtml = getTransformIndexHtmlHandler(options);
   const context: MinimalIndexHtmlTransformContext = { path: "/index.html", filename: "index.html" };
   const transformed = await transformIndexHtml.call({}, html, context);
 
@@ -52,8 +52,12 @@ async function runTransformIndexHtml(html: string): Promise<string> {
   throw new Error("iconsPlugin transformIndexHtml handler returned a non-string result");
 }
 
-async function runTransform(code: string, id: string): Promise<{ code: string; map: null } | null> {
-  const transform = getTransformHook();
+async function runTransform(
+  code: string,
+  id: string,
+  options?: Parameters<typeof iconsPlugin>[0],
+): Promise<{ code: string; map: null } | null> {
+  const transform = getTransformHook(options);
   const transformed = await transform.call({}, code, id);
 
   if (transformed === null || transformed === undefined) {
@@ -130,5 +134,48 @@ describe("iconsPlugin", () => {
     expect(supported).toMatchObject({ map: null });
     expect(supported?.code ?? "").toContain(`<svg class="utility"`);
     expect(unsupported).toBeNull();
+  });
+});
+
+describe("iconsPlugin — custom icons option", () => {
+  it("should resolve a consumer-supplied icon that is not in the built-in registry", async () => {
+    const options = {
+      icons: { star: `<svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-6 5 2 7-6-4-6 4 2-7-6-5h7z"/></svg>` },
+    };
+    const transformed = await runTransformIndexHtml(`<div><i class="ic-star"></i></div>`, options);
+
+    expect(transformed).toContain(`<svg viewBox="0 0 24 24"`);
+    expect(transformed).not.toContain("ic-star");
+  });
+
+  it("should let consumer icons override built-in icons of the same name", async () => {
+    const customMarkup = `<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>`;
+    const options = { icons: { close: customMarkup } };
+    const transformed = await runTransformIndexHtml(`<i class="ic-close"></i>`, options);
+
+    expect(transformed).toContain(customMarkup);
+    expect(transformed).not.toContain(`<path d="M18 6 6 18"`);
+  });
+
+  it("should resolve consumer icons via their alternativeNames", async () => {
+    const markup = `<svg viewBox="0 0 24 24"><rect width="24" height="24"/></svg>`;
+    const options = {
+      icons: { square: { markup, alternativeNames: ["rect", "box"] } },
+    };
+    const byAlias = await runTransformIndexHtml(`<i class="ic-rect"></i>`, options);
+    const byPrimary = await runTransformIndexHtml(`<i class="ic-square"></i>`, options);
+
+    expect(byAlias).toContain(`<rect width="24"`);
+    expect(byPrimary).toContain(`<rect width="24"`);
+  });
+
+  it("should still resolve built-in icons when consumer icons are provided", async () => {
+    const options = {
+      icons: { star: `<svg viewBox="0 0 24 24"><path d="M12 2l3 7h7z"/></svg>` },
+    };
+    const transformed = await runTransformIndexHtml(`<i class="ic-success"></i>`, options);
+
+    expect(transformed).toContain(`<svg`);
+    expect(transformed).not.toContain("ic-success");
   });
 });

@@ -54,6 +54,27 @@ const LOADER_BODY = `
   </script>
 `;
 
+/**
+ * Vite plugin that injects a full-screen page-loader overlay into every HTML
+ * entry point. The loader fades out and removes itself after the `load` event
+ * fires. A `<noscript>` rule hides the loader when JavaScript is unavailable.
+ *
+ * Runs with `enforce: "post"` so injection happens on the final HTML output.
+ *
+ * The injected element uses `id="page-loader"` and reads the following CSS
+ * custom properties for theming, falling back to neutral values when unset:
+ * - `--color-background` (default `#fafafa`)
+ * - `--color-border` (default `#d4d4d4`)
+ * - `--color-primary` (default `#0a0a0a`)
+ *
+ * @example
+ * ```ts
+ * // vite.config.ts
+ * import { addLoaderPlugin } from "@codenhub/vite-plugins";
+ *
+ * export default { plugins: [addLoaderPlugin()] };
+ * ```
+ */
 export default function addLoaderPlugin(): Plugin {
   return {
     name: "vite-plugin-add-loader",

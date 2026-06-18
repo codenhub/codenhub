@@ -1,7 +1,14 @@
 {
   "name": "@codenhub/vite-plugins",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
+  "description": "Vite plugins for icon inlining, CSS deferral, i18n validation, and async loader injection.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/vite-plugins"
+  },
   "files": [
     "dist"
   ],
@@ -21,6 +28,8 @@
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/vite-plugins version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugins && npm access get status @codenhub/vite-plugins",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
