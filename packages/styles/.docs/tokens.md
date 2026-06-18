@@ -84,7 +84,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--focus-ring-offset`      | Focus-visible outline offset.                                                |
 | `--focus-ring-width`       | Focus-visible outline/ring width.                                            |
 | `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                |
-| `--motion-duration-normal` | Normal transition for layout, modals, and banners (`200ms`).                 |
+| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                           |
 | `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).             |
 | `--motion-ease`            | Default easing curve.                                                        |
 | `--backdrop-overlay`       | Backdrop filter value for overlay-like surfaces.                             |
