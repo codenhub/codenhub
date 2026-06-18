@@ -144,6 +144,26 @@ test.describe("compiled CSS preview", () => {
     expect(tokenValues.elevationLow).not.toBe("");
   });
 
+  test("exposes semantic hover color tokens", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const tokenValues = await page.evaluate(() => {
+      const styles = getComputedStyle(document.documentElement);
+
+      return {
+        destructiveHover: styles.getPropertyValue("--color-destructive-hover").trim(),
+        infoHover: styles.getPropertyValue("--color-info-hover").trim(),
+        successHover: styles.getPropertyValue("--color-success-hover").trim(),
+        warningHover: styles.getPropertyValue("--color-warning-hover").trim(),
+      };
+    });
+
+    expect(tokenValues.destructiveHover).not.toBe("");
+    expect(tokenValues.infoHover).not.toBe("");
+    expect(tokenValues.successHover).not.toBe("");
+    expect(tokenValues.warningHover).not.toBe("");
+  });
+
   test("does not expose legacy root tokens", async ({ page }) => {
     await page.goto(vanillaPreviewUrl);
 
@@ -222,6 +242,7 @@ test.describe("compiled CSS preview", () => {
       const primaryPillStyles = getComputedStyle(primaryPillButton);
       const secondaryGhostStyles = getComputedStyle(secondaryGhostButton);
       const secondaryButtonStyles = getComputedStyle(secondaryButton);
+      const loadingRootStyles = getComputedStyle(loadingButton);
       const loadingButtonStyles = getComputedStyle(loadingButton, "::after");
       const ariaDisabledStyles = getComputedStyle(ariaDisabledButton);
       const errorButtonStyles = getComputedStyle(errorButton);
@@ -243,6 +264,7 @@ test.describe("compiled CSS preview", () => {
         loadingSpinnerHeight: loadingButtonStyles.height,
         loadingSpinnerLeft: loadingButtonStyles.left,
         loadingSpinnerTranslate: loadingButtonStyles.translate,
+        loadingTransitionProperty: loadingRootStyles.transitionProperty,
         loadingSpinnerWidth: loadingButtonStyles.width,
         loadingSpinnerTop: loadingButtonStyles.top,
         successBackground: successButtonStyles.backgroundColor,
@@ -267,6 +289,8 @@ test.describe("compiled CSS preview", () => {
     expect(Number.parseFloat(styles.loadingSpinnerTop)).toBeCloseTo(styles.loadingButtonHeight / 2, 1);
     expect(Number.parseFloat(styles.loadingSpinnerLeft)).toBeCloseTo(styles.loadingButtonWidth / 2, 1);
     expect(styles.loadingSpinnerTranslate).toBe("-50% -50%");
+    expect(styles.loadingTransitionProperty).not.toContain("background-color");
+    expect(styles.loadingTransitionProperty).not.toContain("color");
     expect(styles.loadingSpinnerWidth).not.toBe("0px");
     expect(styles.loadingSpinnerHeight).not.toBe("0px");
     expect(styles.errorColor).not.toBe(styles.errorBackground);
@@ -283,7 +307,7 @@ test.describe("compiled CSS preview", () => {
     expect(ghostHoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   });
 
-  test("uses semantic companion tones for button presentation classes", async ({ page }) => {
+  test("uses intent tone slots for button presentation classes", async ({ page }) => {
     await page.goto(vanillaPreviewUrl);
 
     const buttonPresentationStyles = await page.evaluate((intents) => {
@@ -307,8 +331,6 @@ test.describe("compiled CSS preview", () => {
         intent: ButtonIntentToken;
         theme: "dark" | "light";
       }) => {
-        const toneName = theme === "dark" ? `${intent.tokenName}-light` : `${intent.tokenName}-dark`;
-        const surfaceName = theme === "dark" ? `${intent.tokenName}-dark` : `${intent.tokenName}-light`;
         const outlineButton = document.createElement("button");
         const ghostButton = document.createElement("button");
         const softButton = document.createElement("button");
@@ -323,8 +345,8 @@ test.describe("compiled CSS preview", () => {
         const softStyles = getComputedStyle(softButton);
 
         const styles = {
-          expectedSoftBackground: resolveTokenColor({ host, tokenName: surfaceName }),
-          expectedTone: resolveTokenColor({ host, tokenName: toneName }),
+          expectedPresentationText: resolveTokenColor({ host, tokenName: `${intent.tokenName}-strong` }),
+          expectedSoftBackground: resolveTokenColor({ host, tokenName: `${intent.tokenName}-subtle` }),
           ghostColor: ghostStyles.color,
           intent: intent.className,
           outlineBorderColor: outlineStyles.borderColor,
@@ -358,12 +380,33 @@ test.describe("compiled CSS preview", () => {
     for (const styles of buttonPresentationStyles) {
       const label = `${styles.theme} ${styles.intent}`;
 
-      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedTone);
-      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedTone);
-      expect(styles.ghostColor, `${label} ghost color`).toBe(styles.expectedTone);
-      expect(styles.softColor, `${label} soft color`).toBe(styles.expectedTone);
+      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedPresentationText);
+      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedPresentationText);
+      expect(styles.ghostColor, `${label} ghost color`).toBe(styles.expectedPresentationText);
+      expect(styles.softColor, `${label} soft color`).toBe(styles.expectedPresentationText);
       expect(styles.softBackground, `${label} soft background`).toBe(styles.expectedSoftBackground);
     }
+  });
+
+  test("uses contrast text on filled outline hover", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const successContrast = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-success-contrast)";
+      document.body.append(probe);
+
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+
+      return color;
+    });
+
+    await page.getByTestId("success-outline-button").hover();
+
+    await expect
+      .poll(() => page.getByTestId("success-outline-button").evaluate((element) => getComputedStyle(element).color))
+      .toBe(successContrast);
   });
 
   test("styles layout, form, and feedback helper classes", async ({ page }) => {

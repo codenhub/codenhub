@@ -1,7 +1,7 @@
 # Roadmap
 
 **Status:** APPROVED
-**Last updated:** 2026-06-17
+**Last updated:** 2026-06-18
 **Scope:** `@codenhub/styles` package direction.
 
 ## Purpose
@@ -13,13 +13,16 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Published the v0.0.2 foundation: tokens, helper classes, accessibility notes, and test strategy.
 - Added package-shipped `.docs` files and kept the README focused on quickstart usage plus links to durable docs.
 - Added foundational design tokens for colors, layout, radius, motion, focus, shadows, layering, and dark mode.
-- Added primary and secondary companion tokens (`--color-primary-light`, `--color-primary-dark`, `--color-accent-light`, `--color-accent-dark`).
+- Added primary and secondary companion tokens (`--color-primary-subtle`, `--color-primary-strong`, `--color-accent-subtle`, `--color-accent-strong`).
 - Expanded helper classes for layout, surfaces, buttons, forms, feedback, loading indicators, progress, empty states, and tooltips.
 - Added preview and browser coverage for compiled CSS and Tailwind source CSS consumer paths.
 - Refactored component helpers toward Tailwind-first source usage with `@apply` for static utility-like styling.
 - Preserved composable button intent classes and presentation classes, including `.btn.error` inside `.field`.
 - Reduced selector leakage by nesting related component styles where CSS nesting clearly scopes variants, states, pseudo-elements, and descendants to their owning helper class.
-- Improved button presentation compatibility: `.ghost` and `.out` now use intent companion text tones, while `.soft` pairs intent companion text and surface tones (`*-dark`/`*-light`) for light and dark contexts.
+- Improved button presentation compatibility: button intents map color tone variants into scoped button slots, while `.ghost`, `.out`, and `.soft` own how those slots become presentation styles.
+- Added semantic hover tokens for success, warning, destructive, and info intents.
+- Renamed companion tone tokens from light/dark to subtle/strong so their names describe role instead of theme luminance.
+- Kept loading buttons from animating color-related transitions so spinner and surface colors stay synchronized during theme changes.
 - Added `.soft` and `.pill` as formally supported presentation classes with consistent docs and tests.
 - Added `.banner` as a full-width, border-x-0 static feedback surface that extends the `.alert` token foundation.
 - Refactored `.toast` so it shares the feedback token foundation with `.alert`, adds placement and overlay-specific treatment, and uses `--elevation-overlay` for its shadow.
@@ -28,7 +31,7 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Added an internal theme toggle to the preview, fixed in the bottom-right corner.
 - Tightened public token roles by removing legacy root tokens and treating component-scoped variables as internal implementation details.
 - Updated semantic contrast tokens so filled intent buttons meet normal text contrast requirements.
-- Added regression coverage for filled semantic button contrast, presentation/intent companion tone composition, and legacy token removal.
+- Added regression coverage for filled semantic button contrast, presentation/intent tone slot composition, loading transition behavior, and legacy token removal.
 
 ## Planned
 
@@ -49,7 +52,7 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 - Prefer scoped CSS nesting when it improves containment, but do not nest only for style. Top-level helper classes are still appropriate when they are intentional public contracts.
 - Presentation classes should document unsupported combinations instead of silently producing inaccessible or visually broken output.
 - If toasts become dismissible in examples or docs, the dismissal behavior must be supplied by a consumer or by a separate runtime package, not implied by CSS alone.
-- The `*-dark` and `*-light` companion tokens are static, literal colors. They do not invert when the theme changes. Components consume whichever companion is appropriate for the current theme context.
+- Color intent tokens own semantic tone values. Components should consume those tokens through scoped slots instead of adding broad theme-specific branches.
 
 ## References
 

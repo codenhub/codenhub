@@ -103,109 +103,79 @@
   }
 
   .btn {
-    --button-bg: var(--color-primary);
-    --button-fg: var(--color-primary-contrast);
+    --button-color: var(--color-primary);
+    --button-contrast: var(--color-primary-contrast);
+    --button-hover: var(--color-primary-hover);
+    --button-subtle: var(--color-primary-subtle);
+    --button-strong: var(--color-primary-strong);
+    --button-bg: var(--button-color);
+    --button-fg: var(--button-contrast);
     --button-border: var(--button-bg);
-    --button-hover-bg: var(--color-primary-hover);
+    --button-hover-bg: var(--button-hover);
     --button-hover-fg: var(--button-fg);
     --button-hover-border: var(--button-hover-bg);
-    --button-text: var(--color-primary-dark);
-    --button-soft-bg: var(--color-primary-light);
-    --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 60%, transparent);
+    --button-text: var(--button-strong);
+    --button-soft-bg: var(--button-subtle);
+    --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 80%, transparent);
     --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
     --button-spinner: var(--button-fg);
-
-    .dark & {
-      --button-text: var(--color-primary-light);
-      --button-soft-bg: var(--color-primary-dark);
-    }
 
     @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) border border-(--button-border) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-fast) ease-(--motion-ease) select-none;
 
     &.primary {
-      --button-bg: var(--color-primary);
-      --button-fg: var(--color-primary-contrast);
-      --button-hover-bg: var(--color-primary-hover);
-      --button-text: var(--color-primary-dark);
-      --button-soft-bg: var(--color-primary-light);
-
-      .dark & {
-        --button-text: var(--color-primary-light);
-        --button-soft-bg: var(--color-primary-dark);
-      }
+      --button-color: var(--color-primary);
+      --button-contrast: var(--color-primary-contrast);
+      --button-hover: var(--color-primary-hover);
+      --button-subtle: var(--color-primary-subtle);
+      --button-strong: var(--color-primary-strong);
     }
 
     &.secondary {
-      --button-bg: var(--color-accent);
-      --button-fg: var(--color-accent-contrast);
-      --button-hover-bg: var(--color-accent-hover);
-      --button-text: var(--color-accent-dark);
-      --button-soft-bg: var(--color-accent-light);
-
-      .dark & {
-        --button-text: var(--color-accent-light);
-        --button-soft-bg: var(--color-accent-dark);
-      }
+      --button-color: var(--color-accent);
+      --button-contrast: var(--color-accent-contrast);
+      --button-hover: var(--color-accent-hover);
+      --button-subtle: var(--color-accent-subtle);
+      --button-strong: var(--color-accent-strong);
     }
 
     &.success {
-      --button-bg: var(--color-success);
-      --button-fg: var(--color-success-contrast);
-      --button-hover-bg: color-mix(in srgb, var(--color-success) 82%, var(--color-success-dark));
-      --button-text: var(--color-success-dark);
-      --button-soft-bg: var(--color-success-light);
-
-      .dark & {
-        --button-text: var(--color-success-light);
-        --button-soft-bg: var(--color-success-dark);
-      }
+      --button-color: var(--color-success);
+      --button-contrast: var(--color-success-contrast);
+      --button-hover: var(--color-success-hover);
+      --button-subtle: var(--color-success-subtle);
+      --button-strong: var(--color-success-strong);
     }
 
     &.warning {
-      --button-bg: var(--color-warning);
-      --button-fg: var(--color-warning-contrast);
-      --button-hover-bg: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-dark));
-      --button-text: var(--color-warning-dark);
-      --button-soft-bg: var(--color-warning-light);
-
-      .dark & {
-        --button-text: var(--color-warning-light);
-        --button-soft-bg: var(--color-warning-dark);
-      }
+      --button-color: var(--color-warning);
+      --button-contrast: var(--color-warning-contrast);
+      --button-hover: var(--color-warning-hover);
+      --button-subtle: var(--color-warning-subtle);
+      --button-strong: var(--color-warning-strong);
     }
 
     &.destructive,
     &.danger,
     &.error {
-      --button-bg: var(--color-destructive);
-      --button-fg: var(--color-destructive-contrast);
-      --button-hover-bg: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-dark));
-      --button-text: var(--color-destructive-dark);
-      --button-soft-bg: var(--color-destructive-light);
-
-      .dark & {
-        --button-text: var(--color-destructive-light);
-        --button-soft-bg: var(--color-destructive-dark);
-      }
+      --button-color: var(--color-destructive);
+      --button-contrast: var(--color-destructive-contrast);
+      --button-hover: var(--color-destructive-hover);
+      --button-subtle: var(--color-destructive-subtle);
+      --button-strong: var(--color-destructive-strong);
     }
 
     &.info {
-      --button-bg: var(--color-info);
-      --button-fg: var(--color-info-contrast);
-      --button-hover-bg: color-mix(in srgb, var(--color-info) 82%, var(--color-info-dark));
-      --button-text: var(--color-info-dark);
-      --button-soft-bg: var(--color-info-light);
-
-      .dark & {
-        --button-text: var(--color-info-light);
-        --button-soft-bg: var(--color-info-dark);
-      }
+      --button-color: var(--color-info);
+      --button-contrast: var(--color-info-contrast);
+      --button-hover: var(--color-info-hover);
+      --button-subtle: var(--color-info-subtle);
+      --button-strong: var(--color-info-strong);
     }
 
     &.out {
-      --button-spinner: var(--button-bg);
+      --button-spinner: var(--button-text);
 
-      @apply border-(--button-text) bg-transparent text-(--button-text);
+      @apply border-2 border-(--button-text) bg-transparent text-(--button-text);
 
       &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
         @apply border-(--button-text) bg-(--button-subtle-hover-bg) text-(--button-text);
@@ -213,7 +183,7 @@
 
       &.fill {
         &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-          @apply border-(--button-bg) bg-(--button-bg) text-(--button-text);
+          @apply border-(--button-color) bg-(--button-color) text-(--button-contrast);
         }
       }
     }
@@ -272,7 +242,7 @@
     }
 
     &.loading {
-      @apply pointer-events-none text-transparent!;
+      @apply pointer-events-none text-transparent! transition-[opacity,transform];
 
       &::after {
         @apply absolute top-[calc(50%+var(--border-width))] left-[calc(50%+var(--border-width))] block size-4 -translate-1/2 animate-spin rounded-full;

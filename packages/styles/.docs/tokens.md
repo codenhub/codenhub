@@ -1,10 +1,10 @@
 # @codenhub/styles Tokens
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-17
+**Last updated:** 2026-06-18
 **Scope:** Public CSS variable contract for `@codenhub/styles`.
 
-Tokens are CSS custom properties. Light values apply by default. Dark values apply inside `.dark`.
+Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
 
 ```html
 <section class="dark">
@@ -19,13 +19,13 @@ Tokens are CSS custom properties. Light values apply by default. Dark values app
 | `--color-primary`              | Primary action/content color.                                                                            |
 | `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                               |
 | `--color-primary-hover`        | Primary hover state.                                                                                     |
-| `--color-primary-light`        | Light companion for primary. Use as subtle background or soft surface.                                   |
-| `--color-primary-dark`         | Dark companion for primary. Use as high-contrast text or icon in light context.                          |
+| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                       |
+| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.      |
 | `--color-accent`               | Secondary/accent surface.                                                                                |
 | `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                |
 | `--color-accent-hover`         | Accent hover state.                                                                                      |
-| `--color-accent-light`         | Light companion for accent. Use as subtle background or soft surface.                                    |
-| `--color-accent-dark`          | Dark companion for accent. Use as high-contrast text or icon in light context.                           |
+| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                        |
+| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.       |
 | `--color-border`               | Default border color.                                                                                    |
 | `--color-border-hover`         | Interactive border color.                                                                                |
 | `--color-background`           | Page and default raised surface background.                                                              |
@@ -35,22 +35,26 @@ Tokens are CSS custom properties. Light values apply by default. Dark values app
 | `--color-text-secondary`       | Secondary text color.                                                                                    |
 | `--color-success`              | Success state color.                                                                                     |
 | `--color-success-contrast`     | Text/icon color on success filled surface. Meets normal text contrast against `--color-success`.         |
-| `--color-success-light`        | Light companion for success. Always a literal light value regardless of theme.                           |
-| `--color-success-dark`         | Dark companion for success. Always a literal dark value regardless of theme.                             |
+| `--color-success-hover`        | Success hover tone.                                                                                      |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                               |
 | `--color-warning`              | Warning state color.                                                                                     |
 | `--color-warning-contrast`     | Text/icon color on warning filled surface. Meets normal text contrast against `--color-warning`.         |
-| `--color-warning-light`        | Light companion for warning. Always a literal light value.                                               |
-| `--color-warning-dark`         | Dark companion for warning. Always a literal dark value.                                                 |
+| `--color-warning-hover`        | Warning hover tone.                                                                                      |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                               |
 | `--color-destructive`          | Destructive/error state color.                                                                           |
 | `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets normal text contrast against `--color-destructive`. |
-| `--color-destructive-light`    | Light companion for destructive. Always a literal light value.                                           |
-| `--color-destructive-dark`     | Dark companion for destructive. Always a literal dark value.                                             |
+| `--color-destructive-hover`    | Destructive hover tone.                                                                                  |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                            |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                           |
 | `--color-info`                 | Informational state color.                                                                               |
 | `--color-info-contrast`        | Text/icon color on info filled surface. Meets normal text contrast against `--color-info`.               |
-| `--color-info-light`           | Light companion for info. Always a literal light value.                                                  |
-| `--color-info-dark`            | Dark companion for info. Always a literal dark value.                                                    |
+| `--color-info-hover`           | Info hover tone.                                                                                         |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                   |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                  |
 
-> **Companion token contract**: `*-light` and `*-dark` companion tokens are static, literal colors. They do not invert when the theme changes. Components consume the appropriate companion depending on context. For example, ghost and out buttons use `*-dark` text in a light context and `*-light` text inside `.dark`; soft buttons pair that readable text with the opposite companion surface.
+> **Intent token contract**: color intent tokens own meaning and tone variants. Components map an intent palette into scoped component slots, and presentation classes decide which slots to consume. Theme changes belong in token values such as `.dark`, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
 ## Foundation Tokens
 

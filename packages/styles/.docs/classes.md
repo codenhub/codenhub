@@ -1,7 +1,7 @@
 # @codenhub/styles Classes
 
 **Status:** IMPLEMENTED
-**Last updated:** 2026-06-17
+**Last updated:** 2026-06-18
 **Scope:** Public helper classes for `@codenhub/styles`.
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
@@ -37,6 +37,8 @@ Helper classes are CSS-only. They provide presentation and state styling, not se
 
 Use `.btn` with one optional intent class, one optional presentation class, optional size class, and optional state.
 
+Intent classes map color tokens into button tone slots. Presentation classes own how those slots become background, text, border, hover, and spinner styles.
+
 Intent classes:
 
 | Class                               | Meaning                        |
@@ -52,11 +54,11 @@ Presentation and size classes:
 
 | Class                                                                  | Purpose                                                                   |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `.out`                                                                 | Transparent button with intent companion-tone border and text.            |
-| `.ghost`                                                               | Transparent button with intent companion-tone text and soft hover.        |
-| `.soft`                                                                | Low-emphasis filled button using intent companion surface and text tones. |
+| `.out`                                                                 | Transparent button with intent readable-tone border and text.             |
+| `.ghost`                                                               | Transparent button with intent readable-tone text and soft hover.         |
+| `.soft`                                                                | Low-emphasis filled button using intent subtle surface and strong text tones. |
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                   |
-| `.fill` with `.out`                                                    | Filled hover treatment for outline buttons.                               |
+| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.              |
 | `.sm`                                                                  | Smaller button.                                                           |
 | `.lg`                                                                  | Larger button.                                                            |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.                       |
@@ -74,7 +76,7 @@ Examples:
 <button class="btn primary loading" disabled>Saving</button>
 ```
 
-`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work.
+`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work. Loading buttons keep only opacity and transform transitions active so spinner and surface colors stay synchronized when theme tokens change.
 
 ## Forms
 
