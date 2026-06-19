@@ -18,6 +18,12 @@ The package has no JavaScript runtime. It does not create DOM nodes, attach even
 | `@codenhub/styles/tw`            | Tailwind v4 source for theme, base styles, components, and utilities. |
 | `@codenhub/styles/tw/theme`      | Tailwind v4 source for theme tokens and custom dark variant.          |
 | `@codenhub/styles/tw/components` | Tailwind v4 source for theme tokens and component classes.            |
+| `@codenhub/styles/tw/surface`    | Tailwind v4 source for surface styles and empty-state utility.        |
+| `@codenhub/styles/tw/button`     | Tailwind v4 source for composable button utilities.                   |
+| `@codenhub/styles/tw/form`       | Tailwind v4 source for form, inputs, checkbox, and switch utilities.  |
+| `@codenhub/styles/tw/feedback`   | Tailwind v4 source for alert, badge, spinner, skeleton, and progress. |
+| `@codenhub/styles/tw/tooltip`    | Tailwind v4 source for tooltip utility.                               |
+| `@codenhub/styles/tw/utilities`  | Tailwind v4 source for layout primitives and contrast utilities.      |
 
 `components` entrypoints include theme tokens because component classes depend on those variables.
 

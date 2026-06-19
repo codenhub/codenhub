@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "./theme.css";
+
 @keyframes anim-skeleton {
   0% {
     background-position: 200% 0;
@@ -8,197 +11,195 @@
   }
 }
 
-@layer components {
-  .alert {
+@utility alert {
+  --feedback-color: var(--color-info);
+  --feedback-contrast: var(--color-info-contrast);
+  --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
+  --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
+
+  @apply flex rounded-(--radius-surface) bg-(--feedback-surface) p-4 leading-5 text-(--feedback-color);
+  border: var(--border-width) solid var(--feedback-border);
+
+  &.success {
+    --feedback-color: var(--color-success);
+    --feedback-contrast: var(--color-success-contrast);
+  }
+
+  &.warning {
+    --feedback-color: var(--color-warning);
+    --feedback-contrast: var(--color-warning-contrast);
+  }
+
+  &.destructive,
+  &.danger,
+  &.error {
+    --feedback-color: var(--color-destructive);
+    --feedback-contrast: var(--color-destructive-contrast);
+  }
+
+  &.info {
     --feedback-color: var(--color-info);
     --feedback-contrast: var(--color-info-contrast);
-    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
-    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
-
-    @apply flex rounded-(--radius-surface) bg-(--feedback-surface) p-4 leading-5 text-(--feedback-color);
-    border: var(--border-width) solid var(--feedback-border);
-
-    &.success {
-      --feedback-color: var(--color-success);
-      --feedback-contrast: var(--color-success-contrast);
-    }
-
-    &.warning {
-      --feedback-color: var(--color-warning);
-      --feedback-contrast: var(--color-warning-contrast);
-    }
-
-    &.destructive,
-    &.danger,
-    &.error {
-      --feedback-color: var(--color-destructive);
-      --feedback-contrast: var(--color-destructive-contrast);
-    }
-
-    &.info {
-      --feedback-color: var(--color-info);
-      --feedback-contrast: var(--color-info-contrast);
-    }
-
-    &.flat {
-      @apply bg-(--feedback-color) text-(--feedback-contrast);
-      border-color: var(--feedback-color);
-    }
-
-    &.soft {
-      @apply border-transparent bg-(--feedback-surface) text-(--feedback-color);
-    }
-
-    &.left-accent {
-      @apply border-y-transparent border-r-transparent bg-(--feedback-surface) text-(--feedback-color);
-      border-left-width: 4px;
-      border-left-color: var(--feedback-color);
-    }
-
-    &.icon {
-      @apply relative pl-11;
-
-      &::before {
-        @apply absolute top-4 left-4 block size-5 bg-current;
-
-        content: "";
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
-        mask-size: contain;
-        -webkit-mask-size: contain;
-        mask-repeat: no-repeat;
-        -webkit-mask-repeat: no-repeat;
-        mask-position: center;
-        -webkit-mask-position: center;
-      }
-
-      &.success::before {
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>');
-      }
-
-      &.warning::before {
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
-      }
-
-      &.destructive::before,
-      &.danger::before,
-      &.error::before {
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>');
-      }
-
-      &.info::before {
-        mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
-        -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
-      }
-    }
   }
 
-  .badge {
+  &.flat {
+    @apply bg-(--feedback-color) text-(--feedback-contrast);
+    border-color: var(--feedback-color);
+  }
+
+  &.soft {
+    @apply border-transparent bg-(--feedback-surface) text-(--feedback-color);
+  }
+
+  &.left-accent {
+    @apply border-y-transparent border-r-transparent bg-(--feedback-surface) text-(--feedback-color);
+    border-left-width: 4px;
+    border-left-color: var(--feedback-color);
+  }
+
+  &.icon {
+    @apply relative pl-11;
+
+    &::before {
+      @apply absolute top-4 left-4 block size-5 bg-current;
+
+      content: "";
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+      mask-size: contain;
+      -webkit-mask-size: contain;
+      mask-repeat: no-repeat;
+      -webkit-mask-repeat: no-repeat;
+      mask-position: center;
+      -webkit-mask-position: center;
+    }
+
+    &.success::before {
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>');
+    }
+
+    &.warning::before {
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
+    }
+
+    &.destructive::before,
+    &.danger::before,
+    &.error::before {
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>');
+    }
+
+    &.info::before {
+      mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+      -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+    }
+  }
+}
+
+@utility badge {
+  --feedback-color: var(--color-info);
+  --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
+  --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
+
+  @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-color);
+  border: var(--border-width) solid var(--feedback-border);
+
+  &.success {
+    --feedback-color: var(--color-success);
+  }
+
+  &.warning {
+    --feedback-color: var(--color-warning);
+  }
+
+  &.destructive,
+  &.danger,
+  &.error {
+    --feedback-color: var(--color-destructive);
+  }
+
+  &.info {
     --feedback-color: var(--color-info);
-    --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
-    --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
-
-    @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-color);
-    border: var(--border-width) solid var(--feedback-border);
-
-    &.success {
-      --feedback-color: var(--color-success);
-    }
-
-    &.warning {
-      --feedback-color: var(--color-warning);
-    }
-
-    &.destructive,
-    &.danger,
-    &.error {
-      --feedback-color: var(--color-destructive);
-    }
-
-    &.info {
-      --feedback-color: var(--color-info);
-    }
-
-    &.flat {
-      --feedback-contrast: var(--color-info-contrast);
-
-      @apply bg-(--feedback-color) text-(--feedback-contrast);
-      border-color: var(--feedback-color);
-    }
-
-    &.success.flat {
-      --feedback-contrast: var(--color-success-contrast);
-    }
-
-    &.warning.flat {
-      --feedback-contrast: var(--color-warning-contrast);
-    }
-
-    &.destructive.flat,
-    &.danger.flat,
-    &.error.flat {
-      --feedback-contrast: var(--color-destructive-contrast);
-    }
-
-    &.soft {
-      @apply border-transparent;
-    }
   }
 
-  .spinner {
-    @apply bg-text inline-block size-6 rounded-full [&.lg]:size-8 [&.sm]:size-4;
+  &.flat {
+    --feedback-contrast: var(--color-info-contrast);
 
-    content: "";
-    mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
-    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
-    mask-size: contain;
-    -webkit-mask-size: contain;
+    @apply bg-(--feedback-color) text-(--feedback-contrast);
+    border-color: var(--feedback-color);
   }
 
-  .skeleton {
-    @apply min-h-4 w-full rounded-(--radius-control);
-
-    animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
-    background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
-    background-size: 200% 100%;
+  &.success.flat {
+    --feedback-contrast: var(--color-success-contrast);
   }
 
-  .progress {
-    --progress-color: var(--color-primary);
-    --progress-surface: var(--color-surface);
+  &.warning.flat {
+    --feedback-contrast: var(--color-warning-contrast);
+  }
 
-    @apply h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
+  &.destructive.flat,
+  &.danger.flat,
+  &.error.flat {
+    --feedback-contrast: var(--color-destructive-contrast);
+  }
 
-    > * {
-      @apply block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+  &.soft {
+    @apply border-transparent;
+  }
+}
 
-      background-color: var(--progress-color);
-      width: var(--progress-value, 0%);
-    }
+@utility spinner {
+  @apply bg-text inline-block size-6 rounded-full [&.lg]:size-8 [&.sm]:size-4;
 
-    &.success {
-      --progress-color: var(--color-success);
-      --progress-surface: color-mix(var(--color-success-subtle) 60%, transparent);
-    }
+  content: "";
+  mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+  -webkit-mask-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
 
-    &.warning {
-      --progress-color: var(--color-warning);
-      --progress-surface: color-mix(var(--color-warning-subtle) 60%, transparent);
-    }
+@utility skeleton {
+  @apply min-h-4 w-full rounded-(--radius-control);
 
-    &.destructive,
-    &.danger,
-    &.error {
-      --progress-color: var(--color-destructive);
-      --progress-surface: color-mix(var(--color-destructive-subtle) 60%, transparent);
-    }
+  animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
+  background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
+  background-size: 200% 100%;
+}
 
-    &.info {
-      --progress-color: var(--color-info);
-      --progress-surface: color-mix(var(--color-info-subtle) 60%, transparent);
-    }
+@utility progress {
+  --progress-color: var(--color-primary);
+  --progress-surface: var(--color-surface);
+
+  @apply h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
+
+  > * {
+    @apply block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+
+    background-color: var(--progress-color);
+    width: var(--progress-value, 0%);
+  }
+
+  &.success {
+    --progress-color: var(--color-success);
+    --progress-surface: color-mix(var(--color-success-subtle) 60%, transparent);
+  }
+
+  &.warning {
+    --progress-color: var(--color-warning);
+    --progress-surface: color-mix(var(--color-warning-subtle) 60%, transparent);
+  }
+
+  &.destructive,
+  &.danger,
+  &.error {
+    --progress-color: var(--color-destructive);
+    --progress-surface: color-mix(var(--color-destructive-subtle) 60%, transparent);
+  }
+
+  &.info {
+    --progress-color: var(--color-info);
+    --progress-surface: color-mix(var(--color-info-subtle) 60%, transparent);
   }
 }

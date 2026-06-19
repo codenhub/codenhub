@@ -1,3 +1,6 @@
+@import "tailwindcss";
+@import "./theme.css";
+
 @layer components {
   [aria-current="page"] {
     @apply text-primary font-bold;

@@ -22,7 +22,13 @@
     "./components": "./dist/components.css",
     "./tw": "./src/index.css",
     "./tw/theme": "./src/theme.css",
-    "./tw/components": "./src/components.css"
+    "./tw/components": "./src/components.css",
+    "./tw/surface": "./src/surface.css",
+    "./tw/button": "./src/button.css",
+    "./tw/form": "./src/form.css",
+    "./tw/feedback": "./src/feedback.css",
+    "./tw/tooltip": "./src/tooltip.css",
+    "./tw/utilities": "./src/utilities.css"
   },
   "publishConfig": {
     "access": "public"

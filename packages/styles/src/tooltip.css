@@ -1,59 +1,60 @@
-@layer components {
-  .tooltip {
-    --tooltip-bg: var(--color-surface);
-    --tooltip-fg: var(--color-text);
-    --tooltip-gap: 0.5rem;
-    --tooltip-top: calc(var(--tooltip-gap) * -1);
-    --tooltip-right: auto;
-    --tooltip-bottom: auto;
-    --tooltip-left: 50%;
-    --tooltip-origin: bottom;
-    --tooltip-transform: translate(-50%, -100%);
+@import "tailwindcss";
+@import "./theme.css";
 
-    @apply relative;
+@utility tooltip {
+  --tooltip-bg: var(--color-surface);
+  --tooltip-fg: var(--color-text);
+  --tooltip-gap: 0.5rem;
+  --tooltip-top: calc(var(--tooltip-gap) * -1);
+  --tooltip-right: auto;
+  --tooltip-bottom: auto;
+  --tooltip-left: 50%;
+  --tooltip-origin: bottom;
+  --tooltip-transform: translate(-50%, -100%);
 
-    &.icon {
-      @apply bg-surface text-text inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
-    }
+  @apply relative;
 
-    &[data-tooltip-position="bottom"] {
-      --tooltip-top: auto;
-      --tooltip-bottom: calc(var(--tooltip-gap) * -1);
-      --tooltip-origin: top;
-      --tooltip-transform: translate(-50%, 100%);
-    }
+  &.icon {
+    @apply bg-surface text-text inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
+  }
 
-    &[data-tooltip-position="left"] {
-      --tooltip-top: 50%;
-      --tooltip-left: calc(var(--tooltip-gap) * -1);
-      --tooltip-origin: right;
-      --tooltip-transform: translate(-100%, -50%);
-    }
+  &[data-tooltip-position="bottom"] {
+    --tooltip-top: auto;
+    --tooltip-bottom: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: top;
+    --tooltip-transform: translate(-50%, 100%);
+  }
 
-    &[data-tooltip-position="right"] {
-      --tooltip-top: 50%;
-      --tooltip-left: auto;
-      --tooltip-right: calc(var(--tooltip-gap) * -1);
-      --tooltip-origin: left;
-      --tooltip-transform: translate(100%, -50%);
-    }
+  &[data-tooltip-position="left"] {
+    --tooltip-top: 50%;
+    --tooltip-left: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: right;
+    --tooltip-transform: translate(-100%, -50%);
+  }
 
-    &::after {
-      @apply pointer-events-none absolute z-(--z-popover) w-max max-w-72 rounded-(--radius-control) bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 shadow-(--elevation-high) transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
-      content: attr(data-tooltip);
-      left: var(--tooltip-left);
-      right: var(--tooltip-right);
-      top: var(--tooltip-top);
-      bottom: var(--tooltip-bottom);
-      transform: var(--tooltip-transform) scale(0);
-      transform-origin: var(--tooltip-origin);
-    }
+  &[data-tooltip-position="right"] {
+    --tooltip-top: 50%;
+    --tooltip-left: auto;
+    --tooltip-right: calc(var(--tooltip-gap) * -1);
+    --tooltip-origin: left;
+    --tooltip-transform: translate(100%, -50%);
+  }
 
-    &:hover::after,
-    &:focus-visible::after,
-    &[data-state="open"]::after {
-      opacity: 1;
-      transform: var(--tooltip-transform) scale(1);
-    }
+  &::after {
+    @apply pointer-events-none absolute z-(--z-popover) w-max max-w-72 rounded-(--radius-control) bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 shadow-(--elevation-high) transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+    content: attr(data-tooltip);
+    left: var(--tooltip-left);
+    right: var(--tooltip-right);
+    top: var(--tooltip-top);
+    bottom: var(--tooltip-bottom);
+    transform: var(--tooltip-transform) scale(0);
+    transform-origin: var(--tooltip-origin);
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  &[data-state="open"]::after {
+    opacity: 1;
+    transform: var(--tooltip-transform) scale(1);
   }
 }
