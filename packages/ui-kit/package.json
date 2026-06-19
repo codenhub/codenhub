@@ -34,7 +34,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@codenhub/helpers": "workspace:*"
+    "@codenhub/error": "workspace:*",
+    "@codenhub/store": "workspace:*",
+    "@codenhub/styles": "workspace:*",
+    "@codenhub/theme": "workspace:*",
+    "@codenhub/validation": "workspace:*"
   },
   "devDependencies": {
     "jsdom": "catalog:",

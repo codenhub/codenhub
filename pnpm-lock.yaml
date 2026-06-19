@@ -74,9 +74,6 @@ importers:
 
   apps/debug:
     dependencies:
-      '@codenhub/helpers':
-        specifier: 0.0.1
-        version: 0.0.1
       '@codenhub/theme':
         specifier: 0.0.1
         version: 0.0.1
@@ -192,9 +189,21 @@ importers:
 
   packages/ui-kit:
     dependencies:
-      '@codenhub/helpers':
+      '@codenhub/error':
         specifier: workspace:*
-        version: link:../helpers
+        version: link:../error
+      '@codenhub/store':
+        specifier: workspace:*
+        version: link:../store
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../styles
+      '@codenhub/theme':
+        specifier: workspace:*
+        version: link:../theme
+      '@codenhub/validation':
+        specifier: workspace:*
+        version: link:../validation
     devDependencies:
       jsdom:
         specifier: 'catalog:'

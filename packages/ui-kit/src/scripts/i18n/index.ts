@@ -1,4 +1,4 @@
-import { createStore, type Store } from "../../modules/store";
+import { createStore, type Store } from "@codenhub/store";
 import { DomTranslator } from "./dom-translation";
 import { normalizeValue } from "./helpers";
 import { LocaleLoader, createEmptyDictionary } from "./locale-loader";
@@ -69,13 +69,11 @@ export class I18n<TLocale extends string = string> extends EventTarget {
     this.readyState = false;
     this.storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
     this.root = options.root ?? this.getDocumentRoot();
-    this.storage = createStore<PersistedLocaleState>(
-      this.storageKey,
-      {},
-      {
-        validate: (raw): raw is PersistedLocaleState => isPersistedLocaleState(this.config, raw),
-      },
-    );
+    this.storage = createStore<PersistedLocaleState>({
+      storageKey: this.storageKey,
+      initialState: {},
+      validate: (raw): raw is PersistedLocaleState => isPersistedLocaleState(this.config, raw),
+    });
     this.localeLoader.resetFailedCache();
     this.warnedMissingKeys = new Set<string>();
 
