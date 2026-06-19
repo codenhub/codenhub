@@ -1,4 +1,4 @@
-@keyframes codenhub-skeleton {
+@keyframes anim-skeleton {
   0% {
     background-position: 200% 0;
   }
@@ -161,7 +161,7 @@
   .skeleton {
     @apply min-h-4 w-full rounded-(--radius-control);
 
-    animation: codenhub-skeleton var(--motion-duration-slow) linear infinite;
+    animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
     background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
     background-size: 200% 100%;
   }

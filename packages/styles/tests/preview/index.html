@@ -103,7 +103,7 @@
         </div>
       </section>
 
-      <section class="sect-container stack" data-testid="layout-section">
+      <section class="sect-inn" data-testid="layout-section">
         <h2 class="text-title-lg">Layout</h2>
         <div class="cluster" data-testid="cluster-layout">
           <span class="badge">Neutral</span>
@@ -124,7 +124,18 @@
         </div>
       </section>
 
-      <section class="sect-container narrow stack">
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Tooltips</h2>
+        <div style="display: inline-flex; gap: 1rem">
+          <span class="tooltip icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
+          <span class="tooltip icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
+          <span class="tooltip icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
+          <span class="tooltip icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
+          <span class="tooltip icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
+        </div>
+      </section>
+
+      <section class="sect-inn narrow">
         <h2 class="text-title-lg">Forms and feedback</h2>
         <label class="field">
           <span class="label">Email</span>
@@ -284,17 +295,6 @@
           <div class="spinner sm"></div>
           <div class="spinner"></div>
           <div class="spinner lg"></div>
-        </div>
-      </section>
-
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Tooltips</h2>
-        <div style="display: inline-flex; gap: 16px">
-          <span class="tooltip icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
-          <span class="tooltip icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
-          <span class="tooltip icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
-          <span class="tooltip icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
-          <span class="tooltip icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
         </div>
       </section>
     </main>
