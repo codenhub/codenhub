@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRouter } from "..";
 import { connectRouterLinks, definePageRoute, mountRouter } from ".";
 import type { MountedRouter, MountRouterOptions, PageOptions, PageRoute } from ".";
+import { createRouter } from "..";
 
 type Equal<Actual, Expected> =
   (<Value>() => Value extends Actual ? 1 : 2) extends <Value>() => Value extends Expected ? 1 : 2 ? true : false;

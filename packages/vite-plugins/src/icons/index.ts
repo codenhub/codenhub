@@ -1,8 +1,8 @@
 import type { Plugin } from "vite";
 
+import { ICON_MARKER_PREFIX, ICON_TAG_REGEX, PLUGIN_NAME, TRANSFORM_EXTENSIONS } from "./constants";
 import type { IconDefinition } from "./data";
 import { icons } from "./data";
-import { ICON_MARKER_PREFIX, ICON_TAG_REGEX, PLUGIN_NAME, TRANSFORM_EXTENSIONS } from "./constants";
 
 /** Options accepted by {@link iconsPlugin}. */
 export interface IconsPluginOptions {

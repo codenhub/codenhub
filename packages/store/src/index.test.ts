@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createStore } from "./index";
 import type { RemovableStoreKey } from "./index";
 

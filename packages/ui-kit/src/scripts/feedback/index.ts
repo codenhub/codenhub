@@ -1,4 +1,5 @@
 import { DEFAULT_APP_ERROR_MESSAGE, type AppError, type Result } from "@codenhub/error";
+
 import { getI18nInstance } from "../i18n";
 import { SemanticToast, type ToastOptions } from "../toast";
 

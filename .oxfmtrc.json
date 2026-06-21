@@ -14,5 +14,7 @@
   "semi": true,
   "singleQuote": false,
   "sortTailwindcss": true,
+  "sortImports": true,
+  "sortPackageJson": true,
   "trailingComma": "all"
 }

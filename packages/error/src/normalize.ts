@@ -1,5 +1,5 @@
-import type { AppErrorType, ErrorFeedback, ErrorRegistry } from "./types";
 import { normalizeErrorIdentifier } from "./registry";
+import type { AppErrorType, ErrorFeedback, ErrorRegistry } from "./types";
 
 export interface NormalizedError {
   code: string | null;

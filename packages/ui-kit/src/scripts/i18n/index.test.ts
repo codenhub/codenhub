@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { I18n, type I18nConfig } from "./index";
 
 const LOCALES = ["en-US", "pt-BR"] as const;

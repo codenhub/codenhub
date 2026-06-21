@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { AppError, createErrorRegistry } from "../index";
 import { browserErrorRegistry, supabaseErrorRegistry } from "./index";
 

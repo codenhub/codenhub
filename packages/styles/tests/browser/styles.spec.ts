@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { expect, test } from "@playwright/test";
 
 const previewUrl = pathToFileURL(fileURLToPath(new URL("../preview/index.html", import.meta.url))).toString();
 const vanillaPreviewUrl = `${previewUrl}?env=vanilla`;

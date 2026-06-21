@@ -1,4 +1,5 @@
 import { createStore, type Store } from "@codenhub/store";
+
 import { DomTranslator } from "./dom-translation";
 import { normalizeValue } from "./helpers";
 import { LocaleLoader, createEmptyDictionary } from "./locale-loader";

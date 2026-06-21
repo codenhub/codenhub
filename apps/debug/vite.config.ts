@@ -1,6 +1,6 @@
-import { defineConfig } from "vite";
-import tailwindcss from "@tailwindcss/vite";
 import { addLoaderPlugin, deferCssPlugin, iconsPlugin } from "@codenhub/vite-plugins";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
 
 export default defineConfig({
   root: "./src",
