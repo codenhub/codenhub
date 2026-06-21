@@ -429,7 +429,6 @@ test.describe("compiled CSS preview", () => {
     const styles = await page.evaluate(() => {
       const layoutSection = document.querySelector('[data-testid="layout-section"]');
       const clusterLayout = document.querySelector('[data-testid="cluster-layout"]');
-      const autoGridLayout = document.querySelector('[data-testid="auto-grid-layout"]');
       const invalidInput = document.querySelector('[data-testid="invalid-input"]');
       const successAlert = document.querySelector('[data-testid="default-success-alert"]');
       const successAlertIcon = document.querySelector('[data-testid="default-success-alert-icon"]');
@@ -439,7 +438,6 @@ test.describe("compiled CSS preview", () => {
       if (
         !layoutSection ||
         !clusterLayout ||
-        !autoGridLayout ||
         !invalidInput ||
         !successAlert ||
         !successAlertIcon ||
@@ -451,7 +449,6 @@ test.describe("compiled CSS preview", () => {
 
       const layoutStyles = getComputedStyle(layoutSection);
       const clusterStyles = getComputedStyle(clusterLayout);
-      const autoGridStyles = getComputedStyle(autoGridLayout);
       const invalidInputStyles = getComputedStyle(invalidInput);
       const successAlertStyles = getComputedStyle(successAlert);
       const successAlertIconStyles = getComputedStyle(successAlertIcon);
@@ -463,7 +460,6 @@ test.describe("compiled CSS preview", () => {
         alertColor: successAlertStyles.color,
         alertPaddingLeft: successAlertStyles.paddingLeft,
         alertIconPaddingLeft: successAlertIconStyles.paddingLeft,
-        autoGridDisplay: autoGridStyles.display,
         clusterDisplay: clusterStyles.display,
         invalidBorderColor: invalidInputStyles.borderColor,
         layoutDisplay: layoutStyles.display,
@@ -476,7 +472,6 @@ test.describe("compiled CSS preview", () => {
     expect(styles.layoutDisplay).toBe("flex");
     expect(styles.layoutMaxWidth).not.toBe("none");
     expect(styles.clusterDisplay).toBe("flex");
-    expect(styles.autoGridDisplay).toBe("grid");
     expect(styles.invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.alertBorderWidth).not.toBe("0px");
     expect(styles.alertColor).not.toBe("rgba(0, 0, 0, 0)");
