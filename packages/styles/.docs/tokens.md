@@ -33,6 +33,10 @@ Tokens are CSS custom properties. Default values apply by default. `.dark` may o
 | `--color-surface`              | Nested or muted surface.                                                                                      |
 | `--color-text`                 | Primary text color.                                                                                           |
 | `--color-text-secondary`       | Secondary text color.                                                                                         |
+| `--color-text-contrast`        | Text/icon color on text filled surface.                                                                       |
+| `--color-text-hover`           | Text hover state.                                                                                             |
+| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
+| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
 | `--color-success`              | Success state color.                                                                                          |
 | `--color-success-contrast`     | Text/icon color on success filled surface. Meets 3:1 UI component contrast against `--color-success`.         |
 | `--color-success-hover`        | Success hover tone.                                                                                           |

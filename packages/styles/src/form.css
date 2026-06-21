@@ -134,8 +134,8 @@
 }
 
 @utility checkbox {
-  --control-color: var(--color-primary);
-  --control-contrast: var(--color-primary-contrast);
+  --control-color: var(--color-text);
+  --control-contrast: var(--color-text-contrast);
 
   @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm bg-(--color-background) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
   border: var(--border-width) solid var(--color-border);
@@ -217,8 +217,8 @@
 }
 
 @utility switch {
-  --control-color: var(--color-primary);
-  --control-contrast: var(--color-primary-contrast);
+  --control-color: var(--color-text);
+  --control-contrast: var(--color-text-contrast);
 
   @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
 

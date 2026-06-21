@@ -58,6 +58,7 @@
       <section class="sect-inn">
         <h2 class="text-title-lg">Buttons</h2>
         <div style="display: flex; flex-wrap: wrap; gap: 16px">
+          <button class="btn" data-testid="neutral-button">Neutral</button>
           <button class="btn primary" data-testid="primary-button">Primary</button>
           <button class="btn secondary" data-testid="secondary-button">Secondary</button>
           <button class="btn out">Outline</button>
@@ -106,7 +107,7 @@
       <section class="sect-inn" data-testid="layout-section">
         <h2 class="text-title-lg">Layout</h2>
         <div class="cluster" data-testid="cluster-layout">
-          <span class="badge">Neutral</span>
+          <span class="badge" data-testid="badge-neutral">Neutral</span>
           <span class="badge primary" data-testid="badge-primary">Primary</span>
           <span class="badge secondary" data-testid="badge-secondary">Secondary</span>
           <span class="badge success">Live</span>
@@ -237,6 +238,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem">
           <h3 class="text-title-sm">Default Alerts</h3>
+          <div class="alert" role="status" data-testid="neutral-alert">Neutral.</div>
           <div class="alert success" role="status" data-testid="default-success-alert">Saved.</div>
           <div class="alert success icon" role="status" data-testid="default-success-alert-icon">Saved.</div>
           <div class="alert primary icon" role="status" data-testid="default-primary-alert">Primary alert.</div>

@@ -8,10 +8,10 @@
   --color-primary-hover: var(--color-neutral-700);
   --color-primary-subtle: var(--color-neutral-200);
   --color-primary-strong: var(--color-neutral-900);
-  --color-accent: var(--color-neutral-300);
-  --color-accent-contrast: var(--color-neutral-950);
-  --color-accent-hover: var(--color-neutral-400);
-  --color-accent-subtle: var(--color-neutral-200);
+  --color-accent: var(--color-neutral-600);
+  --color-accent-contrast: var(--color-neutral-50);
+  --color-accent-hover: var(--color-neutral-700);
+  --color-accent-subtle: var(--color-neutral-100);
   --color-accent-strong: var(--color-neutral-800);
   --color-border: var(--color-neutral-300);
   --color-border-hover: var(--color-neutral-600);
@@ -20,6 +20,10 @@
   --color-surface: var(--color-neutral-200);
   --color-text: var(--color-neutral-950);
   --color-text-secondary: var(--color-neutral-700);
+  --color-text-contrast: var(--color-neutral-50);
+  --color-text-hover: var(--color-neutral-700);
+  --color-text-subtle: var(--color-neutral-200);
+  --color-text-strong: var(--color-neutral-900);
 
   --color-success: var(--color-emerald-600);
   --color-success-contrast: var(--color-neutral-50);
@@ -89,9 +93,9 @@
   --color-primary-hover: var(--color-neutral-200);
   --color-primary-subtle: var(--color-neutral-900);
   --color-primary-strong: var(--color-neutral-100);
-  --color-accent: var(--color-neutral-700);
-  --color-accent-contrast: var(--color-neutral-50);
-  --color-accent-hover: var(--color-neutral-500);
+  --color-accent: var(--color-neutral-400);
+  --color-accent-contrast: var(--color-neutral-950);
+  --color-accent-hover: var(--color-neutral-300);
   --color-accent-subtle: var(--color-neutral-800);
   --color-accent-strong: var(--color-neutral-200);
   --color-border: var(--color-neutral-700);
@@ -101,6 +105,10 @@
   --color-surface: var(--color-neutral-800);
   --color-text: var(--color-neutral-50);
   --color-text-secondary: var(--color-neutral-400);
+  --color-text-contrast: var(--color-neutral-950);
+  --color-text-hover: var(--color-neutral-200);
+  --color-text-subtle: var(--color-neutral-900);
+  --color-text-strong: var(--color-neutral-100);
 
   --color-success: var(--color-emerald-600);
   --color-success-contrast: var(--color-neutral-50);

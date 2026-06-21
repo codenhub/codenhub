@@ -12,8 +12,8 @@
 }
 
 @utility alert {
-  --feedback-color: var(--color-info);
-  --feedback-contrast: var(--color-info-contrast);
+  --feedback-color: var(--color-text);
+  --feedback-contrast: var(--color-text-contrast);
   --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
   --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
@@ -109,8 +109,8 @@
 }
 
 @utility badge {
-  --feedback-color: var(--color-info);
-  --feedback-contrast: var(--color-info-contrast);
+  --feedback-color: var(--color-text);
+  --feedback-contrast: var(--color-text-contrast);
   --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
   --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
@@ -178,8 +178,8 @@
 }
 
 @utility progress {
-  --progress-color: var(--color-primary);
-  --progress-surface: var(--color-surface);
+  --progress-color: var(--color-text);
+  --progress-surface: color-mix(var(--color-text-subtle) 60%, transparent);
 
   @apply h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
 

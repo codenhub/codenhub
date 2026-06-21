@@ -764,6 +764,56 @@ test.describe("compiled CSS preview", () => {
     expect(switchStyles.height).toBe("18px");
     expect(switchStyles.cursor).toBe("pointer");
   });
+
+  test("uses default neutral text tokens when no semantic intent is specified", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+
+    const values = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      const getBg = (testId: string) => {
+        const el = document.querySelector(`[data-testid="${testId}"]`);
+        return el ? getComputedStyle(el).backgroundColor : "";
+      };
+
+      const getFg = (testId: string) => {
+        const el = document.querySelector(`[data-testid="${testId}"]`);
+        return el ? getComputedStyle(el).color : "";
+      };
+
+      const getProgressBg = (testId: string) => {
+        const el = document.querySelector(`[data-testid="${testId}"] > *`);
+        return el ? getComputedStyle(el).backgroundColor : "";
+      };
+
+      return {
+        btnBg: getBg("neutral-button"),
+        btnFg: getFg("neutral-button"),
+        checkboxBg: getBg("checkbox-checked-test"),
+        switchBg: getBg("switch-checked-test"),
+        alertFg: getFg("neutral-alert"),
+        badgeFg: getFg("badge-neutral"),
+        progressBg: getProgressBg("progress-bar"),
+        tokenText: resolveToken("text"),
+        tokenTextContrast: resolveToken("text-contrast"),
+      };
+    });
+
+    expect(values.btnBg).toBe(values.tokenText);
+    expect(values.btnFg).toBe(values.tokenTextContrast);
+    expect(values.checkboxBg).toBe(values.tokenText);
+    expect(values.switchBg).toBe(values.tokenText);
+    expect(values.alertFg).toBe(values.tokenText);
+    expect(values.badgeFg).toBe(values.tokenText);
+    expect(values.progressBg).toBe(values.tokenText);
+  });
 });
 
 test.describe("Tailwind source build", () => {});

@@ -2,11 +2,11 @@
 @import "./theme.css";
 
 @utility btn {
-  --button-color: var(--color-primary);
-  --button-contrast: var(--color-primary-contrast);
-  --button-hover: var(--color-primary-hover);
-  --button-subtle: var(--color-primary-subtle);
-  --button-strong: var(--color-primary-strong);
+  --button-color: var(--color-text);
+  --button-contrast: var(--color-text-contrast);
+  --button-hover: var(--color-text-hover);
+  --button-subtle: var(--color-text-subtle);
+  --button-strong: var(--color-text-strong);
   --button-bg: var(--button-color);
   --button-fg: var(--button-contrast);
   --button-border: var(--button-bg);
