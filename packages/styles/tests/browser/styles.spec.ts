@@ -545,6 +545,56 @@ test.describe("compiled CSS preview", () => {
     expect(flatBadgeStyles.color).not.toBe(flatBadgeStyles.backgroundColor);
     expect(flatBadgeStyles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
 
+    // Primary flat badge should have background = primary color, color = primary-contrast color
+    const flatPrimaryBadgeStyles = await page.getByTestId("badge-flat-primary").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+      };
+    });
+    const expectedPrimaryColors = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-primary)";
+      const probeContrast = document.createElement("span");
+      probeContrast.style.color = "var(--color-primary-contrast)";
+      document.body.append(probe, probeContrast);
+      const colors = {
+        primary: getComputedStyle(probe).color,
+        contrast: getComputedStyle(probeContrast).color,
+      };
+      probe.remove();
+      probeContrast.remove();
+      return colors;
+    });
+    expect(flatPrimaryBadgeStyles.backgroundColor).toBe(expectedPrimaryColors.primary);
+    expect(flatPrimaryBadgeStyles.color).toBe(expectedPrimaryColors.contrast);
+
+    // Secondary flat badge should have background = accent color, color = accent-contrast color
+    const flatSecondaryBadgeStyles = await page.getByTestId("badge-flat-secondary").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return {
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+      };
+    });
+    const expectedSecondaryColors = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-accent)";
+      const probeContrast = document.createElement("span");
+      probeContrast.style.color = "var(--color-accent-contrast)";
+      document.body.append(probe, probeContrast);
+      const colors = {
+        accent: getComputedStyle(probe).color,
+        contrast: getComputedStyle(probeContrast).color,
+      };
+      probe.remove();
+      probeContrast.remove();
+      return colors;
+    });
+    expect(flatSecondaryBadgeStyles.backgroundColor).toBe(expectedSecondaryColors.accent);
+    expect(flatSecondaryBadgeStyles.color).toBe(expectedSecondaryColors.contrast);
+
     // Soft badge: tinted background, no border
     const softBadgeStyles = await page.getByTestId("badge-soft-success").evaluate((element) => {
       const styles = getComputedStyle(element);
@@ -629,18 +679,26 @@ test.describe("compiled CSS preview", () => {
       };
 
       return {
+        checkboxPrimary: getCheckedBg("checkbox-primary"),
+        checkboxSecondary: getCheckedBg("checkbox-secondary"),
         checkboxSuccess: getCheckedBg("checkbox-success"),
         checkboxWarning: getCheckedBg("checkbox-warning"),
         checkboxDestructive: getCheckedBg("checkbox-destructive"),
         checkboxInfo: getCheckedBg("checkbox-info"),
+        switchPrimary: getCheckedBg("switch-primary"),
+        switchSecondary: getCheckedBg("switch-secondary"),
         switchSuccess: getCheckedBg("switch-success"),
         switchWarning: getCheckedBg("switch-warning"),
         switchDestructive: getCheckedBg("switch-destructive"),
         switchInfo: getCheckedBg("switch-info"),
+        progressPrimary: getProgressFill("progress-bar-primary"),
+        progressSecondary: getProgressFill("progress-bar-secondary"),
         progressSuccess: getProgressFill("progress-bar-success"),
         progressWarning: getProgressFill("progress-bar-warning"),
         progressDestructive: getProgressFill("progress-bar-destructive"),
         progressInfo: getProgressFill("progress-bar-info"),
+        tokenPrimary: resolveToken("primary"),
+        tokenSecondary: resolveToken("accent"),
         tokenSuccess: resolveToken("success"),
         tokenWarning: resolveToken("warning"),
         tokenDestructive: resolveToken("destructive"),
@@ -648,14 +706,20 @@ test.describe("compiled CSS preview", () => {
       };
     });
 
+    expect(intentStyles.checkboxPrimary).toBe(intentStyles.tokenPrimary);
+    expect(intentStyles.checkboxSecondary).toBe(intentStyles.tokenSecondary);
     expect(intentStyles.checkboxSuccess).toBe(intentStyles.tokenSuccess);
     expect(intentStyles.checkboxWarning).toBe(intentStyles.tokenWarning);
     expect(intentStyles.checkboxDestructive).toBe(intentStyles.tokenDestructive);
     expect(intentStyles.checkboxInfo).toBe(intentStyles.tokenInfo);
+    expect(intentStyles.switchPrimary).toBe(intentStyles.tokenPrimary);
+    expect(intentStyles.switchSecondary).toBe(intentStyles.tokenSecondary);
     expect(intentStyles.switchSuccess).toBe(intentStyles.tokenSuccess);
     expect(intentStyles.switchWarning).toBe(intentStyles.tokenWarning);
     expect(intentStyles.switchDestructive).toBe(intentStyles.tokenDestructive);
     expect(intentStyles.switchInfo).toBe(intentStyles.tokenInfo);
+    expect(intentStyles.progressPrimary).toBe(intentStyles.tokenPrimary);
+    expect(intentStyles.progressSecondary).toBe(intentStyles.tokenSecondary);
     expect(intentStyles.progressSuccess).toBe(intentStyles.tokenSuccess);
     expect(intentStyles.progressWarning).toBe(intentStyles.tokenWarning);
     expect(intentStyles.progressDestructive).toBe(intentStyles.tokenDestructive);

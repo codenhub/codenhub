@@ -173,6 +173,16 @@
     }
   }
 
+  &.primary {
+    --control-color: var(--color-primary);
+    --control-contrast: var(--color-primary-contrast);
+  }
+
+  &.secondary {
+    --control-color: var(--color-accent);
+    --control-contrast: var(--color-accent-contrast);
+  }
+
   &.success {
     --control-color: var(--color-success);
     --control-contrast: var(--color-success-contrast);
@@ -240,6 +250,16 @@
 
       background-color: var(--control-contrast);
     }
+  }
+
+  &.primary {
+    --control-color: var(--color-primary);
+    --control-contrast: var(--color-primary-contrast);
+  }
+
+  &.secondary {
+    --control-color: var(--color-accent);
+    --control-contrast: var(--color-accent-contrast);
   }
 
   &.success {
