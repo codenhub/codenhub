@@ -344,3 +344,7 @@ AppError.registry.codes.addList([
 - Registries are opt-in by design. Consumers start from a blank registry to avoid hidden global classifications.
 - Registries, including `AppError.registry` and ready registry presets, are currently mutable. Configure shared registries during app initialization and avoid mutating imported presets at runtime. A future version is expected to provide stronger mutation safeguards.
 - Preset registries should prefer stable error codes or names over message matching when a library provides them.
+
+## License
+
+This project is licensed under the Apache License 2.0.

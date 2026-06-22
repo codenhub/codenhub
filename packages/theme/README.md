@@ -412,3 +412,7 @@ theme.destroy();
 - Does not provide server-side persistence.
 - Does not synchronize theme changes across tabs.
 - Does not manage user consent requirements for storage.
+
+## License
+
+This project is licensed under the Apache License 2.0.

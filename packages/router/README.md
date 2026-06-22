@@ -805,3 +805,7 @@ tabs open the correct URL.
   titles, focus movement, landmarks, and announcements after route changes.
 - Consumers own authentication, authorization, data fetching, component state,
   error boundaries, and telemetry.
+
+## License
+
+This project is licensed under the Apache License 2.0.

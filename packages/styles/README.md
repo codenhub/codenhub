@@ -139,3 +139,7 @@ This package publishes CSS as its public runtime surface. It does not expose Jav
 Lifecycle exception: `@codenhub/styles` intentionally omits `main`, `module`, and `types` from `package.json` because it is a CSS-only package with no JavaScript API. Every supported consumer import path is listed explicitly in `exports`, build output is generated into `dist`, and package checks validate the CSS build contract.
 
 The package intentionally does not expose private files outside the documented import paths. If exports change, this README and the related `.docs/` documents must be updated in the same change.
+
+## License
+
+This project is licensed under the Apache License 2.0.

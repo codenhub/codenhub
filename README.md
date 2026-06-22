@@ -1,16 +1,29 @@
 # CodenHub
 
-Shared packages, apps, and project standards for CodenHub.
+Shared packages, apps, and project standards for and by [coden.agency](https://coden.agency).
 
-This repository is docs-first: durable decisions live in `.docs/` and code should follow approved documentation.
+## Packages
 
-## Workspace
+### Applications
 
-- `packages/helpers`: TypeScript helpers for errors, validation, and result-style control flow.
-- `packages/theme`: browser theme preference helper.
-- `packages/ui-kit`: UI scripts and styles.
-- `packages/vite-plugins`: Vite plugins.
-- `apps/debug`: local debug workspace.
+- `apps/debug`: Private local debug workspace to run, test, and verify packages in integration.
+
+### Libraries & Primitives
+
+- `packages/error`: Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.
+- `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
+- `packages/router`: Small browser router with DOM page helpers for TypeScript apps.
+- `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
+- `packages/styles`: CSS-only design tokens, base styles, and composable UI helper classes.
+- `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
+- `packages/ui-kit`: UI scripts (feedback, i18n, theme, toast notifications) and styles built on primitive packages.
+- `packages/validation`: Zero-dependency validation and primitive coercion helpers for TypeScript apps.
+
+### Plugins
+
+- `packages/plugins/vite/add-loader`: Vite plugin that injects a full-screen page-loader overlay into every HTML entry point.
+- `packages/plugins/vite/defer-css`: Vite plugin that defers loading of CSS stylesheets to prevent render blocking.
+- `packages/plugins/vite/icons`: Vite plugin that replaces inline SVG icons at build time.
 
 ## Commands
 
@@ -53,6 +66,8 @@ pnpm test
 
 ## Documentation
 
+This repository is docs-first: durable decisions live in `.docs/` and code should follow approved documentation. Package-specific documentation live in `packages/<package-name>/.docs/` .
+
 Read these before changing package behavior, public APIs, or project conventions:
 
 - `.docs/docs-guidelines.md`: documentation structure, status model, and exception rules.
@@ -60,8 +75,4 @@ Read these before changing package behavior, public APIs, or project conventions
 - `.docs/specs/packages-readme.md`: README requirements for public packages.
 - `.docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
 
-### Packages
-
-Every `private: false` package under `packages/*` MUST have a `README.md` that follows `.docs/specs/packages-readme.md`.
-
-Package READMEs should document public usage, supported imports, examples, runtime requirements, and limitations. Internal implementation notes belong in code comments only when local context is needed, or in package-level `.docs/` when durable package knowledge is needed.
+Every `private: false` package under `packages/*` MUST comply to `.docs/specs/packages-lifecycle.md` and MUST have a `README.md` that follows `.docs/specs/packages-readme.md`.

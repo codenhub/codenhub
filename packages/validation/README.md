@@ -371,3 +371,7 @@ const userId = custom("usr_123", (value) => {
 - Validators return results instead of throwing for invalid input.
 - Validation errors are plain serializable objects.
 - `includeInput` should be used only when retaining the original input is safe for the caller.
+
+## License
+
+This project is licensed under the Apache License 2.0.
