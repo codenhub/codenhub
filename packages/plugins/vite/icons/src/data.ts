@@ -15,6 +15,8 @@ export type IconDefinition = string | IconOptions;
 /**
  * Inline SVG strings keyed by icon name.
  * Usage: <i class="ic-<name>"></i>
+ *
+ * Icons are sourced from Lucide (https://lucide.dev) and licensed under the ISC License.
  */
 export const icons = {
   close: {

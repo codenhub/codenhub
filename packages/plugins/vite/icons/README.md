@@ -102,3 +102,9 @@ interface IconOptions {
 
 - Vite version `^8.0.16` or compatible.
 - Node.js environment supporting ESM.
+
+## License
+
+This project is licensed under the Apache License 2.0.
+
+It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](file:///c:/Users/gustavo/projects/codenhub/packages/plugins/vite/icons/NOTICE) file for details.
