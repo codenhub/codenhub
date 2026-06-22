@@ -434,6 +434,10 @@ test.describe("compiled CSS preview", () => {
       const successAlertIcon = document.querySelector('[data-testid="default-success-alert-icon"]');
       const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
       const progressBar = document.querySelector('[data-testid="progress-bar"]');
+      const loaderSm = document.querySelector('[data-testid="loader-sm"]');
+      const loaderDefault = document.querySelector('[data-testid="loader-default"]');
+      const loaderLg = document.querySelector('[data-testid="loader-lg"]');
+      const loaderDots = document.querySelector('[data-testid="loader-dots-wave"]');
 
       if (
         !layoutSection ||
@@ -442,7 +446,11 @@ test.describe("compiled CSS preview", () => {
         !successAlert ||
         !successAlertIcon ||
         !skeletonBlock ||
-        !progressBar
+        !progressBar ||
+        !loaderSm ||
+        !loaderDefault ||
+        !loaderLg ||
+        !loaderDots
       ) {
         throw new Error("Expected helper class fixtures to exist.");
       }
@@ -454,6 +462,10 @@ test.describe("compiled CSS preview", () => {
       const successAlertIconStyles = getComputedStyle(successAlertIcon);
       const skeletonStyles = getComputedStyle(skeletonBlock);
       const progressStyles = getComputedStyle(progressBar);
+      const loaderSmStyles = getComputedStyle(loaderSm);
+      const loaderDefaultStyles = getComputedStyle(loaderDefault);
+      const loaderLgStyles = getComputedStyle(loaderLg);
+      const loaderDotsStyles = getComputedStyle(loaderDots);
 
       return {
         alertBorderWidth: successAlertStyles.borderWidth,
@@ -466,6 +478,11 @@ test.describe("compiled CSS preview", () => {
         layoutMaxWidth: layoutStyles.maxWidth,
         progressOverflow: progressStyles.overflow,
         skeletonAnimationName: skeletonStyles.animationName,
+        loaderSmWidth: loaderSmStyles.width,
+        loaderDefaultWidth: loaderDefaultStyles.width,
+        loaderLgWidth: loaderLgStyles.width,
+        loaderDefaultMask: loaderDefaultStyles.maskImage || loaderDefaultStyles.webkitMaskImage || "none",
+        loaderDotsImage: loaderDotsStyles.getPropertyValue("--ai-image"),
       };
     });
 
@@ -478,6 +495,11 @@ test.describe("compiled CSS preview", () => {
     expect(styles.alertIconPaddingLeft).toBe("44px");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
+    expect(styles.loaderSmWidth).toBe("16px");
+    expect(styles.loaderDefaultWidth).toBe("24px");
+    expect(styles.loaderLgWidth).toBe("32px");
+    expect(styles.loaderDefaultMask).not.toBe("none");
+    expect(styles.loaderDotsImage).toContain("data:image/svg+xml");
   });
 
   test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {

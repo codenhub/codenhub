@@ -80,7 +80,8 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 | `@codenhub/styles/tw/surface`    | Tailwind source CSS | Surface styles and empty-state utility.                             |
 | `@codenhub/styles/tw/button`     | Tailwind source CSS | Composable button utilities.                                        |
 | `@codenhub/styles/tw/form`       | Tailwind source CSS | Form, input, textarea, select, checkbox, switch utilities.          |
-| `@codenhub/styles/tw/feedback`   | Tailwind source CSS | Alert, badge, spinner, skeleton, progress utilities.                |
+| `@codenhub/styles/tw/feedback`   | Tailwind source CSS | Alert, badge, skeleton, progress utilities.                         |
+| `@codenhub/styles/tw/loader`     | Tailwind source CSS | Loader and activity indicator utilities.                            |
 | `@codenhub/styles/tw/tooltip`    | Tailwind source CSS | Tooltip utility.                                                    |
 | `@codenhub/styles/tw/utilities`  | Tailwind source CSS | Layout primitives and contrast utilities.                           |
 

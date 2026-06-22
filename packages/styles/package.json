@@ -27,6 +27,7 @@
     "./tw/button": "./src/button.css",
     "./tw/form": "./src/form.css",
     "./tw/feedback": "./src/feedback.css",
+    "./tw/loader": "./src/loader.css",
     "./tw/tooltip": "./src/tooltip.css",
     "./tw/utilities": "./src/utilities.css"
   },

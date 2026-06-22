@@ -66,6 +66,8 @@
           <button class="btn out">Outline</button>
           <button class="btn fill out">Outline fill</button>
           <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
+          <button class="btn secondary loading dots-wave" disabled data-testid="loading-button-dots">Loading Dots</button>
+          <button class="btn success loading bars-wave" disabled data-testid="loading-button-bars">Loading Bars</button>
           <button class="btn success" data-testid="success-button">Success</button>
           <button class="btn success out fill" data-testid="success-outline-button">Success outline</button>
           <button class="btn success soft" data-testid="success-soft-button">Success soft</button>
@@ -339,10 +341,13 @@
         <div class="progress info" aria-label="Info progress" data-testid="progress-bar-info">
           <span style="--progress-value: 30%"></span>
         </div>
-        <div style="display: inline-flex; gap: 0.5rem; align-items: center">
-          <div class="spinner sm"></div>
-          <div class="spinner"></div>
-          <div class="spinner lg"></div>
+        <div style="display: inline-flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+          <div class="loader sm" data-testid="loader-sm"></div>
+          <div class="loader" data-testid="loader-default"></div>
+          <div class="loader lg" data-testid="loader-lg"></div>
+          <div class="loader dots-wave" data-testid="loader-dots-wave"></div>
+          <div class="loader bars-wave" data-testid="loader-bars-wave"></div>
+          <div class="loader pulse-ring" data-testid="loader-pulse-ring"></div>
         </div>
       </section>
     </main>

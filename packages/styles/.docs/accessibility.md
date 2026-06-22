@@ -31,7 +31,7 @@ Use semantic HTML and behavior appropriate for the component.
 | Toasts             | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
 | Tooltips           | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
 | Progress           | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/spinners | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
+| Skeletons/loaders  | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
 | Popovers/modals    | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
 
 ## State Attribute Guidance

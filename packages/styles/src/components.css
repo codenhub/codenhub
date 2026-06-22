@@ -3,6 +3,7 @@
 @import "./overrides.css";
 @import "./surface.css";
 @import "./button.css";
+@import "./loader.css";
 @import "./form.css";
 @import "./feedback.css";
 @import "./tooltip.css";

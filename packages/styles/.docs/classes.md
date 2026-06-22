@@ -54,7 +54,7 @@ Presentation and size classes:
 | `.sm`                                                                  | Smaller button.                                                               |
 | `.lg`                                                                  | Larger button.                                                                |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS spinner.                              |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                    |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
 
 Examples:
@@ -123,7 +123,8 @@ Example:
 | `.alert`    | Inline feedback surface.                                            |
 | `.icon`     | Subclass of `.alert`. Adds a corresponding intent icon and padding. |
 | `.badge`    | Compact status pill.                                                |
-| `.spinner`  | Inline loading spinner.                                             |
+| `.ai`       | Low-level activity indicator. Applies CSS masking.                  |
+| `.loader`   | Standalone inline loader. Composes `.ai` with visual styles.        |
 | `.skeleton` | Ambient loading placeholder.                                        |
 | `.progress` | Progress track. Fill element uses `--progress-value`.               |
 
@@ -147,7 +148,8 @@ Examples:
 <span class="badge warning">Queued</span>
 <span class="badge success flat">Live</span>
 <span class="badge info soft">Draft</span>
-<span class="spinner" aria-hidden="true"></span>
+<span class="loader" aria-hidden="true"></span>
+<span class="loader dots-wave" aria-hidden="true"></span>
 <div class="progress" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
 <div class="progress success" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
 ```

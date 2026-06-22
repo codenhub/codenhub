@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@utility ai {
+  --ai-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+
+  mask-image: var(--ai-image);
+  -webkit-mask-image: var(--ai-image);
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+
+@utility spinner-stretch {
+  --ai-image: url('data:image/svg+xml;utf8,<svg stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>');
+}
+
+@utility dots-wave {
+  --ai-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.dot{animation:dot-anim 1s ease-in-out infinite;fill:currentColor}.d1{animation-delay:-0.32s}.d2{animation-delay:-0.16s}@keyframes dot-anim{0%,80%,100%{transform:scale(0.6);opacity:0.2}40%{transform:scale(1);opacity:1}}</style><circle class="dot d1" cx="4" cy="12" r="3" transform-origin="4px 12px"></circle><circle class="dot d2" cx="12" cy="12" r="3" transform-origin="12px 12px"></circle><circle class="dot d3" cx="20" cy="12" r="3" transform-origin="20px 12px"></circle></svg>');
+}
+
+@utility bars-wave {
+  --ai-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.bar{animation:bar-anim 1s ease-in-out infinite;fill:currentColor}.b1{animation-delay:-0.4s}.b2{animation-delay:-0.2s}@keyframes bar-anim{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}</style><rect class="bar b1" x="3" y="2" width="4" height="20" rx="2" transform-origin="5px 12px"></rect><rect class="bar b2" x="10" y="2" width="4" height="20" rx="2" transform-origin="12px 12px"></rect><rect class="bar b3" x="17" y="2" width="4" height="20" rx="2" transform-origin="19px 12px"></rect></svg>');
+}
+
+@utility pulse-ring {
+  --ai-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.pulse{animation:pulse-anim 1.2s cubic-bezier(0, 0.2, 0.8, 1) infinite;stroke:currentColor;transform-origin:center}.p2{animation-delay:-0.6s}@keyframes pulse-anim{0%{transform:scale(0);opacity:1}100%{transform:scale(1);opacity:0}}</style><circle class="pulse p1" cx="12" cy="12" r="10" fill="none" stroke-width="3"></circle><circle class="pulse p2" cx="12" cy="12" r="10" fill="none" stroke-width="3"></circle></svg>');
+}
+
+@utility loader {
+  @apply ai bg-text inline-block size-6 rounded-full [&.lg]:size-8 [&.sm]:size-4;
+
+  content: "";
+}
