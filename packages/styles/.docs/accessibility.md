@@ -23,16 +23,16 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                 | Required outside CSS                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Buttons            | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
-| Forms              | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
-| Alerts             | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
-| Toasts             | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips           | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
-| Progress           | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/loaders  | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
-| Popovers/modals    | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
+| UI                | Required outside CSS                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
+| Tooltips          | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
 
 ## State Attribute Guidance
 

@@ -21,8 +21,8 @@ The package has no JavaScript runtime. It does not create DOM nodes, attach even
 | `@codenhub/styles/tw/surface`    | Tailwind v4 source for surface styles and empty-state utility.        |
 | `@codenhub/styles/tw/button`     | Tailwind v4 source for composable button utilities.                   |
 | `@codenhub/styles/tw/form`       | Tailwind v4 source for form, inputs, checkbox, and switch utilities.  |
-| `@codenhub/styles/tw/feedback`   | Tailwind v4 source for alert, badge, skeleton, and progress. |
-| `@codenhub/styles/tw/loader`     | Tailwind v4 source for loader and activity indicator utilities. |
+| `@codenhub/styles/tw/feedback`   | Tailwind v4 source for alert, badge, skeleton, and progress.          |
+| `@codenhub/styles/tw/loader`     | Tailwind v4 source for loader and activity indicator utilities.       |
 | `@codenhub/styles/tw/tooltip`    | Tailwind v4 source for tooltip utility.                               |
 | `@codenhub/styles/tw/utilities`  | Tailwind v4 source for layout primitives and contrast utilities.      |
 

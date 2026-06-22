@@ -54,7 +54,7 @@ Presentation and size classes:
 | `.sm`                                                                  | Smaller button.                                                               |
 | `.lg`                                                                  | Larger button.                                                                |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                    |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                   |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
 
 Examples:
