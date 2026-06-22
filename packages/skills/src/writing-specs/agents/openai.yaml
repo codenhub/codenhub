@@ -1,0 +1,4 @@
+interface:
+  display_name: "Writing Specs"
+  short_description: "Write designs as implementation-ready specs with approval gating"
+  default_prompt: "Use $writing-specs to write the design to a spec that starts in Draft status, review it for gaps, and only proceed to planning or implementation once the spec is documented as Approved unless the user explicitly says otherwise."

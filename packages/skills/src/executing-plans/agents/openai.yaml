@@ -1,0 +1,4 @@
+interface:
+  display_name: "Executing Plans"
+  short_description: "Execute written plans with review checkpoints"
+  default_prompt: "Use $executing-plans to load the plan, confirm the plan and spec are documented as approved before execution unless the user explicitly says otherwise, prefer subagent-based execution, work on a new branch with atomic commits, open a PR at the end when appropriate, and suggest doc status updates when finished."

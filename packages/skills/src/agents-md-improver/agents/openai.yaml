@@ -1,0 +1,4 @@
+interface:
+  display_name: "AGENTS.md Improver"
+  short_description: "Audit and improve AGENTS.md files"
+  default_prompt: "Use $agents-md-improver to audit the target AGENTS.md file, score it, show the quality report, and propose only targeted high-value improvements before editing."

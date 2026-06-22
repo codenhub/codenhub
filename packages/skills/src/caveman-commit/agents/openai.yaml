@@ -1,0 +1,4 @@
+interface:
+  display_name: "Caveman Commit"
+  short_description: "Generate terse Conventional Commit messages"
+  default_prompt: "Use $caveman-commit to generate a terse Conventional Commit message focused on why over what, keep the subject concise, add a body only when needed, and always include fuller context for breaking changes, security fixes, data migrations, or reverts."

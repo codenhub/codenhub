@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent Specialist"
+  short_description: "Specialist workflow for using subagents well"
+  default_prompt: "Use $subagent-specialist to decompose this work, choose the right subagent pattern, and run the correct review loop."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Caveman Review"
+  short_description: "Write terse one-line code review findings"
+  default_prompt: "Use $caveman-review to write terse actionable code review comments, one line per finding with exact line or file references, problem, and fix; only expand into normal prose for security issues, architectural disagreements, or other cases where the rationale needs more explanation."

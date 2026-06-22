@@ -1,0 +1,37 @@
+{
+  "name": "@codenhub/skills",
+  "version": "0.0.1",
+  "private": false,
+  "description": "CLI to install and update AI agent skills.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/skills",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/skills"
+  },
+  "bin": {
+    "codenhub-skills": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/cli.ts --format esm --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/skills version dist-tags time --json && npm dist-tag ls @codenhub/skills && npm access get status @codenhub/skills",
+    "status:pack": "npm pack --dry-run",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

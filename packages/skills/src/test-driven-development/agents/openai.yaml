@@ -1,0 +1,11 @@
+interface:
+  display_name: "Test-Driven Development"
+  short_description: "Enforce strict test-first red-green-refactor"
+  default_prompt: >
+    Use $test-driven-development for strict test-first TDD: verify RED before
+    production code, remove any premature implementation from the delivery path,
+    allow config-only exceptions only with explicit user confirmation for that
+    exact change, verify GREEN with targeted plus relevant related suites,
+    handle flaky baselines by matching test IDs and error signatures, treat new
+    failures as regressions, refactor only while tests stay green, and apply
+    testing anti-pattern guardrails when mocks are involved.

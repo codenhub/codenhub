@@ -1,0 +1,4 @@
+interface:
+  display_name: "Writing Skills"
+  short_description: "Create, adapt, and validate reusable skills"
+  default_prompt: "Use $writing-skills to create or update a skill, keep it aligned with local skill authoring rules, and verify the guidance is testable before deployment."
