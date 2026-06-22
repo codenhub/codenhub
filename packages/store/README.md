@@ -1,6 +1,6 @@
 # @codenhub/store
 
-Typed localStorage-backed state stores for browser apps. The package creates small object stores scoped by a storage key, persists JSON to `localStorage`, returns cloned state snapshots, snapshots the initial fallback state at store creation, falls back safely when browser storage is empty, invalid, blocked, or unavailable, and reports recoverable failures only through an optional `onError` hook.
+Typed state stores with multi-platform compatibility for browser, Node.js, and Cloudflare Workers apps. The package creates small object stores scoped by a storage key, supports pluggable synchronous and asynchronous storage drivers, returns cloned state snapshots to prevent mutations, and reports recoverable failures through an optional `onError` hook.
 
 ## Installation
 
@@ -10,7 +10,9 @@ pnpm add @codenhub/store
 
 ## Usage
 
-Create one store per persisted state object. The `storageKey` owns the `localStorage` entry, and `initialState` is cloned when the store is created so later mutations to the original object do not affect fallback reads.
+### Synchronous Store (Browser / Memory)
+
+Create one store per persisted state object. By default, stores use the browser's `localStorage`.
 
 ```ts
 import { createStore } from "@codenhub/store";
@@ -34,7 +36,32 @@ preferences.patch({ sidebarOpen: true });
 const colorScheme = preferences.getItem("colorScheme");
 ```
 
-Use a runtime validator when stored data may come from older app versions, manual edits, or other code paths. Without a validator, parsed JSON is trusted as the store schema.
+### Asynchronous Store (Edge / Cloudflare / Filesystem)
+
+For environments like Node.js or Cloudflare Workers where storage operations are non-blocking, use `createAsyncStore`.
+
+```ts
+import { createAsyncStore, asyncMemoryDriver } from "@codenhub/store";
+
+interface SessionState {
+  userId: string;
+  token: string;
+}
+
+const session = createAsyncStore<SessionState>({
+  storageKey: "user:session",
+  initialState: { userId: "", token: "" },
+  driver: asyncMemoryDriver(), // Or a platform driver
+});
+
+// All methods return Promises
+await session.set({ userId: "123", token: "abc" });
+const userId = await session.getItem("userId");
+```
+
+### Runtime Schema Validation
+
+Use a validator when stored data may come from older versions, manual edits, or external sources.
 
 ```ts
 import { createStore } from "@codenhub/store";
@@ -45,7 +72,6 @@ interface UserSettings {
 
 const isUserSettings = (raw: unknown): raw is UserSettings => {
   if (typeof raw !== "object" || raw === null) return false;
-
   const value = (raw as Record<string, unknown>)["density"];
   return value === "compact" || value === "comfortable";
 };
@@ -58,46 +84,49 @@ const settings = createStore<UserSettings>({
     console.warn(error.message, error.cause);
   },
 });
-
-const current = settings.get();
 ```
-
-`@codenhub/store` does not log by default. Provide `onError` when the app should report recoverable storage, parsing, or validation failures.
 
 ## Reference
 
+Supported entrypoint paths:
+
+| Path                   | Description                                                     |
+| ---------------------- | --------------------------------------------------------------- |
+| `@codenhub/store`      | Core store APIs, sync/async stores, memory & localStorage.      |
+| `@codenhub/store/node` | Node.js filesystem drivers (`node:fs` based JSON file storage). |
+| `@codenhub/store/cf`   | Cloudflare Workers drivers (KV and Durable Object storage).     |
+
+---
+
 ### `@codenhub/store`
 
-Primary entrypoint for the store API.
+Primary entrypoint containing core interfaces and in-memory/localStorage sync/async stores.
 
 ```ts
-import { createStore } from "@codenhub/store";
-import type { CreateStoreOptions, RemovableStoreKey, Store, StoreErrorEvent } from "@codenhub/store";
+import { createStore, createAsyncStore, localStorageDriver, memoryDriver, asyncMemoryDriver } from "@codenhub/store";
 ```
-
-Supported import paths:
-
-| Path              | Description                               |
-| ----------------- | ----------------------------------------- |
-| `@codenhub/store` | Main JavaScript and TypeScript store API. |
 
 #### `createStore()`
 
-Creates a typed store bound to one `localStorage` key.
+Creates a strictly typed synchronous store.
 
 ```ts
 function createStore<TSchema extends object>(options: CreateStoreOptions<TSchema>): Store<TSchema>;
 ```
 
-| Parameter | Type                          | Description                                                            |
-| --------- | ----------------------------- | ---------------------------------------------------------------------- |
-| `options` | `CreateStoreOptions<TSchema>` | Store configuration, including storage key, fallback state, and guard. |
+If `options.driver` is omitted, defaults to `localStorageDriver`. Throws if `structuredClone` is unavailable or `initialState` cannot be cloned.
 
-Returns a `Store<TSchema>` instance. `createStore()` snapshots `initialState` immediately with `structuredClone`, but does not read or write storage until store methods are called. Store creation throws if `structuredClone` is unavailable or `initialState` is not structured-cloneable.
+#### `createAsyncStore()`
+
+Creates a strictly typed asynchronous store.
+
+```ts
+function createAsyncStore<TSchema extends object>(options: CreateAsyncStoreOptions<TSchema>): AsyncStore<TSchema>;
+```
 
 #### `Store<TSchema>`
 
-Object returned by `createStore()`.
+Synchronous store returned by `createStore()`.
 
 ```ts
 interface Store<TSchema extends object> {
@@ -111,236 +140,150 @@ interface Store<TSchema extends object> {
 }
 ```
 
-##### `get()`
+#### `AsyncStore<TSchema>`
 
-Reads the current state.
-
-```ts
-function get(): TSchema;
-```
-
-Behavior:
-
-- Returns a cloned copy of the stored state when storage contains valid JSON.
-- Returns a cloned copy of the initial-state snapshot when storage is empty.
-- Returns a cloned copy of the initial-state snapshot and calls `options.onError` when provided if storage reads throw, stored JSON is malformed, or `options.validate` rejects the parsed value.
-- Does not remove invalid stored values.
-
-##### `set()`
-
-Replaces the full persisted state.
+Asynchronous store returned by `createAsyncStore()`.
 
 ```ts
-function set(nextState: TSchema): boolean;
-```
-
-Returns `true` when `nextState` is serialized and written to `localStorage`. Returns `false` when storage is unavailable. Returns `false` and calls `options.onError` when provided if writing fails, including serialization errors and storage quota errors.
-
-##### `patch()`
-
-Merges a partial object into the current state and attempts to persist the result.
-
-```ts
-function patch(partialState: Partial<TSchema>): TSchema;
-```
-
-Returns the merged state. If persistence fails, the returned value still reflects the attempted merge, but later reads may fall back to the last stored state or the initial-state snapshot.
-
-##### `getItem()`
-
-Reads a single key from the current state.
-
-```ts
-function getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined;
-```
-
-Returns the value for `key`, or `undefined` when the key is not present in the current state.
-
-##### `setItem()`
-
-Sets one key on the current state and attempts to persist the result.
-
-```ts
-function setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema;
-```
-
-Returns the full updated state. If persistence fails, the returned value still includes the change, but later reads may not.
-
-##### `removeItem()`
-
-Removes one key from the current state and attempts to persist the result.
-
-```ts
-function removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema;
-```
-
-Returns the updated state without the removed key. Only optional schema keys can be removed; required keys must remain present to preserve the typed store shape. If persistence fails, the returned value still reflects the removal, but later reads may not.
-
-##### `clear()`
-
-Removes this store's `localStorage` entry.
-
-```ts
-function clear(): void;
-```
-
-After `clear()`, `get()` returns a cloned copy of the initial-state snapshot. If storage is unavailable, `clear()` does nothing. If removal throws, `clear()` calls `options.onError` when provided and does not rethrow.
-
-#### `RemovableStoreKey<TSchema>`
-
-Type alias for keys that can be removed from a store without violating its schema shape.
-
-```ts
-type RemovableStoreKey<TSchema extends object> = {
-  [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
-}[keyof TSchema];
-```
-
-Use this type when writing helpers that accept keys passed to `removeItem()`.
-
-#### `CreateStoreOptions<TSchema>`
-
-Options passed to `createStore()`.
-
-```ts
-interface CreateStoreOptions<TSchema extends object> {
-  storageKey: string;
-  initialState: TSchema;
-  validate?: (raw: unknown) => raw is TSchema;
-  onError?: (error: StoreErrorEvent) => void;
+interface AsyncStore<TSchema extends object> {
+  get(): Promise<TSchema>;
+  set(nextState: TSchema): Promise<boolean>;
+  patch(partialState: Partial<TSchema>): Promise<TSchema>;
+  getItem<TKey extends keyof TSchema>(key: TKey): Promise<TSchema[TKey] | undefined>;
+  setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): Promise<TSchema>;
+  removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): Promise<TSchema>;
+  clear(): Promise<void>;
 }
 ```
 
-| Property       | Type                               | Default     | Description                                                                                             |
-| -------------- | ---------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------- |
-| `storageKey`   | `string`                           | Required    | Key used for the `localStorage` entry.                                                                  |
-| `initialState` | `TSchema`                          | Required    | Fallback state snapshotted at creation and returned when no valid stored state exists.                  |
-| `validate`     | `(raw: unknown) => raw is TSchema` | `undefined` | Optional guard used to validate parsed stored JSON before it is returned.                               |
-| `onError`      | `(error: StoreErrorEvent) => void` | `undefined` | Optional hook for recoverable storage, parsing, and validation failures. No logging happens by default. |
+#### Drivers (Core)
 
-The validator only runs for values read from storage. It does not validate values passed to `set()`, `patch()`, or `setItem()`.
+- **`localStorageDriver(storageKey, onError?)`**: Sync driver persisting to the browser's `localStorage`.
+- **`memoryDriver()`**: Sync in-memory driver (closure state Map).
+- **`asyncMemoryDriver()`**: Async in-memory driver.
 
-#### `StoreErrorEvent`
+---
 
-Event passed to `CreateStoreOptions.onError` for recoverable failures.
+### `@codenhub/store/node`
+
+Node.js specific entrypoint containing local filesystem persistence drivers.
 
 ```ts
-interface StoreErrorEvent {
-  code:
-    | "storage-read-failed"
-    | "storage-write-failed"
-    | "storage-clear-failed"
-    | "storage-parse-failed"
-    | "storage-validation-failed";
-  message: string;
-  storageKey: string;
-  cause?: unknown;
-}
+import { nodeJsonFileDriver, nodeAsyncJsonFileDriver } from "@codenhub/store/node";
 ```
 
-`message` is intended for diagnostics. `code` is the stable field to branch on. `cause` is present when the failure came from a thrown value.
+#### `nodeJsonFileDriver()`
+
+Synchronous driver that persists state to a local JSON file.
+
+```ts
+function nodeJsonFileDriver<TSchema extends object>(options: { filePath: string }): StorageDriver<TSchema>;
+```
+
+#### `nodeAsyncJsonFileDriver()`
+
+Asynchronous driver that persists state to a local JSON file using promise-based `node:fs`.
+
+```ts
+function nodeAsyncJsonFileDriver<TSchema extends object>(options: { filePath: string }): AsyncStorageDriver<TSchema>;
+```
+
+---
+
+### `@codenhub/store/cf`
+
+Cloudflare Workers specific entrypoint containing Cloudflare bindings drivers.
+
+```ts
+import { cloudflareKvDriver, cloudflareDoDriver } from "@codenhub/store/cf";
+```
+
+#### `cloudflareKvDriver()`
+
+Asynchronous driver that persists state to a Cloudflare Workers KV Namespace.
+
+```ts
+function cloudflareKvDriver<TSchema extends object>(options: {
+  kvNamespace: CloudflareKvNamespace;
+  storageKey: string;
+}): AsyncStorageDriver<TSchema>;
+```
+
+#### `cloudflareDoDriver()`
+
+Asynchronous driver that persists state natively to Cloudflare Durable Object transactional storage.
+
+```ts
+function cloudflareDoDriver<TSchema extends object>(options: {
+  storage: CloudflareDurableObjectStorage;
+  storageKey: string;
+}): AsyncStorageDriver<TSchema>;
+```
+
+---
 
 ## Examples
 
-### Clear Stored State
+### Node.js Filesystem Persisted Store
+
+Configure an asynchronous JSON file store for CLI tools or server apps.
 
 ```ts
-import { createStore } from "@codenhub/store";
+import { createAsyncStore } from "@codenhub/store";
+import { nodeAsyncJsonFileDriver } from "@codenhub/store/node";
+import * as path from "node:path";
 
-const filters = createStore({ storageKey: "app:filters", initialState: { query: "", page: 1 } });
+const configPath = path.join(process.cwd(), "config.json");
 
-filters.patch({ query: "design systems", page: 2 });
-filters.clear();
-
-console.log(filters.get());
-// { query: "", page: 1 }
-```
-
-### Handle Write Failures
-
-```ts
-import { createStore } from "@codenhub/store";
-
-const draft = createStore({ storageKey: "app:draft", initialState: { body: "" } });
-
-const didSave = draft.set({ body: "Unsaved text" });
-
-if (!didSave) {
-  // Storage may be blocked, full, or unavailable.
-  // Keep using app-owned in-memory state if persistence matters.
-}
-```
-
-### Handle Store Errors
-
-Use `onError` for app-owned logging or telemetry. This package does not call `console.warn` unless the app provides that behavior.
-
-```ts
-import { createStore } from "@codenhub/store";
-
-const draft = createStore({
-  storageKey: "app:draft",
-  initialState: { body: "" },
-  onError(error) {
-    console.warn(error.message, error.cause);
-  },
+const store = createAsyncStore({
+  storageKey: "app-config",
+  initialState: { port: 3000, debug: false },
+  driver: nodeAsyncJsonFileDriver({ filePath: configPath }),
 });
 
-draft.get();
+await store.patch({ debug: true });
 ```
 
-Apps that use `@codenhub/error` can normalize the original cause without coupling `@codenhub/store` to the error package.
+### Cloudflare Workers KV Persisted Store
+
+Persist state on Cloudflare's Edge using KV bindings.
 
 ```ts
-import { AppError } from "@codenhub/error";
-import { createStore } from "@codenhub/store";
+import { createAsyncStore } from "@codenhub/store";
+import { cloudflareKvDriver } from "@codenhub/store/cf";
 
-const preferences = createStore({
-  storageKey: "app:preferences",
-  initialState: { colorScheme: "light" },
-  onError(error) {
-    const appError = new AppError(error.cause ?? error, {
-      fallbackMessage: error.message,
+interface Env {
+  SETTINGS_KV: any;
+}
+
+export default {
+  async fetch(request: Request, env: Env) {
+    const settings = createAsyncStore({
+      storageKey: "user-123",
+      initialState: { darkMode: false },
+      driver: cloudflareKvDriver({
+        kvNamespace: env.SETTINGS_KV,
+        storageKey: "user-123",
+      }),
     });
 
-    console.warn(appError.message, appError);
+    const current = await settings.get();
+    return new Response(JSON.stringify(current));
   },
-});
-
-preferences.get();
-```
-
-### Optional Keys
-
-```ts
-import { createStore } from "@codenhub/store";
-
-interface SessionState {
-  token?: string;
-}
-
-const session = createStore<SessionState>({ storageKey: "app:session", initialState: {} });
-
-session.setItem("token", "abc123");
-session.removeItem("token");
-
-console.log(session.getItem("token"));
-// undefined
+};
 ```
 
 ## Requirements
 
-- Browser `localStorage` is used for persistence.
-- Server-side and storage-restricted environments are supported by falling back to the initial-state snapshot for reads and `false` for direct writes.
-- `structuredClone` is required because `initialState` is snapshotted at store creation and returned state is cloned to avoid leaking consumer mutations into future reads.
-- Stored state must be JSON-serializable for persistence and structured-cloneable for reads.
-- No framework, CSS, DOM rendering, or external runtime dependency is required.
+- `structuredClone` is required to snapshot `initialState` and return cloned state states.
+- Browser `localStorage` is used by default in browser environments.
+- Node.js runtime (v18+) is required for `@codenhub/store/node` (uses `node:fs` and `node:path`).
+- Cloudflare Workers environment is required for `@codenhub/store/cf` (uses KV namespace and Durable Object storage).
 
 ## Notes
 
-- Each store is isolated only by its `storageKey`; consumers are responsible for choosing stable, collision-free keys.
-- State is object-based. Primitive schemas are not supported.
-- `patch()` is a shallow merge.
-- The package does not synchronize state across tabs, windows, components, or subscribers.
-- The package does not encrypt, redact, or secure stored data. Do not store secrets or sensitive personal data in `localStorage`.
-- The package does not log by default. Use `onError` for app-owned logging, telemetry, user feedback, or error normalization.
+- **Isolation**: Stores are isolated by key; consumers must ensure collision-free keys.
+- **Serialization**: Values must be JSON-serializable and structured-cloneable.
+- **Synchronization**: The library does not synchronize across tabs or multiple process instances out of the box.
+- **Security**: Do not store plain credentials or sensitive PII without encryption.
+- **Diagnostics**: Logging is off by default. Provide `onError` in configuration for diagnostics or custom telemetry.

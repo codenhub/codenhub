@@ -21,13 +21,21 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    },
+    "./cf": {
+      "types": "./dist/cf.d.ts",
+      "import": "./dist/cf.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts src/node.ts src/cf.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/store version dist-tags time --json && npm dist-tag ls @codenhub/store && npm access get status @codenhub/store",
     "status:pack": "npm pack --dry-run",
