@@ -62,6 +62,7 @@
   --layout-cluster-gap: 0.75rem;
   --layout-grid-min: 16rem;
 
+  --radius-small: 0.25rem;
   --radius-control: 0.5rem;
   --radius-surface: 0.875rem;
   --control-height: 2.5rem;

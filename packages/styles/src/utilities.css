@@ -34,3 +34,7 @@
     color: var(--color-primary);
   }
 }
+
+@utility code {
+  @apply bg-surface rounded-(--radius-small) px-1 py-0.5 font-mono;
+}
