@@ -1,6 +1,3 @@
-import { err } from "@codenhub/error";
-
-import { feedback } from "../feedback";
 import { KEY_VALUES, type KeyboardKey } from "./keys";
 
 export { KEYS } from "./keys";
@@ -81,9 +78,6 @@ export interface KeyboardSubscriptionOptions {
  * The handler receives the original DOM {@link KeyboardEvent} and has full
  * control over it — call {@link Event.preventDefault} or
  * {@link Event.stopPropagation} directly as needed.
- *
- * Exceptions thrown by the handler are caught and reported via `feedback`
- * rather than propagating to the browser event loop.
  */
 export type KeyboardHandler = (event: KeyboardEvent) => void;
 
@@ -111,6 +105,17 @@ export interface KeyboardRegistration {
    * instance-level enabled state.
    */
   disable(): void;
+}
+
+/**
+ * Options configuration for creating a {@link Keyboard} instance.
+ */
+export interface KeyboardOptions {
+  /**
+   * Optional error handler to capture exceptions thrown in registered handlers
+   * or during execution.
+   */
+  onError?: (error: unknown, fallback: string) => void;
 }
 
 type ResolvedOptions = {
@@ -163,17 +168,22 @@ const DEFAULT_EVENT: KeyboardEventName = "keydown";
 export class Keyboard {
   private scopes = new Set<KeyboardScope>();
   private enabled = true;
+  private onError?: (error: unknown, fallback: string) => void;
+
+  constructor(options?: KeyboardOptions) {
+    this.onError = options?.onError;
+  }
 
   /**
    * Registers a keyboard binding and returns a handle to manage it.
    *
    * If no `target` is provided and `document` is unavailable (e.g. SSR or a
-   * Web Worker), registration fails silently: `feedback` is called and
-   * a no-op {@link KeyboardRegistration} is returned.
+   * Web Worker), registration fails silently: any registered `onError` handler
+   * is called and a no-op {@link KeyboardRegistration} is returned.
    *
    * @param binding - The key or key+modifier combination to listen for.
    * @param handler - Called when the binding matches. Exceptions are caught and
-   *   reported silently — they do not propagate.
+   *   reported silently via `onError` callback if provided.
    * @param options - Target, event type, and propagation controls.
    */
   register(
@@ -184,10 +194,10 @@ export class Keyboard {
     const target = options.target ?? this.getDefaultTarget();
 
     if (target === undefined) {
-      feedback.register(err(new Error("[Keyboard] Cannot register a keyboard binding without an event target.")), {
-        fallback: "Keyboard binding could not be registered.",
-        toast: false,
-      });
+      this.onError?.(
+        new Error("[Keyboard] Cannot register a keyboard binding without an event target."),
+        "Keyboard binding could not be registered.",
+      );
       return { unregister: () => {}, enable: () => {}, disable: () => {} };
     }
 
@@ -222,6 +232,14 @@ export class Keyboard {
     };
   }
 
+  /**
+   * Configures a custom error handler to intercept exceptions from keyboard handlers
+   * or registration failures.
+   */
+  setErrorHandler(handler: (error: unknown, fallback: string) => void): void {
+    this.onError = handler;
+  }
+
   private matches(event: KeyboardEvent, subscription: KeyboardSubscription): boolean {
     const key = this.normalizeKey(event.key);
 
@@ -241,7 +259,7 @@ export class Keyboard {
    * temporarily suppressing all keyboard handling (e.g. while a blocking UI
    * overlay is open).
    *
-   * Individual bindings silenced via {@link KeyboardRegistration.disable} are
+   * Subscriptions silenced via {@link KeyboardRegistration.disable} are
    * independent and unaffected by this call.
    */
   disable(): void {
@@ -252,7 +270,7 @@ export class Keyboard {
    * Lifts the instance-level pause set by {@link disable}. No-op if already
    * enabled.
    *
-   * Individual bindings silenced via {@link KeyboardRegistration.disable} are
+   * Subscriptions silenced via {@link KeyboardRegistration.disable} are
    * independent and remain silenced until their own `enable` is called.
    */
   enable(): void {
@@ -286,10 +304,7 @@ export class Keyboard {
       try {
         subscription.handler(event);
       } catch (error) {
-        feedback.register(err(error), {
-          fallback: "Keyboard handler failed.",
-          toast: false,
-        });
+        this.onError?.(error, "Keyboard handler failed.");
       }
 
       if (subscription.options.stopPropagation) {

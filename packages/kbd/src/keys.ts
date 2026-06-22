@@ -55,6 +55,10 @@ const FUNCTION_KEYS = {
   f12: "F12",
 } as const;
 
+/**
+ * Mapping of recognizable key values for keyboard shortcuts.
+ * Includes control keys, letters, digits, and function keys.
+ */
 export const KEYS = {
   escape: "Escape",
   enter: "Enter",
@@ -76,6 +80,9 @@ export const KEYS = {
   ...FUNCTION_KEYS,
 } as const;
 
+/**
+ * Union type representing valid keyboard key values recognized by the registry.
+ */
 export type KeyboardKey = (typeof KEYS)[keyof typeof KEYS];
 
 export const KEY_VALUES = Object.values(KEYS) as KeyboardKey[];

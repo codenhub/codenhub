@@ -1,18 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { feedback } from "../feedback";
-import { KEYS, keyboard } from "./index";
+import { KEYS, keyboard, Keyboard } from "./index";
 
 interface KeyboardTestAccess {
   getDefaultTarget(): EventTarget | undefined;
 }
-
-vi.mock("../feedback", () => ({
-  feedback: {
-    register: vi.fn((result) => result),
-  },
-}));
 
 describe("Keyboard", () => {
   afterEach(() => {
@@ -194,49 +187,37 @@ describe("Keyboard", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("should report handler exceptions silently", () => {
+  it("should report handler exceptions silently to onError", () => {
     const error = new Error("Handler failed");
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard({ onError });
 
-    keyboard.register(KEYS.escape, () => {
+    customKeyboard.register(KEYS.escape, () => {
       throw error;
     });
 
     expect(() => {
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     }).not.toThrow();
-    expect(feedback.register).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ok: false,
-        error: expect.objectContaining({ originalError: error }),
-      }),
-      {
-        fallback: "Keyboard handler failed.",
-        toast: false,
-      },
-    );
+
+    expect(onError).toHaveBeenCalledWith(error, "Keyboard handler failed.");
   });
 
-  it("should report missing target errors silently", () => {
+  it("should report missing target errors to onError", () => {
     const handler = vi.fn();
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard({ onError });
 
-    vi.spyOn(keyboard as unknown as KeyboardTestAccess, "getDefaultTarget").mockReturnValueOnce(undefined);
-    const reg = keyboard.register(KEYS.escape, handler);
+    vi.spyOn(customKeyboard as unknown as KeyboardTestAccess, "getDefaultTarget").mockReturnValueOnce(undefined);
+    const reg = customKeyboard.register(KEYS.escape, handler);
 
     reg.unregister();
 
-    expect(feedback.register).toHaveBeenCalledWith(
+    expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({
-        ok: false,
-        error: expect.objectContaining({
-          originalError: expect.objectContaining({
-            message: "[Keyboard] Cannot register a keyboard binding without an event target.",
-          }),
-        }),
+        message: "[Keyboard] Cannot register a keyboard binding without an event target.",
       }),
-      {
-        fallback: "Keyboard binding could not be registered.",
-        toast: false,
-      },
+      "Keyboard binding could not be registered.",
     );
   });
 });

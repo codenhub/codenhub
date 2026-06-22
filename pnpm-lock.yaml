@@ -75,11 +75,11 @@ importers:
   apps/debug:
     dependencies:
       '@codenhub/theme':
-        specifier: 0.0.1
-        version: 0.0.1
+        specifier: workspace:*
+        version: link:../../packages/theme
       '@codenhub/ui-kit':
-        specifier: 0.0.1
-        version: 0.0.1
+        specifier: workspace:*
+        version: link:../../packages/ui-kit
     devDependencies:
       '@codenhub/vite-plugin-add-loader':
         specifier: workspace:*
@@ -108,6 +108,24 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.8(vitest@4.1.8)
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/kbd:
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.8(vitest@4.1.8)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1
       tsdown:
         specifier: 'catalog:'
         version: 0.22.2(typescript@6.0.3)
@@ -346,15 +364,6 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
-
-  '@codenhub/helpers@0.0.1':
-    resolution: {integrity: sha512-z/UEjKXmrLHyHnaoSLLR1IsraZ+po5xtz03OlVCm1d9HlgC4HWT/YQ06C7i5LxYf8kwT3HbmmHBSk7AeFZzgIQ==}
-
-  '@codenhub/theme@0.0.1':
-    resolution: {integrity: sha512-UAufq7dlSRwu0GUUSDx1V/ZLLeTKM6ibFQ/cZLQ/c+dgRFzEyYtSku018uN0EtuEy251caXad6MRU3007QNRyg==}
-
-  '@codenhub/ui-kit@0.0.1':
-    resolution: {integrity: sha512-6bbcvzMNQquWZjFF6Itosfjf6iSc7mMEeBRVYcDAF4uDnA4kFrStT4iTt4TjWFtbBWW2MQKeL+s7URKGCR5aeg==}
 
   '@csstools/color-helpers@6.0.2':
     resolution: {integrity: sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q==}
@@ -1960,14 +1969,6 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
-
-  '@codenhub/helpers@0.0.1': {}
-
-  '@codenhub/theme@0.0.1': {}
-
-  '@codenhub/ui-kit@0.0.1':
-    dependencies:
-      '@codenhub/helpers': 0.0.1
 
   '@csstools/color-helpers@6.0.2': {}
 
