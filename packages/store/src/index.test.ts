@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createStore } from "./index";
+import { createStore, memoryDriver } from "./index";
 import type { RemovableStoreKey } from "./index";
 
 describe("Store", () => {
@@ -346,6 +346,68 @@ describe("Store", () => {
       const store = createStore({ storageKey: "key-no-validate", initialState: { count: 0 } });
       store.set({ count: 5 });
       expect(store.get()).toEqual({ count: 5 });
+    });
+  });
+
+  describe("memoryDriver", () => {
+    it("should prevent mutation leaks on set", () => {
+      const driver = memoryDriver<{ config: { theme: string } }>();
+      const store = createStore({
+        storageKey: "memory-leak-test",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      const data = { config: { theme: "dark" } };
+      store.set(data);
+
+      data.config.theme = "blue";
+      expect(store.get().config.theme).toBe("dark");
+    });
+
+    it("should prevent mutation leaks on get", () => {
+      const driver = memoryDriver<{ config: { theme: string } }>();
+      const store = createStore({
+        storageKey: "memory-leak-test-2",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      store.set({ config: { theme: "dark" } });
+
+      const state = store.get();
+      state.config.theme = "blue";
+      expect(store.get().config.theme).toBe("dark");
+    });
+  });
+
+  describe("write operations returned value isolation", () => {
+    it("should clone the object returned by patch", () => {
+      const store = createStore({
+        storageKey: "patch-clone-test",
+        initialState: { config: { theme: "light" } },
+      });
+      const result = store.patch({ config: { theme: "dark" } });
+      result.config.theme = "blue";
+      expect(store.get().config.theme).toBe("dark");
+    });
+
+    it("should clone the object returned by setItem", () => {
+      const store = createStore({
+        storageKey: "setitem-clone-test",
+        initialState: { config: { theme: "light" } },
+      });
+      const result = store.setItem("config", { theme: "dark" });
+      result.config.theme = "blue";
+      expect(store.get().config.theme).toBe("dark");
+    });
+
+    it("should clone the object returned by removeItem", () => {
+      const store = createStore<{ config?: { theme: string }; other: number }>({
+        storageKey: "removeitem-clone-test",
+        initialState: { config: { theme: "light" }, other: 1 },
+      });
+      const result = store.removeItem("config");
+      result.other = 99;
+      expect(store.get().other).toBe(1);
     });
   });
 });

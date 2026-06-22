@@ -39,6 +39,35 @@ describe("Cloudflare Drivers", () => {
       expect(mockKvNamespace.delete).toHaveBeenCalledWith("my-config");
       expect(await store.get()).toEqual({ api: "https://default.api" });
     });
+
+    it("should fall back to initialState and report storage-parse-failed when KV JSON is malformed", async () => {
+      const onError = vi.fn();
+      const mockKvNamespace = {
+        get: vi.fn().mockResolvedValue("{invalid json}"),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+
+      const driver = cloudflareKvDriver<{ api: string }>({
+        kvNamespace: mockKvNamespace,
+        storageKey: "my-config",
+      });
+
+      const store = createAsyncStore({
+        storageKey: "my-config",
+        initialState: { api: "https://default.api" },
+        driver,
+        onError,
+      });
+
+      expect(await store.get()).toEqual({ api: "https://default.api" });
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-parse-failed",
+        message: 'Failed to parse stored JSON for key "my-config".',
+        storageKey: "my-config",
+        cause: expect.any(SyntaxError),
+      });
+    });
   });
 
   describe("cloudflareDoDriver", () => {

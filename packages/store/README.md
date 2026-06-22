@@ -287,3 +287,7 @@ export default {
 - **Synchronization**: The library does not synchronize across tabs or multiple process instances out of the box.
 - **Security**: Do not store plain credentials or sensitive PII without encryption.
 - **Diagnostics**: Logging is off by default. Provide `onError` in configuration for diagnostics or custom telemetry.
+
+## License
+
+Apache-2.0

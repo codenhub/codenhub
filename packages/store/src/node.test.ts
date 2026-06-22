@@ -1,11 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAsyncStore, createStore } from "./index";
 import { nodeAsyncJsonFileDriver, nodeJsonFileDriver } from "./node";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const tempDir = path.join(__dirname, "temp-test-dir");
 const tempFile = path.join(tempDir, "store.json");
 
@@ -52,6 +54,28 @@ describe("Node Drivers", () => {
       expect(fs.existsSync(tempFile)).toBe(false);
       expect(store.get()).toEqual({ value: "default" });
     });
+
+    it("should fall back to initialState and report storage-parse-failed when JSON is malformed", () => {
+      const onError = vi.fn();
+      fs.mkdirSync(tempDir, { recursive: true });
+      fs.writeFileSync(tempFile, "{invalid json}", "utf8");
+
+      const driver = nodeJsonFileDriver<{ value: string }>({ filePath: tempFile });
+      const store = createStore({
+        storageKey: "node-sync-store-malformed",
+        initialState: { value: "default" },
+        driver,
+        onError,
+      });
+
+      expect(store.get()).toEqual({ value: "default" });
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-parse-failed",
+        message: 'Failed to parse stored JSON for key "node-sync-store-malformed".',
+        storageKey: "node-sync-store-malformed",
+        cause: expect.any(SyntaxError),
+      });
+    });
   });
 
   describe("nodeAsyncJsonFileDriver (Async)", () => {
@@ -77,6 +101,28 @@ describe("Node Drivers", () => {
       await store.clear();
       expect(fs.existsSync(tempFile)).toBe(false);
       expect(await store.get()).toEqual({ value: "default" });
+    });
+
+    it("should fall back to initialState and report storage-parse-failed when JSON is malformed", async () => {
+      const onError = vi.fn();
+      fs.mkdirSync(tempDir, { recursive: true });
+      fs.writeFileSync(tempFile, "{invalid json}", "utf8");
+
+      const driver = nodeAsyncJsonFileDriver<{ value: string }>({ filePath: tempFile });
+      const store = createAsyncStore({
+        storageKey: "node-async-store-malformed",
+        initialState: { value: "default" },
+        driver,
+        onError,
+      });
+
+      expect(await store.get()).toEqual({ value: "default" });
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-parse-failed",
+        message: 'Failed to parse stored JSON for key "node-async-store-malformed".',
+        storageKey: "node-async-store-malformed",
+        cause: expect.any(SyntaxError),
+      });
     });
   });
 });

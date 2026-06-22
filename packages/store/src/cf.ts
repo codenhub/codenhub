@@ -35,6 +35,10 @@ export interface CloudflareKvDriverOptions {
 /**
  * An asynchronous storage driver that persists data to a Cloudflare Workers KV namespace.
  *
+ * If KV read/write operations fail or the retrieved string contains invalid JSON,
+ * the driver throws or rejects with an error (e.g., `SyntaxError` for malformed JSON),
+ * which is caught and handled by the store.
+ *
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration options for the KV namespace and storage key.
  * @returns An asynchronous storage driver compatible with `createAsyncStore`.
@@ -97,7 +101,9 @@ export interface CloudflareDoDriverOptions {
 /**
  * An asynchronous storage driver that persists data to Cloudflare Durable Object storage.
  *
- * Stored state is persisted natively (as parsed object) instead of stringified JSON.
+ * Stored state is persisted natively (as a parsed object) instead of stringified JSON.
+ * If the transactional storage operations fail, the driver rejects with an error,
+ * which is caught and handled by the store.
  *
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration options for DO storage and key.

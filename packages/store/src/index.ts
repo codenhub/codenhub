@@ -54,10 +54,10 @@ export interface Store<TSchema extends object> {
    * Returns the full persisted state.
    *
    * When storage is empty, unavailable, unreadable, invalid JSON, or rejected by `validate`,
-   * the store falls back to the initial state. Recoverable read, parse, and validation
+   * the store falls back to a clone of the initial state. Recoverable read, parse, and validation
    * failures are reported through `CreateStoreOptions.onError` when provided.
    *
-   * @returns Current state object.
+   * @returns A deep clone of the current state object.
    */
   get(): TSchema;
 
@@ -70,43 +70,59 @@ export interface Store<TSchema extends object> {
   set(nextState: TSchema): boolean;
 
   /**
-   * Merges a partial object into the current state and attempts to persist the result.
+   * Merges partial updates into the current state and attempts to persist the result.
    *
-   * @param partialState - Partial state fields to merge.
-   * @returns The merged state, even when persistence fails and later reads may not include the merge.
+   * If writing to the storage driver fails, the merged state is still returned and kept in memory,
+   * but the failure is reported to `CreateStoreOptions.onError`.
+   *
+   * @param partialState - A partial object containing the fields to update.
+   * @returns A deep clone of the merged state object.
    */
   patch(partialState: Partial<TSchema>): TSchema;
 
   /**
-   * Returns a single typed value from the current state.
+   * Retrieves a single field's value from the current store state.
    *
-   * @typeParam TKey - Key of the target field in the schema.
-   * @param key - Field name to read.
-   * @returns Field value, or `undefined` when the key is missing.
+   * Under the hood, this reads the entire state object. If storage is unavailable or corrupt,
+   * the store falls back to the initial state and reports the failure via `CreateStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of keys in the schema.
+   * @param key - The field name to retrieve.
+   * @returns The value of the field if present; otherwise, `undefined`.
    */
   getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined;
 
   /**
-   * Sets a single typed value, attempts to persist it, and returns the next state.
+   * Updates a single field in the store state and attempts to persist the changes.
    *
-   * @typeParam TKey - Key of the target field in the schema.
-   * @param key - Field name to write.
-   * @param value - Typed value for the field.
-   * @returns Updated state, even when persistence fails and later reads may not include the change.
+   * If writing to the storage driver fails, the updated state is still returned and kept in memory,
+   * but the failure is reported to `CreateStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of keys in the schema.
+   * @param key - The field name to update.
+   * @param value - The new value to assign to the field.
+   * @returns A deep clone of the updated full state object.
    */
   setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema;
 
   /**
-   * Removes a key from the state object, attempts to persist, and returns the next state.
+   * Deletes an optional field from the store state and attempts to persist the changes.
    *
-   * @typeParam TKey - Key of the target field in the schema.
-   * @param key - Field name to remove.
-   * @returns Updated state, even when persistence fails and later reads may not include the removal.
+   * Only optional keys can be removed to prevent producing a state object that violates the schema.
+   * If writing to the storage driver fails, the updated state is still returned and kept in memory,
+   * but the failure is reported to `CreateStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of optional keys in the schema.
+   * @param key - The optional field name to delete.
+   * @returns A deep clone of the updated full state object without the removed field.
    */
   removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema;
 
   /**
-   * Removes the stored entry for this store key.
+   * Clears the persisted entry from storage.
+   *
+   * Subsequent reads will fall back to the initial state. If clearing the storage driver fails,
+   * the failure is reported to `CreateStoreOptions.onError`.
    */
   clear(): void;
 }
@@ -150,6 +166,15 @@ export interface CreateStoreOptions<TSchema extends object> {
 
 /**
  * Default synchronous localStorage driver.
+ *
+ * Persists and reads values from the browser's `localStorage`.
+ * If `localStorage` throws during read, write, or clear operations, this driver catches
+ * the exception, reports it via the provided `onError` callback, and returns fallback values (null/false).
+ *
+ * @typeParam TSchema - Object shape persisted by the store.
+ * @param storageKey - The key under which state is saved in `localStorage`.
+ * @param onError - Optional callback for reporting recoverable storage failures.
+ * @returns A synchronous storage driver.
  */
 export function localStorageDriver<TSchema extends object>(
   storageKey: string,
@@ -233,16 +258,22 @@ export function localStorageDriver<TSchema extends object>(
 }
 
 /**
- * In-memory synchronous driver. Useful for testing or server-side rendering fallback.
+ * In-memory synchronous driver.
+ *
+ * Stores state in a local variable. Useful for testing, environments without storage APIs,
+ * or server-side rendering fallback. Operations never throw.
+ *
+ * @typeParam TSchema - Object shape persisted by the store.
+ * @returns A synchronous storage driver.
  */
 export function memoryDriver<TSchema extends object>(): StorageDriver<TSchema> {
   let data: unknown | null = null;
   return {
     get(): unknown | null {
-      return data;
+      return data !== null ? structuredClone(data) : null;
     },
     set(value: TSchema): boolean {
-      data = value;
+      data = structuredClone(value);
       return true;
     },
     clear(): void {
@@ -257,6 +288,7 @@ export function memoryDriver<TSchema extends object>(): StorageDriver<TSchema> {
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration for the store instance.
  * @returns A typed store instance.
+ * @throws If `structuredClone` is unavailable in the host environment or if the `initialState` cannot be cloned.
  */
 export function createStore<TSchema extends object>(options: CreateStoreOptions<TSchema>): Store<TSchema> {
   const { storageKey } = options;
@@ -273,9 +305,12 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     try {
       parsed = driver.get();
     } catch (error) {
+      const isParseError = error instanceof SyntaxError;
       reportError({
-        code: "storage-read-failed",
-        message: `Driver failed to read value for key "${storageKey}".`,
+        code: isParseError ? "storage-parse-failed" : "storage-read-failed",
+        message: isParseError
+          ? `Failed to parse stored JSON for key "${storageKey}".`
+          : `Driver failed to read value for key "${storageKey}".`,
         storageKey,
         cause: error,
       });
@@ -322,7 +357,7 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     patch(partialState: Partial<TSchema>): TSchema {
       const nextState = { ...readState(), ...partialState };
       writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     getItem<TKey extends keyof TSchema>(key: TKey): TSchema[TKey] | undefined {
       return readState()[key];
@@ -330,14 +365,14 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): TSchema {
       const nextState = { ...readState(), [key]: value } as TSchema;
       writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): TSchema {
       const currentState = readState();
       const nextState = { ...currentState };
       delete nextState[key];
       writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     clear(): void {
       try {
@@ -374,19 +409,80 @@ export interface AsyncStorageDriver<TSchema extends object> {
  * @typeParam TSchema - Object shape persisted by the store.
  */
 export interface AsyncStore<TSchema extends object> {
-  /** Returns the full persisted state. */
+  /**
+   * Retrieves the full persisted state asynchronously.
+   *
+   * Falls back to a clone of the initial state if storage is empty, corrupt, or unreadable.
+   * Failure to read, parse, or validate is reported to `CreateAsyncStoreOptions.onError`.
+   *
+   * @returns A promise resolving to a deep clone of the current state object.
+   */
   get(): Promise<TSchema>;
-  /** Replaces the full persisted state. */
+
+  /**
+   * Replaces the entire persisted state asynchronously.
+   *
+   * @param nextState - The new full state object.
+   * @returns A promise resolving to `true` if successful; `false` if the write failed. Failure is reported to `CreateAsyncStoreOptions.onError`.
+   */
   set(nextState: TSchema): Promise<boolean>;
-  /** Merges a partial object into the current state and attempts to persist the result. */
+
+  /**
+   * Merges partial updates into the current state asynchronously and attempts to persist the result.
+   *
+   * If the write operation fails, the merged state is still returned, and the failure is reported
+   * to `CreateAsyncStoreOptions.onError`.
+   *
+   * @param partialState - A partial object containing the fields to update.
+   * @returns A promise resolving to a deep clone of the merged full state object.
+   */
   patch(partialState: Partial<TSchema>): Promise<TSchema>;
-  /** Returns a single typed value from the current state. */
+
+  /**
+   * Retrieves a single field's value from the persisted state asynchronously.
+   *
+   * If storage is unavailable or corrupt, the store falls back to the initial state and reports
+   * the failure via `CreateAsyncStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of keys in the schema.
+   * @param key - The field name to retrieve.
+   * @returns A promise resolving to the field's value, or `undefined` if not found.
+   */
   getItem<TKey extends keyof TSchema>(key: TKey): Promise<TSchema[TKey] | undefined>;
-  /** Sets a single typed value, attempts to persist it, and returns the next state. */
+
+  /**
+   * Updates a single field in the store state asynchronously and attempts to persist the changes.
+   *
+   * If the write operation fails, the updated state is still returned, and the failure is reported
+   * to `CreateAsyncStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of keys in the schema.
+   * @param key - The field name to update.
+   * @param value - The new value to assign to the field.
+   * @returns A promise resolving to a deep clone of the updated full state object.
+   */
   setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): Promise<TSchema>;
-  /** Removes a key from the state object, attempts to persist, and returns the next state. */
+
+  /**
+   * Deletes an optional field from the store state asynchronously and attempts to persist the changes.
+   *
+   * Only optional keys can be removed. If the write operation fails, the updated state is still returned,
+   * and the failure is reported to `CreateAsyncStoreOptions.onError`.
+   *
+   * @typeParam TKey - Union of optional keys in the schema.
+   * @param key - The optional field name to delete.
+   * @returns A promise resolving to a deep clone of the updated full state object without the removed field.
+   */
   removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): Promise<TSchema>;
-  /** Removes the stored entry for this store key. */
+
+  /**
+   * Clears the persisted entry from storage asynchronously.
+   *
+   * Subsequent reads will fall back to the initial state. If clearing fails, the failure is reported
+   * to `CreateAsyncStoreOptions.onError`.
+   *
+   * @returns A promise resolving when the clear operation completes.
+   */
   clear(): Promise<void>;
 }
 
@@ -414,6 +510,7 @@ export interface CreateAsyncStoreOptions<TSchema extends object> {
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration for the store instance.
  * @returns An asynchronous typed store instance.
+ * @throws If `structuredClone` is unavailable in the host environment or if the `initialState` cannot be cloned.
  */
 export function createAsyncStore<TSchema extends object>(
   options: CreateAsyncStoreOptions<TSchema>,
@@ -430,9 +527,12 @@ export function createAsyncStore<TSchema extends object>(
     try {
       parsed = await driver.get();
     } catch (error) {
+      const isParseError = error instanceof SyntaxError;
       reportError({
-        code: "storage-read-failed",
-        message: `Driver failed to read value for key "${storageKey}".`,
+        code: isParseError ? "storage-parse-failed" : "storage-read-failed",
+        message: isParseError
+          ? `Failed to parse stored JSON for key "${storageKey}".`
+          : `Driver failed to read value for key "${storageKey}".`,
         storageKey,
         cause: error,
       });
@@ -480,7 +580,7 @@ export function createAsyncStore<TSchema extends object>(
       const currentState = await readState();
       const nextState = { ...currentState, ...partialState };
       await writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     async getItem<TKey extends keyof TSchema>(key: TKey): Promise<TSchema[TKey] | undefined> {
       const state = await readState();
@@ -490,14 +590,14 @@ export function createAsyncStore<TSchema extends object>(
       const currentState = await readState();
       const nextState = { ...currentState, [key]: value } as TSchema;
       await writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     async removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): Promise<TSchema> {
       const currentState = await readState();
       const nextState = { ...currentState };
       delete nextState[key];
       await writeState(nextState);
-      return nextState;
+      return structuredClone(nextState);
     },
     async clear(): Promise<void> {
       try {
@@ -515,16 +615,22 @@ export function createAsyncStore<TSchema extends object>(
 }
 
 /**
- * In-memory asynchronous driver. Useful for testing or server-side rendering fallback.
+ * In-memory asynchronous driver.
+ *
+ * Stores state in a local variable. Useful for testing, environments without storage APIs,
+ * or server-side rendering fallback. Operations never throw.
+ *
+ * @typeParam TSchema - Object shape persisted by the store.
+ * @returns An asynchronous storage driver.
  */
 export function asyncMemoryDriver<TSchema extends object>(): AsyncStorageDriver<TSchema> {
   let data: unknown | null = null;
   return {
     async get(): Promise<unknown | null> {
-      return data;
+      return data !== null ? structuredClone(data) : null;
     },
     async set(value: TSchema): Promise<boolean> {
-      data = value;
+      data = structuredClone(value);
       return true;
     },
     async clear(): Promise<void> {

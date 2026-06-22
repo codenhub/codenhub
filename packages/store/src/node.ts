@@ -17,6 +17,9 @@ export interface NodeJsonFileDriverOptions {
  * A synchronous storage driver that persists data to a local JSON file.
  *
  * Suitable for command-line tools or backend applications running in Node.js.
+ * If file read/write operations fail or the JSON is invalid, the driver throws an error
+ * (e.g. `SyntaxError` for malformed JSON, or filesystem errors), which is caught
+ * and handled by the store.
  *
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration options containing the file path.
@@ -56,6 +59,9 @@ export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFile
  * An asynchronous storage driver that persists data to a local JSON file.
  *
  * Uses non-blocking promise-based filesystem operations.
+ * If file access/write fails or the JSON is invalid, the driver throws or rejects
+ * with an error (e.g. `SyntaxError` for malformed JSON, or filesystem errors),
+ * which is caught and handled by the store.
  *
  * @typeParam TSchema - Object shape persisted by the store.
  * @param options - Configuration options containing the file path.
@@ -92,8 +98,10 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
     async clear(): Promise<void> {
       try {
         await fs.promises.unlink(filePath);
-      } catch {
-        // Ignore if file does not exist
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          throw error;
+        }
       }
     },
   };

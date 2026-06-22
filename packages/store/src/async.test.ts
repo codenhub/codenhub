@@ -84,4 +84,72 @@ describe("AsyncStore", () => {
       cause: expect.any(Error),
     });
   });
+
+  describe("asyncMemoryDriver state isolation", () => {
+    it("should prevent mutation leaks on set", async () => {
+      const driver = asyncMemoryDriver<{ config: { theme: string } }>();
+      const store = createAsyncStore({
+        storageKey: "async-memory-leak-test",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      const data = { config: { theme: "dark" } };
+      await store.set(data);
+
+      data.config.theme = "blue";
+      expect((await store.get()).config.theme).toBe("dark");
+    });
+
+    it("should prevent mutation leaks on get", async () => {
+      const driver = asyncMemoryDriver<{ config: { theme: string } }>();
+      const store = createAsyncStore({
+        storageKey: "async-memory-leak-test-2",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      await store.set({ config: { theme: "dark" } });
+
+      const state = await store.get();
+      state.config.theme = "blue";
+      expect((await store.get()).config.theme).toBe("dark");
+    });
+  });
+
+  describe("write operations returned value isolation (async)", () => {
+    it("should clone the object returned by patch", async () => {
+      const driver = asyncMemoryDriver<{ config: { theme: string } }>();
+      const store = createAsyncStore({
+        storageKey: "async-patch-clone-test",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      const result = await store.patch({ config: { theme: "dark" } });
+      result.config.theme = "blue";
+      expect((await store.get()).config.theme).toBe("dark");
+    });
+
+    it("should clone the object returned by setItem", async () => {
+      const driver = asyncMemoryDriver<{ config: { theme: string } }>();
+      const store = createAsyncStore({
+        storageKey: "async-setitem-clone-test",
+        initialState: { config: { theme: "light" } },
+        driver,
+      });
+      const result = await store.setItem("config", { theme: "dark" });
+      result.config.theme = "blue";
+      expect((await store.get()).config.theme).toBe("dark");
+    });
+
+    it("should clone the object returned by removeItem", async () => {
+      const driver = asyncMemoryDriver<{ config?: { theme: string }; other: number }>();
+      const store = createAsyncStore({
+        storageKey: "async-removeitem-clone-test",
+        initialState: { config: { theme: "light" }, other: 1 },
+        driver,
+      });
+      const result = await store.removeItem("config");
+      result.other = 99;
+      expect((await store.get()).other).toBe(1);
+    });
+  });
 });
