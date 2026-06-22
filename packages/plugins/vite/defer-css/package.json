@@ -1,13 +1,13 @@
 {
-  "name": "@codenhub/vite-plugins",
-  "version": "0.0.2",
+  "name": "@codenhub/vite-plugin-defer-css",
+  "version": "0.0.1",
   "private": false,
-  "description": "Vite plugins for icon inlining, CSS deferral, i18n validation, and async loader injection.",
+  "description": "Vite plugin that defers loading of CSS stylesheets to prevent render blocking.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codenhub/codenhub.git",
-    "directory": "packages/vite-plugins"
+    "directory": "packages/plugins/vite/defer-css"
   },
   "files": [
     "dist"
@@ -28,19 +28,20 @@
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
-    "status:npm": "npm view @codenhub/vite-plugins version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugins && npm access get status @codenhub/vite-plugins",
+    "status:npm": "npm view @codenhub/vite-plugin-defer-css version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugin-defer-css && npm access get status @codenhub/vite-plugin-defer-css",
     "status:pack": "npm pack --dry-run",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "vite": "^8.0.16"
+    "vite": "^8.0.0"
   }
 }

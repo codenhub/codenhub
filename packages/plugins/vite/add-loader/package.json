@@ -1,0 +1,47 @@
+{
+  "name": "@codenhub/vite-plugin-add-loader",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Vite plugin that injects a full-screen page-loader overlay into every HTML entry point.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/plugins/vite/add-loader"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/vite-plugin-add-loader version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugin-add-loader && npm access get status @codenhub/vite-plugin-add-loader",
+    "status:pack": "npm pack --dry-run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.16"
+  }
+}

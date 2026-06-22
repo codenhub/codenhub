@@ -17,12 +17,12 @@ const LINK_TAG_END_RE = /\/?\s*>$/;
  * @example
  * ```ts
  * // vite.config.ts
- * import { deferCssPlugin } from "@codenhub/vite-plugins";
+ * import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
  *
  * export default { plugins: [deferCssPlugin()] };
  * ```
  */
-export default function deferCssPlugin(): Plugin {
+export function deferCssPlugin(): Plugin {
   return {
     name: "vite-plugin-defer-css",
     enforce: "post",

@@ -70,12 +70,12 @@ const LOADER_BODY = `
  * @example
  * ```ts
  * // vite.config.ts
- * import { addLoaderPlugin } from "@codenhub/vite-plugins";
+ * import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
  *
  * export default { plugins: [addLoaderPlugin()] };
  * ```
  */
-export default function addLoaderPlugin(): Plugin {
+export function addLoaderPlugin(): Plugin {
   return {
     name: "vite-plugin-add-loader",
     enforce: "post",

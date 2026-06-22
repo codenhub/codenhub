@@ -123,7 +123,7 @@ function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): st
  * @example
  * ```ts
  * // vite.config.ts
- * import { iconsPlugin } from "@codenhub/vite-plugins";
+ * import { iconsPlugin } from "@codenhub/vite-plugin-icons";
  *
  * export default { plugins: [iconsPlugin()] };
  * ```
@@ -131,7 +131,7 @@ function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): st
  * @example
  * ```ts
  * // With custom icons
- * import { iconsPlugin } from "@codenhub/vite-plugins";
+ * import { iconsPlugin } from "@codenhub/vite-plugin-icons";
  *
  * export default {
  *   plugins: [
@@ -141,6 +141,7 @@ function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): st
  *   ],
  * };
  * ```
+ *
  */
 export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
   const iconMarkupMap = createIconMarkupMap(options?.icons);

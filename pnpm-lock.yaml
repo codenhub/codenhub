@@ -81,9 +81,15 @@ importers:
         specifier: 0.0.1
         version: 0.0.1
     devDependencies:
-      '@codenhub/vite-plugins':
-        specifier: 0.0.1
-        version: 0.0.1(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+      '@codenhub/vite-plugin-add-loader':
+        specifier: workspace:*
+        version: link:../../packages/plugins/vite/add-loader
+      '@codenhub/vite-plugin-defer-css':
+        specifier: workspace:*
+        version: link:../../packages/plugins/vite/defer-css
+      '@codenhub/vite-plugin-icons':
+        specifier: workspace:*
+        version: link:../../packages/plugins/vite/icons
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.0(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
@@ -108,6 +114,60 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/plugins/vite/add-loader:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/plugins/vite/defer-css:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+
+  packages/plugins/vite/icons:
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.1
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.2(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
       vitest:
         specifier: 'catalog:'
         version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
@@ -224,18 +284,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/vite-plugins:
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.9.1
-      vite:
-        specifier: 'catalog:'
-        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
-
 packages:
 
   '@asamuzakjp/css-color@5.1.11':
@@ -307,11 +355,6 @@ packages:
 
   '@codenhub/ui-kit@0.0.1':
     resolution: {integrity: sha512-6bbcvzMNQquWZjFF6Itosfjf6iSc7mMEeBRVYcDAF4uDnA4kFrStT4iTt4TjWFtbBWW2MQKeL+s7URKGCR5aeg==}
-
-  '@codenhub/vite-plugins@0.0.1':
-    resolution: {integrity: sha512-+hANogDUQc6x9GhNIz8hteQ8d5rQEFYnW133XR1eRq5GBZeJMZWji99SDcKDIRbpsaWOvfr+HA96jFTCZaYfrA==}
-    peerDependencies:
-      vite: ^8.0.16
 
   '@csstools/color-helpers@6.0.2':
     resolution: {integrity: sha512-LMGQLS9EuADloEFkcTBR3BwV/CGHV7zyDxVRtVDTwdI2Ca4it0CCVTT9wCkxSgokjE5Ho41hEPgb8OEUwoXr6Q==}
@@ -1925,10 +1968,6 @@ snapshots:
   '@codenhub/ui-kit@0.0.1':
     dependencies:
       '@codenhub/helpers': 0.0.1
-
-  '@codenhub/vite-plugins@0.0.1(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))':
-    dependencies:
-      vite: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
 
   '@csstools/color-helpers@6.0.2': {}
 

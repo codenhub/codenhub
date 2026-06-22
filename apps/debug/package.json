@@ -13,7 +13,9 @@
     "@codenhub/ui-kit": "0.0.1"
   },
   "devDependencies": {
-    "@codenhub/vite-plugins": "0.0.1",
+    "@codenhub/vite-plugin-add-loader": "workspace:*",
+    "@codenhub/vite-plugin-defer-css": "workspace:*",
+    "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",

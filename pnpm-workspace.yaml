@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "packages/plugins/**"
 
 catalog:
   "@tailwindcss/cli": ^4.3.0

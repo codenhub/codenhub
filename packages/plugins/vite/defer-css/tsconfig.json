@@ -3,5 +3,5 @@
     "module": "Preserve",
     "moduleResolution": "bundler"
   },
-  "extends": "../../tsconfig.json"
+  "extends": "../../../../tsconfig.json"
 }

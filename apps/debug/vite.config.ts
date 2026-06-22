@@ -1,4 +1,6 @@
-import { addLoaderPlugin, deferCssPlugin, iconsPlugin } from "@codenhub/vite-plugins";
+import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
+import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
+import { iconsPlugin } from "@codenhub/vite-plugin-icons";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
