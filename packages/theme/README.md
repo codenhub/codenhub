@@ -1,6 +1,13 @@
 # @codenhub/theme
 
-Small zero-dependency theme preference helper for browser apps. It applies a theme name to the document, updates `document.documentElement.style.colorScheme`, and leaves tokens, variables, and visual styles to your CSS.
+Small zero-dependency theme preference helper for browser apps. It applies a theme name to the document, updates `document.documentElement.style.colorScheme`, and supports managing dynamic CSS tokens.
+
+## Features
+
+- **Factory API**: Instantiate with `createTheme()`.
+- **Dynamic CSS Tokens**: Define a `tokenSchema` at initialization for type-safe, dynamic inline CSS custom property styling.
+- **Zero Dependencies**: Tiny footprint and pure TypeScript.
+- **Flexible Styling**: Works with standard CSS variables, class toggles, or Tailwind CSS.
 
 ## Installation
 
@@ -13,9 +20,9 @@ pnpm add @codenhub/theme
 By default, `init()` uses a valid stored preference first. If there is no valid stored preference, it maps the OS color scheme to `light` or `dark`.
 
 ```ts
-import { Theme } from "@codenhub/theme";
+import { createTheme } from "@codenhub/theme";
 
-const theme = new Theme({ tailwindcss: false, applyClass: true });
+const theme = createTheme({ tailwindcss: false, applyClass: true });
 
 theme.init();
 theme.set("dark");
@@ -31,9 +38,10 @@ Call `destroy()` during app or test cleanup when the instance is no longer used.
 Primary entrypoint for the theme preference API.
 
 ```ts
-import { Theme, darkTheme, lightTheme, THEME_CHANGE_EVENT } from "@codenhub/theme";
+import { createTheme, darkTheme, lightTheme, THEME_CHANGE_EVENT } from "@codenhub/theme";
 import type {
   SystemThemeMap,
+  Theme,
   ThemeChangeDetail,
   ThemeChangeListener,
   ThemeChangeSource,
@@ -49,63 +57,72 @@ Supported import paths:
 | ----------------- | ----------------------------------- |
 | `@codenhub/theme` | Main JavaScript and TypeScript API. |
 
-#### `Theme`
+#### `createTheme()`
 
-Manages the active theme, storage preference, DOM attribute, `colorScheme` style, classes, system preference listener, and change notifications.
+Factory function that returns a `Theme` manager instance.
 
 ```ts
-class Theme {
-  constructor(options?: ThemeOptions);
-  init(): this;
-  get(): ThemeDefinition;
-  set(name: string): ThemeDefinition;
-  toggle(): ThemeDefinition;
-  clearPreference(): ThemeDefinition;
+function createTheme<TSchema extends Record<string, string> = Record<string, string>>(
+  options?: ThemeOptions<TSchema>,
+): Theme<TSchema>;
+```
+
+#### `Theme`
+
+Manages the active theme, storage preference, DOM attribute, `colorScheme` style, classes, system preference listener, dynamic tokens, and change notifications.
+
+```ts
+interface Theme<TSchema extends Record<string, string> = Record<string, string>> {
+  init(tokens?: Partial<Record<keyof TSchema, string>>): this;
+  get(): ThemeDefinition<TSchema>;
+  set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
+  toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
+  clearPreference(): ThemeDefinition<TSchema>;
   getStored(): string | null;
-  getSystem(): ThemeDefinition;
-  subscribe(listener: ThemeChangeListener): () => void;
+  getSystem(): ThemeDefinition<TSchema>;
+  subscribe(listener: ThemeChangeListener<TSchema>): () => void;
   destroy(): void;
 }
 ```
 
 Import from `@codenhub/theme`.
 
-The constructor throws `Error` when configured theme names are empty, duplicated, invalid for CSS class application, or referenced by `defaultTheme` or `systemTheme` without being configured.
+The factory throws `Error` when configured theme names are empty, duplicated, invalid for CSS class application, or referenced by `defaultTheme` or `systemTheme` without being configured.
 
 ##### `init()`
 
-Registers the system preference listener, resolves the initial theme, applies it, and emits a change with source `"init"`.
+Registers the system preference listener, resolves the initial theme, applies it, and emits a change with source `"init"`. Can optionally accept initial token value overrides.
+
+```ts
+function init(tokens?: Partial<Record<keyof TSchema, string>>): this;
+```
 
 Repeated calls do not register duplicate system preference listeners.
 
-```ts
-function init(): this;
-```
-
 ##### `get()`
 
-Returns the active theme definition.
+Returns the active theme definition including any active merged tokens.
 
 ```ts
-function get(): ThemeDefinition;
+function get(): ThemeDefinition<TSchema>;
 ```
 
 ##### `set()`
 
-Activates a configured theme by name and stores the explicit preference when browser storage is available.
+Activates a configured theme by name, applies any dynamic token overrides, and stores the explicit preference when browser storage is available.
 
 ```ts
-function set(name: string): ThemeDefinition;
+function set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
 ```
 
 Throws `Error` when `name` is not configured.
 
 ##### `toggle()`
 
-Toggles between the configured system light and dark theme names, then stores the explicit preference when browser storage is available.
+Toggles between the configured system light and dark theme names, applies any dynamic token overrides, then stores the explicit preference when browser storage is available.
 
 ```ts
-function toggle(): ThemeDefinition;
+function toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
 ```
 
 ##### `clearPreference()`
@@ -113,7 +130,7 @@ function toggle(): ThemeDefinition;
 Removes the stored preference and activates the current system theme.
 
 ```ts
-function clearPreference(): ThemeDefinition;
+function clearPreference(): ThemeDefinition<TSchema>;
 ```
 
 ##### `getStored()`
@@ -131,7 +148,7 @@ Returns `null` during SSR, when storage is unavailable, when storage access thro
 Returns the configured theme for the current `prefers-color-scheme` value.
 
 ```ts
-function getSystem(): ThemeDefinition;
+function getSystem(): ThemeDefinition<TSchema>;
 ```
 
 Returns the default theme during SSR or when `matchMedia` is unavailable.
@@ -141,7 +158,7 @@ Returns the default theme during SSR or when `matchMedia` is unavailable.
 Registers an in-process listener for theme changes.
 
 ```ts
-function subscribe(listener: ThemeChangeListener): () => void;
+function subscribe(listener: ThemeChangeListener<TSchema>): () => void;
 ```
 
 Returns an unsubscribe function.
@@ -159,14 +176,15 @@ Call this during app or test cleanup when the instance is no longer used.
 #### `ThemeOptions`
 
 ```ts
-interface ThemeOptions {
-  themes?: readonly ThemeDefinition[];
+interface ThemeOptions<TSchema extends Record<string, string> = Record<string, string>> {
+  themes?: readonly ThemeDefinition<TSchema>[];
   defaultTheme?: string;
   systemTheme?: SystemThemeMap;
   storageKey?: string;
   attribute?: string;
   tailwindcss?: boolean;
-  applyClass?: boolean | ThemeClassResolver;
+  applyClass?: boolean | ThemeClassResolver<TSchema>;
+  tokenSchema?: TSchema;
 }
 ```
 
@@ -179,22 +197,25 @@ interface ThemeOptions {
 | `attribute`    | `string`                                          | `"data-theme"`                     | Attribute set on `document.documentElement`.                                                |
 | `tailwindcss`  | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
 | `applyClass`   | `boolean` or `(theme: ThemeDefinition) => string` | `true`                             | Adds `theme-${name}`, no class, or a resolver-provided class to `document.documentElement`. |
+| `tokenSchema`  | `TSchema`                                         | `undefined`                        | Schema mapping theme token names to their corresponding CSS Custom Property names.          |
 
 When class application is enabled, each theme application removes classes for all configured themes, then adds the class for the active theme.
 
 #### `ThemeDefinition`
 
 ```ts
-interface ThemeDefinition {
+interface ThemeDefinition<TSchema extends Record<string, string> = Record<string, string>> {
   name: string;
   colorScheme: "light" | "dark";
+  tokens?: Partial<Record<keyof TSchema, string>>;
 }
 ```
 
-| Field         | Type                | Description                                                      |
-| ------------- | ------------------- | ---------------------------------------------------------------- |
-| `name`        | `string`            | Unique theme name used for storage, attributes, and class names. |
-| `colorScheme` | `"light" \| "dark"` | Browser color scheme applied through `style.colorScheme`.        |
+| Field         | Type                                     | Description                                                      |
+| ------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| `name`        | `string`                                 | Unique theme name used for storage, attributes, and class names. |
+| `colorScheme` | `"light" \| "dark"`                      | Browser color scheme applied through `style.colorScheme`.        |
+| `tokens`      | `Partial<Record<keyof TSchema, string>>` | Optional theme-specific static token values.                     |
 
 #### `SystemThemeMap`
 
@@ -215,7 +236,9 @@ interface SystemThemeMap {
 Returns the class name applied to `document.documentElement` for a theme.
 
 ```ts
-type ThemeClassResolver = (theme: ThemeDefinition) => string;
+type ThemeClassResolver<TSchema extends Record<string, string> = Record<string, string>> = (
+  theme: ThemeDefinition<TSchema>,
+) => string;
 ```
 
 The returned class name must be a single non-empty class token without whitespace.
@@ -227,7 +250,9 @@ The returned class name must be a single non-empty class token without whitespac
 Listener passed to `theme.subscribe()`.
 
 ```ts
-type ThemeChangeListener = (detail: ThemeChangeDetail) => void;
+type ThemeChangeListener<TSchema extends Record<string, string> = Record<string, string>> = (
+  detail: ThemeChangeDetail<TSchema>,
+) => void;
 ```
 
 #### `THEME_CHANGE_EVENT`
@@ -241,10 +266,10 @@ const THEME_CHANGE_EVENT = "themechange";
 #### `ThemeChangeDetail`
 
 ```ts
-interface ThemeChangeDetail {
+interface ThemeChangeDetail<TSchema extends Record<string, string> = Record<string, string>> {
   name: string;
-  theme: ThemeDefinition;
-  source: "init" | "set" | "toggle" | "clearPreference" | "system";
+  theme: ThemeDefinition<TSchema>;
+  source: ThemeChangeSource;
 }
 ```
 
@@ -281,6 +306,40 @@ const darkTheme: ThemeDefinition = { name: "dark", colorScheme: "dark" };
 
 ## Examples
 
+### Dynamic CSS Tokens
+
+```ts
+import { createTheme } from "@codenhub/theme";
+
+// 1. Define schema
+const tokenSchema = {
+  primary: "--color-primary",
+  background: "--color-bg",
+} as const;
+
+// 2. Initialize with schema and optional theme static token values
+const theme = createTheme({
+  tokenSchema,
+  themes: [
+    {
+      name: "light",
+      colorScheme: "light",
+      tokens: { primary: "#0070f3", background: "#ffffff" },
+    },
+    {
+      name: "dark",
+      colorScheme: "dark",
+      tokens: { primary: "#3291ff", background: "#000000" },
+    },
+  ],
+});
+
+theme.init();
+
+// 3. Switch theme and pass runtime overrides (e.g. from dynamic branding API)
+theme.set("dark", { primary: "#ff007f" });
+```
+
 ### Define CSS Tokens
 
 ```css
@@ -304,9 +363,9 @@ body {
 ### Add More Themes
 
 ```ts
-import { Theme, darkTheme, lightTheme } from "@codenhub/theme";
+import { createTheme, darkTheme, lightTheme } from "@codenhub/theme";
 
-const theme = new Theme({
+const theme = createTheme({
   themes: [lightTheme, darkTheme, { name: "high-contrast", colorScheme: "dark" }],
   systemTheme: { light: "light", dark: "high-contrast" },
   applyClass: (definition) => `mode-${definition.name}`,
@@ -319,9 +378,9 @@ theme.set("high-contrast");
 ### Listen For Changes
 
 ```ts
-import { Theme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from "@codenhub/theme";
+import { createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from "@codenhub/theme";
 
-const theme = new Theme().init();
+const theme = createTheme().init();
 
 const unsubscribe = theme.subscribe((detail) => {
   console.log(detail.name, detail.theme, detail.source);

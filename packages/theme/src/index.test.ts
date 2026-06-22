@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { darkTheme, lightTheme, Theme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from ".";
+import { darkTheme, lightTheme, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from ".";
 
 interface MockMediaQueryList {
   matches: boolean;
@@ -47,28 +47,30 @@ beforeEach(() => {
 
 describe("Theme config", () => {
   it("should reject empty theme names", () => {
-    expect(() => new Theme({ themes: [{ name: "", colorScheme: "light" }] })).toThrow("Theme names must be non-empty.");
+    expect(() => createTheme({ themes: [{ name: "", colorScheme: "light" }] })).toThrow(
+      "Theme names must be non-empty.",
+    );
   });
 
   it("should reject duplicate theme names", () => {
-    expect(() => new Theme({ themes: [lightTheme, { name: "light", colorScheme: "dark" }] })).toThrow(
+    expect(() => createTheme({ themes: [lightTheme, { name: "light", colorScheme: "dark" }] })).toThrow(
       "Duplicate theme name: light.",
     );
   });
 
   it("should reject missing default and system mappings", () => {
-    expect(() => new Theme({ defaultTheme: "missing" })).toThrow("Default theme is not configured: missing.");
-    expect(() => new Theme({ systemTheme: { light: "missing", dark: "dark" } })).toThrow(
+    expect(() => createTheme({ defaultTheme: "missing" })).toThrow("Default theme is not configured: missing.");
+    expect(() => createTheme({ systemTheme: { light: "missing", dark: "dark" } })).toThrow(
       "System light theme is not configured: missing.",
     );
-    expect(() => new Theme({ systemTheme: { light: "light", dark: "missing" } })).toThrow(
+    expect(() => createTheme({ systemTheme: { light: "light", dark: "missing" } })).toThrow(
       "System dark theme is not configured: missing.",
     );
   });
 
   it("should reject default theme classes that are not single DOM tokens", () => {
-    expect(
-      () => new Theme({ themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }] }),
+    expect(() =>
+      createTheme({ themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }] }),
     ).toThrow("Theme name cannot be used as a default theme class: high contrast.");
   });
 });
@@ -78,7 +80,7 @@ describe("Theme behavior", () => {
     createMatchMedia(true);
     window.localStorage.setItem("app-theme-preference", "unknown");
 
-    const theme = new Theme().init();
+    const theme = createTheme().init();
 
     expect(theme.get().name).toBe("dark");
     expect(theme.getStored()).toBeNull();
@@ -91,7 +93,7 @@ describe("Theme behavior", () => {
   it("should remove pre-existing configured theme classes on init", () => {
     document.documentElement.className = "app-shell theme-dark keep-me";
 
-    new Theme().init();
+    createTheme().init();
 
     expect(document.documentElement.classList.contains("theme-dark")).toBe(false);
     expect(document.documentElement.classList.contains("theme-light")).toBe(true);
@@ -100,11 +102,11 @@ describe("Theme behavior", () => {
   });
 
   it("should store and apply an explicit theme", () => {
-    const theme = new Theme({ tailwindcss: true }).init();
+    const theme = createTheme({ tailwindcss: true }).init();
 
     const nextTheme = theme.set("dark");
 
-    expect(nextTheme).toEqual(darkTheme);
+    expect(nextTheme.name).toBe("dark");
     expect(window.localStorage.getItem("app-theme-preference")).toBe("dark");
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
     expect(document.documentElement.classList.contains("theme-light")).toBe(false);
@@ -113,7 +115,7 @@ describe("Theme behavior", () => {
   });
 
   it("should keep applyClass independent from tailwindcss", () => {
-    const theme = new Theme({ applyClass: false, tailwindcss: true }).init();
+    const theme = createTheme({ applyClass: false, tailwindcss: true }).init();
 
     theme.set("dark");
 
@@ -124,14 +126,14 @@ describe("Theme behavior", () => {
   it("should not remove pre-existing dark classes when tailwindcss is disabled", () => {
     document.documentElement.className = "dark app-shell";
 
-    new Theme({ tailwindcss: false }).init();
+    createTheme({ tailwindcss: false }).init();
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("app-shell")).toBe(true);
   });
 
   it("should apply the exact default theme class", () => {
-    const theme = new Theme({
+    const theme = createTheme({
       themes: [lightTheme, darkTheme, { name: "BrandDark", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "BrandDark" },
     }).init();
@@ -143,7 +145,7 @@ describe("Theme behavior", () => {
   });
 
   it("should support custom attributes, custom class names, and more than two themes", () => {
-    const theme = new Theme({
+    const theme = createTheme({
       themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "high contrast" },
       attribute: "data-mode",
@@ -160,7 +162,7 @@ describe("Theme behavior", () => {
   });
 
   it("should reject invalid custom theme classes before applying", () => {
-    const theme = new Theme({ applyClass: () => "two classes" });
+    const theme = createTheme({ applyClass: () => "two classes" });
 
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
@@ -171,7 +173,7 @@ describe("Theme behavior", () => {
     document.documentElement.setAttribute("data-theme", "server");
     document.documentElement.style.colorScheme = "dark";
 
-    const theme = new Theme({
+    const theme = createTheme({
       applyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
     });
 
@@ -182,7 +184,7 @@ describe("Theme behavior", () => {
   });
 
   it("should toggle between configured system light and dark themes", () => {
-    const theme = new Theme({
+    const theme = createTheme({
       themes: [lightTheme, darkTheme, { name: "midnight", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "midnight" },
     }).init();
@@ -193,7 +195,7 @@ describe("Theme behavior", () => {
 
   it("should clear preference and return to system theme", () => {
     createMatchMedia(true);
-    const theme = new Theme().init();
+    const theme = createTheme().init();
 
     theme.set("light");
     const systemTheme = theme.clearPreference();
@@ -204,7 +206,7 @@ describe("Theme behavior", () => {
   });
 
   it("should notify subscribers and dispatch themechange events", () => {
-    const theme = new Theme().init();
+    const theme = createTheme().init();
     const listener = vi.fn();
     const eventListener = vi.fn((event: CustomEvent<ThemeChangeDetail>) => event.detail);
     const unsubscribe = theme.subscribe(listener);
@@ -216,14 +218,16 @@ describe("Theme behavior", () => {
     window.removeEventListener(THEME_CHANGE_EVENT, eventListener as unknown as EventListener);
 
     expect(listener).toHaveBeenCalledOnce();
-    expect(listener).toHaveBeenCalledWith({ name: "dark", theme: darkTheme, source: "set" });
+    expect(listener.mock.calls[0]?.[0]?.name).toBe("dark");
+    expect(listener.mock.calls[0]?.[0]?.source).toBe("set");
     expect(eventListener).toHaveBeenCalledTimes(2);
-    expect(eventListener.mock.results[0]?.value).toEqual({ name: "dark", theme: darkTheme, source: "set" });
+    expect(eventListener.mock.results[0]?.value?.name).toBe("dark");
+    expect(eventListener.mock.results[0]?.value?.source).toBe("set");
   });
 
   it("should respond to system changes only without a stored preference", () => {
     const mediaQueryList = createMatchMedia(false);
-    const theme = new Theme().init();
+    const theme = createTheme().init();
 
     mediaQueryList.dispatch(true);
     expect(theme.get().name).toBe("dark");
@@ -256,7 +260,7 @@ describe("Theme behavior", () => {
     });
 
     try {
-      const theme = new Theme().init();
+      const theme = createTheme().init();
 
       expect(theme.getStored()).toBeNull();
       expect(() => theme.set("dark")).not.toThrow();
@@ -281,7 +285,7 @@ describe("Theme behavior", () => {
 
     try {
       const listener = vi.fn();
-      const theme = new Theme();
+      const theme = createTheme();
 
       expect(() => theme.init()).not.toThrow();
       expect(theme.get().name).toBe("light");
@@ -294,11 +298,116 @@ describe("Theme behavior", () => {
 
       theme.subscribe(listener);
       theme.set("dark");
-      expect(listener).toHaveBeenCalledWith({ name: "dark", theme: darkTheme, source: "set" });
+      expect(listener.mock.calls[0]?.[0]?.name).toBe("dark");
+      expect(listener.mock.calls[0]?.[0]?.source).toBe("set");
     } finally {
       vi.unstubAllGlobals();
       Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
       Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
     }
+  });
+});
+
+describe("Theme CSS tokens support", () => {
+  it("should reject theme tokens if no tokenSchema is configured", () => {
+    const customTheme = { name: "custom", colorScheme: "light" as const, tokens: { primary: "blue" } };
+    expect(() => createTheme({ themes: [customTheme] })).toThrow(
+      'Theme "custom" defines tokens but no tokenSchema is configured.',
+    );
+  });
+
+  it("should apply theme-defined tokens on init and theme change", () => {
+    const tokenSchema = { primary: "--color-primary", bg: "--color-bg" };
+    const customLight = {
+      name: "light",
+      colorScheme: "light" as const,
+      tokens: { primary: "blue", bg: "white" },
+    };
+    const customDark = {
+      name: "dark",
+      colorScheme: "dark" as const,
+      tokens: { primary: "red", bg: "black" },
+    };
+
+    const theme = createTheme({
+      themes: [customLight, customDark],
+      tokenSchema,
+    }).init();
+
+    theme.set("light");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("blue");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("white");
+
+    theme.set("dark");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("red");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("black");
+  });
+
+  it("should apply dynamic overrides on set", () => {
+    const tokenSchema = { primary: "--color-primary", bg: "--color-bg" };
+    const customLight = {
+      name: "light",
+      colorScheme: "light" as const,
+      tokens: { primary: "blue", bg: "white" },
+    };
+    const customDark = {
+      name: "dark",
+      colorScheme: "dark" as const,
+      tokens: { primary: "red", bg: "black" },
+    };
+
+    const theme = createTheme({
+      themes: [customLight, customDark],
+      tokenSchema,
+    }).init();
+
+    theme.set("dark", { primary: "purple" });
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("purple");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("black");
+
+    expect(theme.get().tokens).toEqual({ primary: "purple", bg: "black" });
+  });
+
+  it("should clear omitted tokens to allow CSS fallback", () => {
+    const tokenSchema = { primary: "--color-primary", bg: "--color-bg" };
+    const customLight = {
+      name: "light",
+      colorScheme: "light" as const,
+      tokens: { primary: "blue" },
+    };
+    const customDark = {
+      name: "dark",
+      colorScheme: "dark" as const,
+      tokens: { primary: "red", bg: "black" },
+    };
+
+    const theme = createTheme({
+      themes: [customLight, customDark],
+      tokenSchema,
+      defaultTheme: "dark",
+    }).init();
+
+    theme.set("dark");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("red");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("black");
+
+    theme.set("light");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("blue");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("");
+  });
+
+  it("should allow partial changes on init and toggle", () => {
+    const tokenSchema = { primary: "--color-primary", bg: "--color-bg" };
+    const theme = createTheme({
+      tokenSchema,
+    });
+
+    theme.init({ primary: "orange" });
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("orange");
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("");
+
+    theme.toggle({ bg: "gray" });
+    expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("gray");
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("");
   });
 });
