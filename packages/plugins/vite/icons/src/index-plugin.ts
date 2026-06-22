@@ -7,6 +7,11 @@ import { icons } from "./data";
 /** Options accepted by {@link iconsPlugin}. */
 export interface IconsPluginOptions {
   /**
+   * If true, clears the built-in icon registry.
+   * Only custom icons supplied in the `icons` option will be registered.
+   */
+  clear?: boolean;
+  /**
    * Additional icons merged on top of the built-in registry.
    * When a name exists in both, the consumer entry takes precedence.
    * Each value is either a raw SVG string or an {@link IconDefinition} object
@@ -28,9 +33,10 @@ function getAlternativeNames(iconDefinition: IconDefinition): readonly string[] 
   return typeof iconDefinition === "string" ? [] : (iconDefinition.alternativeNames ?? []);
 }
 
-function createIconMarkupMap(extraIcons: Record<string, IconDefinition> = {}): Map<string, string> {
+function createIconMarkupMap(extraIcons: Record<string, IconDefinition> = {}, clear = false): Map<string, string> {
   const iconMarkupMap = new Map<string, string>();
-  const mergedIcons: Record<string, IconDefinition> = { ...icons, ...extraIcons };
+  const baseIcons = clear ? {} : icons;
+  const mergedIcons: Record<string, IconDefinition> = { ...baseIcons, ...extraIcons };
 
   for (const [iconName, iconDefinition] of Object.entries(mergedIcons)) {
     const markup = getIconMarkup(iconDefinition);
@@ -144,7 +150,7 @@ function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): st
  *
  */
 export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
-  const iconMarkupMap = createIconMarkupMap(options?.icons);
+  const iconMarkupMap = createIconMarkupMap(options?.icons, options?.clear);
   return {
     name: PLUGIN_NAME,
     enforce: "pre",

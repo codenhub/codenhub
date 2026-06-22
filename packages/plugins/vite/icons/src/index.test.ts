@@ -178,4 +178,21 @@ describe("iconsPlugin — custom icons option", () => {
     expect(transformed).toContain(`<svg`);
     expect(transformed).not.toContain("ic-success");
   });
+
+  describe("clear option", () => {
+    it("should not resolve built-in icons when clear is true", async () => {
+      const transformed = await runTransformIndexHtml(`<i class="ic-success"></i>`, { clear: true });
+
+      expect(transformed).toBe(`<i class="ic-success"></i>`);
+    });
+
+    it("should resolve consumer icons when clear is true", async () => {
+      const customMarkup = `<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>`;
+      const options = { clear: true, icons: { custom: customMarkup } };
+      const transformed = await runTransformIndexHtml(`<i class="ic-custom"></i>`, options);
+
+      expect(transformed).toContain(customMarkup);
+      expect(transformed).not.toContain("ic-custom");
+    });
+  });
 });
