@@ -1,7 +1,7 @@
 # Package README spec
 
 **Status:** APPROVED
-**Last updated:** 2026-06-08
+**Last updated:** 2026-06-22
 **Scope:** README files for workspace packages.
 
 This document defines the expected structure and content for package README files.
@@ -34,6 +34,7 @@ Public package README files MUST follow this structure unless a section is expli
 6. Examples: common workflows and real-world scenarios beyond the minimal usage path.
 7. Requirements: browser, Node, SSR, framework, peer dependency, CSS, storage, DOM, or build-tool requirements.
 8. Notes: flexible final section for limitations, non-goals, caveats, stability notes, or other package-specific considerations that do not fit earlier sections.
+9. License: primary package license, along with any necessary third-party attributions, licenses, and notices for bundled or derived third-party assets (such as Lucide icons).
 
 Headings should use these names when practical. Small wording changes are allowed when they improve clarity for the package, but the section purpose MUST stay recognizable. Optional sections MAY appear wherever they make the README easiest to understand, as long as the required information remains present, accurate, and easy to scan.
 
@@ -78,8 +79,9 @@ A section, API category, example group, or template surface MAY be omitted when 
 - Omit methods when the package has no public methods.
 - Omit events when the package emits, listens to, or documents no public events.
 - Omit types or interfaces when the package exposes no public consumer-facing types.
-- Omit CSS, assets, or plugin entrypoints when the package exposes none, or when they are advanced surfaces documented in package-level `.docs/` instead of the README.
-- Omit additional examples when there is only one meaningful workflow.
+- Omit `CSS`, `assets`, or `plugin` entrypoints when the package exposes none, or when they are advanced surfaces documented in package-level `.docs/` instead of the README.
+- Omit `additional examples` when there is only one meaningful workflow.
+- Omit `License` section details only if the package does not bundle or derive from third-party code/assets, uses the repository's standard license (Apache-2.0), and the repository root license is sufficient without additional package-level notices. Public packages incorporating third-party assets (such as Lucide icons under the ISC license) MUST NOT omit this section and MUST document those dependencies alongside a corresponding package-level `NOTICE` file.
 
 Very small packages MAY have fewer headings and less template structure only when all applicable required information remains present and easy to scan.
 

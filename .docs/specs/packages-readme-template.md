@@ -266,3 +266,9 @@ export default {
 - List important limitations, non-goals, caveats, or stability notes.
 - Link to package-level `.docs/` files for deeper design, advanced workflows, or edge cases.
 - Remove placeholder notes before publishing the README.
+
+## License
+
+This project is licensed under the Apache License 2.0.
+
+[Optional] It includes third-party code or assets, such as SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
