@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "description": "",
-  "license": "MIT",
   "author": "coden.agency",
   "type": "module",
   "scripts": {
