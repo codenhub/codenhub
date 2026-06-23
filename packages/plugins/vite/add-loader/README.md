@@ -61,3 +61,7 @@ Returns a Vite `Plugin` object.
 
 - The plugin operates at build time only and adds no runtime dependencies to consumer bundles.
 - It injects into every HTML entry point processed by Vite. Projects with multiple HTML entry points will receive the loader in each.
+
+## License
+
+This project is licensed under the [Apache-2.0](LICENSE) license.

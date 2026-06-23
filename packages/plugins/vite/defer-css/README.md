@@ -67,3 +67,7 @@ Returns a Vite `Plugin` object.
 
 - The plugin operates at build time only and adds no runtime dependencies to consumer bundles.
 - It transforms all `<link rel="stylesheet">` tags found in HTML entry points processed by Vite.
+
+## License
+
+This project is licensed under the [Apache-2.0](LICENSE) license.

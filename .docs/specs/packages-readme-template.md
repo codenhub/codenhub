@@ -269,6 +269,6 @@ export default {
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the [Apache-2.0](LICENSE) license.
 
 [Optional] It includes third-party code or assets, such as SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
