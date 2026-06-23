@@ -1,0 +1,46 @@
+{
+  "name": "bubble-plugin",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Core types and build scripts for Bubble.io plugins.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/plugins/bubble/core"
+  },
+  "bin": {
+    "bbp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "bubble.schema.json"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/cli.ts src/build.ts --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view bubble-plugin version dist-tags time --json && npm dist-tag ls bubble-plugin && npm access get status bubble-plugin",
+    "status:pack": "npm pack --dry-run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tsdown": "catalog:",
+    "typescript": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}
