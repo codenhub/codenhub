@@ -1,11 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Dictionary of properties configured in the Bubble dashboard
  * and passed to actions or elements.
  */
 export interface BubbleProperties {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -16,14 +14,14 @@ export interface BubbleContext {
   /**
    * Object containing the API keys configured for the plugin.
    */
-  keys: {
-    [key: string]: string;
-  };
+  keys: Record<string, string>;
 
   /**
    * Runs a server-side request (available in server-side actions).
+   * @param options Request configuration options.
+   * @returns The request response.
    */
-  request?: (options: any) => any;
+  request?: (options: unknown) => unknown;
 
   /**
    * The current app user's timezone.
@@ -31,9 +29,12 @@ export interface BubbleContext {
   timezone?: string;
 
   /**
-   * Information about the current running environment.
+   * Utility for executing asynchronous callback-based functions synchronously
+   * in Bubble server-side actions.
+   * @param fn Function that takes a completion callback.
+   * @returns The resolved value of type T.
    */
-  async?: <T>(fn: (cb: (err: any, res: T) => void) => void) => T;
+  async?: <T>(fn: (cb: (err: unknown, res: T) => void) => void) => T;
 }
 
 /**
@@ -43,17 +44,18 @@ export interface BubbleContext {
 export interface BubbleElementInstance {
   /**
    * jQuery selection containing the element's container DOM node.
-   * Typically index 0 is the raw HTML element: instance.canvas[0]
+   * Typings allow clean array indexing to retrieve the raw HTML element (e.g., instance.canvas[0]).
    */
-  canvas: any;
+  canvas: {
+    [index: number]: HTMLElement;
+    length: number;
+  } & Record<string, unknown>;
 
   /**
    * Key-value store to persist state and references across lifecycles
    * (e.g. storing references to sub-elements or third-party libraries).
    */
-  data: {
-    [key: string]: any;
-  };
+  data: Record<string, unknown>;
 
   /**
    * Triggers a custom event defined in the plugin's bubble.json.
@@ -66,5 +68,5 @@ export interface BubbleElementInstance {
    * @param stateName The name of the custom state.
    * @param value The value to assign to the state.
    */
-  publishState: (stateName: string, value: any) => void;
+  publishState: (stateName: string, value: unknown) => void;
 }

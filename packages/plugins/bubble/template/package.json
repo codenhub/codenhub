@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "Template package for creating Bubble.io plugins with TypeScript.",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "bbp build",

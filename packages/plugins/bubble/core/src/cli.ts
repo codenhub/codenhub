@@ -4,7 +4,10 @@ import { runBuild } from "./build.js";
 const command = process.argv[2];
 
 if (command === "build") {
-  runBuild();
+  runBuild().catch((err) => {
+    console.error("Build failed:", err);
+    process.exit(1);
+  });
 } else {
   console.error("Unknown command. Usage: bbp <command>");
   console.error("\nAvailable commands:");
