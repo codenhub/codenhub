@@ -19,19 +19,175 @@ export async function runBuild(): Promise<void> {
     fs.rmSync(distDir, { recursive: true, force: true });
   }
 
-  // Scan src/actions
+  const bubbleConfig = ensureBubbleConfig(cwd);
+
+  // Process actions defined in bubble.json
+  if (bubbleConfig.actions && bubbleConfig.actions.length > 0) {
+    for (const actionConfig of bubbleConfig.actions) {
+      await compileAction(cwd, actionConfig);
+    }
+  }
+
+  // Process elements defined in bubble.json
+  if (bubbleConfig.elements && bubbleConfig.elements.length > 0) {
+    for (const elementConfig of bubbleConfig.elements) {
+      await compileElement(cwd, elementConfig);
+    }
+  }
+
+  console.log("Build completed successfully.");
+}
+
+/**
+ * Ensures a valid bubble.json exists in the current directory.
+ * Scans src/actions and src/elements to generate a default configuration if missing.
+ *
+ * @param cwd Current working directory.
+ */
+export function ensureBubbleConfig(cwd: string): {
+  actions?: Array<{ name: string; type: string }>;
+  elements?: Array<{ name: string }>;
+} {
+  const configPath = path.join(cwd, "bubble.json");
+  if (!fs.existsSync(configPath)) {
+    console.warn("Warning: bubble.json configuration file not found. Creating a default one...");
+
+    const name = path.basename(cwd);
+    const defaultConfig: {
+      $schema: string;
+      name: string;
+      actions: Array<{ name: string; type: string }>;
+      elements: Array<{ name: string }>;
+    } = {
+      $schema: "node_modules/bubble-plugin/bubble.schema.json",
+      name: name
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" "),
+      actions: [],
+      elements: [],
+    };
+
+    // Scan src/actions (excluding .test.ts)
+    const actionsDir = path.join(cwd, "src/actions");
+    if (fs.existsSync(actionsDir)) {
+      const files = fs.readdirSync(actionsDir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
+      for (const file of files) {
+        const fileBaseName = file.replace(/\.ts$/, "");
+        const isServerSide = file.endsWith("-server.ts");
+        defaultConfig.actions.push({
+          name: fileBaseName,
+          type: isServerSide ? "server" : "client",
+        });
+      }
+    }
+
+    // Scan src/elements
+    const elementsDir = path.join(cwd, "src/elements");
+    if (fs.existsSync(elementsDir)) {
+      const dirs = fs.readdirSync(elementsDir).filter((f) => {
+        return fs.statSync(path.join(elementsDir, f)).isDirectory();
+      });
+      for (const dir of dirs) {
+        defaultConfig.elements.push({
+          name: dir,
+        });
+      }
+    }
+
+    fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2), "utf8");
+    console.log("Successfully created default bubble.json.");
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch (err) {
+    throw new Error(`Failed to parse bubble.json: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Compiles a single custom Bubble action.
+ *
+ * @param cwd Current working directory.
+ * @param actionConfig Configuration for the action.
+ */
+export async function compileAction(cwd: string, actionConfig: { name: string; type: string }): Promise<void> {
   const actionsDir = path.join(cwd, "src/actions");
-  if (fs.existsSync(actionsDir)) {
-    const files = fs.readdirSync(actionsDir).filter((f) => f.endsWith(".ts"));
-    for (const file of files) {
-      const entry = path.join(actionsDir, file);
-      const outName = file.replace(/\.ts$/, ".js");
-      const outDir = path.join(cwd, "dist/actions");
+  const file = `${actionConfig.name}.ts`;
+  const entry = path.join(actionsDir, file);
+
+  if (!fs.existsSync(entry)) {
+    throw new Error(`Action source file not found: ${entry}`);
+  }
+
+  const outName = `${actionConfig.name}.js`;
+  const outDir = path.join(cwd, "dist/actions");
+  const outPath = path.join(outDir, outName);
+
+  console.log(`Compiling action: ${file}`);
+
+  await build({
+    entry: [entry],
+    format: ["esm"],
+    dts: false,
+    clean: false,
+    outDir,
+    fixedExtension: false,
+    config: false,
+  });
+
+  if (!fs.existsSync(outPath)) {
+    throw new Error(`Build output file not found: ${outPath}`);
+  }
+
+  const rawContent = fs.readFileSync(outPath, "utf8");
+  const { content, hasAction } = processCode(rawContent);
+
+  if (!hasAction) {
+    throw new Error(`Action file ${file} does not declare a function named 'action'.`);
+  }
+
+  let finalContent = content;
+  const isServerSide = actionConfig.type === "server";
+
+  if (isServerSide) {
+    finalContent += "\n\n// Execute server-side action\nreturn action(properties, context);";
+  } else {
+    finalContent += "\n\n// Execute action\naction(properties, context);";
+  }
+
+  fs.writeFileSync(outPath, finalContent, "utf8");
+}
+
+/**
+ * Compiles custom visual element lifecycle hooks.
+ *
+ * @param cwd Current working directory.
+ * @param elementConfig Configuration for the visual element.
+ */
+export async function compileElement(cwd: string, elementConfig: { name: string }): Promise<void> {
+  const element = elementConfig.name;
+  const elementsDir = path.join(cwd, "src/elements");
+  const elDir = path.join(elementsDir, element);
+
+  if (!fs.existsSync(elDir)) {
+    throw new Error(`Element directory not found: ${elDir}`);
+  }
+
+  const standardHooks = ["initialize", "update", "preview"];
+  let hasAnyHook = false;
+
+  for (const hook of standardHooks) {
+    const entry = path.join(elDir, `${hook}.ts`);
+    if (fs.existsSync(entry)) {
+      hasAnyHook = true;
+      const outName = `${hook}.js`;
+      const outDir = path.join(cwd, "dist/elements", element);
       const outPath = path.join(outDir, outName);
 
-      console.log(`Compiling action: ${file}`);
+      console.log(`Compiling element (${element}) file: ${hook}.ts`);
 
-      // Call tsdown programmatically
       await build({
         entry: [entry],
         format: ["esm"],
@@ -42,84 +198,33 @@ export async function runBuild(): Promise<void> {
         config: false,
       });
 
-      // Post-process to remove exports and append execution hook
-      if (fs.existsSync(outPath)) {
-        const rawContent = fs.readFileSync(outPath, "utf8");
-        const { content, hasAction, isAsync } = processCode(rawContent);
-
-        if (!hasAction) {
-          console.warn(`Warning: Action file ${file} does not declare a function named 'action'.`);
-        }
-
-        let finalContent = content;
-
-        // Check if server-side action or client-side action
-        const isServerSide = file.endsWith("-server.ts") || isAsync;
-        if (isServerSide) {
-          finalContent += "\n\n// Execute server-side action\nreturn action(properties, context);";
-        } else {
-          finalContent += "\n\n// Execute action\naction(properties, context);";
-        }
-
-        fs.writeFileSync(outPath, finalContent, "utf8");
+      if (!fs.existsSync(outPath)) {
+        throw new Error(`Build output file not found: ${outPath}`);
       }
+
+      const rawContent = fs.readFileSync(outPath, "utf8");
+      const { content, hasFunction } = processCode(rawContent, hook);
+
+      if (!hasFunction) {
+        throw new Error(`Element file ${hook}.ts does not declare a function named '${hook}'.`);
+      }
+
+      let finalContent = content;
+      if (hook === "initialize") {
+        finalContent += "\n\n// Initialize element\ninitialize(instance, context);";
+      } else if (hook === "update") {
+        finalContent += "\n\n// Update element\nupdate(instance, properties, context);";
+      } else if (hook === "preview") {
+        finalContent += "\n\n// Preview element\npreview(instance, properties, context);";
+      }
+
+      fs.writeFileSync(outPath, finalContent, "utf8");
     }
   }
 
-  // Scan src/elements
-  const elementsDir = path.join(cwd, "src/elements");
-  if (fs.existsSync(elementsDir)) {
-    const elements = fs.readdirSync(elementsDir).filter((f) => {
-      return fs.statSync(path.join(elementsDir, f)).isDirectory();
-    });
-
-    for (const element of elements) {
-      const elDir = path.join(elementsDir, element);
-      const files = fs.readdirSync(elDir).filter((f) => f.endsWith(".ts"));
-
-      for (const file of files) {
-        const entry = path.join(elDir, file);
-        const outName = file.replace(/\.ts$/, ".js");
-        const outDir = path.join(cwd, "dist/elements", element);
-        const outPath = path.join(outDir, outName);
-
-        console.log(`Compiling element (${element}) file: ${file}`);
-
-        await build({
-          entry: [entry],
-          format: ["esm"],
-          dts: false,
-          clean: false,
-          outDir,
-          fixedExtension: false,
-          config: false,
-        });
-
-        if (fs.existsSync(outPath)) {
-          const rawContent = fs.readFileSync(outPath, "utf8");
-          const baseName = path.basename(file, ".ts");
-          const { content, hasFunction } = processCode(rawContent, baseName);
-
-          if (!hasFunction) {
-            console.warn(`Warning: Element file ${file} does not declare a function named '${baseName}'.`);
-          }
-
-          let finalContent = content;
-          if (baseName === "initialize") {
-            finalContent += "\n\n// Initialize element\ninitialize(instance, context);";
-          } else if (baseName === "update") {
-            finalContent += "\n\n// Update element\nupdate(instance, properties, context);";
-          } else if (baseName === "preview") {
-            finalContent += "\n\n// Preview element\npreview(instance, properties, context);";
-          }
-
-          fs.writeFileSync(outPath, finalContent, "utf8");
-        }
-      }
-    }
+  if (!hasAnyHook) {
+    console.warn(`Warning: Element ${element} does not contain any of initialize.ts, update.ts, or preview.ts.`);
   }
-
-  console.log("Build completed successfully.");
 }
 
 /**
@@ -135,22 +240,17 @@ export function processCode(
 ): {
   content: string;
   hasAction: boolean;
-  isAsync: boolean;
   hasFunction: boolean;
 } {
   const sourceFile = ts.createSourceFile("temp.js", content, ts.ScriptTarget.Latest, true);
 
   let hasAction = false;
-  let isAsync = false;
   let hasFunction = false;
 
-  // We want to transform the AST:
-  // 1. Remove 'export' and 'default' modifier from variable, function, class, etc. declarations.
-  // 2. Remove export declarations like `export { foo }` or `export default foo` entirely.
+  // Transform AST to remove export modifiers and assignments.
   const transformer = (context: ts.TransformationContext) => {
     return (rootNode: ts.SourceFile) => {
       function visit(node: ts.Node): ts.Node | undefined {
-        // Find if the target function is declared and inspect its async state
         if (ts.isFunctionDeclaration(node) && node.name) {
           const name = node.name.text;
           if (name === "action") {
@@ -158,12 +258,6 @@ export function processCode(
           }
           if (name === expectedFunctionName) {
             hasFunction = true;
-          }
-          if (name === "action" || name === expectedFunctionName) {
-            const modifiers = ts.getModifiers(node);
-            if (modifiers && modifiers.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)) {
-              isAsync = true;
-            }
           }
         } else if (ts.isVariableStatement(node)) {
           for (const decl of node.declarationList.declarations) {
@@ -175,21 +269,13 @@ export function processCode(
               if (name === expectedFunctionName) {
                 hasFunction = true;
               }
-              if ((name === "action" || name === expectedFunctionName) && decl.initializer) {
-                if (ts.isArrowFunction(decl.initializer) || ts.isFunctionExpression(decl.initializer)) {
-                  const modifiers = ts.getModifiers(decl.initializer);
-                  if (modifiers && modifiers.some((m) => m.kind === ts.SyntaxKind.AsyncKeyword)) {
-                    isAsync = true;
-                  }
-                }
-              }
             }
           }
         }
 
-        // Strip exports
+        // Strip export statements entirely
         if (ts.isExportDeclaration(node) || ts.isExportAssignment(node)) {
-          return undefined; // remove
+          return undefined;
         }
 
         if (ts.canHaveModifiers(node)) {
@@ -227,25 +313,6 @@ export function processCode(
                   node.members,
                 );
               }
-              if (ts.isInterfaceDeclaration(node)) {
-                return ts.factory.updateInterfaceDeclaration(
-                  node,
-                  newModifiers,
-                  node.name,
-                  node.typeParameters,
-                  node.heritageClauses,
-                  node.members,
-                );
-              }
-              if (ts.isTypeAliasDeclaration(node)) {
-                return ts.factory.updateTypeAliasDeclaration(
-                  node,
-                  newModifiers,
-                  node.name,
-                  node.typeParameters,
-                  node.type,
-                );
-              }
               if (ts.isEnumDeclaration(node)) {
                 return ts.factory.updateEnumDeclaration(node, newModifiers, node.name, node.members);
               }
@@ -274,7 +341,6 @@ export function processCode(
   return {
     content: cleanedContent,
     hasAction,
-    isAsync,
     hasFunction,
   };
 }
