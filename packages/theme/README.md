@@ -101,7 +101,7 @@ Repeated calls do not register duplicate system preference listeners.
 
 ##### `get()`
 
-Returns the active theme definition including any active merged tokens.
+Returns the active theme definition including any active merged tokens. If a token in `tokenSchema` is not defined in JS for the active theme, its value is dynamically resolved from the computed styles of the DOM in browser environments.
 
 ```ts
 function get(): ThemeDefinition<TSchema>;

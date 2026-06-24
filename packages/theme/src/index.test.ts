@@ -410,4 +410,67 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.style.getPropertyValue("--color-bg")).toBe("gray");
     expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("");
   });
+
+  it("should resolve missing tokens from computed styles on theme changes", () => {
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+      :root {
+        --color-primary: blue;
+      }
+      .theme-dark {
+        --color-primary: red;
+      }
+    `;
+    document.head.appendChild(styleEl);
+
+    try {
+      const tokenSchema = { primary: "--color-primary" };
+      const customLight = { name: "light", colorScheme: "light" as const };
+      const customDark = { name: "dark", colorScheme: "dark" as const };
+      const forest = { name: "forest", colorScheme: "light" as const, tokens: { primary: "green" } };
+
+      const theme = createTheme({
+        themes: [customLight, customDark, forest],
+        tokenSchema,
+      }).init();
+
+      // Switch to forest (uses JS token)
+      theme.set("forest");
+      expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("green");
+      expect(theme.get().tokens).toEqual({ primary: "green" });
+
+      // Switch to light (uses CSS fallback on :root)
+      theme.set("light");
+      expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("");
+      expect(theme.get().tokens).toEqual({ primary: "blue" });
+
+      // Switch to dark (uses CSS fallback on .theme-dark)
+      theme.set("dark");
+      expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("");
+      expect(theme.get().tokens).toEqual({ primary: "red" });
+    } finally {
+      document.head.removeChild(styleEl);
+    }
+  });
+
+  it("should handle dynamic token fallback gracefully under SSR", () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+
+    vi.stubGlobal("window", undefined);
+    vi.stubGlobal("document", undefined);
+
+    try {
+      const tokenSchema = { primary: "--color-primary" };
+      const theme = createTheme({
+        tokenSchema,
+      }).init();
+
+      expect(theme.get().tokens).toEqual({});
+    } finally {
+      vi.unstubAllGlobals();
+      Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
+      Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
+    }
+  });
 });

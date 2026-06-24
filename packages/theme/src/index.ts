@@ -171,7 +171,11 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
   /** Registers system preference handling, applies the initial theme, emits an `init` change, and returns this instance. */
   init(tokens?: Partial<Record<keyof TSchema, string>>): this;
 
-  /** Returns the currently active theme definition including active merged tokens. */
+  /**
+   * Returns the currently active theme definition including active merged tokens.
+   * If a token in `tokenSchema` is not defined in JS for the active theme, its value
+   * will be dynamically resolved from the computed styles of the DOM in browser environments.
+   */
   get(): ThemeDefinition<TSchema>;
 
   /** Applies a configured theme by name, stores it when possible, emits a `set` change, and throws `Error` for unknown names. */
@@ -200,6 +204,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #options: ResolvedThemeOptions<TSchema>;
   #activeName: string;
   #activeTokens: Partial<Record<keyof TSchema, string>> = {};
+  #computedTokens: Partial<Record<keyof TSchema, string>> = {};
   #listeners = new Set<ThemeChangeListener<TSchema>>();
   #mediaQueryList: MediaQueryList | null = null;
   #handleSystemChange = (event: MediaQueryListEvent): void => {
@@ -232,6 +237,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     return {
       ...baseTheme,
       tokens: {
+        ...this.#computedTokens,
         ...baseTheme.tokens,
         ...this.#activeTokens,
       },
@@ -342,6 +348,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       root.classList.toggle(DARK_CLASS, theme.colorScheme === "dark");
     }
 
+    this.#computedTokens = {};
     if (this.#options.tokenSchema) {
       const schema = this.#options.tokenSchema;
       const mergedTokens = {
@@ -356,6 +363,16 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
           root.style.setProperty(cssVarName, tokenValue);
         } else {
           root.style.removeProperty(cssVarName);
+        }
+      }
+
+      const style = window.getComputedStyle(root);
+      for (const key of Object.keys(schema) as Array<keyof TSchema>) {
+        if (mergedTokens[key] === undefined) {
+          const val = style.getPropertyValue(schema[key]).trim();
+          if (val) {
+            this.#computedTokens[key] = val;
+          }
         }
       }
     }
