@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { darkTheme, lightTheme, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from ".";
+import { DARK_THEME, LIGHT_THEME, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from ".";
 
 interface MockMediaQueryList {
   matches: boolean;
@@ -53,7 +53,7 @@ describe("Theme config", () => {
   });
 
   it("should reject duplicate theme names", () => {
-    expect(() => createTheme({ themes: [lightTheme, { name: "light", colorScheme: "dark" }] })).toThrow(
+    expect(() => createTheme({ themes: [LIGHT_THEME, { name: "light", colorScheme: "dark" }] })).toThrow(
       "Duplicate theme name: light.",
     );
   });
@@ -70,7 +70,7 @@ describe("Theme config", () => {
 
   it("should reject default theme classes that are not single DOM tokens", () => {
     expect(() =>
-      createTheme({ themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }] }),
+      createTheme({ themes: [LIGHT_THEME, DARK_THEME, { name: "high contrast", colorScheme: "dark" }] }),
     ).toThrow("Theme name cannot be used as a default theme class: high contrast.");
   });
 });
@@ -102,7 +102,7 @@ describe("Theme behavior", () => {
   });
 
   it("should store and apply an explicit theme", () => {
-    const theme = createTheme({ tailwindcss: true }).init();
+    const theme = createTheme({ isTailwindcss: true }).init();
 
     const nextTheme = theme.set("dark");
 
@@ -114,8 +114,8 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should keep applyClass independent from tailwindcss", () => {
-    const theme = createTheme({ applyClass: false, tailwindcss: true }).init();
+  it("should keep shouldApplyClass independent from isTailwindcss", () => {
+    const theme = createTheme({ shouldApplyClass: false, isTailwindcss: true }).init();
 
     theme.set("dark");
 
@@ -123,10 +123,10 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should not remove pre-existing dark classes when tailwindcss is disabled", () => {
+  it("should not remove pre-existing dark classes when isTailwindcss is disabled", () => {
     document.documentElement.className = "dark app-shell";
 
-    createTheme({ tailwindcss: false }).init();
+    createTheme({ isTailwindcss: false }).init();
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("app-shell")).toBe(true);
@@ -134,7 +134,7 @@ describe("Theme behavior", () => {
 
   it("should apply the exact default theme class", () => {
     const theme = createTheme({
-      themes: [lightTheme, darkTheme, { name: "BrandDark", colorScheme: "dark" }],
+      themes: [LIGHT_THEME, DARK_THEME, { name: "BrandDark", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "BrandDark" },
     }).init();
 
@@ -146,11 +146,11 @@ describe("Theme behavior", () => {
 
   it("should support custom attributes, custom class names, and more than two themes", () => {
     const theme = createTheme({
-      themes: [lightTheme, darkTheme, { name: "high contrast", colorScheme: "dark" }],
+      themes: [LIGHT_THEME, DARK_THEME, { name: "high contrast", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "high contrast" },
       attribute: "data-mode",
-      applyClass: (definition) => `mode-${definition.name.replace(" ", "-")}`,
-      tailwindcss: true,
+      shouldApplyClass: (definition) => `mode-${definition.name.replace(" ", "-")}`,
+      isTailwindcss: true,
     }).init();
 
     theme.set("high contrast");
@@ -162,7 +162,7 @@ describe("Theme behavior", () => {
   });
 
   it("should reject invalid custom theme classes before applying", () => {
-    const theme = createTheme({ applyClass: () => "two classes" });
+    const theme = createTheme({ shouldApplyClass: () => "two classes" });
 
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
@@ -174,7 +174,7 @@ describe("Theme behavior", () => {
     document.documentElement.style.colorScheme = "dark";
 
     const theme = createTheme({
-      applyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
+      shouldApplyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
     });
 
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: dark.");
@@ -185,7 +185,7 @@ describe("Theme behavior", () => {
 
   it("should toggle between configured system light and dark themes", () => {
     const theme = createTheme({
-      themes: [lightTheme, darkTheme, { name: "midnight", colorScheme: "dark" }],
+      themes: [LIGHT_THEME, DARK_THEME, { name: "midnight", colorScheme: "dark" }],
       systemTheme: { light: "light", dark: "midnight" },
     }).init();
 

@@ -22,7 +22,7 @@ By default, `init()` uses a valid stored preference first. If there is no valid 
 ```ts
 import { createTheme } from "@codenhub/theme";
 
-const theme = createTheme({ tailwindcss: false, applyClass: true });
+const theme = createTheme({ isTailwindcss: false, shouldApplyClass: true });
 
 theme.init();
 theme.set("dark");
@@ -38,7 +38,7 @@ Call `destroy()` during app or test cleanup when the instance is no longer used.
 Primary entrypoint for the theme preference API.
 
 ```ts
-import { createTheme, darkTheme, lightTheme, THEME_CHANGE_EVENT } from "@codenhub/theme";
+import { createTheme, DARK_THEME, LIGHT_THEME, THEME_CHANGE_EVENT } from "@codenhub/theme";
 import type {
   SystemThemeMap,
   Theme,
@@ -182,22 +182,22 @@ interface ThemeOptions<TSchema extends Record<string, string> = Record<string, s
   systemTheme?: SystemThemeMap;
   storageKey?: string;
   attribute?: string;
-  tailwindcss?: boolean;
-  applyClass?: boolean | ThemeClassResolver<TSchema>;
+  isTailwindcss?: boolean;
+  shouldApplyClass?: boolean | ThemeClassResolver<TSchema>;
   tokenSchema?: TSchema;
 }
 ```
 
-| Option         | Type                                              | Default                            | Description                                                                                 |
-| -------------- | ------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `themes`       | `readonly ThemeDefinition[]`                      | `[lightTheme, darkTheme]`          | Defines available themes.                                                                   |
-| `defaultTheme` | `string`                                          | `"light"`                          | Theme used before init and when browser APIs are unavailable.                               |
-| `systemTheme`  | `SystemThemeMap`                                  | `{ light: "light", dark: "dark" }` | Maps OS light and dark preferences to configured theme names.                               |
-| `storageKey`   | `string`                                          | `"app-theme-preference"`           | Key used for `localStorage`.                                                                |
-| `attribute`    | `string`                                          | `"data-theme"`                     | Attribute set on `document.documentElement`.                                                |
-| `tailwindcss`  | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
-| `applyClass`   | `boolean` or `(theme: ThemeDefinition) => string` | `true`                             | Adds `theme-${name}`, no class, or a resolver-provided class to `document.documentElement`. |
-| `tokenSchema`  | `TSchema`                                         | `undefined`                        | Schema mapping theme token names to their corresponding CSS Custom Property names.          |
+| Option             | Type                                              | Default                            | Description                                                                                 |
+| ------------------ | ------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `themes`           | `readonly ThemeDefinition[]`                      | `[LIGHT_THEME, DARK_THEME]`        | Defines available themes.                                                                   |
+| `defaultTheme`     | `string`                                          | `"light"`                          | Theme used before init and when browser APIs are unavailable.                               |
+| `systemTheme`      | `SystemThemeMap`                                  | `{ light: "light", dark: "dark" }` | Maps OS light and dark preferences to configured theme names.                               |
+| `storageKey`       | `string`                                          | `"app-theme-preference"`           | Key used for `localStorage`.                                                                |
+| `attribute`        | `string`                                          | `"data-theme"`                     | Attribute set on `document.documentElement`.                                                |
+| `isTailwindcss`    | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
+| `shouldApplyClass` | `boolean` or `(theme: ThemeDefinition) => string` | `true`                             | Adds `theme-${name}`, no class, or a resolver-provided class to `document.documentElement`. |
+| `tokenSchema`      | `TSchema`                                         | `undefined`                        | Schema mapping theme token names to their corresponding CSS Custom Property names.          |
 
 When class application is enabled, each theme application removes classes for all configured themes, then adds the class for the active theme.
 
@@ -300,8 +300,8 @@ type ThemeChangeSource = "init" | "set" | "toggle" | "clearPreference" | "system
 Built-in theme definitions.
 
 ```ts
-const lightTheme: ThemeDefinition = { name: "light", colorScheme: "light" };
-const darkTheme: ThemeDefinition = { name: "dark", colorScheme: "dark" };
+const LIGHT_THEME: ThemeDefinition = { name: "light", colorScheme: "light" };
+const DARK_THEME: ThemeDefinition = { name: "dark", colorScheme: "dark" };
 ```
 
 ## Examples
@@ -363,12 +363,12 @@ body {
 ### Add More Themes
 
 ```ts
-import { createTheme, darkTheme, lightTheme } from "@codenhub/theme";
+import { createTheme, DARK_THEME, LIGHT_THEME } from "@codenhub/theme";
 
 const theme = createTheme({
-  themes: [lightTheme, darkTheme, { name: "high-contrast", colorScheme: "dark" }],
+  themes: [LIGHT_THEME, DARK_THEME, { name: "high-contrast", colorScheme: "dark" }],
   systemTheme: { light: "light", dark: "high-contrast" },
-  applyClass: (definition) => `mode-${definition.name}`,
+  shouldApplyClass: (definition) => `mode-${definition.name}`,
 });
 
 theme.init();
