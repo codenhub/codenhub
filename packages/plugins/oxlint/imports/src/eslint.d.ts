@@ -9,10 +9,10 @@ declare module "eslint" {
           recommended?: boolean;
           url?: string;
         };
-        schema?: any[];
+        schema?: unknown[];
         messages?: Record<string, string>;
       };
-      create(context: any): any;
+      create(context: unknown): unknown;
     }
   }
 }

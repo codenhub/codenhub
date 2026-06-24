@@ -30,4 +30,7 @@ const plugin = {
   configs,
 };
 
+/**
+ * The default export of the ESLint naming plugin.
+ */
 export default plugin;

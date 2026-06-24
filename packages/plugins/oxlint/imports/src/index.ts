@@ -10,4 +10,8 @@ export const plugin = {
 };
 
 export { noDeepPackageImports };
+
+/**
+ * The default export of the ESLint plugin to enforce package import constraints.
+ */
 export default plugin;

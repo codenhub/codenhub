@@ -10,6 +10,12 @@ import type {
 
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
 
+/**
+ * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
+ *
+ * @param identifier - The raw error identifier string.
+ * @returns The normalized error identifier string.
+ */
 export const normalizeErrorIdentifier = (identifier: string): string => {
   return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "");
 };

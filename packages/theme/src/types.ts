@@ -59,13 +59,25 @@ export interface ThemeOptions<TSchema extends Record<string, string> = Record<st
   tokenSchema?: TSchema;
 }
 
+/**
+ * Fully resolved configuration options for theme management.
+ * Contains defaults for any option not explicitly provided in the initial configuration.
+ */
 export interface ResolvedThemeOptions<TSchema extends Record<string, string> = Record<string, string>> {
+  /** The complete list of available theme definitions. */
   themes: readonly ThemeDefinition<TSchema>[];
+  /** The theme name used when no user preference has been saved and the system preference cannot be determined. */
   defaultTheme: string;
+  /** Mapping of system color scheme preferences (light/dark) to target theme names. */
   systemTheme: SystemThemeMap;
+  /** The localStorage key under which the user's explicit theme preference is persisted. */
   storageKey: string;
+  /** The HTML attribute on `document.documentElement` where the active theme name is applied. */
   attribute: string;
+  /** Whether Tailwind CSS's dark mode class should be automatically toggled on the document element. */
   isTailwindcss: boolean;
+  /** Custom resolver function or boolean determining whether and how theme-specific CSS classes are applied to the document element. */
   shouldApplyClass: boolean | ThemeClassResolver<TSchema>;
+  /** Optional schema mapping token names to their corresponding CSS Custom Property names. */
   tokenSchema?: TSchema;
 }

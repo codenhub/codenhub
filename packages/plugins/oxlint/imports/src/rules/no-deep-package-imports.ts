@@ -3,15 +3,21 @@ import path from "path";
 
 import type { Rule } from "eslint";
 
+export interface ASTNode {
+  type: string;
+  source?: ASTNode | null;
+  value?: unknown;
+}
+
 // Cache for package information and workspace root path
-export const packageCache = new Map<string, { exports: any; packageJsonPath: string } | null>();
+export const packageCache = new Map<string, { exports: unknown; packageJsonPath: string } | null>();
 const workspaceRootCache = { value: "" };
 let isWorkspaceScanned = false;
 
 /**
  * Normalizes and checks if a subpath is explicitly allowed in the package's exports map.
  */
-function isSubpathAllowed(exports: any, subpath: string): boolean {
+function isSubpathAllowed(exports: unknown, subpath: string): boolean {
   if (typeof exports === "string") {
     return subpath === ".";
   }
@@ -20,7 +26,7 @@ function isSubpathAllowed(exports: any, subpath: string): boolean {
     return false;
   }
 
-  const keys = Object.keys(exports);
+  const keys = Object.keys(exports as Record<string, unknown>);
   const isConditionalRoot = keys.every((key) => !key.startsWith("."));
 
   if (isConditionalRoot) {
@@ -73,7 +79,9 @@ function findWorkspaceRoot(startDir: string): string {
  * Scans the workspace packages directory recursively for package.json files.
  */
 function scanWorkspace(workspaceRoot: string) {
-  if (isWorkspaceScanned) {return;}
+  if (isWorkspaceScanned) {
+    return;
+  }
   isWorkspaceScanned = true;
 
   const packagesDir = path.join(workspaceRoot, "packages");
@@ -141,7 +149,7 @@ function scanWorkspace(workspaceRoot: string) {
 /**
  * Resolves the exports structure for a given @codenhub/ package.
  */
-function getPackageInfo(packageName: string, currentFileDir: string): { exports: any } | null {
+function getPackageInfo(packageName: string, currentFileDir: string): { exports: unknown } | null {
   if (packageCache.has(packageName)) {
     return packageCache.get(packageName)!;
   }
@@ -194,10 +202,14 @@ export const noDeepPackageImports: Rule.RuleModule = {
     },
   },
   create(context) {
-    const filename = context.getFilename();
+    const ctx = context as {
+      getFilename(): string;
+      report(descriptor: { node: unknown; messageId: string; data?: Record<string, string> }): void;
+    };
+    const filename = ctx.getFilename();
     const currentFileDir = filename && !filename.startsWith("<") ? path.dirname(filename) : process.cwd();
 
-    function checkImport(importPath: string, reportNode: any) {
+    function checkImport(importPath: string, reportNode: ASTNode) {
       if (!importPath.startsWith("@codenhub/")) {
         return;
       }
@@ -220,7 +232,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
 
       if (!info) {
         // If package cannot be resolved, block the deep import since it cannot be verified.
-        context.report({
+        ctx.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {
@@ -233,7 +245,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
 
       if (!info.exports) {
         // No exports map defined in package.json, so only root is allowed.
-        context.report({
+        ctx.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {
@@ -245,7 +257,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
       }
 
       if (!isSubpathAllowed(info.exports, normalizedSubpath)) {
-        context.report({
+        ctx.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {
@@ -257,22 +269,22 @@ export const noDeepPackageImports: Rule.RuleModule = {
     }
 
     return {
-      ImportDeclaration(node: any) {
+      ImportDeclaration(node: ASTNode) {
         if (node.source && typeof node.source.value === "string") {
           checkImport(node.source.value, node.source);
         }
       },
-      ImportExpression(node: any) {
+      ImportExpression(node: ASTNode) {
         if (node.source && node.source.type === "Literal" && typeof node.source.value === "string") {
           checkImport(node.source.value, node.source);
         }
       },
-      ExportNamedDeclaration(node: any) {
+      ExportNamedDeclaration(node: ASTNode) {
         if (node.source && typeof node.source.value === "string") {
           checkImport(node.source.value, node.source);
         }
       },
-      ExportAllDeclaration(node: any) {
+      ExportAllDeclaration(node: ASTNode) {
         if (node.source && typeof node.source.value === "string") {
           checkImport(node.source.value, node.source);
         }

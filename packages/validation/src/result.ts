@@ -153,6 +153,14 @@ export function parseResult<T>(value: unknown): ValidationResult<T> {
   return err(GENERIC_VALIDATION_ERROR_MESSAGE);
 }
 
+/**
+ * Normalizes validation error input (which can be a string, an Error instance,
+ * or a custom object) into a standardized {@link ValidationError} structure.
+ *
+ * @param input - The error payload or message to normalize.
+ * @param options - Additional options, such as overriding the path.
+ * @returns The standardized validation error object.
+ */
 export const normalizeError = (
   input: ValidationErrorInput | unknown,
   options: ValidationOptions = {},
@@ -208,6 +216,13 @@ export const normalizeError = (
   return error;
 };
 
+/**
+ * Constructs a failed validation result containing a normalized validation error.
+ *
+ * @param input - Detailed properties of the validation error.
+ * @param options - Validation settings, such as whether to include the original input.
+ * @returns A failed validation result object.
+ */
 export const fail = (input: ValidationErrorOptions, options: ValidationOptions = {}): ValidationErr => {
   const errorInput = options.includeInput ? input : { ...input, input: undefined };
   const error = normalizeError(errorInput, { path: input.path ?? options.path });
@@ -219,6 +234,13 @@ export const fail = (input: ValidationErrorOptions, options: ValidationOptions =
   return { ok: false, error };
 };
 
+/**
+ * Generates a human-readable string representation of a received value's type or value,
+ * useful for constructing error messages detailing unexpected input.
+ *
+ * @param value - The received value to describe.
+ * @returns A string description of the value's type or value.
+ */
 export const describeReceived = (value: unknown): string => {
   if (value === null) {
     return "null";

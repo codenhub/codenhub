@@ -85,4 +85,8 @@ export const KEYS = {
  */
 export type KeyboardKey = (typeof KEYS)[keyof typeof KEYS];
 
+/**
+ * A complete list of all recognizable keyboard key values.
+ * Used to validate whether a given keyboard event key matches a supported shortcut key value.
+ */
 export const KEY_VALUES = Object.values(KEYS) as KeyboardKey[];

@@ -1,47 +1,66 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { noDeepPackageImports, packageCache } from "../src/rules/no-deep-package-imports";
+import { noDeepPackageImports, packageCache, type ASTNode } from "../src/rules/no-deep-package-imports";
 
-function setParents(node: any, parent?: any) {
-  if (!node || typeof node !== "object") {return;}
-  if ("type" in node && parent) {
-    node.parent = parent;
+function setParents(node: unknown, parent?: unknown) {
+  if (!node || typeof node !== "object") {
+    return;
   }
-  for (const key of Object.keys(node)) {
-    if (key === "parent") {continue;}
-    const val = node[key];
+  const obj = node as Record<string, unknown>;
+  if ("type" in obj && parent) {
+    obj.parent = parent;
+  }
+  for (const key of Object.keys(obj)) {
+    if (key === "parent") {
+      continue;
+    }
+    const val = obj[key];
     if (Array.isArray(val)) {
       for (const child of val) {
-        setParents(child, "type" in node ? node : parent);
+        setParents(child, "type" in obj ? obj : parent);
       }
     } else if (val && typeof val === "object") {
-      setParents(val, "type" in node ? node : parent);
+      setParents(val, "type" in obj ? obj : parent);
     }
   }
 }
 
-function runRule(tree: any, filename = "test.ts") {
+interface Report {
+  messageId: string;
+  data: Record<string, string>;
+}
+
+function runRule(tree: unknown, filename = "test.ts"): Report[] {
   setParents(tree);
-  const reports: any[] = [];
+  const reports: Report[] = [];
   const context = {
     getFilename() {
       return filename;
     },
-    report(options: any) {
-      reports.push(options);
+    report(options: unknown) {
+      reports.push(options as Report);
     },
-  } as any;
+  };
 
-  const visitors = noDeepPackageImports.create(context);
+  const visitors = noDeepPackageImports.create(context) as Record<string, (node: ASTNode) => void>;
 
-  function traverse(node: any) {
-    if (!node || typeof node !== "object") {return;}
-    if (node.type && (visitors as any)[node.type]) {
-      (visitors as any)[node.type](node);
+  function traverse(node: unknown) {
+    if (!node || typeof node !== "object") {
+      return;
     }
-    for (const key of Object.keys(node)) {
-      if (key === "parent") {continue;}
-      const val = node[key];
+    const obj = node as Record<string, unknown>;
+    const type = obj.type as string | undefined;
+    if (type && type in visitors) {
+      const visitor = visitors[type];
+      if (typeof visitor === "function") {
+        visitor(obj as unknown as ASTNode);
+      }
+    }
+    for (const key of Object.keys(obj)) {
+      if (key === "parent") {
+        continue;
+      }
+      const val = obj[key];
       if (Array.isArray(val)) {
         for (const child of val) {
           traverse(child);
