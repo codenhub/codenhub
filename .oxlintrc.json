@@ -32,6 +32,38 @@
     "prefer-const": "error",
     "typescript/consistent-type-imports": ["error", { "prefer": "type-imports" }],
     "typescript/no-explicit-any": "error",
-    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
-  }
+    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "require-jsdoc/require-public-jsdoc": "warn",
+    "max-params/max-params": "warn",
+    "imports/no-deep-package-imports": "warn",
+    "naming/boolean-prefix": "warn",
+    "naming/array-plural": "warn",
+    "magic-strings/no-magic-strings": "warn"
+  },
+  "jsPlugins": [
+    { "name": "require-jsdoc", "specifier": "./packages/plugins/oxlint/require-jsdoc/dist/index.js" },
+    { "name": "max-params", "specifier": "./packages/plugins/oxlint/max-params/dist/index.js" },
+    { "name": "imports", "specifier": "./packages/plugins/oxlint/imports/dist/index.js" },
+    { "name": "naming", "specifier": "./packages/plugins/oxlint/naming/dist/index.js" },
+    { "name": "magic-strings", "specifier": "./packages/plugins/oxlint/magic-strings/dist/index.js" }
+  ],
+  "overrides": [
+    {
+      "files": ["*.test.ts", "*.spec.ts", "*.test.tsx", "*.spec.tsx", "**/tests/**/*", "**/__tests__/**/*"],
+      "rules": {
+        "magic-strings/no-magic-strings": "off",
+        "naming/boolean-prefix": "off",
+        "naming/array-plural": "off",
+        "require-jsdoc/require-public-jsdoc": "off",
+        "max-params/max-params": "off"
+      }
+    },
+    {
+      "files": ["*.config.ts", "*.config.js"],
+      "rules": {
+        "magic-strings/no-magic-strings": "off",
+        "require-jsdoc/require-public-jsdoc": "off"
+      }
+    }
+  ]
 }
