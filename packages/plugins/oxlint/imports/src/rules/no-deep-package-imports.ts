@@ -32,6 +32,7 @@ export interface RuleModule {
 export const packageCache = new Map<string, { exports: unknown; packageJsonPath: string } | null>();
 const workspaceRootCache = { value: "" };
 let isWorkspaceScanned = false;
+const wildcardRegexCache = new Map<string, RegExp>();
 
 /**
  * Normalizes and checks if a subpath is explicitly allowed in the package's exports map.
@@ -62,7 +63,11 @@ function isSubpathAllowed(exports: unknown, subpath: string): boolean {
     }
 
     if (key.includes("*")) {
-      const regex = new RegExp("^" + key.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "(.*)") + "$");
+      let regex = wildcardRegexCache.get(key);
+      if (!regex) {
+        regex = new RegExp("^" + key.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "(.*)") + "$");
+        wildcardRegexCache.set(key, regex);
+      }
       if (regex.test(subpath)) {
         return true;
       }

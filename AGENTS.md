@@ -36,6 +36,9 @@ When checking or running scripts for one package, use `pnpm --filter=<package-di
 
 Use package-filtered commands when a full workspace check is unnecessary, but full workspace checks are preferred before final delivery when practical.
 
+> [!WARNING]
+> Running `pnpm test` repo-wide may hang/fail to exit because of Playwright worker timeout issues in the `styles` package. Prefer package-filtered test execution (e.g. `pnpm --filter=<pkg> test`) or target specific packages.
+
 ## Change rules
 
 - Prefer small, targeted changes.

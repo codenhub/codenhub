@@ -62,25 +62,27 @@ export const arrayPluralRule: RuleModule = {
     },
   },
   create(context) {
-    function checkArrayVariable(node: ASTNode) {
-      if (!node.id || node.id.type !== "Identifier") {
+    function checkArrayNode(
+      nameNode: ASTNode | null | undefined,
+      typeAnnNode: ASTNode | null | undefined,
+      valueNode: ASTNode | null | undefined,
+    ) {
+      if (!nameNode) {
         return;
       }
-
-      const name = node.id.name;
-      if (!name) {
-        return;
-      }
-
-      if (isValidArrayName(name)) {
+      const name =
+        nameNode.name ?? (nameNode.type === "Literal" && typeof nameNode.value === "string" ? nameNode.value : null);
+      if (!name || isValidArrayName(name)) {
         return;
       }
 
       let isArray = false;
 
       // Check TS Type Annotation first
-      if (node.id.typeAnnotation && node.id.typeAnnotation.type === "TSTypeAnnotation") {
-        const typeAnn = node.id.typeAnnotation.typeAnnotation;
+      const typeAnnParent = typeAnnNode ?? nameNode;
+      const typeAnnNodeObj = typeAnnParent.typeAnnotation as ASTNode | null | undefined;
+      if (typeAnnNodeObj && typeAnnNodeObj.type === "TSTypeAnnotation") {
+        const typeAnn = typeAnnNodeObj.typeAnnotation;
         if (typeAnn && typeAnn.type === "TSArrayType") {
           isArray = true;
         } else if (
@@ -94,35 +96,35 @@ export const arrayPluralRule: RuleModule = {
         }
       }
 
-      // Check initializer
-      if (!isArray && node.init) {
-        const init = node.init;
-        if (init.type === "ArrayExpression") {
+      // Check initializer / value
+      if (!isArray && valueNode) {
+        const val = valueNode;
+        if (val.type === "ArrayExpression") {
           isArray = true;
         } else if (
-          init.type === "NewExpression" &&
-          init.callee &&
-          init.callee.type === "Identifier" &&
-          init.callee.name === "Array"
+          val.type === "NewExpression" &&
+          val.callee &&
+          val.callee.type === "Identifier" &&
+          val.callee.name === "Array"
         ) {
           isArray = true;
         } else if (
-          init.type === "CallExpression" &&
-          init.callee &&
-          init.callee.type === "Identifier" &&
-          init.callee.name === "Array"
+          val.type === "CallExpression" &&
+          val.callee &&
+          val.callee.type === "Identifier" &&
+          val.callee.name === "Array"
         ) {
           isArray = true;
         } else if (
-          init.type === "CallExpression" &&
-          init.callee &&
-          init.callee.type === "MemberExpression" &&
-          init.callee.object &&
-          init.callee.object.type === "Identifier" &&
-          init.callee.object.name === "Array" &&
-          init.callee.property &&
-          init.callee.property.type === "Identifier" &&
-          ["from", "of"].includes(init.callee.property.name || "")
+          val.type === "CallExpression" &&
+          val.callee &&
+          val.callee.type === "MemberExpression" &&
+          val.callee.object &&
+          val.callee.object.type === "Identifier" &&
+          val.callee.object.name === "Array" &&
+          val.callee.property &&
+          val.callee.property.type === "Identifier" &&
+          ["from", "of"].includes(val.callee.property.name || "")
         ) {
           isArray = true;
         }
@@ -130,7 +132,7 @@ export const arrayPluralRule: RuleModule = {
 
       if (isArray) {
         context.report({
-          node: node.id,
+          node: nameNode,
           messageId: "arrayPlural",
           data: { name },
         });
@@ -139,7 +141,24 @@ export const arrayPluralRule: RuleModule = {
 
     return {
       VariableDeclarator(node: ASTNode) {
-        checkArrayVariable(node);
+        if (node.id && node.id.type === "Identifier") {
+          checkArrayNode(node.id, node.id, node.init as ASTNode | null | undefined);
+        }
+      },
+      PropertyDefinition(node: ASTNode) {
+        if (!node.computed) {
+          checkArrayNode(node.key, node, node.value as ASTNode | null | undefined);
+        }
+      },
+      TSPropertySignature(node: ASTNode) {
+        if (!node.computed) {
+          checkArrayNode(node.key, node, undefined);
+        }
+      },
+      Property(node: ASTNode) {
+        if (node.kind === "init" && !node.method && !node.computed) {
+          checkArrayNode(node.key, undefined, node.value as ASTNode | null | undefined);
+        }
       },
     };
   },

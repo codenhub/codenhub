@@ -4,6 +4,11 @@
   "private": false,
   "description": "An ESLint/Oxlint plugin to ensure exported declarations in public entry points have JSDoc comments.",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/plugins/oxlint/require-jsdoc"
+  },
   "files": [
     "dist"
   ],

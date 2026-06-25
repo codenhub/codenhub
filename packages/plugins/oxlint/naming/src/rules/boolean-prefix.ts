@@ -168,6 +168,15 @@ export const booleanPrefixRule: RuleModule = {
           checkName(node.key, isBoolean);
         }
       },
+      TSPropertySignature(node: ASTNode) {
+        if (!node.computed) {
+          let isBoolean = false;
+          if (hasBooleanTypeAnnotation(node)) {
+            isBoolean = true;
+          }
+          checkName(node.key, isBoolean);
+        }
+      },
     };
   },
 };

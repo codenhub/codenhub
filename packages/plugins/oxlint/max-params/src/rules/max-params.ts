@@ -41,8 +41,7 @@ export const maxParamsRule: RuleModule = {
   },
   create(context): Record<string, (node: ASTNode) => void> {
     const filename = context.getFilename();
-    const isTestFile =
-      filename.endsWith(".test.ts") || filename.endsWith(".spec.ts") || /[\\/]__tests__[\\/]/.test(filename);
+    const isTestFile = /\.(test|spec)\.[jt]sx?$/.test(filename) || /[\\/]__tests__[\\/]/.test(filename);
 
     if (isTestFile) {
       return {};

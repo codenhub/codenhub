@@ -268,6 +268,36 @@ describe("boolean-prefix rule", () => {
     expect(reports).toHaveLength(1);
     expect(reports[0].data?.name).toBe("active");
   });
+
+  it("should check interface and type properties with TS boolean type annotations", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    const validProp = {
+      computed: false,
+      key: { type: "Identifier", name: "isActive" },
+      typeAnnotation: {
+        type: "TSTypeAnnotation",
+        typeAnnotation: { type: "TSBooleanKeyword" },
+      },
+    };
+
+    const invalidProp = {
+      computed: false,
+      key: { type: "Identifier", name: "active" },
+      typeAnnotation: {
+        type: "TSTypeAnnotation",
+        typeAnnotation: { type: "TSBooleanKeyword" },
+      },
+    };
+
+    listeners.TSPropertySignature?.(validProp as unknown as ASTNode);
+    expect(reports).toHaveLength(0);
+
+    listeners.TSPropertySignature?.(invalidProp as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("active");
+  });
 });
 
 describe("array-plural rule", () => {
@@ -452,5 +482,44 @@ describe("array-plural rule", () => {
     }
 
     expect(reports).toHaveLength(0);
+  });
+
+  it("should check properties (class, interface, object)", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    // Class Property
+    listeners.PropertyDefinition?.({
+      computed: false,
+      key: { type: "Identifier", name: "item" },
+      value: { type: "ArrayExpression", elements: [] },
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("item");
+    reports.length = 0;
+
+    // Interface Property
+    listeners.TSPropertySignature?.({
+      computed: false,
+      key: { type: "Identifier", name: "record" },
+      typeAnnotation: {
+        type: "TSTypeAnnotation",
+        typeAnnotation: { type: "TSArrayType" },
+      },
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("record");
+    reports.length = 0;
+
+    // Object Property
+    listeners.Property?.({
+      kind: "init",
+      method: false,
+      computed: false,
+      key: { type: "Identifier", name: "value" },
+      value: { type: "ArrayExpression", elements: [] },
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("value");
   });
 });

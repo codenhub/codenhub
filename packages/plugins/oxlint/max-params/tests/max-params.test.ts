@@ -120,6 +120,20 @@ describe("max-params rule", () => {
     expect(reports).toHaveLength(0);
   });
 
+  it("should ignore other test file formats (.tsx, .js, .jsx)", () => {
+    const node: ASTNode = {
+      type: "FunctionDeclaration",
+      params: [{ type: "Identifier" }, { type: "Identifier" }, { type: "Identifier" }],
+    };
+
+    expect(runRule(node, "src/utils.test.tsx")).toHaveLength(0);
+    expect(runRule(node, "src/utils.spec.tsx")).toHaveLength(0);
+    expect(runRule(node, "src/utils.test.js")).toHaveLength(0);
+    expect(runRule(node, "src/utils.spec.js")).toHaveLength(0);
+    expect(runRule(node, "src/utils.test.jsx")).toHaveLength(0);
+    expect(runRule(node, "src/utils.spec.jsx")).toHaveLength(0);
+  });
+
   it("should ignore files inside __tests__ directory", () => {
     const node: ASTNode = {
       type: "FunctionDeclaration",

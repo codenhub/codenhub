@@ -105,6 +105,33 @@ export function getPublicSymbols(
     const content = fs.readFileSync(normPath, "utf8");
     const sourceFile = ts.createSourceFile(normPath, content, ts.ScriptTarget.Latest, true);
 
+    const localImports = new Map<string, { source: string; originalName: string }>();
+
+    for (const statement of sourceFile.statements) {
+      if (ts.isImportDeclaration(statement)) {
+        const source =
+          statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+            ? statement.moduleSpecifier.text
+            : null;
+        if (source && statement.importClause) {
+          if (statement.importClause.name) {
+            localImports.set(statement.importClause.name.text, { source, originalName: "default" });
+          }
+          if (statement.importClause.namedBindings) {
+            if (ts.isNamedImports(statement.importClause.namedBindings)) {
+              for (const element of statement.importClause.namedBindings.elements) {
+                const localName = element.name.text;
+                const originalName = element.propertyName ? element.propertyName.text : localName;
+                localImports.set(localName, { source, originalName });
+              }
+            } else if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
+              localImports.set(statement.importClause.namedBindings.name.text, { source, originalName: "*" });
+            }
+          }
+        }
+      }
+    }
+
     function extractBindingNames(nameNode: ts.BindingName, names: string[]) {
       if (ts.isIdentifier(nameNode)) {
         names.push(nameNode.text);
@@ -138,7 +165,16 @@ export function getPublicSymbols(
               if (resolved) {
                 addSymbol(resolved, localName);
               } else {
-                addSymbol(normPath, localName);
+                const imported = localImports.get(localName);
+                if (imported) {
+                  const resolvedImport = resolveImport(imported.source, normPath);
+                  if (resolvedImport) {
+                    traceFile(resolvedImport);
+                    addSymbol(resolvedImport, imported.originalName);
+                  }
+                } else {
+                  addSymbol(normPath, localName);
+                }
               }
             }
           } else if (ts.isNamespaceExport(statement.exportClause)) {
@@ -157,7 +193,17 @@ export function getPublicSymbols(
         // export default expr
         exportedSymbols.add("default");
         if (ts.isIdentifier(statement.expression)) {
-          addSymbol(normPath, statement.expression.text);
+          const localName = statement.expression.text;
+          const imported = localImports.get(localName);
+          if (imported) {
+            const resolvedImport = resolveImport(imported.source, normPath);
+            if (resolvedImport) {
+              traceFile(resolvedImport);
+              addSymbol(resolvedImport, imported.originalName);
+            }
+          } else {
+            addSymbol(normPath, localName);
+          }
         }
       } else {
         // Check inline declaration exports

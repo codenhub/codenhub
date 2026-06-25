@@ -410,4 +410,51 @@ describe("require-public-jsdoc rule", () => {
 
     expect(reportSpy).toHaveBeenCalledTimes(4);
   });
+
+  it("should trace public exports that are imported first and then exported separately", () => {
+    setupMockPackage(
+      {
+        name: "test-pkg",
+        exports: {
+          ".": "./dist/index.js",
+        },
+      },
+      {
+        "src/index.ts": `
+          import { foo } from "./foo";
+          export { foo };
+        `,
+        "src/foo.ts": "export function foo() {}",
+      },
+    );
+
+    const reportSpy = vi.fn();
+    const context = {
+      filename: path.join(tempDir, "src/foo.ts"),
+      report: reportSpy,
+      sourceCode: {
+        getCommentsBefore: vi.fn(() => []),
+      },
+    };
+
+    const visitors = requirePublicJsdocRule.create(context);
+    expect(visitors.FunctionDeclaration).toBeDefined();
+
+    const mockNode: ASTNode = {
+      type: "FunctionDeclaration",
+      id: { type: "Identifier", name: "foo" },
+      parent: { type: "ExportNamedDeclaration" },
+    };
+
+    visitors.FunctionDeclaration!(mockNode);
+
+    expect(reportSpy).toHaveBeenCalledOnce();
+    expect(reportSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        node: mockNode,
+        messageId: "missingJSDoc",
+        data: { name: "foo" },
+      }),
+    );
+  });
 });
