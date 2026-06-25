@@ -187,6 +187,74 @@ describe("boolean-prefix rule", () => {
     expect(reports).toHaveLength(1);
     expect(reports[0].data?.name).toBe("loading");
   });
+
+  it("should check variable declarations with TS boolean type annotations", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    const validNode = {
+      id: {
+        type: "Identifier",
+        name: "isActive",
+        typeAnnotation: {
+          type: "TSTypeAnnotation",
+          typeAnnotation: { type: "TSBooleanKeyword" },
+        },
+      },
+      init: null,
+    };
+
+    const invalidNode = {
+      id: {
+        type: "Identifier",
+        name: "active",
+        typeAnnotation: {
+          type: "TSTypeAnnotation",
+          typeAnnotation: { type: "TSBooleanKeyword" },
+        },
+      },
+      init: null,
+    };
+
+    listeners.VariableDeclarator?.(validNode as unknown as ASTNode);
+    expect(reports).toHaveLength(0);
+
+    listeners.VariableDeclarator?.(invalidNode as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("active");
+  });
+
+  it("should check class properties with TS boolean type annotations", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    const validProp = {
+      computed: false,
+      key: { type: "Identifier", name: "isActive" },
+      typeAnnotation: {
+        type: "TSTypeAnnotation",
+        typeAnnotation: { type: "TSBooleanKeyword" },
+      },
+      value: null,
+    };
+
+    const invalidProp = {
+      computed: false,
+      key: { type: "Identifier", name: "active" },
+      typeAnnotation: {
+        type: "TSTypeAnnotation",
+        typeAnnotation: { type: "TSBooleanKeyword" },
+      },
+      value: null,
+    };
+
+    listeners.PropertyDefinition?.(validProp as unknown as ASTNode);
+    expect(reports).toHaveLength(0);
+
+    listeners.PropertyDefinition?.(invalidProp as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("active");
+  });
 });
 
 describe("array-plural rule", () => {

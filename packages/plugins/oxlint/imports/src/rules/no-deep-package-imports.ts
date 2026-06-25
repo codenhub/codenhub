@@ -147,6 +147,7 @@ function scanWorkspace(workspaceRoot: string) {
       } catch {
         // Ignore invalid package.json
       }
+      return;
     }
 
     for (const file of files) {

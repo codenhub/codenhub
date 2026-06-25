@@ -106,6 +106,20 @@ export const booleanPrefixRule: RuleModule = {
       return null;
     }
 
+    function hasBooleanTypeAnnotation(node: ASTNode | null | undefined): boolean {
+      if (!node) {
+        return false;
+      }
+      const typeAnnNode = node.typeAnnotation as ASTNode | null | undefined;
+      if (typeAnnNode && typeAnnNode.type === "TSTypeAnnotation") {
+        const typeAnn = typeAnnNode.typeAnnotation as ASTNode | null | undefined;
+        if (typeAnn && typeAnn.type === "TSBooleanKeyword") {
+          return true;
+        }
+      }
+      return false;
+    }
+
     // Allowlist for property names that are mandated by platform specifications
     // and conventions, where renaming would break or violate expectations.
     const SPEC_MANDATED_NAMES = new Set([
@@ -118,12 +132,12 @@ export const booleanPrefixRule: RuleModule = {
       "enabled",
     ]);
 
-    function checkName(nameNode: ASTNode | null | undefined, initNode: ASTNode | null | undefined) {
+    function checkName(nameNode: ASTNode | null | undefined, isBoolean: boolean) {
       if (!nameNode) {
         return;
       }
       const name = getPropertyName(nameNode);
-      if (name && isBooleanExpression(initNode)) {
+      if (name && isBoolean) {
         if (SPEC_MANDATED_NAMES.has(name)) {
           return;
         }
@@ -139,16 +153,24 @@ export const booleanPrefixRule: RuleModule = {
 
     return {
       VariableDeclarator(node: ASTNode) {
-        checkName(node.id, node.init);
+        let isBoolean = isBooleanExpression(node.init);
+        if (!isBoolean && node.id && hasBooleanTypeAnnotation(node.id)) {
+          isBoolean = true;
+        }
+        checkName(node.id, isBoolean);
       },
       Property(node: ASTNode) {
         if (node.kind === "init" && !node.method && !node.computed) {
-          checkName(node.key, node.value as ASTNode | null | undefined);
+          checkName(node.key, isBooleanExpression(node.value as ASTNode | null | undefined));
         }
       },
       PropertyDefinition(node: ASTNode) {
         if (!node.computed) {
-          checkName(node.key, node.value as ASTNode | null | undefined);
+          let isBoolean = isBooleanExpression(node.value as ASTNode | null | undefined);
+          if (!isBoolean && hasBooleanTypeAnnotation(node)) {
+            isBoolean = true;
+          }
+          checkName(node.key, isBoolean);
         }
       },
     };

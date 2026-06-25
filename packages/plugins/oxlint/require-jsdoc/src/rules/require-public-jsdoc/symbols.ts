@@ -112,7 +112,7 @@ export function getPublicSymbols(
 
       const resolved = resolveImport(source, normPath);
       if (resolved) {
-        const sourceExports = traceFile(resolved);
+        traceFile(resolved);
         const specifiers = specifiersStr
           .split(",")
           .map((s) => s.trim())
@@ -122,13 +122,8 @@ export function getPublicSymbols(
           const localName = parts[0].trim();
           const exportName = parts[1] ? parts[1].trim() : localName;
 
-          if (sourceExports.has(localName)) {
-            exportedSymbols.add(exportName);
-            addSymbol(resolved, localName);
-          } else {
-            exportedSymbols.add(exportName);
-            addSymbol(resolved, localName);
-          }
+          exportedSymbols.add(exportName);
+          addSymbol(resolved, localName);
         }
       }
     }
@@ -162,6 +157,10 @@ export function getPublicSymbols(
       const name = match[1];
       exportedSymbols.add("default");
       addSymbol(normPath, name);
+    }
+
+    if (/export\s+default\b/.test(cleanContent)) {
+      exportedSymbols.add("default");
     }
 
     // Match export { A, B } (local exports)

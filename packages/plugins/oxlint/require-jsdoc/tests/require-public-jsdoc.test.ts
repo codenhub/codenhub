@@ -312,6 +312,48 @@ describe("require-public-jsdoc rule", () => {
     expect(reportSpy).toHaveBeenCalledOnce();
   });
 
+  it("should handle anonymous default exports in entry point", () => {
+    setupMockPackage(
+      {
+        name: "test-pkg",
+        exports: {
+          ".": "./dist/index.js",
+        },
+      },
+      {
+        "src/index.ts": "export default function() {}",
+      },
+    );
+
+    const reportSpy = vi.fn();
+    const context = {
+      filename: path.join(tempDir, "src/index.ts"),
+      report: reportSpy,
+      sourceCode: {
+        getCommentsBefore: vi.fn(() => []),
+      },
+    };
+
+    const visitors = requirePublicJsdocRule.create(context);
+    const mockNode: ASTNode = {
+      type: "ExportDefaultDeclaration",
+      declaration: {
+        type: "FunctionDeclaration",
+        id: undefined,
+      },
+    };
+
+    visitors.ExportDefaultDeclaration!(mockNode);
+    expect(reportSpy).toHaveBeenCalledOnce();
+    expect(reportSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        node: mockNode,
+        messageId: "missingJSDoc",
+        data: { name: "default" },
+      }),
+    );
+  });
+
   it("should check TSInterfaceDeclaration, TSTypeAliasDeclaration, TSEnumDeclaration, and TSDeclareFunction", () => {
     setupMockPackage(
       {
