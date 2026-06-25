@@ -87,15 +87,15 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 
 ### Detailed Docs
 
-Detailed package reference ships with the package under `.docs/`:
+Detailed package reference ships with the package under `docs/`:
 
-| Document                                  | Purpose                                                       |
-| ----------------------------------------- | ------------------------------------------------------------- |
-| [Overview](./.docs/index.md)              | Package model, entrypoints, and class model.                  |
-| [Tokens](./.docs/tokens.md)               | Color and foundation token contracts.                         |
-| [Classes](./.docs/classes.md)             | Layout, surface, action, form, feedback, and tooltip helpers. |
-| [Accessibility](./.docs/accessibility.md) | CSS accessibility hooks and non-goals.                        |
-| [Tests](./.docs/tests.md)                 | Build and browser validation strategy.                        |
+| Document                                 | Purpose                                                       |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| [Overview](./docs/index.md)              | Package model, entrypoints, and class model.                  |
+| [Tokens](./docs/tokens.md)               | Color and foundation token contracts.                         |
+| [Classes](./docs/classes.md)             | Layout, surface, action, form, feedback, and tooltip helpers. |
+| [Accessibility](./docs/accessibility.md) | CSS accessibility hooks and non-goals.                        |
+| [Tests](./docs/tests.md)                 | Build and browser validation strategy.                        |
 
 ## Examples
 
@@ -138,7 +138,7 @@ This package publishes CSS as its public runtime surface. It does not expose Jav
 
 Lifecycle exception: `@codenhub/styles` intentionally omits `main`, `module`, and `types` from `package.json` because it is a CSS-only package with no JavaScript API. Every supported consumer import path is listed explicitly in `exports`, build output is generated into `dist`, and package checks validate the CSS build contract.
 
-The package intentionally does not expose private files outside the documented import paths. If exports change, this README and the related `.docs/` documents must be updated in the same change.
+The package intentionally does not expose private files outside the documented import paths. If exports change, this README and the related `docs/` documents must be updated in the same change.
 
 ## License
 

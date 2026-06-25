@@ -7,7 +7,7 @@ This document covers how the documentation in this project is structured, mainta
 
 ## Required header
 
-Every durable document in `.docs/` MUST start with these fields, in this order:
+Every durable document in `docs/` MUST start with these fields, in this order:
 
 - `Status`: how reliable and authoritative the document is.
 - `Last updated`: date of the last meaningful content change.
@@ -51,7 +51,7 @@ Do not create broad exceptions for one-off cases. Prefer changing the rule when 
 
 ## What belongs here
 
-Use `.docs/` for durable project knowledge:
+Use `docs/` for durable project knowledge:
 
 - Architecture decisions.
 - Implementation guidelines.
@@ -59,6 +59,6 @@ Use `.docs/` for durable project knowledge:
 - Feature specs.
 - Source-of-truth decisions.
 
-Do not use `.docs/` for temporary notes, TODO lists, or information better expressed in code comments. Also do not use root `.docs/` for package-specific documentation; those should be at `packages/<package-name>/.docs/`, because each package should own its own package-level rules and documentation.
+Do not use `docs/` for temporary notes, TODO lists, or information better expressed in code comments. Also do not use root `docs/` for package-specific documentation; those should be at `packages/<package-name>/docs/`, because each package should own its own package-level rules and documentation.
 
-Plans and similar temporary documents MAY live in `.docs/plans/`. This directory is git-ignored and should stay that way because these documents are short-lived planning aids, not long-term project documentation.
+Plans and similar temporary documents MAY live in `docs/plans/`. This directory is git-ignored and should stay that way because these documents are short-lived planning aids, not long-term project documentation.

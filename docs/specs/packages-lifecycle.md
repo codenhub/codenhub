@@ -70,7 +70,7 @@ Generated output MUST NOT be treated as source of truth. Source, docs, and tests
 
 Public packages MUST use explicit `exports`.
 
-Every supported import path MUST be listed in `exports`. Import paths that are part of default or common consumer usage MUST be documented in the package README. Advanced or uncommon import paths MAY be documented in package-level `.docs/` files when README coverage would make the README noisy or harder to scan.
+Every supported import path MUST be listed in `exports`. Import paths that are part of default or common consumer usage MUST be documented in the package README. Advanced or uncommon import paths MAY be documented in package-level `docs/` files when README coverage would make the README noisy or harder to scan.
 
 Packages MUST NOT rely on consumers importing private files from `dist` or `src`.
 
@@ -115,13 +115,13 @@ Version changes SHOULD follow semantic versioning:
 - Minor: new backward-compatible functionality.
 - Major: breaking API, behavior, runtime, export, or dependency changes.
 
-Breaking changes MUST update the package README and any relevant `.docs/` files in the same change.
+Breaking changes MUST update the package README and any relevant `docs/` files in the same change.
 
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
 ## README relationship
 
-Package README files MUST follow `.docs/specs/packages-readme.md`.
+Package README files MUST follow `docs/specs/packages-readme.md`.
 
 README exports and examples MUST match `package.json` `exports` for the public import paths they document.
 
@@ -129,6 +129,6 @@ When `exports` changes, README import examples and API/reference sections MUST b
 
 ## Exceptions
 
-Exceptions MUST follow `.docs/docs-guidelines.md`.
+Exceptions MUST follow `docs/docs-guidelines.md`.
 
 A valid lifecycle exception MUST name the package, the skipped rule, and why the package remains safe to build, test, or publish.

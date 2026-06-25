@@ -24,8 +24,8 @@ Assume they are a skilled developer, but know almost nothing about the toolset o
 
 ## Save Plans To
 
-- Prefer `.docs/plans/NNNN--kebab-case-plan-name.md` (for example, `.docs/plans/0001--add-bulk-export-plan.md`).
-- Before choosing the path, inspect the project for an existing structure and respect it if one is already in use, for example `docs/superpowers/plans/`, `.docs/plans/`, or another documented path.
+- Prefer `docs/plans/NNNN--kebab-case-plan-name.md` (for example, `docs/plans/0001--add-bulk-export-plan.md`).
+- Before choosing the path, inspect the project for an existing structure and respect it if one is already in use, for example `docs/superpowers/plans/`, `docs/plans/`, or another documented path.
 - User preferences for plan location override this default.
 
 ## Status

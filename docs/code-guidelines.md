@@ -87,7 +87,7 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Comments explain WHY, not WHAT or HOW.
 - Remove and avoid redundant comments, decorations and outdated docs.
 - Public package APIs MUST have JSDoc/TSDoc in source, even when the README also documents them.
-- Package READMEs MUST follow `.docs/specs/packages-readme.md` when the package is public.
+- Package READMEs MUST follow `docs/specs/packages-readme.md` when the package is public.
 
 For `private: false` packages under `packages/*`, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
 

@@ -18,7 +18,7 @@ A package README is the public package usage contract for default behavior, the 
 
 A package README SHOULD be useful as the first package design document: enough natural language to describe the intended public shape and basic behavior, followed by examples and reference material that code can implement and grow from. Code examples should demonstrate the documented behavior, not replace all explanation.
 
-The README owns public consumer behavior, default usage, supported imports, constraints, and stability notes. Package-level `.docs/` files own deeper design rationale, advanced workflows, lifecycle rules, internal architecture, and extended examples. When full documentation would make the README noisy or difficult to scan, deeper guides SHOULD live in package-level `.docs/` files and the README SHOULD link to them.
+The README owns public consumer behavior, default usage, supported imports, constraints, and stability notes. Package-level `docs/` files own deeper design rationale, advanced workflows, lifecycle rules, internal architecture, and extended examples. When full documentation would make the README noisy or difficult to scan, deeper guides SHOULD live in package-level `docs/` files and the README SHOULD link to them.
 
 The README SHOULD document public behavior, not internal implementation details.
 
@@ -42,7 +42,7 @@ Headings should use these names when practical. Small wording changes are allowe
 
 The Reference section MUST document the primary public entrypoint listed in `package.json` `exports`, plus any subpath entrypoints that are part of default or common consumer usage. For each covered entrypoint, document the consumer-facing symbols available from it, such as functions, classes, types, structures, CSS files, plugins, config objects, assets, or other public package surfaces.
 
-The Reference section SHOULD describe what each public surface is for, when to use it, and the default behavior it guarantees. It is intentionally a catalog of the default and common public surfaces; Usage and Examples are responsible for showing behavior, workflows, and main scenarios. Signatures alone are not sufficient documentation, and the README does not need to be exhaustive when deeper package-level `.docs/` would be clearer.
+The Reference section SHOULD describe what each public surface is for, when to use it, and the default behavior it guarantees. It is intentionally a catalog of the default and common public surfaces; Usage and Examples are responsible for showing behavior, workflows, and main scenarios. Signatures alone are not sufficient documentation, and the README does not need to be exhaustive when deeper package-level `docs/` would be clearer.
 
 Document only public behavior. Do not document private files, implementation details, or exports that consumers should not use.
 
@@ -52,9 +52,9 @@ For small packages, one flat list of documented symbols is usually enough. For c
 2. Short entrypoint purpose and when consumers should use it.
 3. Import example for the entrypoint.
 4. Public symbols or files available from that entrypoint.
-5. Link to deeper package-level `.docs/` when the entrypoint has advanced workflows, edge cases, or many options.
+5. Link to deeper package-level `docs/` when the entrypoint has advanced workflows, edge cases, or many options.
 
-If a package has many public entrypoints or advanced APIs, the README SHOULD cover the default and most common entrypoints, then link to package-level `.docs/` files for full details. The README should stay useful as a reference, not become exhaustive documentation when a separate guide would be clearer.
+If a package has many public entrypoints or advanced APIs, the README SHOULD cover the default and most common entrypoints, then link to package-level `docs/` files for full details. The README should stay useful as a reference, not become exhaustive documentation when a separate guide would be clearer.
 
 For each applicable item, include:
 
@@ -79,15 +79,15 @@ A section, API category, example group, or template surface MAY be omitted when 
 - Omit methods when the package has no public methods.
 - Omit events when the package emits, listens to, or documents no public events.
 - Omit types or interfaces when the package exposes no public consumer-facing types.
-- Omit `CSS`, `assets`, or `plugin` entrypoints when the package exposes none, or when they are advanced surfaces documented in package-level `.docs/` instead of the README.
+- Omit `CSS`, `assets`, or `plugin` entrypoints when the package exposes none, or when they are advanced surfaces documented in package-level `docs/` instead of the README.
 - Omit `additional examples` when there is only one meaningful workflow.
 - Omit `License` section details only if the package does not bundle or derive from third-party code/assets, uses the repository's standard license (Apache-2.0), and the repository root license is sufficient without additional package-level notices. Public packages incorporating third-party assets (such as Lucide icons under the ISC license) MUST NOT omit this section and MUST document those dependencies alongside a corresponding package-level `NOTICE` file.
 
 Very small packages MAY have fewer headings and less template structure only when all applicable required information remains present and easy to scan.
 
-Large packages MAY move deep guides to package-level `.docs/`, but README MUST still cover the public usage contract for default behavior, the main use case, and common consumer usage, then link to those guides.
+Large packages MAY move deep guides to package-level `docs/`, but README MUST still cover the public usage contract for default behavior, the main use case, and common consumer usage, then link to those guides.
 
-README files MUST NOT contradict APPROVED or IMPLEMENTED package-level `.docs/` source-of-truth documents. When both describe the same public behavior, they MUST use the same terms, defaults, constraints, and observable failure behavior. When public behavior changes, update the README and relevant package-level `.docs/` files together when both are affected.
+README files MUST NOT contradict APPROVED or IMPLEMENTED package-level `docs/` source-of-truth documents. When both describe the same public behavior, they MUST use the same terms, defaults, constraints, and observable failure behavior. When public behavior changes, update the README and relevant package-level `docs/` files together when both are affected.
 
 ## Template
 
@@ -178,7 +178,7 @@ README content MUST NOT include:
 - Undocumented exports or examples that require private internals.
 - Stale TODOs, roadmap promises, or speculative features.
 - Marketing copy that does not help usage.
-- Long implementation explanations better kept in code or package-level `.docs/`.
+- Long implementation explanations better kept in code or package-level `docs/`.
 - Secrets, private URLs, credentials, or environment-specific local paths.
 
 Examples MUST be small, copyable, and realistic. Prefer complete snippets over fragments when missing context would confuse users.

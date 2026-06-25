@@ -20,8 +20,8 @@ Write the validated design as a complete spec, review it for planning readiness,
 
 ## Save Specs To
 
-- Prefer `.docs/specs/NNNN--short-kebab-title.md` (for example `.docs/specs/0001--design-auth-session-lifecycle.md`).
-- Before choosing the path, inspect the project for an existing structure and respect it if one is already in use, for example `docs/superpowers/specs/`, `.docs/specs/`, or another documented path.
+- Prefer `docs/specs/NNNN--short-kebab-title.md` (for example `docs/specs/0001--design-auth-session-lifecycle.md`).
+- Before choosing the path, inspect the project for an existing structure and respect it if one is already in use, for example `docs/superpowers/specs/`, `docs/specs/`, or another documented path.
 - User preferences for spec location override this default.
 
 ## Status

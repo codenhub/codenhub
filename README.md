@@ -66,13 +66,13 @@ pnpm test
 
 ## Documentation
 
-This repository is docs-first: durable decisions live in `.docs/` and code should follow approved documentation. Package-specific documentation live in `packages/<package-name>/.docs/` .
+This repository is docs-first: durable decisions live in `docs/` and code should follow approved documentation. Package-specific documentation live in `packages/<package-name>/docs/` .
 
 Read these before changing package behavior, public APIs, or project conventions:
 
-- `.docs/docs-guidelines.md`: documentation structure, status model, and exception rules.
-- `.docs/code-guidelines.md`: coding conventions and enforceable quality rules.
-- `.docs/specs/packages-readme.md`: README requirements for public packages.
-- `.docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
+- `docs/docs-guidelines.md`: documentation structure, status model, and exception rules.
+- `docs/code-guidelines.md`: coding conventions and enforceable quality rules.
+- `docs/specs/packages-readme.md`: README requirements for public packages.
+- `docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
 
-Every `private: false` package under `packages/*` MUST comply to `.docs/specs/packages-lifecycle.md` and MUST have a `README.md` that follows `.docs/specs/packages-readme.md`.
+Every `private: false` package under `packages/*` MUST comply to `docs/specs/packages-lifecycle.md` and MUST have a `README.md` that follows `docs/specs/packages-readme.md`.

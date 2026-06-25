@@ -14,17 +14,17 @@ When a roadmap exists, it SHOULD follow this spec unless a different structure i
 
 ## Locations
 
-Repo-level roadmap files MAY live at `.docs/roadmap.md`.
+Repo-level roadmap files MAY live at `docs/roadmap.md`.
 
-Package-level roadmap files MAY live at `packages/<package-name>/.docs/roadmap.md`.
+Package-level roadmap files MAY live at `packages/<package-name>/docs/roadmap.md`.
 
-Root `.docs/` MUST NOT contain package-specific roadmap details. Package-specific roadmap details belong in that package's `.docs/` directory.
+Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific roadmap details belong in that package's `docs/` directory.
 
 ## Purpose
 
 A roadmap is an optional durable planning entrypoint. It should help readers understand current focus, intended direction, possible future work, and relevant planning context.
 
-A roadmap is not a short-lived task list, scratchpad, or replacement for issue tracking. Temporary plans and working notes should follow `.docs/docs-guidelines.md`.
+A roadmap is not a short-lived task list, scratchpad, or replacement for issue tracking. Temporary plans and working notes should follow `docs/docs-guidelines.md`.
 
 ## Recommended structure
 

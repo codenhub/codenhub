@@ -264,7 +264,7 @@ export default {
 ## Notes
 
 - List important limitations, non-goals, caveats, or stability notes.
-- Link to package-level `.docs/` files for deeper design, advanced workflows, or edge cases.
+- Link to package-level `docs/` files for deeper design, advanced workflows, or edge cases.
 - Remove placeholder notes before publishing the README.
 
 ## License
