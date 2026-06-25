@@ -1,6 +1,6 @@
 ---
 name: caveman-review
-description: Ultra-compressed code review comments. Cuts noise from PR feedback while preserving actionable signal. Each comment is one line: location, problem, fix. Use when explicitly requested by the user or when reviewing PRs.
+description: "Ultra-compressed code review comments. Cuts noise from PR feedback while preserving actionable signal. Each comment is one line: location, problem, fix. Use when explicitly requested by the user or when reviewing PRs."
 ---
 
 Write code review comments terse and actionable. One line per finding. Location, problem, fix. No throat-clearing.
