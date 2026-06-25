@@ -50,7 +50,15 @@ const rule: RuleModule = {
   },
   create(context) {
     function isValidBooleanName(name: string): boolean {
-      return /^(is|has|can|should)([A-Z0-9_].*)?$/.test(name);
+      // camelCase: isLoading, hasError, canEdit, shouldRetry
+      if (/^(is|has|can|should)([A-Z0-9_].*)?$/.test(name)) {
+        return true;
+      }
+      // SCREAMING_SNAKE_CASE: IS_LOADING, HAS_ERROR, DEFAULT_IS_LOADING, PREFIX_SHOULD_RETRY
+      if (/(?:^|_)(IS|HAS|CAN|SHOULD)(_[A-Z0-9].*)?$/.test(name)) {
+        return true;
+      }
+      return false;
     }
 
     function isBooleanExpression(node: ASTNode | null | undefined): boolean {
@@ -67,7 +75,15 @@ const rule: RuleModule = {
       }
 
       if (node.type === "LogicalExpression") {
-        return ["&&", "||"].includes(node.operator || "");
+        if (node.operator !== "&&" && node.operator !== "||") {
+          return false;
+        }
+        // If the right-hand side is a known non-boolean type, it's not a boolean expression
+        const right = node.right as ASTNode | null | undefined;
+        if (right && right.type === "Literal") {
+          return typeof right.value === "boolean";
+        }
+        return true;
       }
 
       if (node.type === "UnaryExpression" && node.operator === "!") {
@@ -90,12 +106,27 @@ const rule: RuleModule = {
       return null;
     }
 
+    // Allowlist for property names that are mandated by platform specifications
+    // and conventions, where renaming would break or violate expectations.
+    const SPEC_MANDATED_NAMES = new Set([
+      "configurable",
+      "enumerable",
+      "writable",
+      "recommended",
+      "ok",
+      "checked",
+      "enabled",
+    ]);
+
     function checkName(nameNode: ASTNode | null | undefined, initNode: ASTNode | null | undefined) {
       if (!nameNode) {
         return;
       }
       const name = getPropertyName(nameNode);
       if (name && isBooleanExpression(initNode)) {
+        if (SPEC_MANDATED_NAMES.has(name)) {
+          return;
+        }
         if (!isValidBooleanName(name)) {
           context.report({
             node: nameNode,

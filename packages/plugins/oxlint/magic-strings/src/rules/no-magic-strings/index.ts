@@ -1,0 +1,1 @@
+export { noMagicStrings } from "./rule";
