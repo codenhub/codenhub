@@ -1,3 +1,6 @@
+/**
+ * Represents an AST node processed by ESLint.
+ */
 export interface ASTNode {
   type: string;
   params?: ASTNode[];
@@ -6,11 +9,17 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+/**
+ * The ESLint context provided to rules.
+ */
 export interface RuleContext {
   getFilename(): string;
   report(descriptor: { node: ASTNode; messageId: string; data?: Record<string, string | number> }): void;
 }
 
+/**
+ * The module structure for an ESLint rule.
+ */
 export interface RuleModule {
   meta: {
     type: "problem" | "suggestion" | "layout";
@@ -26,6 +35,9 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
+/**
+ * ESLint rule to enforce a maximum number of parameters in functions.
+ */
 export const maxParamsRule: RuleModule = {
   meta: {
     type: "suggestion",
@@ -58,6 +70,11 @@ export const maxParamsRule: RuleModule = {
           parent.arguments &&
           parent.arguments.includes(node)
         ) {
+          return;
+        }
+
+        // Exclude class constructors
+        if (parent && parent.type === "MethodDefinition" && parent.kind === "constructor") {
           return;
         }
 

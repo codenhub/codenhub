@@ -222,8 +222,8 @@ export function isPropertyKey(node: ASTNode): boolean {
     return false;
   }
 
-  // obj["key"]
-  if (parent.type === "MemberExpression" && parent.property === node) {
+  // obj["key"] or obj?.["key"]
+  if ((parent.type === "MemberExpression" || parent.type === "OptionalMemberExpression") && parent.property === node) {
     return true;
   }
 

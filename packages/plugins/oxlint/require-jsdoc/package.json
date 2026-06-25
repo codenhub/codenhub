@@ -39,8 +39,5 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  },
-  "peerDependencies": {
-    "typescript": ">=5.0.0"
   }
 }

@@ -1,3 +1,6 @@
+/**
+ * Represents an AST node processed by ESLint.
+ */
 export interface ASTNode {
   type: string;
   id?: ASTNode;
@@ -15,6 +18,9 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+/**
+ * The ESLint context provided to rules.
+ */
 export interface RuleContext {
   filename?: string;
   getFilename?(): string;
@@ -24,6 +30,9 @@ export interface RuleContext {
   };
 }
 
+/**
+ * The module structure for an ESLint rule.
+ */
 export interface RuleModule {
   meta: {
     type: "problem" | "suggestion" | "layout";

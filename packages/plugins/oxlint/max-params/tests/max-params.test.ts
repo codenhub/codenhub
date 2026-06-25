@@ -194,4 +194,20 @@ describe("max-params rule", () => {
     const reports = runRule(functionNode);
     expect(reports).toHaveLength(1);
   });
+
+  it("should ignore class constructors with 3 or more parameters", () => {
+    const constructorNode: ASTNode = {
+      type: "FunctionExpression",
+      params: [{ type: "Identifier" }, { type: "Identifier" }, { type: "Identifier" }],
+    };
+
+    const parentNode: ASTNode = {
+      type: "MethodDefinition",
+      kind: "constructor",
+      arguments: [constructorNode],
+    };
+
+    const reports = runRule(parentNode);
+    expect(reports).toHaveLength(0);
+  });
 });

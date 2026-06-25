@@ -1,12 +1,49 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
-
 import { resolveImport } from "./resolution";
 
-// Cache for public symbols per package directory
-export const packageCache = new Map<string, Map<string, Set<string>>>();
+/**
+ * Cache for public symbols per package directory.
+ */
+export const packageCache = new Map<
+  string,
+  {
+    symbols: Map<string, Set<string>>;
+    packageJsonPath: string;
+    mtime: number;
+    entrypoints: { path: string; mtime: number }[];
+  }
+>();
+
+const DIST_DIR_PREFIX = "dist/";
+const SRC_DIR_PREFIX = "src/";
+
+function isCacheValid(cached: {
+  packageJsonPath: string;
+  mtime: number;
+  entrypoints: { path: string; mtime: number }[];
+}): boolean {
+  try {
+    const pkgStat = fs.statSync(cached.packageJsonPath);
+    if (pkgStat.mtimeMs !== cached.mtime) {
+      return false;
+    }
+    for (const ep of cached.entrypoints) {
+      if (fs.existsSync(ep.path)) {
+        const epStat = fs.statSync(ep.path);
+        if (epStat.mtimeMs !== ep.mtime) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Parses and traces exports recursively starting from public entrypoints.
@@ -17,12 +54,13 @@ export function getPublicSymbols(
   pkgJson: { exports?: unknown; main?: string; module?: string; types?: string },
 ): Map<string, Set<string>> {
   const normalizedPkgDir = path.normalize(pkgDir);
-  if (packageCache.has(normalizedPkgDir)) {
-    return packageCache.get(normalizedPkgDir)!;
+  const cached = packageCache.get(normalizedPkgDir);
+  if (cached && isCacheValid(cached)) {
+    return cached.symbols;
   }
 
   const publicSymbols = new Map<string, Set<string>>();
-  packageCache.set(normalizedPkgDir, publicSymbols);
+  const entrypointsList: { path: string; mtime: number }[] = [];
 
   const addSymbol = (filePath: string, symbol: string) => {
     const normPath = path.normalize(filePath);
@@ -64,11 +102,11 @@ export function getPublicSymbols(
   const resolvedEntrypoints = new Set<string>();
   for (const ep of entrypointPaths) {
     let t = ep.replace(/\\/g, "/").replace(/^\.\//, "");
-    if (t.startsWith("dist/")) {
-      t = "src/" + t.slice(5);
+    if (t.startsWith(DIST_DIR_PREFIX)) {
+      t = SRC_DIR_PREFIX + t.slice(DIST_DIR_PREFIX.length);
     }
 
-    const baseWithoutExt = t.replace(/\.(d\.ts|js|mjs|cjs)$/, "");
+    const baseWithoutExt = t.replace(/\.(d\.ts|ts|tsx|js|mjs|cjs)$/, "");
     const possibleExtensions = [".ts", ".tsx", ".js", ".jsx"];
     let isFound = false;
     for (const ext of possibleExtensions) {
@@ -102,98 +140,99 @@ export function getPublicSymbols(
       return exportedSymbols;
     }
 
+    try {
+      const stat = fs.statSync(normPath);
+      entrypointsList.push({ path: normPath, mtime: stat.mtimeMs });
+    } catch {
+      // Ignore
+    }
+
     const content = fs.readFileSync(normPath, "utf8");
-    const sourceFile = ts.createSourceFile(normPath, content, ts.ScriptTarget.Latest, true);
+    const cleanContent = content.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
 
+    // 1. Parse imports
+    const importRegex = /import\s+([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g;
     const localImports = new Map<string, { source: string; originalName: string }>();
+    let importMatch;
+    while ((importMatch = importRegex.exec(cleanContent)) !== null) {
+      let clause = importMatch[1].trim();
+      const source = importMatch[2];
 
-    for (const statement of sourceFile.statements) {
-      if (ts.isImportDeclaration(statement)) {
-        const source =
-          statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
-            ? statement.moduleSpecifier.text
-            : null;
-        if (source && statement.importClause) {
-          if (statement.importClause.name) {
-            localImports.set(statement.importClause.name.text, { source, originalName: "default" });
-          }
-          if (statement.importClause.namedBindings) {
-            if (ts.isNamedImports(statement.importClause.namedBindings)) {
-              for (const element of statement.importClause.namedBindings.elements) {
-                const localName = element.name.text;
-                const originalName = element.propertyName ? element.propertyName.text : localName;
-                localImports.set(localName, { source, originalName });
-              }
-            } else if (ts.isNamespaceImport(statement.importClause.namedBindings)) {
-              localImports.set(statement.importClause.namedBindings.name.text, { source, originalName: "*" });
+      if (clause.startsWith("type ")) {
+        clause = clause.slice(5).trim();
+      }
+
+      if (/^[a-zA-Z0-9_$]+$/.test(clause)) {
+        localImports.set(clause, { source, originalName: "default" });
+      } else {
+        const namedMatch = clause.match(/{([\s\S]*?)}/);
+        if (namedMatch) {
+          const elements = namedMatch[1].split(",");
+          for (const el of elements) {
+            let trimmed = el.trim();
+            if (!trimmed) {
+              continue;
             }
+            if (trimmed.startsWith("type ")) {
+              trimmed = trimmed.slice(5).trim();
+            }
+            const parts = trimmed.split(/\s+as\s+/);
+            const originalName = parts[0].trim();
+            const localName = parts[1] ? parts[1].trim() : originalName;
+            localImports.set(localName, { source, originalName });
           }
+        }
+        const nsMatch = clause.match(/\*\s+as\s+([a-zA-Z0-9_$]+)/);
+        if (nsMatch) {
+          localImports.set(nsMatch[1], { source, originalName: "*" });
         }
       }
     }
 
-    function extractBindingNames(nameNode: ts.BindingName, names: string[]) {
-      if (ts.isIdentifier(nameNode)) {
-        names.push(nameNode.text);
-      } else if (ts.isObjectBindingPattern(nameNode) || ts.isArrayBindingPattern(nameNode)) {
-        for (const element of nameNode.elements) {
-          if (ts.isBindingElement(element)) {
-            extractBindingNames(element.name, names);
-          }
+    // 2. Parse exports
+    // Matches: export * from "./foo";
+    const exportStarRegex = /export\s+\*\s+from\s+['"]([^'"]+)['"]/g;
+    let starMatch;
+    while ((starMatch = exportStarRegex.exec(cleanContent)) !== null) {
+      const source = starMatch[1];
+      const resolved = resolveImport(source, normPath);
+      if (resolved) {
+        const sourceExports = traceFile(resolved);
+        for (const sym of sourceExports) {
+          exportedSymbols.add(sym);
+          addSymbol(resolved, sym);
         }
       }
     }
 
-    for (const statement of sourceFile.statements) {
-      if (ts.isExportDeclaration(statement)) {
-        const source =
-          statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
-            ? statement.moduleSpecifier.text
-            : null;
-        const resolved = source ? resolveImport(source, normPath) : null;
+    // Matches: export { a, b as c } from "./foo"; OR export { a, b as c };
+    const exportNamedRegex = /export\s+(?:type\s+)?{([\s\S]*?)}\s*(?:from\s+['"]([^'"]+)['"])?/g;
+    let namedMatch;
+    while ((namedMatch = exportNamedRegex.exec(cleanContent)) !== null) {
+      const clause = namedMatch[1];
+      const source = namedMatch[2];
+      const resolved = source ? resolveImport(source, normPath) : null;
+      if (resolved) {
+        traceFile(resolved);
+      }
+
+      const elements = clause.split(",");
+      for (const el of elements) {
+        let trimmed = el.trim();
+        if (!trimmed) {
+          continue;
+        }
+        if (trimmed.startsWith("type ")) {
+          trimmed = trimmed.slice(5).trim();
+        }
+        const parts = trimmed.split(/\s+as\s+/);
+        const localName = parts[0].trim();
+        const exportName = parts[1] ? parts[1].trim() : localName;
+        exportedSymbols.add(exportName);
 
         if (resolved) {
-          traceFile(resolved);
-        }
-
-        if (statement.exportClause) {
-          if (ts.isNamedExports(statement.exportClause)) {
-            for (const element of statement.exportClause.elements) {
-              const localName = element.propertyName ? element.propertyName.text : element.name.text;
-              const exportName = element.name.text;
-              exportedSymbols.add(exportName);
-              if (resolved) {
-                addSymbol(resolved, localName);
-              } else {
-                const imported = localImports.get(localName);
-                if (imported) {
-                  const resolvedImport = resolveImport(imported.source, normPath);
-                  if (resolvedImport) {
-                    traceFile(resolvedImport);
-                    addSymbol(resolvedImport, imported.originalName);
-                  }
-                } else {
-                  addSymbol(normPath, localName);
-                }
-              }
-            }
-          } else if (ts.isNamespaceExport(statement.exportClause)) {
-            const exportName = statement.exportClause.name.text;
-            exportedSymbols.add(exportName);
-          }
-        } else if (resolved) {
-          // export * from "./foo"
-          const sourceExports = traceFile(resolved);
-          for (const sym of sourceExports) {
-            exportedSymbols.add(sym);
-            addSymbol(resolved, sym);
-          }
-        }
-      } else if (ts.isExportAssignment(statement)) {
-        // export default expr
-        exportedSymbols.add("default");
-        if (ts.isIdentifier(statement.expression)) {
-          const localName = statement.expression.text;
+          addSymbol(resolved, localName);
+        } else {
           const imported = localImports.get(localName);
           if (imported) {
             const resolvedImport = resolveImport(imported.source, normPath);
@@ -205,44 +244,61 @@ export function getPublicSymbols(
             addSymbol(normPath, localName);
           }
         }
-      } else {
-        // Check inline declaration exports
-        const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) : undefined;
-        const hasExport = modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
-        const hasDefault = modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword);
+      }
+    }
 
-        if (hasExport) {
-          if (hasDefault) {
-            exportedSymbols.add("default");
-            if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
-              if (statement.name) {
-                addSymbol(normPath, statement.name.text);
-              }
+    // Matches: export default ...
+    const exportDefaultRegex = /export\s+default\s+(?:class|function)?\s*([a-zA-Z0-9_$]+)?/g;
+    let defaultMatch;
+    while ((defaultMatch = exportDefaultRegex.exec(cleanContent)) !== null) {
+      exportedSymbols.add("default");
+      const localName = defaultMatch[1];
+      if (localName) {
+        const imported = localImports.get(localName);
+        if (imported) {
+          const resolvedImport = resolveImport(imported.source, normPath);
+          if (resolvedImport) {
+            traceFile(resolvedImport);
+            addSymbol(resolvedImport, imported.originalName);
+          }
+        } else {
+          addSymbol(normPath, localName);
+        }
+      }
+    }
+
+    // Matches: export const/let/var/function/class/interface/type/enum name
+    const inlineExportRegex = /export\s+(const|let|var|function|class|interface|type|enum)\s+([a-zA-Z0-9_$]+)/g;
+    let inlineMatch;
+    while ((inlineMatch = inlineExportRegex.exec(cleanContent)) !== null) {
+      const name = inlineMatch[2];
+      exportedSymbols.add(name);
+      addSymbol(normPath, name);
+    }
+
+    // Matches destructuring export: export const { a, b } = ... OR export const [ a, b ] = ...
+    const destructureExportRegex = /export\s+(const|let|var)\s+([{\[])([\s\S]*?)([}\]])\s*=/g;
+    let destructureMatch;
+    while ((destructureMatch = destructureExportRegex.exec(cleanContent)) !== null) {
+      const bindingBody = destructureMatch[3];
+      const idMatches = bindingBody.match(/[a-zA-Z0-9_$]+/g);
+      if (idMatches) {
+        for (const name of idMatches) {
+          const index = bindingBody.indexOf(name);
+          const after = bindingBody.slice(index + name.length).trim();
+          if (after.startsWith(":")) {
+            const valMatch = after
+              .slice(1)
+              .trim()
+              .match(/^[a-zA-Z0-9_$]+/);
+            if (valMatch) {
+              const valName = valMatch[0];
+              exportedSymbols.add(valName);
+              addSymbol(normPath, valName);
             }
           } else {
-            if (ts.isVariableStatement(statement)) {
-              for (const decl of statement.declarationList.declarations) {
-                const names: string[] = [];
-                extractBindingNames(decl.name, names);
-                for (const name of names) {
-                  exportedSymbols.add(name);
-                  addSymbol(normPath, name);
-                }
-              }
-            } else if (
-              ts.isFunctionDeclaration(statement) ||
-              ts.isClassDeclaration(statement) ||
-              ts.isInterfaceDeclaration(statement) ||
-              ts.isTypeAliasDeclaration(statement) ||
-              ts.isEnumDeclaration(statement) ||
-              ts.isModuleDeclaration(statement)
-            ) {
-              if (statement.name) {
-                const name = statement.name.text;
-                exportedSymbols.add(name);
-                addSymbol(normPath, name);
-              }
-            }
+            exportedSymbols.add(name);
+            addSymbol(normPath, name);
           }
         }
       }
@@ -257,6 +313,21 @@ export function getPublicSymbols(
       addSymbol(ep, sym);
     }
   }
+
+  const packageJsonPath = path.join(normalizedPkgDir, "package.json");
+  let pkgMtime = 0;
+  try {
+    pkgMtime = fs.statSync(packageJsonPath).mtimeMs;
+  } catch {
+    // Ignore
+  }
+
+  packageCache.set(normalizedPkgDir, {
+    symbols: publicSymbols,
+    packageJsonPath,
+    mtime: pkgMtime,
+    entrypoints: entrypointsList,
+  });
 
   return publicSymbols;
 }

@@ -1,3 +1,6 @@
+/**
+ * Represents an AST node processed by ESLint.
+ */
 export interface ASTNode {
   type: string;
   operator?: string;
@@ -17,10 +20,16 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+/**
+ * The ESLint context provided to rules.
+ */
 export interface RuleContext {
   report(descriptor: { node: ASTNode; messageId: string; data?: Record<string, string | number> }): void;
 }
 
+/**
+ * The module structure for an ESLint rule.
+ */
 export interface RuleModule {
   meta: {
     type: "problem" | "suggestion" | "layout";
@@ -36,7 +45,7 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
-const IRREGULAR_PLURALS = new Set(["children", "people", "media", "data"]);
+const IRREGULAR_PLURALS = new Set(["children", "people", "media", "data", "schema"]);
 const COLLECTIVE_SUFFIX_PATTERN = /(?:List|Group|Set|Collection|Array)$/i;
 
 function isValidArrayName(name: string): boolean {
@@ -49,6 +58,36 @@ function isValidArrayName(name: string): boolean {
   return COLLECTIVE_SUFFIX_PATTERN.test(name);
 }
 
+function isArrayTypeNode(typeNode: ASTNode | null | undefined): boolean {
+  if (!typeNode) {
+    return false;
+  }
+  if (typeNode.type === "TSArrayType") {
+    return true;
+  }
+  if (
+    typeNode.type === "TSTypeReference" &&
+    typeNode.typeName &&
+    typeNode.typeName.type === "Identifier" &&
+    ["Array", "ReadonlyArray"].includes(typeNode.typeName.name || "")
+  ) {
+    return true;
+  }
+  if (typeNode.type === "TSTypeOperator" && typeNode.operator === "readonly") {
+    return isArrayTypeNode(typeNode.typeAnnotation as ASTNode | undefined);
+  }
+  if (typeNode.type === "TSUnionType" && typeNode.types) {
+    return (typeNode.types as ASTNode[]).some(isArrayTypeNode);
+  }
+  if (typeNode.type === "TSIntersectionType" && typeNode.types) {
+    return (typeNode.types as ASTNode[]).some(isArrayTypeNode);
+  }
+  return false;
+}
+
+/**
+ * ESLint rule that enforces that array variables end with 's'.
+ */
 export const arrayPluralRule: RuleModule = {
   meta: {
     type: "suggestion",
@@ -62,11 +101,12 @@ export const arrayPluralRule: RuleModule = {
     },
   },
   create(context) {
-    function checkArrayNode(
-      nameNode: ASTNode | null | undefined,
-      typeAnnNode: ASTNode | null | undefined,
-      valueNode: ASTNode | null | undefined,
-    ) {
+    function checkArrayNode(options: {
+      nameNode: ASTNode | null | undefined;
+      typeAnnNode?: ASTNode | null | undefined;
+      valueNode?: ASTNode | null | undefined;
+    }) {
+      const { nameNode, typeAnnNode, valueNode } = options;
       if (!nameNode) {
         return;
       }
@@ -83,15 +123,7 @@ export const arrayPluralRule: RuleModule = {
       const typeAnnNodeObj = typeAnnParent.typeAnnotation as ASTNode | null | undefined;
       if (typeAnnNodeObj && typeAnnNodeObj.type === "TSTypeAnnotation") {
         const typeAnn = typeAnnNodeObj.typeAnnotation;
-        if (typeAnn && typeAnn.type === "TSArrayType") {
-          isArray = true;
-        } else if (
-          typeAnn &&
-          typeAnn.type === "TSTypeReference" &&
-          typeAnn.typeName &&
-          typeAnn.typeName.type === "Identifier" &&
-          ["Array", "ReadonlyArray"].includes(typeAnn.typeName.name || "")
-        ) {
+        if (isArrayTypeNode(typeAnn as ASTNode | undefined)) {
           isArray = true;
         }
       }
@@ -142,22 +174,30 @@ export const arrayPluralRule: RuleModule = {
     return {
       VariableDeclarator(node: ASTNode) {
         if (node.id && node.id.type === "Identifier") {
-          checkArrayNode(node.id, node.id, node.init as ASTNode | null | undefined);
+          checkArrayNode({
+            nameNode: node.id,
+            typeAnnNode: node.id,
+            valueNode: node.init as ASTNode | null | undefined,
+          });
         }
       },
       PropertyDefinition(node: ASTNode) {
         if (!node.computed) {
-          checkArrayNode(node.key, node, node.value as ASTNode | null | undefined);
+          checkArrayNode({
+            nameNode: node.key,
+            typeAnnNode: node,
+            valueNode: node.value as ASTNode | null | undefined,
+          });
         }
       },
       TSPropertySignature(node: ASTNode) {
         if (!node.computed) {
-          checkArrayNode(node.key, node, undefined);
+          checkArrayNode({ nameNode: node.key, typeAnnNode: node });
         }
       },
       Property(node: ASTNode) {
         if (node.kind === "init" && !node.method && !node.computed) {
-          checkArrayNode(node.key, undefined, node.value as ASTNode | null | undefined);
+          checkArrayNode({ nameNode: node.key, valueNode: node.value as ASTNode | null | undefined });
         }
       },
     };

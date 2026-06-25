@@ -1,3 +1,6 @@
+/**
+ * Represents an AST node processed by ESLint.
+ */
 export interface ASTNode {
   type: string;
   operator?: string;
@@ -17,10 +20,16 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+/**
+ * The ESLint context provided to rules.
+ */
 export interface RuleContext {
   report(descriptor: { node: ASTNode; messageId: string; data?: Record<string, string | number> }): void;
 }
 
+/**
+ * The module structure for an ESLint rule.
+ */
 export interface RuleModule {
   meta: {
     type: "problem" | "suggestion" | "layout";
@@ -36,6 +45,25 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
+// Allowlist for property names that are mandated by platform specifications
+// and conventions, where renaming would break or violate expectations.
+const SPEC_MANDATED_NAMES = new Set([
+  "configurable",
+  "enumerable",
+  "writable",
+  "recommended",
+  "ok",
+  "checked",
+  "enabled",
+  "method",
+  "computed",
+  "optional",
+  "shorthand",
+]);
+
+/**
+ * ESLint rule that enforces boolean variables and properties start with a boolean prefix.
+ */
 export const booleanPrefixRule: RuleModule = {
   meta: {
     type: "suggestion",
@@ -57,6 +85,22 @@ export const booleanPrefixRule: RuleModule = {
       // SCREAMING_SNAKE_CASE: IS_LOADING, HAS_ERROR, DEFAULT_IS_LOADING, PREFIX_SHOULD_RETRY
       if (/(?:^|_)(IS|HAS|CAN|SHOULD)(_[A-Z0-9].*)?$/.test(name)) {
         return true;
+      }
+      return false;
+    }
+
+    function isBooleanTypeNode(typeNode: ASTNode | null | undefined): boolean {
+      if (!typeNode) {
+        return false;
+      }
+      if (typeNode.type === "TSBooleanKeyword") {
+        return true;
+      }
+      if (typeNode.type === "TSUnionType" && typeNode.types) {
+        return (typeNode.types as ASTNode[]).some(isBooleanTypeNode);
+      }
+      if (typeNode.type === "TSIntersectionType" && typeNode.types) {
+        return (typeNode.types as ASTNode[]).some(isBooleanTypeNode);
       }
       return false;
     }
@@ -85,6 +129,10 @@ export const booleanPrefixRule: RuleModule = {
         return true;
       }
 
+      if (node.type === "ConditionalExpression") {
+        return isBooleanExpression(node.consequent as ASTNode) && isBooleanExpression(node.alternate as ASTNode);
+      }
+
       return false;
     }
 
@@ -107,25 +155,10 @@ export const booleanPrefixRule: RuleModule = {
       }
       const typeAnnNode = node.typeAnnotation as ASTNode | null | undefined;
       if (typeAnnNode && typeAnnNode.type === "TSTypeAnnotation") {
-        const typeAnn = typeAnnNode.typeAnnotation as ASTNode | null | undefined;
-        if (typeAnn && typeAnn.type === "TSBooleanKeyword") {
-          return true;
-        }
+        return isBooleanTypeNode(typeAnnNode.typeAnnotation as ASTNode | undefined);
       }
       return false;
     }
-
-    // Allowlist for property names that are mandated by platform specifications
-    // and conventions, where renaming would break or violate expectations.
-    const SPEC_MANDATED_NAMES = new Set([
-      "configurable",
-      "enumerable",
-      "writable",
-      "recommended",
-      "ok",
-      "checked",
-      "enabled",
-    ]);
 
     function checkName(nameNode: ASTNode | null | undefined, isBoolean: boolean) {
       if (!nameNode) {

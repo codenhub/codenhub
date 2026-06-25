@@ -1,6 +1,9 @@
 import fs from "fs";
 import path from "path";
 
+/**
+ * Represents an AST node processed by ESLint.
+ */
 export interface ASTNode {
   type: string;
   source?: ASTNode | null;
@@ -8,11 +11,17 @@ export interface ASTNode {
   [key: string]: unknown;
 }
 
+/**
+ * The ESLint context provided to rules.
+ */
 export interface RuleContext {
   getFilename(): string;
   report(descriptor: { node: ASTNode; messageId: string; data?: Record<string, string> }): void;
 }
 
+/**
+ * The module structure for an ESLint rule.
+ */
 export interface RuleModule {
   meta: {
     type: "problem" | "suggestion" | "layout";
@@ -28,11 +37,61 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
-// Cache for package information and workspace root path
-export const packageCache = new Map<string, { exports: unknown; packageJsonPath: string } | null>();
+/**
+ * Cache for package information and workspace root path.
+ */
+export interface PackageCacheEntry {
+  exports: unknown;
+  packageJsonPath: string;
+  mtime?: number;
+}
+export const packageCache = new Map<string, PackageCacheEntry | null>();
 const workspaceRootCache = { value: "" };
 let isWorkspaceScanned = false;
 const wildcardRegexCache = new Map<string, RegExp>();
+
+function parsePackageJson(pJsonPath: string): PackageCacheEntry | null {
+  try {
+    const stat = fs.statSync(pJsonPath);
+    const content = fs.readFileSync(pJsonPath, "utf8");
+    const pJson = JSON.parse(content);
+    return {
+      exports: pJson.exports,
+      packageJsonPath: pJsonPath,
+      mtime: stat.mtimeMs,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function getCachedEntry(packageName: string): PackageCacheEntry | null | undefined {
+  const cached = packageCache.get(packageName);
+  if (cached === undefined) {
+    return undefined;
+  }
+  if (cached === null) {
+    return null;
+  }
+  try {
+    if (fs.existsSync(cached.packageJsonPath)) {
+      const stat = fs.statSync(cached.packageJsonPath);
+      if (cached.mtime !== undefined && stat.mtimeMs !== cached.mtime) {
+        const reloaded = parsePackageJson(cached.packageJsonPath);
+        if (reloaded) {
+          packageCache.set(packageName, reloaded);
+          return reloaded;
+        } else {
+          packageCache.set(packageName, null);
+          return null;
+        }
+      }
+    }
+  } catch {
+    // Ignore errors to support mock/virtual paths in tests
+  }
+  return cached;
+}
 
 /**
  * Normalizes and checks if a subpath is explicitly allowed in the package's exports map.
@@ -109,100 +168,98 @@ function scanWorkspace(workspaceRoot: string) {
   isWorkspaceScanned = true;
 
   const packagesDir = path.join(workspaceRoot, "packages");
-  if (!fs.existsSync(packagesDir)) {
-    return;
-  }
+  const appsDir = path.join(workspaceRoot, "apps");
 
-  const visited = new Set<string>();
+  const dirsToScan: string[] = [];
 
-  function scan(dir: string) {
-    let realPath: string;
+  const addSubdirs = (parentDir: string) => {
+    if (!fs.existsSync(parentDir)) {
+      return;
+    }
     try {
-      realPath = fs.realpathSync(dir);
+      const children = fs.readdirSync(parentDir);
+      for (const child of children) {
+        const fullPath = path.join(parentDir, child);
+        try {
+          if (fs.statSync(fullPath).isDirectory()) {
+            dirsToScan.push(fullPath);
+          }
+        } catch {
+          // Ignore
+        }
+      }
     } catch {
-      return;
+      // Ignore
     }
-    if (visited.has(realPath)) {
-      return;
-    }
-    visited.add(realPath);
+  };
 
-    const name = path.basename(dir);
-    if (name === "node_modules" || name === "dist" || name === "coverage" || name === ".git" || name === ".docs") {
-      return;
-    }
+  addSubdirs(packagesDir);
+  addSubdirs(appsDir);
 
-    let files: string[];
+  const pluginsDir = path.join(packagesDir, "plugins");
+  if (fs.existsSync(pluginsDir)) {
+    addSubdirs(pluginsDir);
     try {
-      files = fs.readdirSync(dir);
+      const pluginSubdirs = fs.readdirSync(pluginsDir);
+      for (const sub of pluginSubdirs) {
+        addSubdirs(path.join(pluginsDir, sub));
+      }
     } catch {
-      return;
-    }
-
-    if (files.includes("package.json")) {
-      const pJsonPath = path.join(dir, "package.json");
-      try {
-        const pJson = JSON.parse(fs.readFileSync(pJsonPath, "utf8"));
-        if (pJson.name && pJson.name.startsWith("@codenhub/")) {
-          packageCache.set(pJson.name, {
-            exports: pJson.exports,
-            packageJsonPath: pJsonPath,
-          });
-        }
-      } catch {
-        // Ignore invalid package.json
-      }
-      return;
-    }
-
-    for (const file of files) {
-      const fullPath = path.join(dir, file);
-      try {
-        const stat = fs.lstatSync(fullPath);
-        if (stat.isDirectory() && !stat.isSymbolicLink()) {
-          scan(fullPath);
-        }
-      } catch {
-        // Ignore stat errors
-      }
+      // Ignore
     }
   }
 
-  scan(packagesDir);
+  for (const dir of dirsToScan) {
+    const pJsonPath = path.join(dir, "package.json");
+    if (fs.existsSync(pJsonPath)) {
+      const entry = parsePackageJson(pJsonPath);
+      if (entry) {
+        try {
+          const pJson = JSON.parse(fs.readFileSync(pJsonPath, "utf8"));
+          if (pJson.name && pJson.name.startsWith("@codenhub/")) {
+            packageCache.set(pJson.name, entry);
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  }
 }
 
 /**
  * Resolves the exports structure for a given @codenhub/ package.
  */
 function getPackageInfo(packageName: string, currentFileDir: string): { exports: unknown } | null {
-  if (packageCache.has(packageName)) {
-    return packageCache.get(packageName)!;
+  const cached = getCachedEntry(packageName);
+  if (cached !== undefined) {
+    return cached;
   }
 
   const workspaceRoot = findWorkspaceRoot(currentFileDir);
   scanWorkspace(workspaceRoot);
 
-  if (packageCache.has(packageName)) {
-    return packageCache.get(packageName)!;
+  const cachedAfterScan = getCachedEntry(packageName);
+  if (cachedAfterScan !== undefined) {
+    return cachedAfterScan;
   }
 
-  try {
-    const mainPath = require.resolve(packageName, { paths: [currentFileDir] });
-    let dir = path.dirname(mainPath);
-    while (dir && dir !== path.parse(dir).root) {
-      const pJsonPath = path.join(dir, "package.json");
-      if (fs.existsSync(pJsonPath)) {
-        const pJson = JSON.parse(fs.readFileSync(pJsonPath, "utf8"));
-        if (pJson.name === packageName) {
-          const info = { exports: pJson.exports, packageJsonPath: pJsonPath };
-          packageCache.set(packageName, info);
-          return info;
-        }
+  let dir = currentFileDir;
+  while (dir && dir !== path.parse(dir).root) {
+    const possiblePath = path.join(dir, "node_modules", packageName);
+    const pJsonPath = path.join(possiblePath, "package.json");
+    if (fs.existsSync(pJsonPath)) {
+      const entry = parsePackageJson(pJsonPath);
+      if (entry) {
+        packageCache.set(packageName, entry);
+        return entry;
       }
-      dir = path.dirname(dir);
     }
-  } catch {
-    // Ignore resolution errors
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
   }
 
   packageCache.set(packageName, null);
@@ -235,7 +292,8 @@ export const noDeepPackageImports: RuleModule = {
         return;
       }
 
-      const match = importPath.match(/^(@codenhub\/[^/]+)(?:\/(.*))?$/);
+      const cleanImportPath = importPath.replace(/\/+$/, "");
+      const match = cleanImportPath.match(/^(@codenhub\/[^/]+)(?:\/(.*))?$/);
       if (!match) {
         return;
       }

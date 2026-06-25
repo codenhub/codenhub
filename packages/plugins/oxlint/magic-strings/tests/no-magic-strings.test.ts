@@ -333,6 +333,28 @@ describe("no-magic-strings ESLint rule", () => {
     expect(reports).toHaveLength(0);
   });
 
+  it("should not report property access with optional computed properties", () => {
+    const tree = {
+      type: "FunctionDeclaration",
+      body: {
+        type: "BlockStatement",
+        body: [
+          {
+            type: "ExpressionStatement",
+            expression: {
+              type: "OptionalMemberExpression",
+              object: { type: "Identifier", name: "obj" },
+              property: { type: "Literal", value: "my-prop" },
+              computed: true,
+            },
+          },
+        ],
+      },
+    };
+    const reports = runRule(tree);
+    expect(reports).toHaveLength(0);
+  });
+
   it("should not report string literals in type annotations", () => {
     const tree = {
       type: "FunctionDeclaration",

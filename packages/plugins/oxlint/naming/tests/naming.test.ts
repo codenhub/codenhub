@@ -298,6 +298,56 @@ describe("boolean-prefix rule", () => {
     expect(reports).toHaveLength(1);
     expect(reports[0].data?.name).toBe("active");
   });
+
+  it("should allow spec mandated and AST common names", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    const allowedNames = ["method", "computed", "optional", "shorthand", "configurable", "enumerable", "writable"];
+    for (const name of allowedNames) {
+      listeners.VariableDeclarator?.({
+        id: { type: "Identifier", name },
+        init: { type: "Literal", value: true },
+      } as unknown as ASTNode);
+    }
+    expect(reports).toHaveLength(0);
+  });
+
+  it("should support union types and ternary expressions", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    // Union type annotation (boolean | undefined) but invalid name
+    listeners.VariableDeclarator?.({
+      id: {
+        type: "Identifier",
+        name: "active",
+        typeAnnotation: {
+          type: "TSTypeAnnotation",
+          typeAnnotation: {
+            type: "TSUnionType",
+            types: [{ type: "TSBooleanKeyword" }, { type: "TSUndefinedKeyword" }],
+          },
+        },
+      },
+      init: null,
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("active");
+    reports.length = 0;
+
+    // Ternary expression (cond ? true : false) with invalid name
+    listeners.VariableDeclarator?.({
+      id: { type: "Identifier", name: "visible" },
+      init: {
+        type: "ConditionalExpression",
+        consequent: { type: "Literal", value: true },
+        alternate: { type: "Literal", value: false },
+      },
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("visible");
+  });
 });
 
 describe("array-plural rule", () => {
@@ -521,5 +571,60 @@ describe("array-plural rule", () => {
     } as unknown as ASTNode);
     expect(reports).toHaveLength(1);
     expect(reports[0].data?.name).toBe("value");
+  });
+
+  it("should allow irregular plural 'schema'", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    listeners.VariableDeclarator?.({
+      id: { type: "Identifier", name: "schema" },
+      init: { type: "ArrayExpression", elements: [] },
+    } as unknown as ASTNode);
+
+    expect(reports).toHaveLength(0);
+  });
+
+  it("should support union types and readonly array type operators", () => {
+    const reports: ReportDescriptor[] = [];
+    const listeners = createRuleInstance(reports);
+
+    // Union type: string[] | null but invalid name
+    listeners.VariableDeclarator?.({
+      id: {
+        type: "Identifier",
+        name: "item",
+        typeAnnotation: {
+          type: "TSTypeAnnotation",
+          typeAnnotation: {
+            type: "TSUnionType",
+            types: [{ type: "TSArrayType" }, { type: "TSNullKeyword" }],
+          },
+        },
+      },
+      init: null,
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("item");
+    reports.length = 0;
+
+    // Readonly array type: readonly string[] but invalid name
+    listeners.VariableDeclarator?.({
+      id: {
+        type: "Identifier",
+        name: "record",
+        typeAnnotation: {
+          type: "TSTypeAnnotation",
+          typeAnnotation: {
+            type: "TSTypeOperator",
+            operator: "readonly",
+            typeAnnotation: { type: "TSArrayType" },
+          },
+        },
+      },
+      init: null,
+    } as unknown as ASTNode);
+    expect(reports).toHaveLength(1);
+    expect(reports[0].data?.name).toBe("record");
   });
 });

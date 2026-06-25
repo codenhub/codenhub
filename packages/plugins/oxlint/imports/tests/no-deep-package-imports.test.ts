@@ -112,6 +112,20 @@ describe("no-deep-package-imports ESLint rule", () => {
     expect(reports).toHaveLength(0);
   });
 
+  it("should allow root @codenhub imports with trailing slash", () => {
+    const tree = {
+      type: "Program",
+      body: [
+        {
+          type: "ImportDeclaration",
+          source: { type: "Literal", value: "@codenhub/error/" },
+        },
+      ],
+    };
+    const reports = runRule(tree);
+    expect(reports).toHaveLength(0);
+  });
+
   it("should allow deep imports if explicitly exported (exact match)", () => {
     packageCache.set("@codenhub/error", {
       exports: {

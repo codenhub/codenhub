@@ -5,6 +5,9 @@ import { findPackageJson } from "./resolution";
 import { getPublicSymbols } from "./symbols";
 import type { ASTNode, RuleModule } from "./types";
 
+/**
+ * ESLint rule that enforces JSDoc comments for exported public declarations in entry points.
+ */
 export const requirePublicJsdocRule: RuleModule = {
   meta: {
     type: "problem",

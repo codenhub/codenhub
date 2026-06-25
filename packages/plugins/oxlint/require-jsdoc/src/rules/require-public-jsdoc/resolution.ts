@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+const RESOLUTION_EXTENSIONS = [".ts", ".tsx", ".d.ts", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"];
+
 /**
  * Resolves an import path to its actual source file on disk.
  */
@@ -8,8 +10,7 @@ export function resolveImport(importPath: string, currentFile: string): string |
   const dir = path.dirname(currentFile);
   const absoluteBase = path.resolve(dir, importPath);
 
-  const extensions = [".ts", ".tsx", ".d.ts", ".js", ".jsx", "/index.ts", "/index.tsx", "/index.js"];
-  for (const ext of extensions) {
+  for (const ext of RESOLUTION_EXTENSIONS) {
     const file = absoluteBase + ext;
     if (fs.existsSync(file) && fs.statSync(file).isFile()) {
       return file;
