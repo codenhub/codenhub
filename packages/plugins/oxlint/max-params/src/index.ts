@@ -1,4 +1,4 @@
-import { maxParamsRule } from "./rules/max-params.js";
+import { maxParamsRule } from "./rules/max-params";
 
 export const rules = {
   "max-params": maxParamsRule,
@@ -9,4 +9,4 @@ const plugin = {
 };
 
 export default plugin;
-export type * from "./rules/max-params.js";
+export type * from "./rules/max-params";

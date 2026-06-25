@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import arrayPluralRule from "../src/rules/array-plural";
-import booleanPrefixRule, { type ASTNode, type RuleContext } from "../src/rules/boolean-prefix";
+import { arrayPluralRule } from "../src/rules/array-plural";
+import { booleanPrefixRule, type ASTNode, type RuleContext } from "../src/rules/boolean-prefix";
 
 interface ReportDescriptor {
   node: ASTNode;

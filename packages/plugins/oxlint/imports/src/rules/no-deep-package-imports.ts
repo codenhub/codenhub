@@ -1,12 +1,31 @@
 import fs from "fs";
 import path from "path";
 
-import type { Rule } from "eslint";
-
 export interface ASTNode {
   type: string;
   source?: ASTNode | null;
   value?: unknown;
+  [key: string]: unknown;
+}
+
+export interface RuleContext {
+  getFilename(): string;
+  report(descriptor: { node: ASTNode; messageId: string; data?: Record<string, string> }): void;
+}
+
+export interface RuleModule {
+  meta: {
+    type: "problem" | "suggestion" | "layout";
+    docs: {
+      description: string;
+      category?: string;
+      recommended?: boolean;
+      url?: string;
+    };
+    schema: unknown[];
+    messages: Record<string, string>;
+  };
+  create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
 // Cache for package information and workspace root path
@@ -187,7 +206,7 @@ function getPackageInfo(packageName: string, currentFileDir: string): { exports:
 /**
  * ESLint rule to prevent deep internal imports across package boundaries.
  */
-export const noDeepPackageImports: Rule.RuleModule = {
+export const noDeepPackageImports: RuleModule = {
   meta: {
     type: "problem",
     docs: {
@@ -201,12 +220,8 @@ export const noDeepPackageImports: Rule.RuleModule = {
         "Deep import from package '{{packageName}}' is not allowed. Only exports defined in its package.json are allowed.",
     },
   },
-  create(context) {
-    const ctx = context as {
-      getFilename(): string;
-      report(descriptor: { node: unknown; messageId: string; data?: Record<string, string> }): void;
-    };
-    const filename = ctx.getFilename();
+  create(context): Record<string, (node: ASTNode) => void> {
+    const filename = context.getFilename();
     const currentFileDir = filename && !filename.startsWith("<") ? path.dirname(filename) : process.cwd();
 
     function checkImport(importPath: string, reportNode: ASTNode) {
@@ -232,7 +247,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
 
       if (!info) {
         // If package cannot be resolved, block the deep import since it cannot be verified.
-        ctx.report({
+        context.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {
@@ -245,7 +260,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
 
       if (!info.exports) {
         // No exports map defined in package.json, so only root is allowed.
-        ctx.report({
+        context.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {
@@ -257,7 +272,7 @@ export const noDeepPackageImports: Rule.RuleModule = {
       }
 
       if (!isSubpathAllowed(info.exports, normalizedSubpath)) {
-        ctx.report({
+        context.report({
           node: reportNode,
           messageId: "deepImportNotAllowed",
           data: {

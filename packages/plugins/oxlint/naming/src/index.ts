@@ -1,12 +1,12 @@
-import arrayPlural from "./rules/array-plural";
-import booleanPrefix from "./rules/boolean-prefix";
+import { arrayPluralRule } from "./rules/array-plural";
+import { booleanPrefixRule } from "./rules/boolean-prefix";
 
 /**
  * The naming rules provided by the naming plugin.
  */
 export const rules = {
-  "boolean-prefix": booleanPrefix,
-  "array-plural": arrayPlural,
+  "boolean-prefix": booleanPrefixRule,
+  "array-plural": arrayPluralRule,
 };
 
 /**

@@ -36,7 +36,7 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
-const rule: RuleModule = {
+export const booleanPrefixRule: RuleModule = {
   meta: {
     type: "suggestion",
     docs: {
@@ -154,5 +154,3 @@ const rule: RuleModule = {
     };
   },
 };
-
-export default rule;
