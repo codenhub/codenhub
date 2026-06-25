@@ -1,1 +1,0 @@
-export { noMagicStrings } from "./rule";

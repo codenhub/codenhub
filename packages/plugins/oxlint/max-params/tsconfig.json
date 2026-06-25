@@ -1,8 +1,0 @@
-{
-  "compilerOptions": {
-    "module": "Preserve",
-    "moduleResolution": "bundler"
-  },
-  "extends": "../../../../tsconfig.json",
-  "include": ["src/**/*"]
-}
