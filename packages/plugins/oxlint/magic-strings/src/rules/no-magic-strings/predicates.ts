@@ -93,93 +93,76 @@ export function isInherentlySafeValue(value: string): boolean {
 // ---------------------------------------------------------------------------
 
 /** Returns true when the node is nested inside a function body. */
-export function isInsideFunction(node: ASTNode): boolean {
-  let current = node.parent;
-  while (current) {
-    if (FUNCTION_TYPES.has(current.type)) {
-      return true;
-    }
-    current = current.parent;
-  }
-  return false;
-}
-
-/** Returns true when any ancestor is a JSX node. */
-export function isInsideJSX(node: ASTNode): boolean {
-  let current = node.parent;
-  while (current) {
-    if (current.type.startsWith("JSX")) {
-      return true;
-    }
-    current = current.parent;
-  }
-  return false;
+export interface AncestorInfo {
+  isInsideFunction: boolean;
+  isInsideJSX: boolean;
+  isInsideTypeAnnotation: boolean;
+  isInsideSafeCallOrError: boolean;
 }
 
 /**
- * Returns true when any ancestor is a TypeScript type node
- * (but not type casts, which wrap runtime expressions).
+ * Traverses parent chain once to retrieve ancestor states, optimizing performance.
  */
-export function isInsideTypeAnnotation(node: ASTNode): boolean {
+export function getAncestorInfo(node: ASTNode): AncestorInfo {
+  const info: AncestorInfo = {
+    isInsideFunction: false,
+    isInsideJSX: false,
+    isInsideTypeAnnotation: false,
+    isInsideSafeCallOrError: false,
+  };
+
   let current = node.parent;
+  let hasCrossedFunction = false;
+
   while (current) {
-    if (current.type.startsWith("TS") && !TS_CAST_TYPES.has(current.type)) {
-      return true;
+    const type = current.type;
+
+    if (FUNCTION_TYPES.has(type)) {
+      info.isInsideFunction = true;
+      hasCrossedFunction = true;
     }
+
+    if (type.startsWith("JSX")) {
+      info.isInsideJSX = true;
+    }
+
+    if (type.startsWith("TS") && !TS_CAST_TYPES.has(type)) {
+      info.isInsideTypeAnnotation = true;
+    }
+
+    if (!hasCrossedFunction) {
+      if (type === "ThrowStatement") {
+        info.isInsideSafeCallOrError = true;
+      } else if (type === "NewExpression") {
+        const callee = current.callee;
+        if (callee?.type === "Identifier" && callee.name?.endsWith("Error")) {
+          info.isInsideSafeCallOrError = true;
+        }
+      } else if (type === "CallExpression") {
+        const callee = current.callee;
+
+        // console.log("..."), console.error("...")
+        if (callee?.type === "MemberExpression") {
+          if (callee.object?.type === "Identifier" && callee.object.name === "console") {
+            info.isInsideSafeCallOrError = true;
+          }
+          const methodName = callee.property?.type === "Identifier" ? callee.property.name : null;
+          if (methodName && SAFE_METHODS.has(methodName)) {
+            info.isInsideSafeCallOrError = true;
+          }
+        }
+
+        // Direct safe function call: emit("event")
+        if (callee?.type === "Identifier" && SAFE_METHODS.has(callee.name ?? "")) {
+          info.isInsideSafeCallOrError = true;
+        }
+      }
+    }
+
     current = current.parent;
   }
-  return false;
-}
 
-/**
- * True when the string appears inside a throw/Error constructor, a console
- * call, or an argument to one of the safe methods listed in SAFE_METHODS.
- *
- * Walks ancestors until it hits the enclosing function boundary (to avoid
- * leaking across closures).
- */
-export function isInsideSafeCallOrError(node: ASTNode): boolean {
-  let current = node.parent;
-  while (current) {
-    if (current.type === "ThrowStatement") {
-      return true;
-    }
-
-    // new TypeError("..."), new CustomError("...")
-    if (current.type === "NewExpression") {
-      const callee = current.callee;
-      if (callee?.type === "Identifier" && callee.name?.endsWith("Error")) {
-        return true;
-      }
-    }
-
-    if (current.type === "CallExpression") {
-      const callee = current.callee;
-
-      // console.log("..."), console.error("...")
-      if (callee?.type === "MemberExpression") {
-        if (callee.object?.type === "Identifier" && callee.object.name === "console") {
-          return true;
-        }
-        const methodName = callee.property?.type === "Identifier" ? callee.property.name : null;
-        if (methodName && SAFE_METHODS.has(methodName)) {
-          return true;
-        }
-      }
-
-      // Direct safe function call: emit("event")
-      if (callee?.type === "Identifier" && SAFE_METHODS.has(callee.name ?? "")) {
-        return true;
-      }
-    }
-
-    // Stop at the enclosing function so we don't cross closure boundaries
-    if (FUNCTION_TYPES.has(current.type)) {
-      break;
-    }
-    current = current.parent;
-  }
-  return false;
+  return info;
 }
 
 // ---------------------------------------------------------------------------

@@ -78,12 +78,7 @@ export const booleanPrefixRule: RuleModule = {
         if (node.operator !== "&&" && node.operator !== "||") {
           return false;
         }
-        // If the right-hand side is a known non-boolean type, it's not a boolean expression
-        const right = node.right as ASTNode | null | undefined;
-        if (right && right.type === "Literal") {
-          return typeof right.value === "boolean";
-        }
-        return true;
+        return isBooleanExpression(node.right as ASTNode);
       }
 
       if (node.type === "UnaryExpression" && node.operator === "!") {

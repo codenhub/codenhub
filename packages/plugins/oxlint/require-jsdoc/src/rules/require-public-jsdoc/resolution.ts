@@ -21,20 +21,39 @@ export function resolveImport(importPath: string, currentFile: string): string |
   return null;
 }
 
+const packageJsonCache = new Map<
+  string,
+  { pkgDir: string; pkgJson: { exports?: unknown; main?: string; module?: string; types?: string } } | null
+>();
+
 /**
  * Finds the nearest package.json starting from the given path and moving upwards.
  */
 export function findPackageJson(
   startFile: string,
 ): { pkgDir: string; pkgJson: { exports?: unknown; main?: string; module?: string; types?: string } } | null {
-  let dir = path.dirname(path.resolve(startFile));
+  const startDir = path.dirname(path.resolve(startFile));
+  if (packageJsonCache.has(startDir)) {
+    return packageJsonCache.get(startDir)!;
+  }
+
+  const traversedDirs: string[] = [];
+  let dir = startDir;
   while (true) {
+    traversedDirs.push(dir);
     const pkgPath = path.join(dir, "package.json");
     if (fs.existsSync(pkgPath)) {
       try {
         const pkgJson = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-        return { pkgDir: dir, pkgJson };
+        const info = { pkgDir: dir, pkgJson };
+        for (const d of traversedDirs) {
+          packageJsonCache.set(d, info);
+        }
+        return info;
       } catch {
+        for (const d of traversedDirs) {
+          packageJsonCache.set(d, null);
+        }
         return null;
       }
     }
@@ -43,6 +62,10 @@ export function findPackageJson(
       break;
     }
     dir = parent;
+  }
+
+  for (const d of traversedDirs) {
+    packageJsonCache.set(d, null);
   }
   return null;
 }

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import ts from "typescript";
+
 import { resolveImport } from "./resolution";
 
 // Cache for public symbols per package directory
@@ -101,82 +103,102 @@ export function getPublicSymbols(
     }
 
     const content = fs.readFileSync(normPath, "utf8");
-    const cleanContent = content.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "");
+    const sourceFile = ts.createSourceFile(normPath, content, ts.ScriptTarget.Latest, true);
 
-    // Match export { A, B } from './foo';
-    const exportFromRegex = /export\s+(?:type\s+)?\{\s*([^}]+)\s*\}\s*from\s*['"]([^'"]+)['"]/g;
-    let match;
-    while ((match = exportFromRegex.exec(cleanContent)) !== null) {
-      const specifiersStr = match[1];
-      const source = match[2];
-
-      const resolved = resolveImport(source, normPath);
-      if (resolved) {
-        traceFile(resolved);
-        const specifiers = specifiersStr
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-        for (const spec of specifiers) {
-          const parts = spec.replace(/\btype\s+/, "").split(/\s+as\s+/);
-          const localName = parts[0].trim();
-          const exportName = parts[1] ? parts[1].trim() : localName;
-
-          exportedSymbols.add(exportName);
-          addSymbol(resolved, localName);
+    function extractBindingNames(nameNode: ts.BindingName, names: string[]) {
+      if (ts.isIdentifier(nameNode)) {
+        names.push(nameNode.text);
+      } else if (ts.isObjectBindingPattern(nameNode) || ts.isArrayBindingPattern(nameNode)) {
+        for (const element of nameNode.elements) {
+          if (ts.isBindingElement(element)) {
+            extractBindingNames(element.name, names);
+          }
         }
       }
     }
 
-    // Match export * from '...'
-    const exportAllRegex = /export\s+\*\s*from\s*['"]([^'"]+)['"]/g;
-    while ((match = exportAllRegex.exec(cleanContent)) !== null) {
-      const source = match[1];
-      const resolved = resolveImport(source, normPath);
-      if (resolved) {
-        const sourceExports = traceFile(resolved);
-        for (const sym of sourceExports) {
-          exportedSymbols.add(sym);
-          addSymbol(resolved, sym);
+    for (const statement of sourceFile.statements) {
+      if (ts.isExportDeclaration(statement)) {
+        const source =
+          statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+            ? statement.moduleSpecifier.text
+            : null;
+        const resolved = source ? resolveImport(source, normPath) : null;
+
+        if (resolved) {
+          traceFile(resolved);
         }
-      }
-    }
 
-    // Match inline exports
-    const inlineExportRegex =
-      /export\s+(?:default\s+)?(?:async\s+)?(?:type|interface|class|function\*?|const|let|var|enum)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
-    while ((match = inlineExportRegex.exec(cleanContent)) !== null) {
-      const name = match[1];
-      exportedSymbols.add(name);
-      addSymbol(normPath, name);
-    }
+        if (statement.exportClause) {
+          if (ts.isNamedExports(statement.exportClause)) {
+            for (const element of statement.exportClause.elements) {
+              const localName = element.propertyName ? element.propertyName.text : element.name.text;
+              const exportName = element.name.text;
+              exportedSymbols.add(exportName);
+              if (resolved) {
+                addSymbol(resolved, localName);
+              } else {
+                addSymbol(normPath, localName);
+              }
+            }
+          } else if (ts.isNamespaceExport(statement.exportClause)) {
+            const exportName = statement.exportClause.name.text;
+            exportedSymbols.add(exportName);
+          }
+        } else if (resolved) {
+          // export * from "./foo"
+          const sourceExports = traceFile(resolved);
+          for (const sym of sourceExports) {
+            exportedSymbols.add(sym);
+            addSymbol(resolved, sym);
+          }
+        }
+      } else if (ts.isExportAssignment(statement)) {
+        // export default expr
+        exportedSymbols.add("default");
+        if (ts.isIdentifier(statement.expression)) {
+          addSymbol(normPath, statement.expression.text);
+        }
+      } else {
+        // Check inline declaration exports
+        const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) : undefined;
+        const hasExport = modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+        const hasDefault = modifiers?.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword);
 
-    // Match export default Name
-    const defaultExportRegex = /export\s+default\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
-    while ((match = defaultExportRegex.exec(cleanContent)) !== null) {
-      const name = match[1];
-      exportedSymbols.add("default");
-      addSymbol(normPath, name);
-    }
-
-    if (/export\s+default\b/.test(cleanContent)) {
-      exportedSymbols.add("default");
-    }
-
-    // Match export { A, B } (local exports)
-    const localExportRegex = /export\s+\{\s*([^}]+)\s*\}(?!\s*from)/g;
-    while ((match = localExportRegex.exec(cleanContent)) !== null) {
-      const specifiersStr = match[1];
-      const specifiers = specifiersStr
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      for (const spec of specifiers) {
-        const parts = spec.replace(/\btype\s+/, "").split(/\s+as\s+/);
-        const localName = parts[0].trim();
-        const exportName = parts[1] ? parts[1].trim() : localName;
-        exportedSymbols.add(exportName);
-        addSymbol(normPath, localName);
+        if (hasExport) {
+          if (hasDefault) {
+            exportedSymbols.add("default");
+            if (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) {
+              if (statement.name) {
+                addSymbol(normPath, statement.name.text);
+              }
+            }
+          } else {
+            if (ts.isVariableStatement(statement)) {
+              for (const decl of statement.declarationList.declarations) {
+                const names: string[] = [];
+                extractBindingNames(decl.name, names);
+                for (const name of names) {
+                  exportedSymbols.add(name);
+                  addSymbol(normPath, name);
+                }
+              }
+            } else if (
+              ts.isFunctionDeclaration(statement) ||
+              ts.isClassDeclaration(statement) ||
+              ts.isInterfaceDeclaration(statement) ||
+              ts.isTypeAliasDeclaration(statement) ||
+              ts.isEnumDeclaration(statement) ||
+              ts.isModuleDeclaration(statement)
+            ) {
+              if (statement.name) {
+                const name = statement.name.text;
+                exportedSymbols.add(name);
+                addSymbol(normPath, name);
+              }
+            }
+          }
+        }
       }
     }
 

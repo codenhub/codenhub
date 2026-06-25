@@ -13,4 +13,7 @@ const plugin = {
  * Default export of the eslint-plugin-require-jsdoc plugin.
  */
 export default plugin;
+/**
+ * ESLint rule to enforce JSDoc comments for exported public declarations in entry points.
+ */
 export { requirePublicJsdocRule };

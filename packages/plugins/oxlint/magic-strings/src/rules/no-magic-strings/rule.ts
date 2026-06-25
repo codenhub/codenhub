@@ -1,12 +1,9 @@
 import {
+  getAncestorInfo,
   isAssignedToConst,
   isAssignedToKnownProperty,
   isComparedToMetadataProperty,
   isInherentlySafeValue,
-  isInsideFunction,
-  isInsideJSX,
-  isInsideSafeCallOrError,
-  isInsideTypeAnnotation,
   isMetadataPropertyValue,
   isModuleSpecifier,
   isPropertyKey,
@@ -21,11 +18,10 @@ import type { ASTNode, RuleModule } from "./types";
 // ---------------------------------------------------------------------------
 
 /**
- * Ordered list of exemption checks. A string literal is allowed (not magic)
- * if any of these return true. The order matters for performance: cheap
- * parent-level checks run before expensive ancestor-walking checks.
+ * Ordered list of cheap exemption checks. A string literal is allowed (not magic)
+ * if any of these return true. These run before expensive ancestor-walking checks.
  */
-const EXEMPTIONS: ReadonlyArray<(node: ASTNode) => boolean> = [
+const CHEAP_EXEMPTIONS: ReadonlyArray<(node: ASTNode) => boolean> = [
   isAssignedToConst,
   isPropertyKey,
   isModuleSpecifier,
@@ -34,10 +30,6 @@ const EXEMPTIONS: ReadonlyArray<(node: ASTNode) => boolean> = [
   isComparedToMetadataProperty,
   isSwitchCaseOnMetadata,
   isAssignedToKnownProperty,
-  // Ancestor-walking checks (more expensive)
-  isInsideJSX,
-  isInsideTypeAnnotation,
-  isInsideSafeCallOrError,
 ];
 
 // ---------------------------------------------------------------------------
@@ -68,16 +60,24 @@ export const noMagicStrings: RuleModule = {
         return;
       }
 
-      // Only flag strings that appear inside function bodies
-      if (!isInsideFunction(node)) {
-        return;
-      }
-
-      // Check each exemption; bail on the first match
-      for (const isExempt of EXEMPTIONS) {
+      // Check each cheap exemption first; bail on the first match
+      for (const isExempt of CHEAP_EXEMPTIONS) {
         if (isExempt(node)) {
           return;
         }
+      }
+
+      // Get ancestor info in a single traversal pass
+      const ancestorInfo = getAncestorInfo(node);
+
+      // Only flag strings that appear inside function bodies
+      if (!ancestorInfo.isInsideFunction) {
+        return;
+      }
+
+      // Check ancestor-walking exemptions
+      if (ancestorInfo.isInsideJSX || ancestorInfo.isInsideTypeAnnotation || ancestorInfo.isInsideSafeCallOrError) {
+        return;
       }
 
       context.report({

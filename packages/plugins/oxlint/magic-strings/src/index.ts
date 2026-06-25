@@ -9,5 +9,12 @@ export const plugin = {
   },
 };
 
+/**
+ * ESLint rule that disallows magic strings inside functions.
+ */
 export { noMagicStrings };
+
+/**
+ * Default export of the ESLint plugin to detect and restrict magic strings.
+ */
 export default plugin;

@@ -9,6 +9,9 @@ export const plugin = {
   },
 };
 
+/**
+ * ESLint rule to prevent deep internal imports across package boundaries.
+ */
 export { noDeepPackageImports };
 
 /**

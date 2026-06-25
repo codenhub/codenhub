@@ -36,6 +36,19 @@ export interface RuleModule {
   create(context: RuleContext): Record<string, (node: ASTNode) => void>;
 }
 
+const IRREGULAR_PLURALS = new Set(["children", "people", "media", "data"]);
+const COLLECTIVE_SUFFIX_PATTERN = /(?:List|Group|Set|Collection|Array)$/i;
+
+function isValidArrayName(name: string): boolean {
+  if (name.endsWith("s") || name.endsWith("S")) {
+    return true;
+  }
+  if (IRREGULAR_PLURALS.has(name.toLowerCase())) {
+    return true;
+  }
+  return COLLECTIVE_SUFFIX_PATTERN.test(name);
+}
+
 export const arrayPluralRule: RuleModule = {
   meta: {
     type: "suggestion",
@@ -59,8 +72,7 @@ export const arrayPluralRule: RuleModule = {
         return;
       }
 
-      const isValid = name.endsWith("s") || name.endsWith("S");
-      if (isValid) {
+      if (isValidArrayName(name)) {
         return;
       }
 

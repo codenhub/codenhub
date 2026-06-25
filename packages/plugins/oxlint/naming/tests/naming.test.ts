@@ -32,7 +32,7 @@ describe("boolean-prefix rule", () => {
       { id: { type: "Identifier", name: "canWrite" }, init: { type: "UnaryExpression", operator: "!", argument: {} } },
       {
         id: { type: "Identifier", name: "shouldUpdate" },
-        init: { type: "LogicalExpression", operator: "&&", left: {}, right: {} },
+        init: { type: "LogicalExpression", operator: "&&", left: {}, right: { type: "Literal", value: true } },
       },
       { id: { type: "Identifier", name: "is" }, init: { type: "Literal", value: false } },
       { id: { type: "Identifier", name: "is_ready" }, init: { type: "Literal", value: true } },
@@ -59,7 +59,7 @@ describe("boolean-prefix rule", () => {
       { id: { type: "Identifier", name: "write" }, init: { type: "UnaryExpression", operator: "!", argument: {} } },
       {
         id: { type: "Identifier", name: "update" },
-        init: { type: "LogicalExpression", operator: "&&", left: {}, right: {} },
+        init: { type: "LogicalExpression", operator: "&&", left: {}, right: { type: "Literal", value: true } },
       },
       { id: { type: "Identifier", name: "issue" }, init: { type: "Literal", value: true } },
       { id: { type: "Identifier", name: "canvas" }, init: { type: "Literal", value: true } },
@@ -87,6 +87,19 @@ describe("boolean-prefix rule", () => {
         init: { type: "CallExpression", callee: { type: "Identifier", name: "getData" }, arguments: [] },
       },
       { id: { type: "Identifier", name: "loading" }, init: null },
+      {
+        id: { type: "Identifier", name: "item" },
+        init: {
+          type: "LogicalExpression",
+          operator: "&&",
+          left: { type: "Identifier", name: "options" },
+          right: {
+            type: "MemberExpression",
+            object: { type: "Identifier", name: "options" },
+            property: { type: "Identifier", name: "item" },
+          },
+        },
+      },
     ];
 
     for (const node of nonBooleans) {
@@ -335,6 +348,13 @@ describe("array-plural rule", () => {
         },
         init: null,
       },
+      // Irregular plurals
+      { id: { type: "Identifier", name: "children" }, init: { type: "ArrayExpression", elements: [] } },
+      { id: { type: "Identifier", name: "people" }, init: { type: "ArrayExpression", elements: [] } },
+      // Collective suffixes
+      { id: { type: "Identifier", name: "itemList" }, init: { type: "ArrayExpression", elements: [] } },
+      { id: { type: "Identifier", name: "userGroup" }, init: { type: "ArrayExpression", elements: [] } },
+      { id: { type: "Identifier", name: "dataSet" }, init: { type: "ArrayExpression", elements: [] } },
     ];
 
     for (const node of validArrays) {
