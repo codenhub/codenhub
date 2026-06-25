@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/skills",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "description": "CLI to install and update AI agent skills.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/skills",
