@@ -16,4 +16,4 @@ Define the required preparation steps before publishing the `@codenhub/skills` p
 ## Planned
 
 - **Package Registration**: Publish the `@codenhub/skills` package to npm.
-- **Validation**: Verify that running `npx @codenhub/skills` or `pnpm dlx @codenhub/skills` works seamlessly on a clean machine.
+- **Validation**: Verify that running `npx @codenhub/skills@latest` or `pnpm dlx @codenhub/skills@latest` works seamlessly on a clean machine.

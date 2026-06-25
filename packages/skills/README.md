@@ -1,41 +1,46 @@
 # @codenhub/skills
 
-Zero-dependency interactive CLI tool to install and update AI agent skills across multiple workspace and global harnesses.
+A curated collection of AI agent skills with a built-in installer to configure them across global and local agent harnesses.
 
-## Installation
+## Included Skills
+
+The package includes the following custom AI agent skills:
+
+- **brainstorming**: Collaborative design and requirement exploration before implementation.
+- **writing-specs**: Draft validated technical specifications or design documents.
+- **writing-plans**: Turn approved specs into detailed step-by-step implementation plans.
+- **executing-plans**: Execute plans with verification checkpoints.
+- **test-driven-development**: Strict fail-first red-green-refactor TDD.
+- **frontend-design**: Design premium, production-grade frontend interfaces.
+- **subagent-specialist**: Planning, dispatching, and reviewing subagents.
+- **agents-md-improver**: Audit and improve project-scoped `AGENTS.md` guidelines.
+- **writing-skills**: Create, test, and validate new reusable skills.
+- **caveman**: Speak in a highly technical, ultra-compressed communication mode.
+- **caveman-commit**: Generate clean, terse Conventional Commit messages.
+- **caveman-review**: Provide ultra-compressed, actionable one-line code review findings.
+
+## How to Install
+
+Run the interactive installer using `pnpm` or `npx` to copy the skills into your desired global or workspace directories:
 
 ```sh
-pnpm add @codenhub/skills
+pnpm dlx @codenhub/skills@latest
 ```
 
-## CLI Usage
-
-Run the CLI tool directly using your package runner:
+Or with `npx`:
 
 ```sh
-npx @codenhub/skills
+npx @codenhub/skills@latest
 ```
 
-Or with `pnpm`:
+### Installation Modes
 
-```sh
-pnpm dlx @codenhub/skills
-```
-
-### Interactive UI
-
-By default, the CLI scans the available skills and prompts you to select:
-
-1. **Which skills to install**: Checkbox list of all packaged skills (pre-selected).
-2. **Which harnesses to target**: Checkbox list of all supported global and local workspaces (pre-selected).
-
-### Non-Interactive Fallback
-
-If run in a non-interactive terminal (e.g., CI/CD or scripting pipeline), the CLI automatically installs all available skills to all detected harnesses on your system without waiting for input.
+- **Interactive UI**: By default, the installer lists the available skills and target harnesses on your system (such as Antigravity, OpenCode, Claude, Codex) and prompts you to select which ones to install.
+- **Non-Interactive Fallback**: In non-interactive environments (e.g., CI/CD pipelines or automated scripts), it automatically installs all available skills to all detected harnesses without prompting.
 
 ## Harness Support
 
-The CLI supports copying custom instructions to both Global and Workspace directories for the following AI agent harnesses:
+The installer supports copying custom instructions to both Global and Workspace directories for the following AI agent harnesses:
 
 | Harness         | Scope     | Path                        |
 | --------------- | --------- | --------------------------- |
