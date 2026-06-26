@@ -156,6 +156,52 @@ interface AsyncStore<TSchema extends object> {
 }
 ```
 
+#### `StoreErrorEvent`
+
+Describes a recoverable failure reported through the `onError` hook.
+
+```ts
+interface StoreErrorEvent {
+  code:
+    | "storage-read-failed"
+    | "storage-write-failed"
+    | "storage-clear-failed"
+    | "storage-parse-failed"
+    | "storage-validation-failed";
+  message: string;
+  storageKey: string;
+  cause?: unknown;
+}
+```
+
+#### `RemovableStoreKey<TSchema>`
+
+Utility type representing the optional keys that can be removed from a store. Required keys are excluded at type level.
+
+#### `StorageDriver<TSchema>`
+
+Interface for custom synchronous storage drivers.
+
+```ts
+interface StorageDriver<TSchema extends object> {
+  get(): unknown;
+  set(value: TSchema): boolean;
+  clear?(): void;
+}
+```
+
+#### `AsyncStorageDriver<TSchema>`
+
+Interface for custom asynchronous storage drivers.
+
+```ts
+interface AsyncStorageDriver<TSchema extends object> {
+  get(): Promise<unknown> | unknown;
+  set(value: TSchema): Promise<boolean> | boolean;
+  clear?(): Promise<void> | void;
+}
+```
+
 #### Drivers (Core)
 
 - **`localStorageDriver(storageKey, onError?)`**: Sync driver persisting to the browser's `localStorage`.
@@ -277,6 +323,7 @@ export default {
 
 - `structuredClone` is required to snapshot `initialState` and return cloned state states.
 - Browser `localStorage` is used by default in browser environments.
+  - **SSR Compatibility**: When running in Server-Side Rendering (SSR) environments where `localStorage` is unavailable, the store safely falls back to a temporary in-memory state (`initialState`) without throwing errors.
 - Node.js runtime (v18+) is required for `@codenhub/store/node` (uses `node:fs` and `node:path`).
 - Cloudflare Workers environment is required for `@codenhub/store/cf` (uses KV namespace and Durable Object storage).
 
@@ -289,6 +336,7 @@ export default {
   - The asynchronous `AsyncStore` automatically serializes all read/write operations (like `patch()`, `setItem()`, and `removeItem()`) via an internal queue to prevent concurrency race conditions on the same store instance.
 - **Security**: Do not store plain credentials or sensitive PII without encryption.
 - **Diagnostics**: Logging is off by default. Provide `onError` in configuration for diagnostics or custom telemetry.
+- **Driver Reusability & Key Binding**: Storage drivers bind to a specific store's `storageKey`. Do not share driver instances across multiple stores. Reassigning a driver instance to a different store with a different key will throw a runtime error.
 
 ## License
 

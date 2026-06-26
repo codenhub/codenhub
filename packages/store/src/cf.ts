@@ -74,6 +74,11 @@ export function cloudflareKvDriver<TSchema extends object>(
       await kvNamespace.delete(getKey());
     },
     _setStorageKey(k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
       key = k;
     },
   };
@@ -155,6 +160,11 @@ export function cloudflareDoDriver<TSchema extends object>(
       await storage.delete(getKey());
     },
     _setStorageKey(k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
       key = k;
     },
   };

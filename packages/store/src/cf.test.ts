@@ -183,5 +183,41 @@ describe("Cloudflare Drivers", () => {
 
       await expect(driver.get()).rejects.toThrow("Storage key not initialized in driver");
     });
+
+    it("should throw error if KV driver is reassigned a different storageKey", () => {
+      const mockKvNamespace = {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+      const driver = cloudflareKvDriver<{ api: string }>({
+        kvNamespace: mockKvNamespace,
+        storageKey: "original-key",
+      });
+
+      expect(() => {
+        if (driver._setStorageKey) {
+          driver._setStorageKey("new-key");
+        }
+      }).toThrow("Driver instance cannot be shared across stores with different keys");
+    });
+
+    it("should throw error if DO driver is reassigned a different storageKey", () => {
+      const mockDoStorage = {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+      const driver = cloudflareDoDriver<{ token: string }>({
+        storage: mockDoStorage,
+        storageKey: "original-key",
+      });
+
+      expect(() => {
+        if (driver._setStorageKey) {
+          driver._setStorageKey("new-key");
+        }
+      }).toThrow("Driver instance cannot be shared across stores with different keys");
+    });
   });
 });
