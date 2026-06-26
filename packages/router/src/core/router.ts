@@ -50,20 +50,27 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     }
   };
 
-  const findMatch = (target: ParsedPath): RouterMatch | null => {
+  interface MatchResult {
+    match: RouterMatch;
+    route: RegisteredRoute;
+  }
+
+  const findMatch = (target: ParsedPath): MatchResult | null => {
     for (const route of routes) {
       const params = matchRoute(route.pattern, target);
       if (params === null) {
         continue;
       }
 
-      return {
+      const match: RouterMatch = {
         path: route.pattern.path,
         pathname: target.pathname,
         params,
         searchParams: target.searchParams,
         hash: target.hash,
       };
+
+      return { match, route };
     }
 
     return null;
@@ -74,13 +81,12 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     isNavigating = true;
 
     try {
-      const match = findMatch(target);
-      if (match !== null) {
-        const route = routes.find((candidate) => candidate.pattern.path === match.path);
-        route?.handler(match);
-        notify(match);
+      const result = findMatch(target);
+      if (result !== null) {
+        result.route.handler(result.match);
+        notify(result.match);
 
-        return match;
+        return result.match;
       }
 
       const miss: RouterMiss = {
@@ -152,7 +158,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     },
 
     match(to) {
-      return findMatch(parseAppPath(to));
+      return findMatch(parseAppPath(to))?.match ?? null;
     },
 
     href(to) {
