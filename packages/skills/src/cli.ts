@@ -304,6 +304,8 @@ async function main() {
 }
 
 if (typeof process !== "undefined" && !process.env.VITEST) {
+  // eslint-disable-next-line promise/prefer-await-to-then
+  /* oxlint-disable promise/prefer-await-to-then */
   main().catch((err) => {
     console.error(`${ANSI.RED}Unhandled exception:${ANSI.RESET}`, err);
     process.exit(1);

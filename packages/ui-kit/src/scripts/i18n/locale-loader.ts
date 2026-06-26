@@ -1,3 +1,4 @@
+/* oxlint-disable no-await-in-loop */
 import type { I18nConfig, LocaleDictionary } from "./types";
 
 const MAX_LOCALE_RETRIES = 3;
