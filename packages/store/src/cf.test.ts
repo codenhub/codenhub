@@ -105,5 +105,83 @@ describe("Cloudflare Drivers", () => {
       expect(mockDoStorage.delete).toHaveBeenCalledWith("do-token-key");
       expect(await store.get()).toEqual({ token: "default-token" });
     });
+
+    it("should map undefined returned by DurableObjectStorage get to null", async () => {
+      const mockDoStorage = {
+        get: vi.fn().mockResolvedValue(undefined),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+      const driver = cloudflareDoDriver<{ token: string }>({
+        storage: mockDoStorage,
+        storageKey: "do-token-key",
+      });
+      expect(await driver.get()).toBeNull();
+    });
+  });
+
+  describe("Dynamic storageKey injection", () => {
+    it("should inject storageKey dynamically from store into KV driver if omitted in options", async () => {
+      const kvData = new Map<string, string>();
+      const mockKvNamespace = {
+        get: vi.fn().mockImplementation(async (key: string) => kvData.get(key) || null),
+        put: vi.fn().mockImplementation(async (key: string, val: string) => {
+          kvData.set(key, val);
+        }),
+        delete: vi.fn(),
+      };
+
+      // storageKey omitted in KV driver options
+      const driver = cloudflareKvDriver<{ api: string }>({
+        kvNamespace: mockKvNamespace,
+      });
+
+      const store = createAsyncStore({
+        storageKey: "injected-kv-key",
+        initialState: { api: "https://default.api" },
+        driver,
+      });
+
+      expect(await store.get()).toEqual({ api: "https://default.api" });
+      expect(mockKvNamespace.get).toHaveBeenCalledWith("injected-kv-key");
+    });
+
+    it("should inject storageKey dynamically from store into DO driver if omitted in options", async () => {
+      const doData = new Map<string, unknown>();
+      const mockDoStorage = {
+        get: vi.fn().mockImplementation(async (key: string) => doData.get(key)),
+        put: vi.fn().mockImplementation(async (key: string, val: unknown) => {
+          doData.set(key, val);
+        }),
+        delete: vi.fn(),
+      };
+
+      // storageKey omitted in DO driver options
+      const driver = cloudflareDoDriver<{ token: string }>({
+        storage: mockDoStorage,
+      });
+
+      const store = createAsyncStore({
+        storageKey: "injected-do-key",
+        initialState: { token: "default-token" },
+        driver,
+      });
+
+      expect(await store.get()).toEqual({ token: "default-token" });
+      expect(mockDoStorage.get).toHaveBeenCalledWith("injected-do-key");
+    });
+
+    it("should throw error if get/set called on KV driver without storageKey initialization", async () => {
+      const mockKvNamespace = {
+        get: vi.fn(),
+        put: vi.fn(),
+        delete: vi.fn(),
+      };
+      const driver = cloudflareKvDriver<{ api: string }>({
+        kvNamespace: mockKvNamespace,
+      });
+
+      await expect(driver.get()).rejects.toThrow("Storage key not initialized in driver");
+    });
   });
 });

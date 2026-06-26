@@ -29,7 +29,7 @@ export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFile
   const { filePath } = options;
 
   return {
-    get(): unknown | null {
+    get(): unknown {
       if (!fs.existsSync(filePath)) {
         return null;
       }
@@ -73,7 +73,7 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
   const { filePath } = options;
 
   return {
-    async get(): Promise<unknown | null> {
+    async get(): Promise<unknown> {
       try {
         await fs.promises.access(filePath);
       } catch {
@@ -99,7 +99,7 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
       try {
         await fs.promises.unlink(filePath);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
           throw error;
         }
       }

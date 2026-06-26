@@ -152,4 +152,36 @@ describe("AsyncStore", () => {
       expect((await store.get()).other).toBe(1);
     });
   });
+
+  describe("write serialization", () => {
+    it("should serialize concurrent writes to prevent race conditions", async () => {
+      const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      let inMemoryData: unknown = null;
+
+      const slowDriver = {
+        async get() {
+          await delay(10);
+          return inMemoryData;
+        },
+        async set(value: unknown) {
+          await delay(10);
+          inMemoryData = value;
+          return true;
+        },
+      };
+
+      const store = createAsyncStore<{ count: number; name?: string }>({
+        storageKey: "async-serialize-test",
+        initialState: { count: 0, name: "default" },
+        driver: slowDriver,
+      });
+
+      const p1 = store.patch({ count: 1 });
+      const p2 = store.patch({ name: "updated" });
+
+      await Promise.all([p1, p2]);
+
+      expect(await store.get()).toEqual({ count: 1, name: "updated" });
+    });
+  });
 });

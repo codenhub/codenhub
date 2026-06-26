@@ -29,7 +29,7 @@ export interface CloudflareKvDriverOptions {
   /**
    * The key under which the store data is saved in KV.
    */
-  storageKey: string;
+  storageKey?: string;
 }
 
 /**
@@ -46,24 +46,37 @@ export interface CloudflareKvDriverOptions {
 export function cloudflareKvDriver<TSchema extends object>(
   options: CloudflareKvDriverOptions,
 ): AsyncStorageDriver<TSchema> {
-  const { kvNamespace, storageKey } = options;
+  const { kvNamespace } = options;
+  let key = options.storageKey;
+
+  const getKey = (): string => {
+    if (!key) {
+      throw new Error(
+        "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
+      );
+    }
+    return key;
+  };
 
   return {
-    async get(): Promise<unknown | null> {
-      const raw = await kvNamespace.get(storageKey);
+    async get(): Promise<unknown> {
+      const raw = await kvNamespace.get(getKey());
       if (raw === null || raw === undefined) {
         return null;
       }
       return JSON.parse(raw);
     },
     async set(value: TSchema): Promise<boolean> {
-      await kvNamespace.put(storageKey, JSON.stringify(value));
+      await kvNamespace.put(getKey(), JSON.stringify(value));
       return true;
     },
     async clear(): Promise<void> {
-      await kvNamespace.delete(storageKey);
+      await kvNamespace.delete(getKey());
     },
-  };
+    _setStorageKey(k: string) {
+      key = k;
+    },
+  } as AsyncStorageDriver<TSchema>;
 }
 
 /**
@@ -95,7 +108,7 @@ export interface CloudflareDoDriverOptions {
   /**
    * The key under which the store data is saved in Durable Object storage.
    */
-  storageKey: string;
+  storageKey?: string;
 }
 
 /**
@@ -112,22 +125,35 @@ export interface CloudflareDoDriverOptions {
 export function cloudflareDoDriver<TSchema extends object>(
   options: CloudflareDoDriverOptions,
 ): AsyncStorageDriver<TSchema> {
-  const { storage, storageKey } = options;
+  const { storage } = options;
+  let key = options.storageKey;
+
+  const getKey = (): string => {
+    if (!key) {
+      throw new Error(
+        "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
+      );
+    }
+    return key;
+  };
 
   return {
-    async get(): Promise<unknown | null> {
-      const val = await storage.get(storageKey);
+    async get(): Promise<unknown> {
+      const val = await storage.get(getKey());
       if (val === undefined) {
         return null;
       }
       return val;
     },
     async set(value: TSchema): Promise<boolean> {
-      await storage.put(storageKey, value);
+      await storage.put(getKey(), value);
       return true;
     },
     async clear(): Promise<void> {
-      await storage.delete(storageKey);
+      await storage.delete(getKey());
     },
-  };
+    _setStorageKey(k: string) {
+      key = k;
+    },
+  } as AsyncStorageDriver<TSchema>;
 }

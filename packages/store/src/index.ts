@@ -1,3 +1,4 @@
+/** @internal */
 type OptionalKeys<TSchema extends object> = {
   [TKey in keyof TSchema]-?: object extends Pick<TSchema, TKey> ? TKey : never;
 }[keyof TSchema];
@@ -35,7 +36,7 @@ export type RemovableStoreKey<TSchema extends object> = OptionalKeys<TSchema>;
  */
 export interface StorageDriver<TSchema extends object> {
   /** Reads and returns the stored value, or null if not found. */
-  get(): unknown | null;
+  get(): unknown;
   /** Persists the value. Returns true if successful, false otherwise. */
   set(value: TSchema): boolean;
   /** Removes the stored value. */
@@ -176,20 +177,32 @@ export interface CreateStoreOptions<TSchema extends object> {
  * @param onError - Optional callback for reporting recoverable storage failures.
  * @returns A synchronous storage driver.
  */
+const isStorageAvailable = (): boolean => {
+  try {
+    return typeof localStorage !== "undefined" && localStorage !== null;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Default synchronous localStorage driver.
+ *
+ * Persists and reads values from the browser's `localStorage`.
+ * If `localStorage` throws during read, write, or clear operations, this driver catches
+ * the exception, reports it via the provided `onError` callback, and returns fallback values (null/false).
+ *
+ * @typeParam TSchema - Object shape persisted by the store.
+ * @param storageKey - The key under which state is saved in `localStorage`.
+ * @param onError - Optional callback for reporting recoverable storage failures.
+ * @returns A synchronous storage driver.
+ */
 export function localStorageDriver<TSchema extends object>(
   storageKey: string,
   onError?: (error: StoreErrorEvent) => void,
 ): StorageDriver<TSchema> {
-  const isStorageAvailable = (): boolean => {
-    try {
-      return typeof localStorage !== "undefined" && localStorage !== null;
-    } catch {
-      return false;
-    }
-  };
-
   return {
-    get(): unknown | null {
+    get(): unknown {
       if (!isStorageAvailable()) {
         return null;
       }
@@ -267,9 +280,9 @@ export function localStorageDriver<TSchema extends object>(
  * @returns A synchronous storage driver.
  */
 export function memoryDriver<TSchema extends object>(): StorageDriver<TSchema> {
-  let data: unknown | null = null;
+  let data: unknown = null;
   return {
-    get(): unknown | null {
+    get(): unknown {
       return data !== null ? structuredClone(data) : null;
     },
     set(value: TSchema): boolean {
@@ -299,6 +312,10 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
   };
 
   const driver = options.driver ?? localStorageDriver<TSchema>(storageKey, reportError);
+
+  if (driver && typeof (driver as { _setStorageKey?: (key: string) => void })._setStorageKey === "function") {
+    (driver as unknown as { _setStorageKey: (key: string) => void })._setStorageKey(storageKey);
+  }
 
   const readState = (): TSchema => {
     let parsed: unknown = null;
@@ -396,11 +413,29 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
  */
 export interface AsyncStorageDriver<TSchema extends object> {
   /** Reads and returns the stored value, or null if not found. */
-  get(): Promise<unknown | null> | unknown | null;
+  get(): Promise<unknown> | unknown;
   /** Persists the value. Returns true if successful, false otherwise. */
   set(value: TSchema): Promise<boolean> | boolean;
   /** Removes the stored value. */
   clear?(): Promise<void> | void;
+}
+
+class AsyncQueue {
+  private tail: Promise<unknown> = Promise.resolve();
+
+  async run<T>(fn: () => Promise<T> | T): Promise<T> {
+    const previous = this.tail;
+    const next = (async () => {
+      try {
+        await previous;
+      } catch {
+        // Suppress previous errors to avoid blocking the queue
+      }
+      return fn();
+    })();
+    this.tail = next;
+    return next;
+  }
 }
 
 /**
@@ -492,15 +527,34 @@ export interface AsyncStore<TSchema extends object> {
  * @typeParam TSchema - Object shape persisted by the store.
  */
 export interface CreateAsyncStoreOptions<TSchema extends object> {
-  /** Storage key used to identify the stored state. */
+  /**
+   * Storage key used to identify the stored state.
+   */
   storageKey: string;
-  /** Fallback state snapshotted at store creation and returned when storage is empty or fails. */
+
+  /**
+   * Fallback state snapshotted at store creation and returned when storage is empty, unavailable, invalid, or rejected by `validate`.
+   */
   initialState: TSchema;
-  /** Asynchronous storage driver. */
+
+  /**
+   * Asynchronous storage driver.
+   */
   driver: AsyncStorageDriver<TSchema>;
-  /** Optional runtime validator for parsed JSON. */
+
+  /**
+   * Optional runtime validator for parsed JSON.
+   *
+   * @param raw - The parsed value (typed as `unknown`).
+   * @returns `true` if the value matches the expected schema.
+   */
   validate?: (raw: unknown) => raw is TSchema;
-  /** Optional hook for recoverable storage, parsing, and validation failures. */
+
+  /**
+   * Optional hook for recoverable storage, parsing, and validation failures.
+   *
+   * @param error - Store-owned error event with a stable code, storage key, message, and optional cause.
+   */
   onError?: (error: StoreErrorEvent) => void;
 }
 
@@ -521,6 +575,12 @@ export function createAsyncStore<TSchema extends object>(
   const reportError = (error: StoreErrorEvent): void => {
     options.onError?.(error);
   };
+
+  if (driver && typeof (driver as { _setStorageKey?: (key: string) => void })._setStorageKey === "function") {
+    (driver as unknown as { _setStorageKey: (key: string) => void })._setStorageKey(storageKey);
+  }
+
+  const queue = new AsyncQueue();
 
   const readState = async (): Promise<TSchema> => {
     let parsed: unknown = null;
@@ -570,46 +630,56 @@ export function createAsyncStore<TSchema extends object>(
   };
 
   return {
-    async get(): Promise<TSchema> {
-      return readState();
+    get(): Promise<TSchema> {
+      return queue.run(() => readState());
     },
-    async set(nextState: TSchema): Promise<boolean> {
-      return writeState(nextState);
+    set(nextState: TSchema): Promise<boolean> {
+      return queue.run(() => writeState(nextState));
     },
-    async patch(partialState: Partial<TSchema>): Promise<TSchema> {
-      const currentState = await readState();
-      const nextState = { ...currentState, ...partialState };
-      await writeState(nextState);
-      return structuredClone(nextState);
+    patch(partialState: Partial<TSchema>): Promise<TSchema> {
+      return queue.run(async () => {
+        const currentState = await readState();
+        const nextState = { ...currentState, ...partialState };
+        await writeState(nextState);
+        return structuredClone(nextState);
+      });
     },
-    async getItem<TKey extends keyof TSchema>(key: TKey): Promise<TSchema[TKey] | undefined> {
-      const state = await readState();
-      return state[key];
+    getItem<TKey extends keyof TSchema>(key: TKey): Promise<TSchema[TKey] | undefined> {
+      return queue.run(async () => {
+        const state = await readState();
+        return state[key];
+      });
     },
-    async setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): Promise<TSchema> {
-      const currentState = await readState();
-      const nextState = { ...currentState, [key]: value } as TSchema;
-      await writeState(nextState);
-      return structuredClone(nextState);
+    setItem<TKey extends keyof TSchema>(key: TKey, value: TSchema[TKey]): Promise<TSchema> {
+      return queue.run(async () => {
+        const currentState = await readState();
+        const nextState = { ...currentState, [key]: value } as TSchema;
+        await writeState(nextState);
+        return structuredClone(nextState);
+      });
     },
-    async removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): Promise<TSchema> {
-      const currentState = await readState();
-      const nextState = { ...currentState };
-      delete nextState[key];
-      await writeState(nextState);
-      return structuredClone(nextState);
+    removeItem<TKey extends RemovableStoreKey<TSchema>>(key: TKey): Promise<TSchema> {
+      return queue.run(async () => {
+        const currentState = await readState();
+        const nextState = { ...currentState };
+        delete nextState[key];
+        await writeState(nextState);
+        return structuredClone(nextState);
+      });
     },
-    async clear(): Promise<void> {
-      try {
-        await driver.clear?.();
-      } catch (error) {
-        reportError({
-          code: "storage-clear-failed",
-          message: `Driver failed to clear storage for key "${storageKey}".`,
-          storageKey,
-          cause: error,
-        });
-      }
+    clear(): Promise<void> {
+      return queue.run(async () => {
+        try {
+          await driver.clear?.();
+        } catch (error) {
+          reportError({
+            code: "storage-clear-failed",
+            message: `Driver failed to clear storage for key "${storageKey}".`,
+            storageKey,
+            cause: error,
+          });
+        }
+      });
     },
   };
 }
@@ -624,9 +694,9 @@ export function createAsyncStore<TSchema extends object>(
  * @returns An asynchronous storage driver.
  */
 export function asyncMemoryDriver<TSchema extends object>(): AsyncStorageDriver<TSchema> {
-  let data: unknown | null = null;
+  let data: unknown = null;
   return {
-    async get(): Promise<unknown | null> {
+    async get(): Promise<unknown> {
       return data !== null ? structuredClone(data) : null;
     },
     async set(value: TSchema): Promise<boolean> {

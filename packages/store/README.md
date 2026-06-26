@@ -159,7 +159,7 @@ interface AsyncStore<TSchema extends object> {
 #### Drivers (Core)
 
 - **`localStorageDriver(storageKey, onError?)`**: Sync driver persisting to the browser's `localStorage`.
-- **`memoryDriver()`**: Sync in-memory driver (closure state Map).
+- **`memoryDriver()`**: Sync in-memory driver (local variable).
 - **`asyncMemoryDriver()`**: Async in-memory driver.
 
 ---
@@ -251,9 +251,10 @@ Persist state on Cloudflare's Edge using KV bindings.
 ```ts
 import { createAsyncStore } from "@codenhub/store";
 import { cloudflareKvDriver } from "@codenhub/store/cf";
+import type { CloudflareKvNamespace } from "@codenhub/store/cf";
 
 interface Env {
-  SETTINGS_KV: any;
+  SETTINGS_KV: CloudflareKvNamespace;
 }
 
 export default {
@@ -263,7 +264,6 @@ export default {
       initialState: { darkMode: false },
       driver: cloudflareKvDriver({
         kvNamespace: env.SETTINGS_KV,
-        storageKey: "user-123",
       }),
     });
 
@@ -284,7 +284,9 @@ export default {
 
 - **Isolation**: Stores are isolated by key; consumers must ensure collision-free keys.
 - **Serialization**: Values must be JSON-serializable and structured-cloneable.
-- **Synchronization**: The library does not synchronize across tabs or multiple process instances out of the box.
+- **Synchronization & Concurrency**:
+  - The synchronous `Store` does not synchronize across browser tabs out of the box. Simultaneous cross-tab writes to the same localStorage key can lead to race conditions.
+  - The asynchronous `AsyncStore` automatically serializes all read/write operations (like `patch()`, `setItem()`, and `removeItem()`) via an internal queue to prevent concurrency race conditions on the same store instance.
 - **Security**: Do not store plain credentials or sensitive PII without encryption.
 - **Diagnostics**: Logging is off by default. Provide `onError` in configuration for diagnostics or custom telemetry.
 
