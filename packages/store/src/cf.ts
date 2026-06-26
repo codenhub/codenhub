@@ -58,7 +58,7 @@ export function cloudflareKvDriver<TSchema extends object>(
     return key;
   };
 
-  return {
+  const driver: AsyncStorageDriver<TSchema> = {
     async get(): Promise<unknown> {
       const raw = await kvNamespace.get(getKey());
       if (raw === null || raw === undefined) {
@@ -76,7 +76,9 @@ export function cloudflareKvDriver<TSchema extends object>(
     _setStorageKey(k: string) {
       key = k;
     },
-  } as AsyncStorageDriver<TSchema>;
+  };
+
+  return driver;
 }
 
 /**
@@ -137,7 +139,7 @@ export function cloudflareDoDriver<TSchema extends object>(
     return key;
   };
 
-  return {
+  const driver: AsyncStorageDriver<TSchema> = {
     async get(): Promise<unknown> {
       const val = await storage.get(getKey());
       if (val === undefined) {
@@ -155,5 +157,7 @@ export function cloudflareDoDriver<TSchema extends object>(
     _setStorageKey(k: string) {
       key = k;
     },
-  } as AsyncStorageDriver<TSchema>;
+  };
+
+  return driver;
 }

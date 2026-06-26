@@ -41,6 +41,11 @@ export interface StorageDriver<TSchema extends object> {
   set(value: TSchema): boolean;
   /** Removes the stored value. */
   clear?(): void;
+  /**
+   * Sets the storage key on the driver dynamically.
+   * @internal
+   */
+  _setStorageKey?(key: string): void;
 }
 
 /**
@@ -73,8 +78,9 @@ export interface Store<TSchema extends object> {
   /**
    * Merges partial updates into the current state and attempts to persist the result.
    *
-   * If writing to the storage driver fails, the merged state is still returned and kept in memory,
-   * but the failure is reported to `CreateStoreOptions.onError`.
+   * If writing to the storage driver fails, the merged state is still returned by the method call,
+   * but subsequent reads will reflect the old state from the storage driver. The failure is
+   * reported to `CreateStoreOptions.onError`.
    *
    * @param partialState - A partial object containing the fields to update.
    * @returns A deep clone of the merged state object.
@@ -96,8 +102,9 @@ export interface Store<TSchema extends object> {
   /**
    * Updates a single field in the store state and attempts to persist the changes.
    *
-   * If writing to the storage driver fails, the updated state is still returned and kept in memory,
-   * but the failure is reported to `CreateStoreOptions.onError`.
+   * If writing to the storage driver fails, the updated state is still returned by the method call,
+   * but subsequent reads will reflect the old state from the storage driver. The failure is
+   * reported to `CreateStoreOptions.onError`.
    *
    * @typeParam TKey - Union of keys in the schema.
    * @param key - The field name to update.
@@ -110,8 +117,9 @@ export interface Store<TSchema extends object> {
    * Deletes an optional field from the store state and attempts to persist the changes.
    *
    * Only optional keys can be removed to prevent producing a state object that violates the schema.
-   * If writing to the storage driver fails, the updated state is still returned and kept in memory,
-   * but the failure is reported to `CreateStoreOptions.onError`.
+   * If writing to the storage driver fails, the updated state is still returned by the method call,
+   * but subsequent reads will reflect the old state from the storage driver. The failure is
+   * reported to `CreateStoreOptions.onError`.
    *
    * @typeParam TKey - Union of optional keys in the schema.
    * @param key - The optional field name to delete.
@@ -165,18 +173,7 @@ export interface CreateStoreOptions<TSchema extends object> {
   onError?: (error: StoreErrorEvent) => void;
 }
 
-/**
- * Default synchronous localStorage driver.
- *
- * Persists and reads values from the browser's `localStorage`.
- * If `localStorage` throws during read, write, or clear operations, this driver catches
- * the exception, reports it via the provided `onError` callback, and returns fallback values (null/false).
- *
- * @typeParam TSchema - Object shape persisted by the store.
- * @param storageKey - The key under which state is saved in `localStorage`.
- * @param onError - Optional callback for reporting recoverable storage failures.
- * @returns A synchronous storage driver.
- */
+// Helper to detect if localStorage is available and accessible.
 const isStorageAvailable = (): boolean => {
   try {
     return typeof localStorage !== "undefined" && localStorage !== null;
@@ -313,8 +310,8 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
 
   const driver = options.driver ?? localStorageDriver<TSchema>(storageKey, reportError);
 
-  if (driver && typeof (driver as { _setStorageKey?: (key: string) => void })._setStorageKey === "function") {
-    (driver as unknown as { _setStorageKey: (key: string) => void })._setStorageKey(storageKey);
+  if (driver._setStorageKey) {
+    driver._setStorageKey(storageKey);
   }
 
   const readState = (): TSchema => {
@@ -418,6 +415,11 @@ export interface AsyncStorageDriver<TSchema extends object> {
   set(value: TSchema): Promise<boolean> | boolean;
   /** Removes the stored value. */
   clear?(): Promise<void> | void;
+  /**
+   * Sets the storage key on the driver dynamically.
+   * @internal
+   */
+  _setStorageKey?(key: string): void;
 }
 
 class AsyncQueue {
@@ -576,8 +578,8 @@ export function createAsyncStore<TSchema extends object>(
     options.onError?.(error);
   };
 
-  if (driver && typeof (driver as { _setStorageKey?: (key: string) => void })._setStorageKey === "function") {
-    (driver as unknown as { _setStorageKey: (key: string) => void })._setStorageKey(storageKey);
+  if (driver._setStorageKey) {
+    driver._setStorageKey(storageKey);
   }
 
   const queue = new AsyncQueue();
