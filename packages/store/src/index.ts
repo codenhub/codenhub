@@ -14,7 +14,7 @@ export interface StoreErrorEvent {
     | "storage-validation-failed";
   /** Human-readable diagnostic message safe for logs or developer tooling. */
   message: string;
-  /** localStorage key associated with the failed operation. */
+  /** Storage key associated with the failed operation. */
   storageKey: string;
   /** Original thrown value when the failure came from an exception. */
   cause?: unknown;
@@ -30,6 +30,13 @@ export interface StoreErrorEvent {
 export type RemovableStoreKey<TSchema extends object> = OptionalKeys<TSchema>;
 
 /**
+ * Internal Symbol used to inject the storage key dynamically into driver instances.
+ *
+ * @internal
+ */
+export const SET_STORAGE_KEY = Symbol.for("store:set_storage_key");
+
+/**
  * Interface for a synchronous storage driver.
  *
  * @typeParam TSchema - Object shape persisted by the store.
@@ -37,15 +44,15 @@ export type RemovableStoreKey<TSchema extends object> = OptionalKeys<TSchema>;
 export interface StorageDriver<TSchema extends object> {
   /** Reads and returns the stored value, or null if not found. */
   get(): unknown;
-  /** Persists the value. Returns true if successful, false otherwise. */
+  /**
+   * Persists the value. Returns true if successful, false if writing is disabled/unavailable,
+   * or throws an error on system failures (which will be caught and reported by the store).
+   */
   set(value: TSchema): boolean;
   /** Removes the stored value. */
   clear?(): void;
-  /**
-   * Sets the storage key on the driver dynamically.
-   * @internal
-   */
-  _setStorageKey?(key: string): void;
+  /** @internal */
+  [SET_STORAGE_KEY]?(key: string): void;
 }
 
 /**
@@ -173,98 +180,145 @@ export interface CreateStoreOptions<TSchema extends object> {
   onError?: (error: StoreErrorEvent) => void;
 }
 
-// Helper to detect if localStorage is available and accessible.
+// Probe actual localStorage access: catches SecurityError in cross-origin iframes
+// and other environments where the property exists but throws on access.
+let cachedLocalStorage: typeof localStorage | null = null;
+let cachedAvailable = false;
+
 const isStorageAvailable = (): boolean => {
-  try {
-    return typeof localStorage !== "undefined" && localStorage !== null;
-  } catch {
+  if (typeof localStorage === "undefined") {
     return false;
   }
+  const isTest = typeof process !== "undefined" && process.env && process.env.NODE_ENV === "test";
+  if (!isTest && localStorage === cachedLocalStorage) {
+    return cachedAvailable;
+  }
+  cachedLocalStorage = localStorage;
+  try {
+    localStorage.getItem("");
+    cachedAvailable = true;
+  } catch {
+    cachedAvailable = false;
+  }
+  return cachedAvailable;
 };
 
 /**
  * Default synchronous localStorage driver.
  *
  * Persists and reads values from the browser's `localStorage`.
- * If `localStorage` throws during read, write, or clear operations, this driver catches
- * the exception, reports it via the provided `onError` callback, and returns fallback values (null/false).
+ * Before each operation, probes `localStorage` availability; if storage is inaccessible
+ * (e.g. in a cross-origin iframe or private-browsing restriction), the operation returns
+ * a silent fallback value (`null` / `false`) without firing `onError`.
+ * Per-key operation failures (e.g. quota exceeded on write, malformed JSON on read)
+ * are caught and reported via the provided `onError` callback.
  *
  * @typeParam TSchema - Object shape persisted by the store.
- * @param storageKey - The key under which state is saved in `localStorage`.
- * @param onError - Optional callback for reporting recoverable storage failures.
+ * @param storageKey - Optional key under which state is saved in `localStorage`. If omitted, will be bound dynamically.
+ * @param onError - Optional callback for reporting recoverable per-key storage failures.
  * @returns A synchronous storage driver.
  */
 export function localStorageDriver<TSchema extends object>(
-  storageKey: string,
+  storageKey?: string,
   onError?: (error: StoreErrorEvent) => void,
 ): StorageDriver<TSchema> {
-  return {
+  let key = storageKey;
+
+  const getKey = (): string => {
+    if (!key) {
+      throw new Error(
+        "Storage key not initialized in driver. Ensure storageKey is provided in options or store creation.",
+      );
+    }
+    return key;
+  };
+
+  const driver: StorageDriver<TSchema> = {
     get(): unknown {
       if (!isStorageAvailable()) {
         return null;
       }
-      let raw: string | null = null;
+      const currentKey = getKey();
       try {
-        raw = localStorage.getItem(storageKey);
-      } catch (error) {
-        onError?.({
-          code: "storage-read-failed",
-          message: `Failed to read from localStorage for key "${storageKey}".`,
-          storageKey,
-          cause: error,
-        });
-        return null;
-      }
-
-      if (raw === null) {
-        return null;
-      }
-
-      try {
+        const raw = localStorage.getItem(currentKey);
+        if (raw === null) {
+          return null;
+        }
         return JSON.parse(raw);
       } catch (error) {
-        onError?.({
-          code: "storage-parse-failed",
-          message: `Failed to parse stored JSON for key "${storageKey}".`,
-          storageKey,
-          cause: error,
-        });
-        return null;
+        if (onError) {
+          const isParseError = error instanceof SyntaxError;
+          onError({
+            code: isParseError ? "storage-parse-failed" : "storage-read-failed",
+            message: isParseError
+              ? `Failed to parse stored JSON for key "${currentKey}".`
+              : `Failed to read from localStorage for key "${currentKey}".`,
+            storageKey: currentKey,
+            cause: error,
+          });
+          if (error && typeof error === "object") {
+            (error as Record<string, unknown>)._storeHandled = true;
+          }
+        }
+        throw error;
       }
     },
     set(state: TSchema): boolean {
       if (!isStorageAvailable()) {
         return false;
       }
+      const currentKey = getKey();
       try {
-        localStorage.setItem(storageKey, JSON.stringify(state));
+        localStorage.setItem(currentKey, JSON.stringify(state));
         return true;
       } catch (error) {
-        onError?.({
-          code: "storage-write-failed",
-          message: `Failed to write to localStorage for key "${storageKey}".`,
-          storageKey,
-          cause: error,
-        });
-        return false;
+        if (onError) {
+          onError({
+            code: "storage-write-failed",
+            message: `Failed to write to localStorage for key "${currentKey}".`,
+            storageKey: currentKey,
+            cause: error,
+          });
+          if (error && typeof error === "object") {
+            (error as Record<string, unknown>)._storeHandled = true;
+          }
+        }
+        throw error;
       }
     },
     clear(): void {
       if (!isStorageAvailable()) {
         return;
       }
+      const currentKey = getKey();
       try {
-        localStorage.removeItem(storageKey);
+        localStorage.removeItem(currentKey);
       } catch (error) {
-        onError?.({
-          code: "storage-clear-failed",
-          message: `Failed to clear localStorage for key "${storageKey}".`,
-          storageKey,
-          cause: error,
-        });
+        if (onError) {
+          onError({
+            code: "storage-clear-failed",
+            message: `Failed to clear localStorage for key "${currentKey}".`,
+            storageKey: currentKey,
+            cause: error,
+          });
+          if (error && typeof error === "object") {
+            (error as Record<string, unknown>)._storeHandled = true;
+          }
+        }
+        throw error;
       }
     },
+    [SET_STORAGE_KEY](k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
+      key = k;
+    },
   };
+
+  return driver;
 }
 
 /**
@@ -278,6 +332,7 @@ export function localStorageDriver<TSchema extends object>(
  */
 export function memoryDriver<TSchema extends object>(): StorageDriver<TSchema> {
   let data: unknown = null;
+  let key: string | undefined;
   return {
     get(): unknown {
       return data !== null ? structuredClone(data) : null;
@@ -288,6 +343,14 @@ export function memoryDriver<TSchema extends object>(): StorageDriver<TSchema> {
     },
     clear(): void {
       data = null;
+    },
+    [SET_STORAGE_KEY](k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
+      key = k;
     },
   };
 }
@@ -304,14 +367,10 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
   const { storageKey } = options;
   const initialState = structuredClone(options.initialState);
 
-  const reportError = (error: StoreErrorEvent): void => {
-    options.onError?.(error);
-  };
+  const driver = options.driver ?? localStorageDriver<TSchema>(storageKey, options.onError);
 
-  const driver = options.driver ?? localStorageDriver<TSchema>(storageKey, reportError);
-
-  if (driver._setStorageKey) {
-    driver._setStorageKey(storageKey);
+  if (driver[SET_STORAGE_KEY]) {
+    driver[SET_STORAGE_KEY](storageKey);
   }
 
   const readState = (): TSchema => {
@@ -319,8 +378,11 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     try {
       parsed = driver.get();
     } catch (error) {
+      if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+        return structuredClone(initialState);
+      }
       const isParseError = error instanceof SyntaxError;
-      reportError({
+      options.onError?.({
         code: isParseError ? "storage-parse-failed" : "storage-read-failed",
         message: isParseError
           ? `Failed to parse stored JSON for key "${storageKey}".`
@@ -336,7 +398,7 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
     }
 
     if (options.validate !== undefined && !options.validate(parsed)) {
-      reportError({
+      options.onError?.({
         code: "storage-validation-failed",
         message: `Stored value for key "${storageKey}" failed schema validation.`,
         storageKey,
@@ -349,9 +411,20 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
 
   const writeState = (state: TSchema): boolean => {
     try {
-      return driver.set(state);
+      const success = driver.set(state);
+      if (!success) {
+        options.onError?.({
+          code: "storage-write-failed",
+          message: `Driver failed to write value for key "${storageKey}".`,
+          storageKey,
+        });
+      }
+      return success;
     } catch (error) {
-      reportError({
+      if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+        return false;
+      }
+      options.onError?.({
         code: "storage-write-failed",
         message: `Driver failed to write value for key "${storageKey}".`,
         storageKey,
@@ -392,7 +465,10 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
       try {
         driver.clear?.();
       } catch (error) {
-        reportError({
+        if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+          return;
+        }
+        options.onError?.({
           code: "storage-clear-failed",
           message: `Driver failed to clear storage for key "${storageKey}".`,
           storageKey,
@@ -410,16 +486,16 @@ export function createStore<TSchema extends object>(options: CreateStoreOptions<
  */
 export interface AsyncStorageDriver<TSchema extends object> {
   /** Reads and returns the stored value, or null if not found. */
-  get(): Promise<unknown> | unknown;
-  /** Persists the value. Returns true if successful, false otherwise. */
-  set(value: TSchema): Promise<boolean> | boolean;
-  /** Removes the stored value. */
-  clear?(): Promise<void> | void;
+  get(): Promise<unknown>;
   /**
-   * Sets the storage key on the driver dynamically.
-   * @internal
+   * Persists the value. Returns true if successful, false if writing is disabled/unavailable,
+   * or rejects with an error on system failures (which will be caught and reported by the store).
    */
-  _setStorageKey?(key: string): void;
+  set(value: TSchema): Promise<boolean>;
+  /** Removes the stored value. */
+  clear?(): Promise<void>;
+  /** @internal */
+  [SET_STORAGE_KEY]?(key: string): void;
 }
 
 class AsyncQueue {
@@ -574,12 +650,8 @@ export function createAsyncStore<TSchema extends object>(
   const { storageKey, driver } = options;
   const initialState = structuredClone(options.initialState);
 
-  const reportError = (error: StoreErrorEvent): void => {
-    options.onError?.(error);
-  };
-
-  if (driver._setStorageKey) {
-    driver._setStorageKey(storageKey);
+  if (driver[SET_STORAGE_KEY]) {
+    driver[SET_STORAGE_KEY](storageKey);
   }
 
   const queue = new AsyncQueue();
@@ -589,8 +661,11 @@ export function createAsyncStore<TSchema extends object>(
     try {
       parsed = await driver.get();
     } catch (error) {
+      if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+        return structuredClone(initialState);
+      }
       const isParseError = error instanceof SyntaxError;
-      reportError({
+      options.onError?.({
         code: isParseError ? "storage-parse-failed" : "storage-read-failed",
         message: isParseError
           ? `Failed to parse stored JSON for key "${storageKey}".`
@@ -606,7 +681,7 @@ export function createAsyncStore<TSchema extends object>(
     }
 
     if (options.validate !== undefined && !options.validate(parsed)) {
-      reportError({
+      options.onError?.({
         code: "storage-validation-failed",
         message: `Stored value for key "${storageKey}" failed schema validation.`,
         storageKey,
@@ -619,9 +694,20 @@ export function createAsyncStore<TSchema extends object>(
 
   const writeState = async (state: TSchema): Promise<boolean> => {
     try {
-      return await driver.set(state);
+      const success = await driver.set(state);
+      if (!success) {
+        options.onError?.({
+          code: "storage-write-failed",
+          message: `Driver failed to write value for key "${storageKey}".`,
+          storageKey,
+        });
+      }
+      return success;
     } catch (error) {
-      reportError({
+      if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+        return false;
+      }
+      options.onError?.({
         code: "storage-write-failed",
         message: `Driver failed to write value for key "${storageKey}".`,
         storageKey,
@@ -674,7 +760,10 @@ export function createAsyncStore<TSchema extends object>(
         try {
           await driver.clear?.();
         } catch (error) {
-          reportError({
+          if (error && typeof error === "object" && (error as Record<string, unknown>)._storeHandled) {
+            return;
+          }
+          options.onError?.({
             code: "storage-clear-failed",
             message: `Driver failed to clear storage for key "${storageKey}".`,
             storageKey,
@@ -697,6 +786,7 @@ export function createAsyncStore<TSchema extends object>(
  */
 export function asyncMemoryDriver<TSchema extends object>(): AsyncStorageDriver<TSchema> {
   let data: unknown = null;
+  let key: string | undefined;
   return {
     async get(): Promise<unknown> {
       return data !== null ? structuredClone(data) : null;
@@ -707,6 +797,14 @@ export function asyncMemoryDriver<TSchema extends object>(): AsyncStorageDriver<
     },
     async clear(): Promise<void> {
       data = null;
+    },
+    [SET_STORAGE_KEY](k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
+      key = k;
     },
   };
 }

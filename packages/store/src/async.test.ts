@@ -113,6 +113,25 @@ describe("AsyncStore", () => {
       state.config.theme = "blue";
       expect((await store.get()).config.theme).toBe("dark");
     });
+
+    it("should throw if the driver is shared across stores with different keys", () => {
+      const driver = asyncMemoryDriver<{ value: number }>();
+      createAsyncStore({
+        storageKey: "store-a",
+        initialState: { value: 1 },
+        driver,
+      });
+
+      expect(() => {
+        createAsyncStore({
+          storageKey: "store-b",
+          initialState: { value: 2 },
+          driver,
+        });
+      }).toThrow(
+        'Driver instance cannot be shared across stores with different keys (already bound to "store-a", tried to bind to "store-b").',
+      );
+    });
   });
 
   describe("write operations returned value isolation (async)", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { cloudflareDoDriver, cloudflareKvDriver } from "./cf";
-import { createAsyncStore } from "./index";
+import { cloudflareDoDriver, cloudflareKvDriver } from "./cloudflare";
+import { createAsyncStore, SET_STORAGE_KEY } from "./index";
 
 describe("Cloudflare Drivers", () => {
   describe("cloudflareKvDriver", () => {
@@ -196,8 +196,8 @@ describe("Cloudflare Drivers", () => {
       });
 
       expect(() => {
-        if (driver._setStorageKey) {
-          driver._setStorageKey("new-key");
+        if (driver[SET_STORAGE_KEY]) {
+          driver[SET_STORAGE_KEY]("new-key");
         }
       }).toThrow("Driver instance cannot be shared across stores with different keys");
     });
@@ -214,8 +214,8 @@ describe("Cloudflare Drivers", () => {
       });
 
       expect(() => {
-        if (driver._setStorageKey) {
-          driver._setStorageKey("new-key");
+        if (driver[SET_STORAGE_KEY]) {
+          driver[SET_STORAGE_KEY]("new-key");
         }
       }).toThrow("Driver instance cannot be shared across stores with different keys");
     });

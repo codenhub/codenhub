@@ -116,6 +116,26 @@ function createStore<TSchema extends object>(options: CreateStoreOptions<TSchema
 
 If `options.driver` is omitted, defaults to `localStorageDriver`. Throws if `structuredClone` is unavailable or `initialState` cannot be cloned.
 
+#### `CreateStoreOptions<TSchema>`
+
+Options for configuring a synchronous store.
+
+```ts
+interface CreateStoreOptions<TSchema extends object> {
+  storageKey: string;
+  initialState: TSchema;
+  driver?: StorageDriver<TSchema>;
+  validate?: (raw: unknown) => raw is TSchema;
+  onError?: (error: StoreErrorEvent) => void;
+}
+```
+
+- **`storageKey`**: Storage key used to identify the stored state.
+- **`initialState`**: Fallback state snapshotted at store creation and returned when storage is empty, unavailable, invalid, or rejected by `validate`.
+- **`driver`**: Custom storage driver. Defaults to `localStorageDriver`.
+- **`validate`**: Optional runtime validator for parsed JSON.
+- **`onError`**: Optional hook for recoverable storage, parsing, and validation failures.
+
 #### `createAsyncStore()`
 
 Creates a strictly typed asynchronous store.
@@ -123,6 +143,26 @@ Creates a strictly typed asynchronous store.
 ```ts
 function createAsyncStore<TSchema extends object>(options: CreateAsyncStoreOptions<TSchema>): AsyncStore<TSchema>;
 ```
+
+#### `CreateAsyncStoreOptions<TSchema>`
+
+Options for configuring an asynchronous store.
+
+```ts
+interface CreateAsyncStoreOptions<TSchema extends object> {
+  storageKey: string;
+  initialState: TSchema;
+  driver: AsyncStorageDriver<TSchema>;
+  validate?: (raw: unknown) => raw is TSchema;
+  onError?: (error: StoreErrorEvent) => void;
+}
+```
+
+- **`storageKey`**: Storage key used to identify the stored state.
+- **`initialState`**: Fallback state snapshotted at store creation.
+- **`driver`**: Asynchronous storage driver. **Required** for async stores.
+- **`validate`**: Optional runtime validator for parsed JSON.
+- **`onError`**: Optional hook for recoverable storage, parsing, and validation failures.
 
 #### `Store<TSchema>`
 
@@ -196,15 +236,15 @@ Interface for custom asynchronous storage drivers.
 
 ```ts
 interface AsyncStorageDriver<TSchema extends object> {
-  get(): Promise<unknown> | unknown;
-  set(value: TSchema): Promise<boolean> | boolean;
-  clear?(): Promise<void> | void;
+  get(): Promise<unknown>;
+  set(value: TSchema): Promise<boolean>;
+  clear?(): Promise<void>;
 }
 ```
 
 #### Drivers (Core)
 
-- **`localStorageDriver(storageKey, onError?)`**: Sync driver persisting to the browser's `localStorage`.
+- **`localStorageDriver(storageKey?, onError?)`**: Sync driver persisting to the browser's `localStorage`. If `storageKey` is omitted, it will be injected automatically.
 - **`memoryDriver()`**: Sync in-memory driver (local variable).
 - **`asyncMemoryDriver()`**: Async in-memory driver.
 
@@ -251,7 +291,7 @@ Asynchronous driver that persists state to a Cloudflare Workers KV Namespace.
 ```ts
 function cloudflareKvDriver<TSchema extends object>(options: {
   kvNamespace: CloudflareKvNamespace;
-  storageKey: string;
+  storageKey?: string;
 }): AsyncStorageDriver<TSchema>;
 ```
 
@@ -262,7 +302,7 @@ Asynchronous driver that persists state natively to Cloudflare Durable Object tr
 ```ts
 function cloudflareDoDriver<TSchema extends object>(options: {
   storage: CloudflareDurableObjectStorage;
-  storageKey: string;
+  storageKey?: string;
 }): AsyncStorageDriver<TSchema>;
 ```
 
@@ -321,7 +361,7 @@ export default {
 
 ## Requirements
 
-- `structuredClone` is required to snapshot `initialState` and return cloned state states.
+- `structuredClone` is required to snapshot `initialState` and return cloned state objects.
 - Browser `localStorage` is used by default in browser environments.
   - **SSR Compatibility**: When running in Server-Side Rendering (SSR) environments where `localStorage` is unavailable, the store safely falls back to a temporary in-memory state (`initialState`) without throwing errors.
 - Node.js runtime (v18+) is required for `@codenhub/store/node` (uses `node:fs` and `node:path`).

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { SET_STORAGE_KEY } from "./index";
 import type { AsyncStorageDriver, StorageDriver } from "./index";
 
 /**
@@ -27,30 +28,45 @@ export interface NodeJsonFileDriverOptions {
  */
 export function nodeJsonFileDriver<TSchema extends object>(options: NodeJsonFileDriverOptions): StorageDriver<TSchema> {
   const { filePath } = options;
+  let key: string | undefined;
 
   return {
     get(): unknown {
-      if (!fs.existsSync(filePath)) {
-        return null;
+      try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        if (!raw.trim()) {
+          return null;
+        }
+        return JSON.parse(raw);
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+          return null;
+        }
+        throw error;
       }
-      const raw = fs.readFileSync(filePath, "utf8");
-      if (!raw.trim()) {
-        return null;
-      }
-      return JSON.parse(raw);
     },
     set(value: TSchema): boolean {
       const dir = path.dirname(filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
+      fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(filePath, JSON.stringify(value, null, 2), "utf8");
       return true;
     },
     clear(): void {
-      if (fs.existsSync(filePath)) {
+      try {
         fs.rmSync(filePath, { force: true });
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code !== "ENOENT") {
+          throw error;
+        }
       }
+    },
+    [SET_STORAGE_KEY](k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
+      key = k;
     },
   };
 }
@@ -71,27 +87,26 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
   options: NodeJsonFileDriverOptions,
 ): AsyncStorageDriver<TSchema> {
   const { filePath } = options;
+  let key: string | undefined;
 
   return {
     async get(): Promise<unknown> {
       try {
-        await fs.promises.access(filePath);
-      } catch {
-        return null;
+        const raw = await fs.promises.readFile(filePath, "utf8");
+        if (!raw.trim()) {
+          return null;
+        }
+        return JSON.parse(raw);
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+          return null;
+        }
+        throw error;
       }
-      const raw = await fs.promises.readFile(filePath, "utf8");
-      if (!raw.trim()) {
-        return null;
-      }
-      return JSON.parse(raw);
     },
     async set(value: TSchema): Promise<boolean> {
       const dir = path.dirname(filePath);
-      try {
-        await fs.promises.access(dir);
-      } catch {
-        await fs.promises.mkdir(dir, { recursive: true });
-      }
+      await fs.promises.mkdir(dir, { recursive: true });
       await fs.promises.writeFile(filePath, JSON.stringify(value, null, 2), "utf8");
       return true;
     },
@@ -103,6 +118,14 @@ export function nodeAsyncJsonFileDriver<TSchema extends object>(
           throw error;
         }
       }
+    },
+    [SET_STORAGE_KEY](k: string) {
+      if (key && key !== k) {
+        throw new Error(
+          `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
+        );
+      }
+      key = k;
     },
   };
 }

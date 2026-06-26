@@ -1,33 +1,70 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAsyncStore, createStore } from "./index";
 import { nodeAsyncJsonFileDriver, nodeJsonFileDriver } from "./node";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const tempDir = path.join(__dirname, "temp-test-dir");
-const tempFile = path.join(tempDir, "store.json");
+const tempFile = "temp-test-dir/store.json";
+
+// In-memory virtual filesystem map
+const mockFiles = new Map<string, string>();
+
+const createEnoentError = (msg: string): Error & { code?: string } => {
+  const err = new Error(msg) as Error & { code?: string };
+  err.code = "ENOENT";
+  return err;
+};
+
+vi.mock("node:fs", () => {
+  return {
+    existsSync: vi.fn((p: string) => mockFiles.has(p)),
+    readFileSync: vi.fn((p: string) => {
+      if (!mockFiles.has(p)) {
+        throw createEnoentError(`ENOENT: no such file or directory, open '${p}'`);
+      }
+      return mockFiles.get(p)!;
+    }),
+    mkdirSync: vi.fn(),
+    writeFileSync: vi.fn((p: string, data: string) => {
+      mockFiles.set(p, data);
+    }),
+    rmSync: vi.fn((p: string) => {
+      mockFiles.delete(p);
+    }),
+    promises: {
+      access: vi.fn(async (p: string) => {
+        if (!mockFiles.has(p)) {
+          throw createEnoentError(`ENOENT: no such file or directory, access '${p}'`);
+        }
+      }),
+      readFile: vi.fn(async (p: string) => {
+        if (!mockFiles.has(p)) {
+          throw createEnoentError(`ENOENT: no such file or directory, open '${p}'`);
+        }
+        return mockFiles.get(p)!;
+      }),
+      mkdir: vi.fn(async () => {}),
+      writeFile: vi.fn(async (p: string, data: string) => {
+        mockFiles.set(p, data);
+      }),
+      unlink: vi.fn(async (p: string) => {
+        if (!mockFiles.has(p)) {
+          throw createEnoentError(`ENOENT: no such file or directory, unlink '${p}'`);
+        }
+        mockFiles.delete(p);
+      }),
+    },
+  };
+});
 
 describe("Node Drivers", () => {
   beforeEach(() => {
-    if (fs.existsSync(tempFile)) {
-      fs.rmSync(tempFile, { force: true });
-    }
-    if (fs.existsSync(tempDir)) {
-      fs.rmdirSync(tempDir);
-    }
+    mockFiles.clear();
   });
 
   afterEach(() => {
-    if (fs.existsSync(tempFile)) {
-      fs.rmSync(tempFile, { force: true });
-    }
-    if (fs.existsSync(tempDir)) {
-      fs.rmdirSync(tempDir);
-    }
+    vi.restoreAllMocks();
   });
 
   describe("nodeJsonFileDriver (Sync)", () => {
@@ -57,8 +94,7 @@ describe("Node Drivers", () => {
 
     it("should fall back to initialState and report storage-parse-failed when JSON is malformed", () => {
       const onError = vi.fn();
-      fs.mkdirSync(tempDir, { recursive: true });
-      fs.writeFileSync(tempFile, "{invalid json}", "utf8");
+      mockFiles.set(tempFile, "{invalid json}");
 
       const driver = nodeJsonFileDriver<{ value: string }>({ filePath: tempFile });
       const store = createStore({
@@ -75,6 +111,25 @@ describe("Node Drivers", () => {
         storageKey: "node-sync-store-malformed",
         cause: expect.any(SyntaxError),
       });
+    });
+
+    it("should throw if the driver is shared across stores with different keys", () => {
+      const driver = nodeJsonFileDriver<{ value: string }>({ filePath: tempFile });
+      createStore({
+        storageKey: "store-a",
+        initialState: { value: "default" },
+        driver,
+      });
+
+      expect(() => {
+        createStore({
+          storageKey: "store-b",
+          initialState: { value: "default" },
+          driver,
+        });
+      }).toThrow(
+        'Driver instance cannot be shared across stores with different keys (already bound to "store-a", tried to bind to "store-b").',
+      );
     });
   });
 
@@ -105,8 +160,7 @@ describe("Node Drivers", () => {
 
     it("should fall back to initialState and report storage-parse-failed when JSON is malformed", async () => {
       const onError = vi.fn();
-      fs.mkdirSync(tempDir, { recursive: true });
-      fs.writeFileSync(tempFile, "{invalid json}", "utf8");
+      mockFiles.set(tempFile, "{invalid json}");
 
       const driver = nodeAsyncJsonFileDriver<{ value: string }>({ filePath: tempFile });
       const store = createAsyncStore({
@@ -123,6 +177,25 @@ describe("Node Drivers", () => {
         storageKey: "node-async-store-malformed",
         cause: expect.any(SyntaxError),
       });
+    });
+
+    it("should throw if the driver is shared across stores with different keys", () => {
+      const driver = nodeAsyncJsonFileDriver<{ value: string }>({ filePath: tempFile });
+      createAsyncStore({
+        storageKey: "store-a",
+        initialState: { value: "default" },
+        driver,
+      });
+
+      expect(() => {
+        createAsyncStore({
+          storageKey: "store-b",
+          initialState: { value: "default" },
+          driver,
+        });
+      }).toThrow(
+        'Driver instance cannot be shared across stores with different keys (already bound to "store-a", tried to bind to "store-b").',
+      );
     });
   });
 });

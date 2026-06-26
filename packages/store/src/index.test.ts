@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createStore, memoryDriver } from "./index";
+import { createStore, localStorageDriver, memoryDriver } from "./index";
 import type { RemovableStoreKey } from "./index";
 
 describe("Store", () => {
@@ -77,23 +77,17 @@ describe("Store", () => {
       expect(warnSpy).not.toHaveBeenCalled();
     });
 
-    it("should fall back to initialState and report an error when localStorage.getItem throws", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const error = new Error("SecurityError");
-      const onError = vi.fn();
+    it("should fall back to initialState without error when localStorage is inaccessible (e.g. SecurityError)", () => {
       vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-        throw error;
+        throw new Error("SecurityError");
       });
 
+      const onError = vi.fn();
       const store = createStore({ storageKey: "key-get-throws", initialState: { name: "fallback" }, onError });
       expect(store.get()).toEqual({ name: "fallback" });
-      expect(onError).toHaveBeenCalledWith({
-        code: "storage-read-failed",
-        message: 'Failed to read from localStorage for key "key-get-throws".',
-        storageKey: "key-get-throws",
-        cause: error,
-      });
-      expect(warnSpy).not.toHaveBeenCalled();
+      // isStorageAvailable() catches the throw and treats storage as unavailable.
+      // No onError is fired because this is an environmental failure, not a per-key read failure.
+      expect(onError).not.toHaveBeenCalled();
     });
 
     it("should fall back to initialState when localStorage is unavailable", () => {
@@ -171,6 +165,28 @@ describe("Store", () => {
       store.patch({ x: "hi" });
       expect(store.get().y).toBe("world");
     });
+
+    it("should return merged state even when the write fails", () => {
+      const onError = vi.fn();
+      const stored: unknown = { a: 1, b: 2 };
+      const failingWriteDriver = {
+        get: () => stored,
+        set: () => {
+          throw new Error("Write failed");
+        },
+      };
+
+      const store = createStore({
+        storageKey: "key-patch-write-fail",
+        initialState: { a: 1, b: 2 },
+        driver: failingWriteDriver,
+        onError,
+      });
+
+      const result = store.patch({ b: 99 });
+      expect(result).toEqual({ a: 1, b: 99 });
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
+    });
   });
 
   describe("getItem()", () => {
@@ -209,6 +225,28 @@ describe("Store", () => {
       const state = store.get();
       expect(state.a).toBe(1);
       expect(state.c).toBe(3);
+    });
+
+    it("should return updated state even when the write fails", () => {
+      const onError = vi.fn();
+      const stored: unknown = { a: 1, b: 2 };
+      const failingWriteDriver = {
+        get: () => stored,
+        set: () => {
+          throw new Error("Write failed");
+        },
+      };
+
+      const store = createStore({
+        storageKey: "key-setitem-write-fail",
+        initialState: { a: 1, b: 2 },
+        driver: failingWriteDriver,
+        onError,
+      });
+
+      const result = store.setItem("a", 99);
+      expect(result).toEqual({ a: 99, b: 2 });
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
     });
   });
 
@@ -268,6 +306,28 @@ describe("Store", () => {
       store.set({ a: 1, b: 2 });
       store.removeItem("b");
       expect("b" in store.get()).toBe(false);
+    });
+
+    it("should return updated state even when the write fails", () => {
+      const onError = vi.fn();
+      const stored: unknown = { a: 1, b: 2 };
+      const failingWriteDriver = {
+        get: () => stored,
+        set: () => {
+          throw new Error("Write failed");
+        },
+      };
+
+      const store = createStore<{ a: number; b?: number }>({
+        storageKey: "key-removeitem-write-fail",
+        initialState: { a: 1, b: 2 },
+        driver: failingWriteDriver,
+        onError,
+      });
+
+      const result = store.removeItem("b");
+      expect(result).toEqual({ a: 1 });
+      expect(onError).toHaveBeenCalledWith(expect.objectContaining({ code: "storage-write-failed" }));
     });
   });
 
@@ -377,6 +437,25 @@ describe("Store", () => {
       state.config.theme = "blue";
       expect(store.get().config.theme).toBe("dark");
     });
+
+    it("should throw if the driver is shared across stores with different keys", () => {
+      const driver = memoryDriver<{ value: number }>();
+      createStore({
+        storageKey: "store-a",
+        initialState: { value: 1 },
+        driver,
+      });
+
+      expect(() => {
+        createStore({
+          storageKey: "store-b",
+          initialState: { value: 2 },
+          driver,
+        });
+      }).toThrow(
+        'Driver instance cannot be shared across stores with different keys (already bound to "store-a", tried to bind to "store-b").',
+      );
+    });
   });
 
   describe("write operations returned value isolation", () => {
@@ -408,6 +487,49 @@ describe("Store", () => {
       const result = store.removeItem("config");
       result.other = 99;
       expect(store.get().other).toBe(1);
+    });
+  });
+
+  describe("onError count and propagation fixes", () => {
+    it("should call store onError exactly once and include cause on write failure", () => {
+      const error = new DOMException("QuotaExceededError");
+      const onError = vi.fn();
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw error;
+      });
+
+      const store = createStore({ storageKey: "key-set-fail-once", initialState: { count: 0 }, onError });
+      store.set({ count: 1 });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-write-failed",
+        message: 'Failed to write to localStorage for key "key-set-fail-once".',
+        storageKey: "key-set-fail-once",
+        cause: error,
+      });
+    });
+
+    it("should propagate error to store onError when driver has no onError", () => {
+      const error = new DOMException("QuotaExceededError");
+      const onError = vi.fn();
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw error;
+      });
+
+      const store = createStore({
+        storageKey: "key-set-fail-manual-driver",
+        initialState: { count: 0 },
+        driver: localStorageDriver(),
+        onError,
+      });
+      store.set({ count: 1 });
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith({
+        code: "storage-write-failed",
+        message: 'Driver failed to write value for key "key-set-fail-manual-driver".',
+        storageKey: "key-set-fail-manual-driver",
+        cause: error,
+      });
     });
   });
 });

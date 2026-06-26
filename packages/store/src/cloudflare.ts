@@ -1,3 +1,4 @@
+import { SET_STORAGE_KEY } from "./index";
 import type { AsyncStorageDriver } from "./index";
 
 /**
@@ -73,7 +74,7 @@ export function cloudflareKvDriver<TSchema extends object>(
     async clear(): Promise<void> {
       await kvNamespace.delete(getKey());
     },
-    _setStorageKey(k: string) {
+    [SET_STORAGE_KEY](k: string) {
       if (key && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
@@ -159,7 +160,7 @@ export function cloudflareDoDriver<TSchema extends object>(
     async clear(): Promise<void> {
       await storage.delete(getKey());
     },
-    _setStorageKey(k: string) {
+    [SET_STORAGE_KEY](k: string) {
       if (key && key !== k) {
         throw new Error(
           `Driver instance cannot be shared across stores with different keys (already bound to "${key}", tried to bind to "${k}").`,
