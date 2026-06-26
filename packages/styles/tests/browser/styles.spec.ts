@@ -495,9 +495,9 @@ test.describe("compiled CSS preview", () => {
     expect(styles.alertIconPaddingLeft).toBe("44px");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
-    expect(styles.loaderSmWidth).toBe("16px");
-    expect(styles.loaderDefaultWidth).toBe("24px");
-    expect(styles.loaderLgWidth).toBe("32px");
+    expect(styles.loaderSmWidth).toBe("24px");
+    expect(styles.loaderDefaultWidth).toBe("32px");
+    expect(styles.loaderLgWidth).toBe("40px");
     expect(styles.loaderDefaultMask).not.toBe("none");
     expect(styles.loaderDotsImage).toContain("data:image/svg+xml");
   });
