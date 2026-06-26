@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./theme.css";
+@import "../theme.css";
 
 @keyframes anim-skeleton {
   0% {

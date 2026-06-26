@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./theme.css";
+@import "../theme.css";
 
 @utility empty-state {
   @apply text-text-secondary flex flex-col items-center gap-3 p-[clamp(2rem,8vw,5rem)] text-center;

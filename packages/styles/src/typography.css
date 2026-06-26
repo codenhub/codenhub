@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+@utility text-display {
+  @apply text-6xl font-bold tracking-tight md:text-8xl;
+}
+
+@utility text-title-lg {
+  @apply text-5xl font-bold tracking-tight md:text-6xl;
+}
+
+@utility text-title {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+@utility text-title-sm {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+@utility text-label-lg {
+  @apply text-lg font-medium tracking-wide;
+}
+
+@utility text-label {
+  @apply text-base font-medium tracking-wide;
+}
+
+@utility text-body {
+  @apply text-sm font-normal tracking-wider;
+}
