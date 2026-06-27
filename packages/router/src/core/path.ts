@@ -230,7 +230,7 @@ function decodeRouteParam(segment: string): string | null {
   }
 }
 
-function stripBasePath(pathname: string, basePath: string): string | null {
+export function stripBasePath(pathname: string, basePath: string): string | null {
   if (basePath === "") {
     return pathname;
   }

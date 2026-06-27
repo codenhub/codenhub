@@ -189,7 +189,7 @@ describe("createRouter", () => {
     expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
   });
 
-  it("rejects navigation started while another navigation is running", () => {
+  it("queues and executes navigation started while another navigation is running", () => {
     const router = createRouter();
     const handler = vi.fn(() => {
       router.navigate("/redirected");
@@ -200,10 +200,94 @@ describe("createRouter", () => {
     router.on("/start", handler).on("/redirected", redirectedHandler);
     router.subscribe(listener);
 
-    expect(() => router.navigate("/start")).toThrow("Router navigation is already running.");
-    expect(location.pathname).toBe("/start");
-    expect(redirectedHandler).not.toHaveBeenCalled();
-    expect(listener).not.toHaveBeenCalled();
+    const match = router.navigate("/start");
+
+    expect(match).toMatchObject({ path: "/redirected", pathname: "/redirected" });
+    expect(location.pathname).toBe("/redirected");
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(redirectedHandler).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenNthCalledWith(1, expect.any(Object));
+    expect(listener).toHaveBeenNthCalledWith(2, expect.any(Object));
+  });
+
+  it("intercepts anchor clicks with data-router-link", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(handler).toHaveBeenCalled();
+    expect(location.pathname).toBe("/target");
+
+    document.body.removeChild(link);
+  });
+
+  it("does not intercept anchor clicks without data-router-link", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("does not intercept external clicks or clicks with modifier keys", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "https://google.com/target");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    // modifier key (meta)
+    link.setAttribute("href", "/target");
+    const metaClickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      metaKey: true,
+    });
+    link.dispatchEvent(metaClickEvent);
+    expect(metaClickEvent.defaultPrevented).toBe(false);
+
+    document.body.removeChild(link);
   });
 
   it("removes browser listeners and subscribers when destroyed", () => {

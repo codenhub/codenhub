@@ -2,6 +2,8 @@
 export interface CreateRouterOptions {
   /** App-local prefix removed from browser locations before matching and added back when creating hrefs. */
   basePath?: string;
+  /** Automatically intercept standard click events on anchors matching the selector/attribute. */
+  interceptLinks?: boolean;
 }
 
 /** Options used when navigating through browser history. */

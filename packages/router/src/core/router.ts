@@ -2,9 +2,11 @@ import {
   buildBrowserHref,
   matchRoute,
   normalizeBasePath,
+  normalizePercentEscapes,
   parseAppPath,
   parseLocationPath,
   parseRoutePath,
+  stripBasePath,
   type ParsedPath,
   type RoutePattern,
 } from "./path";
@@ -40,6 +42,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   let fallbackHandler: NotFoundHandler | undefined;
   let isStarted = false;
   let isNavigating = false;
+  let pendingNavigation: { target: ParsedPath; historyUpdate?: () => void } | null = null;
 
   const assertCanNavigate = (): void => {
     if (isNavigating) {
@@ -84,26 +87,40 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     isNavigating = true;
 
     try {
-      const result = findMatch(target);
-      if (result !== null) {
-        result.route.handler(result.match);
-        notify(result.match);
+      let currentTarget: ParsedPath | null = target;
+      let lastMatch: RouterMatch | null = null;
 
-        return result.match;
+      while (currentTarget !== null) {
+        const result = findMatch(currentTarget);
+        if (result !== null) {
+          result.route.handler(result.match);
+          notify(result.match);
+          lastMatch = result.match;
+        } else {
+          const miss: RouterMiss = {
+            pathname: currentTarget.pathname,
+            searchParams: currentTarget.searchParams,
+            hash: currentTarget.hash,
+          };
+
+          fallbackHandler?.(miss);
+          notify(null);
+          lastMatch = null;
+        }
+
+        if (pendingNavigation !== null) {
+          pendingNavigation.historyUpdate?.();
+          currentTarget = pendingNavigation.target;
+          pendingNavigation = null;
+        } else {
+          currentTarget = null;
+        }
       }
 
-      const miss: RouterMiss = {
-        pathname: target.pathname,
-        searchParams: target.searchParams,
-        hash: target.hash,
-      };
-
-      fallbackHandler?.(miss);
-      notify(null);
-
-      return null;
+      return lastMatch;
     } finally {
       isNavigating = false;
+      pendingNavigation = null;
     }
   };
 
@@ -114,6 +131,49 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     }
 
     runTarget(parseLocationPath(browserWindow.location, basePath));
+  };
+
+  const handleLinkClick = (e: MouseEvent): void => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return;
+    }
+
+    const browserWindow = getBrowserWindow();
+    if (browserWindow === null) {
+      return;
+    }
+
+    const anchor = (e.target as HTMLElement).closest("a");
+    if (
+      anchor === null ||
+      !anchor.hasAttribute("data-router-link") ||
+      (anchor.target !== "" && anchor.target !== "_self") ||
+      anchor.hasAttribute("download")
+    ) {
+      return;
+    }
+
+    const href = anchor.getAttribute("href");
+    if (href === null) {
+      return;
+    }
+
+    try {
+      const url = new URL(href, browserWindow.location.href);
+      if (url.origin !== browserWindow.location.origin) {
+        return;
+      }
+
+      const appPathname = stripBasePath(normalizePercentEscapes(url.pathname), basePath);
+      if (appPathname === null) {
+        return;
+      }
+
+      e.preventDefault();
+      router.navigate(appPathname + url.search + url.hash);
+    } catch {
+      // Ignore URL parsing errors
+    }
   };
 
   const router: Router = {
@@ -137,6 +197,9 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       }
       if (!isStarted) {
         browserWindow.addEventListener("popstate", handlePopState);
+        if (options.interceptLinks === true) {
+          browserWindow.document.addEventListener("click", handleLinkClick);
+        }
         isStarted = true;
       }
 
@@ -144,18 +207,27 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     },
 
     navigate(to, options: NavigateOptions = {}) {
-      assertCanNavigate();
       const target = parseAppPath(to);
       const browserWindow = getBrowserWindow();
 
-      if (browserWindow !== null) {
-        const href = buildBrowserHref(to, basePath);
-        if (options.shouldReplace === true) {
-          browserWindow.history.replaceState(options.state, "", href);
-        } else {
-          browserWindow.history.pushState(options.state, "", href);
+      const updateHistory = (): void => {
+        if (browserWindow !== null) {
+          const href = buildBrowserHref(to, basePath);
+          if (options.shouldReplace === true) {
+            browserWindow.history.replaceState(options.state, "", href);
+          } else {
+            browserWindow.history.pushState(options.state, "", href);
+          }
         }
+      };
+
+      if (isNavigating) {
+        pendingNavigation = { target, historyUpdate: updateHistory };
+
+        return null;
       }
+
+      updateHistory();
 
       return runTarget(target);
     },
@@ -180,6 +252,9 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       const browserWindow = getBrowserWindow();
       if (browserWindow !== null && isStarted) {
         browserWindow.removeEventListener("popstate", handlePopState);
+        if (options.interceptLinks === true) {
+          browserWindow.document.removeEventListener("click", handleLinkClick);
+        }
       }
       isStarted = false;
 

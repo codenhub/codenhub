@@ -74,9 +74,9 @@ Creates a router instance.
 function createRouter(options?: CreateRouterOptions): Router;
 ```
 
-| Parameter | Type                  | Description         |
-| --------- | --------------------- | ------------------- |
-| `options` | `CreateRouterOptions` | Optional base path. |
+| Parameter | Type                  | Description            |
+| --------- | --------------------- | ---------------------- |
+| `options` | `CreateRouterOptions` | Configuration options. |
 
 The router starts with no routes. Register routes with `router.on()` before
 calling `router.start()`. Creation validates `basePath` and throws `Error` when
@@ -90,12 +90,14 @@ Options passed to `createRouter()`.
 ```ts
 interface CreateRouterOptions {
   basePath?: string;
+  interceptLinks?: boolean;
 }
 ```
 
-| Property   | Type     | Default | Description                                                 |
-| ---------- | -------- | ------- | ----------------------------------------------------------- |
-| `basePath` | `string` | `""`    | Prefix stripped before matching and restored in navigation. |
+| Property         | Type      | Default | Description                                                 |
+| ---------------- | --------- | ------- | ----------------------------------------------------------- |
+| `basePath`       | `string`  | `""`    | Prefix stripped before matching and restored in navigation. |
+| `interceptLinks` | `boolean` | `false` | Enable built-in interception of `data-router-link` anchors. |
 
 When provided, `basePath` must be an app-local path prefix without a trailing
 slash, backslashes, query string, hash, or `.`/`..` path segments.
@@ -156,7 +158,9 @@ function start(): RouterMatch | null;
 
 In browsers, `start()` attaches one `popstate` listener, matches the current
 location, calls the matching route handler or fallback handler, and notifies
-subscribers. Repeated calls do not attach duplicate listeners. Without `window`,
+subscribers. If `interceptLinks` is enabled, it also attaches a click listener to the document to automatically intercept clicks on anchors with a `data-router-link` attribute.
+
+Repeated calls do not attach duplicate listeners. Without `window`,
 `start()` returns `null` and does not attach listeners.
 
 `start()` throws `Error` when called while another navigation is being handled.
@@ -179,9 +183,12 @@ function navigate(to: string, options?: NavigateOptions): RouterMatch | null;
 matches the new location. Without `window`, it matches `to` without writing
 browser history.
 
+If navigation is already running, the new navigation is queued and executed synchronously
+after the current route handler completes.
+
 Returns the active `RouterMatch`, or `null` when no route matches. It throws
-`Error` when `to` is not an app-local path, contains backslashes or `.`/`..`
-path segments, or another navigation is already being handled.
+`Error` when `to` is not an app-local path or contains backslashes or `.`/`..`
+path segments.
 
 ##### `href()`
 
@@ -224,7 +231,7 @@ when navigation has no matching route.
 
 ##### `destroy()`
 
-Removes router-owned listeners and clears router subscribers.
+Removes router-owned browser listeners (including click and popstate listeners) and clears router subscribers.
 
 ```ts
 function destroy(): void;
