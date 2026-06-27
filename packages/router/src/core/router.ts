@@ -27,6 +27,7 @@ interface RegisteredRoute {
 }
 
 const REENTRANT_NAVIGATION_ERROR = "Router navigation is already running.";
+const LEFT_CLICK_BUTTON = 0;
 
 /**
  * Creates a browser router for app-local path matching, navigation, and subscriptions.
@@ -142,7 +143,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   };
 
   const handleLinkClick = (e: MouseEvent): void => {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+    if (e.defaultPrevented || e.button !== LEFT_CLICK_BUTTON || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
       return;
     }
 
@@ -152,12 +153,12 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     }
 
     const anchor = (e.target as HTMLElement).closest("a");
-    if (
-      anchor === null ||
-      !anchor.hasAttribute("data-router-link") ||
-      (anchor.target !== "" && anchor.target !== "_self") ||
-      anchor.hasAttribute("download")
-    ) {
+    if (anchor === null || !anchor.hasAttribute("data-router-link") || anchor.hasAttribute("download")) {
+      return;
+    }
+
+    const targetAttr = anchor.getAttribute("target");
+    if (targetAttr !== null && targetAttr !== "" && targetAttr !== "_self") {
       return;
     }
 

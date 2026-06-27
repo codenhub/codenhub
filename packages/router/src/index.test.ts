@@ -411,4 +411,74 @@ describe("createRouter", () => {
 
     document.body.removeChild(link);
   });
+
+  it("does not intercept anchor clicks when shouldInterceptLinks is false", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter().on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("throws when start is called during active navigation", () => {
+    const router = trackStartedRouter(createRouter());
+    router.on("/start", () => {
+      expect(() => router.start()).toThrow("Router navigation is already running.");
+    });
+    router.navigate("/start");
+  });
+
+  it("can be restarted after being destroyed", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter().on("/target", handler));
+
+    router.start();
+    router.destroy();
+
+    // Start again
+    router.start();
+    router.navigate("/target");
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("intercepts SVG anchor clicks with data-router-link", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    svg.appendChild(link);
+    document.body.appendChild(svg);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(handler).toHaveBeenCalled();
+    expect(location.pathname).toBe("/target");
+
+    document.body.removeChild(svg);
+  });
 });
