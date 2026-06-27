@@ -43,6 +43,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   let isStarted = false;
   let isNavigating = false;
   const pendingNavigations: Array<{ target: ParsedPath; historyUpdate?: () => void }> = [];
+  let currentMatch: RouterMatch | null = null;
 
   const assertCanNavigate = (): void => {
     if (isNavigating) {
@@ -117,6 +118,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         }
       }
 
+      currentMatch = lastMatch;
       return lastMatch;
     } finally {
       isNavigating = false;
@@ -175,8 +177,11 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         return;
       }
 
+      const to = appPathname + url.search + url.hash;
+      parseAppPath(to);
+
       e.preventDefault();
-      router.navigate(appPathname + url.search + url.hash);
+      router.navigate(to);
     } catch {
       // Ignore URL parsing errors
     }
@@ -197,19 +202,20 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
 
     start() {
       assertCanNavigate();
-      const browserWindow = getBrowserWindow();
-      if (browserWindow === null) {
-        return null;
-      }
       if (!isStarted) {
+        const browserWindow = getBrowserWindow();
+        if (browserWindow === null) {
+          return null;
+        }
         browserWindow.addEventListener("popstate", handlePopState);
         if (options.shouldInterceptLinks === true) {
           browserWindow.document.addEventListener("click", handleLinkClick);
         }
         isStarted = true;
+        currentMatch = runTarget(parseLocationPath(browserWindow.location, basePath));
       }
 
-      return runTarget(parseLocationPath(browserWindow.location, basePath));
+      return currentMatch;
     },
 
     navigate(to, options: NavigateOptions = {}) {
