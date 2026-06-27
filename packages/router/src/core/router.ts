@@ -34,7 +34,7 @@ const LEFT_CLICK_BUTTON = 0;
  *
  * @param options - Configuration options for the router, including base path.
  * @returns The initialized router instance.
- * @throws An error when `basePath` is not empty and is not a valid app-local path prefix.
+ * @throws {Error} If `basePath` is not empty and is not a valid app-local path prefix.
  */
 export function createRouter(options: CreateRouterOptions = {}): Router {
   const basePath = normalizeBasePath(options.basePath);
@@ -152,13 +152,18 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return;
     }
 
-    const anchor = (e.target as HTMLElement).closest("a");
+    const target = e.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const anchor = target.closest("a");
     if (anchor === null || !anchor.hasAttribute("data-router-link") || anchor.hasAttribute("download")) {
       return;
     }
 
     const targetAttr = anchor.getAttribute("target");
-    if (targetAttr !== null && targetAttr !== "" && targetAttr !== "_self") {
+    if (targetAttr !== null && targetAttr !== "" && targetAttr.toLowerCase() !== "_self") {
       return;
     }
 

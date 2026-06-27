@@ -481,4 +481,127 @@ describe("createRouter", () => {
 
     document.body.removeChild(svg);
   });
+
+  it("does not intercept anchor clicks with non-self targets", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    link.setAttribute("target", "_blank");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("does not intercept anchor clicks without href", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("does not intercept clicks on external origins", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "https://google.com/target");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("does not intercept clicks on same-origin paths outside basePath", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(
+      createRouter({ basePath: "/app", shouldInterceptLinks: true }).on("/target", handler),
+    );
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/outside-basepath");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(false);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(link);
+  });
+
+  it("does not crash on non-Element click targets", () => {
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }));
+    router.start();
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+
+    expect(() => document.dispatchEvent(clickEvent)).not.toThrow();
+  });
+
+  it("returns base-path-prefixed href for root path '/'", () => {
+    const router = createRouter({ basePath: "/app" });
+    expect(router.href("/")).toBe("/app/");
+  });
+
+  it("strips base path when location exactly matches basePath + '/'", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/", handler));
+
+    history.replaceState(null, "", "/app/");
+    const match = router.start();
+
+    expect(match).toMatchObject({ path: "/", pathname: "/" });
+    expect(handler).toHaveBeenCalled();
+  });
 });

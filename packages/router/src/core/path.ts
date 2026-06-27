@@ -129,9 +129,6 @@ export function matchRoute(pattern: RoutePattern, target: ParsedPath): RoutePara
 
   for (const [index, segment] of pattern.segments.entries()) {
     const targetSegment = targetSegments[index];
-    if (targetSegment === undefined) {
-      return null;
-    }
     if (segment.kind === "static") {
       if (segment.value !== targetSegment) {
         return null;

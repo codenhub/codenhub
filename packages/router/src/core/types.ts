@@ -1,16 +1,24 @@
 /** Options used when creating a router. */
 export interface CreateRouterOptions {
-  /** App-local prefix removed from browser locations before matching and added back when creating hrefs. */
+  /**
+   * App-local prefix removed from browser locations before matching and added back when creating hrefs.
+   */
   basePath?: string;
-  /** Automatically intercept standard click events on anchors with the `data-router-link` attribute. */
+  /**
+   * Automatically intercept standard click events on anchors with the `data-router-link` attribute.
+   */
   shouldInterceptLinks?: boolean;
 }
 
 /** Options used when navigating through browser history. */
 export interface NavigateOptions {
-  /** Uses `history.replaceState` instead of `history.pushState` when a browser history object exists. */
+  /**
+   * Uses `history.replaceState` instead of `history.pushState` when a browser history object exists.
+   */
   shouldReplace?: boolean;
-  /** State value passed to browser history when navigation writes a history entry. */
+  /**
+   * State value passed to browser history when navigation writes a history entry.
+   */
   state?: unknown;
 }
 
@@ -56,20 +64,73 @@ export type RouterListener = (match: RouterMatch | null) => void;
 
 /** Browser router with route registration, matching, navigation, and subscriptions. */
 export interface Router {
-  /** Registers a route handler and returns the router for chaining; throws when the route path is invalid or contains dot segments. */
+  /**
+   * Registers a route handler and returns the router for chaining.
+   *
+   * @param path - The route path pattern to match, e.g., `/users/:id`.
+   * @param handler - Callback called when the route matches and becomes active.
+   * @returns The router instance.
+   * @throws {Error} If the route path is empty, invalid, or contains dot segments.
+   */
   on(path: string, handler: RouteHandler): Router;
-  /** Replaces the fallback handler used when navigation has no matching route. */
+
+  /**
+   * Replaces the fallback handler used when navigation has no matching route.
+   *
+   * @param handler - Fallback callback called on route misses.
+   * @returns The router instance.
+   */
   notFound(handler: NotFoundHandler): Router;
-  /** Starts browser history integration and matches the current browser location when available; throws during active navigation. */
+
+  /**
+   * Starts browser history integration and matches the current browser location when available.
+   *
+   * @returns The matched route info, or null if no route matched or not in a browser environment.
+   * @throws {Error} If called during active navigation.
+   */
   start(): RouterMatch | null;
-  /** Navigates to an app-local path, writing browser history when available; throws when the target is invalid or contains dot segments, and queues the navigation if called during active navigation. */
+
+  /**
+   * Navigates to an app-local path, writing to browser history when available.
+   *
+   * If navigation is already running, the new navigation is queued and executed synchronously
+   * after the current route handler completes, and this method synchronously returns null.
+   *
+   * @param to - The target app-local path to navigate to.
+   * @param options - Navigation and history options.
+   * @returns The active route match, or null if no route matches or the navigation was queued.
+   * @throws {Error} If the target is invalid or contains dot segments.
+   */
   navigate(to: string, options?: NavigateOptions): RouterMatch | null;
-  /** Matches an app-local path without side effects; throws when the target is invalid or contains dot segments. */
+
+  /**
+   * Matches an app-local path without side effects (does not navigate, call handlers, or notify).
+   *
+   * @param to - The app-local path to match.
+   * @returns The route match info, or null if no route matches.
+   * @throws {Error} If the target is invalid or contains dot segments.
+   */
   match(to: string): RouterMatch | null;
-  /** Builds a browser href for an app-local path without navigating; throws when the target is invalid or contains dot segments. */
+
+  /**
+   * Builds a browser href for an app-local path without navigating.
+   *
+   * @param to - The target app-local path.
+   * @returns The fully qualified browser href containing the configured basePath.
+   * @throws {Error} If the target is invalid or contains dot segments.
+   */
   href(to: string): string;
-  /** Registers a listener called after navigation and returns an unsubscribe function. */
+
+  /**
+   * Registers a listener called after navigation completes.
+   *
+   * @param listener - Callback called after any navigation change.
+   * @returns An unsubscribe function to remove the listener.
+   */
   subscribe(listener: RouterListener): () => void;
-  /** Removes router-owned browser listeners and clears subscribers. */
+
+  /**
+   * Removes router-owned browser listeners and clears subscribers.
+   */
   destroy(): void;
 }
