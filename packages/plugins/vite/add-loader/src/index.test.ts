@@ -67,7 +67,7 @@ describe("addLoaderPlugin", () => {
     // Verify loader markup is injected after body
     expect(outputHtml).toContain("<body");
     expect(outputHtml).toContain('<div id="page-loader" role="status" aria-label="Loading">');
-    expect(outputHtml).toContain('<div class="spinner"></div>');
+    expect(outputHtml).toContain('<svg class="spinner"');
   });
 
   it("should handle body tags with attributes", async () => {
@@ -105,5 +105,52 @@ describe("addLoaderPlugin", () => {
 
     expect(outputHtml).toContain('<body class="dark-theme" data-test="true">');
     expect(outputHtml).toContain('<div id="page-loader" role="status" aria-label="Loading">');
+  });
+
+  it("should support custom background and spinner colors", async () => {
+    const plugin = addLoaderPlugin({
+      backgroundColor: "red",
+      color: "blue",
+    });
+    const transformIndexHtml = plugin.transformIndexHtml;
+
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("transformIndexHtml should be an object");
+    }
+
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `<html><head></head><body></body></html>`;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+
+    const outputHtml = typeof result === "string" ? result : undefined;
+    expect(outputHtml).toContain("#page-loader { background: red; }");
+    expect(outputHtml).toContain("#page-loader .spinner { color: blue; }");
+  });
+
+  it("should match uppercase HEAD and BODY tags", async () => {
+    const plugin = addLoaderPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("transformIndexHtml should be an object");
+    }
+
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `<html><HEAD></HEAD><BODY>hello</BODY></html>`;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+
+    const outputHtml = typeof result === "string" ? result : undefined;
+    expect(outputHtml).toContain("#page-loader {");
+    expect(outputHtml).toContain("</HEAD>");
+    expect(outputHtml).toContain("<BODY>");
+    expect(outputHtml).toContain('<div id="page-loader"');
   });
 });

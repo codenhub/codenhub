@@ -8,7 +8,6 @@ const LOADER_STYLES = `
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-background, #fafafa);
     transition: opacity 0.3s ease;
   }
 
@@ -20,20 +19,12 @@ const LOADER_STYLES = `
   #page-loader .spinner {
     width: 2.5rem;
     height: 2.5rem;
-    border: 4px solid var(--color-border, #d4d4d4);
-    border-top-color: var(--color-primary, #0a0a0a);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 `;
 
 const LOADER_BODY = `
   <div id="page-loader" role="status" aria-label="Loading">
-    <div class="spinner"></div>
+    <svg class="spinner" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}.spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}</style><g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g></svg>
   </div>
   <noscript>
     <style>
@@ -53,6 +44,20 @@ const LOADER_BODY = `
     });
   </script>
 `;
+
+/** Options accepted by {@link addLoaderPlugin}. */
+export interface AddLoaderPluginOptions {
+  /**
+   * Background color for the page-loader overlay.
+   * Defaults to `var(--color-background, #fafafa)`.
+   */
+  backgroundColor?: string;
+  /**
+   * Spinner color.
+   * Defaults to `currentColor` falling back to `var(--color-primary, #0a0a0a)`.
+   */
+  color?: string;
+}
 
 /**
  * Vite plugin that injects a full-screen page-loader overlay into every HTML
@@ -75,15 +80,24 @@ const LOADER_BODY = `
  * export default { plugins: [addLoaderPlugin()] };
  * ```
  */
-export function addLoaderPlugin(): Plugin {
+export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
+  const bgValue = options?.backgroundColor ?? "var(--color-background, #fafafa)";
+  const colorValue = options?.color ?? "var(--color-primary, #0a0a0a)";
+
+  const styledCss = `
+    ${LOADER_STYLES}
+    #page-loader { background: ${bgValue}; }
+    #page-loader .spinner { color: ${colorValue}; }
+  `;
+
   return {
     name: "vite-plugin-add-loader",
     enforce: "post",
     transformIndexHtml: {
       order: "post",
       handler(html: string) {
-        const withStyle = html.replace("</head>", `<style>${LOADER_STYLES}</style>\n</head>`);
-        return withStyle.replace(/<body([^>]*)>/, `<body$1>${LOADER_BODY}`);
+        const withStyle = html.replace(/(<\/head>)/i, `<style>${styledCss}</style>\n$1`);
+        return withStyle.replace(/(<body([^>]*)>)/i, `$1${LOADER_BODY}`);
       },
     },
   };

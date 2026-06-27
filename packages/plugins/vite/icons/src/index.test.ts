@@ -135,6 +135,12 @@ describe("iconsPlugin", () => {
     expect(supported?.code ?? "").toContain(`<svg class="utility"`);
     expect(unsupported).toBeNull();
   });
+
+  it("should match className in JSX/TSX and output className on svg", async () => {
+    const supported = await runTransform(`<i className="ic-warning utility"></i>`, "Component.tsx");
+    expect(supported).toMatchObject({ map: null });
+    expect(supported?.code ?? "").toContain(`<svg className="utility"`);
+  });
 });
 
 describe("iconsPlugin — custom icons option", () => {
@@ -179,16 +185,16 @@ describe("iconsPlugin — custom icons option", () => {
     expect(transformed).not.toContain("ic-success");
   });
 
-  describe("clear option", () => {
-    it("should not resolve built-in icons when clear is true", async () => {
-      const transformed = await runTransformIndexHtml(`<i class="ic-success"></i>`, { clear: true });
+  describe("shouldClear option", () => {
+    it("should not resolve built-in icons when shouldClear is true", async () => {
+      const transformed = await runTransformIndexHtml(`<i class="ic-success"></i>`, { shouldClear: true });
 
       expect(transformed).toBe(`<i class="ic-success"></i>`);
     });
 
-    it("should resolve consumer icons when clear is true", async () => {
+    it("should resolve consumer icons when shouldClear is true", async () => {
       const customMarkup = `<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>`;
-      const options = { clear: true, icons: { custom: customMarkup } };
+      const options = { shouldClear: true, icons: { custom: customMarkup } };
       const transformed = await runTransformIndexHtml(`<i class="ic-custom"></i>`, options);
 
       expect(transformed).toContain(customMarkup);

@@ -10,7 +10,7 @@ export interface IconsPluginOptions {
    * If true, clears the built-in icon registry.
    * Only custom icons supplied in the `icons` option will be registered.
    */
-  clear?: boolean;
+  shouldClear?: boolean;
   /**
    * Additional icons merged on top of the built-in registry.
    * When a name exists in both, the consumer entry takes precedence.
@@ -33,9 +33,12 @@ function getAlternativeNames(iconDefinition: IconDefinition): readonly string[] 
   return typeof iconDefinition === "string" ? [] : (iconDefinition.alternativeNames ?? []);
 }
 
-function createIconMarkupMap(extraIcons: Record<string, IconDefinition> = {}, clear = false): Map<string, string> {
+function createIconMarkupMap(
+  extraIcons: Record<string, IconDefinition> = {},
+  shouldClear = false,
+): Map<string, string> {
   const iconMarkupMap = new Map<string, string>();
-  const baseIcons = clear ? {} : icons;
+  const baseIcons = shouldClear ? {} : icons;
   const mergedIcons: Record<string, IconDefinition> = { ...baseIcons, ...extraIcons };
 
   for (const [iconName, iconDefinition] of Object.entries(mergedIcons)) {
@@ -94,6 +97,7 @@ function buildSvgReplacement(
   iconMarkupMap: Map<string, string>,
   match: string,
   attrsBeforeClass: string,
+  attrName: string,
   classValue: string,
   attrsAfterClass: string,
 ): string {
@@ -103,7 +107,7 @@ function buildSvgReplacement(
   }
 
   const extraClasses = stripIconClass(classValue, icon.iconClass);
-  const classAttr = extraClasses ? ` class="${extraClasses}"` : "";
+  const classAttr = extraClasses ? ` ${attrName}="${extraClasses}"` : "";
   const passthroughAttrStr = joinPassthroughAttributes(attrsBeforeClass, attrsAfterClass);
 
   return icon.markup.replace(/^<svg\b/i, `<svg${classAttr}${passthroughAttrStr}`);
@@ -112,8 +116,10 @@ function buildSvgReplacement(
 function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): string {
   const iconTagRegex = createIconTagRegex();
 
-  return source.replace(iconTagRegex, (match, before: string, _quote: string, classValue: string, after: string) =>
-    buildSvgReplacement(iconMarkupMap, match, before, classValue, after),
+  return source.replace(
+    iconTagRegex,
+    (match, before: string, attrName: string, _quote: string, classValue: string, after: string) =>
+      buildSvgReplacement(iconMarkupMap, match, before, attrName, classValue, after),
   );
 }
 
@@ -150,7 +156,7 @@ function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): st
  *
  */
 export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
-  const iconMarkupMap = createIconMarkupMap(options?.icons, options?.clear);
+  const iconMarkupMap = createIconMarkupMap(options?.icons, options?.shouldClear);
   return {
     name: PLUGIN_NAME,
     enforce: "pre",

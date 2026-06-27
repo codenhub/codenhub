@@ -1,8 +1,10 @@
 import type { Plugin } from "vite";
 
 const STYLESHEET_RE =
-  /<link\b(?=[^>]*\brel\s*=\s*(?:"stylesheet"|'stylesheet'|stylesheet(?=[\s>])))(?=[^>]*\bhref\s*=)[^>]*\/?\s*>/gi;
-const STYLESHEET_REL_ATTR_RE = /\brel\s*=\s*(?:"stylesheet"|'stylesheet'|stylesheet(?=[\s>]))/i;
+  /<link\b(?=[^>]*\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>])))(?=[^>]*\bhref\s*=)[^>]*\/?\s*>/gi;
+const STYLESHEET_REL_ATTR_RE =
+  /\brel\s*=\s*(?:"[^"]*\bstylesheet\b[^"]*"|'[^']*\bstylesheet\b[^']*'|stylesheet(?=[\s>]))/i;
+const ONLOAD_ATTR_RE = /\bonload\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
 
 /**
@@ -33,7 +35,9 @@ export function deferCssPlugin(): Plugin {
         const transformed = html.replace(STYLESHEET_RE, (linkTag: string) => {
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
-          return linkTag
+          const cleanTag = linkTag.replace(ONLOAD_ATTR_RE, "");
+
+          return cleanTag
             .replace(STYLESHEET_REL_ATTR_RE, 'rel="preload"')
             .replace(LINK_TAG_END_RE, ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">');
         });
@@ -42,7 +46,7 @@ export function deferCssPlugin(): Plugin {
           return transformed;
         }
 
-        return transformed.replace("</head>", `  <noscript>\n${noscript}  </noscript>\n  </head>`);
+        return transformed.replace(/(<\/head>)/i, `  <noscript>\n${noscript}  </noscript>\n  $1`);
       },
     },
   };

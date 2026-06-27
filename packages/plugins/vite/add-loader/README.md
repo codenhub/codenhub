@@ -45,12 +45,19 @@ import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
 Creates a Vite plugin instance that injects a loader overlay into the final HTML output.
 
 ```ts
-function addLoaderPlugin(): Plugin;
+function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin;
 ```
 
-Runs with `enforce: "post"`. If JavaScript is disabled in the browser, a `<noscript>` block hides the loader overlay immediately so the page content remains accessible.
+##### `AddLoaderPluginOptions`
 
-Returns a Vite `Plugin` object.
+```ts
+interface AddLoaderPluginOptions {
+  /** Background color for the page-loader overlay. Defaults to `var(--color-background, #fafafa)`. */
+  backgroundColor?: string;
+  /** Spinner color. Defaults to `currentColor` (falling back to `var(--color-primary, #0a0a0a)`). */
+  color?: string;
+}
+```
 
 ## Requirements
 

@@ -74,6 +74,11 @@ function iconsPlugin(options?: IconsPluginOptions): Plugin;
 ```ts
 interface IconsPluginOptions {
   /**
+   * If true, clears the built-in icon registry.
+   * Only custom icons supplied in the `icons` option will be registered.
+   */
+  shouldClear?: boolean;
+  /**
    * Additional icons merged on top of the built-in registry.
    * When a name exists in both, the consumer entry takes precedence.
    */

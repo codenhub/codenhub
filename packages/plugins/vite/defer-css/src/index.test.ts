@@ -168,4 +168,60 @@ describe("deferCssPlugin", () => {
     const outputHtml = getHtml(result);
     expect(outputHtml).toBe(inputHtml);
   });
+
+  it("should match uppercase HEAD tags", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><HEAD><link rel="stylesheet" href="a.css"></HEAD><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain("</HEAD>");
+    expect(outputHtml).toContain("<noscript>");
+  });
+
+  it("should transform stylesheets with multiple rel values", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet prefetch" href="a.css"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
+
+  it("should prevent duplicate onload attribute if tag already has one", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css" onload="run()"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(
+      `<link rel="preload" href="a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
+    );
+  });
 });
