@@ -210,9 +210,47 @@ describe("createRouter", () => {
     expect(listener).toHaveBeenNthCalledWith(2, expect.any(Object));
   });
 
+  it("queues multiple navigations in FIFO order when started while another is running", () => {
+    const router = createRouter();
+    const log: string[] = [];
+
+    router.on("/start", () => {
+      log.push("start");
+      router.navigate("/first");
+      router.navigate("/second");
+    });
+    router.on("/first", () => {
+      log.push("first");
+    });
+    router.on("/second", () => {
+      log.push("second");
+    });
+
+    router.navigate("/start");
+    expect(log).toEqual(["start", "first", "second"]);
+  });
+
+  it("queues popstate events triggered during active navigation", () => {
+    const router = trackStartedRouter(createRouter());
+    const log: string[] = [];
+
+    router.on("/start", () => {
+      log.push("start");
+      history.pushState(null, "", "/popstate-target");
+      dispatchEvent(new PopStateEvent("popstate"));
+    });
+    router.on("/popstate-target", () => {
+      log.push("popstate");
+    });
+
+    router.start();
+    router.navigate("/start");
+    expect(log).toEqual(["start", "popstate"]);
+  });
+
   it("intercepts anchor clicks with data-router-link", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
     router.start();
 
     const link = document.createElement("a");
@@ -236,7 +274,7 @@ describe("createRouter", () => {
 
   it("does not intercept anchor clicks without data-router-link", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
     router.start();
 
     const link = document.createElement("a");
@@ -258,7 +296,7 @@ describe("createRouter", () => {
 
   it("does not intercept external clicks or clicks with modifier keys", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ interceptLinks: true }).on("/target", handler));
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
     router.start();
 
     const link = document.createElement("a");

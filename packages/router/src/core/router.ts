@@ -42,7 +42,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   let fallbackHandler: NotFoundHandler | undefined;
   let isStarted = false;
   let isNavigating = false;
-  let pendingNavigation: { target: ParsedPath; historyUpdate?: () => void } | null = null;
+  const pendingNavigations: Array<{ target: ParsedPath; historyUpdate?: () => void }> = [];
 
   const assertCanNavigate = (): void => {
     if (isNavigating) {
@@ -108,10 +108,10 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
           lastMatch = null;
         }
 
-        if (pendingNavigation !== null) {
-          pendingNavigation.historyUpdate?.();
-          currentTarget = pendingNavigation.target;
-          pendingNavigation = null;
+        const nextPending = pendingNavigations.shift();
+        if (nextPending !== undefined) {
+          nextPending.historyUpdate?.();
+          currentTarget = nextPending.target;
         } else {
           currentTarget = null;
         }
@@ -120,7 +120,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return lastMatch;
     } finally {
       isNavigating = false;
-      pendingNavigation = null;
+      pendingNavigations.length = 0;
     }
   };
 
@@ -130,7 +130,13 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return;
     }
 
-    runTarget(parseLocationPath(browserWindow.location, basePath));
+    const target = parseLocationPath(browserWindow.location, basePath);
+    if (isNavigating) {
+      pendingNavigations.push({ target });
+      return;
+    }
+
+    runTarget(target);
   };
 
   const handleLinkClick = (e: MouseEvent): void => {
@@ -197,7 +203,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       }
       if (!isStarted) {
         browserWindow.addEventListener("popstate", handlePopState);
-        if (options.interceptLinks === true) {
+        if (options.shouldInterceptLinks === true) {
           browserWindow.document.addEventListener("click", handleLinkClick);
         }
         isStarted = true;
@@ -222,7 +228,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       };
 
       if (isNavigating) {
-        pendingNavigation = { target, historyUpdate: updateHistory };
+        pendingNavigations.push({ target, historyUpdate: updateHistory });
 
         return null;
       }
@@ -252,7 +258,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       const browserWindow = getBrowserWindow();
       if (browserWindow !== null && isStarted) {
         browserWindow.removeEventListener("popstate", handlePopState);
-        if (options.interceptLinks === true) {
+        if (options.shouldInterceptLinks === true) {
           browserWindow.document.removeEventListener("click", handleLinkClick);
         }
       }

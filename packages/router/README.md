@@ -90,14 +90,14 @@ Options passed to `createRouter()`.
 ```ts
 interface CreateRouterOptions {
   basePath?: string;
-  interceptLinks?: boolean;
+  shouldInterceptLinks?: boolean;
 }
 ```
 
-| Property         | Type      | Default | Description                                                 |
-| ---------------- | --------- | ------- | ----------------------------------------------------------- |
-| `basePath`       | `string`  | `""`    | Prefix stripped before matching and restored in navigation. |
-| `interceptLinks` | `boolean` | `false` | Enable built-in interception of `data-router-link` anchors. |
+| Property               | Type      | Default | Description                                                 |
+| ---------------------- | --------- | ------- | ----------------------------------------------------------- |
+| `basePath`             | `string`  | `""`    | Prefix stripped before matching and restored in navigation. |
+| `shouldInterceptLinks` | `boolean` | `false` | Enable built-in interception of `data-router-link` anchors. |
 
 When provided, `basePath` must be an app-local path prefix without a trailing
 slash, backslashes, query string, hash, or `.`/`..` path segments.
@@ -158,7 +158,7 @@ function start(): RouterMatch | null;
 
 In browsers, `start()` attaches one `popstate` listener, matches the current
 location, calls the matching route handler or fallback handler, and notifies
-subscribers. If `interceptLinks` is enabled, it also attaches a click listener to the document to automatically intercept clicks on anchors with a `data-router-link` attribute.
+subscribers. If `shouldInterceptLinks` is enabled, it also attaches a click listener to the document to automatically intercept clicks on anchors with a `data-router-link` attribute.
 
 Repeated calls do not attach duplicate listeners. Without `window`,
 `start()` returns `null` and does not attach listeners.
