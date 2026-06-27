@@ -1,9 +1,6 @@
 # @codenhub/router
 
-Small browser router for TypeScript apps. The core entrypoint owns app-local
-path matching, browser history navigation, route callbacks, and subscriptions.
-The DOM entrypoint mounts explicit page routes into the document while keeping
-the same matching and navigation behavior.
+Small browser router for TypeScript apps. The router owns app-local path matching, browser history navigation, route callbacks, and subscriptions.
 
 ## Installation
 
@@ -41,63 +38,13 @@ unsubscribe();
 router.destroy();
 ```
 
-Use `@codenhub/router/dom` when routes render page elements. Each page module
-owns its route metadata and exports the route. The root mount receives only the
-route list and router options.
-
-```ts
-// pages/user-page.ts
-import { definePageRoute } from "@codenhub/router/dom";
-
-export const userRoute = definePageRoute({
-  path: "/users/:id",
-  page: {
-    tag: "main",
-    className: "user-page",
-  },
-  render({ page, params }) {
-    page.replaceChildren(`User ${params["id"]}`);
-  },
-});
-```
-
-```ts
-// main.ts
-import { mountRouter } from "@codenhub/router/dom";
-import { homeRoute } from "./pages/home-page";
-import { userRoute } from "./pages/user-page";
-
-const app = mountRouter({
-  routes: [homeRoute, userRoute],
-  outlet: "#app",
-  basePath: "/app",
-  links: true,
-});
-
-app.start();
-
-window.addEventListener("pagehide", () => {
-  app.destroy();
-});
-```
-
-```html
-<nav>
-  <a href="/app">Home</a>
-  <a href="/app/users/42">User 42</a>
-</nav>
-
-<main id="app"></main>
-```
-
 ## Reference
 
 Supported import paths:
 
-| Path                   | Description                                      |
-| ---------------------- | ------------------------------------------------ |
-| `@codenhub/router`     | Core browser router, matcher, and subscriptions. |
-| `@codenhub/router/dom` | DOM page routes, mounting, and link handling.    |
+| Path               | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| `@codenhub/router` | Core browser router, matcher, and subscriptions. |
 
 ### `@codenhub/router`
 
@@ -716,80 +663,13 @@ router.href("/settings"); // "/app/settings"
 In a browser, this writes `/app/settings` to history and matches the route path
 `/settings`.
 
-### Page Route Modules
-
-```ts
-import { definePageRoute } from "@codenhub/router/dom";
-
-export const settingsRoute = definePageRoute({
-  path: "/settings",
-  page: {
-    className: "settings-page",
-  },
-  title: "Settings",
-  render({ page, router, searchParams }) {
-    const tab = searchParams.get("tab") ?? "profile";
-    const homeLink = document.createElement("a");
-    const profileButton = document.createElement("button");
-
-    homeLink.href = router.href("/");
-    homeLink.textContent = "Home";
-
-    profileButton.textContent = "Profile";
-    profileButton.addEventListener("click", () => {
-      router.navigate("/settings?tab=profile");
-    });
-
-    page.replaceChildren(`Settings: ${tab}`, homeLink, profileButton);
-  },
-});
-```
-
-### Page Cleanup
-
-```ts
-import { definePageRoute } from "@codenhub/router/dom";
-
-export const activityRoute = definePageRoute({
-  path: "/activity",
-  render({ page }) {
-    page.replaceChildren("Activity");
-    page.addEventListener("click", refreshActivity);
-  },
-  destroy({ page }) {
-    page.removeEventListener("click", refreshActivity);
-  },
-});
-
-function refreshActivity() {
-  // Refresh activity state.
-}
-```
-
-### Native Link Navigation
-
-```html
-<a href="/settings">Settings</a>
-<a href="https://example.com">External</a>
-<a href="/report.pdf" download>Download</a>
-<a href="/settings" data-router-ignore>Native settings</a>
-```
-
-Only the first link is intercepted. The external, download, and ignored links
-keep normal browser behavior. With a router `basePath`, use `router.href()` when
-building anchors in page code so native browser fallback, middle-click, and new
-tabs open the correct URL.
-
 ## Requirements
 
-- Core navigation uses `window.location`, `window.history.pushState`,
+- Navigation uses `window.location`, `window.history.pushState`,
   `window.history.replaceState`, and the `popstate` event.
-- Core matching uses `URL` and `URLSearchParams`.
-- DOM rendering uses `document`, `HTMLElement`, `Element`, `ParentNode`, and
-  `replaceChildren()`.
-- Link handling uses `MouseEvent`, `Node`, and `HTMLAnchorElement`.
+- Matching uses `URL` and `URLSearchParams`.
 - SSR and non-browser environments can create routers and call `match()`.
-  Browser history, DOM mounting, and link interception need browser APIs.
+  Browser history integration needs browser APIs.
 - No framework, CSS, peer dependency, storage, or build-tool plugin is required.
 
 ## Notes
@@ -801,8 +681,8 @@ tabs open the correct URL.
 - The package does not provide nested routes, wildcard routes, route ranking,
   route guards, data loading, suspense, transitions, scroll restoration, focus
   management, or form helpers.
-- Consumers own accessibility beyond native anchor behavior, including page
-  titles, focus movement, landmarks, and announcements after route changes.
+- Consumers own accessibility, page titles, focus movement, landmarks, and
+  announcements after route changes.
 - Consumers own authentication, authorization, data fetching, component state,
   error boundaries, and telemetry.
 

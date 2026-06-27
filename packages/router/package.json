@@ -2,7 +2,7 @@
   "name": "@codenhub/router",
   "version": "0.0.1",
   "private": false,
-  "description": "Small browser router with DOM page helpers for TypeScript apps.",
+  "description": "Small browser router for TypeScript apps.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/router",
   "license": "Apache-2.0",
   "repository": {
@@ -21,17 +21,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./dom": {
-      "types": "./dist/dom/index.d.ts",
-      "import": "./dist/dom/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/dom/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/router version dist-tags time --json && npm dist-tag ls @codenhub/router && npm access get status @codenhub/router",
     "status:pack": "npm pack --dry-run",
