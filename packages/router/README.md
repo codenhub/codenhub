@@ -248,8 +248,7 @@ type RouteHandler = (match: RouterMatch) => void;
 ```
 
 Route handler errors are not caught by the router. Starting another navigation
-synchronously from a route handler throws `Error`; schedule redirects or followup
-navigation after the handler returns.
+synchronously from a route handler is queued and executed after the current handler returns.
 
 #### `NotFoundHandler`
 
@@ -260,8 +259,7 @@ type NotFoundHandler = (miss: RouterMiss) => void;
 ```
 
 Fallback handler errors are not caught by the router. Starting another
-navigation synchronously from the fallback handler throws `Error`; schedule
-redirects or followup navigation after the handler returns.
+navigation synchronously from the fallback handler is queued and executed after the fallback handler returns.
 
 #### `NavigateOptions`
 
@@ -341,8 +339,7 @@ type RouterListener = (match: RouterMatch | null) => void;
 ```
 
 Subscriber errors are not caught by the router. Starting another navigation
-synchronously from a subscriber throws `Error`; schedule redirects or followup
-navigation after the listener returns.
+synchronously from a subscriber is queued and executed after the listener returns.
 
 ## Examples
 

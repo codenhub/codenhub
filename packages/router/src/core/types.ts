@@ -2,7 +2,7 @@
 export interface CreateRouterOptions {
   /** App-local prefix removed from browser locations before matching and added back when creating hrefs. */
   basePath?: string;
-  /** Automatically intercept standard click events on anchors matching the selector/attribute. */
+  /** Automatically intercept standard click events on anchors with the `data-router-link` attribute. */
   shouldInterceptLinks?: boolean;
 }
 
@@ -45,13 +45,13 @@ export interface RouterMiss {
   hash: string;
 }
 
-/** Handler called when a registered route becomes active; synchronous navigation started from the handler throws. */
+/** Handler called when a registered route becomes active; synchronous navigation started from the handler is queued. */
 export type RouteHandler = (match: RouterMatch) => void;
 
-/** Handler called when navigation does not match any registered route; synchronous navigation started from the handler throws. */
+/** Handler called when navigation does not match any registered route; synchronous navigation started from the handler is queued. */
 export type NotFoundHandler = (miss: RouterMiss) => void;
 
-/** Listener called after route navigation completes; synchronous navigation started from the listener throws. */
+/** Listener called after route navigation completes; synchronous navigation started from the listener is queued. */
 export type RouterListener = (match: RouterMatch | null) => void;
 
 /** Browser router with route registration, matching, navigation, and subscriptions. */
@@ -62,7 +62,7 @@ export interface Router {
   notFound(handler: NotFoundHandler): Router;
   /** Starts browser history integration and matches the current browser location when available; throws during active navigation. */
   start(): RouterMatch | null;
-  /** Navigates to an app-local path, writing browser history when available; throws when the target is invalid, contains dot segments, or navigation is already running. */
+  /** Navigates to an app-local path, writing browser history when available; throws when the target is invalid or contains dot segments, and queues the navigation if called during active navigation. */
   navigate(to: string, options?: NavigateOptions): RouterMatch | null;
   /** Matches an app-local path without side effects; throws when the target is invalid or contains dot segments. */
   match(to: string): RouterMatch | null;
