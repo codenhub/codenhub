@@ -7,7 +7,7 @@ export interface CreateRouterOptions {
 /** Options used when navigating through browser history. */
 export interface NavigateOptions {
   /** Uses `history.replaceState` instead of `history.pushState` when a browser history object exists. */
-  replace?: boolean;
+  shouldReplace?: boolean;
   /** State value passed to browser history when navigation writes a history entry. */
   state?: unknown;
 }

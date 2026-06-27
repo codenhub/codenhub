@@ -55,7 +55,7 @@ describe("createRouter", () => {
     expect(router.href("/settings")).toBe("/app/settings");
 
     const navigatedMatch = router.navigate("/settings?tab=billing", {
-      replace: true,
+      shouldReplace: true,
       state: { source: "test" },
     });
 

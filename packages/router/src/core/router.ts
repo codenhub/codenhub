@@ -28,7 +28,10 @@ const REENTRANT_NAVIGATION_ERROR = "Router navigation is already running.";
 
 /**
  * Creates a browser router for app-local path matching, navigation, and subscriptions.
- * Throws when `basePath` is not empty and is not a valid app-local path prefix.
+ *
+ * @param options - Configuration options for the router, including base path.
+ * @returns The initialized router instance.
+ * @throws An error when `basePath` is not empty and is not a valid app-local path prefix.
  */
 export function createRouter(options: CreateRouterOptions = {}): Router {
   const basePath = normalizeBasePath(options.basePath);
@@ -147,7 +150,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
 
       if (browserWindow !== null) {
         const href = buildBrowserHref(to, basePath);
-        if (options.replace === true) {
+        if (options.shouldReplace === true) {
           browserWindow.history.replaceState(options.state, "", href);
         } else {
           browserWindow.history.pushState(options.state, "", href);
@@ -177,8 +180,8 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       const browserWindow = getBrowserWindow();
       if (browserWindow !== null && isStarted) {
         browserWindow.removeEventListener("popstate", handlePopState);
-        isStarted = false;
       }
+      isStarted = false;
 
       listeners.clear();
     },
