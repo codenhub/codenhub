@@ -51,12 +51,33 @@ import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
 Creates a Vite plugin instance that defers stylesheets in the final HTML output.
 
 ```ts
-function deferCssPlugin(): Plugin;
+function deferCssPlugin(options?: DeferCssPluginOptions): Plugin;
 ```
 
 Runs with `enforce: "post"` so it acts on the final HTML output after all other transforms. Does not affect CSS imported through JavaScript modules.
 
 Returns a Vite `Plugin` object.
+
+##### `DeferCssPluginOptions`
+
+```ts
+interface DeferCssPluginOptions {
+  /** Content Security Policy nonce to inject into preload load helper script. */
+  nonce?: string;
+}
+```
+
+## Content Security Policy (CSP)
+
+By default, this plugin uses inline `onload` attributes to swap `<link rel="preload">` back to `rel="stylesheet"`. If your application enforces a strict CSP that blocks inline event handlers, you must provide a `nonce` value to `deferCssPlugin`:
+
+```ts
+deferCssPlugin({
+  nonce: "your-csp-nonce-value",
+});
+```
+
+This configuration disables inline `onload` event attributes and instead appends an inline `<script nonce="your-csp-nonce-value">` block to dynamically wire up the stylesheet swap.
 
 ## Requirements
 

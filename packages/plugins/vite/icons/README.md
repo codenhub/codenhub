@@ -55,6 +55,28 @@ export default {
 };
 ```
 
+> [!WARNING]
+> Custom icon SVG markup must not include root `class` or `className` attributes. Doing so will result in duplicate `class` attributes on the generated element.
+
+## Limitations
+
+### JSX/TSX Dynamic Expressions
+
+Only static string literal class attributes are supported for replacement. For example:
+
+```tsx
+// Supported
+const el = <i className="ic-success text-green-500" />;
+```
+
+Dynamic class binding syntax (curly braces) is **not** matched and will be ignored:
+
+```tsx
+// Unsupported
+const el = <i className={"ic-success"} />;
+const el = <i className={`ic-success ${active ? "active" : ""}`} />;
+```
+
 ## Reference
 
 ### `@codenhub/vite-plugin-icons`

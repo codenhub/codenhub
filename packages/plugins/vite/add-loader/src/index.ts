@@ -76,6 +76,18 @@ export interface AddLoaderPluginOptions {
  * - `--color-border` (default `#d4d4d4`)
  * - `--color-primary` (default `#0a0a0a`)
  *
+ * @param options Configuration options for the add loader plugin.
+ * @returns A Vite {@link Plugin} instance.
+ *
+ * @remarks
+ * **Side Effects:**
+ * - Injects a CSS `<style>` tag into the HTML `<head>`.
+ * - Injects a full-screen page loader HTML block (`#page-loader`) and inline `<script>` at the start of `<body>` to handle fading out and removing the loader.
+ * - When `options.nonce` is provided, attaches the nonce to the injected `<style>` and `<script>` elements.
+ *
+ * **Failure/Fallback Behavior:**
+ * - Returns unmodified HTML if the input lacks `</head>` or `<body>` tags.
+ *
  * @example
  * ```ts
  * // vite.config.ts

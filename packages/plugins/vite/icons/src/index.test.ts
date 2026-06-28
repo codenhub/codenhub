@@ -238,5 +238,20 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result).not.toBeNull();
       expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
     });
+
+    it("should not be confused by quotes inside regular expressions", async () => {
+      const jsCode = `const r = /"/; const icon = "<i class='ic-success'></i>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
+
+    it("should not be confused by quotes inside regular expressions in single quotes", async () => {
+      const jsCode = `const r = /"/; const icon = '<i class="ic-success"></i>';`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns="http://www.w3.org/2000/svg"');
+      expect(result?.code).not.toContain('xmlns=\\"');
+    });
   });
 });

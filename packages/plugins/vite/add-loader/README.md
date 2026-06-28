@@ -56,6 +56,8 @@ interface AddLoaderPluginOptions {
   backgroundColor?: string;
   /** Spinner color. Defaults to `currentColor` (falling back to `var(--color-primary, #0a0a0a)`). */
   color?: string;
+  /** Content Security Policy nonce to inject into style and script tags. */
+  nonce?: string;
 }
 ```
 

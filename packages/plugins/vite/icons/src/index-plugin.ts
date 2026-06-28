@@ -113,27 +113,48 @@ interface SvgReplacementOptions {
   offset: number;
 }
 
+function isRegexStart(code: string, index: number): boolean {
+  let i = index - 1;
+  while (i >= 0 && /\s/.test(code[i])) {
+    i--;
+  }
+  if (i < 0) {
+    return true;
+  }
+  const char = code[i];
+  if (!/[a-zA-Z0-9_$]/.test(char)) {
+    return char !== ")" && char !== "]" && char !== "}";
+  }
+  let start = i;
+  while (start >= 0 && /[a-zA-Z0-9_$]/.test(code[start])) {
+    start--;
+  }
+  const word = code.slice(start + 1, i + 1);
+  const keywords = ["return", "throw", "yield", "case", "typeof", "delete", "void", "in", "instanceof"];
+  return keywords.includes(word);
+}
+
 function getEnclosingQuote(code: string, matchIndex: number): string | null {
-  let insideDouble = false;
-  let insideSingle = false;
-  let insideBacktick = false;
-  let insideLineComment = false;
-  let insideBlockComment = false;
+  let isInsideDouble = false;
+  let isInsideSingle = false;
+  let isInsideBacktick = false;
+  let isInsideLineComment = false;
+  let isInsideBlockComment = false;
   let isEscaped = false;
 
   for (let i = 0; i < matchIndex; i++) {
     const char = code[i];
     const nextChar = code[i + 1];
 
-    if (insideLineComment) {
+    if (isInsideLineComment) {
       if (char === "\n" || char === "\r") {
-        insideLineComment = false;
+        isInsideLineComment = false;
       }
       continue;
     }
-    if (insideBlockComment) {
+    if (isInsideBlockComment) {
       if (char === "*" && nextChar === "/") {
-        insideBlockComment = false;
+        isInsideBlockComment = false;
         i++; // skip /
       }
       continue;
@@ -148,35 +169,61 @@ function getEnclosingQuote(code: string, matchIndex: number): string | null {
       continue;
     }
 
-    if (!insideDouble && !insideSingle && !insideBacktick) {
+    if (!isInsideDouble && !isInsideSingle && !isInsideBacktick) {
       if (char === "/" && nextChar === "/") {
-        insideLineComment = true;
+        isInsideLineComment = true;
         i++;
         continue;
       }
       if (char === "/" && nextChar === "*") {
-        insideBlockComment = true;
+        isInsideBlockComment = true;
         i++;
+        continue;
+      }
+      if (char === "/" && nextChar !== "/" && nextChar !== "*" && isRegexStart(code, i)) {
+        // Scan to end of regex literal
+        let j = i + 1;
+        let isInsideCharClass = false;
+        while (j < matchIndex) {
+          const c = code[j];
+          if (c === "\\") {
+            j += 2;
+            continue;
+          }
+          if (isInsideCharClass) {
+            if (c === "]") {
+              isInsideCharClass = false;
+            }
+          } else {
+            if (c === "[") {
+              isInsideCharClass = true;
+            } else if (c === "/") {
+              i = j; // advance outer loop index
+              break;
+            }
+          }
+          j++;
+        }
         continue;
       }
     }
 
-    if (char === '"' && !insideSingle && !insideBacktick) {
-      insideDouble = !insideDouble;
-    } else if (char === "'" && !insideDouble && !insideBacktick) {
-      insideSingle = !insideSingle;
-    } else if (char === "`" && !insideDouble && !insideSingle) {
-      insideBacktick = !insideBacktick;
+    if (char === '"' && !isInsideSingle && !isInsideBacktick) {
+      isInsideDouble = !isInsideDouble;
+    } else if (char === "'" && !isInsideDouble && !isInsideBacktick) {
+      isInsideSingle = !isInsideSingle;
+    } else if (char === "`" && !isInsideDouble && !isInsideSingle) {
+      isInsideBacktick = !isInsideBacktick;
     }
   }
 
-  if (insideDouble) {
+  if (isInsideDouble) {
     return '"';
   }
-  if (insideSingle) {
+  if (isInsideSingle) {
     return "'";
   }
-  if (insideBacktick) {
+  if (isInsideBacktick) {
     return "`";
   }
   return null;
@@ -253,6 +300,18 @@ function replaceIconTags(options: ReplaceIconTagsOptions): string {
  *
  * Plugin order is `"pre"` so icon replacement runs before framework transforms.
  *
+ *
+ * @param options Configuration options for the icons plugin.
+ * @returns A Vite {@link Plugin} instance.
+ *
+ * @remarks
+ * **Side Effects:**
+ * - Scans and replaces `<i class="ic-<name>">` (or `className`) tags in HTML and JS/TS/JSX/TSX files with inlined SVG elements at build time.
+ *
+ * **Failure/Fallback Behavior:**
+ * - Ignores unknown icon names and leaves the original marker elements unchanged.
+ * - Returns `null` from the transform hook if the code does not contain the icon prefix `ic-` or if no modifications were made.
+ *
  * @example
  * ```ts
  * // vite.config.ts
@@ -274,7 +333,6 @@ function replaceIconTags(options: ReplaceIconTagsOptions): string {
  *   ],
  * };
  * ```
- *
  */
 export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
   const iconMarkupMap = createIconMarkupMap(options?.icons, options?.shouldClear);

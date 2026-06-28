@@ -24,6 +24,18 @@ export interface DeferCssPluginOptions {
  * Runs with `enforce: "post"` so it acts on the final HTML output after all
  * other transforms. Does not affect CSS imported through JavaScript modules.
  *
+ * @param options Configuration options for the defer CSS plugin.
+ * @returns A Vite {@link Plugin} instance.
+ *
+ * @remarks
+ * **Side Effects:**
+ * - Converts matches of `<link rel="stylesheet">` tags to `<link rel="preload" as="style">`.
+ * - Appends a `<noscript>` block just before `</head>` containing the original `<link rel="stylesheet">` elements.
+ * - When `options.nonce` is provided, appends an inline `<script nonce="...">` block to wire up transition event handlers dynamically to avoid CSP violations.
+ *
+ * **Failure/Fallback Behavior:**
+ * - Returns unmodified HTML if the input has no `</head>` tag or no stylesheets to defer.
+ *
  * @example
  * ```ts
  * // vite.config.ts
