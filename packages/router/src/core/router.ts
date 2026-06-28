@@ -159,12 +159,21 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return;
     }
 
-    const target = e.target;
-    if (!(target instanceof Element)) {
-      return;
+    let anchor: HTMLAnchorElement | SVGAElement | null = null;
+    if (typeof e.composedPath === "function") {
+      for (const el of e.composedPath()) {
+        if (el instanceof Element && el.localName === "a") {
+          anchor = el as HTMLAnchorElement | SVGAElement;
+          break;
+        }
+      }
+    } else {
+      const target = e.target;
+      if (target instanceof Element) {
+        anchor = target.closest("a");
+      }
     }
 
-    const anchor = target.closest("a");
     if (anchor === null || !anchor.hasAttribute("data-router-link") || anchor.hasAttribute("download")) {
       return;
     }

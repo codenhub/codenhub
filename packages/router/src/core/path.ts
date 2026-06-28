@@ -24,6 +24,7 @@ export interface ParsedPath {
   hash: string;
   href: string;
   canMatch: boolean;
+  segments: readonly string[];
 }
 
 export interface RoutePattern {
@@ -99,6 +100,7 @@ export function parseLocationPath(currentLocation: Location, basePath: string): 
     hash,
     href: pathname + search + hash,
     canMatch: appPathname !== null,
+    segments: Object.freeze(splitPath(pathname)),
   };
 }
 
@@ -120,7 +122,7 @@ export function matchRoute(pattern: RoutePattern, target: ParsedPath): RoutePara
     return null;
   }
 
-  const targetSegments = splitPath(target.pathname);
+  const targetSegments = target.segments;
   if (pattern.segments.length !== targetSegments.length) {
     return null;
   }
@@ -188,6 +190,7 @@ function parseUrlPath(url: URL): ParsedPath {
     hash,
     href: pathname + search + hash,
     canMatch: true,
+    segments: Object.freeze(splitPath(pathname)),
   };
 }
 

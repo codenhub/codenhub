@@ -641,6 +641,35 @@ describe("createRouter", () => {
     expect(() => document.dispatchEvent(clickEvent)).not.toThrow();
   });
 
+  it("intercepts anchor clicks inside a shadow DOM", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const shadowRoot = host.attachShadow({ mode: "open" });
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    shadowRoot.appendChild(link);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      composed: true,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(handler).toHaveBeenCalled();
+    expect(location.pathname).toBe("/target");
+
+    document.body.removeChild(host);
+  });
+
   it("returns base-path-prefixed href for root path '/'", () => {
     const router = createRouter({ basePath: "/app" });
     expect(router.href("/")).toBe("/app/");
