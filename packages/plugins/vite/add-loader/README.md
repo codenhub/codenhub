@@ -58,12 +58,14 @@ interface AddLoaderPluginOptions {
   color?: string;
   /** Content Security Policy nonce to inject into style and script tags. */
   nonce?: string;
+  /** Maximum load duration in milliseconds before forcing the loader to fade out. Defaults to `5000` (5 seconds). */
+  timeout?: number;
 }
 ```
 
 ## Requirements
 
-- Vite `^8.0.16` is required as a peer dependency.
+- Vite `^8.0.0` is required as a peer dependency.
 - TypeScript consumers should use `moduleResolution: "bundler"` or a resolver that supports package `exports`.
 
 ## Notes

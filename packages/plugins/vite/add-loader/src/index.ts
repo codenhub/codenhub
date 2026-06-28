@@ -32,16 +32,23 @@ const LOADER_BODY = `
     </style>
   </noscript>
   <script>
-    window.addEventListener("load", function () {
+    (function () {
       const loader = document.getElementById("page-loader");
       if (!loader) return;
-      loader.classList.add("hidden");
-      const fallback = setTimeout(function () { loader.remove(); }, 500);
-      loader.addEventListener("transitionend", function () {
-        clearTimeout(fallback);
-        loader.remove();
-      });
-    });
+      let removed = false;
+      function removeLoader() {
+        if (removed) return;
+        removed = true;
+        loader.classList.add("hidden");
+        const fallback = setTimeout(function () { loader.remove(); }, 500);
+        loader.addEventListener("transitionend", function () {
+          clearTimeout(fallback);
+          loader.remove();
+        });
+      }
+      window.addEventListener("load", removeLoader);
+      setTimeout(removeLoader, __TIMEOUT_VALUE__);
+    })();
   </script>
 `;
 
@@ -61,12 +68,18 @@ export interface AddLoaderPluginOptions {
    * Content Security Policy nonce to inject into style and script tags.
    */
   nonce?: string;
+  /**
+   * Maximum load duration in milliseconds before forcing the loader to fade out.
+   * Defaults to `5000` (5 seconds).
+   */
+  timeout?: number;
 }
 
 /**
  * Vite plugin that injects a full-screen page-loader overlay into every HTML
  * entry point. The loader fades out and removes itself after the `load` event
- * fires. A `<noscript>` rule hides the loader when JavaScript is unavailable.
+ * fires, or after a configurable timeout fallback (defaults to 5 seconds).
+ * A `<noscript>` rule hides the loader when JavaScript is unavailable.
  *
  * Runs with `enforce: "post"` so injection happens on the final HTML output.
  *
@@ -100,6 +113,7 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
   const bgValue = options?.backgroundColor ?? "var(--color-background, #fafafa)";
   const colorValue = options?.color ?? "var(--color-primary, #0a0a0a)";
   const nonceAttr = options?.nonce ? ` nonce="${options.nonce}"` : "";
+  const timeoutValue = options?.timeout ?? 5000;
 
   const styledCss = `
     ${LOADER_STYLES}
@@ -127,7 +141,7 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
         }
 
         const withStyle = cleanedHtml.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
-        let loaderBodyWithNonce = LOADER_BODY;
+        let loaderBodyWithNonce = LOADER_BODY.replace("__TIMEOUT_VALUE__", String(timeoutValue));
         if (nonceAttr) {
           loaderBodyWithNonce = loaderBodyWithNonce
             .replace(/<script>/g, `<script${nonceAttr}>`)

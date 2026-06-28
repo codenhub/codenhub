@@ -261,4 +261,38 @@ describe("addLoaderPlugin", () => {
     // Loader body is injected after actualBodyStart (+3 for newline and indentation in LOADER_BODY)
     expect(outputHtml.indexOf('<div id="page-loader"')).toBe(actualBodyStart + "<body>".length + 3);
   });
+
+  it("should support timeout option and fall back to 5000ms default", async () => {
+    const plugin = addLoaderPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("Expected transformIndexHtml to be object");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `<html><head></head><body></body></html>`;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+    const outputHtml = typeof result === "string" ? result : "";
+    expect(outputHtml).toContain("setTimeout(removeLoader, 5000);");
+  });
+
+  it("should support custom timeout value", async () => {
+    const plugin = addLoaderPlugin({ timeout: 3000 });
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("Expected transformIndexHtml to be object");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `<html><head></head><body></body></html>`;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+    const outputHtml = typeof result === "string" ? result : "";
+    expect(outputHtml).toContain("setTimeout(removeLoader, 3000);");
+  });
 });
