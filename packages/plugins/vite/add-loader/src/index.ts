@@ -96,6 +96,9 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(html: string) {
+        if (!/<\/head>/i.test(html) || !/<body\b/i.test(html)) {
+          return html;
+        }
         const withStyle = html.replace(/(<\/head>)/i, `<style>${styledCss}</style>\n$1`);
         return withStyle.replace(/(<body([^>]*)>)/i, `$1${LOADER_BODY}`);
       },

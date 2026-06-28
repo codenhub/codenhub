@@ -31,8 +31,15 @@ export function deferCssPlugin(): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(html: string) {
+        const noscriptBlocks: string[] = [];
+        // Temporarily extract existing noscript blocks to avoid replacing links inside them
+        const htmlWithoutNoscript = html.replace(/<noscript\b[^>]*>([\s\S]*?)<\/noscript>/gi, (match) => {
+          noscriptBlocks.push(match);
+          return `<!--__NOSCRIPT_PLACEHOLDER_${noscriptBlocks.length - 1}__-->`;
+        });
+
         let noscript = "";
-        const transformed = html.replace(STYLESHEET_RE, (linkTag: string) => {
+        const transformed = htmlWithoutNoscript.replace(STYLESHEET_RE, (linkTag: string) => {
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
           const cleanTag = linkTag.replace(ONLOAD_ATTR_RE, "");
@@ -42,11 +49,23 @@ export function deferCssPlugin(): Plugin {
             .replace(LINK_TAG_END_RE, ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">');
         });
 
+        const restoreNoscripts = (content: string) => {
+          return content.replace(/<!--__NOSCRIPT_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
+            const index = parseInt(indexStr, 10);
+            return noscriptBlocks[index];
+          });
+        };
+
         if (!noscript) {
-          return transformed;
+          return restoreNoscripts(transformed);
         }
 
-        return transformed.replace(/(<\/head>)/i, `  <noscript>\n${noscript}  </noscript>\n  $1`);
+        const hasHead = /<\/head>/i.test(transformed);
+        const withFallback = hasHead
+          ? transformed.replace(/(<\/head>)/i, `  <noscript>\n${noscript}  </noscript>\n  $1`)
+          : transformed;
+
+        return restoreNoscripts(withFallback);
       },
     },
   };

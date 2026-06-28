@@ -153,4 +153,34 @@ describe("addLoaderPlugin", () => {
     expect(outputHtml).toContain("<BODY>");
     expect(outputHtml).toContain('<div id="page-loader"');
   });
+
+  it("should return unmodified HTML if HEAD or BODY tags are missing", async () => {
+    const plugin = addLoaderPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("transformIndexHtml should be an object");
+    }
+
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const noHeadHtml = `<html><body>hello</body></html>`;
+    const noBodyHtml = `<html><head></head>hello</html>`;
+
+    const ctx = { path: "/index.html", filename: "index.html" } as IndexHtmlTransformContext;
+
+    const result1 = await handler.call(
+      undefined as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      noHeadHtml,
+      ctx,
+    );
+    const result2 = await handler.call(
+      undefined as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      noBodyHtml,
+      ctx,
+    );
+
+    expect(typeof result1 === "string" ? result1 : undefined).toBe(noHeadHtml);
+    expect(typeof result2 === "string" ? result2 : undefined).toBe(noBodyHtml);
+  });
 });

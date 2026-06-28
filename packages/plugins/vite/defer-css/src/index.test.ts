@@ -224,4 +224,22 @@ describe("deferCssPlugin", () => {
       `<link rel="preload" href="a.css" as="style" onload="this.onload=null;this.rel='stylesheet'">`,
     );
   });
+
+  it("should not transform link tags inside existing noscript tags", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><noscript><link rel="stylesheet" href="noscript-only.css"></noscript><link rel="stylesheet" href="a.css"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toContain(`<noscript><link rel="stylesheet" href="noscript-only.css"></noscript>`);
+    expect(outputHtml).toContain(`<link rel="preload" href="a.css"`);
+  });
 });
