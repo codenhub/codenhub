@@ -38,14 +38,21 @@ function createIconMarkupMap(
   shouldClear = false,
 ): Map<string, string> {
   const iconMarkupMap = new Map<string, string>();
-  const baseIcons = shouldClear ? {} : icons;
-  const mergedIcons: Record<string, IconDefinition> = { ...baseIcons, ...extraIcons };
 
-  for (const [iconName, iconDefinition] of Object.entries(mergedIcons)) {
+  if (!shouldClear) {
+    for (const [iconName, iconDefinition] of Object.entries(icons)) {
+      const markup = getIconMarkup(iconDefinition);
+      iconMarkupMap.set(iconName, markup);
+      for (const name of getAlternativeNames(iconDefinition)) {
+        iconMarkupMap.set(name, markup);
+      }
+    }
+  }
+
+  for (const [iconName, iconDefinition] of Object.entries(extraIcons)) {
     const markup = getIconMarkup(iconDefinition);
-    const names = [iconName, ...getAlternativeNames(iconDefinition)];
-
-    for (const name of names) {
+    iconMarkupMap.set(iconName, markup);
+    for (const name of getAlternativeNames(iconDefinition)) {
       iconMarkupMap.set(name, markup);
     }
   }
@@ -107,21 +114,70 @@ interface SvgReplacementOptions {
 }
 
 function getEnclosingQuote(code: string, matchIndex: number): string | null {
-  let index = matchIndex - 1;
-  while (index >= 0 && code[index] !== "\n" && code[index] !== "\r") {
-    const char = code[index];
-    if (char === '"' || char === "'" || char === "`") {
-      let escaped = false;
-      let check = index - 1;
-      while (check >= 0 && code[check] === "\\") {
-        escaped = !escaped;
-        check--;
+  let insideDouble = false;
+  let insideSingle = false;
+  let insideBacktick = false;
+  let insideLineComment = false;
+  let insideBlockComment = false;
+  let isEscaped = false;
+
+  for (let i = 0; i < matchIndex; i++) {
+    const char = code[i];
+    const nextChar = code[i + 1];
+
+    if (insideLineComment) {
+      if (char === "\n" || char === "\r") {
+        insideLineComment = false;
       }
-      if (!escaped) {
-        return char;
+      continue;
+    }
+    if (insideBlockComment) {
+      if (char === "*" && nextChar === "/") {
+        insideBlockComment = false;
+        i++; // skip /
+      }
+      continue;
+    }
+
+    if (isEscaped) {
+      isEscaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      isEscaped = true;
+      continue;
+    }
+
+    if (!insideDouble && !insideSingle && !insideBacktick) {
+      if (char === "/" && nextChar === "/") {
+        insideLineComment = true;
+        i++;
+        continue;
+      }
+      if (char === "/" && nextChar === "*") {
+        insideBlockComment = true;
+        i++;
+        continue;
       }
     }
-    index--;
+
+    if (char === '"' && !insideSingle && !insideBacktick) {
+      insideDouble = !insideDouble;
+    } else if (char === "'" && !insideDouble && !insideBacktick) {
+      insideSingle = !insideSingle;
+    } else if (char === "`" && !insideDouble && !insideSingle) {
+      insideBacktick = !insideBacktick;
+    }
+  }
+
+  if (insideDouble) {
+    return '"';
+  }
+  if (insideSingle) {
+    return "'";
+  }
+  if (insideBacktick) {
+    return "`";
   }
   return null;
 }

@@ -242,4 +242,24 @@ describe("deferCssPlugin", () => {
     expect(outputHtml).toContain(`<noscript><link rel="stylesheet" href="noscript-only.css"></noscript>`);
     expect(outputHtml).toContain(`<link rel="preload" href="a.css"`);
   });
+
+  it("should support nonce option, remove inline onload, and inject nonced helper script", async () => {
+    const plugin = deferCssPlugin({ nonce: "test-nonce" });
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `<html><head><link rel="stylesheet" href="a.css"></head><body></body></html>`;
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+
+    expect(outputHtml).toContain(`<link rel="preload" href="a.css" as="style" data-defer-css>`);
+    expect(outputHtml).toContain('<script nonce="test-nonce">');
+    expect(outputHtml).toContain("document.querySelectorAll('link[data-defer-css]')");
+  });
 });

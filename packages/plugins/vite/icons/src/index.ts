@@ -1,5 +1,11 @@
 import iconsPlugin from "./index-plugin";
 
+/**
+ * Vite plugin that replaces `<i class="ic-<name>">` marker elements with
+ * inline SVG at build time, in both HTML and JS/TS/JSX/TSX files.
+ *
+ * This is the named export of the icons package.
+ */
 export { iconsPlugin };
 /**
  * Vite plugin that replaces `<i class="ic-<name>">` marker elements with

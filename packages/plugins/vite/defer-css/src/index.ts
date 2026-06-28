@@ -7,6 +7,14 @@ const STYLESHEET_REL_ATTR_RE =
 const ONLOAD_ATTR_RE = /\bonload\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i;
 const LINK_TAG_END_RE = /\/?\s*>$/;
 
+/** Options accepted by {@link deferCssPlugin}. */
+export interface DeferCssPluginOptions {
+  /**
+   * Content Security Policy nonce to inject into preload load helper script.
+   */
+  nonce?: string;
+}
+
 /**
  * Vite plugin that converts `<link rel="stylesheet">` tags in HTML entry
  * points to non-render-blocking preloads, then swaps them back to stylesheets
@@ -24,7 +32,7 @@ const LINK_TAG_END_RE = /\/?\s*>$/;
  * export default { plugins: [deferCssPlugin()] };
  * ```
  */
-export function deferCssPlugin(): Plugin {
+export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
   return {
     name: "vite-plugin-defer-css",
     enforce: "post",
@@ -46,7 +54,12 @@ export function deferCssPlugin(): Plugin {
 
           return cleanTag
             .replace(STYLESHEET_REL_ATTR_RE, 'rel="preload"')
-            .replace(LINK_TAG_END_RE, ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">');
+            .replace(
+              LINK_TAG_END_RE,
+              options?.nonce
+                ? ' as="style" data-defer-css>'
+                : ' as="style" onload="this.onload=null;this.rel=\'stylesheet\'">',
+            );
         });
 
         const restoreNoscripts = (content: string) => {
@@ -61,9 +74,20 @@ export function deferCssPlugin(): Plugin {
         }
 
         const hasHead = /<\/head>/i.test(transformed);
-        const withFallback = hasHead
-          ? transformed.replace(/(<\/head>)/i, `  <noscript>\n${noscript}  </noscript>\n  $1`)
-          : transformed;
+        let withFallback = transformed;
+        if (hasHead) {
+          let injected = `  <noscript>\n${noscript}  </noscript>\n`;
+          if (options?.nonce) {
+            injected += `  <script nonce="${options.nonce}">
+    document.querySelectorAll('link[data-defer-css]').forEach(function(l) {
+      var swap = function() { l.rel = 'stylesheet'; };
+      if (l.sheet) swap();
+      else { l.addEventListener('load', swap); l.addEventListener('error', swap); }
+    });
+  </script>\n`;
+          }
+          withFallback = transformed.replace(/(<\/head>)/i, `${injected}  $1`);
+        }
 
         return restoreNoscripts(withFallback);
       },

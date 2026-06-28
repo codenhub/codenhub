@@ -216,5 +216,27 @@ describe("iconsPlugin — custom icons option", () => {
       const transformed = await runTransformIndexHtml(`<div><i class="ic-search"></i></div>`);
       expect(transformed).toContain('stroke-width="2"');
     });
+
+    it("should not corrupt JSX tags when preceding attribute has quotes on same line", async () => {
+      const jsxCode = `const b = <span className="label">Label</span> <i className="ic-success size-4" />;`;
+      const result = await runTransform(jsxCode, "Component.tsx");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns="http://www.w3.org/2000/svg"');
+      expect(result?.code).not.toContain('xmlns=\\"');
+    });
+
+    it("should escape double quotes in multiline JS string with backslash-newline", async () => {
+      const jsCode = `const icon = "<div>\\\n  <i class='ic-success'></i>\\\n</div>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
+
+    it("should not be confused by quotes inside comments", async () => {
+      const jsCode = `// const a = "hello"\nconst icon = "<div><i class='ic-success'></i></div>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
   });
 });

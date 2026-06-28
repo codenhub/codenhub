@@ -183,4 +183,26 @@ describe("addLoaderPlugin", () => {
     expect(typeof result1 === "string" ? result1 : undefined).toBe(noHeadHtml);
     expect(typeof result2 === "string" ? result2 : undefined).toBe(noBodyHtml);
   });
+
+  it("should inject nonce into style and script tags if nonce option is provided", async () => {
+    const plugin = addLoaderPlugin({ nonce: "test-nonce-123" });
+    const transformIndexHtml = plugin.transformIndexHtml;
+
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("transformIndexHtml should be an object");
+    }
+
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `<html><head></head><body></body></html>`;
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+
+    const outputHtml = typeof result === "string" ? result : undefined;
+    expect(outputHtml).toContain('<style nonce="test-nonce-123">');
+    expect(outputHtml).toContain('<script nonce="test-nonce-123">');
+    expect(outputHtml).toContain('<style nonce="test-nonce-123">\n      #page-loader { display: none !important; }');
+  });
 });

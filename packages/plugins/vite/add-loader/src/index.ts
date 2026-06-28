@@ -57,6 +57,10 @@ export interface AddLoaderPluginOptions {
    * Defaults to `currentColor` falling back to `var(--color-primary, #0a0a0a)`.
    */
   color?: string;
+  /**
+   * Content Security Policy nonce to inject into style and script tags.
+   */
+  nonce?: string;
 }
 
 /**
@@ -83,6 +87,7 @@ export interface AddLoaderPluginOptions {
 export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
   const bgValue = options?.backgroundColor ?? "var(--color-background, #fafafa)";
   const colorValue = options?.color ?? "var(--color-primary, #0a0a0a)";
+  const nonceAttr = options?.nonce ? ` nonce="${options.nonce}"` : "";
 
   const styledCss = `
     ${LOADER_STYLES}
@@ -99,8 +104,14 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
         if (!/<\/head>/i.test(html) || !/<body\b/i.test(html)) {
           return html;
         }
-        const withStyle = html.replace(/(<\/head>)/i, `<style>${styledCss}</style>\n$1`);
-        return withStyle.replace(/(<body([^>]*)>)/i, `$1${LOADER_BODY}`);
+        const withStyle = html.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
+        let loaderBodyWithNonce = LOADER_BODY;
+        if (nonceAttr) {
+          loaderBodyWithNonce = loaderBodyWithNonce
+            .replace(/<script>/g, `<script${nonceAttr}>`)
+            .replace(/<style>/g, `<style${nonceAttr}>`);
+        }
+        return withStyle.replace(/(<body([^>]*)>)/i, `$1${loaderBodyWithNonce}`);
       },
     },
   };

@@ -112,4 +112,4 @@ interface IconOptions {
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
 
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](file:///c:/Users/gustavo/projects/codenhub/packages/plugins/vite/icons/NOTICE) file for details.
+It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](./NOTICE) file for details.
