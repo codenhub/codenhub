@@ -138,5 +138,4 @@ export function iconsPlugin(options?: IconsPluginOptions): Plugin {
   };
 }
 
-export default iconsPlugin;
 export type { IconDefinition, IconOptions } from "./data";

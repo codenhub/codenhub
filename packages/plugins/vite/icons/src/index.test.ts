@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import iconsPlugin from "./index";
+import { iconsPlugin } from "./index";
 
 interface MinimalIndexHtmlTransformContext {
   path: string;

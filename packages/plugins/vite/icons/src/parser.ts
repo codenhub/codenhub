@@ -28,7 +28,7 @@ interface ReplaceIconTagsOptions {
  * Replaces comment characters with spaces to preserve character indices
  * while removing comments so they do not confuse regex and quote tracking.
  */
-export function stripComments(code: string): string {
+function stripComments(code: string): string {
   let isInsideDouble = false;
   let isInsideSingle = false;
   let isInsideBacktick = false;
@@ -126,7 +126,7 @@ export function stripComments(code: string): string {
   return chars.join("");
 }
 
-export function isRegexStart(chars: string[] | string, index: number): boolean {
+function isRegexStart(chars: string[] | string, index: number): boolean {
   let i = index - 1;
   while (i >= 0 && /\s/.test(chars[i])) {
     i--;
