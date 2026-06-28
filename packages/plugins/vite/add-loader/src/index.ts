@@ -35,10 +35,10 @@ const LOADER_BODY = `
     (function () {
       const loader = document.getElementById("page-loader");
       if (!loader) return;
-      let removed = false;
+      let isRemoved = false;
       function removeLoader() {
-        if (removed) return;
-        removed = true;
+        if (isRemoved) return;
+        isRemoved = true;
         loader.classList.add("hidden");
         const fallback = setTimeout(function () { loader.remove(); }, 500);
         loader.addEventListener("transitionend", function () {
