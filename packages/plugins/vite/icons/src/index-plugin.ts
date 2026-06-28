@@ -93,33 +93,98 @@ function createIconTagRegex(): RegExp {
   return new RegExp(ICON_TAG_REGEX.source, ICON_TAG_REGEX.flags);
 }
 
-function buildSvgReplacement(
-  iconMarkupMap: Map<string, string>,
-  match: string,
-  attrsBeforeClass: string,
-  attrName: string,
-  classValue: string,
-  attrsAfterClass: string,
-): string {
+interface SvgReplacementOptions {
+  iconMarkupMap: Map<string, string>;
+  match: string;
+  attrsBeforeClass: string;
+  attrName: string;
+  quote: string;
+  classValue: string;
+  attrsAfterClass: string;
+  isJsContext: boolean;
+  source: string;
+  offset: number;
+}
+
+function getEnclosingQuote(code: string, matchIndex: number): string | null {
+  let index = matchIndex - 1;
+  while (index >= 0 && code[index] !== "\n" && code[index] !== "\r") {
+    const char = code[index];
+    if (char === '"' || char === "'" || char === "`") {
+      let escaped = false;
+      let check = index - 1;
+      while (check >= 0 && code[check] === "\\") {
+        escaped = !escaped;
+        check--;
+      }
+      if (!escaped) {
+        return char;
+      }
+    }
+    index--;
+  }
+  return null;
+}
+
+function buildSvgReplacement(options: SvgReplacementOptions): string {
+  const {
+    iconMarkupMap,
+    match,
+    attrsBeforeClass,
+    attrName,
+    quote,
+    classValue,
+    attrsAfterClass,
+    isJsContext,
+    source,
+    offset,
+  } = options;
+
   const icon = resolveIcon(iconMarkupMap, classValue);
   if (!icon) {
     return match;
   }
 
   const extraClasses = stripIconClass(classValue, icon.iconClass);
-  const classAttr = extraClasses ? ` ${attrName}="${extraClasses}"` : "";
+  const classAttr = extraClasses ? ` ${attrName}=${quote}${extraClasses}${quote}` : "";
   const passthroughAttrStr = joinPassthroughAttributes(attrsBeforeClass, attrsAfterClass);
 
-  return icon.markup.replace(/^<svg\b/i, `<svg${classAttr}${passthroughAttrStr}`);
+  let markup = icon.markup;
+  if (isJsContext) {
+    const enclosingQuote = getEnclosingQuote(source, offset);
+    if (enclosingQuote === '"') {
+      markup = markup.replace(/"/g, '\\"');
+    }
+  }
+
+  return markup.replace(/^<svg\b/i, `<svg${classAttr}${passthroughAttrStr}`);
 }
 
-function replaceIconTags(iconMarkupMap: Map<string, string>, source: string): string {
+interface ReplaceIconTagsOptions {
+  iconMarkupMap: Map<string, string>;
+  source: string;
+  isJsContext?: boolean;
+}
+
+function replaceIconTags(options: ReplaceIconTagsOptions): string {
+  const { iconMarkupMap, source, isJsContext = false } = options;
   const iconTagRegex = createIconTagRegex();
 
   return source.replace(
     iconTagRegex,
-    (match, before: string, attrName: string, _quote: string, classValue: string, after: string) =>
-      buildSvgReplacement(iconMarkupMap, match, before, attrName, classValue, after),
+    (match, before: string, attrName: string, quote: string, classValue: string, after: string, offset: number) =>
+      buildSvgReplacement({
+        iconMarkupMap,
+        match,
+        attrsBeforeClass: before,
+        attrName,
+        quote,
+        classValue,
+        attrsAfterClass: after,
+        isJsContext,
+        source,
+        offset,
+      }),
   );
 }
 
@@ -163,7 +228,7 @@ export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
 
     transformIndexHtml: {
       order: "pre",
-      handler: (html: string) => replaceIconTags(iconMarkupMap, html),
+      handler: (html: string) => replaceIconTags({ iconMarkupMap, source: html, isJsContext: false }),
     },
 
     transform(code: string, id: string) {
@@ -175,7 +240,11 @@ export default function iconsPlugin(options?: IconsPluginOptions): Plugin {
         return null;
       }
 
-      const transformed = replaceIconTags(iconMarkupMap, code);
+      const transformed = replaceIconTags({
+        iconMarkupMap,
+        source: code,
+        isJsContext: true,
+      });
       if (transformed === code) {
         return null;
       }

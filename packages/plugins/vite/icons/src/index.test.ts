@@ -201,4 +201,20 @@ describe("iconsPlugin — custom icons option", () => {
       expect(transformed).not.toContain("ic-custom");
     });
   });
+
+  describe("JS context quote escaping and stroke-width verification", () => {
+    it("should escape double quotes when matching class inside double-quoted JS string context", async () => {
+      const jsCode = `const icon = "<div><i class='ic-success size-4'></i></div>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+      expect(result?.code).toContain('const icon = "<div><svg');
+      expect(result?.code).toContain("class='size-4'");
+    });
+
+    it("should keep stroke-width='2' in the transformed SVGs", async () => {
+      const transformed = await runTransformIndexHtml(`<div><i class="ic-search"></i></div>`);
+      expect(transformed).toContain('stroke-width="2"');
+    });
+  });
 });
