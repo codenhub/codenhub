@@ -46,7 +46,11 @@ const LOADER_BODY = `
           loader.remove();
         });
       }
-      window.addEventListener("load", removeLoader);
+      if (document.readyState === "complete") {
+        removeLoader();
+      } else {
+        window.addEventListener("load", removeLoader);
+      }
       setTimeout(removeLoader, __TIMEOUT_VALUE__);
     })();
   </script>
