@@ -92,7 +92,27 @@ export function iconsPlugin(options?: IconsPluginOptions): Plugin {
 
     transformIndexHtml: {
       order: "pre",
-      handler: (html: string) => replaceIconTags({ iconMarkupMap, source: html, isJsContext: false }),
+      handler(html: string) {
+        // Shield HTML comments, <pre>, and <noscript> tags from icon marker replacements.
+        // NOTE: We intentionally do NOT shield <script> or <style> tags here. This ensures that
+        // consumers can still replace icons dynamically within JavaScript/TypeScript blocks
+        // and CSS/style declarations (e.g., using mask-image).
+        const literalBlocks: string[] = [];
+        const cleanedHtml = html.replace(
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
+          (match) => {
+            literalBlocks.push(match);
+            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+          },
+        );
+
+        const replaced = replaceIconTags({ iconMarkupMap, source: cleanedHtml, isJsContext: false });
+
+        return replaced.replace(/<!--__LITERAL_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
+          const index = parseInt(indexStr, 10);
+          return literalBlocks[index];
+        });
+      },
     },
 
     transform(code: string, id: string) {

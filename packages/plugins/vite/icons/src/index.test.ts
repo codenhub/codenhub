@@ -276,4 +276,37 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
     });
   });
+
+  describe("HTML transform literal blocks", () => {
+    it("should ignore HTML comments, pre, and noscript blocks, but process script and style tags", async () => {
+      const inputHtml = `
+        <div>
+          <!-- <i class="ic-success"></i> -->
+          <pre><i class="ic-success"></i></pre>
+          <noscript><i class="ic-success"></i></noscript>
+          <style>
+            .icon-test {
+              background: url('<i class="ic-success"></i>');
+            }
+          </style>
+          <script>
+            const iconStr = '<i class="ic-success"></i>';
+          </script>
+        </div>
+      `.trim();
+
+      const result = await runTransformIndexHtml(inputHtml);
+
+      // Verify shielded blocks are untouched
+      expect(result).toContain('<!-- <i class="ic-success"></i> -->');
+      expect(result).toContain('<pre><i class="ic-success"></i></pre>');
+      expect(result).toContain('<noscript><i class="ic-success"></i></noscript>');
+
+      // Verify unshielded blocks (script, style) are replaced
+      expect(result).toContain("background: url('<svg");
+      expect(result).toContain("const iconStr = '<svg");
+      expect(result).not.toContain('background: url(\'<i class="ic-success">');
+      expect(result).not.toContain('const iconStr = \'<i class="ic-success">');
+    });
+  });
 });
