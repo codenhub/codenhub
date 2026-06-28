@@ -188,6 +188,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return;
     }
 
+    let to: string;
     try {
       const url = new URL(href, browserWindow.location.href);
       if (url.origin !== browserWindow.location.origin) {
@@ -199,14 +200,15 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         return;
       }
 
-      const to = appPathname + url.search + url.hash;
+      to = appPathname + url.search + url.hash;
       parseAppPath(to);
-
-      e.preventDefault();
-      router.navigate(to);
     } catch {
-      // Ignore URL parsing errors
+      // Ignore URL parsing / validation errors and let native browser navigation handle it
+      return;
     }
+
+    e.preventDefault();
+    router.navigate(to);
   };
 
   const router: Router = {

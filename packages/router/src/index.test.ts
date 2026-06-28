@@ -298,6 +298,41 @@ describe("createRouter", () => {
     document.body.removeChild(link);
   });
 
+  it("propagates route handler errors from intercepted anchor clicks", () => {
+    const handler = vi.fn().mockImplementation(() => {
+      throw new Error("Route handler failed");
+    });
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const link = document.createElement("a");
+    link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    document.body.appendChild(link);
+
+    let errorEvent: ErrorEvent | null = null;
+    const onError = (e: ErrorEvent) => {
+      errorEvent = e;
+      e.preventDefault();
+    };
+    window.addEventListener("error", onError);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    window.removeEventListener("error", onError);
+
+    expect(errorEvent).not.toBeNull();
+    expect((errorEvent as unknown as ErrorEvent).message).toContain("Route handler failed");
+    expect(clickEvent.defaultPrevented).toBe(true);
+
+    document.body.removeChild(link);
+  });
+
   it("does not intercept anchor clicks without data-router-link", () => {
     const handler = vi.fn();
     const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
