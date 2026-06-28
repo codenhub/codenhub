@@ -51,15 +51,17 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(html: string) {
-        const noscriptBlocks: string[] = [];
-        // Temporarily extract existing noscript blocks to avoid replacing links inside them
-        const htmlWithoutNoscript = html.replace(/<noscript\b[^>]*>([\s\S]*?)<\/noscript>/gi, (match) => {
-          noscriptBlocks.push(match);
-          return `<!--__NOSCRIPT_PLACEHOLDER_${noscriptBlocks.length - 1}__-->`;
-        });
+        const literalBlocks: string[] = [];
+        const cleanedHtml = html.replace(
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
+          (match) => {
+            literalBlocks.push(match);
+            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+          },
+        );
 
         let noscript = "";
-        const transformed = htmlWithoutNoscript.replace(STYLESHEET_RE, (linkTag: string) => {
+        const transformed = cleanedHtml.replace(STYLESHEET_RE, (linkTag: string) => {
           noscript += `    ${linkTag.replace(LINK_TAG_END_RE, ">")}\n`;
 
           const cleanTag = linkTag.replace(ONLOAD_ATTR_RE, "");
@@ -74,15 +76,15 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
             );
         });
 
-        const restoreNoscripts = (content: string) => {
-          return content.replace(/<!--__NOSCRIPT_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
+        const restoreLiterals = (content: string) => {
+          return content.replace(/<!--__LITERAL_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
             const index = parseInt(indexStr, 10);
-            return noscriptBlocks[index];
+            return literalBlocks[index];
           });
         };
 
         if (!noscript) {
-          return restoreNoscripts(transformed);
+          return restoreLiterals(transformed);
         }
 
         const hasHead = /<\/head>/i.test(transformed);
@@ -101,7 +103,7 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
           withFallback = transformed.replace(/(<\/head>)/i, `${injected}  $1`);
         }
 
-        return restoreNoscripts(withFallback);
+        return restoreLiterals(withFallback);
       },
     },
   };

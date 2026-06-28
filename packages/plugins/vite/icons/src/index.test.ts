@@ -253,5 +253,13 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result?.code).toContain('xmlns="http://www.w3.org/2000/svg"');
       expect(result?.code).not.toContain('xmlns=\\"');
     });
+
+    it("should transform double-escaped class quotes in double-quoted JS string literals", async () => {
+      const jsCode = `const icon = "<div><i class=\\"ic-success size-4\\"></i></div>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('class=\\"size-4\\"');
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
   });
 });

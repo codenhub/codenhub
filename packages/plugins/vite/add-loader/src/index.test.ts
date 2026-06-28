@@ -205,4 +205,60 @@ describe("addLoaderPlugin", () => {
     expect(outputHtml).toContain('<script nonce="test-nonce-123">');
     expect(outputHtml).toContain('<style nonce="test-nonce-123">\n      #page-loader { display: none !important; }');
   });
+
+  it("should ignore dummy head and body tags inside literal blocks", async () => {
+    const plugin = addLoaderPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object") {
+      throw new Error("transformIndexHtml should be an object");
+    }
+
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+
+    const inputHtml = `
+<html>
+<head>
+  <!-- <body> inside comment -->
+  <!-- </head> inside comment -->
+  <pre><code>
+    </head>
+    <body>
+  </code></pre>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>
+    `.trim();
+
+    const result = await handler.call(undefined as unknown as ThisParameterType<IndexHtmlTransformHook>, inputHtml, {
+      path: "/index.html",
+      filename: "index.html",
+    } as unknown as IndexHtmlTransformContext);
+
+    const outputHtml = typeof result === "string" ? result : undefined;
+    expect(outputHtml).toBeDefined();
+    if (!outputHtml) {
+      throw new Error("Expected html output");
+    }
+
+    // Verify it injected loader at the actual head/body, and not in the comment/pre block
+    const commentPart = outputHtml.indexOf("<!-- <body> inside comment -->");
+    const prePart = outputHtml.indexOf("<pre><code>");
+    const actualHeadEnd = outputHtml.lastIndexOf("</head>");
+    const actualBodyStart = outputHtml.lastIndexOf("<body>");
+
+    expect(commentPart).toBeGreaterThan(-1);
+    expect(prePart).toBeGreaterThan(-1);
+    expect(actualHeadEnd).toBeGreaterThan(-1);
+    expect(actualBodyStart).toBeGreaterThan(-1);
+
+    // Style is injected before the last actual </head>
+    expect(outputHtml.indexOf("<style>")).toBeLessThan(actualHeadEnd);
+    expect(outputHtml.indexOf("<style>")).toBeGreaterThan(prePart);
+
+    // Loader body is injected after actualBodyStart (+3 for newline and indentation in LOADER_BODY)
+    expect(outputHtml.indexOf('<div id="page-loader"')).toBe(actualBodyStart + "<body>".length + 3);
+  });
 });

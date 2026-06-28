@@ -113,17 +113,32 @@ export function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(html: string) {
-        if (!/<\/head>/i.test(html) || !/<body\b/i.test(html)) {
+        const literalBlocks: string[] = [];
+        const cleanedHtml = html.replace(
+          /(<!--[\s\S]*?-->|<pre\b[^>]*>[\s\S]*?<\/pre>|<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>|<noscript\b[^>]*>[\s\S]*?<\/noscript>)/gi,
+          (match) => {
+            literalBlocks.push(match);
+            return `<!--__LITERAL_PLACEHOLDER_${literalBlocks.length - 1}__-->`;
+          },
+        );
+
+        if (!/<\/head>/i.test(cleanedHtml) || !/<body\b/i.test(cleanedHtml)) {
           return html;
         }
-        const withStyle = html.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
+
+        const withStyle = cleanedHtml.replace(/(<\/head>)/i, `<style${nonceAttr}>${styledCss}</style>\n$1`);
         let loaderBodyWithNonce = LOADER_BODY;
         if (nonceAttr) {
           loaderBodyWithNonce = loaderBodyWithNonce
             .replace(/<script>/g, `<script${nonceAttr}>`)
             .replace(/<style>/g, `<style${nonceAttr}>`);
         }
-        return withStyle.replace(/(<body([^>]*)>)/i, `$1${loaderBodyWithNonce}`);
+        const withLoader = withStyle.replace(/(<body([^>]*)>)/i, `$1${loaderBodyWithNonce}`);
+
+        return withLoader.replace(/<!--__LITERAL_PLACEHOLDER_(\d+)__-->/g, (_, indexStr) => {
+          const index = parseInt(indexStr, 10);
+          return literalBlocks[index];
+        });
       },
     },
   };

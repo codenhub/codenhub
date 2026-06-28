@@ -262,4 +262,51 @@ describe("deferCssPlugin", () => {
     expect(outputHtml).toContain('<script nonce="test-nonce">');
     expect(outputHtml).toContain("document.querySelectorAll('link[data-defer-css]')");
   });
+
+  it("should ignore stylesheet links and dummy head tags inside literal blocks", async () => {
+    const plugin = deferCssPlugin();
+    const transformIndexHtml = plugin.transformIndexHtml;
+    if (!transformIndexHtml || typeof transformIndexHtml !== "object" || !("handler" in transformIndexHtml)) {
+      throw new Error("Expected transformIndexHtml to have handler");
+    }
+    const handler = transformIndexHtml.handler as IndexHtmlTransformHook;
+    const inputHtml = `
+<html>
+<head>
+  <!-- <link rel="stylesheet" href="ignored-comment.css"> -->
+  <!-- </head> inside comment -->
+  <pre><code>
+    <link rel="stylesheet" href="ignored-code.css">
+    </head>
+  </code></pre>
+  <link rel="stylesheet" href="real.css">
+</head>
+<body></body>
+</html>
+    `.trim();
+
+    const result = await handler.call(
+      { format: "html" } as unknown as ThisParameterType<IndexHtmlTransformHook>,
+      inputHtml,
+      { path: "/index.html", filename: "index.html" } as unknown as IndexHtmlTransformContext,
+    );
+    const outputHtml = getHtml(result);
+    expect(outputHtml).toBeDefined();
+    if (!outputHtml) {
+      throw new Error("Expected html output");
+    }
+
+    // Ignored links must remain unmodified
+    expect(outputHtml).toContain('<link rel="stylesheet" href="ignored-comment.css">');
+    expect(outputHtml).toContain('<link rel="stylesheet" href="ignored-code.css">');
+
+    // Real link must be transformed
+    expect(outputHtml).toContain('<link rel="preload" href="real.css" as="style"');
+
+    // Verification that it matched the actual head and not dummy one
+    const actualHeadEnd = outputHtml.lastIndexOf("</head>");
+    const fallbackNoscriptStart = outputHtml.indexOf("<noscript>");
+    expect(fallbackNoscriptStart).toBeLessThan(actualHeadEnd);
+    expect(outputHtml.lastIndexOf("</noscript>")).toBeLessThan(actualHeadEnd);
+  });
 });

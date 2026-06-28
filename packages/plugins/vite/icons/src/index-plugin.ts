@@ -275,13 +275,22 @@ function replaceIconTags(options: ReplaceIconTagsOptions): string {
 
   return source.replace(
     iconTagRegex,
-    (match, before: string, attrName: string, quote: string, classValue: string, after: string, offset: number) =>
+    (
+      match,
+      before: string,
+      attrName: string,
+      backslash: string,
+      quote: string,
+      classValue: string,
+      after: string,
+      offset: number,
+    ) =>
       buildSvgReplacement({
         iconMarkupMap,
         match,
         attrsBeforeClass: before,
         attrName,
-        quote,
+        quote: backslash + quote,
         classValue,
         attrsAfterClass: after,
         isJsContext,
