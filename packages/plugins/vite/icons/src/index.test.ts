@@ -275,6 +275,32 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result).not.toBeNull();
       expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
     });
+
+    it("should escape single quotes in single-quoted JS string context when SVG has single quotes", async () => {
+      const options = {
+        icons: {
+          test: `<svg class='foo' id='bar'></svg>`,
+        },
+      };
+      const jsCode = `const icon = '<div><i class="ic-test"></i></div>';`;
+      const result = await runTransform(jsCode, "entry.ts", options);
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain("class=\\'foo\\'");
+      expect(result?.code).toContain("id=\\'bar\\'");
+    });
+
+    it("should escape backticks and template literals in backtick JS string context when SVG has backticks or template sequences", async () => {
+      const options = {
+        icons: {
+          test: `<svg class='foo' data-val="\`hello\`" id="\${expr}"></svg>`,
+        },
+      };
+      const jsCode = `const icon = \`<div><i class="ic-test"></i></div>\`;`;
+      const result = await runTransform(jsCode, "entry.ts", options);
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('data-val="\\`hello\\`"');
+      expect(result?.code).toContain('id="\\${expr}"');
+    });
   });
 
   describe("HTML transform literal blocks", () => {

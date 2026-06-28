@@ -287,6 +287,10 @@ function buildSvgReplacement(options: SvgReplacementOptions): string {
     const enclosingQuote = getEnclosingQuote(source, offset);
     if (enclosingQuote === '"') {
       markup = markup.replace(/"/g, '\\"');
+    } else if (enclosingQuote === "'") {
+      markup = markup.replace(/'/g, "\\'");
+    } else if (enclosingQuote === "`") {
+      markup = markup.replace(/`/g, "\\`").replace(/\${/g, "\\${");
     }
   }
 

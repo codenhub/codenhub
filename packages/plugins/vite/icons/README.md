@@ -127,6 +127,8 @@ interface IconOptions {
 
 ## Requirements
 
+- **Plugin Order:** Can be registered anywhere in the Vite `plugins` array. The plugin automatically runs with `enforce: "pre"` so the icon replacement occurs before standard framework compilers/transformers.
+- **Failure Behavior:** If an icon tag uses an unknown icon name not present in the registry, it is left unmodified in the output. If the input code contains no matching icon tags or doesn't match the prefix `ic-`, the plugin returns `null` from the transform hook to let Vite skip the file.
 - Vite version `^8.0.16` or compatible.
 - Node.js environment supporting ESM.
 
