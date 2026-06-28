@@ -259,6 +259,25 @@ function createIconTagRegex(): RegExp {
   return new RegExp(ICON_TAG_REGEX.source, ICON_TAG_REGEX.flags);
 }
 
+function mergeSvgClasses(markup: string, extraClasses: string | null): string {
+  if (!extraClasses) {
+    return markup;
+  }
+
+  const svgClassRegex = /^(<svg\b[^>]*?\b(class|className))=((['"])(.*?)\4|([^\s>]+))/i;
+  const match = markup.match(svgClassRegex);
+
+  if (match) {
+    const quote = match[4] || '"';
+    const existingClasses = match[5] || match[6] || "";
+    const merged = `${existingClasses} ${extraClasses}`;
+    const replacement = `${match[1]}=${quote}${merged}${quote}`;
+    return markup.replace(svgClassRegex, replacement);
+  }
+
+  return markup;
+}
+
 function buildSvgReplacement(options: SvgReplacementOptions): string {
   const {
     iconMarkupMap,
@@ -279,10 +298,17 @@ function buildSvgReplacement(options: SvgReplacementOptions): string {
   }
 
   const extraClasses = stripIconClass(classValue, icon.iconClass);
-  const classAttr = extraClasses ? ` ${attrName}=${quote}${extraClasses}${quote}` : "";
   const passthroughAttrStr = joinPassthroughAttributes(attrsBeforeClass, attrsAfterClass);
 
   let markup = icon.markup;
+  const hasClass = /^(<svg\b[^>]*?\b(class|className))=/i.test(markup);
+
+  if (hasClass) {
+    markup = mergeSvgClasses(markup, extraClasses);
+  }
+
+  const classAttr = !hasClass && extraClasses ? ` ${attrName}=${quote}${extraClasses}${quote}` : "";
+
   if (isJsContext) {
     const enclosingQuote = getEnclosingQuote(source, offset);
     if (enclosingQuote === '"') {

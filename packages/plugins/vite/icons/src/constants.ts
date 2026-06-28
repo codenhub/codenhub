@@ -2,7 +2,7 @@ export const PLUGIN_NAME = "vite-plugin-icons";
 
 export const ICON_MARKER_PREFIX = "ic-";
 
-export const TRANSFORM_EXTENSIONS = /\.(html|js|ts|jsx|tsx)$/;
+export const TRANSFORM_EXTENSIONS = /\.(js|ts|jsx|tsx)$/;
 
 /**
  * Matches <i> tags with a class or className attribute (self-closing or explicit).
