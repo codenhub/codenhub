@@ -65,6 +65,8 @@ interface AddLoaderPluginOptions {
 
 ## Requirements
 
+- **Plugin Order:** Can be registered anywhere in the Vite `plugins` array. The plugin automatically runs with `enforce: "post"` so its HTML transforms execute on the final HTML output.
+- **Failure Behavior:** If the input HTML does not contain both `</head>` and `<body>` tags, the plugin returns the HTML unmodified.
 - Vite `^8.0.0` is required as a peer dependency.
 - TypeScript consumers should use `moduleResolution: "bundler"` or a resolver that supports package `exports`.
 
