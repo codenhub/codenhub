@@ -261,5 +261,19 @@ describe("iconsPlugin — custom icons option", () => {
       expect(result?.code).toContain('class=\\"size-4\\"');
       expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
     });
+
+    it("should not be confused by regex after a line comment", async () => {
+      const jsCode = `const r =\n  // comment\n  /"/;\nconst icon = "<i class='ic-success'></i>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
+
+    it("should not be confused by regex after a block comment", async () => {
+      const jsCode = `const r = /* comment */ /"/;\nconst icon = "<i class='ic-success'></i>";`;
+      const result = await runTransform(jsCode, "entry.ts");
+      expect(result).not.toBeNull();
+      expect(result?.code).toContain('xmlns=\\"http://www.w3.org/2000/svg\\"');
+    });
   });
 });
