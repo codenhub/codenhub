@@ -94,8 +94,8 @@ export function deferCssPlugin(options?: DeferCssPluginOptions): Plugin {
           if (options?.nonce) {
             injected += `  <script nonce="${options.nonce}">
     document.querySelectorAll('link[data-defer-css]').forEach(function(l) {
-      var swap = function() { l.rel = 'stylesheet'; };
-      var isLoaded = false;
+      const swap = function() { l.rel = 'stylesheet'; };
+      let isLoaded = false;
       try { isLoaded = window.performance && window.performance.getEntriesByName(l.href).length > 0; } catch (e) {}
       if (l.sheet || isLoaded) swap();
       else { l.addEventListener('load', swap); l.addEventListener('error', swap); }
