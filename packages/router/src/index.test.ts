@@ -248,6 +248,32 @@ describe("createRouter", () => {
     expect(log).toEqual(["start", "popstate"]);
   });
 
+  it("queues popstate events triggered during active navigation and preserves state", () => {
+    const router = trackStartedRouter(createRouter());
+    const log: string[] = [];
+    let stateDuringPopstateTarget: unknown = null;
+
+    router.on("/start", () => {
+      log.push("start");
+      history.pushState({ val: "original" }, "", "/popstate-target");
+      dispatchEvent(new PopStateEvent("popstate", { state: { val: "popstate-queued" } }));
+      router.navigate("/other");
+    });
+    router.on("/other", () => {
+      log.push("other");
+    });
+    router.on("/popstate-target", () => {
+      log.push("popstate");
+      stateDuringPopstateTarget = history.state;
+    });
+
+    router.start();
+    router.navigate("/start");
+    expect(log).toEqual(["start", "popstate", "other"]);
+    expect(location.pathname).toBe("/other");
+    expect(stateDuringPopstateTarget).toEqual({ val: "popstate-queued" });
+  });
+
   it("intercepts anchor clicks with data-router-link", () => {
     const handler = vi.fn();
     const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
@@ -464,6 +490,32 @@ describe("createRouter", () => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
     link.setAttribute("href", "/target");
+    link.setAttribute("data-router-link", "");
+    svg.appendChild(link);
+    document.body.appendChild(svg);
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    link.dispatchEvent(clickEvent);
+
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(handler).toHaveBeenCalled();
+    expect(location.pathname).toBe("/target");
+
+    document.body.removeChild(svg);
+  });
+
+  it("intercepts SVG anchor clicks with data-router-link using xlink:href", () => {
+    const handler = vi.fn();
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
+    router.start();
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
+    link.setAttribute("xlink:href", "/target");
     link.setAttribute("data-router-link", "");
     svg.appendChild(link);
     document.body.appendChild(svg);

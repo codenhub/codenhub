@@ -127,7 +127,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     }
   };
 
-  const handlePopState = (): void => {
+  const handlePopState = (e: PopStateEvent): void => {
     const browserWindow = getBrowserWindow();
     if (browserWindow === null) {
       return;
@@ -135,7 +135,14 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
 
     const target = parseLocationPath(browserWindow.location, basePath);
     if (isNavigating) {
-      pendingNavigations.push({ target });
+      const state = e.state;
+      pendingNavigations.push({
+        target,
+        historyUpdate: () => {
+          const href = buildBrowserHref(target.href, basePath);
+          browserWindow.history.replaceState(state, "", href);
+        },
+      });
       return;
     }
 
@@ -167,7 +174,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return;
     }
 
-    const href = anchor.getAttribute("href");
+    const href = anchor.getAttribute("href") ?? anchor.getAttribute("xlink:href");
     if (href === null) {
       return;
     }
