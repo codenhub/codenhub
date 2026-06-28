@@ -55,8 +55,8 @@ export default {
 };
 ```
 
-> [!WARNING]
-> Custom icon SVG markup must not include root `class` or `className` attributes. Doing so will result in duplicate `class` attributes on the generated element.
+> [!NOTE]
+> Custom icon SVG markup can include root `class` or `className` attributes. The plugin automatically merges them with the classes provided on the icon marker element.
 
 ## Limitations
 

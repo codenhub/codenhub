@@ -195,6 +195,20 @@ describe("iconsPlugin — custom icons option", () => {
     expect(transformed).toContain('class="base-class extra-class"');
   });
 
+  it("should handle custom SVG markup with leading whitespace or newlines", async () => {
+    const options = {
+      icons: {
+        custom: `
+          <svg class="base-class" viewBox="0 0 24 24">
+            <rect width="24" height="24"/>
+          </svg>
+        `,
+      },
+    };
+    const transformed = await runTransformIndexHtml(`<i class="ic-custom extra-class"></i>`, options);
+    expect(transformed).toContain('class="base-class extra-class"');
+  });
+
   describe("shouldClear option", () => {
     it("should not resolve built-in icons when shouldClear is true", async () => {
       const transformed = await runTransformIndexHtml(`<i class="ic-success"></i>`, { shouldClear: true });

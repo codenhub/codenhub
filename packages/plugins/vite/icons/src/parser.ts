@@ -300,7 +300,7 @@ function buildSvgReplacement(options: SvgReplacementOptions): string {
   const extraClasses = stripIconClass(classValue, icon.iconClass);
   const passthroughAttrStr = joinPassthroughAttributes(attrsBeforeClass, attrsAfterClass);
 
-  let markup = icon.markup;
+  let markup = icon.markup.trim();
   const hasClass = /^(<svg\b[^>]*?\b(class|className))=/i.test(markup);
 
   if (hasClass) {
