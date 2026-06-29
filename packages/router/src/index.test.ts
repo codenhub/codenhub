@@ -91,8 +91,8 @@ describe("createRouter", () => {
     expect(location.pathname).toBe("/redirected");
     expect(handler).toHaveBeenCalledTimes(1);
     expect(redirectedHandler).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenNthCalledWith(1, expect.any(Object));
-    expect(listener).toHaveBeenNthCalledWith(2, expect.any(Object));
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ path: "/redirected" }));
   });
 
   it("shouldProcessMultipleQueuedNavigationsInFifoOrder", () => {

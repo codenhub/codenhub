@@ -190,6 +190,28 @@ describe("createNavigation", () => {
 
       nav.run(parseAppPath("/start"));
     });
+
+    it("shouldDrainQueueOnHandlerError", () => {
+      const log: string[] = [];
+      const { registry, nav } = makeNav();
+
+      registry.add("/start", () => {
+        nav.enqueue(parseAppPath("/next"));
+        throw new Error("handler error");
+      });
+      registry.add("/next", () => {
+        log.push("next");
+      });
+      registry.add("/other", () => {
+        log.push("other");
+      });
+
+      expect(() => nav.run(parseAppPath("/start"))).toThrow("handler error");
+      expect(nav.isActive()).toBe(false);
+
+      nav.run(parseAppPath("/other"));
+      expect(log).toEqual(["other"]);
+    });
   });
 
   // ---------------------------------------------------------------------------

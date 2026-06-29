@@ -95,7 +95,6 @@ export function createNavigation(registry: Registry): Navigation {
 
           if (result !== null) {
             result.route.handler(result.match);
-            notify(result.match);
             loopMatch = result.match;
           } else {
             const miss: RouterMiss = {
@@ -105,12 +104,12 @@ export function createNavigation(registry: Registry): Navigation {
             };
 
             registry.getFallback()?.(miss);
-            notify(null);
             loopMatch = null;
           }
-        } else if (currentMiss !== undefined) {
-          registry.getFallback()?.(currentMiss);
-          notify(null);
+        } else {
+          // Invariant: since the loop condition is (currentTarget !== null || currentMiss !== undefined),
+          // if currentTarget is null, currentMiss must be defined.
+          registry.getFallback()?.(currentMiss!);
           loopMatch = null;
         }
 
@@ -126,9 +125,13 @@ export function createNavigation(registry: Registry): Navigation {
       }
 
       lastMatch = loopMatch;
+      notify(loopMatch);
       // Draining the queue means the loop returns the final match resolved by
       // the last executed navigation in this cycle (e.g. following redirects).
       return loopMatch;
+    } catch (error) {
+      pendingNavigations.length = 0;
+      throw error;
     } finally {
       isNavigating = false;
     }
