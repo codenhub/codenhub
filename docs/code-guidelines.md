@@ -1,7 +1,7 @@
 # Coding guidelines
 
 **Status:** APPROVED
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-28
 
 This document outlines patterns, conventions and guidelines to follow when working on this codebase.
 
@@ -81,6 +81,8 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Mock external dependencies such as network, storage, filesystem, timers, and browser APIs.
 - Prefer observable behavior over implementation details.
 - Update affected tests when changing behavior.
+
+For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](./specs/tests.md).
 
 ## Documentation
 
