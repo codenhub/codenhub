@@ -164,22 +164,38 @@ const styles = css`
 
 ### `ComponentConfig<Props, Methods>`
 
-| Property     | Type                                  | Default  | Description                                                                                                                         |
-| ------------ | ------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `properties` | `Record<string, PropertyConstructor>` | `{}`     | Reactive property declarations with type constructors.                                                                              |
-| `hasShadow`  | `boolean`                             | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                                                                                 |
-| `styles`     | `string`                              | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`.                                                                 |
-| `render`     | `(this: Instance) => string`          | required | Returns HTML string for the component's current state.                                                                              |
-| `onMount`    | `(this: Instance) => void`            | —        | Called once after the initial render when the element is first inserted into the document. DOM is already populated when this runs. |
-| `onUnmount`  | `(this: Instance) => void`            | —        | Called after removal from the document.                                                                                             |
-| `onUpdate`   | `(this: Instance) => void`            | —        | Called after every render, including the initial one. Fires before `onMount` on first connect.                                      |
-| `methods`    | `Methods`                             | `{}`     | Custom methods bound to the instance.                                                                                               |
+| Property     | Type                                                    | Default  | Description                                                                                                                         |
+| ------------ | ------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `properties` | `Record<string, PropertyConstructor \| PropertyConfig>` | `{}`     | Reactive property declarations with type constructors or property descriptor objects.                                               |
+| `hasShadow`  | `boolean`                                               | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                                                                                 |
+| `styles`     | `string`                                                | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`.                                                                 |
+| `render`     | `(this: Instance) => string \| TemplateResult`          | required | Returns HTML string or TemplateResult representing the component's current state.                                                   |
+| `onMount`    | `(this: Instance) => void`                              | —        | Called once after the initial render when the element is first inserted into the document. DOM is already populated when this runs. |
+| `onUnmount`  | `(this: Instance) => void`                              | —        | Called after removal from the document.                                                                                             |
+| `onUpdate`   | `(this: Instance) => void`                              | —        | Called after every render, including the initial one. Fires before `onMount` on first connect.                                      |
+| `methods`    | `Methods`                                               | `{}`     | Custom methods bound to the instance.                                                                                               |
 
 #### Reactive properties
 
 Declaring a property in `properties` installs a getter/setter on the element.
 Assigning a new value automatically schedules a batched re-render in the next
 micro-task. Attribute changes are forwarded to the matching property setter.
+
+Properties can be declared using a type constructor directly, or via a property descriptor object to define default values:
+
+```ts
+const MyComponent = defineComponent("my-component", {
+  properties: {
+    // Type constructor declaration (default is undefined)
+    name: String,
+    // Property descriptor object declaration with default value
+    clicks: { type: Number, default: 0 },
+    // Descriptor with function factory for objects/arrays to avoid shared references
+    items: { type: Array, default: () => [] },
+  },
+  ...
+});
+```
 
 Supported constructor types:
 
@@ -196,7 +212,7 @@ String attributes are cast automatically:
 - **`Boolean`**: standard HTML attribute rules apply. The empty string `""` (attribute presence) and `"true"` cast to `true`. `"false"` and `null` (attribute absence/removal) cast to `false`.
 - **`Number`**: parsed via `Number(val)`. Empty or whitespace-only strings cast to `NaN` to prevent silent coercion to `0`.
 - **`Object`/`Array`**: parsed via `JSON.parse`. If parsing fails, an explicit `Error` is thrown to fail fast.
-- **Custom Classes / Converters**: parsed or constructed by calling/instantiating the function (e.g. `Date` or user class), unless the value is already an instance.
+- **Custom Classes / Converters**: parsed or constructed by calling/instantiating the function (e.g. `Date` or user class), unless the value is already an instance. For transpiled ES5 classes, you can pass a custom factory function (e.g. `(val) => new MyClass(val)`) to ensure correct invocation.
 - **`undefined`**: passes through unchanged for all property types. An `undefined` value means the property has not been initialized and is preserved as-is.
 
 ---
@@ -289,6 +305,7 @@ createRouter()
 ## Notes
 
 - `innerHTML` is replaced on every render. Event listeners attached directly to child elements inside `onUpdate` are garbage-collected along with the discarded DOM nodes when the next render occurs. However, avoid attaching listeners to persistent external elements or the host element itself inside `onUpdate` to prevent memory leaks and duplicate execution.
+- **Interactive State & Focus Loss**: Since `innerHTML` is replaced on every render, interactive elements (like `<input>`, `<textarea>`, or custom dropdowns) are destroyed and recreated. This results in immediate loss of focus, selection, and cursor position. To prevent this, avoid reactive property updates while inputs are actively focused, or manage form/input focus state manually.
 - **Lifecycle call order on first connect**: render → `onUpdate` → `onMount`.
   The DOM is fully populated before `onMount` runs, so it is safe to query
   child elements there. `onUpdate` fires before `onMount` on the initial render
@@ -305,4 +322,4 @@ createRouter()
 
 ## License
 
-Apache-2.0
+This project is licensed under the [Apache-2.0](LICENSE) license.

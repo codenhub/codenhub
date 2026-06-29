@@ -1242,4 +1242,83 @@ describe("defineComponent - additional validations and features", () => {
     expect(el1.val).toBe("a");
     expect(el2.val).toBe("b");
   });
+
+  it("shouldInitializePropertyDefaultValues", () => {
+    const tag = generateUniqueTag("default-vals");
+    const component = defineComponent(tag, {
+      properties: {
+        clicks: { type: Number, default: 42 },
+        items: { type: Array, default: () => [1, 2] },
+        name: { type: String, default: "Bob" },
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el1 = component.create();
+    const el2 = component.create();
+
+    expect(castToProps<{ clicks: number }>(el1).clicks).toBe(42);
+    expect(castToProps<{ items: number[] }>(el1).items).toEqual([1, 2]);
+    expect(castToProps<{ name: string }>(el1).name).toBe("Bob");
+
+    // Verify factory function generates fresh instances
+    expect(castToProps<{ items: number[] }>(el1).items).not.toBe(castToProps<{ items: number[] }>(el2).items);
+  });
+
+  it("shouldNotRenderRepeatedlyForNaNProperties", async () => {
+    const tag = generateUniqueTag("nan-check");
+    let renderCount = 0;
+    const component = defineComponent(tag, {
+      properties: {
+        value: Number,
+      },
+      render() {
+        renderCount++;
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    // Initial render
+    expect(renderCount).toBe(1);
+
+    // Set to NaN
+    castToProps<{ value: unknown }>(el).value = NaN;
+    await Promise.resolve(); // wait for deferred render
+    expect(renderCount).toBe(2);
+
+    // Set to NaN again — should NOT trigger a third render
+    castToProps<{ value: unknown }>(el).value = NaN;
+    await Promise.resolve();
+    expect(renderCount).toBe(2);
+  });
+
+  it("shouldApplyStylesViaShadowDom", () => {
+    const tag = generateUniqueTag("styles-shadow");
+    const component = defineComponent(tag, {
+      hasShadow: true,
+      styles: ":host { color: red; }",
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(el.shadowRoot).not.toBeNull();
+
+    // Either adoptedStyleSheets are used, or style tag fallback is appended
+    const adoptedSheets = el.shadowRoot!.adoptedStyleSheets;
+    const hasAdoptedSheets = adoptedSheets !== undefined && adoptedSheets.length > 0;
+    const hasStyleTag = el.shadowRoot!.querySelector("style") !== null;
+    expect(hasAdoptedSheets || hasStyleTag).toBe(true);
+  });
 });

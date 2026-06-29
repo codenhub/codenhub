@@ -83,6 +83,7 @@ export function unsafeHTML(value: unknown): TemplateResult {
  * @param strings - Static template string fragments.
  * @param values - Dynamic values to interpolate and concatenate.
  * @returns Concatenated CSS stylesheet string.
+ * @throws {TypeError} If an array or a plain object (without a custom `toString` method) is interpolated.
  *
  * @example
  * ```ts

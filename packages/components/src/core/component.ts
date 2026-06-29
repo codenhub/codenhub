@@ -1,12 +1,18 @@
 import { TemplateResult } from "./html.js";
-import type { ComponentConfig, ComponentDefinition, ComponentInstance, ComponentProperties } from "./types.js";
+import type {
+  ComponentConfig,
+  ComponentDefinition,
+  ComponentInstance,
+  ComponentProperties,
+  PropertyConstructor,
+} from "./types.js";
 
 const BaseElement = typeof HTMLElement !== "undefined" ? HTMLElement : (class {} as typeof HTMLElement);
 
 interface CustomElementInternal {
   _propertyValues: Record<string, unknown>;
   _isRendering: boolean;
-  _mutatedDuringRender: boolean;
+  _hasMutatedDuringRender: boolean;
   _scheduleRender(): void;
 }
 
@@ -153,6 +159,11 @@ const RESERVED_NAMES = new Set([
   "requestUpdate",
 ]);
 
+const supportsConstructableStylesheets =
+  typeof window !== "undefined" &&
+  "adoptedStyleSheets" in Document.prototype &&
+  "replaceSync" in CSSStyleSheet.prototype;
+
 /**
  * Defines a Web Component from a plain configuration object.
  *
@@ -216,6 +227,12 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     );
   }
 
+  let compiledStyleSheet: CSSStyleSheet | null = null;
+  if (shouldUseShadow && config.styles !== undefined && supportsConstructableStylesheets) {
+    compiledStyleSheet = new CSSStyleSheet();
+    compiledStyleSheet.replaceSync(config.styles);
+  }
+
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
     if (RESERVED_NAMES.has(propName)) {
@@ -258,7 +275,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private _isRenderScheduled = false;
     private _isMounted = false;
     _isRendering = false;
-    private _mutatedDuringRender = false;
+    private _hasMutatedDuringRender = false;
     private _contentWrapper: HTMLElement | null = null;
     _propertyValues: Record<string, unknown> = {};
 
@@ -270,6 +287,20 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       super();
 
       this._propertyValues = {};
+
+      // Initialize default values defined in property config descriptors
+      for (const [propName, propEntry] of Object.entries(properties)) {
+        if (typeof propEntry === "object" && propEntry !== null && "default" in propEntry) {
+          const defaultValue = (propEntry as { default: unknown }).default;
+          const propType = (propEntry as { type: PropertyConstructor }).type;
+          const val =
+            typeof defaultValue === "function" && propType !== Function
+              ? (defaultValue as () => unknown)()
+              : defaultValue;
+          this._propertyValues[propName] = castProperty(val, propType);
+        }
+      }
+
       // Capture pre-existing own properties (upgraded elements)
       for (const propName of Object.keys(properties)) {
         if (Object.prototype.hasOwnProperty.call(this, propName)) {
@@ -286,7 +317,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       if (shouldUseShadow) {
         const shadow = this.attachShadow({ mode: "open" });
-        if (config.styles) {
+        if (compiledStyleSheet !== null) {
+          shadow.adoptedStyleSheets = [compiledStyleSheet];
+        } else if (config.styles) {
           const style = document.createElement("style");
           style.textContent = config.styles;
           shadow.appendChild(style);
@@ -358,14 +391,14 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private _render(): void {
       this._isRenderScheduled = false;
       this._isRendering = true;
-      this._mutatedDuringRender = false;
+      this._hasMutatedDuringRender = false;
       let htmlContent: string | TemplateResult;
       try {
         htmlContent = config.render.call(this as unknown as ComponentInstance<Props, Methods>);
       } finally {
         this._isRendering = false;
-        if (this._mutatedDuringRender) {
-          this._mutatedDuringRender = false;
+        if (this._hasMutatedDuringRender) {
+          this._hasMutatedDuringRender = false;
           this._scheduleRender();
         }
       }
@@ -391,7 +424,12 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
   // Wire reactive getters/setters on prototype.
   for (const propName of Object.keys(properties)) {
-    const propConfig = properties[propName];
+    const propEntry = properties[propName];
+    const propConfig =
+      typeof propEntry === "object" && propEntry !== null && "type" in propEntry
+        ? (propEntry as { type: PropertyConstructor }).type
+        : (propEntry as PropertyConstructor);
+
     Object.defineProperty(CustomElement.prototype, propName, {
       get(this: HTMLElement) {
         const self = this as unknown as CustomElementInternal;
@@ -404,14 +442,14 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
           self._propertyValues = {};
         }
         const storedValue = self._propertyValues[propName];
-        if (storedValue !== casted) {
+        if (!Object.is(storedValue, casted)) {
           self._propertyValues[propName] = casted;
           if (self._isRendering) {
             console.warn(
               `Component "${tagName}": property "${propName}" was mutated during render. ` +
                 "This can cause an infinite rendering loop.",
             );
-            self._mutatedDuringRender = true;
+            self._hasMutatedDuringRender = true;
             return;
           }
           self._scheduleRender();
