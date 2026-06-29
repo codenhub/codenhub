@@ -115,6 +115,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   class CustomElement extends HTMLElement {
     private _isRenderScheduled = false;
     private _isMounted = false;
+    private _contentWrapper: HTMLElement | null = null;
 
     static get observedAttributes(): string[] {
       return Array.from(attributeToPropertyMap.keys());
@@ -157,6 +158,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         // without needing to walk siblings to avoid clobbering the style node.
         const contentWrapper = document.createElement("div");
         shadow.appendChild(contentWrapper);
+        this._contentWrapper = contentWrapper;
       }
     }
 
@@ -205,13 +207,8 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       const htmlContent = config.render.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
 
       if (shouldUseShadow) {
-        const root = this.shadowRoot!;
-        // The dedicated content wrapper is always the last child of the shadow
-        // root (appened in the constructor after the optional style node).
-        // Setting innerHTML on it avoids any need to walk siblings to preserve
-        // the style node across renders.
-        const contentWrapper = root.lastElementChild as HTMLElement | null;
-        if (contentWrapper === null) {
+        const contentWrapper = this._contentWrapper;
+        if (contentWrapper === null || contentWrapper.parentNode !== this.shadowRoot) {
           throw new Error(
             `Component "${tagName}": shadow root content wrapper element is missing. ` +
               "Render aborted to prevent style node clobbering.",

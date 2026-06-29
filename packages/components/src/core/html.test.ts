@@ -60,6 +60,41 @@ describe("html", () => {
       `.trim(),
     ).toBe("<p>true</p>");
   });
+
+  it("shouldInterpolateArrayValuesByJoiningThem", () => {
+    const items = ["a", null, "b", undefined, "c"];
+    expect(
+      html`
+        <ul>
+          ${items}
+        </ul>
+      `
+        .trim()
+        .replace(/\s+/g, ""),
+    ).toBe("<ul>abc</ul>");
+  });
+
+  it("shouldInterpolateArrayOfTemplates", () => {
+    const items = [
+      html`
+        <li>a</li>
+      `,
+      null,
+      html`
+        <li>b</li>
+      `,
+      undefined,
+    ];
+    expect(
+      html`
+        <ul>
+          ${items}
+        </ul>
+      `
+        .trim()
+        .replace(/\s+/g, ""),
+    ).toBe("<ul><li>a</li><li>b</li></ul>");
+  });
 });
 
 describe("css", () => {

@@ -18,8 +18,16 @@
 export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
   return strings.reduce((result, str, i) => {
     const val = values[i];
-    const serialized =
-      val !== undefined && val !== null ? (typeof val === "object" ? JSON.stringify(val) : String(val)) : "";
+    let serialized = "";
+    if (val !== undefined && val !== null) {
+      if (Array.isArray(val)) {
+        serialized = val.map((v) => (v !== undefined && v !== null ? String(v) : "")).join("");
+      } else if (typeof val === "object") {
+        serialized = JSON.stringify(val);
+      } else {
+        serialized = String(val);
+      }
+    }
     return result + str + serialized;
   }, "");
 }

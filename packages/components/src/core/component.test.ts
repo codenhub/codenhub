@@ -527,6 +527,36 @@ describe("Shadow DOM", () => {
       `Component "${tag}": shadow root content wrapper element is missing. Render aborted to prevent style node clobbering.`,
     );
   });
+
+  it("shouldRenderCorrectlyWhenExtraElementAppendedToShadowRoot", async () => {
+    const tag = generateUniqueTag("shadow-append");
+    const component = defineComponent(tag, {
+      hasShadow: true,
+      properties: { value: String },
+      render() {
+        return html`
+          <p>${this.value}</p>
+        `;
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ value: "initial" });
+    document.body.appendChild(el);
+
+    // Manually append another element to shadow root
+    const extra = document.createElement("span");
+    extra.textContent = "extra";
+    el.shadowRoot!.appendChild(extra);
+
+    // Trigger re-render
+    castToProps<{ value: string }>(el).value = "updated";
+    await Promise.resolve();
+
+    // Verify rendering still succeeded and updated the innerHTML of wrapper
+    expect(el.shadowRoot!.innerHTML).toContain("<p>updated</p>");
+    expect(el.shadowRoot!.innerHTML).toContain("<span>extra</span>");
+  });
 });
 
 // ---------------------------------------------------------------------------
