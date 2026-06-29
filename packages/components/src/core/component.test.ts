@@ -1182,4 +1182,64 @@ describe("defineComponent - additional validations and features", () => {
 
     expect(castToProps<{ value: unknown }>(el).value).toBe(inst);
   });
+
+  it("shouldThrowErrorWhenPropertyNamesCollide", () => {
+    const tag = generateUniqueTag("prop-collision");
+    expect(() => {
+      defineComponent(tag, {
+        properties: {
+          myProp: String,
+          "my-prop": String,
+        },
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow(
+      `Component "${tag}": property "my-prop" produces colliding attribute name "my-prop" which is already mapped to property "myProp".`,
+    );
+  });
+
+  it("shouldCorrectlyConvertCustomClassFromPrimitiveValue", () => {
+    const tag = generateUniqueTag("custom-class-cast");
+    class User {
+      constructor(public name: string) {}
+    }
+    const component = defineComponent(tag, {
+      properties: { user: User },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    castToProps<{ user: unknown }>(el).user = "Alice";
+    const userInst = castToProps<{ user: User }>(el).user;
+    expect(userInst).toBeInstanceOf(User);
+    expect(userInst.name).toBe("Alice");
+  });
+
+  it("shouldDefinePropertiesOnPrototype", () => {
+    const tag = generateUniqueTag("proto-props");
+    const component = defineComponent(tag, {
+      properties: { val: String },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el1 = component.create({ val: "a" });
+    const el2 = component.create({ val: "b" });
+
+    // Properties should be defined on prototype, not on instance.
+    expect(Object.prototype.hasOwnProperty.call(el1, "val")).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(el2, "val")).toBe(false);
+
+    expect(el1.val).toBe("a");
+    expect(el2.val).toBe("b");
+  });
 });

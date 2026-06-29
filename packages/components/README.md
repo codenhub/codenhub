@@ -123,15 +123,29 @@ const markup = html`
 `;
 ```
 
+- **HTML Escaping**: Automatically escapes dynamic values to prevent Cross-Site Scripting (XSS) attacks. Standard strings, numbers, objects, and arrays are escaped during serialization.
+- **Unsafe HTML**: To bypass escaping and insert raw, unescaped HTML, wrap the value in `unsafeHTML(value)`.
+- **Template Nesting**: Nested `TemplateResult` objects (e.g., returned from nested `html` calls) are inserted raw without escaping, allowing template composition.
 - Objects are serialized with `JSON.stringify` (unless they define a custom `toString` method).
 - Arrays are mapped recursively through these serialization rules and joined as a single string.
 - `null` and `undefined` produce empty strings.
 - All other values are converted via `String()`.
 
+#### `unsafeHTML`
+
+Bypasses automatic HTML escaping in the `html` helper.
+
+```ts
+import { html, unsafeHTML } from "@codenhub/components";
+
+const rawMarkup = unsafeHTML("<span>Raw HTML</span>");
+const template = html`
+  <div>${rawMarkup}</div>
+`;
+```
+
 > [!WARNING]
-> This helper does NOT perform HTML escaping or sanitization.
-> To prevent Cross-Site Scripting (XSS) attacks, ensure any user-controlled
-> input interpolated here is sanitized first (e.g. using a DOM sanitization library).
+> Only use `unsafeHTML` with trusted or sanitized inputs. Passing unsanitized user input directly to `unsafeHTML` will introduce XSS vulnerabilities.
 
 #### `css`
 
@@ -182,6 +196,7 @@ String attributes are cast automatically:
 - **`Boolean`**: standard HTML attribute rules apply. The empty string `""` (attribute presence) and `"true"` cast to `true`. `"false"` and `null` (attribute absence/removal) cast to `false`.
 - **`Number`**: parsed via `Number(val)`. Empty or whitespace-only strings cast to `NaN` to prevent silent coercion to `0`.
 - **`Object`/`Array`**: parsed via `JSON.parse`. If parsing fails, an explicit `Error` is thrown to fail fast.
+- **Custom Classes / Converters**: parsed or constructed by calling/instantiating the function (e.g. `Date` or user class), unless the value is already an instance.
 - **`undefined`**: passes through unchanged for all property types. An `undefined` value means the property has not been initialized and is preserved as-is.
 
 ---

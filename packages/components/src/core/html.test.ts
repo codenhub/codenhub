@@ -1,80 +1,102 @@
 import { describe, expect, it } from "vitest";
 
-import { css, html } from "./html.js";
+import { css, html, unsafeHTML, TemplateResult } from "./html.js";
+
+const render = (res: TemplateResult) => res.value.trim();
 
 describe("html", () => {
+  it("shouldReturnTemplateResult", () => {
+    const res = html`
+      <p>hello</p>
+    `;
+    expect(res).toBeInstanceOf(TemplateResult);
+    expect(res.toString().trim()).toBe("<p>hello</p>");
+  });
+
   it("shouldContainPlainTagWithNoInterpolations", () => {
     expect(
-      html`
+      render(html`
         <p>hello</p>
-      `.trim(),
+      `),
     ).toBe("<p>hello</p>");
   });
 
-  it("shouldInterpolateStringValues", () => {
+  it("shouldInterpolateStringValuesAndEscapeThem", () => {
     const name = "world";
     expect(
-      html`
+      render(html`
         <p>${name}</p>
-      `.trim(),
+      `),
     ).toBe("<p>world</p>");
+
+    const unsafe = "<script>alert(1)</script>";
+    expect(
+      render(html`
+        <p>${unsafe}</p>
+      `),
+    ).toBe("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
   });
 
   it("shouldInterpolateNumberValues", () => {
     expect(
-      html`
+      render(html`
         <span>${42}</span>
-      `.trim(),
+      `),
     ).toBe("<span>42</span>");
   });
 
-  it("shouldSerializeObjectsAsJson", () => {
+  it("shouldSerializeObjectsAsJsonAndEscapeThem", () => {
     const obj = { a: 1 };
     expect(
-      html`
+      render(html`
         <p>${obj}</p>
-      `.trim(),
-    ).toBe('<p>{"a":1}</p>');
+      `),
+    ).toBe("<p>{&quot;a&quot;:1}</p>");
   });
 
   it("shouldProduceEmptyStringForNullInterpolation", () => {
     expect(
-      html`
+      render(html`
         <p>${null}</p>
-      `.trim(),
+      `),
     ).toBe("<p></p>");
   });
 
   it("shouldProduceEmptyStringForUndefinedInterpolation", () => {
     expect(
-      html`
+      render(html`
         <p>${undefined}</p>
-      `.trim(),
+      `),
     ).toBe("<p></p>");
   });
 
   it("shouldInterpolateBooleanValues", () => {
     expect(
-      html`
+      render(html`
         <p>${true}</p>
-      `.trim(),
+      `),
     ).toBe("<p>true</p>");
   });
 
-  it("shouldInterpolateArrayValuesByJoiningThem", () => {
+  it("shouldInterpolateArrayValuesByJoiningAndEscapingThem", () => {
     const items = ["a", null, "b", undefined, "c"];
     expect(
-      html`
+      render(html`
         <ul>
           ${items}
         </ul>
-      `
-        .trim()
-        .replace(/\s+/g, ""),
+      `).replace(/\s+/g, ""),
     ).toBe("<ul>abc</ul>");
+
+    const unsafeItems = ["<script>", "safe"];
+    expect(
+      render(html`
+        <div>${unsafeItems}</div>
+      `),
+    ).toBe("<div>&lt;script&gt;safe</div>");
   });
 
-  it("shouldSerializeObjectsWithinArraysAsJsonOrCustomToString", () => {
+  it("shouldSerializeObjectsWithinArraysAsJsonOrCustomToStringAndEscape", () => {
     class CustomItem {
       toString() {
         return "custom";
@@ -82,13 +104,13 @@ describe("html", () => {
     }
     const items = [{ x: 1 }, new CustomItem()];
     expect(
-      html`
+      render(html`
         <div>${items}</div>
-      `.trim(),
-    ).toBe('<div>{"x":1}custom</div>');
+      `),
+    ).toBe("<div>{&quot;x&quot;:1}custom</div>");
   });
 
-  it("shouldInterpolateArrayOfTemplates", () => {
+  it("shouldInterpolateArrayOfTemplatesWithoutEscapingThem", () => {
     const items = [
       html`
         <li>a</li>
@@ -100,46 +122,60 @@ describe("html", () => {
       undefined,
     ];
     expect(
-      html`
+      render(html`
         <ul>
           ${items}
         </ul>
-      `
-        .trim()
-        .replace(/\s+/g, ""),
+      `).replace(/\s+/g, ""),
     ).toBe("<ul><li>a</li><li>b</li></ul>");
   });
 
-  it("shouldCallCustomToStringOnClassInstance", () => {
+  it("shouldCallCustomToStringOnClassInstanceAndEscape", () => {
     class CustomClass {
       toString() {
-        return "custom-string";
+        return "<custom>";
       }
     }
     expect(
-      html`
+      render(html`
         <div>${new CustomClass()}</div>
-      `.trim(),
-    ).toBe("<div>custom-string</div>");
+      `),
+    ).toBe("<div>&lt;custom&gt;</div>");
   });
 
   it("shouldFallbackToJsonStringifyWhenPlainObject", () => {
     const plainObj = { x: 1 };
     expect(
-      html`
+      render(html`
         <div>${plainObj}</div>
-      `.trim(),
-    ).toBe('<div>{"x":1}</div>');
+      `),
+    ).toBe("<div>{&quot;x&quot;:1}</div>");
   });
 
   it("shouldFallbackToJsonStringifyWhenObjectHasNoPrototype", () => {
     const noProtoObj = Object.create(null);
     noProtoObj.y = 2;
     expect(
-      html`
+      render(html`
         <div>${noProtoObj}</div>
-      `.trim(),
-    ).toBe('<div>{"y":2}</div>');
+      `),
+    ).toBe("<div>{&quot;y&quot;:2}</div>");
+  });
+
+  it("shouldSupportUnsafeHTMLBypassingEscaping", () => {
+    const trusted = "<span>safe</span>";
+    expect(
+      render(html`
+        <div>${unsafeHTML(trusted)}</div>
+      `),
+    ).toBe("<div><span>safe</span></div>");
+
+    const trustedEmpty = unsafeHTML(null);
+    expect(
+      render(html`
+        <div>${trustedEmpty}</div>
+      `),
+    ).toBe("<div></div>");
   });
 });
 

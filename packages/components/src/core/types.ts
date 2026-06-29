@@ -1,3 +1,5 @@
+import type { TemplateResult } from "./html.js";
+
 /**
  * Supported constructor types for component property declarations.
  * Maps to their corresponding TypeScript primitive/structural types.
@@ -95,10 +97,10 @@ export interface ComponentConfig<Props extends ComponentProperties, Methods> {
    */
   onUpdate?: (this: ComponentInstance<Props, Methods>) => void;
   /**
-   * Returns an HTML string representing the component's current state.
+   * Returns an HTML string or TemplateResult representing the component's current state.
    * Called on mount and after any reactive property change.
    */
-  render: (this: ComponentInstance<Props, Methods>) => string;
+  render: (this: ComponentInstance<Props, Methods>) => string | TemplateResult;
   /**
    * Custom methods bound to the element instance.
    * Accessible as `this.methodName` inside other config hooks.

@@ -1,4 +1,14 @@
+import { TemplateResult } from "./html.js";
 import type { ComponentConfig, ComponentDefinition, ComponentInstance, ComponentProperties } from "./types.js";
+
+const BaseElement = typeof HTMLElement !== "undefined" ? HTMLElement : (class {} as typeof HTMLElement);
+
+interface CustomElementInternal {
+  _propertyValues: Record<string, unknown>;
+  _isRendering: boolean;
+  _mutatedDuringRender: boolean;
+  _scheduleRender(): void;
+}
 
 /**
  * Casts a raw attribute or property value to the type indicated by its
@@ -90,6 +100,33 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
     }
     return parsed;
   }
+
+  // Custom constructor/converter logic
+  if (typeof type === "function") {
+    if (value instanceof type) {
+      return value;
+    }
+    // Check if it's a class or native constructor
+    const typeStr = Function.prototype.toString.call(type);
+    const isClassOrNative =
+      typeStr.startsWith("class") ||
+      /^(?:Date|RegExp|Map|Set|URL|URLSearchParams|WeakMap|WeakSet|ArrayBuffer|SharedArrayBuffer|DataView|Float32Array|Float64Array|Int8Array|Int16Array|Int32Array|Uint8Array|Uint8ClampedArray|Uint16Array|Uint32Array|BigInt64Array|BigUint64Array)$/.test(
+        type.name,
+      );
+
+    try {
+      if (isClassOrNative) {
+        return new (type as new (...args: unknown[]) => unknown)(value);
+      } else {
+        return (type as Function)(value);
+      }
+    } catch (err) {
+      throw new Error(`Failed to convert value using custom constructor/converter: "${value}"`, {
+        cause: err instanceof Error ? err : undefined,
+      });
+    }
+  }
+
   return value;
 }
 
@@ -187,10 +224,22 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     if (propName.startsWith("_")) {
       throw new Error(`Component "${tagName}": property "${propName}" cannot start with an underscore.`);
     }
-    attributeToPropertyMap.set(propName.toLowerCase(), propName);
+
+    const checkAndSetAttribute = (attrName: string) => {
+      const existingProp = attributeToPropertyMap.get(attrName);
+      if (existingProp !== undefined && existingProp !== propName) {
+        throw new Error(
+          `Component "${tagName}": property "${propName}" produces colliding attribute name "${attrName}" ` +
+            `which is already mapped to property "${existingProp}".`,
+        );
+      }
+      attributeToPropertyMap.set(attrName, propName);
+    };
+
+    checkAndSetAttribute(propName.toLowerCase());
     const kebabName = propName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
     if (kebabName !== propName.toLowerCase()) {
-      attributeToPropertyMap.set(kebabName, propName);
+      checkAndSetAttribute(kebabName);
     }
   }
 
@@ -205,12 +254,13 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     }
   }
 
-  class CustomElement extends HTMLElement {
+  class CustomElement extends BaseElement {
     private _isRenderScheduled = false;
     private _isMounted = false;
-    private _isRendering = false;
+    _isRendering = false;
     private _mutatedDuringRender = false;
     private _contentWrapper: HTMLElement | null = null;
+    _propertyValues: Record<string, unknown> = {};
 
     static get observedAttributes(): string[] {
       return Array.from(attributeToPropertyMap.keys());
@@ -219,30 +269,14 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     constructor() {
       super();
 
-      // Wire reactive getters/setters for each declared property.
+      this._propertyValues = {};
+      // Capture pre-existing own properties (upgraded elements)
       for (const propName of Object.keys(properties)) {
-        let storedValue: unknown = castProperty((this as Record<string, unknown>)[propName], properties[propName]);
-
-        Object.defineProperty(this, propName, {
-          get: () => storedValue,
-          set: (newValue: unknown) => {
-            const casted = castProperty(newValue, properties[propName]);
-            if (storedValue !== casted) {
-              storedValue = casted;
-              if (this._isRendering) {
-                console.warn(
-                  `Component "${tagName}": property "${propName}" was mutated during render. ` +
-                    "This can cause an infinite rendering loop.",
-                );
-                this._mutatedDuringRender = true;
-                return;
-              }
-              this._scheduleRender();
-            }
-          },
-          configurable: true,
-          enumerable: true,
-        });
+        if (Object.prototype.hasOwnProperty.call(this, propName)) {
+          const val = (this as Record<string, unknown>)[propName];
+          delete (this as Record<string, unknown>)[propName];
+          (this as Record<string, unknown>)[propName] = val;
+        }
       }
 
       // Bind all methods to the instance so `this` is always the element.
@@ -325,7 +359,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       this._isRenderScheduled = false;
       this._isRendering = true;
       this._mutatedDuringRender = false;
-      let htmlContent: string;
+      let htmlContent: string | TemplateResult;
       try {
         htmlContent = config.render.call(this as unknown as ComponentInstance<Props, Methods>);
       } finally {
@@ -336,6 +370,8 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         }
       }
 
+      const rawHTML = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
+
       if (shouldUseShadow) {
         const contentWrapper = this._contentWrapper;
         if (contentWrapper === null || !this.shadowRoot || contentWrapper.parentNode !== this.shadowRoot) {
@@ -344,13 +380,46 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
               "Render aborted to prevent style node clobbering.",
           );
         }
-        contentWrapper.innerHTML = htmlContent;
+        contentWrapper.innerHTML = rawHTML;
       } else {
-        this.innerHTML = htmlContent;
+        this.innerHTML = rawHTML;
       }
 
       config.onUpdate?.call(this as unknown as ComponentInstance<Props, Methods>);
     }
+  }
+
+  // Wire reactive getters/setters on prototype.
+  for (const propName of Object.keys(properties)) {
+    const propConfig = properties[propName];
+    Object.defineProperty(CustomElement.prototype, propName, {
+      get(this: HTMLElement) {
+        const self = this as unknown as CustomElementInternal;
+        return self._propertyValues?.[propName];
+      },
+      set(this: HTMLElement, newValue: unknown) {
+        const casted = castProperty(newValue, propConfig);
+        const self = this as unknown as CustomElementInternal;
+        if (!self._propertyValues) {
+          self._propertyValues = {};
+        }
+        const storedValue = self._propertyValues[propName];
+        if (storedValue !== casted) {
+          self._propertyValues[propName] = casted;
+          if (self._isRendering) {
+            console.warn(
+              `Component "${tagName}": property "${propName}" was mutated during render. ` +
+                "This can cause an infinite rendering loop.",
+            );
+            self._mutatedDuringRender = true;
+            return;
+          }
+          self._scheduleRender();
+        }
+      },
+      configurable: true,
+      enumerable: true,
+    });
   }
 
   return {
@@ -359,8 +428,8 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     create(props) {
       const element = new CustomElement();
       if (props !== undefined) {
-        // Object.assign goes through the reactive setters installed in the
-        // constructor, so property assignments here trigger type casting.
+        // Object.assign goes through the reactive setters installed on the
+        // prototype, so property assignments here trigger type casting.
         // The element is not yet connected so no render is scheduled yet.
         Object.assign(element, props);
       }

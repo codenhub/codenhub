@@ -1,39 +1,54 @@
 /**
+ * Class representing a trusted, serialized HTML template.
+ * Returned by the `html` helper.
+ */
+export class TemplateResult {
+  constructor(public readonly value: string) {}
+  toString(): string {
+    return this.value;
+  }
+}
+
+/**
+ * Escapes special HTML characters to prevent XSS.
+ */
+function escapeHTML(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
  * Tagged template literal helper for HTML markup.
  *
- * Performs simple string concatenation. Objects are serialized with
- * `JSON.stringify` (unless they provide a custom `toString` method);
- * arrays are serialized by mapping each item through the same rules and joining them.
- * All other values use `String()`. `null` and `undefined` interpolations
- * produce an empty string.
- *
- * > [!WARNING]
- * > This helper does NOT perform HTML escaping or sanitization.
- * > To prevent Cross-Site Scripting (XSS) attacks, ensure any user-controlled
- * > input interpolated here is sanitized first.
+ * Performs HTML escaping on standard string interpolations to prevent XSS.
+ * To insert raw HTML, wrap the value in `unsafeHTML`.
  *
  * @param strings - Static template string fragments.
  * @param values - Dynamic values to interpolate and concatenate.
- * @returns Concatenated HTML markup string.
- *
- * @example
- * ```ts
- * const markup = html`<h1>${title}</h1>`;
- * ```
+ * @returns A `TemplateResult` containing the escaped and concatenated HTML.
  */
-export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
-  return strings.reduce((result, str, i) => {
+export function html(strings: TemplateStringsArray, ...values: unknown[]): TemplateResult {
+  const result = strings.reduce((res, str, i) => {
     const val = values[i];
     let serialized = "";
     if (val !== undefined && val !== null) {
-      if (Array.isArray(val)) {
-        serialized = val.map(serializeValue).join("");
+      if (val instanceof TemplateResult) {
+        serialized = val.value;
+      } else if (Array.isArray(val)) {
+        serialized = val
+          .map((item) => (item instanceof TemplateResult ? item.value : escapeHTML(serializeValue(item))))
+          .join("");
       } else {
-        serialized = serializeValue(val);
+        serialized = escapeHTML(serializeValue(val));
       }
     }
-    return result + str + serialized;
+    return res + str + serialized;
   }, "");
+  return new TemplateResult(result);
 }
 
 function serializeValue(val: unknown): string {
@@ -47,6 +62,16 @@ function serializeValue(val: unknown): string {
     return JSON.stringify(val);
   }
   return String(val);
+}
+
+/**
+ * Wraps a value to bypass automatic HTML escaping in the `html` helper.
+ *
+ * > [!WARNING]
+ * > Only use this helper with trusted inputs to prevent XSS attacks.
+ */
+export function unsafeHTML(value: unknown): TemplateResult {
+  return new TemplateResult(value === null || value === undefined ? "" : String(value));
 }
 
 /**
