@@ -47,7 +47,7 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 ```html
 <a class="btn secondary" aria-disabled="true">Unavailable</a>
-<button class="tooltip icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+<button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.

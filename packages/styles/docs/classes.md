@@ -159,7 +159,7 @@ Examples:
 | Class or Attribute                 | Purpose                                                      |
 | ---------------------------------- | ------------------------------------------------------------ |
 | `.tooltip`                         | Tooltip host. Uses `data-tooltip` as pseudo-element content. |
-| `.tooltip.icon`                    | Circular icon-style tooltip host.                            |
+| `.tooltip.tooltip-icon`            | Circular icon-style tooltip host.                            |
 | `[data-tooltip-position="top"]`    | Positions tooltip above host.                                |
 | `[data-tooltip-position="bottom"]` | Positions tooltip below host.                                |
 | `[data-tooltip-position="left"]`   | Positions tooltip left of host.                              |
@@ -170,7 +170,12 @@ Examples:
 Example:
 
 ```html
-<button class="tooltip icon" data-tooltip="More details" data-tooltip-position="right" aria-label="More details">
+<button
+  class="tooltip tooltip-icon"
+  data-tooltip="More details"
+  data-tooltip-position="right"
+  aria-label="More details"
+>
   ?
 </button>
 ```

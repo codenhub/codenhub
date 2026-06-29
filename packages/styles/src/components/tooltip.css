@@ -14,7 +14,7 @@
 
   @apply relative;
 
-  &.icon {
+  &.tooltip-icon {
     @apply bg-surface text-text inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
   }
 
