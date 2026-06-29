@@ -126,6 +126,8 @@ export function createNavigation(registry: Registry): Navigation {
       }
 
       lastMatch = loopMatch;
+      // Draining the queue means the loop returns the final match resolved by
+      // the last executed navigation in this cycle (e.g. following redirects).
       return loopMatch;
     } finally {
       isNavigating = false;

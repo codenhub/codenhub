@@ -39,11 +39,11 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
 
     navigate(to: string, navOptions: NavigateOptions = {}) {
       const target = parseAppPath(to);
-      const browserWindow = getBrowserWindow();
 
       // Build the history update as a deferred callback so it can be enqueued
       // and executed inside the navigation loop in the correct order.
       const updateHistory = (): void => {
+        const browserWindow = getBrowserWindow();
         if (browserWindow !== null) {
           const href = buildBrowserHref(target, basePath);
           if (navOptions.shouldReplace === true) {

@@ -292,11 +292,15 @@ describe("createRouter", () => {
     const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }));
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");
+    const docAddSpy = vi.spyOn(document, "addEventListener");
+    const docRemoveSpy = vi.spyOn(document, "removeEventListener");
 
     router.start();
     expect(addSpy).toHaveBeenCalledWith("popstate", expect.any(Function));
+    expect(docAddSpy).toHaveBeenCalledWith("click", expect.any(Function));
 
     router.destroy();
     expect(removeSpy).toHaveBeenCalledWith("popstate", expect.any(Function));
+    expect(docRemoveSpy).toHaveBeenCalledWith("click", expect.any(Function));
   });
 });
