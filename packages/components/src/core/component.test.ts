@@ -332,6 +332,22 @@ describe("reactive properties", () => {
     expect(() => {
       castToProps<{ data: unknown }>(el).data = "{invalid json";
     }).toThrow("Failed to parse JSON value for property of type Object");
+
+    const tag2 = generateUniqueTag("cast-json-fail-arr");
+    const component2 = defineComponent(tag2, {
+      properties: { items: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component2);
+
+    const el2 = component2.create();
+    document.body.appendChild(el2);
+
+    expect(() => {
+      castToProps<{ items: unknown }>(el2).items = "[invalid json";
+    }).toThrow("Failed to parse JSON value for property of type Array");
   });
 
   it("shouldCastBooleanAttributesCorrectly", () => {
@@ -690,5 +706,66 @@ describe("coverage gaps", () => {
     }).not.toThrow();
 
     expect(castToProps<{ name: string }>(el).name).toBe("Alice");
+  });
+
+  it("shouldThrowErrorWhenObjectPropertyReceivesNonObject", () => {
+    const tag = generateUniqueTag("gap-obj-invalid");
+    const component = defineComponent(tag, {
+      properties: { data: Object },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(() => {
+      castToProps<{ data: unknown }>(el).data = 123;
+    }).toThrow("Property of type Object received non-object value: 123");
+
+    expect(() => {
+      castToProps<{ data: unknown }>(el).data = [1, 2];
+    }).toThrow("Property of type Object received non-object value: 1,2");
+  });
+
+  it("shouldThrowErrorWhenArrayPropertyReceivesNonArray", () => {
+    const tag = generateUniqueTag("gap-arr-invalid");
+    const component = defineComponent(tag, {
+      properties: { items: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(() => {
+      castToProps<{ items: unknown }>(el).items = { a: 1 };
+    }).toThrow("Property of type Array received non-array value: [object Object]");
+
+    expect(() => {
+      castToProps<{ items: unknown }>(el).items = true;
+    }).toThrow("Property of type Array received non-array value: true");
+  });
+
+  it("shouldParseJSONStringForArrayProperty", () => {
+    const tag = generateUniqueTag("gap-arr-json");
+    const component = defineComponent(tag, {
+      properties: { items: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    castToProps<{ items: unknown }>(el).items = "[1, 2, 3]";
+    expect(castToProps<{ items: unknown }>(el).items).toEqual([1, 2, 3]);
   });
 });

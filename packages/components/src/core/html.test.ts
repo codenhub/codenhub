@@ -95,6 +95,38 @@ describe("html", () => {
         .replace(/\s+/g, ""),
     ).toBe("<ul><li>a</li><li>b</li></ul>");
   });
+
+  it("shouldCallCustomToStringOnClassInstance", () => {
+    class CustomClass {
+      toString() {
+        return "custom-string";
+      }
+    }
+    expect(
+      html`
+        <div>${new CustomClass()}</div>
+      `.trim(),
+    ).toBe("<div>custom-string</div>");
+  });
+
+  it("shouldFallbackToJsonStringifyWhenPlainObject", () => {
+    const plainObj = { x: 1 };
+    expect(
+      html`
+        <div>${plainObj}</div>
+      `.trim(),
+    ).toBe('<div>{"x":1}</div>');
+  });
+
+  it("shouldFallbackToJsonStringifyWhenObjectHasNoPrototype", () => {
+    const noProtoObj = Object.create(null);
+    noProtoObj.y = 2;
+    expect(
+      html`
+        <div>${noProtoObj}</div>
+      `.trim(),
+    ).toBe('<div>{"y":2}</div>');
+  });
 });
 
 describe("css", () => {

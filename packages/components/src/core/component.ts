@@ -42,17 +42,38 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
     }
     return Number(value);
   }
-  if (type === Object || type === Array) {
+  if (type === Array) {
+    let parsed = value;
     if (typeof value === "string") {
       try {
-        return JSON.parse(value);
+        parsed = JSON.parse(value);
       } catch (err) {
         throw new Error(`Failed to parse JSON value for property of type ${type.name}: "${value}"`, {
           cause: err instanceof Error ? err : undefined,
         });
       }
     }
-    return value;
+    if (!Array.isArray(parsed)) {
+      throw new Error(`Property of type ${type.name} received non-array value: ${String(parsed)}`);
+    }
+    return parsed;
+  }
+
+  if (type === Object) {
+    let parsed = value;
+    if (typeof value === "string") {
+      try {
+        parsed = JSON.parse(value);
+      } catch (err) {
+        throw new Error(`Failed to parse JSON value for property of type ${type.name}: "${value}"`, {
+          cause: err instanceof Error ? err : undefined,
+        });
+      }
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      throw new Error(`Property of type ${type.name} received non-object value: ${String(parsed)}`);
+    }
+    return parsed;
   }
   return value;
 }

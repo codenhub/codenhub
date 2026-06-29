@@ -23,7 +23,11 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): strin
       if (Array.isArray(val)) {
         serialized = val.map((v) => (v !== undefined && v !== null ? String(v) : "")).join("");
       } else if (typeof val === "object") {
-        serialized = JSON.stringify(val);
+        if (typeof val.toString === "function" && val.toString !== Object.prototype.toString) {
+          serialized = val.toString();
+        } else {
+          serialized = JSON.stringify(val);
+        }
       } else {
         serialized = String(val);
       }
