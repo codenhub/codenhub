@@ -202,7 +202,7 @@ describe("createNavigation", () => {
       const { registry, nav } = makeNav();
       registry.add("/home", handler);
 
-      nav.runFromHistory(parseAppPath("/home"), undefined);
+      nav.runFromHistory({ target: parseAppPath("/home"), miss: undefined });
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
@@ -214,7 +214,11 @@ describe("createNavigation", () => {
       registry.add("/start", () => {
         log.push("start");
         // Simulate a popstate arriving mid-navigation.
-        nav.runFromHistory(parseAppPath("/popstate-target"), undefined, historyUpdate);
+        nav.runFromHistory({
+          target: parseAppPath("/popstate-target"),
+          miss: undefined,
+          historyUpdate,
+        });
       });
       registry.add("/popstate-target", () => log.push("popstate"));
 
@@ -228,7 +232,7 @@ describe("createNavigation", () => {
       registry.setFallback(fallback);
 
       const miss = { pathname: "/outside", searchParams: new URLSearchParams(), hash: "" };
-      nav.runFromHistory(null, miss);
+      nav.runFromHistory({ target: null, miss });
       expect(fallback).toHaveBeenCalledWith(miss);
     });
   });

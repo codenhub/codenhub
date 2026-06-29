@@ -72,19 +72,23 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     // the browser history entry reflects exactly what the popstate carried.
     if (nav.isActive()) {
       const state = e.state;
-      nav.runFromHistory(target, miss, () => {
-        const href =
-          target !== null
-            ? buildBrowserHref(target.href, basePath)
-            : normalizePercentEscapes(browserWindow.location.pathname || "/") +
-              browserWindow.location.search +
-              browserWindow.location.hash;
-        browserWindow.history.replaceState(state, "", href);
+      nav.runFromHistory({
+        target,
+        miss,
+        historyUpdate: () => {
+          const href =
+            target !== null
+              ? buildBrowserHref(target.href, basePath)
+              : normalizePercentEscapes(browserWindow.location.pathname || "/") +
+                browserWindow.location.search +
+                browserWindow.location.hash;
+          browserWindow.history.replaceState(state, "", href);
+        },
       });
       return;
     }
 
-    nav.runFromHistory(target, miss);
+    nav.runFromHistory({ target, miss });
   }
 
   function resolveAnchor(e: MouseEvent): HTMLAnchorElement | SVGAElement | null {
@@ -176,7 +180,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
 
       const target = parseLocationPath(browserWindow.location, basePath);
       const miss = target === null ? buildMissFromLocation(browserWindow.location) : undefined;
-      nav.runFromHistory(target, miss);
+      nav.runFromHistory({ target, miss });
 
       return nav.currentMatch();
     },

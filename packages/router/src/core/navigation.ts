@@ -37,7 +37,11 @@ export interface Navigation {
    * full ownership of `window` access. When navigation is already active the
    * call is enqueued with its `historyUpdate` so state is replayed in order.
    */
-  runFromHistory(target: ParsedPath | null, miss: RouterMiss | undefined, historyUpdate?: () => void): void;
+  runFromHistory(options: {
+    target: ParsedPath | null;
+    miss: RouterMiss | undefined;
+    historyUpdate?: () => void;
+  }): void;
 
   /**
    * Matches an app-local path without side effects.
@@ -67,7 +71,7 @@ export interface Navigation {
 export function createNavigation(registry: Registry): Navigation {
   const listeners = new Set<RouterListener>();
   const pendingNavigations: PendingNavigation[] = [];
-  let navigating = false;
+  let isNavigating = false;
   let lastMatch: RouterMatch | null = null;
 
   function notify(match: RouterMatch | null): void {
@@ -77,8 +81,8 @@ export function createNavigation(registry: Registry): Navigation {
   }
 
   function runLoop(initialTarget: ParsedPath | null, initialMiss: RouterMiss | undefined): RouterMatch | null {
-    // Invariant: callers must verify !navigating before calling runLoop.
-    navigating = true;
+    // Invariant: callers must verify !isNavigating before calling runLoop.
+    isNavigating = true;
 
     try {
       let currentTarget: ParsedPath | null = initialTarget;
@@ -124,7 +128,7 @@ export function createNavigation(registry: Registry): Navigation {
       lastMatch = loopMatch;
       return loopMatch;
     } finally {
-      navigating = false;
+      isNavigating = false;
     }
   }
 
@@ -137,8 +141,8 @@ export function createNavigation(registry: Registry): Navigation {
       pendingNavigations.push({ target, historyUpdate });
     },
 
-    runFromHistory(target, miss, historyUpdate) {
-      if (navigating) {
+    runFromHistory({ target, miss, historyUpdate }) {
+      if (isNavigating) {
         pendingNavigations.push({ target, miss, historyUpdate });
         return;
       }
@@ -158,7 +162,7 @@ export function createNavigation(registry: Registry): Navigation {
     },
 
     isActive() {
-      return navigating;
+      return isNavigating;
     },
 
     currentMatch() {
