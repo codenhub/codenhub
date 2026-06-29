@@ -10,6 +10,10 @@
  * > To prevent Cross-Site Scripting (XSS) attacks, ensure any user-controlled
  * > input interpolated here is sanitized first.
  *
+ * @param strings - Static template string fragments.
+ * @param values - Dynamic values to interpolate and concatenate.
+ * @returns Concatenated HTML markup string.
+ *
  * @example
  * ```ts
  * const markup = html`<h1>${title}</h1>`;
@@ -41,6 +45,10 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): strin
  *
  * Enables editor syntax highlighting and type safety for CSS strings.
  * Returns the processed CSS string with interpolated values inlined.
+ *
+ * @param strings - Static template string fragments.
+ * @param values - Dynamic values to interpolate and concatenate.
+ * @returns Concatenated CSS stylesheet string.
  *
  * @example
  * ```ts

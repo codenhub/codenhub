@@ -372,6 +372,12 @@ describe("reactive properties", () => {
     el.setAttribute("active", "true");
     expect(castToProps<{ active: boolean }>(el).active).toBe(true);
 
+    el.setAttribute("active", "active");
+    expect(castToProps<{ active: boolean }>(el).active).toBe(true);
+
+    el.setAttribute("active", "anything-else");
+    expect(castToProps<{ active: boolean }>(el).active).toBe(true);
+
     el.removeAttribute("active");
     expect(castToProps<{ active: boolean }>(el).active).toBe(false);
   });

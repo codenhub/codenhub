@@ -21,10 +21,12 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
   if (type === Boolean) {
     // null arrives from removeAttribute (attribute absence), which maps to false
     // per standard HTML boolean attribute semantics documented in the README.
-    if (value === null) {
+    // Any value that is not null, false, or the string "false" is considered true
+    // (treating present attribute values like "active" or "" as true).
+    if (value === null || value === false || value === "false") {
       return false;
     }
-    return value === "true" || value === "" || value === true;
+    return true;
   }
 
   // For all other types, null passes through unchanged so consumers can
