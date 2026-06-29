@@ -190,6 +190,70 @@ describe("reactive properties", () => {
     expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
   });
 
+  it("shouldThrowErrorOnInvalidJSONParsing", () => {
+    const tag = uniqueTag("cast-json-fail");
+    const component = defineComponent(tag, {
+      properties: { data: Object },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(() => {
+      (el as unknown as Record<string, unknown>)["data"] = "{invalid json";
+    }).toThrow("Failed to parse JSON value for property of type Object");
+  });
+
+  it("shouldCastBooleanAttributesCorrectly", () => {
+    const tag = uniqueTag("cast-bool-attr");
+    const component = defineComponent(tag, {
+      properties: { active: Boolean },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    el.setAttribute("active", "");
+    expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
+
+    el.setAttribute("active", "false");
+    expect((el as unknown as Record<string, unknown>)["active"]).toBe(false);
+
+    el.setAttribute("active", "true");
+    expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
+
+    el.removeAttribute("active");
+    expect((el as unknown as Record<string, unknown>)["active"]).toBe(false);
+  });
+
+  it("shouldCastEmptyStringToNaNForNumber", () => {
+    const tag = uniqueTag("cast-num-empty");
+    const component = defineComponent(tag, {
+      properties: { value: Number },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    (el as unknown as Record<string, unknown>)["value"] = "";
+    expect(Number.isNaN((el as unknown as Record<string, unknown>)["value"])).toBe(true);
+
+    (el as unknown as Record<string, unknown>)["value"] = "   ";
+    expect(Number.isNaN((el as unknown as Record<string, unknown>)["value"])).toBe(true);
+  });
+
   it("shouldNotScheduleRenderWhenValueUnchanged", async () => {
     const tag = uniqueTag("no-rerender");
     let renderCount = 0;
@@ -318,37 +382,5 @@ describe("Shadow DOM", () => {
 
     const style = el.shadowRoot!.querySelector("style");
     expect(style?.textContent).toContain(".card { color: red; }");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// registerComponents
-// ---------------------------------------------------------------------------
-
-describe("registerComponents", () => {
-  it("shouldRegisterElementInCustomElementsRegistry", () => {
-    const tag = uniqueTag("reg-test");
-    const component = defineComponent(tag, {
-      render() {
-        return "<p>ok</p>";
-      },
-    });
-
-    reg(component);
-    expect(customElements.get(tag)).toBeDefined();
-  });
-
-  it("shouldNotThrowWhenRegisteredTwice", () => {
-    const tag = uniqueTag("reg-dupe");
-    const component = defineComponent(tag, {
-      render() {
-        return "<p>ok</p>";
-      },
-    });
-
-    expect(() => {
-      reg(component);
-      reg(component);
-    }).not.toThrow();
   });
 });

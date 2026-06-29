@@ -123,6 +123,11 @@ const markup = html`
 - `null` and `undefined` produce empty strings.
 - All other values are converted via `String()`.
 
+> [!WARNING]
+> This helper does NOT perform HTML escaping or sanitization.
+> To prevent Cross-Site Scripting (XSS) attacks, ensure any user-controlled
+> input interpolated here is sanitized first (e.g. using a DOM sanitization library).
+
 #### `css`
 
 Tagged template literal helper for CSS strings. Enables editor syntax
@@ -167,8 +172,11 @@ Supported constructor types:
 | `Object`    | `Record<string, unknown>` |
 | `Array`     | `unknown[]`               |
 
-String attributes are cast automatically: `"true"` → `true` for `Boolean`,
-`"42"` → `42` for `Number`, and JSON strings are parsed for `Object`/`Array`.
+String attributes are cast automatically:
+
+- **`Boolean`**: standard HTML attribute rules apply. The empty string `""` (attribute presence) and `"true"` cast to `true`. `"false"`, `null`, and `undefined` (attribute absence/removal) cast to `false`.
+- **`Number`**: parsed via `Number(val)`. Empty or whitespace-only strings cast to `NaN` to prevent silent coercion to `0`.
+- **`Object`/`Array`**: parsed via `JSON.parse`. If parsing fails, an explicit `Error` is thrown to fail fast.
 
 ---
 

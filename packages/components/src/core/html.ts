@@ -5,6 +5,11 @@
  * `JSON.stringify`; all other values use `String()`. `null` and
  * `undefined` interpolations produce an empty string.
  *
+ * > [!WARNING]
+ * > This helper does NOT perform HTML escaping or sanitization.
+ * > To prevent Cross-Site Scripting (XSS) attacks, ensure any user-controlled
+ * > input interpolated here is sanitized first.
+ *
  * @example
  * ```ts
  * const markup = html`<h1>${title}</h1>`;

@@ -8,6 +8,9 @@ import type { ComponentConfig, ComponentDefinition, ComponentProperties, Compone
  * - `Object`/`Array` constructors attempt `JSON.parse` when value is a string.
  */
 function castProperty(value: unknown, type: ComponentProperties[string]): unknown {
+  if (type === Boolean) {
+    return value === "true" || value === "" || value === true;
+  }
   if (value === undefined || value === null) {
     return value;
   }
@@ -15,17 +18,19 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
     return String(value);
   }
   if (type === Number) {
+    if (typeof value === "string" && value.trim() === "") {
+      return NaN;
+    }
     return Number(value);
-  }
-  if (type === Boolean) {
-    return value === "true" || value === true;
   }
   if (type === Object || type === Array) {
     if (typeof value === "string") {
       try {
         return JSON.parse(value);
-      } catch {
-        return value;
+      } catch (err) {
+        throw new Error(`Failed to parse JSON value for property of type ${type.name}: "${value}"`, {
+          cause: err instanceof Error ? err : undefined,
+        });
       }
     }
     return value;
@@ -67,6 +72,11 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   const methods = (config.methods ?? {}) as Methods;
   const useShadow = config.hasShadow === true;
 
+  const attributeToPropertyMap = new Map<string, string>();
+  for (const propName of Object.keys(properties)) {
+    attributeToPropertyMap.set(propName.toLowerCase(), propName);
+  }
+
   class CustomElement extends HTMLElement {
     private _renderScheduled = false;
     private _isMounted = false;
@@ -74,7 +84,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private _styleNode: HTMLStyleElement | null = null;
 
     static get observedAttributes(): string[] {
-      return Object.keys(properties).map((p) => p.toLowerCase());
+      return Array.from(attributeToPropertyMap.keys());
     }
 
     constructor() {
@@ -130,7 +140,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         return;
       }
 
-      const propKey = Object.keys(properties).find((key) => key.toLowerCase() === name.toLowerCase());
+      const propKey = attributeToPropertyMap.get(name.toLowerCase());
 
       if (propKey !== undefined) {
         (this as Record<string, unknown>)[propKey] = newValue;
@@ -156,10 +166,13 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       if (useShadow) {
         const root = this.shadowRoot!;
-        root.innerHTML = "";
-        // Re-attach the preserved style node so styles survive each render.
-        if (this._styleNode !== null) {
-          root.appendChild(this._styleNode);
+        let child = root.firstChild;
+        while (child !== null) {
+          const next = child.nextSibling;
+          if (child !== this._styleNode) {
+            root.removeChild(child);
+          }
+          child = next;
         }
         const wrapper = document.createElement("div");
         wrapper.innerHTML = htmlContent;
