@@ -16,48 +16,48 @@ import {
 // ---------------------------------------------------------------------------
 
 describe("normalizeBasePath", () => {
-  it("returns empty string for an omitted base path", () => {
+  it("shouldReturnEmptyStringForOmittedBasePath", () => {
     expect(normalizeBasePath()).toBe("");
   });
 
-  it("returns empty string for empty-string and root-slash inputs", () => {
+  it("shouldReturnEmptyStringForEmptyStringAndRootSlashInputs", () => {
     expect(normalizeBasePath("")).toBe("");
     expect(normalizeBasePath("/")).toBe("");
   });
 
-  it("normalises percent-escape casing in the base path", () => {
+  it("shouldNormalisePercentEscapeCasingInBasePath", () => {
     expect(normalizeBasePath("/caf\u00e9")).toBe("/caf%C3%A9");
   });
 
-  it("rejects a base path that does not start with a slash", () => {
+  it("shouldRejectBasePathThatDoesNotStartWithSlash", () => {
     expect(() => normalizeBasePath("app")).toThrow("Router basePath must start with a slash.");
   });
 
-  it("rejects a base path that starts with double-slash", () => {
+  it("shouldRejectBasePathThatStartsWithDoubleSlash", () => {
     expect(() => normalizeBasePath("//example.com")).toThrow("Router basePath must start with a slash.");
   });
 
-  it("rejects a base path containing backslashes", () => {
+  it("shouldRejectBasePathContainingBackslashes", () => {
     expect(() => normalizeBasePath("/app\\sub")).toThrow("Router basePath must not include backslashes.");
   });
 
-  it("rejects a base path containing a query string", () => {
+  it("shouldRejectBasePathContainingQueryString", () => {
     expect(() => normalizeBasePath("/app?tab=settings")).toThrow(
       "Router basePath must not include a query string or hash.",
     );
   });
 
-  it("rejects a base path containing a hash", () => {
+  it("shouldRejectBasePathContainingHash", () => {
     expect(() => normalizeBasePath("/app#settings")).toThrow(
       "Router basePath must not include a query string or hash.",
     );
   });
 
-  it("rejects a base path that ends with a slash", () => {
+  it("shouldRejectBasePathThatEndsWithSlash", () => {
     expect(() => normalizeBasePath("/app/")).toThrow("Router basePath must not end with a slash.");
   });
 
-  it("rejects a base path with dot segments", () => {
+  it("shouldRejectBasePathWithDotSegments", () => {
     expect(() => normalizeBasePath("/admin/../app")).toThrow('must not include "." or ".." path segments.');
     expect(() => normalizeBasePath("/admin/./app")).toThrow('must not include "." or ".." path segments.');
   });
@@ -68,7 +68,7 @@ describe("normalizeBasePath", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseRoutePath", () => {
-  it("returns frozen segments for a static route", () => {
+  it("shouldReturnFrozenSegmentsForStaticRoute", () => {
     const result = parseRoutePath("/users/settings");
     expect(result.path).toBe("/users/settings");
     expect(result.segments).toEqual([
@@ -78,7 +78,7 @@ describe("parseRoutePath", () => {
     expect(Object.isFrozen(result.segments)).toBe(true);
   });
 
-  it("returns param segments for named parameters", () => {
+  it("shouldReturnParamSegmentsForNamedParameters", () => {
     const result = parseRoutePath("/users/:id");
     expect(result.segments).toEqual([
       { kind: "static", value: "users" },
@@ -86,40 +86,40 @@ describe("parseRoutePath", () => {
     ]);
   });
 
-  it("returns an empty segment array for the root route", () => {
+  it("shouldReturnEmptySegmentArrayForRootRoute", () => {
     const result = parseRoutePath("/");
     expect(result.segments).toEqual([]);
   });
 
-  it("rejects an empty path", () => {
+  it("shouldRejectEmptyPath", () => {
     expect(() => parseRoutePath("")).toThrow("Route paths must be app-local paths starting with a slash.");
   });
 
-  it("rejects a path that does not start with slash", () => {
+  it("shouldRejectPathThatDoesNotStartWithSlash", () => {
     expect(() => parseRoutePath("users/:id")).toThrow("Route paths must be app-local paths starting with a slash.");
   });
 
-  it("rejects a path containing backslashes", () => {
+  it("shouldRejectPathContainingBackslashes", () => {
     expect(() => parseRoutePath("/users\\:id")).toThrow("Route paths must not include backslashes.");
   });
 
-  it("rejects a path containing a query string", () => {
+  it("shouldRejectPathContainingQueryString", () => {
     expect(() => parseRoutePath("/users?tab=active")).toThrow("Route paths must not include a query string or hash.");
   });
 
-  it("rejects a path containing a hash", () => {
+  it("shouldRejectPathContainingHash", () => {
     expect(() => parseRoutePath("/users#active")).toThrow("Route paths must not include a query string or hash.");
   });
 
-  it("rejects a parameter segment with an empty name", () => {
+  it("shouldRejectParameterSegmentWithEmptyName", () => {
     expect(() => parseRoutePath("/users/:")).toThrow("Route path parameters must have a name.");
   });
 
-  it("rejects duplicate parameter names", () => {
+  it("shouldRejectDuplicateParameterNames", () => {
     expect(() => parseRoutePath("/teams/:id/users/:id")).toThrow("Route path parameters must use unique names.");
   });
 
-  it("rejects dot segments in route paths", () => {
+  it("shouldRejectDotSegmentsInRoutePaths", () => {
     expect(() => parseRoutePath("/admin/../users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseRoutePath("/admin/./users")).toThrow('must not include "." or ".." path segments.');
   });
@@ -130,7 +130,7 @@ describe("parseRoutePath", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseAppPath", () => {
-  it("parses a simple path", () => {
+  it("shouldParseSimplePath", () => {
     const result = parseAppPath("/users/alice");
     expect(result.pathname).toBe("/users/alice");
     expect(result.search).toBe("");
@@ -138,40 +138,40 @@ describe("parseAppPath", () => {
     expect(result.href).toBe("/users/alice");
   });
 
-  it("parses query strings and hashes", () => {
+  it("shouldParseQueryStringsAndHashes", () => {
     const result = parseAppPath("/users/alice?tab=posts#activity");
     expect(result.search).toBe("?tab=posts");
     expect(result.hash).toBe("#activity");
     expect(result.searchParams.get("tab")).toBe("posts");
   });
 
-  it("normalises percent-escape casing in the pathname", () => {
+  it("shouldNormalisePercentEscapeCasingInPathname", () => {
     const result = parseAppPath("/caf%c3%a9");
     expect(result.pathname).toBe("/caf%C3%A9");
   });
 
-  it("returns frozen segments", () => {
+  it("shouldReturnFrozenSegments", () => {
     const result = parseAppPath("/users/alice");
     expect(Object.isFrozen(result.segments)).toBe(true);
   });
 
-  it("rejects an empty string", () => {
+  it("shouldRejectEmptyString", () => {
     expect(() => parseAppPath("")).toThrow("Router navigation targets must be app-local paths starting with a slash.");
   });
 
-  it("rejects a path without a leading slash", () => {
+  it("shouldRejectPathWithoutLeadingSlash", () => {
     expect(() => parseAppPath("settings")).toThrow(
       "Router navigation targets must be app-local paths starting with a slash.",
     );
   });
 
-  it("rejects a path containing backslashes", () => {
+  it("shouldRejectPathContainingBackslashes", () => {
     expect(() => parseAppPath("/\\example.com/settings")).toThrow(
       "Router navigation targets must not include backslashes.",
     );
   });
 
-  it("rejects dot segments before URL normalisation", () => {
+  it("shouldRejectDotSegmentsBeforeUrlNormalisation", () => {
     expect(() => parseAppPath("/admin/%2e%2e/users")).toThrow('must not include "." or ".." path segments.');
   });
 });
@@ -201,18 +201,18 @@ describe("parseLocationPath", () => {
     };
   }
 
-  it("returns null when the pathname does not start with basePath", () => {
+  it("shouldReturnNullWhenPathnameDoesNotStartWithBasePath", () => {
     const location = makeLocation({ pathname: "/settings" });
     expect(parseLocationPath(location, "/app")).toBeNull();
   });
 
-  it("returns the app pathname when it matches the base path exactly", () => {
+  it("shouldReturnAppPathnameWhenItMatchesBasePathExactly", () => {
     const location = makeLocation({ pathname: "/app" });
     const result = parseLocationPath(location, "/app");
     expect(result?.pathname).toBe("/");
   });
 
-  it("strips the base path prefix and preserves query and hash", () => {
+  it("shouldStripBasePathPrefixAndPreserveQueryAndHash", () => {
     const location = makeLocation({ pathname: "/app/settings", search: "?tab=a", hash: "#top" });
     const result = parseLocationPath(location, "/app");
     expect(result?.pathname).toBe("/settings");
@@ -220,7 +220,7 @@ describe("parseLocationPath", () => {
     expect(result?.hash).toBe("#top");
   });
 
-  it("returns the full pathname when basePath is empty", () => {
+  it("shouldReturnFullPathnameWhenBasePathIsEmpty", () => {
     const location = makeLocation({ pathname: "/settings" });
     const result = parseLocationPath(location, "");
     expect(result?.pathname).toBe("/settings");
@@ -232,39 +232,39 @@ describe("parseLocationPath", () => {
 // ---------------------------------------------------------------------------
 
 describe("matchRoute", () => {
-  it("returns null for segment count mismatch", () => {
+  it("shouldReturnNullForSegmentCountMismatch", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users");
     expect(matchRoute(pattern, target)).toBeNull();
   });
 
-  it("returns null when a static segment does not match", () => {
+  it("shouldReturnNullWhenStaticSegmentDoesNotMatch", () => {
     const pattern = parseRoutePath("/users/settings");
     const target = parseAppPath("/users/profile");
     expect(matchRoute(pattern, target)).toBeNull();
   });
 
-  it("captures named parameters", () => {
+  it("shouldCaptureNamedParameters", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/alice");
     const params = matchRoute(pattern, target);
     expect(params?.["id"]).toBe("alice");
   });
 
-  it("decodes percent-encoded parameter values", () => {
+  it("shouldDecodePercentEncodedParameterValues", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/alice%2042");
     const params = matchRoute(pattern, target);
     expect(params?.["id"]).toBe("alice 42");
   });
 
-  it("returns null for malformed percent-encoded parameter values", () => {
+  it("shouldReturnNullForMalformedPercentEncodedParameterValues", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/%E0%A4%A");
     expect(matchRoute(pattern, target)).toBeNull();
   });
 
-  it("sets prototype-polluting parameter names as safe own properties", () => {
+  it("shouldSetPrototypePollutingParameterNamesAsSafeOwnProperties", () => {
     const pattern = parseRoutePath("/users/:__proto__");
     const target = parseAppPath("/users/alice");
     const params = matchRoute(pattern, target);
@@ -272,7 +272,7 @@ describe("matchRoute", () => {
     expect(params?.["__proto__"]).toBe("alice");
   });
 
-  it("keeps params as plain objects with Object.prototype", () => {
+  it("shouldKeepParamsAsPlainObjectsWithObjectPrototype", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/alice");
     const params = matchRoute(pattern, target);
@@ -285,19 +285,19 @@ describe("matchRoute", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildBrowserHref", () => {
-  it("returns the app path as-is when basePath is empty", () => {
+  it("shouldReturnAppPathAsIsWhenBasePathIsEmpty", () => {
     expect(buildBrowserHref("/settings", "")).toBe("/settings");
   });
 
-  it("prepends the base path", () => {
+  it("shouldPrependBasePath", () => {
     expect(buildBrowserHref("/settings", "/app")).toBe("/app/settings");
   });
 
-  it("adds a trailing slash for the root path", () => {
+  it("shouldAddTrailingSlashForRootPath", () => {
     expect(buildBrowserHref("/", "/app")).toBe("/app/");
   });
 
-  it("preserves query strings and hashes", () => {
+  it("shouldPreserveQueryStringsAndHashes", () => {
     expect(buildBrowserHref("/settings?tab=a#top", "/app")).toBe("/app/settings?tab=a#top");
   });
 });
@@ -307,23 +307,23 @@ describe("buildBrowserHref", () => {
 // ---------------------------------------------------------------------------
 
 describe("stripBasePath", () => {
-  it("returns the pathname unchanged when basePath is empty", () => {
+  it("shouldReturnPathnameUnchangedWhenBasePathIsEmpty", () => {
     expect(stripBasePath("/settings", "")).toBe("/settings");
   });
 
-  it("returns '/' when pathname exactly matches basePath", () => {
+  it("shouldReturnRootSlashWhenPathnameExactlyMatchesBasePath", () => {
     expect(stripBasePath("/app", "/app")).toBe("/");
   });
 
-  it("returns '/' when pathname is basePath + trailing slash", () => {
+  it("shouldReturnRootSlashWhenPathnameIsBasePathPlusTrailingSlash", () => {
     expect(stripBasePath("/app/", "/app")).toBe("/");
   });
 
-  it("strips the base path prefix", () => {
+  it("shouldStripBasePathPrefix", () => {
     expect(stripBasePath("/app/settings", "/app")).toBe("/settings");
   });
 
-  it("returns null when pathname is outside basePath", () => {
+  it("shouldReturnNullWhenPathnameIsOutsideBasePath", () => {
     expect(stripBasePath("/settings", "/app")).toBeNull();
   });
 });
@@ -333,15 +333,15 @@ describe("stripBasePath", () => {
 // ---------------------------------------------------------------------------
 
 describe("normalizePercentEscapes", () => {
-  it("uppercases lowercase hex digits in percent escapes", () => {
+  it("shouldUppercaseLowercaseHexDigitsInPercentEscapes", () => {
     expect(normalizePercentEscapes("/caf%c3%a9")).toBe("/caf%C3%A9");
   });
 
-  it("leaves already-uppercase escapes unchanged", () => {
+  it("shouldLeaveAlreadyUppercaseEscapesUnchanged", () => {
     expect(normalizePercentEscapes("/caf%C3%A9")).toBe("/caf%C3%A9");
   });
 
-  it("leaves non-escaped characters unchanged", () => {
+  it("shouldLeaveNonEscapedCharactersUnchanged", () => {
     expect(normalizePercentEscapes("/settings")).toBe("/settings");
   });
 });

@@ -32,7 +32,7 @@ describe("History — browser integration", () => {
   });
 
   describe("start", () => {
-    it("matches the current browser location on start", () => {
+    it("shouldMatchCurrentBrowserLocationOnStart", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/", handler), startedRouters);
       history.replaceState(null, "", "/");
@@ -42,7 +42,7 @@ describe("History — browser integration", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it("is idempotent — repeated calls do not re-run handlers", () => {
+    it("shouldBeIdempotentAndNotReRunHandlersOnRepeatedCalls", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/", handler), startedRouters);
 
@@ -52,7 +52,7 @@ describe("History — browser integration", () => {
       expect(match1).toBe(match2);
     });
 
-    it("returns null when no route matches the current location", () => {
+    it("shouldReturnNullWhenNoRouteMatchesCurrentLocation", () => {
       const router = withRouter(createRouter().on("/other", vi.fn()), startedRouters);
       history.replaceState(null, "", "/");
 
@@ -60,7 +60,7 @@ describe("History — browser integration", () => {
       expect(match).toBeNull();
     });
 
-    it("throws when called during active navigation", () => {
+    it("shouldThrowWhenCalledDuringActiveNavigation", () => {
       const router = withRouter(createRouter(), startedRouters);
       router.on("/start", () => {
         expect(() => router.start()).toThrow("Router navigation is already running.");
@@ -68,7 +68,7 @@ describe("History — browser integration", () => {
       router.navigate("/start");
     });
 
-    it("strips the base path when matching the browser location", () => {
+    it("shouldStripBasePathWhenMatchingBrowserLocation", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ basePath: "/app" }).on("/settings", handler), startedRouters);
       history.replaceState(null, "", "/app/settings?tab=profile#details");
@@ -80,7 +80,7 @@ describe("History — browser integration", () => {
       expect(match?.searchParams.get("tab")).toBe("profile");
     });
 
-    it("calls the not-found handler when the location is outside basePath", () => {
+    it("shouldCallNotFoundHandlerWhenLocationIsOutsideBasePath", () => {
       const fallback = vi.fn();
       const listener = vi.fn();
       const router = withRouter(
@@ -96,7 +96,7 @@ describe("History — browser integration", () => {
       expect(listener).toHaveBeenCalledWith(null);
     });
 
-    it("matches basePath + trailing slash as the root route", () => {
+    it("shouldMatchBasePathPlusTrailingSlashAsRootRoute", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ basePath: "/app" }).on("/", handler), startedRouters);
       history.replaceState(null, "", "/app/");
@@ -106,7 +106,7 @@ describe("History — browser integration", () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it("can be restarted after being destroyed", () => {
+    it("shouldBeRestartableAfterDestroy", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/", handler), startedRouters);
 
@@ -119,7 +119,7 @@ describe("History — browser integration", () => {
   });
 
   describe("navigate — browser history writes", () => {
-    it("pushes a new history entry by default", () => {
+    it("shouldPushNewHistoryEntryByDefault", () => {
       const router = withRouter(createRouter().on("/target", vi.fn()), startedRouters);
 
       router.navigate("/target");
@@ -127,7 +127,7 @@ describe("History — browser integration", () => {
       expect(location.pathname).toBe("/target");
     });
 
-    it("replaces the history entry when shouldReplace is true", () => {
+    it("shouldReplaceHistoryEntryWhenShouldReplaceIsTrue", () => {
       const router = withRouter(createRouter().on("/target", vi.fn()), startedRouters);
 
       router.navigate("/target", { shouldReplace: true, state: { source: "test" } });
@@ -136,7 +136,7 @@ describe("History — browser integration", () => {
       expect(history.state).toEqual({ source: "test" });
     });
 
-    it("prepends the base path to the history href", () => {
+    it("shouldPrependBasePathToHistoryHref", () => {
       const router = withRouter(createRouter({ basePath: "/app" }).on("/settings", vi.fn()), startedRouters);
 
       router.navigate("/settings?tab=billing", { shouldReplace: true });
@@ -147,7 +147,7 @@ describe("History — browser integration", () => {
   });
 
   describe("popstate", () => {
-    it("navigates when popstate fires", () => {
+    it("shouldNavigateWhenPopstateFires", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/next", handler), startedRouters);
       router.start();
@@ -158,7 +158,7 @@ describe("History — browser integration", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it("queues popstate events that arrive during active navigation", () => {
+    it("shouldQueuePopstateEventsThatArriveDuringActiveNavigation", () => {
       const log: string[] = [];
       const router = withRouter(createRouter(), startedRouters);
 
@@ -176,7 +176,7 @@ describe("History — browser integration", () => {
       expect(log).toEqual(["start", "popstate"]);
     });
 
-    it("replays the popstate state when executing a queued popstate navigation", () => {
+    it("shouldReplayPopstateStateWhenExecutingQueuedPopstateNavigation", () => {
       const router = withRouter(createRouter(), startedRouters);
       let stateDuringHandler: unknown = null;
 
@@ -196,7 +196,7 @@ describe("History — browser integration", () => {
       expect(stateDuringHandler).toEqual({ val: "queued" });
     });
 
-    it("removes the popstate listener when destroyed", () => {
+    it("shouldRemovePopstateListenerWhenDestroyed", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/next", handler), startedRouters);
       router.start();
@@ -216,7 +216,7 @@ describe("History — browser integration", () => {
       return event;
     }
 
-    it("intercepts clicks on anchors with data-router-link", () => {
+    it("shouldInterceptClicksOnAnchorsWithDataRouterLink", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -234,7 +234,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks on anchors without data-router-link", () => {
+    it("shouldNotInterceptClicksOnAnchorsWithoutDataRouterLink", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -250,7 +250,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept when shouldInterceptLinks is false", () => {
+    it("shouldNotInterceptWhenShouldInterceptLinksIsFalse", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter().on("/target", handler), startedRouters);
       router.start();
@@ -267,7 +267,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks with modifier keys", () => {
+    it("shouldNotInterceptClicksWithModifierKeys", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -291,7 +291,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept external origin clicks", () => {
+    it("shouldNotInterceptExternalOriginClicks", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -308,7 +308,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks on paths outside basePath", () => {
+    it("shouldNotInterceptClicksOnPathsOutsideBasePath", () => {
       const handler = vi.fn();
       const router = withRouter(
         createRouter({ basePath: "/app", shouldInterceptLinks: true }).on("/target", handler),
@@ -328,7 +328,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks with a non-self target attribute", () => {
+    it("shouldNotInterceptClicksWithNonSelfTargetAttribute", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -346,7 +346,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks on anchors without href", () => {
+    it("shouldNotInterceptClicksOnAnchorsWithoutHref", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -362,7 +362,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not intercept clicks on download links", () => {
+    it("shouldNotInterceptClicksOnDownloadLinks", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -380,7 +380,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not prevent default on invalid paths with backslashes", () => {
+    it("shouldNotPreventDefaultOnInvalidPathsWithBackslashes", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -397,7 +397,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("does not crash on non-Element click targets", () => {
+    it("shouldNotCrashOnNonElementClickTargets", () => {
       const router = withRouter(createRouter({ shouldInterceptLinks: true }), startedRouters);
       router.start();
 
@@ -405,7 +405,7 @@ describe("History — browser integration", () => {
       expect(() => document.dispatchEvent(event)).not.toThrow();
     });
 
-    it("intercepts SVG anchor clicks with data-router-link", () => {
+    it("shouldInterceptSvgAnchorClicksWithDataRouterLink", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -425,7 +425,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(svg);
     });
 
-    it("intercepts SVG anchor clicks using xlink:href", () => {
+    it("shouldInterceptSvgAnchorClicksUsingXlinkHref", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -445,7 +445,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(svg);
     });
 
-    it("intercepts anchor clicks inside a shadow DOM", () => {
+    it("shouldInterceptAnchorClicksInsideShadowDom", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -474,7 +474,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(host);
     });
 
-    it("intercepts clicks when composedPath is not available", () => {
+    it("shouldInterceptClicksWhenComposedPathIsNotAvailable", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -498,7 +498,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("removes the link-click listener when destroyed", () => {
+    it("shouldRemoveLinkClickListenerWhenDestroyed", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
       router.start();
@@ -518,7 +518,7 @@ describe("History — browser integration", () => {
       document.body.removeChild(link);
     });
 
-    it("propagates errors thrown by route handlers through link-click events", () => {
+    it("shouldPropagateErrorsThrownByRouteHandlersThroughLinkClickEvents", () => {
       const handler = vi.fn().mockImplementation(() => {
         throw new Error("Route handler failed");
       });
@@ -551,7 +551,7 @@ describe("History — browser integration", () => {
   });
 
   describe("destroy", () => {
-    it("clears pending navigations so they do not run after destroy", () => {
+    it("shouldClearPendingNavigationsSoTheyDoNotRunAfterDestroy", () => {
       let callCount = 0;
       const router = createRouter();
       router.on("/first", () => {
@@ -567,7 +567,7 @@ describe("History — browser integration", () => {
       expect(callCount).toBe(1);
     });
 
-    it("removes subscribers", () => {
+    it("shouldRemoveSubscribersOnDestroy", () => {
       const listener = vi.fn();
       const router = withRouter(createRouter().on("/next", vi.fn()), startedRouters);
       router.subscribe(listener);
@@ -588,17 +588,17 @@ describe("History — browser integration", () => {
 // ---------------------------------------------------------------------------
 
 describe("History — SSR (no browser APIs)", () => {
-  it("start returns null when window is not available", () => {
+  it("shouldReturnNullOnStartWhenWindowIsNotAvailable", () => {
     const router = createRouter().on("/settings", vi.fn());
     expect(router.start()).toBeNull();
   });
 
-  it("start returns null when basePath is configured but window is unavailable", () => {
+  it("shouldReturnNullOnStartWhenBasePathIsConfiguredButWindowIsUnavailable", () => {
     const router = createRouter({ basePath: "/app" }).on("/settings", vi.fn());
     expect(router.start()).toBeNull();
   });
 
-  it("handles href building with and without base paths", () => {
+  it("shouldHandleHrefBuildingWithAndWithoutBasePaths", () => {
     const routerWithBase = createRouter({ basePath: "/app" });
     const routerWithoutBase = createRouter();
 
@@ -607,7 +607,7 @@ describe("History — SSR (no browser APIs)", () => {
     expect(routerWithoutBase.href("/settings")).toBe("/settings");
   });
 
-  it("navigate and match work without browser history", () => {
+  it("shouldNavigateAndMatchWithoutBrowserHistory", () => {
     const handler = vi.fn();
     const listener = vi.fn();
     const router = createRouter().on("/users/:id", handler);
@@ -621,7 +621,7 @@ describe("History — SSR (no browser APIs)", () => {
     expect(listener).toHaveBeenCalledWith(match);
   });
 
-  it("throws validation errors on match with invalid paths", () => {
+  it("shouldThrowValidationErrorsOnMatchWithInvalidPaths", () => {
     const router = createRouter();
     expect(() => router.match("settings")).toThrow(Error);
     expect(() => router.match("/\\example.com/settings")).toThrow(Error);

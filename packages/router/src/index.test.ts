@@ -34,7 +34,7 @@ describe("createRouter", () => {
   // Routing
   // ---------------------------------------------------------------------------
 
-  it("matches registered routes in order with decoded params, query strings, and hashes", () => {
+  it("shouldMatchRegisteredRoutesInOrderWithDecodedParamsQueryStringsAndHashes", () => {
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
     const router = createRouter().on("/users/:id", firstHandler).on("/users/settings", secondHandler);
@@ -52,7 +52,7 @@ describe("createRouter", () => {
     expect(secondHandler).not.toHaveBeenCalled();
   });
 
-  it("calls fallback handlers and subscribers for misses", () => {
+  it("shouldCallFallbackHandlerAndSubscribersOnMiss", () => {
     const fallback = vi.fn();
     const listener = vi.fn();
     const router = createRouter().on("/known", vi.fn()).notFound(fallback);
@@ -74,7 +74,7 @@ describe("createRouter", () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
-  it("queues and executes navigation started while another navigation is running", () => {
+  it("shouldQueueAndExecuteNavigationStartedDuringActiveNavigation", () => {
     const router = createRouter();
     const handler = vi.fn(() => {
       router.navigate("/redirected");
@@ -95,7 +95,7 @@ describe("createRouter", () => {
     expect(listener).toHaveBeenNthCalledWith(2, expect.any(Object));
   });
 
-  it("queues multiple navigations in FIFO order when started while another is running", () => {
+  it("shouldProcessMultipleQueuedNavigationsInFifoOrder", () => {
     const router = createRouter();
     const log: string[] = [];
 
@@ -119,7 +119,7 @@ describe("createRouter", () => {
   // Encoding
   // ---------------------------------------------------------------------------
 
-  it("matches static route paths using browser URL encoding", () => {
+  it("shouldMatchStaticRoutePathsUsingBrowserUrlEncoding", () => {
     const handler = vi.fn();
     const routePath = "/caf\u00e9";
     const router = createRouter().on(routePath, handler);
@@ -130,7 +130,7 @@ describe("createRouter", () => {
     expect(handler).toHaveBeenCalledWith(match);
   });
 
-  it("matches static route paths with equivalent percent-escape casing", () => {
+  it("shouldMatchStaticRoutePathsWithEquivalentPercentEscapeCasing", () => {
     const handler = vi.fn();
     const routePath = "/caf\u00e9";
     const router = createRouter().on(routePath, handler);
@@ -141,7 +141,7 @@ describe("createRouter", () => {
     expect(handler).toHaveBeenCalledWith(match);
   });
 
-  it("normalizes encoded base paths for browser starts and hrefs", () => {
+  it("shouldNormalizeEncodedBasePathsForBrowserStartsAndHrefs", () => {
     const handler = vi.fn();
     const router = trackStartedRouter(createRouter({ basePath: "/caf\u00e9" }).on("/settings", handler));
 
@@ -159,7 +159,7 @@ describe("createRouter", () => {
   // Prototype safety
   // ---------------------------------------------------------------------------
 
-  it("captures parameter names that overlap object prototype fields", () => {
+  it("shouldCaptureParameterNamesThatOverlapObjectPrototypeFields", () => {
     const router = createRouter().on("/users/:__proto__", vi.fn());
 
     const match = router.navigate("/users/alice");
@@ -168,7 +168,7 @@ describe("createRouter", () => {
     expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
   });
 
-  it("returns route params as ordinary objects", () => {
+  it("shouldReturnRouteParamsAsOrdinaryObjects", () => {
     const router = createRouter().on("/users/:id", vi.fn());
 
     const match = router.navigate("/users/alice");
@@ -181,7 +181,7 @@ describe("createRouter", () => {
   // Validation — integration boundary
   // ---------------------------------------------------------------------------
 
-  it("validates base paths, route paths, and navigation targets", () => {
+  it("shouldValidateBasePathsRoutePathsAndNavigationTargets", () => {
     const router = createRouter();
     const handler = vi.fn();
 
@@ -201,7 +201,7 @@ describe("createRouter", () => {
     expect(() => router.href("/settings\\profile")).toThrow(Error);
   });
 
-  it("rejects dot path segments before URL normalization", () => {
+  it("shouldRejectDotPathSegmentsBeforeUrlNormalization", () => {
     const router = createRouter();
     const handler = vi.fn();
 
@@ -217,12 +217,12 @@ describe("createRouter", () => {
   // href
   // ---------------------------------------------------------------------------
 
-  it("returns base-path-prefixed href for root path '/'", () => {
+  it("shouldReturnBasePathPrefixedHrefForRootPath", () => {
     const router = createRouter({ basePath: "/app" });
     expect(router.href("/")).toBe("/app/");
   });
 
-  it("strips base paths on browser starts and restores them for hrefs and history navigation", () => {
+  it("shouldStripBasePathOnStartAndRestoreForHrefsAndHistoryNavigation", () => {
     const handler = vi.fn();
     const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler));
 
@@ -249,7 +249,7 @@ describe("createRouter", () => {
   // Malformed params
   // ---------------------------------------------------------------------------
 
-  it("treats malformed encoded path parameters as misses", () => {
+  it("shouldTreatMalformedEncodedPathParametersAsMisses", () => {
     const handler = vi.fn();
     const fallback = vi.fn();
     const router = createRouter().on("/users/:id", handler).notFound(fallback);
@@ -269,7 +269,7 @@ describe("createRouter", () => {
   // Route path validation via on()
   // ---------------------------------------------------------------------------
 
-  it("rejects route paths with queries, hashes, and duplicate parameter names", () => {
+  it("shouldRejectRoutePathsWithQueriesHashesAndDuplicateParameterNames", () => {
     const router = createRouter();
     const handler = vi.fn();
 
@@ -282,13 +282,13 @@ describe("createRouter", () => {
   // Lifecycle and chaining
   // ---------------------------------------------------------------------------
 
-  it("chains on() and notFound()", () => {
+  it("shouldChainOnAndNotFound", () => {
     const router = createRouter();
     const chained = router.on("/", () => {}).notFound(() => {});
     expect(chained).toBe(router);
   });
 
-  it("cleans up event listeners on destroy", () => {
+  it("shouldCleanUpEventListenersOnDestroy", () => {
     const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }));
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");

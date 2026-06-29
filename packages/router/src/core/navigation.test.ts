@@ -16,12 +16,12 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("run", () => {
-    it("returns null when no route matches", () => {
+    it("shouldReturnNullWhenNoRouteMatches", () => {
       const { nav } = makeNav();
       expect(nav.run(parseAppPath("/missing"))).toBeNull();
     });
 
-    it("calls the matching route handler and returns the match", () => {
+    it("shouldCallMatchingRouteHandlerAndReturnMatch", () => {
       const handler = vi.fn();
       const { registry, nav } = makeNav();
       registry.add("/users/:id", handler);
@@ -32,7 +32,7 @@ describe("createNavigation", () => {
       expect(handler).toHaveBeenCalledWith(match);
     });
 
-    it("calls the fallback when no route matches", () => {
+    it("shouldCallFallbackWhenNoRouteMatches", () => {
       const fallback = vi.fn();
       const { registry, nav } = makeNav();
       registry.setFallback(fallback);
@@ -42,7 +42,7 @@ describe("createNavigation", () => {
       expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/missing" }));
     });
 
-    it("updates currentMatch after each run", () => {
+    it("shouldUpdateCurrentMatchAfterEachRun", () => {
       const { registry, nav } = makeNav();
       registry.add("/home", vi.fn());
 
@@ -55,7 +55,7 @@ describe("createNavigation", () => {
   });
 
   describe("match", () => {
-    it("returns the match without side effects", () => {
+    it("shouldReturnMatchWithoutSideEffects", () => {
       const handler = vi.fn();
       const { registry, nav } = makeNav();
       registry.add("/users/:id", handler);
@@ -66,12 +66,12 @@ describe("createNavigation", () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it("returns null when no route matches", () => {
+    it("shouldReturnNullWhenNoRouteMatches", () => {
       const { nav } = makeNav();
       expect(nav.match("/missing")).toBeNull();
     });
 
-    it("throws for invalid paths", () => {
+    it("shouldThrowForInvalidPaths", () => {
       const { nav } = makeNav();
       expect(() => nav.match("settings")).toThrow(Error);
       expect(() => nav.match("/\\example.com")).toThrow(Error);
@@ -83,7 +83,7 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("subscribe", () => {
-    it("notifies listeners with the match after a successful navigation", () => {
+    it("shouldNotifyListenersWithMatchAfterSuccessfulNavigation", () => {
       const listener = vi.fn();
       const { registry, nav } = makeNav();
       registry.add("/home", vi.fn());
@@ -94,7 +94,7 @@ describe("createNavigation", () => {
       expect(listener.mock.calls[0]?.[0]).toMatchObject({ pathname: "/home" });
     });
 
-    it("notifies listeners with null after a miss", () => {
+    it("shouldNotifyListenersWithNullAfterMiss", () => {
       const listener = vi.fn();
       const { nav } = makeNav();
       nav.subscribe(listener);
@@ -103,7 +103,7 @@ describe("createNavigation", () => {
       expect(listener).toHaveBeenCalledWith(null);
     });
 
-    it("stops notifying after the returned unsubscribe is called", () => {
+    it("shouldStopNotifyingAfterUnsubscribe", () => {
       const listener = vi.fn();
       const { registry, nav } = makeNav();
       registry.add("/home", vi.fn());
@@ -114,7 +114,7 @@ describe("createNavigation", () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it("supports multiple independent listeners", () => {
+    it("shouldSupportMultipleIndependentListeners", () => {
       const listenerA = vi.fn();
       const listenerB = vi.fn();
       const { registry, nav } = makeNav();
@@ -133,7 +133,7 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("FIFO navigation queue via enqueue", () => {
-    it("executes an enqueued navigation after the current one finishes", () => {
+    it("shouldExecuteEnqueuedNavigationAfterCurrentOneFinishes", () => {
       const log: string[] = [];
       const { registry, nav } = makeNav();
 
@@ -150,7 +150,7 @@ describe("createNavigation", () => {
       expect(log).toEqual(["start", "next"]);
     });
 
-    it("processes multiple enqueued navigations in FIFO order", () => {
+    it("shouldProcessMultipleEnqueuedNavigationsInFifoOrder", () => {
       const log: string[] = [];
       const { registry, nav } = makeNav();
 
@@ -166,7 +166,7 @@ describe("createNavigation", () => {
       expect(log).toEqual(["start", "first", "second"]);
     });
 
-    it("executes the historyUpdate callback before the queued navigation", () => {
+    it("shouldExecuteHistoryUpdateCallbackBeforeQueuedNavigation", () => {
       const callOrder: string[] = [];
       const historyUpdate = vi.fn(() => callOrder.push("historyUpdate"));
       const { registry, nav } = makeNav();
@@ -180,7 +180,7 @@ describe("createNavigation", () => {
       expect(callOrder).toEqual(["historyUpdate", "handler"]);
     });
 
-    it("returns null immediately when a navigation is enqueued mid-run", () => {
+    it("shouldReturnNullImmediatelyWhenNavigationIsEnqueuedMidRun", () => {
       const { registry, nav } = makeNav();
 
       registry.add("/start", () => {
@@ -197,7 +197,7 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("runFromHistory", () => {
-    it("runs the navigation immediately when not active", () => {
+    it("shouldRunNavigationImmediatelyWhenNotActive", () => {
       const handler = vi.fn();
       const { registry, nav } = makeNav();
       registry.add("/home", handler);
@@ -206,7 +206,7 @@ describe("createNavigation", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it("queues the navigation with historyUpdate when already active", () => {
+    it("shouldQueueNavigationWithHistoryUpdateWhenAlreadyActive", () => {
       const log: string[] = [];
       const historyUpdate = vi.fn(() => log.push("history"));
       const { registry, nav } = makeNav();
@@ -226,7 +226,7 @@ describe("createNavigation", () => {
       expect(log).toEqual(["start", "history", "popstate"]);
     });
 
-    it("invokes the fallback when target is null (browser outside basePath)", () => {
+    it("shouldInvokeFallbackWhenTargetIsNullOutsideBasePath", () => {
       const fallback = vi.fn();
       const { registry, nav } = makeNav();
       registry.setFallback(fallback);
@@ -242,12 +242,12 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("isActive", () => {
-    it("returns false before any navigation", () => {
+    it("shouldReturnFalseBeforeAnyNavigation", () => {
       const { nav } = makeNav();
       expect(nav.isActive()).toBe(false);
     });
 
-    it("returns true while a navigation is executing", () => {
+    it("shouldReturnTrueWhileNavigationIsExecuting", () => {
       const { registry, nav } = makeNav();
       let wasActive = false;
 
@@ -266,7 +266,7 @@ describe("createNavigation", () => {
   // ---------------------------------------------------------------------------
 
   describe("reset", () => {
-    it("clears the current match", () => {
+    it("shouldClearCurrentMatch", () => {
       const { registry, nav } = makeNav();
       registry.add("/home", vi.fn());
 
@@ -277,7 +277,7 @@ describe("createNavigation", () => {
       expect(nav.currentMatch()).toBeNull();
     });
 
-    it("clears pending navigations so they do not run after reset", () => {
+    it("shouldClearPendingNavigationsSoTheyDoNotRunAfterReset", () => {
       const afterReset = vi.fn();
       const { registry, nav } = makeNav();
 
@@ -292,7 +292,7 @@ describe("createNavigation", () => {
       expect(afterReset).not.toHaveBeenCalled();
     });
 
-    it("clears registered listeners", () => {
+    it("shouldClearRegisteredListeners", () => {
       const { registry, nav } = makeNav();
       const listener = vi.fn();
       nav.subscribe(listener);

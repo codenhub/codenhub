@@ -68,7 +68,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     },
 
     href(to) {
-      return buildBrowserHref(to, basePath);
+      return buildBrowserHref(parseAppPath(to), basePath);
     },
 
     subscribe(listener) {

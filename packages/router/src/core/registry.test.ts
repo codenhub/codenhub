@@ -9,43 +9,43 @@ describe("createRegistry", () => {
   // ---------------------------------------------------------------------------
 
   describe("add", () => {
-    it("accepts valid static and parameterised route paths", () => {
+    it("shouldAcceptValidStaticAndParameterisedRoutePaths", () => {
       const registry = createRegistry();
       expect(() => registry.add("/users", vi.fn())).not.toThrow();
       expect(() => registry.add("/users/:id", vi.fn())).not.toThrow();
     });
 
-    it("rejects an empty path", () => {
+    it("shouldRejectEmptyPath", () => {
       const registry = createRegistry();
       expect(() => registry.add("", vi.fn())).toThrow(Error);
     });
 
-    it("rejects a path missing a leading slash", () => {
+    it("shouldRejectPathMissingLeadingSlash", () => {
       const registry = createRegistry();
       expect(() => registry.add("users/:id", vi.fn())).toThrow(Error);
     });
 
-    it("rejects a path containing backslashes", () => {
+    it("shouldRejectPathContainingBackslashes", () => {
       const registry = createRegistry();
       expect(() => registry.add("/users\\:id", vi.fn())).toThrow(Error);
     });
 
-    it("rejects a path containing a query string", () => {
+    it("shouldRejectPathContainingQueryString", () => {
       const registry = createRegistry();
       expect(() => registry.add("/users?tab=active", vi.fn())).toThrow(Error);
     });
 
-    it("rejects a path containing a hash", () => {
+    it("shouldRejectPathContainingHash", () => {
       const registry = createRegistry();
       expect(() => registry.add("/users#active", vi.fn())).toThrow(Error);
     });
 
-    it("rejects duplicate parameter names", () => {
+    it("shouldRejectDuplicateParameterNames", () => {
       const registry = createRegistry();
       expect(() => registry.add("/teams/:id/users/:id", vi.fn())).toThrow(Error);
     });
 
-    it("rejects dot segments", () => {
+    it("shouldRejectDotSegments", () => {
       const registry = createRegistry();
       expect(() => registry.add("/admin/../users", vi.fn())).toThrow(Error);
       expect(() => registry.add("/admin/./users", vi.fn())).toThrow(Error);
@@ -57,19 +57,19 @@ describe("createRegistry", () => {
   // ---------------------------------------------------------------------------
 
   describe("setFallback / getFallback", () => {
-    it("returns undefined before a fallback is set", () => {
+    it("shouldReturnUndefinedBeforeFallbackIsSet", () => {
       const registry = createRegistry();
       expect(registry.getFallback()).toBeUndefined();
     });
 
-    it("returns the registered fallback handler", () => {
+    it("shouldReturnRegisteredFallbackHandler", () => {
       const registry = createRegistry();
       const fallback = vi.fn();
       registry.setFallback(fallback);
       expect(registry.getFallback()).toBe(fallback);
     });
 
-    it("replaces an existing fallback when set again", () => {
+    it("shouldReplaceExistingFallbackWhenSetAgain", () => {
       const registry = createRegistry();
       const firstFallback = vi.fn();
       const secondFallback = vi.fn();
@@ -84,18 +84,18 @@ describe("createRegistry", () => {
   // ---------------------------------------------------------------------------
 
   describe("findMatch", () => {
-    it("returns null when no routes are registered", () => {
+    it("shouldReturnNullWhenNoRoutesAreRegistered", () => {
       const registry = createRegistry();
       expect(registry.findMatch(parseAppPath("/users"))).toBeNull();
     });
 
-    it("returns null when no route matches the target", () => {
+    it("shouldReturnNullWhenNoRouteMatchesTarget", () => {
       const registry = createRegistry();
       registry.add("/users", vi.fn());
       expect(registry.findMatch(parseAppPath("/settings"))).toBeNull();
     });
 
-    it("returns the first matching route with its match object", () => {
+    it("shouldReturnFirstMatchingRouteWithMatchObject", () => {
       const handler = vi.fn();
       const registry = createRegistry();
       registry.add("/users/:id", handler);
@@ -108,7 +108,7 @@ describe("createRegistry", () => {
       expect(result?.route.handler).toBe(handler);
     });
 
-    it("matches routes in registration order (first-match wins)", () => {
+    it("shouldMatchRoutesInRegistrationOrderFirstMatchWins", () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       const registry = createRegistry();
@@ -120,7 +120,7 @@ describe("createRegistry", () => {
       expect(result?.route.handler).toBe(firstHandler);
     });
 
-    it("returns the static route when it is registered first", () => {
+    it("shouldReturnStaticRouteWhenItIsRegisteredFirst", () => {
       const staticHandler = vi.fn();
       const paramHandler = vi.fn();
       const registry = createRegistry();
@@ -131,7 +131,7 @@ describe("createRegistry", () => {
       expect(result?.route.handler).toBe(staticHandler);
     });
 
-    it("populates searchParams and hash on the match object", () => {
+    it("shouldPopulateSearchParamsAndHashOnMatchObject", () => {
       const registry = createRegistry();
       registry.add("/users/:id", vi.fn());
 
@@ -140,13 +140,13 @@ describe("createRegistry", () => {
       expect(result?.match.hash).toBe("#bio");
     });
 
-    it("returns null for a malformed percent-encoded parameter", () => {
+    it("shouldReturnNullForMalformedPercentEncodedParameter", () => {
       const registry = createRegistry();
       registry.add("/users/:id", vi.fn());
       expect(registry.findMatch(parseAppPath("/users/%E0%A4%A"))).toBeNull();
     });
 
-    it("returns params as plain objects with Object.prototype", () => {
+    it("shouldReturnParamsAsPlainObjectsWithObjectPrototype", () => {
       const registry = createRegistry();
       registry.add("/users/:id", vi.fn());
 
@@ -154,7 +154,7 @@ describe("createRegistry", () => {
       expect(Object.getPrototypeOf(result?.match.params)).toBe(Object.prototype);
     });
 
-    it("captures prototype-polluting parameter names as safe own properties", () => {
+    it("shouldCapturePrototypePollutingParameterNamesAsSafeOwnProperties", () => {
       const registry = createRegistry();
       registry.add("/users/:__proto__", vi.fn());
 
