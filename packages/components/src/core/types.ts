@@ -13,15 +13,15 @@ export type PropertyConstructor =
  * Resolves a `PropertyConstructor` to its corresponding TypeScript value type.
  */
 export type PropertyType<T extends PropertyConstructor> = T extends StringConstructor
-  ? string
+  ? string | undefined | null
   : T extends NumberConstructor
-    ? number
+    ? number | undefined | null
     : T extends BooleanConstructor
       ? boolean
       : T extends ObjectConstructor
-        ? Record<string, unknown>
+        ? Record<string, unknown> | undefined | null
         : T extends ArrayConstructor
-          ? unknown[]
+          ? unknown[] | undefined | null
           : never;
 
 /**

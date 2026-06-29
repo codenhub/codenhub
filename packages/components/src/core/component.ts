@@ -47,6 +47,9 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
   if (type === Array) {
     let parsed = value;
     if (typeof value === "string") {
+      if (value.trim() === "") {
+        return undefined;
+      }
       try {
         parsed = JSON.parse(value);
       } catch (err) {
@@ -64,6 +67,9 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
   if (type === Object) {
     let parsed = value;
     if (typeof value === "string") {
+      if (value.trim() === "") {
+        return undefined;
+      }
       try {
         parsed = JSON.parse(value);
       } catch (err) {
@@ -138,6 +144,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   class CustomElement extends HTMLElement {
     private _isRenderScheduled = false;
     private _isMounted = false;
+    private _isRendering = false;
     private _contentWrapper: HTMLElement | null = null;
 
     static get observedAttributes(): string[] {
@@ -157,6 +164,13 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
             const casted = castProperty(newValue, properties[propName]);
             if (storedValue !== casted) {
               storedValue = casted;
+              if (this._isRendering) {
+                console.warn(
+                  `Component "${tagName}": property "${propName}" was mutated during render. ` +
+                    "This can cause an infinite rendering loop.",
+                );
+                return;
+              }
               this._scheduleRender();
             }
           },
@@ -227,7 +241,13 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     }
 
     private _render(): void {
-      const htmlContent = config.render.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+      this._isRendering = true;
+      let htmlContent: string;
+      try {
+        htmlContent = config.render.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+      } finally {
+        this._isRendering = false;
+      }
 
       if (shouldUseShadow) {
         const contentWrapper = this._contentWrapper;

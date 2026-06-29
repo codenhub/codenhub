@@ -801,4 +801,63 @@ describe("coverage gaps", () => {
       JSON.parse = originalParse;
     }
   });
+
+  it("shouldHandleEmptyAndWhitespaceJSONStringAttributes", () => {
+    const tag = generateUniqueTag("cast-json-empty");
+    const component = defineComponent(tag, {
+      properties: {
+        items: Array,
+        data: Object,
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    // Should not throw and should cast to undefined
+    el.setAttribute("items", "");
+    expect(castToProps<{ items: unknown }>(el).items).toBeUndefined();
+
+    el.setAttribute("data", "   ");
+    expect(castToProps<{ data: unknown }>(el).data).toBeUndefined();
+  });
+
+  it("shouldWarnAndNotReRenderWhenPropertyMutatedDuringRender", async () => {
+    const tag = generateUniqueTag("render-loop-guard");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let renderCount = 0;
+
+    const component = defineComponent(tag, {
+      properties: { count: Number },
+      render() {
+        renderCount++;
+        if (renderCount === 1) {
+          // Mutate count during render
+          castToProps<{ count: number }>(this).count = 42;
+        }
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    // Initial render runs synchronously
+    expect(renderCount).toBe(1);
+    expect(castToProps<{ count: number }>(el).count).toBe(42);
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Component "${tag}": property "count" was mutated during render. This can cause an infinite rendering loop.`,
+    );
+
+    // Wait to ensure no extra render was scheduled for the next microtask
+    await Promise.resolve();
+    expect(renderCount).toBe(1);
+
+    warnSpy.mockRestore();
+  });
 });
