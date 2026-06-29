@@ -18,3 +18,12 @@ export function uniqueTag(base: string): string {
 export function reg(component: unknown): void {
   registerComponents([component as ComponentDefinition<ComponentProperties, unknown>]);
 }
+
+/**
+ * Casts an element to a typed props interface for test assertions.
+ * Avoids the verbose `(el as unknown as Record<string, unknown>)` pattern
+ * by providing a narrow, test-local type view of the element's properties.
+ */
+export function asProps<T>(element: HTMLElement): T {
+  return element as unknown as T;
+}

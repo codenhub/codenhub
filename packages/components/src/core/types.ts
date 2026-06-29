@@ -52,7 +52,7 @@ export interface ComponentConfig<Props extends ComponentProperties, Methods> {
   properties?: Props;
   /**
    * Whether to attach a Shadow DOM to the element.
-   * Defaults to `false`, allowing global CSS (e.g. Tailwind) to reach the element.
+   * Defaults to `false`, allowing global stylesheets to reach the element.
    */
   hasShadow?: boolean;
   /**

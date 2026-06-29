@@ -4,16 +4,33 @@ import type { ComponentConfig, ComponentDefinition, ComponentProperties, Compone
  * Casts a raw attribute or property value to the type indicated by its
  * constructor. Called at every property set and `attributeChangedCallback`.
  *
- * - `null`/`undefined` pass through unchanged.
+ * - `undefined` passes through unchanged for all types.
+ * - `null` passes through unchanged for non-Boolean types; for `Boolean`, `null`
+ *   maps to `false` (attribute-removal semantics — `removeAttribute` passes `null`).
  * - `Object`/`Array` constructors attempt `JSON.parse` when value is a string.
  */
 function castProperty(value: unknown, type: ComponentProperties[string]): unknown {
-  if (type === Boolean) {
-    return value === "true" || value === "" || value === true;
-  }
-  if (value === undefined || value === null) {
+  // undefined passes through unchanged for all types. An undefined value means
+  // the property has never been set and should stay uninitialized.
+  if (value === undefined) {
     return value;
   }
+
+  if (type === Boolean) {
+    // null arrives from removeAttribute (attribute absence), which maps to false
+    // per standard HTML boolean attribute semantics documented in the README.
+    if (value === null) {
+      return false;
+    }
+    return value === "true" || value === "" || value === true;
+  }
+
+  // For all other types, null passes through unchanged so consumers can
+  // distinguish "not yet set" from a typed value.
+  if (value === null) {
+    return value;
+  }
+
   if (type === String) {
     return String(value);
   }
@@ -85,8 +102,6 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   class CustomElement extends HTMLElement {
     private _renderScheduled = false;
     private _isMounted = false;
-    /** Preserved style node when using Shadow DOM, avoids repeated queries. */
-    private _styleNode: HTMLStyleElement | null = null;
 
     static get observedAttributes(): string[] {
       return Array.from(attributeToPropertyMap.keys());
@@ -123,14 +138,19 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         if (config.styles) {
           const style = document.createElement("style");
           style.textContent = config.styles;
-          this._styleNode = style;
           shadow.appendChild(style);
         }
+        // Dedicated content wrapper so renders can simply set innerHTML
+        // without needing to walk siblings to avoid clobbering the style node.
+        const contentWrapper = document.createElement("div");
+        shadow.appendChild(contentWrapper);
       }
     }
 
     connectedCallback(): void {
       this._isMounted = true;
+      // Render fires first so the DOM is populated before onMount runs.
+      // Call order on first connect: render → onUpdate → onMount.
       this._render();
       config.onMount?.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
     }
@@ -173,19 +193,12 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       if (useShadow) {
         const root = this.shadowRoot!;
-        let child = root.firstChild;
-        while (child !== null) {
-          const next = child.nextSibling;
-          if (child !== this._styleNode) {
-            root.removeChild(child);
-          }
-          child = next;
-        }
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = htmlContent;
-        while (wrapper.firstChild !== null) {
-          root.appendChild(wrapper.firstChild);
-        }
+        // The dedicated content wrapper is always the last child of the shadow
+        // root (appended in the constructor after the optional style node).
+        // Setting innerHTML on it avoids any need to walk siblings to preserve
+        // the style node across renders.
+        const contentWrapper = root.lastChild as HTMLElement;
+        contentWrapper.innerHTML = htmlContent;
       } else {
         this.innerHTML = htmlContent;
       }
@@ -200,6 +213,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     create(props) {
       const element = new CustomElement();
       if (props !== undefined) {
+        // Object.assign goes through the reactive setters installed in the
+        // constructor, so property assignments here trigger type casting.
+        // The element is not yet connected so no render is scheduled yet.
         Object.assign(element, props);
       }
       return element as unknown as HTMLElement & ComponentProps<Props> & Methods;

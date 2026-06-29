@@ -105,6 +105,9 @@ Returns: `ComponentDefinition<Props, Methods>`
 Registers one or more `ComponentDefinition` objects in the browser's global
 `customElements` registry. Safely skips tags that are already registered.
 
+In non-browser environments where `customElements` is unavailable (SSR, Node.js),
+this function is a no-op and returns immediately without throwing.
+
 | Parameter    | Type                    | Description              |
 | ------------ | ----------------------- | ------------------------ |
 | `components` | `ComponentDefinition[]` | Definitions to register. |
@@ -151,9 +154,9 @@ const styles = css`
 | `hasShadow`  | `boolean`                             | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                 |
 | `styles`     | `string`                              | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`. |
 | `render`     | `(this: Instance) => string`          | required | Returns HTML string for the component's current state.              |
-| `onMount`    | `(this: Instance) => void`            | —        | Called once after first insertion into the document.                |
+| `onMount`    | `(this: Instance) => void`            | —        | Called once after the initial render when the element is first inserted into the document. DOM is already populated when this runs. |
 | `onUnmount`  | `(this: Instance) => void`            | —        | Called after removal from the document.                             |
-| `onUpdate`   | `(this: Instance) => void`            | —        | Called after every render, including the initial one.               |
+| `onUpdate`   | `(this: Instance) => void`            | —        | Called after every render, including the initial one. Fires before `onMount` on first connect. |
 | `methods`    | `Methods`                             | `{}`     | Custom methods bound to the instance.                               |
 
 #### Reactive properties
@@ -174,9 +177,10 @@ Supported constructor types:
 
 String attributes are cast automatically:
 
-- **`Boolean`**: standard HTML attribute rules apply. The empty string `""` (attribute presence) and `"true"` cast to `true`. `"false"`, `null`, and `undefined` (attribute absence/removal) cast to `false`.
+- **`Boolean`**: standard HTML attribute rules apply. The empty string `""` (attribute presence) and `"true"` cast to `true`. `"false"` and `null` (attribute absence/removal) cast to `false`.
 - **`Number`**: parsed via `Number(val)`. Empty or whitespace-only strings cast to `NaN` to prevent silent coercion to `0`.
 - **`Object`/`Array`**: parsed via `JSON.parse`. If parsing fails, an explicit `Error` is thrown to fail fast.
+- **`undefined`**: passes through unchanged for all property types. An `undefined` value means the property has not been initialized and is preserved as-is.
 
 ---
 
@@ -242,7 +246,11 @@ createRouter()
 
 - **Browser**: any browser supporting Custom Elements v1 and Shadow DOM v1
   (all evergreen browsers).
-- **SSR**: not supported. This package is pure client-side.
+- **Browser APIs used**: `customElements`, `HTMLElement`, `ShadowRoot`,
+  `document.createElement`, `Element.setAttribute`, and the microtask
+  scheduler via `Promise.resolve()` for batched re-renders.
+- **SSR**: not supported. This package is pure client-side. `registerComponents`
+  is a safe no-op in non-browser environments.
 - **Build tools**: none required at runtime. TypeScript users need a bundler
   configured for ESM (e.g. Vite, esbuild, tsdown).
 
@@ -250,6 +258,10 @@ createRouter()
 
 - `innerHTML` is replaced on every render. Prefer `onUpdate` for event binding
   rather than inline `onclick` attributes to avoid stale listeners.
+- **Lifecycle call order on first connect**: render → `onUpdate` → `onMount`.
+  The DOM is fully populated before `onMount` runs, so it is safe to query
+  child elements there. `onUpdate` fires before `onMount` on the initial render
+  and before any subsequent re-render.
 - Shadow DOM styles are preserved across renders via a retained `<style>` node.
 - `customElements.define` is called only once per tag name; calling
   `registerComponents` multiple times with the same component is safe.

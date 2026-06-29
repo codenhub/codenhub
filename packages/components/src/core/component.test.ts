@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defineComponent } from "./component.js";
 import { html } from "./html.js";
-import { reg, uniqueTag } from "./test-utils.js";
+import { asProps, reg, uniqueTag } from "./test-utils.js";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -58,43 +58,28 @@ describe("defineComponent", () => {
 
     expect(el.innerHTML).toContain("<span>hello</span>");
   });
+
+  it("shouldNotSetPropertiesWhenCreateCalledWithoutArgs", () => {
+    const tag = uniqueTag("create-no-props");
+    const component = defineComponent(tag, {
+      properties: { label: String },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    // create() with no argument must not throw and must produce a valid element
+    expect(() => {
+      const el = component.create();
+      document.body.appendChild(el);
+    }).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
 // Lifecycle hooks
 // ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Render scheduling — disconnect race
-// ---------------------------------------------------------------------------
-
-describe("render scheduling", () => {
-  it("shouldNotCallOnUpdateAfterDisconnectDuringMicrotaskFlush", async () => {
-    const tag = uniqueTag("disconnect-race");
-    const updateSpy = vi.fn();
-    const component = defineComponent(tag, {
-      properties: { count: Number },
-      onUpdate: updateSpy,
-      render() {
-        return `<p>${this.count}</p>`;
-      },
-    });
-    reg(component);
-
-    const el = component.create({ count: 0 });
-    document.body.appendChild(el);
-    // onUpdate fires once on initial render
-    expect(updateSpy).toHaveBeenCalledOnce();
-
-    // Trigger a re-render schedule, then immediately disconnect before flush
-    (el as unknown as Record<string, unknown>)["count"] = 1;
-    document.body.removeChild(el);
-    await Promise.resolve();
-
-    // onUpdate must NOT have been called again on disconnected element
-    expect(updateSpy).toHaveBeenCalledOnce();
-  });
-});
 
 describe("lifecycle hooks", () => {
   it("shouldCallOnMountAfterConnectedToDOM", () => {
@@ -112,6 +97,31 @@ describe("lifecycle hooks", () => {
     expect(mountSpy).not.toHaveBeenCalled();
     document.body.appendChild(el);
     expect(mountSpy).toHaveBeenCalledOnce();
+  });
+
+  it("shouldCallOnUpdateBeforeOnMountOnFirstConnect", () => {
+    // Call order on first connect must be: render → onUpdate → onMount.
+    // onMount consumers rely on DOM being populated; onUpdate must have
+    // already run so the DOM is ready when onMount starts.
+    const tag = uniqueTag("lifecycle-order");
+    const callOrder: string[] = [];
+    const component = defineComponent(tag, {
+      onMount() {
+        callOrder.push("onMount");
+      },
+      onUpdate() {
+        callOrder.push("onUpdate");
+      },
+      render() {
+        return "<p>x</p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(callOrder).toEqual(["onUpdate", "onMount"]);
   });
 
   it("shouldCallOnUpdateAfterEachRender", () => {
@@ -150,6 +160,38 @@ describe("lifecycle hooks", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Render scheduling — disconnect race
+// ---------------------------------------------------------------------------
+
+describe("render scheduling", () => {
+  it("shouldNotCallOnUpdateAfterDisconnectDuringMicrotaskFlush", async () => {
+    const tag = uniqueTag("disconnect-race");
+    const updateSpy = vi.fn();
+    const component = defineComponent(tag, {
+      properties: { count: Number },
+      onUpdate: updateSpy,
+      render() {
+        return `<p>${this.count}</p>`;
+      },
+    });
+    reg(component);
+
+    const el = component.create({ count: 0 });
+    document.body.appendChild(el);
+    // onUpdate fires once on initial render
+    expect(updateSpy).toHaveBeenCalledOnce();
+
+    // Trigger a re-render schedule, then immediately disconnect before flush
+    asProps<{ count: number }>(el).count = 1;
+    document.body.removeChild(el);
+    await Promise.resolve();
+
+    // onUpdate must NOT have been called again on disconnected element
+    expect(updateSpy).toHaveBeenCalledOnce();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Reactive properties
 // ---------------------------------------------------------------------------
 
@@ -170,7 +212,7 @@ describe("reactive properties", () => {
     document.body.appendChild(el);
     expect(el.innerHTML).toContain("<span>0</span>");
 
-    (el as unknown as { count: number }).count = 5;
+    asProps<{ count: number }>(el).count = 5;
     await Promise.resolve();
 
     expect(el.innerHTML).toContain("<span>5</span>");
@@ -188,9 +230,9 @@ describe("reactive properties", () => {
 
     const el = component.create();
     document.body.appendChild(el);
-    (el as unknown as Record<string, unknown>)["value"] = "42";
+    asProps<{ value: unknown }>(el).value = "42";
 
-    expect((el as unknown as Record<string, unknown>)["value"]).toBe(42);
+    expect(asProps<{ value: number }>(el).value).toBe(42);
   });
 
   it("shouldCastStringTrueToBoolean", () => {
@@ -205,10 +247,50 @@ describe("reactive properties", () => {
 
     const el = component.create();
     document.body.appendChild(el);
-    (el as unknown as Record<string, unknown>)["active"] = "true";
+    asProps<{ active: unknown }>(el).active = "true";
 
-    expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
+    expect(asProps<{ active: boolean }>(el).active).toBe(true);
   });
+
+  it("shouldCastNullToFalseForBooleanProperty", () => {
+    // null maps to false for Boolean properties, matching HTML attribute-removal
+    // semantics (removeAttribute passes null to attributeChangedCallback).
+    // This is intentional and documented — see README boolean casting rules.
+    const tag = uniqueTag("cast-bool-null");
+    const component = defineComponent(tag, {
+      properties: { active: Boolean },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+    asProps<{ active: unknown }>(el).active = null;
+
+    expect(asProps<{ active: unknown }>(el).active).toBe(false);
+  });
+
+  it("shouldPassThroughUndefinedForAnyProperty", () => {
+    // undefined means "not yet set" — it must not be coerced to any typed
+    // value so callers can distinguish uninitialized from explicitly set.
+    const tag = uniqueTag("cast-undefined");
+    const component = defineComponent(tag, {
+      properties: { value: Number },
+      render() {
+        return "<p></p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+    asProps<{ value: unknown }>(el).value = undefined;
+
+    expect(asProps<{ value: unknown }>(el).value).toBeUndefined();
+  });
+
 
   it("shouldThrowErrorOnInvalidJSONParsing", () => {
     const tag = uniqueTag("cast-json-fail");
@@ -224,7 +306,7 @@ describe("reactive properties", () => {
     document.body.appendChild(el);
 
     expect(() => {
-      (el as unknown as Record<string, unknown>)["data"] = "{invalid json";
+      asProps<{ data: unknown }>(el).data = "{invalid json";
     }).toThrow("Failed to parse JSON value for property of type Object");
   });
 
@@ -242,16 +324,16 @@ describe("reactive properties", () => {
     document.body.appendChild(el);
 
     el.setAttribute("active", "");
-    expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
+    expect(asProps<{ active: boolean }>(el).active).toBe(true);
 
     el.setAttribute("active", "false");
-    expect((el as unknown as Record<string, unknown>)["active"]).toBe(false);
+    expect(asProps<{ active: boolean }>(el).active).toBe(false);
 
     el.setAttribute("active", "true");
-    expect((el as unknown as Record<string, unknown>)["active"]).toBe(true);
+    expect(asProps<{ active: boolean }>(el).active).toBe(true);
 
     el.removeAttribute("active");
-    expect((el as unknown as Record<string, unknown>)["active"]).toBe(false);
+    expect(asProps<{ active: boolean }>(el).active).toBe(false);
   });
 
   it("shouldCastEmptyStringToNaNForNumber", () => {
@@ -267,11 +349,11 @@ describe("reactive properties", () => {
     const el = component.create();
     document.body.appendChild(el);
 
-    (el as unknown as Record<string, unknown>)["value"] = "";
-    expect(Number.isNaN((el as unknown as Record<string, unknown>)["value"])).toBe(true);
+    asProps<{ value: unknown }>(el).value = "";
+    expect(Number.isNaN(asProps<{ value: number }>(el).value)).toBe(true);
 
-    (el as unknown as Record<string, unknown>)["value"] = "   ";
-    expect(Number.isNaN((el as unknown as Record<string, unknown>)["value"])).toBe(true);
+    asProps<{ value: unknown }>(el).value = "   ";
+    expect(Number.isNaN(asProps<{ value: number }>(el).value)).toBe(true);
   });
 
   it("shouldNotScheduleRenderWhenValueUnchanged", async () => {
@@ -292,7 +374,7 @@ describe("reactive properties", () => {
     document.body.appendChild(el);
     const countAfterMount = renderCount;
 
-    (el as unknown as Record<string, unknown>)["label"] = "same";
+    asProps<{ label: string }>(el).label = "same";
     await Promise.resolve();
 
     expect(renderCount).toBe(countAfterMount);
@@ -339,7 +421,7 @@ describe("methods", () => {
       onUpdate() {
         this.querySelector("button")?.addEventListener(
           "click",
-          (this as unknown as { increment: () => void }).increment,
+          asProps<{ increment: () => void }>(this).increment,
         );
       },
       render() {
