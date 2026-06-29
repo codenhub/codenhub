@@ -254,3 +254,8 @@ function splitPath(pathname: string): string[] {
 
   return pathname.slice(1).split("/");
 }
+
+/** @internal */
+export function getBrowserWindow(): Window | null {
+  return typeof window === "undefined" ? null : window;
+}

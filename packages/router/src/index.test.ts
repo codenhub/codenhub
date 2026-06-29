@@ -174,7 +174,7 @@ describe("createRouter", () => {
     const match = router.navigate("/users/alice");
 
     expect(Object.getPrototypeOf(match?.params)).toBe(Object.prototype);
-    expect(match?.params.hasOwnProperty("id")).toBe(true);
+    expect(Object.hasOwn(match?.params ?? {}, "id")).toBe(true);
   });
 
   // ---------------------------------------------------------------------------

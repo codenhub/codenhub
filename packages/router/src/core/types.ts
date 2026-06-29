@@ -136,6 +136,8 @@ export interface Router {
   /**
    * Registers a listener called after navigation completes.
    *
+   * Note: The subscription is automatically removed when the router is destroyed.
+   *
    * @param listener - Callback called after any navigation change.
    * @returns An unsubscribe function to remove the listener.
    */

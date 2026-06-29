@@ -1,6 +1,13 @@
 import type { Navigation } from "./navigation";
 import { assertNotNavigating } from "./navigation";
-import { buildBrowserHref, normalizePercentEscapes, parseAppPath, parseLocationPath, stripBasePath } from "./path";
+import {
+  buildBrowserHref,
+  getBrowserWindow,
+  normalizePercentEscapes,
+  parseAppPath,
+  parseLocationPath,
+  stripBasePath,
+} from "./path";
 import type { NavigateOptions, RouterMatch, RouterMiss } from "./types";
 
 const LEFT_CLICK_BUTTON = 0;
@@ -41,10 +48,6 @@ export interface History {
 /** @internal */
 export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn }: HistoryOptions): History {
   let isStarted = false;
-
-  function getBrowserWindow(): Window | null {
-    return typeof window === "undefined" ? null : window;
-  }
 
   function buildMissFromLocation(location: Location): RouterMiss {
     const { search } = location;

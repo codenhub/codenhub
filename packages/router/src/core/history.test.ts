@@ -474,6 +474,30 @@ describe("History — browser integration", () => {
       document.body.removeChild(host);
     });
 
+    it("intercepts clicks when composedPath is not available", () => {
+      const handler = vi.fn();
+      const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
+      router.start();
+
+      const link = document.createElement("a");
+      link.setAttribute("href", "/target");
+      link.setAttribute("data-router-link", "");
+      document.body.appendChild(link);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      Object.defineProperty(event, "composedPath", {
+        value: undefined,
+        configurable: true,
+      });
+
+      link.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(handler).toHaveBeenCalled();
+      expect(location.pathname).toBe("/target");
+
+      document.body.removeChild(link);
+    });
+
     it("removes the link-click listener when destroyed", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);

@@ -1,6 +1,6 @@
 import { createHistory } from "./history";
 import { createNavigation } from "./navigation";
-import { buildBrowserHref, normalizeBasePath, parseAppPath } from "./path";
+import { buildBrowserHref, getBrowserWindow, normalizeBasePath, parseAppPath } from "./path";
 import { createRegistry } from "./registry";
 import type { CreateRouterOptions, NavigateOptions, Router } from "./types";
 
@@ -39,7 +39,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
 
     navigate(to: string, navOptions: NavigateOptions = {}) {
       const target = parseAppPath(to);
-      const browserWindow = typeof window === "undefined" ? null : window;
+      const browserWindow = getBrowserWindow();
 
       // Build the history update as a deferred callback so it can be enqueued
       // and executed inside the navigation loop in the correct order.
