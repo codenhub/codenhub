@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/styles",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "description": "CSS-only Codenhub design tokens, base styles, and composable UI helper classes.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/styles",
