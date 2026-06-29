@@ -125,8 +125,30 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   tagName: string,
   config: ComponentConfig<Props, Methods>,
 ): ComponentDefinition<Props, Methods> {
-  if (!tagName.includes("-")) {
-    throw new Error(`Invalid custom element tag name: "${tagName}". Custom element tag names must contain a hyphen.`);
+  const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/;
+  const RESERVED_TAG_NAMES = new Set([
+    "annotation-xml",
+    "color-profile",
+    "font-face",
+    "font-face-src",
+    "font-face-uri",
+    "font-face-format",
+    "font-face-name",
+    "missing-glyph",
+  ]);
+
+  if (!VALID_TAG_NAME_REGEX.test(tagName)) {
+    throw new Error(
+      `Invalid custom element tag name: "${tagName}". ` +
+        "Custom element tag names must start with a lowercase letter, contain at least one hyphen, and only contain lowercase letters, digits, dots, underscores, or hyphens.",
+    );
+  }
+  if (RESERVED_TAG_NAMES.has(tagName)) {
+    throw new Error(`Invalid custom element tag name: "${tagName}". "${tagName}" is a reserved tag name.`);
+  }
+
+  if (typeof config.render !== "function") {
+    throw new Error(`Component "${tagName}": config.render must be a function.`);
   }
 
   const properties = (config.properties ?? {}) as Props;
@@ -143,6 +165,10 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
     attributeToPropertyMap.set(propName.toLowerCase(), propName);
+    const kebabName = propName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+    if (kebabName !== propName.toLowerCase()) {
+      attributeToPropertyMap.set(kebabName, propName);
+    }
   }
 
   class CustomElement extends HTMLElement {
@@ -242,7 +268,12 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       if (this._isRenderScheduled) {
         this._isRenderScheduled = false;
         if (this._isMounted) {
-          this._render();
+          try {
+            this._render();
+          } catch (err) {
+            console.error(`Unhandled error during async render of component "${tagName}":`, err);
+            throw err;
+          }
         }
       }
     }

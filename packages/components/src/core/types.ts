@@ -17,7 +17,7 @@ export type PropertyType<T extends PropertyConstructor> = T extends StringConstr
   : T extends NumberConstructor
     ? number | undefined | null
     : T extends BooleanConstructor
-      ? boolean
+      ? boolean | undefined
       : T extends ObjectConstructor
         ? Record<string, unknown> | undefined | null
         : T extends ArrayConstructor

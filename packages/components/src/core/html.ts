@@ -69,7 +69,21 @@ function serializeValue(val: unknown): string {
 export function css(strings: TemplateStringsArray, ...values: unknown[]): string {
   return strings.reduce((result, str, i) => {
     const val = values[i];
-    const serialized = val !== undefined && val !== null ? String(val) : "";
+    let serialized = "";
+    if (val !== undefined && val !== null) {
+      if (typeof val === "object") {
+        if (Array.isArray(val)) {
+          throw new TypeError("Invalid CSS interpolation: arrays are not allowed in css helper.");
+        }
+        if (typeof val.toString === "function" && val.toString !== Object.prototype.toString) {
+          serialized = val.toString();
+        } else {
+          throw new TypeError("Invalid CSS interpolation: plain objects are not allowed in css helper.");
+        }
+      } else {
+        serialized = String(val);
+      }
+    }
     return result + str + serialized;
   }, "");
 }

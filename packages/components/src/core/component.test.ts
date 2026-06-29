@@ -35,7 +35,7 @@ describe("defineComponent", () => {
           return "<p></p>";
         },
       });
-    }).toThrow('Invalid custom element tag name: "nohyphen". Custom element tag names must contain a hyphen.');
+    }).toThrow('Invalid custom element tag name: "nohyphen".');
   });
 
   it("shouldWarnWhenStylesDefinedWithoutHasShadow", () => {
@@ -915,5 +915,98 @@ describe("coverage gaps", () => {
     }).toThrow(
       `Component "${tag}": shadow root content wrapper element is missing. Render aborted to prevent style node clobbering.`,
     );
+  });
+});
+
+describe("defineComponent - additional validations and features", () => {
+  it("shouldThrowErrorWhenTagNameHasUppercaseLetters", () => {
+    expect(() => {
+      defineComponent("My-Component", {
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow('Invalid custom element tag name: "My-Component".');
+  });
+
+  it("shouldThrowErrorWhenTagNameContainsInvalidCharacters", () => {
+    expect(() => {
+      defineComponent("my-component!", {
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow('Invalid custom element tag name: "my-component!".');
+  });
+
+  it("shouldThrowErrorWhenTagNameIsReserved", () => {
+    expect(() => {
+      defineComponent("font-face", {
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow('Invalid custom element tag name: "font-face". "font-face" is a reserved tag name.');
+  });
+
+  it("shouldThrowErrorWhenRenderIsMissing", () => {
+    expect(() => {
+      defineComponent("no-render", {} as unknown as Parameters<typeof defineComponent>[1]);
+    }).toThrow('Component "no-render": config.render must be a function.');
+  });
+
+  it("shouldMapKebabCaseAttributeToCamelCaseProperty", async () => {
+    const tag = generateUniqueTag("kebab-map");
+    const component = defineComponent(tag, {
+      properties: { myPropValue: String },
+      render() {
+        return html`
+          <p>${this.myPropValue}</p>
+        `;
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ myPropValue: "initial" });
+    document.body.appendChild(el);
+    expect(el.innerHTML).toContain("<p>initial</p>");
+
+    el.setAttribute("my-prop-value", "updated-kebab");
+    await Promise.resolve();
+    expect(castToProps<{ myPropValue: string }>(el).myPropValue).toBe("updated-kebab");
+    expect(el.innerHTML).toContain("<p>updated-kebab</p>");
+  });
+
+  it("shouldLogAndThrowErrorDuringAsyncRender", async () => {
+    const tag = generateUniqueTag("async-err");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    let shouldThrow = false;
+
+    const component = defineComponent(tag, {
+      properties: { val: Number },
+      render() {
+        if (shouldThrow) {
+          throw new Error("Render failed");
+        }
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ val: 1 });
+    document.body.appendChild(el);
+
+    shouldThrow = true;
+
+    castToProps<Record<string, unknown>>(el)._isRenderScheduled = true;
+
+    await expect(castToProps<{ _renderAsync(): Promise<void> }>(el)._renderAsync()).rejects.toThrow("Render failed");
+
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unhandled error during async render of component"),
+      expect.any(Error),
+    );
+
+    errSpy.mockRestore();
   });
 });

@@ -172,4 +172,38 @@ describe("css", () => {
     `;
     expect(result).toContain("color: ;");
   });
+
+  it("shouldThrowTypeErrorForPlainObjectInterpolation", () => {
+    expect(() => {
+      void css`
+        .card {
+          content: ${{ a: 1 }};
+        }
+      `;
+    }).toThrow("Invalid CSS interpolation: plain objects are not allowed in css helper.");
+  });
+
+  it("shouldThrowTypeErrorForArrayInterpolation", () => {
+    expect(() => {
+      void css`
+        .card {
+          content: ${[1, 2]};
+        }
+      `;
+    }).toThrow("Invalid CSS interpolation: arrays are not allowed in css helper.");
+  });
+
+  it("shouldAllowObjectsWithCustomToString", () => {
+    class CustomTheme {
+      toString() {
+        return "blue";
+      }
+    }
+    const result = css`
+      .card {
+        color: ${new CustomTheme()};
+      }
+    `;
+    expect(result).toContain("color: blue");
+  });
 });
