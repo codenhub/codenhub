@@ -2,19 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defineComponent } from "./component.js";
 import { html } from "./html.js";
-import { registerComponents } from "./registry.js";
-import type { ComponentDefinition, ComponentProperties } from "./types.js";
-
-// Each test uses a unique tag name to avoid re-registration conflicts in jsdom.
-let tagCounter = 0;
-function uniqueTag(base: string): string {
-  return `${base}-${++tagCounter}`;
-}
-
-/** Cast a specific ComponentDefinition to the widened type expected by registerComponents. */
-function reg(component: unknown): void {
-  registerComponents([component as ComponentDefinition<ComponentProperties, unknown>]);
-}
+import { reg, uniqueTag } from "./test-utils.js";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -75,6 +63,38 @@ describe("defineComponent", () => {
 // ---------------------------------------------------------------------------
 // Lifecycle hooks
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Render scheduling — disconnect race
+// ---------------------------------------------------------------------------
+
+describe("render scheduling", () => {
+  it("shouldNotCallOnUpdateAfterDisconnectDuringMicrotaskFlush", async () => {
+    const tag = uniqueTag("disconnect-race");
+    const updateSpy = vi.fn();
+    const component = defineComponent(tag, {
+      properties: { count: Number },
+      onUpdate: updateSpy,
+      render() {
+        return `<p>${this.count}</p>`;
+      },
+    });
+    reg(component);
+
+    const el = component.create({ count: 0 });
+    document.body.appendChild(el);
+    // onUpdate fires once on initial render
+    expect(updateSpy).toHaveBeenCalledOnce();
+
+    // Trigger a re-render schedule, then immediately disconnect before flush
+    (el as unknown as Record<string, unknown>)["count"] = 1;
+    document.body.removeChild(el);
+    await Promise.resolve();
+
+    // onUpdate must NOT have been called again on disconnected element
+    expect(updateSpy).toHaveBeenCalledOnce();
+  });
+});
 
 describe("lifecycle hooks", () => {
   it("shouldCallOnMountAfterConnectedToDOM", () => {

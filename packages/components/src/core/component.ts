@@ -54,6 +54,11 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
  *   hooks, render function, and optional methods.
  * @returns A `ComponentDefinition` holding the class and a `create` factory.
  *
+ * @throws {Error} When a property declared as `Object` or `Array` receives a
+ *   string value that cannot be parsed as JSON — thrown from the property
+ *   setter and propagates to the caller (e.g. direct assignment or
+ *   `setAttribute`).
+ *
  * @example
  * ```ts
  * const Counter = defineComponent("my-counter", {
@@ -158,7 +163,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private async _renderAsync(): Promise<void> {
       await Promise.resolve();
       this._renderScheduled = false;
-      this._render();
+      if (this._isMounted) {
+        this._render();
+      }
     }
 
     private _render(): void {

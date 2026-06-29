@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { defineComponent } from "./component.js";
-import { registerComponents } from "./registry.js";
-import type { ComponentDefinition, ComponentProperties } from "./types.js";
-
-let tagCounter = 0;
-function uniqueTag(base: string): string {
-  return `${base}-${++tagCounter}`;
-}
-
-function reg(component: unknown): void {
-  registerComponents([component as ComponentDefinition<ComponentProperties, unknown>]);
-}
+import { reg, uniqueTag } from "./test-utils.js";
 
 describe("registerComponents", () => {
   it("shouldRegisterElementInCustomElementsRegistry", () => {
