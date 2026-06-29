@@ -272,10 +272,10 @@ interface NavigateOptions {
 }
 ```
 
-| Property        | Type      | Default     | Description                                      |
-| --------------- | --------- | ----------- | ------------------------------------------------ |
-| `shouldReplace` | `boolean` | `false`     | Use `history.replaceState` instead of pushState. |
-| `state`         | `unknown` | `undefined` | Optional history state passed to the browser.    |
+| Property        | Type      | Default     | Description                                                |
+| --------------- | --------- | ----------- | ---------------------------------------------------------- |
+| `shouldReplace` | `boolean` | `false`     | Use `history.replaceState` instead of `history.pushState`. |
+| `state`         | `unknown` | `undefined` | Optional history state passed to the browser.              |
 
 #### `RouterMatch`
 

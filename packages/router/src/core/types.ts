@@ -53,13 +53,25 @@ export interface RouterMiss {
   hash: string;
 }
 
-/** Handler called when a registered route becomes active; synchronous navigation started from the handler is queued. */
+/**
+ * Handler called when a registered route becomes active.
+ * Synchronous navigation started from the handler is queued.
+ * Any errors thrown by the handler are not caught by the router.
+ */
 export type RouteHandler = (match: RouterMatch) => void;
 
-/** Handler called when navigation does not match any registered route; synchronous navigation started from the handler is queued. */
+/**
+ * Handler called when navigation does not match any registered route.
+ * Synchronous navigation started from the handler is queued.
+ * Any errors thrown by the handler are not caught by the router.
+ */
 export type NotFoundHandler = (miss: RouterMiss) => void;
 
-/** Listener called after route navigation completes; synchronous navigation started from the listener is queued. */
+/**
+ * Listener called after route navigation completes.
+ * Synchronous navigation started from the listener is queued.
+ * Any errors thrown by the listener are not caught by the router.
+ */
 export type RouterListener = (match: RouterMatch | null) => void;
 
 /** Browser router with route registration, matching, navigation, and subscriptions. */

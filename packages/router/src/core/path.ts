@@ -17,6 +17,7 @@ interface ParamRouteSegment {
 
 type RouteSegment = StaticRouteSegment | ParamRouteSegment;
 
+/** @internal */
 export interface ParsedPath {
   pathname: string;
   search: string;
@@ -26,6 +27,7 @@ export interface ParsedPath {
   segments: readonly string[];
 }
 
+/** @internal */
 export interface RoutePattern {
   path: string;
   segments: readonly RouteSegment[];
@@ -140,6 +142,8 @@ export function matchRoute(pattern: RoutePattern, target: ParsedPath): RoutePara
       return null;
     }
 
+    // Object.defineProperty is used as a defense against prototype pollution,
+    // ensuring '__proto__' parameters are safely set as own data properties.
     Object.defineProperty(params, segment.name, {
       configurable: true,
       enumerable: true,
@@ -193,6 +197,7 @@ function toUrlPathname(pathname: string): string {
   return normalizePercentEscapes(new URL(pathname, ROUTER_URL_BASE).pathname || "/");
 }
 
+/** @internal */
 export function normalizePercentEscapes(pathname: string): string {
   return pathname.replace(PERCENT_ESCAPE_PATTERN, (percentEscape) => percentEscape.toUpperCase());
 }

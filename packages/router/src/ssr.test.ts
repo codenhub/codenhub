@@ -30,4 +30,26 @@ describe("createRouter without browser APIs", () => {
     expect(handler).toHaveBeenCalledWith(match);
     expect(listener).toHaveBeenCalledWith(match);
   });
+
+  it("handles href building with and without base paths in SSR", () => {
+    const routerWithBase = createRouter({ basePath: "/app" });
+    const routerWithoutBase = createRouter();
+
+    expect(routerWithBase.href("/settings")).toBe("/app/settings");
+    expect(routerWithBase.href("/")).toBe("/app/");
+    expect(routerWithoutBase.href("/settings")).toBe("/settings");
+  });
+
+  it("throws validation errors on match with invalid paths in SSR", () => {
+    const router = createRouter();
+
+    expect(() => router.match("settings")).toThrow(Error);
+    expect(() => router.match("/\\example.com/settings")).toThrow(Error);
+  });
+
+  it("returns null on start even when basePath is configured in SSR", () => {
+    const router = createRouter({ basePath: "/app" }).on("/settings", vi.fn());
+
+    expect(router.start()).toBeNull();
+  });
 });

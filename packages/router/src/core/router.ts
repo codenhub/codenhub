@@ -31,6 +31,12 @@ interface MatchResult {
   route: RegisteredRoute;
 }
 
+interface PendingNavigation {
+  target: ParsedPath | null;
+  miss?: RouterMiss;
+  historyUpdate?: () => void;
+}
+
 const REENTRANT_NAVIGATION_ERROR = "Router navigation is already running.";
 const LEFT_CLICK_BUTTON = 0;
 
@@ -48,12 +54,17 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   let fallbackHandler: NotFoundHandler | undefined;
   let isStarted = false;
   let isNavigating = false;
-  const pendingNavigations: Array<{
-    target: ParsedPath | null;
-    miss?: RouterMiss;
-    historyUpdate?: () => void;
-  }> = [];
+  const pendingNavigations: PendingNavigation[] = [];
   let currentMatch: RouterMatch | null = null;
+
+  const buildMissFromLocation = (location: Location): RouterMiss => {
+    const search = location.search;
+    return {
+      pathname: normalizePercentEscapes(location.pathname || "/"),
+      searchParams: new URLSearchParams(search),
+      hash: location.hash,
+    };
+  };
 
   const assertCanNavigate = (): void => {
     if (isNavigating) {
@@ -148,12 +159,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     const target = parseLocationPath(browserWindow.location, basePath);
     let miss: RouterMiss | undefined;
     if (target === null) {
-      const search = browserWindow.location.search;
-      miss = {
-        pathname: normalizePercentEscapes(browserWindow.location.pathname || "/"),
-        searchParams: new URLSearchParams(search),
-        hash: browserWindow.location.hash,
-      };
+      miss = buildMissFromLocation(browserWindow.location);
     }
 
     if (isNavigating) {
@@ -267,12 +273,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         const target = parseLocationPath(browserWindow.location, basePath);
         let miss: RouterMiss | undefined;
         if (target === null) {
-          const search = browserWindow.location.search;
-          miss = {
-            pathname: normalizePercentEscapes(browserWindow.location.pathname || "/"),
-            searchParams: new URLSearchParams(search),
-            hash: browserWindow.location.hash,
-          };
+          miss = buildMissFromLocation(browserWindow.location);
         }
         currentMatch = runTarget(target, miss);
       }
