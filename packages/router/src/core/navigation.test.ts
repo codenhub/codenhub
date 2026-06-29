@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createNavigation } from "../core/navigation";
-import { parseAppPath } from "../core/path";
-import { createRegistry } from "../core/registry";
+import { createNavigation } from "./navigation";
+import { parseAppPath } from "./path";
+import { createRegistry } from "./registry";
 
 function makeNav() {
   const registry = createRegistry();
@@ -286,6 +286,22 @@ describe("createNavigation", () => {
 
       nav.run(parseAppPath("/start"));
       expect(afterReset).not.toHaveBeenCalled();
+    });
+
+    it("clears registered listeners", () => {
+      const { registry, nav } = makeNav();
+      const listener = vi.fn();
+      nav.subscribe(listener);
+      registry.add("/home", vi.fn());
+
+      nav.run(parseAppPath("/home"));
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      listener.mockClear();
+      nav.reset();
+
+      nav.run(parseAppPath("/home"));
+      expect(listener).not.toHaveBeenCalled();
     });
   });
 });

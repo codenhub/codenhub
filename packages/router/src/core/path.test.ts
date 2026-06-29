@@ -9,7 +9,7 @@ import {
   parseLocationPath,
   parseRoutePath,
   stripBasePath,
-} from "../core/path";
+} from "./path";
 
 // ---------------------------------------------------------------------------
 // normalizeBasePath

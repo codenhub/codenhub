@@ -168,6 +168,7 @@ export function createNavigation(registry: Registry): Navigation {
     reset() {
       pendingNavigations.length = 0;
       lastMatch = null;
+      listeners.clear();
     },
   };
 }

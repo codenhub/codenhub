@@ -33,6 +33,7 @@ export interface RoutePattern {
   segments: readonly RouteSegment[];
 }
 
+/** @internal */
 export function normalizeBasePath(basePath = ""): string {
   if (basePath === "" || basePath === "/") {
     return "";
@@ -56,6 +57,7 @@ export function normalizeBasePath(basePath = ""): string {
   return pathname;
 }
 
+/** @internal */
 export function parseRoutePath(path: string): RoutePattern {
   assertRoutePath(path);
   const paramNames = new Set<string>();
@@ -81,12 +83,14 @@ export function parseRoutePath(path: string): RoutePattern {
   return Object.freeze({ path, segments: Object.freeze(segments) });
 }
 
+/** @internal */
 export function parseAppPath(to: string): ParsedPath {
   assertAppPath(to);
 
   return parseUrlPath(new URL(to, ROUTER_URL_BASE));
 }
 
+/** @internal */
 export function parseLocationPath(currentLocation: Location, basePath: string): ParsedPath | null {
   const browserPathname = normalizePercentEscapes(currentLocation.pathname || "/");
   const appPathname = stripBasePath(browserPathname, basePath);
@@ -106,8 +110,9 @@ export function parseLocationPath(currentLocation: Location, basePath: string): 
   };
 }
 
-export function buildBrowserHref(to: string, basePath: string): string {
-  const target = parseAppPath(to);
+/** @internal */
+export function buildBrowserHref(to: string | ParsedPath, basePath: string): string {
+  const target = typeof to === "string" ? parseAppPath(to) : to;
 
   if (basePath === "") {
     return target.href;
@@ -119,6 +124,7 @@ export function buildBrowserHref(to: string, basePath: string): string {
   return basePath + target.href;
 }
 
+/** @internal */
 export function matchRoute(pattern: RoutePattern, target: ParsedPath): RouteParams | null {
   const targetSegments = target.segments;
   if (pattern.segments.length !== targetSegments.length) {
@@ -226,6 +232,7 @@ function decodeRouteParam(segment: string): string | null {
   }
 }
 
+/** @internal */
 export function stripBasePath(pathname: string, basePath: string): string | null {
   if (basePath === "") {
     return pathname;

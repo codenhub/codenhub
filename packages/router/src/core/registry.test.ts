@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { parseAppPath } from "../core/path";
-import { createRegistry } from "../core/registry";
+import { parseAppPath } from "./path";
+import { createRegistry } from "./registry";
 
 describe("createRegistry", () => {
   // ---------------------------------------------------------------------------

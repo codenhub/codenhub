@@ -45,7 +45,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       // and executed inside the navigation loop in the correct order.
       const updateHistory = (): void => {
         if (browserWindow !== null) {
-          const href = buildBrowserHref(to, basePath);
+          const href = buildBrowserHref(target, basePath);
           if (navOptions.shouldReplace === true) {
             browserWindow.history.replaceState(navOptions.state, "", href);
           } else {
