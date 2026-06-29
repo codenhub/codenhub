@@ -18,10 +18,8 @@
 export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
   return strings.reduce((result, str, i) => {
     const val = values[i];
-    let serialized = "";
-    if (val !== undefined && val !== null) {
-      serialized = typeof val === "object" ? JSON.stringify(val) : String(val);
-    }
+    const serialized =
+      val !== undefined && val !== null ? (typeof val === "object" ? JSON.stringify(val) : String(val)) : "";
     return result + str + serialized;
   }, "");
 }
@@ -40,5 +38,9 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): strin
  * ```
  */
 export function css(strings: TemplateStringsArray, ...values: unknown[]): string {
-  return strings.reduce((result, str, i) => result + str + (values[i] ?? ""), "");
+  return strings.reduce((result, str, i) => {
+    const val = values[i];
+    const serialized = val !== undefined && val !== null ? String(val) : "";
+    return result + str + serialized;
+  }, "");
 }

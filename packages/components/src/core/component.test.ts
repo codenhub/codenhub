@@ -28,6 +28,31 @@ describe("defineComponent", () => {
     expect(customElements.get(tag)).toBeUndefined();
   });
 
+  it("shouldThrowErrorWhenTagNameHasNoHyphen", () => {
+    expect(() => {
+      defineComponent("nohyphen", {
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow('Invalid custom element tag name: "nohyphen". Custom element tag names must contain a hyphen.');
+  });
+
+  it("shouldWarnWhenStylesDefinedWithoutHasShadow", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tag = uniqueTag("styles-warn");
+    defineComponent(tag, {
+      styles: "p { color: red; }",
+      render() {
+        return "<p></p>";
+      },
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Component "${tag}" declared styles but "hasShadow" is not enabled. Styles are only injected when hasShadow is true.`,
+    );
+    warnSpy.mockRestore();
+  });
+
   it("shouldExposeCreateFactory", () => {
     const tag = uniqueTag("factory-test");
     const component = defineComponent(tag, {
@@ -291,7 +316,6 @@ describe("reactive properties", () => {
     expect(asProps<{ value: unknown }>(el).value).toBeUndefined();
   });
 
-
   it("shouldThrowErrorOnInvalidJSONParsing", () => {
     const tag = uniqueTag("cast-json-fail");
     const component = defineComponent(tag, {
@@ -419,10 +443,7 @@ describe("methods", () => {
     const component = defineComponent(tag, {
       properties: { clicks: Number },
       onUpdate() {
-        this.querySelector("button")?.addEventListener(
-          "click",
-          asProps<{ increment: () => void }>(this).increment,
-        );
+        this.querySelector("button")?.addEventListener("click", asProps<{ increment: () => void }>(this).increment);
       },
       render() {
         return html`
@@ -484,5 +505,26 @@ describe("Shadow DOM", () => {
 
     const style = el.shadowRoot!.querySelector("style");
     expect(style?.textContent).toContain(".card { color: red; }");
+  });
+
+  it("shouldThrowErrorWhenShadowRootContentWrapperIsMissing", () => {
+    const tag = uniqueTag("shadow-missing");
+    const component = defineComponent(tag, {
+      hasShadow: true,
+      render() {
+        return "<p>shadow</p>";
+      },
+    });
+    reg(component);
+
+    const el = component.create();
+    expect(el.shadowRoot).not.toBeNull();
+    el.shadowRoot!.replaceChildren(); // clear wrapper
+
+    expect(() => {
+      asProps<{ connectedCallback(): void }>(el).connectedCallback();
+    }).toThrow(
+      `Component "${tag}": shadow root content wrapper element is missing. Render aborted to prevent style node clobbering.`,
+    );
   });
 });

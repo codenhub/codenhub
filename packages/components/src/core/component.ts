@@ -8,6 +8,8 @@ import type { ComponentConfig, ComponentDefinition, ComponentProperties, Compone
  * - `null` passes through unchanged for non-Boolean types; for `Boolean`, `null`
  *   maps to `false` (attribute-removal semantics — `removeAttribute` passes `null`).
  * - `Object`/`Array` constructors attempt `JSON.parse` when value is a string.
+ *
+ * @internal
  */
 function castProperty(value: unknown, type: ComponentProperties[string]): unknown {
   // undefined passes through unchanged for all types. An undefined value means
@@ -90,9 +92,20 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   tagName: string,
   config: ComponentConfig<Props, Methods>,
 ): ComponentDefinition<Props, Methods> {
+  if (!tagName.includes("-")) {
+    throw new Error(`Invalid custom element tag name: "${tagName}". Custom element tag names must contain a hyphen.`);
+  }
+
   const properties = (config.properties ?? {}) as Props;
   const methods = (config.methods ?? {}) as Methods;
   const useShadow = config.hasShadow === true;
+
+  if (config.styles !== undefined && !useShadow) {
+    console.warn(
+      `Component "${tagName}" declared styles but "hasShadow" is not enabled. ` +
+        "Styles are only injected when hasShadow is true.",
+    );
+  }
 
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
@@ -197,7 +210,13 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         // root (appended in the constructor after the optional style node).
         // Setting innerHTML on it avoids any need to walk siblings to preserve
         // the style node across renders.
-        const contentWrapper = root.lastChild as HTMLElement;
+        const contentWrapper = root.lastElementChild as HTMLElement | null;
+        if (contentWrapper === null) {
+          throw new Error(
+            `Component "${tagName}": shadow root content wrapper element is missing. ` +
+              "Render aborted to prevent style node clobbering.",
+          );
+        }
         contentWrapper.innerHTML = htmlContent;
       } else {
         this.innerHTML = htmlContent;

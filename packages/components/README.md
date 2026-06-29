@@ -148,16 +148,16 @@ const styles = css`
 
 ### `ComponentConfig<Props, Methods>`
 
-| Property     | Type                                  | Default  | Description                                                         |
-| ------------ | ------------------------------------- | -------- | ------------------------------------------------------------------- |
-| `properties` | `Record<string, PropertyConstructor>` | `{}`     | Reactive property declarations with type constructors.              |
-| `hasShadow`  | `boolean`                             | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                 |
-| `styles`     | `string`                              | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`. |
-| `render`     | `(this: Instance) => string`          | required | Returns HTML string for the component's current state.              |
+| Property     | Type                                  | Default  | Description                                                                                                                         |
+| ------------ | ------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `properties` | `Record<string, PropertyConstructor>` | `{}`     | Reactive property declarations with type constructors.                                                                              |
+| `hasShadow`  | `boolean`                             | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                                                                                 |
+| `styles`     | `string`                              | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`.                                                                 |
+| `render`     | `(this: Instance) => string`          | required | Returns HTML string for the component's current state.                                                                              |
 | `onMount`    | `(this: Instance) => void`            | —        | Called once after the initial render when the element is first inserted into the document. DOM is already populated when this runs. |
-| `onUnmount`  | `(this: Instance) => void`            | —        | Called after removal from the document.                             |
-| `onUpdate`   | `(this: Instance) => void`            | —        | Called after every render, including the initial one. Fires before `onMount` on first connect. |
-| `methods`    | `Methods`                             | `{}`     | Custom methods bound to the instance.                               |
+| `onUnmount`  | `(this: Instance) => void`            | —        | Called after removal from the document.                                                                                             |
+| `onUpdate`   | `(this: Instance) => void`            | —        | Called after every render, including the initial one. Fires before `onMount` on first connect.                                      |
+| `methods`    | `Methods`                             | `{}`     | Custom methods bound to the instance.                                                                                               |
 
 #### Reactive properties
 
@@ -261,7 +261,7 @@ createRouter()
 - **Lifecycle call order on first connect**: render → `onUpdate` → `onMount`.
   The DOM is fully populated before `onMount` runs, so it is safe to query
   child elements there. `onUpdate` fires before `onMount` on the initial render
-  and before any subsequent re-render.
+  and after every subsequent render.
 - Shadow DOM styles are preserved across renders via a retained `<style>` node.
 - `customElements.define` is called only once per tag name; calling
   `registerComponents` multiple times with the same component is safe.
