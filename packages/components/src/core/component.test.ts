@@ -1009,4 +1009,126 @@ describe("defineComponent - additional validations and features", () => {
 
     errSpy.mockRestore();
   });
+
+  it("shouldCastPreExistingPropertyOnUpgrade", () => {
+    const tag = generateUniqueTag("pre-prop");
+    const el = document.createElement(tag);
+    castToProps<{ value: unknown }>(el).value = "100";
+    document.body.appendChild(el);
+
+    const component = defineComponent(tag, {
+      properties: { value: Number },
+      render() {
+        return `<p>${this.value}</p>`;
+      },
+    });
+    registerComponent(component);
+
+    expect(castToProps<{ value: unknown }>(el).value).toBe(100);
+  });
+
+  it("shouldCastPreExistingAttributeOnUpgrade", () => {
+    const tag = generateUniqueTag("pre-attr");
+    const el = document.createElement(tag);
+    el.setAttribute("value", "200");
+    document.body.appendChild(el);
+
+    const component = defineComponent(tag, {
+      properties: { value: Number },
+      render() {
+        return `<p>${this.value}</p>`;
+      },
+    });
+    registerComponent(component);
+
+    expect(castToProps<{ value: unknown }>(el).value).toBe(200);
+  });
+
+  it("shouldCastParsedNullForObjectAndArrayAttributes", () => {
+    const tag = generateUniqueTag("parsed-null");
+    const component = defineComponent(tag, {
+      properties: { data: Object, list: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    el.setAttribute("data", "null");
+    el.setAttribute("list", "null");
+
+    expect(castToProps<{ data: unknown }>(el).data).toBeNull();
+    expect(castToProps<{ list: unknown }>(el).list).toBeNull();
+  });
+
+  it("shouldThrowErrorWhenPropertyNameIsReserved", () => {
+    const tag = generateUniqueTag("res-prop");
+    expect(() => {
+      defineComponent(tag, {
+        properties: { requestUpdate: String },
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow(`Component "${tag}": property "requestUpdate" is a reserved name.`);
+  });
+
+  it("shouldThrowErrorWhenPropertyNameStartsWithUnderscore", () => {
+    const tag = generateUniqueTag("under-prop");
+    expect(() => {
+      defineComponent(tag, {
+        properties: { _isMounted: Boolean },
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow(`Component "${tag}": property "_isMounted" cannot start with an underscore.`);
+  });
+
+  it("shouldTriggerRenderManuallyViaRequestUpdate", async () => {
+    const tag = generateUniqueTag("req-up");
+    let renderCount = 0;
+    const component = defineComponent(tag, {
+      render() {
+        renderCount++;
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(renderCount).toBe(1);
+
+    el.requestUpdate();
+    await Promise.resolve();
+
+    expect(renderCount).toBe(2);
+  });
+
+  it("shouldSupportCustomPropertyConstructors", () => {
+    const tag = generateUniqueTag("cust-const");
+    class CustomClass {
+      constructor(public val: string) {}
+    }
+    const component = defineComponent(tag, {
+      properties: { value: CustomClass },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    const inst = new CustomClass("hello");
+    castToProps<{ value: unknown }>(el).value = inst;
+
+    expect(castToProps<{ value: unknown }>(el).value).toBe(inst);
+  });
 });

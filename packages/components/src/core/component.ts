@@ -1,4 +1,4 @@
-import type { ComponentConfig, ComponentDefinition, ComponentProperties, ComponentProps } from "./types.js";
+import type { ComponentConfig, ComponentDefinition, ComponentInstance, ComponentProperties } from "./types.js";
 
 /**
  * Casts a raw attribute or property value to the type indicated by its
@@ -59,6 +59,9 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
         });
       }
     }
+    if (parsed === null) {
+      return null;
+    }
     if (!Array.isArray(parsed)) {
       throw new Error(`Property of type ${type.name} received non-array value: ${String(parsed)}`);
     }
@@ -79,7 +82,10 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
         });
       }
     }
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    if (parsed === null) {
+      return null;
+    }
+    if (typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error(`Property of type ${type.name} received non-object value: ${String(parsed)}`);
     }
     return parsed;
@@ -162,8 +168,26 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     );
   }
 
+  const RESERVED_PROPERTY_NAMES = new Set([
+    "constructor",
+    "connectedCallback",
+    "disconnectedCallback",
+    "attributeChangedCallback",
+    "adoptedCallback",
+    "tagName",
+    "elementClass",
+    "create",
+    "requestUpdate",
+  ]);
+
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
+    if (RESERVED_PROPERTY_NAMES.has(propName)) {
+      throw new Error(`Component "${tagName}": property "${propName}" is a reserved name.`);
+    }
+    if (propName.startsWith("_")) {
+      throw new Error(`Component "${tagName}": property "${propName}" cannot start with an underscore.`);
+    }
     attributeToPropertyMap.set(propName.toLowerCase(), propName);
     const kebabName = propName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
     if (kebabName !== propName.toLowerCase()) {
@@ -186,7 +210,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       // Wire reactive getters/setters for each declared property.
       for (const propName of Object.keys(properties)) {
-        let storedValue: unknown = (this as Record<string, unknown>)[propName];
+        let storedValue: unknown = castProperty((this as Record<string, unknown>)[propName], properties[propName]);
 
         Object.defineProperty(this, propName, {
           get: () => storedValue,
@@ -229,18 +253,22 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       }
     }
 
+    requestUpdate(): void {
+      this._scheduleRender();
+    }
+
     connectedCallback(): void {
       this._isMounted = true;
       // Render fires first so the DOM is populated before onMount runs.
       // Call order on first connect: render → onUpdate → onMount.
       this._render();
-      config.onMount?.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+      config.onMount?.call(this as unknown as ComponentInstance<Props, Methods>);
     }
 
     disconnectedCallback(): void {
       this._isMounted = false;
       this._isRenderScheduled = false;
-      config.onUnmount?.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+      config.onUnmount?.call(this as unknown as ComponentInstance<Props, Methods>);
     }
 
     attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -283,7 +311,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       this._isRendering = true;
       let htmlContent: string;
       try {
-        htmlContent = config.render.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+        htmlContent = config.render.call(this as unknown as ComponentInstance<Props, Methods>);
       } finally {
         this._isRendering = false;
       }
@@ -301,7 +329,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         this.innerHTML = htmlContent;
       }
 
-      config.onUpdate?.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
+      config.onUpdate?.call(this as unknown as ComponentInstance<Props, Methods>);
     }
   }
 
@@ -316,7 +344,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         // The element is not yet connected so no render is scheduled yet.
         Object.assign(element, props);
       }
-      return element as unknown as HTMLElement & ComponentProps<Props> & Methods;
+      return element as unknown as ComponentInstance<Props, Methods>;
     },
   };
 }

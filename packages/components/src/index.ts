@@ -4,6 +4,7 @@ export { registerComponents } from "./core/registry.js";
 export type {
   ComponentConfig,
   ComponentDefinition,
+  ComponentInstance,
   ComponentProperties,
   ComponentProps,
   PropertyConstructor,

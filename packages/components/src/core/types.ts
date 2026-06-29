@@ -7,7 +7,9 @@ export type PropertyConstructor =
   | NumberConstructor
   | BooleanConstructor
   | ObjectConstructor
-  | ArrayConstructor;
+  | ArrayConstructor
+  | (new (...args: never[]) => unknown)
+  | ((...args: never[]) => unknown);
 
 /**
  * Resolves a `PropertyConstructor` to its corresponding TypeScript value type.
@@ -22,7 +24,24 @@ export type PropertyType<T extends PropertyConstructor> = T extends StringConstr
         ? Record<string, unknown> | undefined | null
         : T extends ArrayConstructor
           ? unknown[] | undefined | null
-          : never;
+          : T extends new (...args: never[]) => infer R
+            ? R | undefined | null
+            : T extends (...args: never[]) => infer R
+              ? R | undefined | null
+              : unknown;
+
+/**
+ * Represents the full type of a component instance, including HTML element APIs,
+ * reactive properties, custom methods, and built-in wrappers.
+ */
+export type ComponentInstance<Props extends ComponentProperties, Methods> = HTMLElement &
+  ComponentProps<Props> &
+  Methods & {
+    /**
+     * Schedules a batched re-render of the component in the next microtask.
+     */
+    requestUpdate(): void;
+  };
 
 /**
  * A map of property names to their constructor types.
@@ -64,27 +83,27 @@ export interface ComponentConfig<Props extends ComponentProperties, Methods> {
    * Called once after the element is inserted into the document.
    * Safe for one-time setup logic that depends on DOM presence.
    */
-  onMount?: (this: HTMLElement & ComponentProps<Props> & Methods) => void;
+  onMount?: (this: ComponentInstance<Props, Methods>) => void;
   /**
    * Called when the element is removed from the document.
    * Safe for cleanup logic such as clearing timers or subscriptions.
    */
-  onUnmount?: (this: HTMLElement & ComponentProps<Props> & Methods) => void;
+  onUnmount?: (this: ComponentInstance<Props, Methods>) => void;
   /**
    * Called immediately after every render, including the initial one.
    * Safe for binding event listeners to freshly rendered DOM nodes.
    */
-  onUpdate?: (this: HTMLElement & ComponentProps<Props> & Methods) => void;
+  onUpdate?: (this: ComponentInstance<Props, Methods>) => void;
   /**
    * Returns an HTML string representing the component's current state.
    * Called on mount and after any reactive property change.
    */
-  render: (this: HTMLElement & ComponentProps<Props> & Methods) => string;
+  render: (this: ComponentInstance<Props, Methods>) => string;
   /**
    * Custom methods bound to the element instance.
    * Accessible as `this.methodName` inside other config hooks.
    */
-  methods?: Methods & ThisType<HTMLElement & ComponentProps<Props> & Methods>;
+  methods?: Methods & ThisType<ComponentInstance<Props, Methods>>;
 }
 
 /**
@@ -98,10 +117,10 @@ export interface ComponentDefinition<Props extends ComponentProperties, Methods>
   /** The registered custom element tag name. */
   tagName: string;
   /** The underlying `HTMLElement` subclass. Pass to `customElements.define`. */
-  elementClass: { new (): HTMLElement & ComponentProps<Props> & Methods };
+  elementClass: { new (): ComponentInstance<Props, Methods> };
   /**
    * Creates a new element instance and optionally sets initial properties.
    * The element must be appended to the DOM to trigger `onMount`.
    */
-  create: (props?: Partial<ComponentProps<Props>>) => HTMLElement & ComponentProps<Props> & Methods;
+  create: (props?: Partial<ComponentProps<Props>>) => ComponentInstance<Props, Methods>;
 }
