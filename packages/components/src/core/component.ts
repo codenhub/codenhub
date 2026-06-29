@@ -8,6 +8,7 @@ import type { ComponentConfig, ComponentDefinition, ComponentProperties, Compone
  * - `null` passes through unchanged for non-Boolean types; for `Boolean`, `null`
  *   maps to `false` (attribute-removal semantics — `removeAttribute` passes `null`).
  * - `Object`/`Array` constructors attempt `JSON.parse` when value is a string.
+ * - Any unsupported constructor types pass the value through unchanged as a fallback.
  *
  * @internal
  */
@@ -102,10 +103,13 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
  *   hooks, render function, and optional methods.
  * @returns A `ComponentDefinition` holding the class and a `create` factory.
  *
+ * @throws {Error} When the `tagName` does not contain a hyphen.
  * @throws {Error} When a property declared as `Object` or `Array` receives a
  *   string value that cannot be parsed as JSON — thrown from the property
  *   setter and propagates to the caller (e.g. direct assignment or
  *   `setAttribute`).
+ * @throws {Error} During rendering if `hasShadow` is enabled but the dedicated
+ *   shadow root content wrapper is removed or missing from the shadow root.
  *
  * @example
  * ```ts
@@ -209,6 +213,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
     disconnectedCallback(): void {
       this._isMounted = false;
+      this._isRenderScheduled = false;
       config.onUnmount?.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
     }
 
@@ -234,13 +239,16 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
     private async _renderAsync(): Promise<void> {
       await Promise.resolve();
-      this._isRenderScheduled = false;
-      if (this._isMounted) {
-        this._render();
+      if (this._isRenderScheduled) {
+        this._isRenderScheduled = false;
+        if (this._isMounted) {
+          this._render();
+        }
       }
     }
 
     private _render(): void {
+      this._isRenderScheduled = false;
       this._isRendering = true;
       let htmlContent: string;
       try {
@@ -251,7 +259,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       if (shouldUseShadow) {
         const contentWrapper = this._contentWrapper;
-        if (contentWrapper === null || contentWrapper.parentNode !== this.shadowRoot) {
+        if (contentWrapper === null || !this.shadowRoot || contentWrapper.parentNode !== this.shadowRoot) {
           throw new Error(
             `Component "${tagName}": shadow root content wrapper element is missing. ` +
               "Render aborted to prevent style node clobbering.",

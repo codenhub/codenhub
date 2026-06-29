@@ -2,8 +2,10 @@
  * Tagged template literal helper for HTML markup.
  *
  * Performs simple string concatenation. Objects are serialized with
- * `JSON.stringify`; all other values use `String()`. `null` and
- * `undefined` interpolations produce an empty string.
+ * `JSON.stringify` (unless they provide a custom `toString` method);
+ * arrays are serialized by mapping each item through the same rules and joining them.
+ * All other values use `String()`. `null` and `undefined` interpolations
+ * produce an empty string.
  *
  * > [!WARNING]
  * > This helper does NOT perform HTML escaping or sanitization.
@@ -25,19 +27,26 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]): strin
     let serialized = "";
     if (val !== undefined && val !== null) {
       if (Array.isArray(val)) {
-        serialized = val.map((v) => (v !== undefined && v !== null ? String(v) : "")).join("");
-      } else if (typeof val === "object") {
-        if (typeof val.toString === "function" && val.toString !== Object.prototype.toString) {
-          serialized = val.toString();
-        } else {
-          serialized = JSON.stringify(val);
-        }
+        serialized = val.map(serializeValue).join("");
       } else {
-        serialized = String(val);
+        serialized = serializeValue(val);
       }
     }
     return result + str + serialized;
   }, "");
+}
+
+function serializeValue(val: unknown): string {
+  if (val === undefined || val === null) {
+    return "";
+  }
+  if (typeof val === "object") {
+    if (typeof val.toString === "function" && val.toString !== Object.prototype.toString) {
+      return val.toString();
+    }
+    return JSON.stringify(val);
+  }
+  return String(val);
 }
 
 /**

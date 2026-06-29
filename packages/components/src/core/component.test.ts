@@ -860,4 +860,60 @@ describe("coverage gaps", () => {
 
     warnSpy.mockRestore();
   });
+
+  it("shouldResetRenderScheduledOnDisconnect", async () => {
+    const tag = generateUniqueTag("disconnect-sched");
+    let renderCount = 0;
+    const component = defineComponent(tag, {
+      properties: { count: Number },
+      render() {
+        renderCount++;
+        return `<p>${this.count}</p>`;
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ count: 0 });
+    document.body.appendChild(el);
+    expect(renderCount).toBe(1);
+
+    // Schedule render by mutating property
+    castToProps<{ count: number }>(el).count = 1;
+    // Disconnect element
+    document.body.removeChild(el);
+
+    // Reconnect element synchronously
+    document.body.appendChild(el);
+    expect(renderCount).toBe(2);
+
+    // Mutate property again. If _isRenderScheduled was NOT reset on disconnect,
+    // this mutation would do nothing.
+    castToProps<{ count: number }>(el).count = 2;
+    await Promise.resolve();
+
+    expect(renderCount).toBe(3);
+  });
+
+  it("shouldThrowErrorWhenShadowRootIsMissingDuringRender", () => {
+    const tag = generateUniqueTag("shadow-null-test");
+    const component = defineComponent(tag, {
+      hasShadow: true,
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    Object.defineProperty(el, "shadowRoot", {
+      get: () => null,
+      configurable: true,
+    });
+
+    expect(() => {
+      castToProps<{ connectedCallback(): void }>(el).connectedCallback();
+    }).toThrow(
+      `Component "${tag}": shadow root content wrapper element is missing. Render aborted to prevent style node clobbering.`,
+    );
+  });
 });

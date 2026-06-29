@@ -74,6 +74,20 @@ describe("html", () => {
     ).toBe("<ul>abc</ul>");
   });
 
+  it("shouldSerializeObjectsWithinArraysAsJsonOrCustomToString", () => {
+    class CustomItem {
+      toString() {
+        return "custom";
+      }
+    }
+    const items = [{ x: 1 }, new CustomItem()];
+    expect(
+      html`
+        <div>${items}</div>
+      `.trim(),
+    ).toBe('<div>{"x":1}custom</div>');
+  });
+
   it("shouldInterpolateArrayOfTemplates", () => {
     const items = [
       html`

@@ -122,7 +122,8 @@ const markup = html`
 `;
 ```
 
-- Objects are serialized with `JSON.stringify`.
+- Objects are serialized with `JSON.stringify` (unless they define a custom `toString` method).
+- Arrays are mapped recursively through these serialization rules and joined as a single string.
 - `null` and `undefined` produce empty strings.
 - All other values are converted via `String()`.
 
@@ -256,8 +257,7 @@ createRouter()
 
 ## Notes
 
-- `innerHTML` is replaced on every render. Prefer `onUpdate` for event binding
-  rather than inline `onclick` attributes to avoid stale listeners.
+- `innerHTML` is replaced on every render. Event listeners attached directly to child elements inside `onUpdate` are garbage-collected along with the discarded DOM nodes when the next render occurs. However, avoid attaching listeners to persistent external elements or the host element itself inside `onUpdate` to prevent memory leaks and duplicate execution.
 - **Lifecycle call order on first connect**: render → `onUpdate` → `onMount`.
   The DOM is fully populated before `onMount` runs, so it is safe to query
   child elements there. `onUpdate` fires before `onMount` on the initial render
