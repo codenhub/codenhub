@@ -720,4 +720,21 @@ describe("createRouter", () => {
     expect(match).toMatchObject({ path: "/", pathname: "/" });
     expect(handler).toHaveBeenCalled();
   });
+
+  it("clears pending navigations and resets currentMatch on destroy", () => {
+    let callCount = 0;
+    const router = createRouter();
+    router.on("/first", () => {
+      callCount++;
+      router.navigate("/second");
+      router.destroy();
+    });
+    router.on("/second", () => {
+      callCount++;
+    });
+
+    router.navigate("/first");
+
+    expect(callCount).toBe(1);
+  });
 });

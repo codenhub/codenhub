@@ -197,7 +197,6 @@ export function normalizePercentEscapes(pathname: string): string {
   return pathname.replace(PERCENT_ESCAPE_PATTERN, (percentEscape) => percentEscape.toUpperCase());
 }
 
-
 function assertNoDotPathSegments(value: string, subject: string): void {
   const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
   const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);

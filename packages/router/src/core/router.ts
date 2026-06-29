@@ -162,9 +162,12 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         target,
         miss,
         historyUpdate: () => {
-          const href = target !== null
-            ? buildBrowserHref(target.href, basePath)
-            : normalizePercentEscapes(browserWindow.location.pathname || "/") + browserWindow.location.search + browserWindow.location.hash;
+          const href =
+            target !== null
+              ? buildBrowserHref(target.href, basePath)
+              : normalizePercentEscapes(browserWindow.location.pathname || "/") +
+                browserWindow.location.search +
+                browserWindow.location.hash;
           browserWindow.history.replaceState(state, "", href);
         },
       });
@@ -328,6 +331,8 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         }
       }
       isStarted = false;
+      pendingNavigations.length = 0;
+      currentMatch = null;
 
       listeners.clear();
     },
