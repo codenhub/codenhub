@@ -26,6 +26,11 @@ interface RegisteredRoute {
   handler: RouteHandler;
 }
 
+interface MatchResult {
+  match: RouterMatch;
+  route: RegisteredRoute;
+}
+
 const REENTRANT_NAVIGATION_ERROR = "Router navigation is already running.";
 const LEFT_CLICK_BUTTON = 0;
 
@@ -43,7 +48,11 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   let fallbackHandler: NotFoundHandler | undefined;
   let isStarted = false;
   let isNavigating = false;
-  const pendingNavigations: Array<{ target: ParsedPath; historyUpdate?: () => void }> = [];
+  const pendingNavigations: Array<{
+    target: ParsedPath | null;
+    miss?: RouterMiss;
+    historyUpdate?: () => void;
+  }> = [];
   let currentMatch: RouterMatch | null = null;
 
   const assertCanNavigate = (): void => {
@@ -57,11 +66,6 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       listener(match);
     }
   };
-
-  interface MatchResult {
-    match: RouterMatch;
-    route: RegisteredRoute;
-  }
 
   const findMatch = (target: ParsedPath): MatchResult | null => {
     for (const route of routes) {
@@ -84,28 +88,35 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     return null;
   };
 
-  const runTarget = (target: ParsedPath): RouterMatch | null => {
-    assertCanNavigate();
+  const runTarget = (target: ParsedPath | null, miss?: RouterMiss): RouterMatch | null => {
+    // Invariant: callers must verify !isNavigating before calling runTarget.
     isNavigating = true;
 
     try {
       let currentTarget: ParsedPath | null = target;
+      let currentMiss: RouterMiss | undefined = miss;
       let lastMatch: RouterMatch | null = null;
 
-      while (currentTarget !== null) {
-        const result = findMatch(currentTarget);
-        if (result !== null) {
-          result.route.handler(result.match);
-          notify(result.match);
-          lastMatch = result.match;
-        } else {
-          const miss: RouterMiss = {
-            pathname: currentTarget.pathname,
-            searchParams: currentTarget.searchParams,
-            hash: currentTarget.hash,
-          };
+      while (currentTarget !== null || currentMiss !== undefined) {
+        if (currentTarget !== null) {
+          const result = findMatch(currentTarget);
+          if (result !== null) {
+            result.route.handler(result.match);
+            notify(result.match);
+            lastMatch = result.match;
+          } else {
+            const missObj: RouterMiss = {
+              pathname: currentTarget.pathname,
+              searchParams: currentTarget.searchParams,
+              hash: currentTarget.hash,
+            };
 
-          fallbackHandler?.(miss);
+            fallbackHandler?.(missObj);
+            notify(null);
+            lastMatch = null;
+          }
+        } else if (currentMiss !== undefined) {
+          fallbackHandler?.(currentMiss);
           notify(null);
           lastMatch = null;
         }
@@ -114,8 +125,10 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         if (nextPending !== undefined) {
           nextPending.historyUpdate?.();
           currentTarget = nextPending.target;
+          currentMiss = nextPending.miss;
         } else {
           currentTarget = null;
+          currentMiss = undefined;
         }
       }
 
@@ -123,7 +136,6 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       return lastMatch;
     } finally {
       isNavigating = false;
-      pendingNavigations.length = 0;
     }
   };
 
@@ -134,19 +146,32 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     }
 
     const target = parseLocationPath(browserWindow.location, basePath);
+    let miss: RouterMiss | undefined;
+    if (target === null) {
+      const search = browserWindow.location.search;
+      miss = {
+        pathname: normalizePercentEscapes(browserWindow.location.pathname || "/"),
+        searchParams: new URLSearchParams(search),
+        hash: browserWindow.location.hash,
+      };
+    }
+
     if (isNavigating) {
       const state = e.state;
       pendingNavigations.push({
         target,
+        miss,
         historyUpdate: () => {
-          const href = buildBrowserHref(target.href, basePath);
+          const href = target !== null
+            ? buildBrowserHref(target.href, basePath)
+            : normalizePercentEscapes(browserWindow.location.pathname || "/") + browserWindow.location.search + browserWindow.location.hash;
           browserWindow.history.replaceState(state, "", href);
         },
       });
       return;
     }
 
-    runTarget(target);
+    runTarget(target, miss);
   };
 
   const handleLinkClick = (e: MouseEvent): void => {
@@ -236,23 +261,33 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
           browserWindow.document.addEventListener("click", handleLinkClick);
         }
         isStarted = true;
-        currentMatch = runTarget(parseLocationPath(browserWindow.location, basePath));
+        const target = parseLocationPath(browserWindow.location, basePath);
+        let miss: RouterMiss | undefined;
+        if (target === null) {
+          const search = browserWindow.location.search;
+          miss = {
+            pathname: normalizePercentEscapes(browserWindow.location.pathname || "/"),
+            searchParams: new URLSearchParams(search),
+            hash: browserWindow.location.hash,
+          };
+        }
+        currentMatch = runTarget(target, miss);
       }
 
       return currentMatch;
     },
 
-    navigate(to, options: NavigateOptions = {}) {
+    navigate(to, navOptions: NavigateOptions = {}) {
       const target = parseAppPath(to);
       const browserWindow = getBrowserWindow();
 
       const updateHistory = (): void => {
         if (browserWindow !== null) {
           const href = buildBrowserHref(to, basePath);
-          if (options.shouldReplace === true) {
-            browserWindow.history.replaceState(options.state, "", href);
+          if (navOptions.shouldReplace === true) {
+            browserWindow.history.replaceState(navOptions.state, "", href);
           } else {
-            browserWindow.history.pushState(options.state, "", href);
+            browserWindow.history.pushState(navOptions.state, "", href);
           }
         }
       };

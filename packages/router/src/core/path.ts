@@ -23,7 +23,6 @@ export interface ParsedPath {
   searchParams: URLSearchParams;
   hash: string;
   href: string;
-  canMatch: boolean;
   segments: readonly string[];
 }
 
@@ -86,21 +85,22 @@ export function parseAppPath(to: string): ParsedPath {
   return parseUrlPath(new URL(to, ROUTER_URL_BASE));
 }
 
-export function parseLocationPath(currentLocation: Location, basePath: string): ParsedPath {
+export function parseLocationPath(currentLocation: Location, basePath: string): ParsedPath | null {
   const browserPathname = normalizePercentEscapes(currentLocation.pathname || "/");
   const appPathname = stripBasePath(browserPathname, basePath);
-  const pathname = appPathname ?? browserPathname;
+  if (appPathname === null) {
+    return null;
+  }
   const search = currentLocation.search;
   const hash = currentLocation.hash;
 
   return {
-    pathname,
+    pathname: appPathname,
     search,
     searchParams: new URLSearchParams(search),
     hash,
-    href: pathname + search + hash,
-    canMatch: appPathname !== null,
-    segments: Object.freeze(splitPath(pathname)),
+    href: appPathname + search + hash,
+    segments: Object.freeze(splitPath(appPathname)),
   };
 }
 
@@ -118,16 +118,12 @@ export function buildBrowserHref(to: string, basePath: string): string {
 }
 
 export function matchRoute(pattern: RoutePattern, target: ParsedPath): RouteParams | null {
-  if (!target.canMatch) {
-    return null;
-  }
-
   const targetSegments = target.segments;
   if (pattern.segments.length !== targetSegments.length) {
     return null;
   }
 
-  const params = createRouteParams();
+  const params: RouteParams = {};
 
   for (const [index, segment] of pattern.segments.entries()) {
     const targetSegment = targetSegments[index];
@@ -189,7 +185,6 @@ function parseUrlPath(url: URL): ParsedPath {
     searchParams: new URLSearchParams(search),
     hash,
     href: pathname + search + hash,
-    canMatch: true,
     segments: Object.freeze(splitPath(pathname)),
   };
 }
@@ -202,9 +197,6 @@ export function normalizePercentEscapes(pathname: string): string {
   return pathname.replace(PERCENT_ESCAPE_PATTERN, (percentEscape) => percentEscape.toUpperCase());
 }
 
-function createRouteParams(): RouteParams {
-  return {};
-}
 
 function assertNoDotPathSegments(value: string, subject: string): void {
   const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
