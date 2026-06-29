@@ -9,7 +9,7 @@ import type { Router } from ".";
  *
  * These tests verify that registry, navigation, and history work correctly
  * together through the createRouter() surface. Unit tests for each module
- * live in src/__tests__/.
+ * are colocated in the same directory (e.g., registry.test.ts).
  */
 describe("createRouter", () => {
   const startedRouters: Router[] = [];
@@ -276,5 +276,27 @@ describe("createRouter", () => {
     expect(() => router.on("/users?tab=active", handler)).toThrow(Error);
     expect(() => router.on("/users#active", handler)).toThrow(Error);
     expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle and chaining
+  // ---------------------------------------------------------------------------
+
+  it("chains on() and notFound()", () => {
+    const router = createRouter();
+    const chained = router.on("/", () => {}).notFound(() => {});
+    expect(chained).toBe(router);
+  });
+
+  it("cleans up event listeners on destroy", () => {
+    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }));
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+
+    router.start();
+    expect(addSpy).toHaveBeenCalledWith("popstate", expect.any(Function));
+
+    router.destroy();
+    expect(removeSpy).toHaveBeenCalledWith("popstate", expect.any(Function));
   });
 });

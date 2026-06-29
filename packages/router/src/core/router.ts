@@ -15,7 +15,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
   const basePath = normalizeBasePath(options.basePath);
   const registry = createRegistry();
   const nav = createNavigation(registry);
-  const hist = createHistory({
+  const history = createHistory({
     nav,
     basePath,
     shouldInterceptLinks: options.shouldInterceptLinks === true,
@@ -34,7 +34,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     },
 
     start() {
-      return hist.start();
+      return history.start();
     },
 
     navigate(to: string, navOptions: NavigateOptions = {}) {
@@ -76,7 +76,7 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
     },
 
     destroy() {
-      hist.destroy();
+      history.destroy();
     },
   };
 
