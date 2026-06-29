@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defineComponent } from "./component.js";
 import { html } from "./html.js";
-import { asProps, reg, uniqueTag } from "./test-utils.js";
+import { castToProps, registerComponent, generateUniqueTag } from "./test-utils.js";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe("defineComponent", () => {
   it("shouldReturnDefinitionWithoutRegisteringElement", () => {
-    const tag = uniqueTag("def-test");
+    const tag = generateUniqueTag("def-test");
     const component = defineComponent(tag, {
       properties: { title: String },
       render() {
@@ -40,7 +40,7 @@ describe("defineComponent", () => {
 
   it("shouldWarnWhenStylesDefinedWithoutHasShadow", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const tag = uniqueTag("styles-warn");
+    const tag = generateUniqueTag("styles-warn");
     defineComponent(tag, {
       styles: "p { color: red; }",
       render() {
@@ -54,20 +54,20 @@ describe("defineComponent", () => {
   });
 
   it("shouldExposeCreateFactory", () => {
-    const tag = uniqueTag("factory-test");
+    const tag = generateUniqueTag("factory-test");
     const component = defineComponent(tag, {
       render() {
         return "<p>hi</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
   it("shouldApplyInitialPropsViaCreate", () => {
-    const tag = uniqueTag("init-props");
+    const tag = generateUniqueTag("init-props");
     const component = defineComponent(tag, {
       properties: { label: String },
       render() {
@@ -76,7 +76,7 @@ describe("defineComponent", () => {
         `;
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ label: "hello" });
     document.body.appendChild(el);
@@ -85,14 +85,14 @@ describe("defineComponent", () => {
   });
 
   it("shouldNotSetPropertiesWhenCreateCalledWithoutArgs", () => {
-    const tag = uniqueTag("create-no-props");
+    const tag = generateUniqueTag("create-no-props");
     const component = defineComponent(tag, {
       properties: { label: String },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     // create() with no argument must not throw and must produce a valid element
     expect(() => {
@@ -108,7 +108,7 @@ describe("defineComponent", () => {
 
 describe("lifecycle hooks", () => {
   it("shouldCallOnMountAfterConnectedToDOM", () => {
-    const tag = uniqueTag("lifecycle-mount");
+    const tag = generateUniqueTag("lifecycle-mount");
     const mountSpy = vi.fn();
     const component = defineComponent(tag, {
       onMount: mountSpy,
@@ -116,7 +116,7 @@ describe("lifecycle hooks", () => {
         return "<p>x</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     expect(mountSpy).not.toHaveBeenCalled();
@@ -128,7 +128,7 @@ describe("lifecycle hooks", () => {
     // Call order on first connect must be: render → onUpdate → onMount.
     // onMount consumers rely on DOM being populated; onUpdate must have
     // already run so the DOM is ready when onMount starts.
-    const tag = uniqueTag("lifecycle-order");
+    const tag = generateUniqueTag("lifecycle-order");
     const callOrder: string[] = [];
     const component = defineComponent(tag, {
       onMount() {
@@ -141,7 +141,7 @@ describe("lifecycle hooks", () => {
         return "<p>x</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
@@ -150,7 +150,7 @@ describe("lifecycle hooks", () => {
   });
 
   it("shouldCallOnUpdateAfterEachRender", () => {
-    const tag = uniqueTag("lifecycle-update");
+    const tag = generateUniqueTag("lifecycle-update");
     const updateSpy = vi.fn();
     const component = defineComponent(tag, {
       onUpdate: updateSpy,
@@ -158,7 +158,7 @@ describe("lifecycle hooks", () => {
         return "<p>x</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
@@ -167,7 +167,7 @@ describe("lifecycle hooks", () => {
   });
 
   it("shouldCallOnUnmountAfterRemovedFromDOM", () => {
-    const tag = uniqueTag("lifecycle-unmount");
+    const tag = generateUniqueTag("lifecycle-unmount");
     const unmountSpy = vi.fn();
     const component = defineComponent(tag, {
       onUnmount: unmountSpy,
@@ -175,7 +175,7 @@ describe("lifecycle hooks", () => {
         return "<p>x</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
@@ -190,7 +190,7 @@ describe("lifecycle hooks", () => {
 
 describe("render scheduling", () => {
   it("shouldNotCallOnUpdateAfterDisconnectDuringMicrotaskFlush", async () => {
-    const tag = uniqueTag("disconnect-race");
+    const tag = generateUniqueTag("disconnect-race");
     const updateSpy = vi.fn();
     const component = defineComponent(tag, {
       properties: { count: Number },
@@ -199,7 +199,7 @@ describe("render scheduling", () => {
         return `<p>${this.count}</p>`;
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ count: 0 });
     document.body.appendChild(el);
@@ -207,7 +207,7 @@ describe("render scheduling", () => {
     expect(updateSpy).toHaveBeenCalledOnce();
 
     // Trigger a re-render schedule, then immediately disconnect before flush
-    asProps<{ count: number }>(el).count = 1;
+    castToProps<{ count: number }>(el).count = 1;
     document.body.removeChild(el);
     await Promise.resolve();
 
@@ -222,7 +222,7 @@ describe("render scheduling", () => {
 
 describe("reactive properties", () => {
   it("shouldReRenderAfterPropertyChangeInNextMicrotask", async () => {
-    const tag = uniqueTag("reactive");
+    const tag = generateUniqueTag("reactive");
     const component = defineComponent(tag, {
       properties: { count: Number },
       render() {
@@ -231,157 +231,157 @@ describe("reactive properties", () => {
         `;
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ count: 0 });
     document.body.appendChild(el);
     expect(el.innerHTML).toContain("<span>0</span>");
 
-    asProps<{ count: number }>(el).count = 5;
+    castToProps<{ count: number }>(el).count = 5;
     await Promise.resolve();
 
     expect(el.innerHTML).toContain("<span>5</span>");
   });
 
   it("shouldCastStringPropertyToNumber", () => {
-    const tag = uniqueTag("cast-num");
+    const tag = generateUniqueTag("cast-num");
     const component = defineComponent(tag, {
       properties: { value: Number },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
-    asProps<{ value: unknown }>(el).value = "42";
+    castToProps<{ value: unknown }>(el).value = "42";
 
-    expect(asProps<{ value: number }>(el).value).toBe(42);
+    expect(castToProps<{ value: number }>(el).value).toBe(42);
   });
 
   it("shouldCastStringTrueToBoolean", () => {
-    const tag = uniqueTag("cast-bool");
+    const tag = generateUniqueTag("cast-bool");
     const component = defineComponent(tag, {
       properties: { active: Boolean },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
-    asProps<{ active: unknown }>(el).active = "true";
+    castToProps<{ active: unknown }>(el).active = "true";
 
-    expect(asProps<{ active: boolean }>(el).active).toBe(true);
+    expect(castToProps<{ active: boolean }>(el).active).toBe(true);
   });
 
   it("shouldCastNullToFalseForBooleanProperty", () => {
     // null maps to false for Boolean properties, matching HTML attribute-removal
     // semantics (removeAttribute passes null to attributeChangedCallback).
     // This is intentional and documented — see README boolean casting rules.
-    const tag = uniqueTag("cast-bool-null");
+    const tag = generateUniqueTag("cast-bool-null");
     const component = defineComponent(tag, {
       properties: { active: Boolean },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
-    asProps<{ active: unknown }>(el).active = null;
+    castToProps<{ active: unknown }>(el).active = null;
 
-    expect(asProps<{ active: unknown }>(el).active).toBe(false);
+    expect(castToProps<{ active: unknown }>(el).active).toBe(false);
   });
 
   it("shouldPassThroughUndefinedForAnyProperty", () => {
     // undefined means "not yet set" — it must not be coerced to any typed
     // value so callers can distinguish uninitialized from explicitly set.
-    const tag = uniqueTag("cast-undefined");
+    const tag = generateUniqueTag("cast-undefined");
     const component = defineComponent(tag, {
       properties: { value: Number },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
-    asProps<{ value: unknown }>(el).value = undefined;
+    castToProps<{ value: unknown }>(el).value = undefined;
 
-    expect(asProps<{ value: unknown }>(el).value).toBeUndefined();
+    expect(castToProps<{ value: unknown }>(el).value).toBeUndefined();
   });
 
   it("shouldThrowErrorOnInvalidJSONParsing", () => {
-    const tag = uniqueTag("cast-json-fail");
+    const tag = generateUniqueTag("cast-json-fail");
     const component = defineComponent(tag, {
       properties: { data: Object },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
 
     expect(() => {
-      asProps<{ data: unknown }>(el).data = "{invalid json";
+      castToProps<{ data: unknown }>(el).data = "{invalid json";
     }).toThrow("Failed to parse JSON value for property of type Object");
   });
 
   it("shouldCastBooleanAttributesCorrectly", () => {
-    const tag = uniqueTag("cast-bool-attr");
+    const tag = generateUniqueTag("cast-bool-attr");
     const component = defineComponent(tag, {
       properties: { active: Boolean },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
 
     el.setAttribute("active", "");
-    expect(asProps<{ active: boolean }>(el).active).toBe(true);
+    expect(castToProps<{ active: boolean }>(el).active).toBe(true);
 
     el.setAttribute("active", "false");
-    expect(asProps<{ active: boolean }>(el).active).toBe(false);
+    expect(castToProps<{ active: boolean }>(el).active).toBe(false);
 
     el.setAttribute("active", "true");
-    expect(asProps<{ active: boolean }>(el).active).toBe(true);
+    expect(castToProps<{ active: boolean }>(el).active).toBe(true);
 
     el.removeAttribute("active");
-    expect(asProps<{ active: boolean }>(el).active).toBe(false);
+    expect(castToProps<{ active: boolean }>(el).active).toBe(false);
   });
 
   it("shouldCastEmptyStringToNaNForNumber", () => {
-    const tag = uniqueTag("cast-num-empty");
+    const tag = generateUniqueTag("cast-num-empty");
     const component = defineComponent(tag, {
       properties: { value: Number },
       render() {
         return "<p></p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
 
-    asProps<{ value: unknown }>(el).value = "";
-    expect(Number.isNaN(asProps<{ value: number }>(el).value)).toBe(true);
+    castToProps<{ value: unknown }>(el).value = "";
+    expect(Number.isNaN(castToProps<{ value: number }>(el).value)).toBe(true);
 
-    asProps<{ value: unknown }>(el).value = "   ";
-    expect(Number.isNaN(asProps<{ value: number }>(el).value)).toBe(true);
+    castToProps<{ value: unknown }>(el).value = "   ";
+    expect(Number.isNaN(castToProps<{ value: number }>(el).value)).toBe(true);
   });
 
   it("shouldNotScheduleRenderWhenValueUnchanged", async () => {
-    const tag = uniqueTag("no-rerender");
+    const tag = generateUniqueTag("no-rerender");
     let renderCount = 0;
     const component = defineComponent(tag, {
       properties: { label: String },
@@ -392,13 +392,13 @@ describe("reactive properties", () => {
         `;
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ label: "same" });
     document.body.appendChild(el);
     const countAfterMount = renderCount;
 
-    asProps<{ label: string }>(el).label = "same";
+    castToProps<{ label: string }>(el).label = "same";
     await Promise.resolve();
 
     expect(renderCount).toBe(countAfterMount);
@@ -411,7 +411,7 @@ describe("reactive properties", () => {
 
 describe("attributeChangedCallback", () => {
   it("shouldSyncAttributeChangeToProperty", async () => {
-    const tag = uniqueTag("attr-sync");
+    const tag = generateUniqueTag("attr-sync");
     const component = defineComponent(tag, {
       properties: { name: String },
       render() {
@@ -420,7 +420,7 @@ describe("attributeChangedCallback", () => {
         `;
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ name: "Alice" });
     document.body.appendChild(el);
@@ -438,12 +438,12 @@ describe("attributeChangedCallback", () => {
 
 describe("methods", () => {
   it("shouldBindMethodsToElementInstance", () => {
-    const tag = uniqueTag("methods");
+    const tag = generateUniqueTag("methods");
     const clickSpy = vi.fn();
     const component = defineComponent(tag, {
       properties: { clicks: Number },
       onUpdate() {
-        this.querySelector("button")?.addEventListener("click", asProps<{ increment: () => void }>(this).increment);
+        this.querySelector("button")?.addEventListener("click", castToProps<{ increment: () => void }>(this).increment);
       },
       render() {
         return html`
@@ -457,7 +457,7 @@ describe("methods", () => {
         },
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create({ clicks: 0 });
     document.body.appendChild(el);
@@ -473,14 +473,14 @@ describe("methods", () => {
 
 describe("Shadow DOM", () => {
   it("shouldAttachShadowRootWhenHasShadowIsTrue", () => {
-    const tag = uniqueTag("shadow-test");
+    const tag = generateUniqueTag("shadow-test");
     const component = defineComponent(tag, {
       hasShadow: true,
       render() {
         return "<p>shadow</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
@@ -490,7 +490,7 @@ describe("Shadow DOM", () => {
   });
 
   it("shouldInjectStyleTagIntoShadowRoot", () => {
-    const tag = uniqueTag("shadow-style");
+    const tag = generateUniqueTag("shadow-style");
     const component = defineComponent(tag, {
       hasShadow: true,
       styles: ".card { color: red; }",
@@ -498,7 +498,7 @@ describe("Shadow DOM", () => {
         return "<div class='card'>hi</div>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     document.body.appendChild(el);
@@ -508,23 +508,157 @@ describe("Shadow DOM", () => {
   });
 
   it("shouldThrowErrorWhenShadowRootContentWrapperIsMissing", () => {
-    const tag = uniqueTag("shadow-missing");
+    const tag = generateUniqueTag("shadow-missing");
     const component = defineComponent(tag, {
       hasShadow: true,
       render() {
         return "<p>shadow</p>";
       },
     });
-    reg(component);
+    registerComponent(component);
 
     const el = component.create();
     expect(el.shadowRoot).not.toBeNull();
     el.shadowRoot!.replaceChildren(); // clear wrapper
 
     expect(() => {
-      asProps<{ connectedCallback(): void }>(el).connectedCallback();
+      castToProps<{ connectedCallback(): void }>(el).connectedCallback();
     }).toThrow(
       `Component "${tag}": shadow root content wrapper element is missing. Render aborted to prevent style node clobbering.`,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage Gaps (Extra Verification)
+// ---------------------------------------------------------------------------
+
+describe("coverage gaps", () => {
+  it("shouldCastNullToNullForNonBooleanProperty", () => {
+    const tag = generateUniqueTag("gap-null");
+    const component = defineComponent(tag, {
+      properties: { label: String },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+    castToProps<{ label: unknown }>(el).label = null;
+
+    expect(castToProps<{ label: unknown }>(el).label).toBeNull();
+  });
+
+  it("shouldPassThroughObjectAndArrayWithoutParsing", () => {
+    const tag = generateUniqueTag("gap-pass-obj");
+    const component = defineComponent(tag, {
+      properties: { data: Object },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+    const originalObject = { value: 123 };
+    castToProps<{ data: unknown }>(el).data = originalObject;
+
+    expect(castToProps<{ data: unknown }>(el).data).toBe(originalObject);
+  });
+
+  it("shouldPassThroughUnsupportedPropertyConstructor", () => {
+    const tag = generateUniqueTag("gap-unsupported");
+    const component = defineComponent(tag, {
+      properties: {
+        // Date constructor is not in standard ComponentProperties but bypass typecheck for fallback coverage
+        created: Date as unknown as StringConstructor,
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+    const date = new Date();
+    castToProps<{ created: unknown }>(el).created = date;
+
+    expect(castToProps<{ created: unknown }>(el).created).toBe(date);
+  });
+
+  it("shouldNotChangePropertyOrTriggerRenderWhenAttributeValueIsSame", () => {
+    const tag = generateUniqueTag("gap-attr-same");
+    const component = defineComponent(tag, {
+      properties: { name: String },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ name: "Alice" });
+    document.body.appendChild(el);
+
+    // Manually invoke callback with same value to hit same-value early return
+    castToProps<{
+      attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+    }>(el).attributeChangedCallback("name", "Alice", "Alice");
+
+    expect(castToProps<{ name: string }>(el).name).toBe("Alice");
+  });
+
+  it("shouldHandleNonErrorJSONParsingFailureGracefully", () => {
+    const tag = generateUniqueTag("gap-json-non-error");
+    const component = defineComponent(tag, {
+      properties: { data: Object },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    // Spy/override JSON.parse to throw a string instead of an Error object
+    const originalParse = JSON.parse;
+    JSON.parse = () => {
+      throw "raw string error";
+    };
+
+    try {
+      expect(() => {
+        castToProps<{ data: unknown }>(el).data = "{";
+      }).toThrow("Failed to parse JSON value for property of type Object");
+    } finally {
+      JSON.parse = originalParse;
+    }
+  });
+
+  it("shouldDoNothingWhenAttributeChangedCallbackCalledForUnmappedAttribute", () => {
+    const tag = generateUniqueTag("gap-attr-unmapped");
+    const component = defineComponent(tag, {
+      properties: { name: String },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ name: "Alice" });
+    document.body.appendChild(el);
+
+    // Call attributeChangedCallback for an unmapped attribute name
+    expect(() => {
+      castToProps<{
+        attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void;
+      }>(el).attributeChangedCallback("unmapped", null, "value");
+    }).not.toThrow();
+
+    expect(castToProps<{ name: string }>(el).name).toBe("Alice");
   });
 });

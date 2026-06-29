@@ -262,7 +262,7 @@ createRouter()
   The DOM is fully populated before `onMount` runs, so it is safe to query
   child elements there. `onUpdate` fires before `onMount` on the initial render
   and after every subsequent render.
-- Shadow DOM styles are preserved across renders via a retained `<style>` node.
+- Shadow DOM styles are preserved across renders via a retained `<style>` node. To prevent style clobbering, the rendered content is wrapped inside a dedicated `<div>` inside the Shadow Root. This wrapper is not exposed directly but may affect CSS layouts (such as flexbox or grid) that expect child elements to be direct descendants of the `:host` element.
 - `customElements.define` is called only once per tag name; calling
   `registerComponents` multiple times with the same component is safe.
 - This package has no runtime dependencies.

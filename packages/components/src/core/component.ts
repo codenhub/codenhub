@@ -98,9 +98,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
   const properties = (config.properties ?? {}) as Props;
   const methods = (config.methods ?? {}) as Methods;
-  const useShadow = config.hasShadow === true;
+  const shouldUseShadow = config.hasShadow === true;
 
-  if (config.styles !== undefined && !useShadow) {
+  if (config.styles !== undefined && !shouldUseShadow) {
     console.warn(
       `Component "${tagName}" declared styles but "hasShadow" is not enabled. ` +
         "Styles are only injected when hasShadow is true.",
@@ -113,7 +113,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   }
 
   class CustomElement extends HTMLElement {
-    private _renderScheduled = false;
+    private _isRenderScheduled = false;
     private _isMounted = false;
 
     static get observedAttributes(): string[] {
@@ -146,7 +146,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         (this as Record<string, unknown>)[name] = (fn as () => unknown).bind(this);
       }
 
-      if (useShadow) {
+      if (shouldUseShadow) {
         const shadow = this.attachShadow({ mode: "open" });
         if (config.styles) {
           const style = document.createElement("style");
@@ -186,16 +186,16 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     }
 
     private _scheduleRender(): void {
-      if (this._renderScheduled || !this._isMounted) {
+      if (this._isRenderScheduled || !this._isMounted) {
         return;
       }
-      this._renderScheduled = true;
+      this._isRenderScheduled = true;
       void this._renderAsync();
     }
 
     private async _renderAsync(): Promise<void> {
       await Promise.resolve();
-      this._renderScheduled = false;
+      this._isRenderScheduled = false;
       if (this._isMounted) {
         this._render();
       }
@@ -204,10 +204,10 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private _render(): void {
       const htmlContent = config.render.call(this as unknown as HTMLElement & ComponentProps<Props> & Methods);
 
-      if (useShadow) {
+      if (shouldUseShadow) {
         const root = this.shadowRoot!;
         // The dedicated content wrapper is always the last child of the shadow
-        // root (appended in the constructor after the optional style node).
+        // root (appened in the constructor after the optional style node).
         // Setting innerHTML on it avoids any need to walk siblings to preserve
         // the style node across renders.
         const contentWrapper = root.lastElementChild as HTMLElement | null;

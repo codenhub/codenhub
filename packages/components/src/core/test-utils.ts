@@ -9,7 +9,7 @@ let tagCounter = 0;
  *
  * @internal
  */
-export function uniqueTag(base: string): string {
+export function generateUniqueTag(base: string): string {
   return `${base}-${++tagCounter}`;
 }
 
@@ -19,7 +19,7 @@ export function uniqueTag(base: string): string {
  *
  * @internal
  */
-export function reg(component: unknown): void {
+export function registerComponent(component: unknown): void {
   registerComponents([component as ComponentDefinition<ComponentProperties, unknown>]);
 }
 
@@ -30,6 +30,6 @@ export function reg(component: unknown): void {
  *
  * @internal
  */
-export function asProps<T>(element: HTMLElement): T {
+export function castToProps<T>(element: HTMLElement): T {
   return element as unknown as T;
 }
