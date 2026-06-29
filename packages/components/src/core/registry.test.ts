@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { defineComponent } from "./component.js";
+import { registerComponents } from "./registry.js";
 import { generateUniqueTag, registerComponent } from "./test-utils.js";
 
 describe("registerComponents", () => {
@@ -28,5 +29,17 @@ describe("registerComponents", () => {
       registerComponent(component);
       registerComponent(component);
     }).not.toThrow();
+  });
+
+  it("shouldBeNoOpWhenCustomElementsUnavailable", () => {
+    // Simulates SSR or non-browser environments where customElements is absent.
+    vi.stubGlobal("customElements", undefined);
+    try {
+      expect(() => {
+        registerComponents([{ tagName: "ssr-no-op", elementClass: class extends HTMLElement {} }]);
+      }).not.toThrow();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

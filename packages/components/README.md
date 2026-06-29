@@ -80,6 +80,7 @@ import { defineComponent, html, css, registerComponents } from "@codenhub/compon
 import type {
   ComponentConfig,
   ComponentDefinition,
+  ComponentInstance,
   ComponentProperties,
   ComponentProps,
   PropertyConstructor,
@@ -193,6 +194,21 @@ String attributes are cast automatically:
 | `elementClass`  | The `HTMLElement` subclass. Pass directly to `customElements.define`.    |
 | `create(props)` | Creates a new element instance. Optionally sets initial property values. |
 
+---
+
+### `ComponentInstance<Props, Methods>`
+
+The full type of a live element instance. Intersects `HTMLElement` with reactive
+properties (`ComponentProps<Props>`), custom methods (`Methods`), and the built-in
+`requestUpdate()` method.
+
+Use this type when you need to annotate a variable that holds a reference to a
+created or queried element outside the call site where the type is inferred.
+
+```ts
+import type { ComponentInstance } from "@codenhub/components";
+```
+
 ## Examples
 
 ### Shadow DOM with scoped styles
@@ -261,8 +277,13 @@ createRouter()
 - **Lifecycle call order on first connect**: render → `onUpdate` → `onMount`.
   The DOM is fully populated before `onMount` runs, so it is safe to query
   child elements there. `onUpdate` fires before `onMount` on the initial render
-  and after every subsequent render.
-- Shadow DOM styles are preserved across renders via a retained `<style>` node. To prevent style clobbering, the rendered content is wrapped inside a dedicated `<div>` inside the Shadow Root. This wrapper is not exposed directly but may affect CSS layouts (such as flexbox or grid) that expect child elements to be direct descendants of the `:host` element.
+  and after every subsequent render. The first-connect `onUpdate` call is
+  **synchronous** (runs during `connectedCallback`). All subsequent `onUpdate`
+  calls are **deferred to the next microtask** after a reactive property change.
+- Shadow DOM styles are preserved across renders via a retained `<style>` node.
+  The rendered content is placed inside a `<div style="display:contents">` inside
+  the Shadow Root, making the wrapper transparent to flex and grid layouts so
+  child elements behave as direct children of `:host`.
 - `customElements.define` is called only once per tag name; calling
   `registerComponents` multiple times with the same component is safe.
 - This package has no runtime dependencies.

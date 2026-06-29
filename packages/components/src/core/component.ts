@@ -93,6 +93,29 @@ function castProperty(value: unknown, type: ComponentProperties[string]): unknow
   return value;
 }
 
+const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/;
+const RESERVED_TAG_NAMES = new Set([
+  "annotation-xml",
+  "color-profile",
+  "font-face",
+  "font-face-src",
+  "font-face-uri",
+  "font-face-format",
+  "font-face-name",
+  "missing-glyph",
+]);
+const RESERVED_NAMES = new Set([
+  "constructor",
+  "connectedCallback",
+  "disconnectedCallback",
+  "attributeChangedCallback",
+  "adoptedCallback",
+  "tagName",
+  "elementClass",
+  "create",
+  "requestUpdate",
+]);
+
 /**
  * Defines a Web Component from a plain configuration object.
  *
@@ -131,18 +154,6 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   tagName: string,
   config: ComponentConfig<Props, Methods>,
 ): ComponentDefinition<Props, Methods> {
-  const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/;
-  const RESERVED_TAG_NAMES = new Set([
-    "annotation-xml",
-    "color-profile",
-    "font-face",
-    "font-face-src",
-    "font-face-uri",
-    "font-face-format",
-    "font-face-name",
-    "missing-glyph",
-  ]);
-
   if (!VALID_TAG_NAME_REGEX.test(tagName)) {
     throw new Error(
       `Invalid custom element tag name: "${tagName}". ` +
@@ -168,21 +179,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     );
   }
 
-  const RESERVED_PROPERTY_NAMES = new Set([
-    "constructor",
-    "connectedCallback",
-    "disconnectedCallback",
-    "attributeChangedCallback",
-    "adoptedCallback",
-    "tagName",
-    "elementClass",
-    "create",
-    "requestUpdate",
-  ]);
-
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
-    if (RESERVED_PROPERTY_NAMES.has(propName)) {
+    if (RESERVED_NAMES.has(propName)) {
       throw new Error(`Component "${tagName}": property "${propName}" is a reserved name.`);
     }
     if (propName.startsWith("_")) {
@@ -195,10 +194,22 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     }
   }
 
+  for (const methodName of Object.keys(methods as object)) {
+    if (Object.prototype.hasOwnProperty.call(properties, methodName)) {
+      throw new Error(
+        `Component "${tagName}": method "${methodName}" conflicts with a declared property of the same name.`,
+      );
+    }
+    if (RESERVED_NAMES.has(methodName)) {
+      throw new Error(`Component "${tagName}": method "${methodName}" is a reserved name.`);
+    }
+  }
+
   class CustomElement extends HTMLElement {
     private _isRenderScheduled = false;
     private _isMounted = false;
     private _isRendering = false;
+    private _mutatedDuringRender = false;
     private _contentWrapper: HTMLElement | null = null;
 
     static get observedAttributes(): string[] {
@@ -223,6 +234,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
                   `Component "${tagName}": property "${propName}" was mutated during render. ` +
                     "This can cause an infinite rendering loop.",
                 );
+                this._mutatedDuringRender = true;
                 return;
               }
               this._scheduleRender();
@@ -247,7 +259,10 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         }
         // Dedicated content wrapper so renders can simply set innerHTML
         // without needing to walk siblings to avoid clobbering the style node.
+        // display:contents makes the wrapper transparent to flex/grid layouts
+        // so child elements behave as direct children of the shadow host.
         const contentWrapper = document.createElement("div");
+        contentWrapper.style.display = "contents";
         shadow.appendChild(contentWrapper);
         this._contentWrapper = contentWrapper;
       }
@@ -309,11 +324,16 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     private _render(): void {
       this._isRenderScheduled = false;
       this._isRendering = true;
+      this._mutatedDuringRender = false;
       let htmlContent: string;
       try {
         htmlContent = config.render.call(this as unknown as ComponentInstance<Props, Methods>);
       } finally {
         this._isRendering = false;
+        if (this._mutatedDuringRender) {
+          this._mutatedDuringRender = false;
+          this._scheduleRender();
+        }
       }
 
       if (shouldUseShadow) {

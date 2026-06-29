@@ -550,6 +550,23 @@ describe("Shadow DOM", () => {
     );
   });
 
+  it("shouldSetDisplayContentsOnShadowRootContentWrapper", () => {
+    const tag = generateUniqueTag("shadow-display-contents");
+    const component = defineComponent(tag, {
+      hasShadow: true,
+      render() {
+        return "<p>test</p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    const wrapper = el.shadowRoot!.querySelector("div");
+    expect(wrapper?.style.display).toBe("contents");
+  });
+
   it("shouldRenderCorrectlyWhenExtraElementAppendedToShadowRoot", async () => {
     const tag = generateUniqueTag("shadow-append");
     const component = defineComponent(tag, {
@@ -826,7 +843,7 @@ describe("coverage gaps", () => {
     expect(castToProps<{ data: unknown }>(el).data).toBeUndefined();
   });
 
-  it("shouldWarnAndNotReRenderWhenPropertyMutatedDuringRender", async () => {
+  it("shouldWarnAndScheduleDeferredRenderWhenPropertyMutatedDuringRender", async () => {
     const tag = generateUniqueTag("render-loop-guard");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     let renderCount = 0;
@@ -836,10 +853,10 @@ describe("coverage gaps", () => {
       render() {
         renderCount++;
         if (renderCount === 1) {
-          // Mutate count during render
+          // Mutate count during render — warns, schedules deferred re-render.
           castToProps<{ count: number }>(this).count = 42;
         }
-        return "<p></p>";
+        return `<p>${this.count}</p>`;
       },
     });
     registerComponent(component);
@@ -847,16 +864,17 @@ describe("coverage gaps", () => {
     const el = component.create();
     document.body.appendChild(el);
 
-    // Initial render runs synchronously
+    // Initial render runs synchronously; mutation warning emitted.
     expect(renderCount).toBe(1);
     expect(castToProps<{ count: number }>(el).count).toBe(42);
     expect(warnSpy).toHaveBeenCalledWith(
       `Component "${tag}": property "count" was mutated during render. This can cause an infinite rendering loop.`,
     );
 
-    // Wait to ensure no extra render was scheduled for the next microtask
+    // Deferred re-render resolves the stale state in the next microtask.
     await Promise.resolve();
-    expect(renderCount).toBe(1);
+    expect(renderCount).toBe(2);
+    expect(el.innerHTML).toContain("<p>42</p>");
 
     warnSpy.mockRestore();
   });
@@ -1108,6 +1126,39 @@ describe("defineComponent - additional validations and features", () => {
     await Promise.resolve();
 
     expect(renderCount).toBe(2);
+  });
+
+  it("shouldThrowErrorWhenMethodNameConflictsWithProperty", () => {
+    const tag = generateUniqueTag("method-prop-conflict");
+    expect(() => {
+      defineComponent(tag, {
+        properties: { count: Number },
+        render() {
+          return "<p></p>";
+        },
+        methods: {
+          count() {
+            // same name as declared property
+          },
+        },
+      });
+    }).toThrow(`Component "${tag}": method "count" conflicts with a declared property of the same name.`);
+  });
+
+  it("shouldThrowErrorWhenMethodNameIsReserved", () => {
+    const tag = generateUniqueTag("method-reserved");
+    expect(() => {
+      defineComponent(tag, {
+        render() {
+          return "<p></p>";
+        },
+        methods: {
+          requestUpdate() {
+            // reserved name
+          },
+        },
+      });
+    }).toThrow(`Component "${tag}": method "requestUpdate" is a reserved name.`);
   });
 
   it("shouldSupportCustomPropertyConstructors", () => {
