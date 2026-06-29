@@ -1,5 +1,3 @@
-import type { ComponentDefinition, ComponentProperties } from "./types.js";
-
 /**
  * Registers an array of component definitions in the browser's global
  * `customElements` registry.
@@ -7,7 +5,10 @@ import type { ComponentDefinition, ComponentProperties } from "./types.js";
  * Safely skips any component whose tag is already registered, preventing
  * duplicate registration errors in hot-reload and test environments.
  *
- * @param components - Definitions returned by `defineComponent`.
+ * In non-browser environments where `customElements` is unavailable (SSR, Node.js),
+ * this function is a no-op and returns immediately without throwing.
+ *
+ * @param components - Array of definitions containing tag names and classes.
  *
  * @example
  * ```ts
@@ -17,7 +18,7 @@ import type { ComponentDefinition, ComponentProperties } from "./types.js";
  * registerComponents([UserCard]);
  * ```
  */
-export function registerComponents(components: ComponentDefinition<ComponentProperties, unknown>[]): void {
+export function registerComponents(components: { tagName: string; elementClass: { new (): HTMLElement } }[]): void {
   if (typeof customElements === "undefined") {
     return;
   }

@@ -774,4 +774,31 @@ describe("coverage gaps", () => {
     castToProps<{ items: unknown }>(el).items = "[1, 2, 3]";
     expect(castToProps<{ items: unknown }>(el).items).toEqual([1, 2, 3]);
   });
+
+  it("shouldHandleNonErrorJSONParsingFailureGracefullyForArray", () => {
+    const tag = generateUniqueTag("gap-arr-json-non-error");
+    const component = defineComponent(tag, {
+      properties: { items: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    const originalParse = JSON.parse;
+    JSON.parse = () => {
+      throw "raw string error";
+    };
+
+    try {
+      expect(() => {
+        castToProps<{ items: unknown }>(el).items = "[";
+      }).toThrow("Failed to parse JSON value for property of type Array");
+    } finally {
+      JSON.parse = originalParse;
+    }
+  });
 });
