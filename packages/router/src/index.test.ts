@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRouter } from ".";
 import type { Router } from ".";
 
+/**
+ * Integration tests for the public Router contract.
+ *
+ * These tests verify that registry, navigation, and history work correctly
+ * together through the createRouter() surface. Unit tests for each module
+ * live in src/__tests__/.
+ */
 describe("createRouter", () => {
   const startedRouters: Router[] = [];
 
@@ -20,9 +27,12 @@ describe("createRouter", () => {
 
   function trackStartedRouter(router: Router): Router {
     startedRouters.push(router);
-
     return router;
   }
+
+  // ---------------------------------------------------------------------------
+  // Routing
+  // ---------------------------------------------------------------------------
 
   it("matches registered routes in order with decoded params, query strings, and hashes", () => {
     const firstHandler = vi.fn();
@@ -40,51 +50,6 @@ describe("createRouter", () => {
     expect(match?.searchParams.get("tab")).toBe("posts");
     expect(firstHandler).toHaveBeenCalledWith(match);
     expect(secondHandler).not.toHaveBeenCalled();
-  });
-
-  it("strips base paths on browser starts and restores them for hrefs and history navigation", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler));
-
-    history.replaceState(null, "", "/app/settings?tab=profile#details");
-
-    const startedMatch = router.start();
-
-    expect(startedMatch).toMatchObject({ path: "/settings", pathname: "/settings", hash: "#details" });
-    expect(startedMatch?.searchParams.get("tab")).toBe("profile");
-    expect(router.href("/settings")).toBe("/app/settings");
-
-    const navigatedMatch = router.navigate("/settings?tab=billing", {
-      shouldReplace: true,
-      state: { source: "test" },
-    });
-
-    expect(navigatedMatch?.pathname).toBe("/settings");
-    expect(location.pathname).toBe("/app/settings");
-    expect(location.search).toBe("?tab=billing");
-    expect(history.state).toEqual({ source: "test" });
-  });
-
-  it("does not match browser locations outside the configured base path", () => {
-    const handler = vi.fn();
-    const fallback = vi.fn();
-    const listener = vi.fn();
-    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler).notFound(fallback));
-
-    router.subscribe(listener);
-    history.replaceState(null, "", "/settings?from=outside#details");
-
-    const match = router.start();
-
-    expect(match).toBeNull();
-    expect(handler).not.toHaveBeenCalled();
-    expect(fallback).toHaveBeenCalledWith({
-      pathname: "/settings",
-      searchParams: expect.any(URLSearchParams),
-      hash: "#details",
-    });
-    expect(fallback.mock.calls[0]?.[0].searchParams.get("from")).toBe("outside");
-    expect(listener).toHaveBeenCalledWith(null);
   });
 
   it("calls fallback handlers and subscribers for misses", () => {
@@ -106,87 +71,7 @@ describe("createRouter", () => {
 
     unsubscribe();
     router.navigate("/known");
-
     expect(listener).toHaveBeenCalledTimes(1);
-  });
-
-  it("matches static route paths using browser URL encoding", () => {
-    const handler = vi.fn();
-    const routePath = "/caf\u00e9";
-    const router = createRouter().on(routePath, handler);
-
-    const match = router.navigate(routePath);
-
-    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
-    expect(handler).toHaveBeenCalledWith(match);
-  });
-
-  it("matches static route paths with equivalent percent-escape casing", () => {
-    const handler = vi.fn();
-    const routePath = "/caf\u00e9";
-    const router = createRouter().on(routePath, handler);
-
-    const match = router.navigate("/caf%c3%a9");
-
-    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
-    expect(handler).toHaveBeenCalledWith(match);
-  });
-
-  it("normalizes encoded base paths for browser starts and hrefs", () => {
-    const handler = vi.fn();
-    const router = createRouter({ basePath: "/caf\u00e9" }).on("/settings", handler);
-
-    history.replaceState(null, "", "/caf%c3%a9/settings?tab=profile");
-
-    const match = router.start();
-
-    expect(match).toMatchObject({ path: "/settings", pathname: "/settings" });
-    expect(match?.searchParams.get("tab")).toBe("profile");
-    expect(handler).toHaveBeenCalledWith(match);
-    expect(router.href("/settings")).toBe("/caf%C3%A9/settings");
-  });
-
-  it("captures parameter names that overlap object prototype fields", () => {
-    const router = createRouter().on("/users/:__proto__", vi.fn());
-
-    const match = router.navigate("/users/alice");
-
-    expect(match?.params["__proto__"]).toBe("alice");
-    expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
-  });
-
-  it("returns route params as ordinary objects", () => {
-    const router = createRouter().on("/users/:id", vi.fn());
-
-    const match = router.navigate("/users/alice");
-
-    expect(Object.getPrototypeOf(match?.params)).toBe(Object.prototype);
-    expect(match?.params.hasOwnProperty("id")).toBe(true);
-  });
-
-  it("treats malformed encoded path parameters as misses", () => {
-    const handler = vi.fn();
-    const fallback = vi.fn();
-    const router = createRouter().on("/users/:id", handler).notFound(fallback);
-
-    const match = router.navigate("/users/%E0%A4%A");
-
-    expect(match).toBeNull();
-    expect(handler).not.toHaveBeenCalled();
-    expect(fallback).toHaveBeenCalledWith({
-      pathname: "/users/%E0%A4%A",
-      searchParams: expect.any(URLSearchParams),
-      hash: "",
-    });
-  });
-
-  it("rejects route paths with queries, hashes, and duplicate parameter names", () => {
-    const router = createRouter();
-    const handler = vi.fn();
-
-    expect(() => router.on("/users?tab=active", handler)).toThrow(Error);
-    expect(() => router.on("/users#active", handler)).toThrow(Error);
-    expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
   });
 
   it("queues and executes navigation started while another navigation is running", () => {
@@ -230,181 +115,71 @@ describe("createRouter", () => {
     expect(log).toEqual(["start", "first", "second"]);
   });
 
-  it("queues popstate events triggered during active navigation", () => {
-    const router = trackStartedRouter(createRouter());
-    const log: string[] = [];
+  // ---------------------------------------------------------------------------
+  // Encoding
+  // ---------------------------------------------------------------------------
 
-    router.on("/start", () => {
-      log.push("start");
-      history.pushState(null, "", "/popstate-target");
-      dispatchEvent(new PopStateEvent("popstate"));
-    });
-    router.on("/popstate-target", () => {
-      log.push("popstate");
-    });
-
-    router.start();
-    router.navigate("/start");
-    expect(log).toEqual(["start", "popstate"]);
-  });
-
-  it("queues popstate events triggered during active navigation and preserves state", () => {
-    const router = trackStartedRouter(createRouter());
-    const log: string[] = [];
-    let stateDuringPopstateTarget: unknown = null;
-
-    router.on("/start", () => {
-      log.push("start");
-      history.pushState({ val: "original" }, "", "/popstate-target");
-      dispatchEvent(new PopStateEvent("popstate", { state: { val: "popstate-queued" } }));
-      router.navigate("/other");
-    });
-    router.on("/other", () => {
-      log.push("other");
-    });
-    router.on("/popstate-target", () => {
-      log.push("popstate");
-      stateDuringPopstateTarget = history.state;
-    });
-
-    router.start();
-    router.navigate("/start");
-    expect(log).toEqual(["start", "popstate", "other"]);
-    expect(location.pathname).toBe("/other");
-    expect(stateDuringPopstateTarget).toEqual({ val: "popstate-queued" });
-  });
-
-  it("intercepts anchor clicks with data-router-link", () => {
+  it("matches static route paths using browser URL encoding", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
+    const routePath = "/caf\u00e9";
+    const router = createRouter().on(routePath, handler);
 
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
+    const match = router.navigate(routePath);
 
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(true);
-    expect(handler).toHaveBeenCalled();
-    expect(location.pathname).toBe("/target");
-
-    document.body.removeChild(link);
+    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
+    expect(handler).toHaveBeenCalledWith(match);
   });
 
-  it("propagates route handler errors from intercepted anchor clicks", () => {
-    const handler = vi.fn().mockImplementation(() => {
-      throw new Error("Route handler failed");
-    });
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    let errorEvent: ErrorEvent | null = null;
-    const onError = (e: ErrorEvent) => {
-      errorEvent = e;
-      e.preventDefault();
-    };
-    window.addEventListener("error", onError);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    window.removeEventListener("error", onError);
-
-    expect(errorEvent).not.toBeNull();
-    expect((errorEvent as unknown as ErrorEvent).message).toContain("Route handler failed");
-    expect(clickEvent.defaultPrevented).toBe(true);
-
-    document.body.removeChild(link);
-  });
-
-  it("does not intercept anchor clicks without data-router-link", () => {
+  it("matches static route paths with equivalent percent-escape casing", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
+    const routePath = "/caf\u00e9";
+    const router = createRouter().on(routePath, handler);
 
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    document.body.appendChild(link);
+    const match = router.navigate("/caf%c3%a9");
 
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
+    expect(match).toMatchObject({ path: routePath, pathname: "/caf%C3%A9" });
+    expect(handler).toHaveBeenCalledWith(match);
   });
 
-  it("does not intercept external clicks or clicks with modifier keys", () => {
+  it("normalizes encoded base paths for browser starts and hrefs", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
+    const router = trackStartedRouter(createRouter({ basePath: "/caf\u00e9" }).on("/settings", handler));
 
-    const link = document.createElement("a");
-    link.setAttribute("href", "https://google.com/target");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
+    history.replaceState(null, "", "/caf%c3%a9/settings?tab=profile");
 
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
+    const match = router.start();
 
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    // modifier key (meta)
-    link.setAttribute("href", "/target");
-    const metaClickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-      metaKey: true,
-    });
-    link.dispatchEvent(metaClickEvent);
-    expect(metaClickEvent.defaultPrevented).toBe(false);
-
-    document.body.removeChild(link);
+    expect(match).toMatchObject({ path: "/settings", pathname: "/settings" });
+    expect(match?.searchParams.get("tab")).toBe("profile");
+    expect(handler).toHaveBeenCalledWith(match);
+    expect(router.href("/settings")).toBe("/caf%C3%A9/settings");
   });
 
-  it("removes browser listeners and subscribers when destroyed", () => {
-    const handler = vi.fn();
-    const listener = vi.fn();
-    const router = trackStartedRouter(createRouter().on("/next", handler));
+  // ---------------------------------------------------------------------------
+  // Prototype safety
+  // ---------------------------------------------------------------------------
 
-    router.subscribe(listener);
-    router.start();
-    listener.mockClear();
-    router.destroy();
+  it("captures parameter names that overlap object prototype fields", () => {
+    const router = createRouter().on("/users/:__proto__", vi.fn());
 
-    history.pushState(null, "", "/next");
-    dispatchEvent(new PopStateEvent("popstate"));
+    const match = router.navigate("/users/alice");
 
-    expect(handler).not.toHaveBeenCalled();
-    expect(listener).not.toHaveBeenCalled();
+    expect(match?.params["__proto__"]).toBe("alice");
+    expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
   });
+
+  it("returns route params as ordinary objects", () => {
+    const router = createRouter().on("/users/:id", vi.fn());
+
+    const match = router.navigate("/users/alice");
+
+    expect(Object.getPrototypeOf(match?.params)).toBe(Object.prototype);
+    expect(match?.params.hasOwnProperty("id")).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Validation — integration boundary
+  // ---------------------------------------------------------------------------
 
   it("validates base paths, route paths, and navigation targets", () => {
     const router = createRouter();
@@ -438,303 +213,68 @@ describe("createRouter", () => {
     expect(() => router.href("/admin/%2e%2e/users")).toThrow(Error);
   });
 
-  it("does not re-match or run handlers on duplicate start calls", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter().on("/", handler));
-
-    const match1 = router.start();
-    expect(handler).toHaveBeenCalledTimes(1);
-
-    const match2 = router.start();
-    expect(handler).toHaveBeenCalledTimes(1);
-    expect(match1).toBe(match2);
-  });
-
-  it("does not prevent default click action on invalid paths containing backslashes", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/\\example.com/settings");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("does not intercept anchor clicks when shouldInterceptLinks is false", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter().on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("throws when start is called during active navigation", () => {
-    const router = trackStartedRouter(createRouter());
-    router.on("/start", () => {
-      expect(() => router.start()).toThrow("Router navigation is already running.");
-    });
-    router.navigate("/start");
-  });
-
-  it("can be restarted after being destroyed", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter().on("/target", handler));
-
-    router.start();
-    router.destroy();
-
-    // Start again
-    router.start();
-    router.navigate("/target");
-    expect(handler).toHaveBeenCalledTimes(1);
-  });
-
-  it("intercepts SVG anchor clicks with data-router-link", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    svg.appendChild(link);
-    document.body.appendChild(svg);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(true);
-    expect(handler).toHaveBeenCalled();
-    expect(location.pathname).toBe("/target");
-
-    document.body.removeChild(svg);
-  });
-
-  it("intercepts SVG anchor clicks with data-router-link using xlink:href", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
-    link.setAttribute("xlink:href", "/target");
-    link.setAttribute("data-router-link", "");
-    svg.appendChild(link);
-    document.body.appendChild(svg);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(true);
-    expect(handler).toHaveBeenCalled();
-    expect(location.pathname).toBe("/target");
-
-    document.body.removeChild(svg);
-  });
-
-  it("does not intercept anchor clicks with non-self targets", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    link.setAttribute("target", "_blank");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("does not intercept anchor clicks without href", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("does not intercept clicks on external origins", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "https://google.com/target");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("does not intercept clicks on same-origin paths outside basePath", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(
-      createRouter({ basePath: "/app", shouldInterceptLinks: true }).on("/target", handler),
-    );
-    router.start();
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/outside-basepath");
-    link.setAttribute("data-router-link", "");
-    document.body.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(handler).not.toHaveBeenCalled();
-
-    document.body.removeChild(link);
-  });
-
-  it("does not crash on non-Element click targets", () => {
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }));
-    router.start();
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-    });
-
-    expect(() => document.dispatchEvent(clickEvent)).not.toThrow();
-  });
-
-  it("intercepts anchor clicks inside a shadow DOM", () => {
-    const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler));
-    router.start();
-
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const shadowRoot = host.attachShadow({ mode: "open" });
-
-    const link = document.createElement("a");
-    link.setAttribute("href", "/target");
-    link.setAttribute("data-router-link", "");
-    shadowRoot.appendChild(link);
-
-    const clickEvent = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      button: 0,
-      composed: true,
-    });
-    link.dispatchEvent(clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(true);
-    expect(handler).toHaveBeenCalled();
-    expect(location.pathname).toBe("/target");
-
-    document.body.removeChild(host);
-  });
+  // ---------------------------------------------------------------------------
+  // href
+  // ---------------------------------------------------------------------------
 
   it("returns base-path-prefixed href for root path '/'", () => {
     const router = createRouter({ basePath: "/app" });
     expect(router.href("/")).toBe("/app/");
   });
 
-  it("strips base path when location exactly matches basePath + '/'", () => {
+  it("strips base paths on browser starts and restores them for hrefs and history navigation", () => {
     const handler = vi.fn();
-    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/", handler));
+    const router = trackStartedRouter(createRouter({ basePath: "/app" }).on("/settings", handler));
 
-    history.replaceState(null, "", "/app/");
-    const match = router.start();
+    history.replaceState(null, "", "/app/settings?tab=profile#details");
 
-    expect(match).toMatchObject({ path: "/", pathname: "/" });
-    expect(handler).toHaveBeenCalled();
+    const startedMatch = router.start();
+
+    expect(startedMatch).toMatchObject({ path: "/settings", pathname: "/settings", hash: "#details" });
+    expect(startedMatch?.searchParams.get("tab")).toBe("profile");
+    expect(router.href("/settings")).toBe("/app/settings");
+
+    const navigatedMatch = router.navigate("/settings?tab=billing", {
+      shouldReplace: true,
+      state: { source: "test" },
+    });
+
+    expect(navigatedMatch?.pathname).toBe("/settings");
+    expect(location.pathname).toBe("/app/settings");
+    expect(location.search).toBe("?tab=billing");
+    expect(history.state).toEqual({ source: "test" });
   });
 
-  it("clears pending navigations and resets currentMatch on destroy", () => {
-    let callCount = 0;
+  // ---------------------------------------------------------------------------
+  // Malformed params
+  // ---------------------------------------------------------------------------
+
+  it("treats malformed encoded path parameters as misses", () => {
+    const handler = vi.fn();
+    const fallback = vi.fn();
+    const router = createRouter().on("/users/:id", handler).notFound(fallback);
+
+    const match = router.navigate("/users/%E0%A4%A");
+
+    expect(match).toBeNull();
+    expect(handler).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledWith({
+      pathname: "/users/%E0%A4%A",
+      searchParams: expect.any(URLSearchParams),
+      hash: "",
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Route path validation via on()
+  // ---------------------------------------------------------------------------
+
+  it("rejects route paths with queries, hashes, and duplicate parameter names", () => {
     const router = createRouter();
-    router.on("/first", () => {
-      callCount++;
-      router.navigate("/second");
-      router.destroy();
-    });
-    router.on("/second", () => {
-      callCount++;
-    });
+    const handler = vi.fn();
 
-    router.navigate("/first");
-
-    expect(callCount).toBe(1);
+    expect(() => router.on("/users?tab=active", handler)).toThrow(Error);
+    expect(() => router.on("/users#active", handler)).toThrow(Error);
+    expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
   });
 });
