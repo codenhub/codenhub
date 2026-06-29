@@ -1,0 +1,45 @@
+{
+  "name": "@codenhub/components",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Lightweight, native Web Components wrapper for fast-loading SPA UIs.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/components"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/components version dist-tags time --json && npm dist-tag ls @codenhub/components && npm access get status @codenhub/components",
+    "status:pack": "npm pack --dry-run",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "jsdom": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
