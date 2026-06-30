@@ -7,6 +7,7 @@ export type {
   ComponentInstance,
   ComponentProperties,
   ComponentProps,
+  PropertyConfig,
   PropertyConstructor,
   PropertyType,
 } from "./core/types.js";

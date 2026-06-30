@@ -159,7 +159,7 @@ const RESERVED_NAMES = new Set([
   "requestUpdate",
 ]);
 
-const supportsConstructableStylesheets =
+const hasConstructableStylesheetsSupport =
   typeof window !== "undefined" &&
   "adoptedStyleSheets" in Document.prototype &&
   "replaceSync" in CSSStyleSheet.prototype;
@@ -228,7 +228,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   }
 
   let compiledStyleSheet: CSSStyleSheet | null = null;
-  if (shouldUseShadow && config.styles !== undefined && supportsConstructableStylesheets) {
+  if (shouldUseShadow && config.styles !== undefined && hasConstructableStylesheetsSupport) {
     compiledStyleSheet = new CSSStyleSheet();
     compiledStyleSheet.replaceSync(config.styles);
   }
