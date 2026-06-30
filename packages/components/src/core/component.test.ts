@@ -316,8 +316,8 @@ describe("reactive properties", () => {
     expect(castToProps<{ value: unknown }>(el).value).toBeUndefined();
   });
 
-  it("shouldThrowErrorOnInvalidJSONParsing", () => {
-    const tag = generateUniqueTag("cast-json-fail");
+  it("shouldThrowErrorOnInvalidJSONParsingForObject", () => {
+    const tag = generateUniqueTag("cast-json-fail-obj");
     const component = defineComponent(tag, {
       properties: { data: Object },
       render() {
@@ -332,21 +332,23 @@ describe("reactive properties", () => {
     expect(() => {
       castToProps<{ data: unknown }>(el).data = "{invalid json";
     }).toThrow("Failed to parse JSON value for property of type Object");
+  });
 
-    const tag2 = generateUniqueTag("cast-json-fail-arr");
-    const component2 = defineComponent(tag2, {
+  it("shouldThrowErrorOnInvalidJSONParsingForArray", () => {
+    const tag = generateUniqueTag("cast-json-fail-arr");
+    const component = defineComponent(tag, {
       properties: { items: Array },
       render() {
         return "<p></p>";
       },
     });
-    registerComponent(component2);
+    registerComponent(component);
 
-    const el2 = component2.create();
-    document.body.appendChild(el2);
+    const el = component.create();
+    document.body.appendChild(el);
 
     expect(() => {
-      castToProps<{ items: unknown }>(el2).items = "[invalid json";
+      castToProps<{ items: unknown }>(el).items = "[invalid json";
     }).toThrow("Failed to parse JSON value for property of type Array");
   });
 
@@ -731,8 +733,8 @@ describe("coverage gaps", () => {
     expect(castToProps<{ name: string }>(el).name).toBe("Alice");
   });
 
-  it("shouldThrowErrorWhenObjectPropertyReceivesNonObject", () => {
-    const tag = generateUniqueTag("gap-obj-invalid");
+  it("shouldThrowErrorWhenObjectPropertyReceivesPrimitive", () => {
+    const tag = generateUniqueTag("gap-obj-invalid-prim");
     const component = defineComponent(tag, {
       properties: { data: Object },
       render() {
@@ -747,14 +749,28 @@ describe("coverage gaps", () => {
     expect(() => {
       castToProps<{ data: unknown }>(el).data = 123;
     }).toThrow("Property of type Object received non-object value: 123");
+  });
+
+  it("shouldThrowErrorWhenObjectPropertyReceivesArray", () => {
+    const tag = generateUniqueTag("gap-obj-invalid-arr");
+    const component = defineComponent(tag, {
+      properties: { data: Object },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
 
     expect(() => {
       castToProps<{ data: unknown }>(el).data = [1, 2];
     }).toThrow("Property of type Object received non-object value: 1,2");
   });
 
-  it("shouldThrowErrorWhenArrayPropertyReceivesNonArray", () => {
-    const tag = generateUniqueTag("gap-arr-invalid");
+  it("shouldThrowErrorWhenArrayPropertyReceivesObject", () => {
+    const tag = generateUniqueTag("gap-arr-invalid-obj");
     const component = defineComponent(tag, {
       properties: { items: Array },
       render() {
@@ -769,6 +785,20 @@ describe("coverage gaps", () => {
     expect(() => {
       castToProps<{ items: unknown }>(el).items = { a: 1 };
     }).toThrow("Property of type Array received non-array value: [object Object]");
+  });
+
+  it("shouldThrowErrorWhenArrayPropertyReceivesBoolean", () => {
+    const tag = generateUniqueTag("gap-arr-invalid-bool");
+    const component = defineComponent(tag, {
+      properties: { items: Array },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
 
     expect(() => {
       castToProps<{ items: unknown }>(el).items = true;
@@ -1016,9 +1046,20 @@ describe("defineComponent - additional validations and features", () => {
 
     shouldThrow = true;
 
-    castToProps<Record<string, unknown>>(el)._isRenderScheduled = true;
+    // Intercept the private _renderAsync to capture the promise and prevent unhandled rejection
+    const instance = el as unknown as { _renderAsync: () => Promise<void> };
+    const originalRenderAsync = instance._renderAsync;
+    let renderPromise: Promise<void> | null = null;
+    instance._renderAsync = function () {
+      renderPromise = originalRenderAsync.call(this);
+      return renderPromise;
+    };
 
-    await expect(castToProps<{ _renderAsync(): Promise<void> }>(el)._renderAsync()).rejects.toThrow("Render failed");
+    // Trigger an async render by mutating property
+    castToProps<{ val: number }>(el).val = 2;
+
+    // Wait for the promise to reject
+    await expect(renderPromise).rejects.toThrow("Render failed");
 
     expect(errSpy).toHaveBeenCalledWith(
       expect.stringContaining("Unhandled error during async render of component"),

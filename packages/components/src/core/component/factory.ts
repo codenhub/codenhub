@@ -141,7 +141,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   class CustomElement extends BaseElement {
     private _isRenderScheduled = false;
     private _isMounted = false;
-    _isRendering = false;
+    private _isRendering = false;
     private _hasMutatedDuringRender = false;
     private _contentWrapper: HTMLElement | null = null;
     _propertyValues: Record<string, unknown> = {};
@@ -152,6 +152,8 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
     constructor() {
       super();
+      // Dummy read to satisfy compiler unused-property check since it is read via CustomElementInternal cast
+      void this._isRendering;
 
       // Initialize default values defined in property config descriptors
       for (const [propName, propEntry] of Object.entries(properties)) {
@@ -258,13 +260,19 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       this._isRendering = true;
       this._hasMutatedDuringRender = false;
       let htmlContent: string | TemplateResult;
+      let hasError = false;
       try {
         htmlContent = config.render.call(this as unknown as ComponentInstance<Props, Methods>);
+      } catch (err) {
+        hasError = true;
+        throw err;
       } finally {
         this._isRendering = false;
         if (this._hasMutatedDuringRender) {
           this._hasMutatedDuringRender = false;
-          this._scheduleRender();
+          if (!hasError) {
+            this._scheduleRender();
+          }
         }
       }
 

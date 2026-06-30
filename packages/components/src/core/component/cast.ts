@@ -93,8 +93,10 @@ function castCustomConstructor(value: unknown, type: PropertyConstructor): unkno
     return value;
   }
   const typeStr = Function.prototype.toString.call(type);
+  const descriptor = Object.getOwnPropertyDescriptor(type, "prototype");
   const isClassOrNative =
     typeStr.startsWith("class") ||
+    (descriptor !== undefined && !descriptor.writable) ||
     /^(?:Date|RegExp|Map|Set|URL|URLSearchParams|WeakMap|WeakSet|ArrayBuffer|SharedArrayBuffer|DataView|Float32Array|Float64Array|Int8Array|Int16Array|Int32Array|Uint8Array|Uint8ClampedArray|Uint16Array|Uint32Array|BigInt64Array|BigUint64Array)$/.test(
       type.name,
     );
