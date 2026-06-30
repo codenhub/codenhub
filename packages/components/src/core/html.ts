@@ -3,7 +3,19 @@
  * Returned by the `html` helper.
  */
 export class TemplateResult {
-  constructor(public readonly value: string) {}
+  /**
+   * @param value - The raw, trusted HTML template string.
+   */
+  constructor(
+    /** The raw, serialized HTML content. */
+    public readonly value: string,
+  ) {}
+
+  /**
+   * Returns the raw HTML string representation.
+   *
+   * @returns Raw template string.
+   */
   toString(): string {
     return this.value;
   }
@@ -69,6 +81,9 @@ function serializeValue(val: unknown): string {
  *
  * > [!WARNING]
  * > Only use this helper with trusted inputs to prevent XSS attacks.
+ *
+ * @param value - Trusted HTML string or value to insert raw.
+ * @returns A `TemplateResult` bypassing automatic HTML escaping.
  */
 export function unsafeHTML(value: unknown): TemplateResult {
   return new TemplateResult(value === null || value === undefined ? "" : String(value));

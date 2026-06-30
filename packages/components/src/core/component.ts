@@ -28,7 +28,7 @@ interface CustomElementInternal {
  *
  * @internal
  */
-function castProperty(value: unknown, type: ComponentProperties[string]): unknown {
+function castProperty(value: unknown, type: PropertyConstructor): unknown {
   // undefined passes through unchanged for all types. An undefined value means
   // the property has never been set and should stay uninitialized.
   if (value === undefined) {
@@ -315,7 +315,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         (this as Record<string, unknown>)[name] = (fn as () => unknown).bind(this);
       }
 
-      if (shouldUseShadow) {
+      if (shouldUseShadow && typeof this.attachShadow === "function") {
         const shadow = this.attachShadow({ mode: "open" });
         if (compiledStyleSheet !== null) {
           shadow.adoptedStyleSheets = [compiledStyleSheet];
@@ -405,7 +405,10 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       const rawHTML = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
 
-      if (shouldUseShadow) {
+      const hasShadowSupport =
+        typeof HTMLElement !== "undefined" && typeof HTMLElement.prototype.attachShadow === "function";
+
+      if (shouldUseShadow && hasShadowSupport) {
         const contentWrapper = this._contentWrapper;
         if (contentWrapper === null || !this.shadowRoot || contentWrapper.parentNode !== this.shadowRoot) {
           throw new Error(

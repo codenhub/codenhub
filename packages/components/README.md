@@ -101,6 +101,14 @@ Does **not** register the element in `customElements` — call
 
 Returns: `ComponentDefinition<Props, Methods>`
 
+- **Errors thrown**:
+  - Throws `Error` if the `tagName` is invalid (e.g. does not contain a hyphen, does not start with a lowercase letter, or contains invalid characters).
+  - Throws `Error` if `tagName` is a reserved SVG/HTML custom element tag name.
+  - Throws `Error` if `config.render` is not a function.
+  - Throws `Error` if a property or method name conflicts or uses a reserved name (such as `constructor`, `requestUpdate`, `connectedCallback`, etc.).
+  - During execution, property setters will throw a parsing `Error` if a property declared as `Object` or `Array` receives a string value that cannot be parsed as JSON.
+  - During rendering, if `hasShadow` is true but the shadow root content wrapper element is removed or missing from the DOM, a render `Error` is thrown to prevent clobbering other nodes.
+
 #### `registerComponents(components)`
 
 Registers one or more `ComponentDefinition` objects in the browser's global
@@ -159,6 +167,9 @@ const styles = css`
   }
 `;
 ```
+
+- **Errors thrown**:
+  - Throws `TypeError` if an array or a plain object (without a custom `toString` method) is interpolated.
 
 ---
 
