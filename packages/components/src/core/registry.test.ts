@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { defineComponent } from "./component.js";
+import { defineComponent } from "./component/index.js";
 import { registerComponents } from "./registry.js";
 import { generateUniqueTag, registerComponent } from "./test-utils.js";
 

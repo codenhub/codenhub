@@ -76,13 +76,14 @@ Supported import paths:
 ### `@codenhub/components`
 
 ```ts
-import { defineComponent, html, css, registerComponents } from "@codenhub/components";
+import { defineComponent, html, css, unsafeHTML, TemplateResult, registerComponents } from "@codenhub/components";
 import type {
   ComponentConfig,
   ComponentDefinition,
   ComponentInstance,
   ComponentProperties,
   ComponentProps,
+  PropertyConfig,
   PropertyConstructor,
   PropertyType,
 } from "@codenhub/components";
@@ -170,6 +171,35 @@ const styles = css`
 
 - **Errors thrown**:
   - Throws `TypeError` if an array or a plain object (without a custom `toString` method) is interpolated.
+
+#### `TemplateResult`
+
+Class representing a trusted, pre-serialized HTML string. Returned by `html`
+and `unsafeHTML`. You will encounter this type as the return type of `render`.
+
+```ts
+import type { TemplateResult } from "@codenhub/components";
+```
+
+When a `TemplateResult` is interpolated inside another `html` expression, its
+content is inserted **raw** without escaping, enabling safe template
+composition:
+
+```ts
+const item = (label: string) => html`
+  <li>${label}</li>
+`;
+const list = html`
+  <ul>
+    ${items.map(item)}
+  </ul>
+`;
+```
+
+| Member       | Type           | Description                      |
+| ------------ | -------------- | -------------------------------- |
+| `value`      | `string`       | The raw, serialized HTML string. |
+| `toString()` | `() => string` | Returns `value`.                 |
 
 ---
 

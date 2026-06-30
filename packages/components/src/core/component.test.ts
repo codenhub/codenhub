@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { defineComponent } from "./component.js";
+import { defineComponent } from "./component/index.js";
 import { html } from "./html.js";
 import { castToProps, registerComponent, generateUniqueTag } from "./test-utils.js";
 

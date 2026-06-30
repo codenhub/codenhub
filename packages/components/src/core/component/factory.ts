@@ -1,168 +1,35 @@
-import { TemplateResult } from "./html.js";
+import { TemplateResult } from "../html.js";
 import type {
   ComponentConfig,
   ComponentDefinition,
   ComponentInstance,
   ComponentProperties,
   PropertyConstructor,
-} from "./types.js";
+} from "../types.js";
+import { castProperty } from "./cast.js";
+import {
+  RESERVED_NAMES,
+  RESERVED_TAG_NAMES,
+  VALID_TAG_NAME_REGEX,
+  hasConstructableStylesheetsSupport,
+  hasShadowSupport,
+} from "./constants.js";
 
 const BaseElement = typeof HTMLElement !== "undefined" ? HTMLElement : (class {} as typeof HTMLElement);
 
+/**
+ * Typed view of CustomElement's private state, used exclusively inside
+ * `Object.defineProperty` getter/setter callbacks. Property descriptors
+ * defined on the prototype via `Object.defineProperty` cannot access
+ * class-private members, so we cast `this` to this interface at the boundary.
+ * All fields map 1-to-1 to private members of the CustomElement class below.
+ */
 interface CustomElementInternal {
   _propertyValues: Record<string, unknown>;
   _isRendering: boolean;
   _hasMutatedDuringRender: boolean;
   _scheduleRender(): void;
 }
-
-/**
- * Casts a raw attribute or property value to the type indicated by its
- * constructor. Called at every property set and `attributeChangedCallback`.
- *
- * - `undefined` passes through unchanged for all types.
- * - `null` passes through unchanged for non-Boolean types; for `Boolean`, `null`
- *   maps to `false` (attribute-removal semantics — `removeAttribute` passes `null`).
- * - `Object`/`Array` constructors attempt `JSON.parse` when value is a string.
- * - Any unsupported constructor types pass the value through unchanged as a fallback.
- *
- * @internal
- */
-function castProperty(value: unknown, type: PropertyConstructor): unknown {
-  // undefined passes through unchanged for all types. An undefined value means
-  // the property has never been set and should stay uninitialized.
-  if (value === undefined) {
-    return value;
-  }
-
-  if (type === Boolean) {
-    // null arrives from removeAttribute (attribute absence), which maps to false
-    // per standard HTML boolean attribute semantics documented in the README.
-    // Any value that is not null, false, or the string "false" is considered true
-    // (treating present attribute values like "active" or "" as true).
-    if (value === null || value === false || value === "false") {
-      return false;
-    }
-    return true;
-  }
-
-  // For all other types, null passes through unchanged so consumers can
-  // distinguish "not yet set" from a typed value.
-  if (value === null) {
-    return value;
-  }
-
-  if (type === String) {
-    return String(value);
-  }
-  if (type === Number) {
-    if (typeof value === "string" && value.trim() === "") {
-      return NaN;
-    }
-    return Number(value);
-  }
-  if (type === Array) {
-    let parsed = value;
-    if (typeof value === "string") {
-      if (value.trim() === "") {
-        return undefined;
-      }
-      try {
-        parsed = JSON.parse(value);
-      } catch (err) {
-        throw new Error(`Failed to parse JSON value for property of type ${type.name}: "${value}"`, {
-          cause: err instanceof Error ? err : undefined,
-        });
-      }
-    }
-    if (parsed === null) {
-      return null;
-    }
-    if (!Array.isArray(parsed)) {
-      throw new Error(`Property of type ${type.name} received non-array value: ${String(parsed)}`);
-    }
-    return parsed;
-  }
-
-  if (type === Object) {
-    let parsed = value;
-    if (typeof value === "string") {
-      if (value.trim() === "") {
-        return undefined;
-      }
-      try {
-        parsed = JSON.parse(value);
-      } catch (err) {
-        throw new Error(`Failed to parse JSON value for property of type ${type.name}: "${value}"`, {
-          cause: err instanceof Error ? err : undefined,
-        });
-      }
-    }
-    if (parsed === null) {
-      return null;
-    }
-    if (typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`Property of type ${type.name} received non-object value: ${String(parsed)}`);
-    }
-    return parsed;
-  }
-
-  // Custom constructor/converter logic
-  if (typeof type === "function") {
-    if (value instanceof type) {
-      return value;
-    }
-    // Check if it's a class or native constructor
-    const typeStr = Function.prototype.toString.call(type);
-    const isClassOrNative =
-      typeStr.startsWith("class") ||
-      /^(?:Date|RegExp|Map|Set|URL|URLSearchParams|WeakMap|WeakSet|ArrayBuffer|SharedArrayBuffer|DataView|Float32Array|Float64Array|Int8Array|Int16Array|Int32Array|Uint8Array|Uint8ClampedArray|Uint16Array|Uint32Array|BigInt64Array|BigUint64Array)$/.test(
-        type.name,
-      );
-
-    try {
-      if (isClassOrNative) {
-        return new (type as new (...args: unknown[]) => unknown)(value);
-      } else {
-        return (type as Function)(value);
-      }
-    } catch (err) {
-      throw new Error(`Failed to convert value using custom constructor/converter: "${value}"`, {
-        cause: err instanceof Error ? err : undefined,
-      });
-    }
-  }
-
-  return value;
-}
-
-const VALID_TAG_NAME_REGEX = /^[a-z][a-z0-9._-]*-[a-z0-9._-]*$/;
-const RESERVED_TAG_NAMES = new Set([
-  "annotation-xml",
-  "color-profile",
-  "font-face",
-  "font-face-src",
-  "font-face-uri",
-  "font-face-format",
-  "font-face-name",
-  "missing-glyph",
-]);
-const RESERVED_NAMES = new Set([
-  "constructor",
-  "connectedCallback",
-  "disconnectedCallback",
-  "attributeChangedCallback",
-  "adoptedCallback",
-  "tagName",
-  "elementClass",
-  "create",
-  "requestUpdate",
-]);
-
-const hasConstructableStylesheetsSupport =
-  typeof window !== "undefined" &&
-  "adoptedStyleSheets" in Document.prototype &&
-  "replaceSync" in CSSStyleSheet.prototype;
 
 /**
  * Defines a Web Component from a plain configuration object.
@@ -286,8 +153,6 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     constructor() {
       super();
 
-      this._propertyValues = {};
-
       // Initialize default values defined in property config descriptors
       for (const [propName, propEntry] of Object.entries(properties)) {
         if (typeof propEntry === "object" && propEntry !== null && "default" in propEntry) {
@@ -404,9 +269,6 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
       }
 
       const rawHTML = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
-
-      const hasShadowSupport =
-        typeof HTMLElement !== "undefined" && typeof HTMLElement.prototype.attachShadow === "function";
 
       if (shouldUseShadow && hasShadowSupport) {
         const contentWrapper = this._contentWrapper;
