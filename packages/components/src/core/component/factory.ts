@@ -306,14 +306,11 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
     Object.defineProperty(CustomElement.prototype, propName, {
       get(this: HTMLElement) {
         const self = this as unknown as CustomElementInternal;
-        return self._propertyValues?.[propName];
+        return self._propertyValues[propName];
       },
       set(this: HTMLElement, newValue: unknown) {
         const casted = castProperty(newValue, propConfig);
         const self = this as unknown as CustomElementInternal;
-        if (!self._propertyValues) {
-          self._propertyValues = {};
-        }
         const storedValue = self._propertyValues[propName];
         if (!Object.is(storedValue, casted)) {
           self._propertyValues[propName] = casted;

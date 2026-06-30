@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent } from "./component/index.js";
 import { html } from "./html.js";
 import { castToProps, registerComponent, generateUniqueTag } from "./test-utils.js";
+import type { PropertyConstructor } from "./types.js";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -708,6 +709,72 @@ describe("coverage gaps", () => {
     } finally {
       JSON.parse = originalParse;
     }
+  });
+
+  it("shouldThrowErrorWhenCustomConstructorThrows", () => {
+    const tag = generateUniqueTag("custom-constructor-err");
+    const component = defineComponent(tag, {
+      properties: {
+        custom: class Custom {
+          constructor() {
+            throw new Error("Constructor fails");
+          }
+        } as unknown as PropertyConstructor,
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(() => {
+      castToProps<{ custom: unknown }>(el).custom = "some value";
+    }).toThrow('Failed to convert value using custom constructor/converter: "some value"');
+  });
+
+  it("shouldThrowErrorWhenCustomFactoryThrows", () => {
+    const tag = generateUniqueTag("custom-factory-err");
+    const component = defineComponent(tag, {
+      properties: {
+        custom: (() => {
+          throw new Error("Factory fails");
+        }) as unknown as PropertyConstructor,
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    expect(() => {
+      castToProps<{ custom: unknown }>(el).custom = "some value";
+    }).toThrow('Failed to convert value using custom constructor/converter: "some value"');
+  });
+
+  it("shouldPassThroughUnrecognizedPropertyTypeDescriptor", () => {
+    const tag = generateUniqueTag("unrecognized-type-desc");
+    const component = defineComponent(tag, {
+      properties: {
+        val: "not-a-constructor" as unknown as PropertyConstructor,
+      },
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    document.body.appendChild(el);
+
+    const val = "some fallback value";
+    castToProps<{ val: unknown }>(el).val = val;
+    expect(castToProps<{ val: unknown }>(el).val).toBe(val);
   });
 
   it("shouldDoNothingWhenAttributeChangedCallbackCalledForUnmappedAttribute", () => {
