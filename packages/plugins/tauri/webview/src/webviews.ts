@@ -1,4 +1,3 @@
-import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { WebviewWindow, getAllWebviewWindows, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewConfig, WebviewHandle } from "./types.js";
@@ -23,15 +22,13 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
   const options: ConstructorParameters<typeof WebviewWindow>[1] = { url };
 
   if (size !== undefined) {
-    const logicalSize = new LogicalSize(size.width, size.height);
-    options.width = logicalSize.width;
-    options.height = logicalSize.height;
+    options.width = size.width;
+    options.height = size.height;
   }
 
   if (position !== undefined) {
-    const logicalPosition = new LogicalPosition(position.x, position.y);
-    options.x = logicalPosition.x;
-    options.y = logicalPosition.y;
+    options.x = position.x;
+    options.y = position.y;
   }
 
   if (parentWindow !== undefined) {
@@ -59,6 +56,8 @@ export async function getWebview(label: string): Promise<WebviewHandle | undefin
 
 /**
  * Returns a handle to the current WebviewWindow.
+ *
+ * @returns The handle to the current WebviewWindow.
  */
 export function getCurrentWebview(): WebviewHandle {
   return createWebviewHandle(getCurrentWebviewWindow());
@@ -66,8 +65,10 @@ export function getCurrentWebview(): WebviewHandle {
 
 /**
  * Returns handles for all currently active WebviewWindows in the Tauri app.
+ *
+ * @returns An array of handles for all active WebviewWindows.
  */
 export async function listWebviews(): Promise<WebviewHandle[]> {
-  const all = await getAllWebviewWindows();
-  return all.map(createWebviewHandle);
+  const handles = await getAllWebviewWindows();
+  return handles.map(createWebviewHandle);
 }

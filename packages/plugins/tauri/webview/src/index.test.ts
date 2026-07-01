@@ -48,20 +48,18 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 vi.mock("@tauri-apps/api/dpi", () => ({
-  // eslint-disable-next-line object-shorthand
-  LogicalPosition: vi.fn().mockImplementation(function (this: { x: number; y: number }, x: number, y: number) {
-    this.x = x;
-    this.y = y;
-  }),
-  // eslint-disable-next-line object-shorthand
-  LogicalSize: vi.fn().mockImplementation(function (
-    this: { width: number; height: number },
-    width: number,
-    height: number,
-  ) {
-    this.width = width;
-    this.height = height;
-  }),
+  LogicalPosition: class {
+    constructor(
+      public x: number,
+      public y: number,
+    ) {}
+  },
+  LogicalSize: class {
+    constructor(
+      public width: number,
+      public height: number,
+    ) {}
+  },
 }));
 
 // ---------------------------------------------------------------------------

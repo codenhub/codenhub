@@ -34,7 +34,7 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
       await webview.setFocus();
     },
 
-    async setZoom(scaleFactor) {
+    async setZoom(scaleFactor: number) {
       await webview.setZoom(scaleFactor);
     },
 
