@@ -72,6 +72,7 @@ Read these before changing package behavior, public APIs, or project conventions
 
 - `docs/docs-guidelines.md`: documentation structure, status model, and exception rules.
 - `docs/code-guidelines.md`: coding conventions and enforceable quality rules.
+- `docs/specs/package-development.md`: optional package-local playground, dev, and debug workflow for real usage scenarios.
 - `docs/specs/packages-readme.md`: README requirements for public packages.
 - `docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
 

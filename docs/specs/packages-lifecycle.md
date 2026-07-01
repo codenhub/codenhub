@@ -1,7 +1,7 @@
 # Package lifecycle spec
 
 **Status:** APPROVED
-**Last updated:** 2026-06-10
+**Last updated:** 2026-07-01
 **Scope:** Workspace packages under `packages/*`.
 
 This document defines how packages are structured, built, tested, exported, and prepared for publishing.
@@ -65,6 +65,12 @@ TypeScript packages MUST emit declaration files for public exports.
 Packages SHOULD publish source maps only when they are useful to consumers and do not expose private implementation details.
 
 Generated output MUST NOT be treated as source of truth. Source, docs, and tests own behavior.
+
+## Development workflow
+
+Packages that need package-local real-usage scenarios SHOULD follow `docs/specs/package-development.md` for the optional `playground`, `dev`, and `debug` workflow.
+
+This workflow is not required for every package. Missing it is non-compliant only when the package directly suffers from not having it and adding it would immediately remove recurring development or debugging pain.
 
 ## Exports
 

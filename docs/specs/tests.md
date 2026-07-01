@@ -1,7 +1,7 @@
 # Testing specification
 
 **Status:** APPROVED
-**Last updated:** 2026-06-28
+**Last updated:** 2026-07-01
 
 This document outlines the testing strategy, architecture, and standards for this repository. It defines test categories, tooling, configuration requirements, and code coverage targets.
 
@@ -14,6 +14,8 @@ This document outlines the testing strategy, architecture, and standards for thi
 ## Test Categorization
 
 Tests in this repository are divided into three distinct categories based on their scope and isolation level.
+
+Manual package usage scenarios are outside this categorization. Use the optional `playground`, `dev`, and `debug` workflow from `docs/specs/package-development.md` for real usage scenarios that are meant for development or pre-ship debugging rather than automated test execution.
 
 ### 1. Unit Tests
 
