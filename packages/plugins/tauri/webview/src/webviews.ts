@@ -45,61 +45,60 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
   let unlistenError: (() => void) | undefined;
   let isFinished = false;
 
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const timeoutId = setTimeout(() => {
-        settle(new Error(`Timeout spawning WebView window with label "${label}"`));
-      }, SPAWN_TIMEOUT_MS);
+  await new Promise<void>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      settle(new Error(`Timeout spawning WebView window with label "${label}"`));
+    }, SPAWN_TIMEOUT_MS);
 
-      function settle(err?: Error) {
-        if (isFinished) {
-          return;
-        }
-        isFinished = true;
-        clearTimeout(timeoutId);
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+    function settle(err?: Error) {
+      if (isFinished) {
+        return;
+      }
+      isFinished = true;
+      clearTimeout(timeoutId);
+
+      if (unlistenCreated) {
+        unlistenCreated();
+      }
+      if (unlistenError) {
+        unlistenError();
       }
 
-      webviewWindow
-        .once("tauri://created", () => {
-          settle();
-        })
-        .then((unlisten) => {
-          unlistenCreated = unlisten;
-          if (isFinished) {
-            unlisten();
-          }
-        })
-        .catch((err) => {
-          settle(err instanceof Error ? err : new Error(formatError(err)));
-        });
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    }
 
-      webviewWindow
-        .once("tauri://error", (err) => {
-          settle(new Error(`Failed to create WebView window: ${formatError(err)}`));
-        })
-        .then((unlisten) => {
-          unlistenError = unlisten;
-          if (isFinished) {
-            unlisten();
-          }
-        })
-        .catch((err) => {
-          settle(err instanceof Error ? err : new Error(formatError(err)));
-        });
-    });
-  } finally {
-    if (unlistenCreated) {
-      unlistenCreated();
-    }
-    if (unlistenError) {
-      unlistenError();
-    }
-  }
+    webviewWindow
+      .once("tauri://created", () => {
+        settle();
+      })
+      .then((unlisten) => {
+        unlistenCreated = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        settle(err instanceof Error ? err : new Error(formatError(err)));
+      });
+
+    webviewWindow
+      .once("tauri://error", (err) => {
+        settle(new Error(`Failed to create WebView window: ${formatError(err)}`));
+      })
+      .then((unlisten) => {
+        unlistenError = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        settle(err instanceof Error ? err : new Error(formatError(err)));
+      });
+  });
 
   return createWebviewHandle(webviewWindow);
 }

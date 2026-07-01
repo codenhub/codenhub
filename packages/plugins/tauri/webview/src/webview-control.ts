@@ -28,7 +28,7 @@ async function runWrapped<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (error) {
-    throw new Error(formatError(error));
+    throw new Error(formatError(error), { cause: error });
   }
 }
 
