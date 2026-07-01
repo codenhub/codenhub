@@ -15,6 +15,7 @@ Write commit messages terse and exact. Conventional Commits format. No fluff. Wh
 - ≤50 chars when possible, hard cap 72
 - No trailing period
 - Match project convention for capitalization after the colon
+- Use `git log` to see recent commits and match style
 
 **Body (only if needed):**
 

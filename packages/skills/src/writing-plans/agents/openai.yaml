@@ -1,4 +1,0 @@
-interface:
-  display_name: "Writing Plans"
-  short_description: "Turn specs into detailed implementation plans"
-  default_prompt: "Use $writing-plans to turn an approved spec (preferred), or explicit user requirements when no approved spec exists or the user asks to proceed, into a direct, complete implementation plan with a status, bite-sized tasks, exact test steps, optional subagent-assisted execution guidance, and the usual new-branch/atomic-commit/PR workflow, then wait for documented approval before execution unless the user explicitly says otherwise."

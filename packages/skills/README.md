@@ -7,9 +7,6 @@ A curated collection of AI agent skills with a built-in installer to configure t
 The package includes the following custom AI agent skills:
 
 - **brainstorming**: Collaborative design and requirement exploration before implementation.
-- **writing-specs**: Draft validated technical specifications or design documents.
-- **writing-plans**: Turn approved specs into detailed step-by-step implementation plans.
-- **executing-plans**: Execute plans with verification checkpoints.
 - **test-driven-development**: Strict fail-first red-green-refactor TDD.
 - **frontend-design**: Design premium, production-grade frontend interfaces.
 - **subagent-specialist**: Planning, dispatching, and reviewing subagents.
