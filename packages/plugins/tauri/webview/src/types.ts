@@ -42,13 +42,16 @@ export interface WebviewConfig {
  * All methods are async and communicate over Tauri IPC.
  *
  * > **Note:** Tauri v2 does not expose a programmatic URL navigation API on
- * > the `Webview` type. To change the displayed URL at runtime, use the Tauri
- * > `emit` / JS event bridge or reload via `window.location` inside the
- * > WebView's own script context.
+ * > the frontend `Webview` type. Navigation and reloading are performed via
+ * > custom Tauri IPC invoking companion Rust commands.
  */
 export interface WebviewHandle {
   /** The unique label that identifies this WebviewWindow in the Tauri runtime. */
   readonly label: string;
+  /** Navigates the WebView to the given URL. */
+  navigate(url: string): Promise<void>;
+  /** Reloads the current page in the WebView. */
+  reload(): Promise<void>;
   /** Resizes the WebviewWindow to the given logical pixel dimensions. */
   setSize(size: WebviewSize): Promise<void>;
   /** Moves the WebviewWindow to the given logical pixel position on screen. */

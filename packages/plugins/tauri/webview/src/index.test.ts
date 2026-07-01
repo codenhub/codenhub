@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // so any variables they reference must also be hoisted.
 // ---------------------------------------------------------------------------
 
-const { mockWebviewInstance, MockWebviewWindow } = vi.hoisted(() => {
+const { mockWebviewInstance, MockWebviewWindow, mockInvoke } = vi.hoisted(() => {
+  const mockInvoke = vi.fn();
   const mockWebviewInstance = {
     label: "test-view",
     setSize: vi.fn(),
@@ -33,7 +34,7 @@ const { mockWebviewInstance, MockWebviewWindow } = vi.hoisted(() => {
     },
   );
 
-  return { mockWebviewInstance, MockWebviewWindow };
+  return { mockWebviewInstance, MockWebviewWindow, mockInvoke };
 });
 
 vi.mock("@tauri-apps/api/webviewWindow", () => ({
@@ -42,14 +43,22 @@ vi.mock("@tauri-apps/api/webviewWindow", () => ({
   getAllWebviewWindows: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: mockInvoke,
+}));
+
 vi.mock("@tauri-apps/api/dpi", () => ({
   // eslint-disable-next-line object-shorthand
-  LogicalPosition: vi.fn().mockImplementation(function (x: number, y: number) {
+  LogicalPosition: vi.fn().mockImplementation(function (this: { x: number; y: number }, x: number, y: number) {
     this.x = x;
     this.y = y;
   }),
   // eslint-disable-next-line object-shorthand
-  LogicalSize: vi.fn().mockImplementation(function (width: number, height: number) {
+  LogicalSize: vi.fn().mockImplementation(function (
+    this: { width: number; height: number },
+    width: number,
+    height: number,
+  ) {
     this.width = width;
     this.height = height;
   }),
@@ -150,6 +159,31 @@ describe("spawnWebview", () => {
     });
     await handle.destroy();
     expect(mockWebviewInstance.destroy).toHaveBeenCalled();
+  });
+
+  it("should navigate via navigate", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await handle.navigate("https://b.com");
+    expect(mockInvoke).toHaveBeenCalledWith("navigate_webview", {
+      label: "test-view",
+      url: "https://b.com",
+    });
+  });
+
+  it("should reload via reload", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await handle.reload();
+    expect(mockInvoke).toHaveBeenCalledWith("reload_webview", {
+      label: "test-view",
+    });
   });
 });
 

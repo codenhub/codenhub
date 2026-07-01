@@ -72,3 +72,9 @@ Plans and similar temporary documents MAY live in `docs/plans/`. This directory 
 - **Why acceptable:** Both packages are in active early development. APIs are unstable and will change. Each README carries a prominent `> **Draft**` notice so consumers know the package is not ready for production. Enforcing full lifecycle compliance before the API stabilizes would create churn with no consumer benefit.
 - **Temporary or permanent:** Temporary. This exception MUST be removed and both packages brought into full compliance — including complete JSDoc, README sections, and lifecycle scripts — before the draft notice is removed and either package is published.
 
+### `@codenhub/tauri-plugin-webview` — Rust-specific conventions
+
+- **Rules bypassed:** `docs/code-guidelines.md` (Files & Folders: kebab-case; Variables & Functions: camelCase).
+- **Where it applies:** `packages/plugins/tauri/webview/src/webview_commands.rs` and associated Rust command/module identifiers (e.g. `webview_commands`, `navigate_webview`, `reload_webview`).
+- **Why acceptable:** Companion Rust code must follow idiomatic Rust naming conventions (snake_case for files, functions, and modules) to prevent compiler warnings and maintain consistency with Tauri Rust APIs.
+- **Temporary or permanent:** Permanent.

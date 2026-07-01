@@ -12,6 +12,16 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
       return webview.label;
     },
 
+    async navigate(url: string) {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("navigate_webview", { label: webview.label, url });
+    },
+
+    async reload() {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("reload_webview", { label: webview.label });
+    },
+
     async setSize(size: WebviewSize) {
       const { LogicalSize } = await import("@tauri-apps/api/dpi");
       await webview.setSize(new LogicalSize(size.width, size.height));
