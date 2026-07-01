@@ -27,7 +27,7 @@ const { mockWindowInstance, MockWindow } = vi.hoisted(() => {
     destroy: vi.fn(),
     once: vi.fn((_: string, cb: () => void) => {
       cb();
-      return Promise.resolve();
+      return Promise.resolve(() => {});
     }),
   };
 
@@ -81,13 +81,47 @@ describe("createWindow", () => {
     vi.clearAllMocks();
     mockWindowInstance.once.mockImplementation((_: string, cb: () => void) => {
       cb();
-      return Promise.resolve();
+      return Promise.resolve(() => {});
     });
   });
 
   it("should return a handle with the correct label", async () => {
     const handle = await createWindow({ label: "main" });
     expect(handle.label).toBe("main");
+  });
+
+  it("should throw error if window creation emits tauri://error", async () => {
+    mockWindowInstance.once.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
+      if (event === "tauri://error") {
+        cb("Creation failed");
+      }
+      return Promise.resolve(() => {});
+    });
+
+    await expect(
+      createWindow({
+        label: "main",
+      }),
+    ).rejects.toThrow('Failed to create window: "Creation failed"');
+  });
+
+  it("should throw error if window creation times out", async () => {
+    vi.useFakeTimers();
+
+    mockWindowInstance.once.mockImplementation(() => {
+      return Promise.resolve(() => {});
+    });
+
+    const spawnPromise = createWindow({
+      label: "main",
+    });
+
+    await Promise.all([
+      expect(spawnPromise).rejects.toThrow('Timeout spawning window with label "main"'),
+      vi.advanceTimersByTimeAsync(5000),
+    ]);
+
+    vi.useRealTimers();
   });
 
   it("should minimize the window", async () => {
@@ -173,7 +207,7 @@ describe("getState", () => {
     vi.clearAllMocks();
     mockWindowInstance.once.mockImplementation((_: string, cb: () => void) => {
       cb();
-      return Promise.resolve();
+      return Promise.resolve(() => {});
     });
   });
 

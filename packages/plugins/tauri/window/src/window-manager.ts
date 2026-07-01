@@ -40,7 +40,91 @@ export async function createWindow(config: WindowConfig): Promise<WindowHandle> 
   }
 
   const win = new Window(label, options);
-  await win.once("tauri://created", () => undefined);
+
+  await new Promise<void>((resolve, reject) => {
+    let isFinished = false;
+    let unlistenCreated: (() => void) | undefined;
+    let unlistenError: (() => void) | undefined;
+
+    const timeoutId = setTimeout(() => {
+      if (!isFinished) {
+        isFinished = true;
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        reject(new Error(`Timeout spawning window with label "${label}"`));
+      }
+    }, 5000);
+
+    const handleCreated = () => {
+      if (!isFinished) {
+        isFinished = true;
+        clearTimeout(timeoutId);
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        resolve();
+      }
+    };
+
+    const handleError = (err: unknown) => {
+      if (!isFinished) {
+        isFinished = true;
+        clearTimeout(timeoutId);
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        reject(new Error(`Failed to create window: ${JSON.stringify(err)}`));
+      }
+    };
+
+    win
+      .once("tauri://created", handleCreated)
+      .then((unlisten) => {
+        unlistenCreated = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        if (!isFinished) {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          if (unlistenError) {
+            unlistenError();
+          }
+          reject(err);
+        }
+      });
+
+    win
+      .once("tauri://error", handleError)
+      .then((unlisten) => {
+        unlistenError = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        if (!isFinished) {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          if (unlistenCreated) {
+            unlistenCreated();
+          }
+          reject(err);
+        }
+      });
+  });
 
   return createWindowHandle(win);
 }

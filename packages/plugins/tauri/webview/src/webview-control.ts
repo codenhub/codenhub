@@ -15,11 +15,19 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
     },
 
     async navigate(url: string) {
-      await invoke("navigate_webview", { label: webview.label, url });
+      try {
+        await invoke("navigate_webview", { label: webview.label, url });
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : String(error));
+      }
     },
 
     async reload() {
-      await invoke("reload_webview", { label: webview.label });
+      try {
+        await invoke("reload_webview", { label: webview.label });
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : String(error));
+      }
     },
 
     async setSize(size: WebviewSize) {

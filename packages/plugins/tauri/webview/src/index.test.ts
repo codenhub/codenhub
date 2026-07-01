@@ -172,6 +172,15 @@ describe("spawnWebview", () => {
     });
   });
 
+  it("should throw standard Error if navigate fails", async () => {
+    mockInvoke.mockRejectedValue("Navigation failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.navigate("https://b.com")).rejects.toThrow("Navigation failed");
+  });
+
   it("should reload via reload", async () => {
     mockInvoke.mockResolvedValue(undefined);
     const handle = await spawnWebview({
@@ -182,6 +191,15 @@ describe("spawnWebview", () => {
     expect(mockInvoke).toHaveBeenCalledWith("reload_webview", {
       label: "test-view",
     });
+  });
+
+  it("should throw standard Error if reload fails", async () => {
+    mockInvoke.mockRejectedValue("Reload failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.reload()).rejects.toThrow("Reload failed");
   });
 
   it("should throw error if duplicate label exists", async () => {
