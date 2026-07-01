@@ -11,8 +11,8 @@ import {
   RESERVED_NAMES,
   RESERVED_TAG_NAMES,
   VALID_TAG_NAME_REGEX,
-  hasConstructableStylesheetsSupport,
-  hasShadowSupport,
+  HAS_CONSTRUCTABLE_STYLESHEETS_SUPPORT,
+  HAS_SHADOW_SUPPORT,
 } from "./constants.js";
 
 const BaseElement = typeof HTMLElement !== "undefined" ? HTMLElement : (class {} as typeof HTMLElement);
@@ -95,7 +95,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   }
 
   let compiledStyleSheet: CSSStyleSheet | null = null;
-  if (shouldUseShadow && config.styles !== undefined && hasConstructableStylesheetsSupport) {
+  if (shouldUseShadow && config.styles !== undefined && HAS_CONSTRUCTABLE_STYLESHEETS_SUPPORT) {
     compiledStyleSheet = new CSSStyleSheet();
     compiledStyleSheet.replaceSync(config.styles);
   }
@@ -278,7 +278,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
       const rawHTML = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
 
-      if (shouldUseShadow && hasShadowSupport) {
+      if (shouldUseShadow && HAS_SHADOW_SUPPORT) {
         const contentWrapper = this._contentWrapper;
         if (contentWrapper === null || !this.shadowRoot || contentWrapper.parentNode !== this.shadowRoot) {
           throw new Error(

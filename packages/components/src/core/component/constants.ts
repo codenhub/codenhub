@@ -49,7 +49,7 @@ export const RESERVED_NAMES = new Set([
  *
  * @internal
  */
-export const hasConstructableStylesheetsSupport =
+export const HAS_CONSTRUCTABLE_STYLESHEETS_SUPPORT =
   typeof window !== "undefined" &&
   "adoptedStyleSheets" in Document.prototype &&
   "replaceSync" in CSSStyleSheet.prototype;
@@ -60,5 +60,5 @@ export const hasConstructableStylesheetsSupport =
  *
  * @internal
  */
-export const hasShadowSupport =
+export const HAS_SHADOW_SUPPORT =
   typeof HTMLElement !== "undefined" && typeof HTMLElement.prototype.attachShadow === "function";
