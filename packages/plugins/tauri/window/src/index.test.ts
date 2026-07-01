@@ -51,12 +51,16 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 vi.mock("@tauri-apps/api/dpi", () => ({
   // eslint-disable-next-line object-shorthand
-  LogicalPosition: vi.fn().mockImplementation(function (x: number, y: number) {
+  LogicalPosition: vi.fn().mockImplementation(function (this: { x: number; y: number }, x: number, y: number) {
     this.x = x;
     this.y = y;
   }),
   // eslint-disable-next-line object-shorthand
-  LogicalSize: vi.fn().mockImplementation(function (width: number, height: number) {
+  LogicalSize: vi.fn().mockImplementation(function (
+    this: { width: number; height: number },
+    width: number,
+    height: number,
+  ) {
     this.width = width;
     this.height = height;
   }),
