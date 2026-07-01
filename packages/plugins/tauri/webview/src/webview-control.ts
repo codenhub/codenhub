@@ -4,13 +4,32 @@ import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewHandle, WebviewPosition, WebviewSize } from "./types.js";
 
+/**
+ * Safely formats an unknown error into a descriptive string message.
+ */
+export function formatError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 function wrapError(error: unknown): Error {
-  return new Error(error instanceof Error ? error.message : String(error));
+  return new Error(formatError(error));
 }
 
 /**
  * Wraps a Tauri {@link WebviewWindow} instance in a {@link WebviewHandle}.
  * Internal factory — not part of the public API.
+ *
+ * @internal
  */
 export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
   return {

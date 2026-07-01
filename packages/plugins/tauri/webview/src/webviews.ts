@@ -1,26 +1,9 @@
 import { WebviewWindow, getAllWebviewWindows, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewConfig, WebviewHandle } from "./types.js";
-import { createWebviewHandle } from "./webview-control.js";
+import { createWebviewHandle, formatError } from "./webview-control.js";
 
 const SPAWN_TIMEOUT_MS = 5000;
-
-/**
- * Safely formats an unknown error into a descriptive string message.
- */
-function formatError(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  if (typeof err === "string") {
-    return err;
-  }
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return String(err);
-  }
-}
 
 /**
  * Spawns a new WebviewWindow with the given configuration.
@@ -58,77 +41,61 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
 
   const webviewWindow = new WebviewWindow(label, options);
 
-  await new Promise<void>((resolve, reject) => {
-    let isFinished = false;
-    const cleanups: Array<() => void> = [];
+  let unlistenCreated: (() => void) | undefined;
+  let unlistenError: (() => void) | undefined;
+  let isFinished = false;
 
-    const cleanup = () => {
-      for (const dispose of cleanups) {
-        dispose();
-      }
-      cleanups.length = 0;
-    };
-
-    const timeoutId = setTimeout(() => {
-      if (!isFinished) {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
         isFinished = true;
-        cleanup();
         reject(new Error(`Timeout spawning WebView window with label "${label}"`));
-      }
-    }, SPAWN_TIMEOUT_MS);
+      }, SPAWN_TIMEOUT_MS);
 
-    const handleCreated = () => {
-      if (!isFinished) {
-        isFinished = true;
-        clearTimeout(timeoutId);
-        cleanup();
-        resolve();
-      }
-    };
-
-    const handleError = (err: unknown) => {
-      if (!isFinished) {
-        isFinished = true;
-        clearTimeout(timeoutId);
-        cleanup();
-        reject(new Error(`Failed to create WebView window: ${formatError(err)}`));
-      }
-    };
-
-    webviewWindow
-      .once("tauri://created", handleCreated)
-      .then((unlisten) => {
-        cleanups.push(unlisten);
-        if (isFinished) {
-          unlisten();
-        }
-      })
-      .catch((err) => {
-        if (!isFinished) {
+      webviewWindow
+        .once("tauri://created", () => {
           isFinished = true;
           clearTimeout(timeoutId);
-          cleanup();
-          reject(err);
-        }
-      });
-
-    webviewWindow
-      .once("tauri://error", handleError)
-      .then((unlisten) => {
-        cleanups.push(unlisten);
-        if (isFinished) {
-          unlisten();
-        }
-      })
-      .catch((err) => {
-        if (!isFinished) {
+          resolve();
+        })
+        .then((unlisten) => {
+          unlistenCreated = unlisten;
+          if (isFinished) {
+            unlisten();
+          }
+        })
+        .catch((err) => {
           isFinished = true;
           clearTimeout(timeoutId);
-          cleanup();
           reject(err);
-        }
-      });
-  });
+        });
+
+      webviewWindow
+        .once("tauri://error", (err) => {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          reject(new Error(`Failed to create WebView window: ${formatError(err)}`));
+        })
+        .then((unlisten) => {
+          unlistenError = unlisten;
+          if (isFinished) {
+            unlisten();
+          }
+        })
+        .catch((err) => {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+    });
+  } finally {
+    if (unlistenCreated) {
+      unlistenCreated();
+    }
+    if (unlistenError) {
+      unlistenError();
+    }
+  }
 
   return createWebviewHandle(webviewWindow);
 }
