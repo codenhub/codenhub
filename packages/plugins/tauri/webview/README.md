@@ -208,7 +208,7 @@ interface WebviewPosition {
 
 Because Tauri v2 does not expose programmatic URL navigation on the frontend, this plugin requires companion Rust commands in your Tauri backend.
 
-1. Copy [webview_commands.rs](./src/webview_commands.rs) to your Tauri Rust project (e.g. at `src-tauri/src/webview_commands.rs`).
+1. Copy [webview_commands.rs](./rust/webview_commands.rs) to your Tauri Rust project (e.g. at `src-tauri/src/webview_commands.rs`).
 2. Include the module and register the commands in your `src-tauri/src/lib.rs` (or `main.rs`):
 
 ```rust

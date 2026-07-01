@@ -41,6 +41,6 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@tauri-apps/api": "catalog:"
+    "@tauri-apps/api": "^2.0.0"
   }
 }

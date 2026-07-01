@@ -5,7 +5,10 @@ import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { WebviewHandle, WebviewPosition, WebviewSize } from "./types.js";
 
 /**
- * Safely formats an unknown error into a descriptive string message.
+ * Converts IPC errors of unknown shape into readable string messages, ensuring
+ * that any downstream error propagation has a standardized, descriptive error message.
+ *
+ * @internal
  */
 export function formatError(err: unknown): string {
   if (err instanceof Error) {
@@ -21,8 +24,12 @@ export function formatError(err: unknown): string {
   }
 }
 
-function wrapError(error: unknown): Error {
-  return new Error(formatError(error));
+async function runWrapped<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    throw new Error(formatError(error));
+  }
 }
 
 /**
@@ -38,75 +45,39 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
     },
 
     async navigate(url: string) {
-      try {
-        await invoke("navigate_webview", { label: webview.label, url });
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => invoke("navigate_webview", { label: webview.label, url }));
     },
 
     async reload() {
-      try {
-        await invoke("reload_webview", { label: webview.label });
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => invoke("reload_webview", { label: webview.label }));
     },
 
     async setSize(size: WebviewSize) {
-      try {
-        await webview.setSize(new LogicalSize(size.width, size.height));
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.setSize(new LogicalSize(size.width, size.height)));
     },
 
     async setPosition(position: WebviewPosition) {
-      try {
-        await webview.setPosition(new LogicalPosition(position.x, position.y));
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.setPosition(new LogicalPosition(position.x, position.y)));
     },
 
     async setFocus() {
-      try {
-        await webview.setFocus();
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.setFocus());
     },
 
     async setZoom(scaleFactor: number) {
-      try {
-        await webview.setZoom(scaleFactor);
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.setZoom(scaleFactor));
     },
 
     async show() {
-      try {
-        await webview.show();
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.show());
     },
 
     async hide() {
-      try {
-        await webview.hide();
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.hide());
     },
 
     async destroy() {
-      try {
-        await webview.destroy();
-      } catch (error) {
-        throw wrapError(error);
-      }
+      return runWrapped(() => webview.destroy());
     },
   };
 }
