@@ -60,18 +60,19 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
 
   await new Promise<void>((resolve, reject) => {
     let isFinished = false;
-    let unlistenCreated: (() => void) | undefined;
-    let unlistenError: (() => void) | undefined;
+    const cleanups: Array<() => void> = [];
+
+    const cleanup = () => {
+      for (const dispose of cleanups) {
+        dispose();
+      }
+      cleanups.length = 0;
+    };
 
     const timeoutId = setTimeout(() => {
       if (!isFinished) {
         isFinished = true;
-        if (unlistenCreated) {
-          unlistenCreated();
-        }
-        if (unlistenError) {
-          unlistenError();
-        }
+        cleanup();
         reject(new Error(`Timeout spawning WebView window with label "${label}"`));
       }
     }, SPAWN_TIMEOUT_MS);
@@ -80,12 +81,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
       if (!isFinished) {
         isFinished = true;
         clearTimeout(timeoutId);
-        if (unlistenCreated) {
-          unlistenCreated();
-        }
-        if (unlistenError) {
-          unlistenError();
-        }
+        cleanup();
         resolve();
       }
     };
@@ -94,12 +90,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
       if (!isFinished) {
         isFinished = true;
         clearTimeout(timeoutId);
-        if (unlistenCreated) {
-          unlistenCreated();
-        }
-        if (unlistenError) {
-          unlistenError();
-        }
+        cleanup();
         reject(new Error(`Failed to create WebView window: ${formatError(err)}`));
       }
     };
@@ -107,7 +98,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
     webviewWindow
       .once("tauri://created", handleCreated)
       .then((unlisten) => {
-        unlistenCreated = unlisten;
+        cleanups.push(unlisten);
         if (isFinished) {
           unlisten();
         }
@@ -116,9 +107,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
         if (!isFinished) {
           isFinished = true;
           clearTimeout(timeoutId);
-          if (unlistenError) {
-            unlistenError();
-          }
+          cleanup();
           reject(err);
         }
       });
@@ -126,7 +115,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
     webviewWindow
       .once("tauri://error", handleError)
       .then((unlisten) => {
-        unlistenError = unlisten;
+        cleanups.push(unlisten);
         if (isFinished) {
           unlisten();
         }
@@ -135,9 +124,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
         if (!isFinished) {
           isFinished = true;
           clearTimeout(timeoutId);
-          if (unlistenCreated) {
-            unlistenCreated();
-          }
+          cleanup();
           reject(err);
         }
       });

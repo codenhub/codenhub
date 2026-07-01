@@ -4,6 +4,10 @@ import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewHandle, WebviewPosition, WebviewSize } from "./types.js";
 
+function wrapError(error: unknown): Error {
+  return new Error(error instanceof Error ? error.message : String(error));
+}
+
 /**
  * Wraps a Tauri {@link WebviewWindow} instance in a {@link WebviewHandle}.
  * Internal factory — not part of the public API.
@@ -18,7 +22,7 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
       try {
         await invoke("navigate_webview", { label: webview.label, url });
       } catch (error) {
-        throw new Error(error instanceof Error ? error.message : String(error));
+        throw wrapError(error);
       }
     },
 
@@ -26,36 +30,64 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
       try {
         await invoke("reload_webview", { label: webview.label });
       } catch (error) {
-        throw new Error(error instanceof Error ? error.message : String(error));
+        throw wrapError(error);
       }
     },
 
     async setSize(size: WebviewSize) {
-      await webview.setSize(new LogicalSize(size.width, size.height));
+      try {
+        await webview.setSize(new LogicalSize(size.width, size.height));
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async setPosition(position: WebviewPosition) {
-      await webview.setPosition(new LogicalPosition(position.x, position.y));
+      try {
+        await webview.setPosition(new LogicalPosition(position.x, position.y));
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async setFocus() {
-      await webview.setFocus();
+      try {
+        await webview.setFocus();
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async setZoom(scaleFactor: number) {
-      await webview.setZoom(scaleFactor);
+      try {
+        await webview.setZoom(scaleFactor);
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async show() {
-      await webview.show();
+      try {
+        await webview.show();
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async hide() {
-      await webview.hide();
+      try {
+        await webview.hide();
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
 
     async destroy() {
-      await webview.destroy();
+      try {
+        await webview.destroy();
+      } catch (error) {
+        throw wrapError(error);
+      }
     },
   };
 }

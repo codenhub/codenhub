@@ -159,6 +159,69 @@ describe("spawnWebview", () => {
     expect(mockWebviewInstance.destroy).toHaveBeenCalled();
   });
 
+  it("should throw standard Error if setSize fails", async () => {
+    mockWebviewInstance.setSize.mockRejectedValue("Resize failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.setSize({ width: 800, height: 600 })).rejects.toThrow("Resize failed");
+  });
+
+  it("should throw standard Error if setPosition fails", async () => {
+    mockWebviewInstance.setPosition.mockRejectedValue("Reposition failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.setPosition({ x: 10, y: 20 })).rejects.toThrow("Reposition failed");
+  });
+
+  it("should throw standard Error if setFocus fails", async () => {
+    mockWebviewInstance.setFocus.mockRejectedValue("Focus failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.setFocus()).rejects.toThrow("Focus failed");
+  });
+
+  it("should throw standard Error if setZoom fails", async () => {
+    mockWebviewInstance.setZoom.mockRejectedValue("Zoom failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.setZoom(1.5)).rejects.toThrow("Zoom failed");
+  });
+
+  it("should throw standard Error if show fails", async () => {
+    mockWebviewInstance.show.mockRejectedValue("Show failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.show()).rejects.toThrow("Show failed");
+  });
+
+  it("should throw standard Error if hide fails", async () => {
+    mockWebviewInstance.hide.mockRejectedValue("Hide failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.hide()).rejects.toThrow("Hide failed");
+  });
+
+  it("should throw standard Error if destroy fails", async () => {
+    mockWebviewInstance.destroy.mockRejectedValue("Destroy failed");
+    const handle = await spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+    await expect(handle.destroy()).rejects.toThrow("Destroy failed");
+  });
+
   it("should navigate via navigate", async () => {
     mockInvoke.mockResolvedValue(undefined);
     const handle = await spawnWebview({
