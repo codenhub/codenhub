@@ -5,7 +5,7 @@ use tauri::{AppHandle, Manager, Url};
 /// # Errors
 /// Returns an error if the window is not found or the URL is invalid.
 #[tauri::command]
-pub async fn navigate_webview<R: tauri::Runtime>(
+pub fn navigate_webview<R: tauri::Runtime>(
     app: AppHandle<R>,
     label: String,
     url: String,
@@ -24,7 +24,7 @@ pub async fn navigate_webview<R: tauri::Runtime>(
 /// # Errors
 /// Returns an error if the window is not found or fails to reload.
 #[tauri::command]
-pub async fn reload_webview<R: tauri::Runtime>(
+pub fn reload_webview<R: tauri::Runtime>(
     app: AppHandle<R>,
     label: String,
 ) -> Result<(), String> {

@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import type { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewHandle, WebviewPosition, WebviewSize } from "./types.js";
@@ -13,22 +15,18 @@ export function createWebviewHandle(webview: WebviewWindow): WebviewHandle {
     },
 
     async navigate(url: string) {
-      const { invoke } = await import("@tauri-apps/api/core");
       await invoke("navigate_webview", { label: webview.label, url });
     },
 
     async reload() {
-      const { invoke } = await import("@tauri-apps/api/core");
       await invoke("reload_webview", { label: webview.label });
     },
 
     async setSize(size: WebviewSize) {
-      const { LogicalSize } = await import("@tauri-apps/api/dpi");
       await webview.setSize(new LogicalSize(size.width, size.height));
     },
 
     async setPosition(position: WebviewPosition) {
-      const { LogicalPosition } = await import("@tauri-apps/api/dpi");
       await webview.setPosition(new LogicalPosition(position.x, position.y));
     },
 

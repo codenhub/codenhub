@@ -1,3 +1,4 @@
+import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
 import { WebviewWindow, getAllWebviewWindows, getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import type { WebviewConfig, WebviewHandle } from "./types.js";
@@ -15,18 +16,22 @@ import { createWebviewHandle } from "./webview-control.js";
 export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle> {
   const { label, url, size, position, parentWindow } = config;
 
+  if ((await WebviewWindow.getByLabel(label)) !== null) {
+    throw new Error(`WebView window with label "${label}" already exists`);
+  }
+
   const options: ConstructorParameters<typeof WebviewWindow>[1] = { url };
 
   if (size !== undefined) {
-    const { LogicalSize } = await import("@tauri-apps/api/dpi");
-    options.width = new LogicalSize(size.width, size.height).width;
-    options.height = new LogicalSize(size.width, size.height).height;
+    const logicalSize = new LogicalSize(size.width, size.height);
+    options.width = logicalSize.width;
+    options.height = logicalSize.height;
   }
 
   if (position !== undefined) {
-    const { LogicalPosition } = await import("@tauri-apps/api/dpi");
-    options.x = new LogicalPosition(position.x, position.y).x;
-    options.y = new LogicalPosition(position.x, position.y).y;
+    const logicalPosition = new LogicalPosition(position.x, position.y);
+    options.x = logicalPosition.x;
+    options.y = logicalPosition.y;
   }
 
   if (parentWindow !== undefined) {

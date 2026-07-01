@@ -28,7 +28,7 @@ const { mockWebviewInstance, MockWebviewWindow, mockInvoke } = vi.hoisted(() => 
       return mockWebviewInstance;
     }),
     {
-      getByLabel: vi.fn(),
+      getByLabel: vi.fn().mockResolvedValue(null),
       getCurrent: vi.fn().mockReturnValue(mockWebviewInstance),
       getAll: vi.fn().mockResolvedValue([]),
     },
@@ -184,6 +184,16 @@ describe("spawnWebview", () => {
     expect(mockInvoke).toHaveBeenCalledWith("reload_webview", {
       label: "test-view",
     });
+  });
+
+  it("should throw error if duplicate label exists", async () => {
+    MockWebviewWindow.getByLabel.mockResolvedValue(mockWebviewInstance);
+    await expect(
+      spawnWebview({
+        label: "test-view",
+        url: "https://a.com",
+      }),
+    ).rejects.toThrow('WebView window with label "test-view" already exists');
   });
 });
 
