@@ -53,3 +53,5 @@ The installer supports copying custom instructions to both Global and Workspace 
 ## License
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
+
+Skill provenance and third-party attribution status are tracked in [docs/provenance.md](docs/provenance.md). Package-level notices live in [NOTICE](NOTICE), and copied or adapted skills may also include per-skill `NOTICE` files.

@@ -1,0 +1,15 @@
+@codenhub/skills
+Copyright 2026 Coden Agency
+
+This product includes software and documentation developed by Coden Agency.
+
+Third-Party Materials and Skill Provenance:
+
+The package includes skill documents and supporting prompts under `src/`.
+Known provenance and attribution status is tracked in `docs/provenance.md`.
+
+No confirmed third-party attribution entries have been added to this NOTICE yet.
+Before publishing a skill that copies or adapts material from another source,
+add the upstream copyright, license, source URL, and change summary here and,
+when appropriate, in a per-skill NOTICE file that travels with the installed
+skill.

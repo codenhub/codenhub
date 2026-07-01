@@ -15,7 +15,9 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "NOTICE",
+    "docs/provenance.md"
   ],
   "type": "module",
   "publishConfig": {
