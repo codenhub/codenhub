@@ -10,7 +10,8 @@ import { createWebviewHandle } from "./webview-control.js";
  * Tauri runtime. Control calls made immediately after may race with initial
  * page load — await them sequentially if ordering matters.
  *
- * @throws If a window with the same label already exists.
+ * @throws {Error} If a window with the same label already exists.
+ * @throws {Error} If the window creation fails (receives "tauri://error") or times out (5 seconds).
  */
 export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle> {
   const { label, url, size, position, parentWindow } = config;
@@ -36,7 +37,91 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
   }
 
   const webviewWindow = new WebviewWindow(label, options);
-  await webviewWindow.once("tauri://created", () => undefined);
+
+  await new Promise<void>((resolve, reject) => {
+    let isFinished = false;
+    let unlistenCreated: (() => void) | undefined;
+    let unlistenError: (() => void) | undefined;
+
+    const timeoutId = setTimeout(() => {
+      if (!isFinished) {
+        isFinished = true;
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        reject(new Error(`Timeout spawning WebView window with label "${label}"`));
+      }
+    }, 5000);
+
+    const handleCreated = () => {
+      if (!isFinished) {
+        isFinished = true;
+        clearTimeout(timeoutId);
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        resolve();
+      }
+    };
+
+    const handleError = (err: unknown) => {
+      if (!isFinished) {
+        isFinished = true;
+        clearTimeout(timeoutId);
+        if (unlistenCreated) {
+          unlistenCreated();
+        }
+        if (unlistenError) {
+          unlistenError();
+        }
+        reject(new Error(`Failed to create WebView window: ${JSON.stringify(err)}`));
+      }
+    };
+
+    webviewWindow
+      .once("tauri://created", handleCreated)
+      .then((unlisten) => {
+        unlistenCreated = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        if (!isFinished) {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          if (unlistenError) {
+            unlistenError();
+          }
+          reject(err);
+        }
+      });
+
+    webviewWindow
+      .once("tauri://error", handleError)
+      .then((unlisten) => {
+        unlistenError = unlisten;
+        if (isFinished) {
+          unlisten();
+        }
+      })
+      .catch((err) => {
+        if (!isFinished) {
+          isFinished = true;
+          clearTimeout(timeoutId);
+          if (unlistenCreated) {
+            unlistenCreated();
+          }
+          reject(err);
+        }
+      });
+  });
 
   return createWebviewHandle(webviewWindow);
 }

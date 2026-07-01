@@ -17,9 +17,9 @@ const { mockWebviewInstance, MockWebviewWindow, mockInvoke } = vi.hoisted(() => 
     show: vi.fn(),
     hide: vi.fn(),
     destroy: vi.fn(),
-    once: vi.fn((_: string, cb: () => void) => {
+    once: vi.fn((_: string, cb: (...args: unknown[]) => void) => {
       cb();
-      return Promise.resolve();
+      return Promise.resolve(() => {});
     }),
   };
 
@@ -75,9 +75,9 @@ import { getCurrentWebview, getWebview, listWebviews, spawnWebview } from "./ind
 describe("spawnWebview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWebviewInstance.once.mockImplementation((_: string, cb: () => void) => {
+    mockWebviewInstance.once.mockImplementation((_: string, cb: (...args: unknown[]) => void) => {
       cb();
-      return Promise.resolve();
+      return Promise.resolve(() => {});
     });
   });
 
@@ -192,6 +192,44 @@ describe("spawnWebview", () => {
         url: "https://a.com",
       }),
     ).rejects.toThrow('WebView window with label "test-view" already exists');
+  });
+
+  it("should throw error if window creation emits tauri://error", async () => {
+    MockWebviewWindow.getByLabel.mockResolvedValue(null);
+    mockWebviewInstance.once.mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
+      if (event === "tauri://error") {
+        cb("Creation failed");
+      }
+      return Promise.resolve(() => {});
+    });
+
+    await expect(
+      spawnWebview({
+        label: "test-view",
+        url: "https://a.com",
+      }),
+    ).rejects.toThrow('Failed to create WebView window: "Creation failed"');
+  });
+
+  it("should throw error if window creation times out", async () => {
+    MockWebviewWindow.getByLabel.mockResolvedValue(null);
+    vi.useFakeTimers();
+
+    mockWebviewInstance.once.mockImplementation(() => {
+      return Promise.resolve(() => {});
+    });
+
+    const spawnPromise = spawnWebview({
+      label: "test-view",
+      url: "https://a.com",
+    });
+
+    await Promise.all([
+      expect(spawnPromise).rejects.toThrow('Timeout spawning WebView window with label "test-view"'),
+      vi.advanceTimersByTimeAsync(5000),
+    ]);
+
+    vi.useRealTimers();
   });
 });
 

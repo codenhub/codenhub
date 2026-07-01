@@ -48,22 +48,58 @@ export interface WebviewConfig {
 export interface WebviewHandle {
   /** The unique label that identifies this WebviewWindow in the Tauri runtime. */
   readonly label: string;
-  /** Navigates the WebView to the given URL. */
+  /**
+   * Navigates the WebView to the given URL.
+   *
+   * @throws {Error} If the WebView window is not found or the URL is invalid.
+   */
   navigate(url: string): Promise<void>;
-  /** Reloads the current page in the WebView. */
+  /**
+   * Reloads the current page in the WebView.
+   *
+   * @throws {Error} If the WebView window is not found.
+   */
   reload(): Promise<void>;
-  /** Resizes the WebviewWindow to the given logical pixel dimensions. */
+  /**
+   * Resizes the WebviewWindow to the given logical pixel dimensions.
+   *
+   * @throws {Error} If the Tauri IPC call to set size fails.
+   */
   setSize(size: WebviewSize): Promise<void>;
-  /** Moves the WebviewWindow to the given logical pixel position on screen. */
+  /**
+   * Moves the WebviewWindow to the given logical pixel position on screen.
+   *
+   * @throws {Error} If the Tauri IPC call to set position fails.
+   */
   setPosition(position: WebviewPosition): Promise<void>;
-  /** Focuses this WebviewWindow. */
+  /**
+   * Focuses this WebviewWindow.
+   *
+   * @throws {Error} If the Tauri IPC call to set focus fails.
+   */
   setFocus(): Promise<void>;
-  /** Sets the zoom level of the webview content (1.0 = 100%). */
+  /**
+   * Sets the zoom level of the webview content (1.0 = 100%).
+   *
+   * @throws {Error} If the Tauri IPC call to set zoom fails.
+   */
   setZoom(scaleFactor: number): Promise<void>;
-  /** Shows this WebviewWindow. */
+  /**
+   * Shows this WebviewWindow.
+   *
+   * @throws {Error} If the Tauri IPC call to show the window fails.
+   */
   show(): Promise<void>;
-  /** Hides this WebviewWindow without destroying it. */
+  /**
+   * Hides this WebviewWindow without destroying it.
+   *
+   * @throws {Error} If the Tauri IPC call to hide the window fails.
+   */
   hide(): Promise<void>;
-  /** Close and destroy this WebviewWindow. The handle becomes invalid after this call. */
+  /**
+   * Close and destroy this WebviewWindow. The handle becomes invalid after this call.
+   *
+   * @throws {Error} If the Tauri IPC call to destroy the window fails.
+   */
   destroy(): Promise<void>;
 }
