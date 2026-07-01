@@ -3,6 +3,25 @@ import { WebviewWindow, getAllWebviewWindows, getCurrentWebviewWindow } from "@t
 import type { WebviewConfig, WebviewHandle } from "./types.js";
 import { createWebviewHandle } from "./webview-control.js";
 
+const SPAWN_TIMEOUT_MS = 5000;
+
+/**
+ * Safely formats an unknown error into a descriptive string message.
+ */
+function formatError(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 /**
  * Spawns a new WebviewWindow with the given configuration.
  *
@@ -10,6 +29,7 @@ import { createWebviewHandle } from "./webview-control.js";
  * Tauri runtime. Control calls made immediately after may race with initial
  * page load — await them sequentially if ordering matters.
  *
+ * @param config - Configuration options for spawning the WebView.
  * @throws {Error} If a window with the same label already exists.
  * @throws {Error} If the window creation fails (receives "tauri://error") or times out (5 seconds).
  */
@@ -54,7 +74,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
         }
         reject(new Error(`Timeout spawning WebView window with label "${label}"`));
       }
-    }, 5000);
+    }, SPAWN_TIMEOUT_MS);
 
     const handleCreated = () => {
       if (!isFinished) {
@@ -80,7 +100,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
         if (unlistenError) {
           unlistenError();
         }
-        reject(new Error(`Failed to create WebView window: ${JSON.stringify(err)}`));
+        reject(new Error(`Failed to create WebView window: ${formatError(err)}`));
       }
     };
 
@@ -129,6 +149,7 @@ export async function spawnWebview(config: WebviewConfig): Promise<WebviewHandle
 /**
  * Returns a handle to an existing WebviewWindow by its label.
  *
+ * @param label - The unique label of the WebView window.
  * @returns `undefined` if no window with the given label exists.
  */
 export async function getWebview(label: string): Promise<WebviewHandle | undefined> {

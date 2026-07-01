@@ -226,7 +226,7 @@ describe("spawnWebview", () => {
         label: "test-view",
         url: "https://a.com",
       }),
-    ).rejects.toThrow('Failed to create WebView window: "Creation failed"');
+    ).rejects.toThrow("Failed to create WebView window: Creation failed");
   });
 
   it("should throw error if window creation times out", async () => {
