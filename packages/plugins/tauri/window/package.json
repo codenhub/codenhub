@@ -1,0 +1,46 @@
+{
+  "name": "@codenhub/tauri-plugin-window",
+  "version": "0.0.1",
+  "private": false,
+  "description": "TypeScript plugin for controlling Tauri v2 window state, chrome, and placement.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/plugins/tauri/window"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/tauri-plugin-window version dist-tags time --json && npm dist-tag ls @codenhub/tauri-plugin-window && npm access get status @codenhub/tauri-plugin-window",
+    "status:pack": "npm pack --dry-run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@tauri-apps/api": "catalog:"
+  }
+}

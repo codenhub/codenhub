@@ -62,3 +62,13 @@ Use `docs/` for durable project knowledge:
 Do not use `docs/` for temporary notes, TODO lists, or information better expressed in code comments. Also do not use root `docs/` for package-specific documentation; those should be at `packages/<package-name>/docs/`, because each package should own its own package-level rules and documentation.
 
 Plans and similar temporary documents MAY live in `docs/plans/`. This directory is git-ignored and should stay that way because these documents are short-lived planning aids, not long-term project documentation.
+
+## Exceptions
+
+### `@codenhub/tauri-plugin-webview` and `@codenhub/tauri-plugin-window` — draft phase
+
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (full JSDoc coverage, complete lifecycle scripts enforced in CI, prepublishOnly checks) and `docs/specs/packages-readme.md` (required README structure and section completeness).
+- **Where it applies:** `packages/plugins/tauri/webview/` and `packages/plugins/tauri/window/`.
+- **Why acceptable:** Both packages are in active early development. APIs are unstable and will change. Each README carries a prominent `> **Draft**` notice so consumers know the package is not ready for production. Enforcing full lifecycle compliance before the API stabilizes would create churn with no consumer benefit.
+- **Temporary or permanent:** Temporary. This exception MUST be removed and both packages brought into full compliance — including complete JSDoc, README sections, and lifecycle scripts — before the draft notice is removed and either package is published.
+

@@ -4,6 +4,7 @@ packages:
   - "packages/plugins/**"
 
 catalog:
+  "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.0
   "@tailwindcss/vite": ^4.3.0
   "@playwright/test": ^1.57.0
