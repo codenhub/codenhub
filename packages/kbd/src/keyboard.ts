@@ -9,7 +9,7 @@ export type { KeyboardKey } from "./keys";
  * Matching is exact: every listed modifier must be active and no unlisted
  * modifier may be active at the time the event fires.
  */
-export type ModifierKey = "ctrl" | "alt" | "shift" | "meta";
+export type ModifierKey = "ctrl" | "alt" | "shift" | "meta" | "mod" | "cmdOrCtrl";
 
 /**
  * DOM keyboard event type to listen on.
@@ -70,6 +70,14 @@ export interface KeyboardSubscriptionOptions {
    * @default false
    */
   stopPropagation?: boolean;
+  /**
+   * When `true`, ignores keyboard events originating from inputs, textareas,
+   * select dropdowns, or contenteditable elements. When a modifier key
+   * (ctrl/alt/meta/mod) is held, the event will bypass the ignore and trigger.
+   *
+   * @default true
+   */
+  ignoreInput?: boolean;
 }
 
 /**
@@ -120,6 +128,7 @@ export interface KeyboardOptions {
 
 type ResolvedOptions = {
   stopPropagation: boolean;
+  ignoreInput: boolean;
 };
 
 interface SimpleKeySubscription {
@@ -152,6 +161,17 @@ interface KeyboardScope {
 const KEY_SET = new Set<string>(KEY_VALUES);
 const ALL_MODIFIERS: readonly ModifierKey[] = ["ctrl", "alt", "shift", "meta"];
 const DEFAULT_EVENT: KeyboardEventName = "keydown";
+
+const isMac =
+  typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+function isInputElement(target: EventTarget | null): boolean {
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName.toLowerCase();
+  return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+}
 
 /**
  * Manages keyboard bindings on one or more event targets.
@@ -191,6 +211,15 @@ export class Keyboard {
     handler: KeyboardHandler,
     options: KeyboardSubscriptionOptions = {},
   ): KeyboardRegistration {
+    const bindingKey = typeof binding === "string" ? binding : binding.key;
+    if (!KEY_SET.has(bindingKey)) {
+      this.onError?.(
+        new Error(`[Keyboard] Invalid key value: "${bindingKey}". Key must be a value defined in KEYS.`),
+        "Keyboard binding could not be registered.",
+      );
+      return { unregister: () => {}, enable: () => {}, disable: () => {} };
+    }
+
     const target = options.target ?? this.getDefaultTarget();
 
     if (target === undefined) {
@@ -205,6 +234,7 @@ export class Keyboard {
     const scope = this.getOrCreateScope(target, event);
     const resolvedOptions: ResolvedOptions = {
       stopPropagation: options.stopPropagation ?? false,
+      ignoreInput: options.ignoreInput ?? true,
     };
 
     const subscription: KeyboardSubscription =
@@ -213,7 +243,9 @@ export class Keyboard {
         : {
             kind: "shortcut",
             binding,
-            modifierSet: new Set(binding.modifiers),
+            modifierSet: new Set(
+              binding.modifiers.map((mod) => (mod === "mod" || mod === "cmdOrCtrl" ? (isMac ? "meta" : "ctrl") : mod)),
+            ),
             handler,
             options: resolvedOptions,
             enabled: true,
@@ -244,14 +276,34 @@ export class Keyboard {
     const key = this.normalizeKey(event.key);
 
     if (subscription.kind === "simple") {
-      return key === subscription.binding && ALL_MODIFIERS.every((mod) => !this.getModifierState(event, mod));
+      if (key !== subscription.binding) {
+        return false;
+      }
+      return ALL_MODIFIERS.every((mod) => {
+        if (mod === "shift") {
+          const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^[a-zA-Z]$/.test(event.key);
+          if (isNonLetterSymbolOrDigit) {
+            return true;
+          }
+        }
+        return !this.getModifierState(event, mod);
+      });
     }
 
     if (key !== subscription.binding.key) {
       return false;
     }
 
-    return ALL_MODIFIERS.every((mod) => subscription.modifierSet.has(mod) === this.getModifierState(event, mod));
+    return ALL_MODIFIERS.every((mod) => {
+      const required = subscription.modifierSet.has(mod);
+      if (mod === "shift" && !required) {
+        const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^[a-zA-Z]$/.test(event.key);
+        if (isNonLetterSymbolOrDigit) {
+          return true;
+        }
+      }
+      return required === this.getModifierState(event, mod);
+    });
   }
 
   /**
@@ -296,8 +348,21 @@ export class Keyboard {
       return;
     }
 
+    const isInput = isInputElement(event.target);
+
     for (const subscription of scope.subscriptions) {
-      if (!subscription.enabled || !this.matches(event, subscription)) {
+      if (!subscription.enabled) {
+        continue;
+      }
+
+      if (isInput && subscription.options.ignoreInput) {
+        const hasBypassModifier = event.ctrlKey || event.altKey || event.metaKey;
+        if (!hasBypassModifier) {
+          continue;
+        }
+      }
+
+      if (!this.matches(event, subscription)) {
         continue;
       }
 

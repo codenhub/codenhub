@@ -92,7 +92,45 @@ class Keyboard {
 
 #### `KEYS`
 
-Mapping of recognizable key values.
+Mapping of recognizable key values, including arrows, digits, control keys, letters, and punctuation/shifted symbols.
+
+#### `ModifierKey`
+
+Modifiers supported in shortcut bindings. Values: `"ctrl" | "alt" | "shift" | "meta" | "mod" | "cmdOrCtrl"`.
+
+The `"mod"` and `"cmdOrCtrl"` modifiers resolve to `"meta"` on macOS/iOS, and `"ctrl"` elsewhere.
+
+#### `KeyboardShortcut`
+
+```ts
+interface KeyboardShortcut {
+  key: KeyboardKey;
+  modifiers: ModifierKey[];
+}
+```
+
+#### `KeyboardSubscriptionOptions`
+
+| Property          | Type                   | Description                                                                                                                           |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`          | `EventTarget`          | Event target to listen on. (Default: `document`)                                                                                      |
+| `event`           | `"keydown" \| "keyup"` | Event type to bind. (Default: `"keydown"`)                                                                                            |
+| `stopPropagation` | `boolean`              | If `true`, stops event propagation immediately after handler runs. (Default: `false`)                                                 |
+| `ignoreInput`     | `boolean`              | If `true`, ignores events originating from form inputs/textareas unless a modifier key (ctrl/alt/meta/mod) is held. (Default: `true`) |
+
+#### `KeyboardRegistration`
+
+```ts
+interface KeyboardRegistration {
+  unregister(): void;
+  enable(): void;
+  disable(): void;
+}
+```
+
+- `unregister()`: Removes the binding permanently and cleans up the DOM listener if it was the last binding.
+- `enable()`: Re-enables the binding handler.
+- `disable()`: Temporarily silences the binding handler.
 
 ## Requirements
 

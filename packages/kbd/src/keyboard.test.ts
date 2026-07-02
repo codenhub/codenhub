@@ -220,4 +220,146 @@ describe("Keyboard", () => {
       "Keyboard binding could not be registered.",
     );
   });
+
+  it("should allow setting error handler after instantiation", () => {
+    const error = new Error("Another handler failed");
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard();
+    customKeyboard.setErrorHandler(onError);
+
+    customKeyboard.register(KEYS.escape, () => {
+      throw error;
+    });
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(onError).toHaveBeenCalledWith(error, "Keyboard handler failed.");
+  });
+
+  it("should fail validation and call onError when registering invalid key", () => {
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard({ onError });
+
+    // @ts-expect-error - testing invalid runtime key
+    const reg = customKeyboard.register("invalid-key", () => {});
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: '[Keyboard] Invalid key value: "invalid-key". Key must be a value defined in KEYS.',
+      }),
+      "Keyboard binding could not be registered.",
+    );
+
+    // Should return noop registration
+    expect(reg).toHaveProperty("unregister");
+    expect(() => reg.unregister()).not.toThrow();
+  });
+
+  it("should ignore shift key check for single-character symbols and digits", () => {
+    const handler = vi.fn();
+    // register simple binding for "@"
+    keyboard.register(KEYS.at, handler);
+
+    // Dispatch "@" with Shift active (typical for US layout)
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "@", shiftKey: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should ignore shift key for symbols in shortcut bindings when shift is not required", () => {
+    const handler = vi.fn();
+    keyboard.register({ key: KEYS.slash, modifiers: ["ctrl"] }, handler);
+
+    // Dispatch Ctrl+Shift+/ (typical for German layout Ctrl+/)
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "/", ctrlKey: true, shiftKey: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should respect shift key for symbols in shortcut bindings when shift is explicitly required", () => {
+    const handler = vi.fn();
+    keyboard.register({ key: KEYS.slash, modifiers: ["ctrl", "shift"] }, handler);
+
+    // Dispatch Ctrl+/ without Shift
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "/", ctrlKey: true }));
+    expect(handler).not.toHaveBeenCalled();
+
+    // Dispatch Ctrl+Shift+/
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "/", ctrlKey: true, shiftKey: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should resolve mod/cmdOrCtrl modifier keys correctly based on platform", () => {
+    const handler1 = vi.fn();
+    const handler2 = vi.fn();
+
+    keyboard.register({ key: KEYS.k, modifiers: ["mod"] }, handler1);
+    keyboard.register({ key: KEYS.j, modifiers: ["cmdOrCtrl"] }, handler2);
+
+    // Since we mock/run in jsdom which is not Mac, mod should map to ctrl
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "K", ctrlKey: true }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "J", ctrlKey: true }));
+
+    expect(handler1).toHaveBeenCalledTimes(1);
+    expect(handler2).toHaveBeenCalledTimes(1);
+  });
+
+  it("should ignore plain shortcuts inside input elements by default", () => {
+    const handler = vi.fn();
+    keyboard.register(KEYS.escape, handler);
+
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(input);
+  });
+
+  it("should not ignore shortcuts inside inputs if bypass modifiers are present", () => {
+    const handler = vi.fn();
+    keyboard.register({ key: KEYS.k, modifiers: ["ctrl"] }, handler);
+
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "K", ctrlKey: true, bubbles: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    document.body.removeChild(input);
+  });
+
+  it("should not ignore shortcuts inside inputs if ignoreInput is false", () => {
+    const handler = vi.fn();
+    keyboard.register(KEYS.escape, handler, { ignoreInput: false });
+
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    document.body.removeChild(input);
+  });
+
+  it("should preserve other bindings in scope when one is unregistered", () => {
+    const handler1 = vi.fn();
+    const handler2 = vi.fn();
+
+    const reg1 = keyboard.register(KEYS.escape, handler1);
+    const reg2 = keyboard.register(KEYS.enter, handler2);
+
+    reg1.unregister();
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(handler2).toHaveBeenCalledTimes(1);
+
+    reg2.unregister();
+  });
+
+  it("should return false on matches when shortcut key does not match", () => {
+    const handler = vi.fn();
+    keyboard.register({ key: KEYS.k, modifiers: ["ctrl"] }, handler);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "j", ctrlKey: true }));
+    expect(handler).not.toHaveBeenCalled();
+  });
 });

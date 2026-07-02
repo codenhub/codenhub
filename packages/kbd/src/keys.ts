@@ -55,9 +55,41 @@ const FUNCTION_KEYS = {
   f12: "F12",
 } as const;
 
+const SYMBOL_KEYS = {
+  semicolon: ";",
+  equal: "=",
+  comma: ",",
+  minus: "-",
+  period: ".",
+  slash: "/",
+  backquote: "`",
+  bracketLeft: "[",
+  backslash: "\\",
+  bracketRight: "]",
+  quote: "'",
+  tilde: "~",
+  exclamation: "!",
+  at: "@",
+  hash: "#",
+  dollar: "$",
+  percent: "%",
+  caret: "^",
+  ampersand: "&",
+  asterisk: "*",
+  parenthesisLeft: "(",
+  parenthesisRight: ")",
+  underscore: "_",
+  plus: "+",
+  colon: ":",
+  doubleQuote: '"',
+  lessThan: "<",
+  greaterThan: ">",
+  questionMark: "?",
+} as const;
+
 /**
  * Mapping of recognizable key values for keyboard shortcuts.
- * Includes control keys, letters, digits, and function keys.
+ * Includes control keys, letters, digits, function keys, and symbols.
  */
 export const KEYS = {
   escape: "Escape",
@@ -78,6 +110,7 @@ export const KEYS = {
   ...LETTER_KEYS,
   ...NUMBER_KEYS,
   ...FUNCTION_KEYS,
+  ...SYMBOL_KEYS,
 } as const;
 
 /**
