@@ -307,6 +307,38 @@ importers:
         specifier: 'catalog:'
         version: 6.0.3
 
+  packages/styles/debug:
+    dependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:..
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.0(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.0
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
+
+  packages/styles/dev:
+    dependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:..
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.0(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.0
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0)
+
   packages/theme:
     devDependencies:
       jsdom:

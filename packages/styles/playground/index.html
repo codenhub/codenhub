@@ -3,30 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@codenhub/styles preview</title>
+    <title>@codenhub/styles playground</title>
+    <link rel="stylesheet" href="/entry.css" />
     <script>
       const doc = document.documentElement;
-      const params = new URLSearchParams(window.location.search);
-      const env = params.get("env") === "build" ? "build" : "vanilla";
-      const nextEnv = env === "build" ? "vanilla" : "build";
-      const href = env === "build" ? "../build/output.css" : "../vanilla/output.css";
-      document.write(`<link rel="stylesheet" href="${href}" />`);
-      doc.dataset.env = env;
+      const isDevPort = window.location.port === "5183";
+      doc.dataset.env = isDevPort ? "build" : "vanilla";
+
       document.addEventListener("DOMContentLoaded", () => {
-        const environmentToggle = document.getElementById("environment-toggle");
         let isDarkTheme = localStorage.getItem("theme") === "dark";
-
-        if (environmentToggle) {
-          const tooltip = `See ${nextEnv}`;
-          environmentToggle.dataset.tooltip = tooltip;
-          environmentToggle.setAttribute("aria-label", tooltip);
-          environmentToggle.addEventListener("click", () => {
-            const nextUrl = new URL(window.location.href);
-            nextUrl.searchParams.set("env", nextEnv);
-            window.location.assign(nextUrl.toString());
-          });
-        }
-
         doc.classList.toggle("dark", isDarkTheme);
         document.getElementById("theme-toggle").addEventListener("click", () => {
           doc.classList.toggle("dark");
@@ -377,42 +362,6 @@
         justify-content: center;
       "
     >
-      <button
-        id="environment-toggle"
-        class="tooltip"
-        data-testid="environment-toggle"
-        data-tooltip="See build"
-        data-tooltip-position="left"
-        style="
-          height: 2.5rem;
-          width: 2.5rem;
-          padding: 0.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--color-surface);
-          border-radius: 50%;
-          cursor: pointer;
-          color: var(--color-text);
-        "
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z"
-          />
-          <path d="M10 21.9V14L2.1 9.1" />
-          <path d="m10 14 11.9-6.9" />
-          <path d="M14 19.8v-8.1" />
-          <path d="M18 17.5V9.4" />
-        </svg>
-      </button>
       <button
         id="theme-toggle"
         class="tooltip"

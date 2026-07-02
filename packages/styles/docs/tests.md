@@ -1,7 +1,7 @@
 # Styles Test Strategy
 
 **Status:** APPROVED
-**Last updated:** 2026-06-16
+**Last updated:** 2026-07-02
 **Scope:** `@codenhub/styles` package test strategy.
 
 ## Goal
@@ -11,99 +11,51 @@ Validate `@codenhub/styles` before publishing changes across both supported cons
 - Ready-to-import compiled CSS.
 - Tailwind CSS build-time source CSS.
 
-Keep tests package-local and focused on visual confidence plus build compatibility.
+Keep tests package-local and focused on visual confidence.
 
 ## Structure
 
 ```text
 packages/styles/
+  playground/
+    index.html
+    index.css
+  dev/
+    package.json
+    vite.config.ts
+    entry.css
+  debug/
+    package.json
+    vite.config.ts
+    entry.css
   tests/
-    preview/
-    vanilla/
-    build/
-    browser/
-  scripts/
+    styles.spec.ts
+    exit-reporter.ts
 ```
 
-## `tests/preview`
+## `playground/`
 
-Shared manual and automated preview page for both supported consumer paths.
+Shared manual and automated preview page. Contains:
 
-Open with one of these URLs when running the package dev server:
+- `index.html`: The HTML fixture showing all components and styles.
+- `index.css`: Playground-only layout scaffolding.
 
-```text
-http://localhost:5173/tests/preview/index.html?env=vanilla
-http://localhost:5173/tests/preview/index.html?env=build
-```
+## `dev/`
 
-The page loads `tests/vanilla/output.css` for `env=vanilla` and `tests/build/output.css` for `env=build`.
+Vite application running against live package source CSS in `src/` for fast iteration.
+Starts on http://localhost:5173.
 
-The floating environment toggle switches the `env` query value between `vanilla` and `build`. Its tooltip names the target environment with `See build` or `See vanilla`.
+## `debug/`
 
-Cover:
+Vite application running against built package CSS in `dist/` for pre-ship debugging.
+Starts on http://localhost:5174.
 
-- Tokens in light and dark mode.
-- Typography utilities.
-- Buttons: intent, presentation, disabled, and loading states.
-- Layout helpers, surfaces, forms, feedback, tooltips, and sections.
-- Selection and base styles.
-- Tailwind token utilities, dark variants, and responsive variants.
+## `tests/`
 
-Purpose: keep one HTML fixture while validating both real CSS outputs.
+Automated cross-browser testing for visual and computed-style confidence. Runs via Playwright against the local `dev` and `debug` Vite servers.
 
-## `tests/vanilla`
-
-Compiled CSS output for vanilla consumers.
-
-Use built package CSS only:
-
-```css
-@import "../../dist/index.css";
-```
-
-Purpose: confirm canonical `@codenhub/styles` output looks right with no Tailwind consumer build.
-
-## `tests/build`
-
-Build validation for Tailwind consumers.
-
-Use source entrypoint:
-
-```css
-@import "tailwindcss";
-@import "@codenhub/styles/tw";
-
-@source "../preview/index.html";
-```
-
-Cover:
-
-- Tailwind can process package source.
-- Token utilities work, such as `bg-background`, `text-text`, `font-default`.
-- Dark variant works with `.dark`.
-- Component classes build correctly.
-- Responsive token variants work.
-
-Purpose: confirm `@codenhub/styles/tw` works in consumer Tailwind builds.
-
-## `tests/browser`
-
-Cross-browser automation for visual and computed-style confidence.
-
-Use Playwright by default.
-
-Tests load the same preview page twice with different `env` query values.
-
-Cover:
-
-- Chromium.
-- Firefox.
-- WebKit.
-- Page load assertions.
-- Key computed style assertions.
-- Optional screenshots for visual review.
-
-Purpose: catch browser-specific CSS regressions before publishing changes.
+- `styles.spec.ts`: Playwright test file executing visual and layout assertions.
+- `exit-reporter.ts`: Custom Playwright reporter to work around Windows process hang.
 
 ## Scripts
 
@@ -111,18 +63,9 @@ Default package checks:
 
 ```json
 {
-  "test": "pnpm typecheck && pnpm test:build && pnpm test:visual",
-  "test:build": "pnpm build && pnpm test:build:vanilla && pnpm test:build:tw",
+  "test": "pnpm typecheck && pnpm build && pnpm test:visual",
   "test:visual": "playwright test",
-  "dev": "node ./scripts/dev.js"
+  "dev": "pnpm --filter=@codenhub/styles-dev dev",
+  "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev"
 }
 ```
-
-`pnpm dev` starts a local static server and watches both CSS test builds.
-
-## Priority
-
-1. Keep `tests/preview` as the single shared HTML fixture.
-2. Keep `tests/vanilla` for compiled CSS output.
-3. Keep `tests/build` for Tailwind source build validation.
-4. Keep `tests/browser` for Playwright cross-browser validation.
