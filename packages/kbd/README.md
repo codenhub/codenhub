@@ -1,6 +1,6 @@
 # @codenhub/kbd
 
-Page-wide and target-scoped keyboard shortcut event binding registry.
+Page-wide and target-scoped keyboard shortcut event binding registry with robust support for Shadow DOM, case-insensitive key registration, and decoupled error handling.
 
 ## Installation
 
@@ -62,6 +62,7 @@ import {
   type ModifierKey,
   type KeyboardEventName,
   type KeyboardHandler,
+  type KeyboardOptions,
 } from "@codenhub/kbd";
 ```
 
@@ -75,7 +76,7 @@ Class that manages keyboard bindings on one or more event targets.
 
 ```ts
 class Keyboard {
-  constructor(options?: { onError?: (error: unknown, fallback: string) => void });
+  constructor(options?: KeyboardOptions);
 
   register(
     binding: KeyboardBinding,
@@ -90,9 +91,35 @@ class Keyboard {
 }
 ```
 
+##### `constructor()`
+
+```ts
+constructor(options?: KeyboardOptions);
+```
+
+| Parameter | Type              | Description                              |
+| --------- | ----------------- | ---------------------------------------- |
+| `options` | `KeyboardOptions` | Configuration for the Keyboard instance. |
+
+#### `KeyboardOptions`
+
+```ts
+interface KeyboardOptions {
+  onError?: (error: unknown, fallback: string) => void;
+  isMac?: boolean | (() => boolean);
+}
+```
+
+| Property  | Type                                         | Default          | Description                                                                                                                                                                            |
+| --------- | -------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onError` | `(error: unknown, fallback: string) => void` | `undefined`      | Callback invoked when handler exceptions or registration issues occur.                                                                                                                 |
+| `isMac`   | `boolean \| (() => boolean)`                 | Detects platform | Custom flag or checker to override the OS platform mapping for shortcut modifiers. Useful for testing macOS shortcut bindings (`cmdOrCtrl` / `mod` mapping) in non-macOS test runners. |
+
 #### `KEYS`
 
-Mapping of recognizable key values, including arrows, digits, control keys, letters, and punctuation/shifted symbols.
+Mapping of recognizable key values, including arrows, lock keys, control keys, letters, and punctuation/shifted symbols.
+
+_Note: Single-character letters, numbers, and symbols are normalized to lowercase when registering._
 
 #### `ModifierKey`
 
@@ -132,11 +159,64 @@ interface KeyboardRegistration {
 - `enable()`: Re-enables the binding handler.
 - `disable()`: Temporarily silences the binding handler.
 
+## Examples
+
+### Target-Scoped Bindings
+
+Register a shortcut scoped to a specific element/container rather than the global page:
+
+```ts
+import { KEYS, keyboard } from "@codenhub/kbd";
+
+const myContainer = document.getElementById("my-container");
+
+keyboard.register(
+  KEYS.enter,
+  () => {
+    console.log("Enter key pressed inside container");
+  },
+  { target: myContainer },
+);
+```
+
+### Unrecognized or Custom Keys
+
+If a key is not part of the standard `KEYS` mapping, it can still be registered with a soft warning. This allows developers to bind arbitrary browser keys while remaining compatible:
+
+```ts
+import { keyboard } from "@codenhub/kbd";
+
+// @ts-expect-error - Custom media play/pause key
+keyboard.register("MediaPlayPause", (event) => {
+  console.log("Play/Pause clicked");
+});
+```
+
+### Testing macOS Bindings
+
+Use the `isMac` option to test how macOS-specific keys resolve on non-macOS platforms:
+
+```ts
+import { Keyboard } from "@codenhub/kbd";
+
+// Force macOS key mappings in tests or special containers
+const macKeyboard = new Keyboard({ isMac: true });
+
+macKeyboard.register({ key: "k", modifiers: ["mod"] }, (event) => {
+  console.log("Command+K pressed");
+});
+```
+
 ## Requirements
 
 - **Browser Environment**: This package requires DOM APIs (`EventTarget`, `KeyboardEvent`, `document`) to bind listeners.
 - **SSR**: In environments where `document` is unavailable (e.g. server-side rendering), registration will fail silently. If an `onError` handler is registered, a registration failure error will be forwarded to it.
 - **Cleanup**: It is important to call `unregister()` on returned registrations or `clear()` on the keyboard instance to prevent memory leaks.
+
+## Notes
+
+- **Shadow DOM Support**: The registry resolves the event source target using `event.composedPath()[0]` when available. This allows inputs nested inside web components and shadow DOM roots to be ignored correctly under `ignoreInput: true`.
+- **Case Normalization**: Case-insensitive matching is guaranteed by normalizing all single-character keys to lowercase during both registration and event dispatching.
 
 ## License
 

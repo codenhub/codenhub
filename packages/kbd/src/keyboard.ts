@@ -124,6 +124,11 @@ export interface KeyboardOptions {
    * or during execution.
    */
   onError?: (error: unknown, fallback: string) => void;
+  /**
+   * Optional custom check or boolean override to determine if the platform is macOS/iOS.
+   * Useful for testing shortcut behavior across different OS setups or custom environments.
+   */
+  isMac?: boolean | (() => boolean);
 }
 
 type ResolvedOptions = {
@@ -162,7 +167,7 @@ const KEY_SET = new Set<string>(KEY_VALUES);
 const ALL_MODIFIERS: readonly ModifierKey[] = ["ctrl", "alt", "shift", "meta"];
 const DEFAULT_EVENT: KeyboardEventName = "keydown";
 
-const isMac =
+const DEFAULT_IS_MAC =
   typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
 function isInputElement(target: EventTarget | null): boolean {
@@ -189,9 +194,17 @@ export class Keyboard {
   private scopes = new Set<KeyboardScope>();
   private enabled = true;
   private onError?: (error: unknown, fallback: string) => void;
+  private isMac: boolean;
 
+  /**
+   * Creates a new Keyboard instance to manage keyboard bindings.
+   *
+   * @param options - Configuration options for the Keyboard instance.
+   */
   constructor(options?: KeyboardOptions) {
     this.onError = options?.onError;
+    const isMacOption = options?.isMac;
+    this.isMac = typeof isMacOption === "function" ? isMacOption() : (isMacOption ?? DEFAULT_IS_MAC);
   }
 
   /**
@@ -212,12 +225,15 @@ export class Keyboard {
     options: KeyboardSubscriptionOptions = {},
   ): KeyboardRegistration {
     const bindingKey = typeof binding === "string" ? binding : binding.key;
-    if (!KEY_SET.has(bindingKey)) {
+    const normalizedBindingKey = bindingKey.length === 1 ? bindingKey.toLowerCase() : bindingKey;
+
+    if (!KEY_SET.has(normalizedBindingKey)) {
       this.onError?.(
-        new Error(`[Keyboard] Invalid key value: "${bindingKey}". Key must be a value defined in KEYS.`),
-        "Keyboard binding could not be registered.",
+        new Error(
+          `[Keyboard] Unrecognized key value: "${bindingKey}". Binding will still be registered but may not match standard browser event keys.`,
+        ),
+        "Keyboard binding registered with warning.",
       );
-      return { unregister: () => {}, enable: () => {}, disable: () => {} };
     }
 
     const target = options.target ?? this.getDefaultTarget();
@@ -239,12 +255,20 @@ export class Keyboard {
 
     const subscription: KeyboardSubscription =
       typeof binding === "string"
-        ? { kind: "simple", binding, handler, options: resolvedOptions, enabled: true }
+        ? {
+            kind: "simple",
+            binding: normalizedBindingKey as KeyboardKey,
+            handler,
+            options: resolvedOptions,
+            enabled: true,
+          }
         : {
             kind: "shortcut",
-            binding,
+            binding: { ...binding, key: normalizedBindingKey as KeyboardKey },
             modifierSet: new Set(
-              binding.modifiers.map((mod) => (mod === "mod" || mod === "cmdOrCtrl" ? (isMac ? "meta" : "ctrl") : mod)),
+              binding.modifiers.map((mod) =>
+                mod === "mod" || mod === "cmdOrCtrl" ? (this.isMac ? "meta" : "ctrl") : mod,
+              ),
             ),
             handler,
             options: resolvedOptions,
@@ -348,7 +372,12 @@ export class Keyboard {
       return;
     }
 
-    const isInput = isInputElement(event.target);
+    const actualTarget =
+      typeof event.composedPath === "function" && event.composedPath().length > 0
+        ? event.composedPath()[0]
+        : event.target;
+
+    const isInput = isInputElement(actualTarget);
 
     for (const subscription of scope.subscriptions) {
       if (!subscription.enabled) {
@@ -421,13 +450,8 @@ export class Keyboard {
     return undefined;
   }
 
-  private normalizeKey(value: string): KeyboardKey | undefined {
+  private normalizeKey(value: string): KeyboardKey {
     const normalizedValue = value.length === 1 ? value.toLowerCase() : value;
-
-    if (!KEY_SET.has(normalizedValue)) {
-      return undefined;
-    }
-
     return normalizedValue as KeyboardKey;
   }
 

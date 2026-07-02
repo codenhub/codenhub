@@ -235,7 +235,7 @@ describe("Keyboard", () => {
     expect(onError).toHaveBeenCalledWith(error, "Keyboard handler failed.");
   });
 
-  it("should fail validation and call onError when registering invalid key", () => {
+  it("should register invalid key and call onError with warning", () => {
     const onError = vi.fn();
     const customKeyboard = new Keyboard({ onError });
 
@@ -244,12 +244,13 @@ describe("Keyboard", () => {
 
     expect(onError).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: '[Keyboard] Invalid key value: "invalid-key". Key must be a value defined in KEYS.',
+        message:
+          '[Keyboard] Unrecognized key value: "invalid-key". Binding will still be registered but may not match standard browser event keys.',
       }),
-      "Keyboard binding could not be registered.",
+      "Keyboard binding registered with warning.",
     );
 
-    // Should return noop registration
+    // Should return working registration
     expect(reg).toHaveProperty("unregister");
     expect(() => reg.unregister()).not.toThrow();
   });
@@ -361,5 +362,78 @@ describe("Keyboard", () => {
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "j", ctrlKey: true }));
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("should ignore shortcuts inside inputs nested inside shadow DOM", () => {
+    const handler = vi.fn();
+    keyboard.register(KEYS.escape, handler);
+
+    const host = document.createElement("div");
+    const shadowRoot = host.attachShadow({ mode: "open" });
+    const input = document.createElement("input");
+    shadowRoot.appendChild(input);
+    document.body.appendChild(host);
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+    vi.spyOn(event, "composedPath").mockReturnValue([input, shadowRoot, host, document.body, document]);
+
+    host.dispatchEvent(event);
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(host);
+  });
+
+  it("should register case-insensitive single-character keys", () => {
+    const handler = vi.fn();
+    // @ts-expect-error - testing uppercase register
+    keyboard.register("K", handler);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k" }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "K" }));
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  it("should respect isMac override for modifier mapping", () => {
+    const handlerMac = vi.fn();
+    const handlerNonMac = vi.fn();
+
+    const kbMac = new Keyboard({ isMac: true });
+    const kbNonMac = new Keyboard({ isMac: false });
+
+    kbMac.register({ key: KEYS.k, modifiers: ["mod"] }, handlerMac, { target: document });
+    kbNonMac.register({ key: KEYS.k, modifiers: ["mod"] }, handlerNonMac, { target: document });
+
+    // On Mac, mod maps to metaKey
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+    expect(handlerMac).toHaveBeenCalledTimes(1);
+    expect(handlerNonMac).not.toHaveBeenCalled();
+
+    // On Non-Mac, mod maps to ctrlKey
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+    expect(handlerMac).toHaveBeenCalledTimes(1);
+    expect(handlerNonMac).toHaveBeenCalledTimes(1);
+
+    kbMac.clear();
+    kbNonMac.clear();
+  });
+
+  it("should register unrecognized keys with a warning and trigger matches", () => {
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard({ onError });
+    const handler = vi.fn();
+
+    // @ts-expect-error - testing arbitrary unrecognized key
+    customKeyboard.register("MyCustomKey", handler);
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('[Keyboard] Unrecognized key value: "MyCustomKey"'),
+      }),
+      "Keyboard binding registered with warning.",
+    );
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "MyCustomKey" }));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    customKeyboard.clear();
   });
 });
