@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { KEYS, keyboard, Keyboard } from "./index";
@@ -175,7 +174,7 @@ describe("Keyboard", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("should reset global enabled state on clear", () => {
+  it("should preserve instance-level enabled state on clear", () => {
     const handler = vi.fn();
 
     keyboard.disable();
@@ -184,6 +183,10 @@ describe("Keyboard", () => {
     keyboard.register(KEYS.escape, handler);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 
+    expect(handler).not.toHaveBeenCalled();
+
+    keyboard.enable();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
@@ -287,19 +290,15 @@ describe("Keyboard", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
-  it("should resolve mod/cmdOrCtrl modifier keys correctly based on platform", () => {
-    const handler1 = vi.fn();
-    const handler2 = vi.fn();
+  it("should resolve cmdOrCtrl modifier keys correctly based on platform", () => {
+    const handler = vi.fn();
 
-    keyboard.register({ key: KEYS.k, modifiers: ["mod"] }, handler1);
-    keyboard.register({ key: KEYS.j, modifiers: ["cmdOrCtrl"] }, handler2);
+    keyboard.register({ key: KEYS.j, modifiers: ["cmdOrCtrl"] }, handler);
 
-    // Since we mock/run in jsdom which is not Mac, mod should map to ctrl
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "K", ctrlKey: true }));
+    // Since we mock/run in jsdom which is not Mac, cmdOrCtrl should map to ctrl
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "J", ctrlKey: true }));
 
-    expect(handler1).toHaveBeenCalledTimes(1);
-    expect(handler2).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it("should ignore plain shortcuts inside input elements by default", () => {
@@ -399,21 +398,35 @@ describe("Keyboard", () => {
     const kbMac = new Keyboard({ isMac: true });
     const kbNonMac = new Keyboard({ isMac: false });
 
-    kbMac.register({ key: KEYS.k, modifiers: ["mod"] }, handlerMac, { target: document });
-    kbNonMac.register({ key: KEYS.k, modifiers: ["mod"] }, handlerNonMac, { target: document });
+    kbMac.register({ key: KEYS.k, modifiers: ["cmdOrCtrl"] }, handlerMac, { target: document });
+    kbNonMac.register({ key: KEYS.k, modifiers: ["cmdOrCtrl"] }, handlerNonMac, { target: document });
 
-    // On Mac, mod maps to metaKey
+    // On Mac, cmdOrCtrl maps to metaKey
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
     expect(handlerMac).toHaveBeenCalledTimes(1);
     expect(handlerNonMac).not.toHaveBeenCalled();
 
-    // On Non-Mac, mod maps to ctrlKey
+    // On Non-Mac, cmdOrCtrl maps to ctrlKey
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
     expect(handlerMac).toHaveBeenCalledTimes(1);
     expect(handlerNonMac).toHaveBeenCalledTimes(1);
 
     kbMac.clear();
     kbNonMac.clear();
+  });
+
+  it("should expose active state on registration", () => {
+    const handler = vi.fn();
+    const reg = keyboard.register(KEYS.escape, handler);
+    expect(reg.active).toBe(true);
+    reg.unregister();
+  });
+
+  it("should report active: false when target cannot be resolved (SSR)", () => {
+    const customKeyboard = new Keyboard();
+    vi.spyOn(customKeyboard as unknown as KeyboardTestAccess, "getDefaultTarget").mockReturnValueOnce(undefined);
+    const reg = customKeyboard.register(KEYS.escape, vi.fn());
+    expect(reg.active).toBe(false);
   });
 
   it("should register unrecognized keys with a warning and trigger matches", () => {

@@ -101,6 +101,22 @@ constructor(options?: KeyboardOptions);
 | --------- | ----------------- | ---------------------------------------- |
 | `options` | `KeyboardOptions` | Configuration for the Keyboard instance. |
 
+##### `register()`
+
+Registers a keyboard binding. If the event target cannot be resolved (e.g. during SSR), fails silently and returns an inactive registration handle (i.e. `active: false`).
+
+##### `disable()` / `enable()`
+
+Pauses or resumes all bindings on the instance.
+
+##### `clear()`
+
+Removes all bindings and DOM listeners on this instance. **Note:** The instance-level enabled/disabled state is preserved and not reset.
+
+##### `setErrorHandler()`
+
+Registers a global error callback to capture exceptions from key handlers or registration failures.
+
 #### `KeyboardOptions`
 
 ```ts
@@ -110,10 +126,10 @@ interface KeyboardOptions {
 }
 ```
 
-| Property  | Type                                         | Default          | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `onError` | `(error: unknown, fallback: string) => void` | `undefined`      | Callback invoked when handler exceptions or registration issues occur.                                                                                                                 |
-| `isMac`   | `boolean \| (() => boolean)`                 | Detects platform | Custom flag or checker to override the OS platform mapping for shortcut modifiers. Useful for testing macOS shortcut bindings (`cmdOrCtrl` / `mod` mapping) in non-macOS test runners. |
+| Property  | Type                                         | Default          | Description                                                                                                                                                                    |
+| --------- | -------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `onError` | `(error: unknown, fallback: string) => void` | `undefined`      | Callback invoked when handler exceptions or registration issues occur.                                                                                                         |
+| `isMac`   | `boolean \| (() => boolean)`                 | Detects platform | Custom flag or checker to override the OS platform mapping for shortcut modifiers. Useful for testing macOS shortcut bindings (`cmdOrCtrl` mapping) in non-macOS test runners. |
 
 #### `KEYS`
 
@@ -123,9 +139,9 @@ _Note: Single-character letters, numbers, and symbols are normalized to lowercas
 
 #### `ModifierKey`
 
-Modifiers supported in shortcut bindings. Values: `"ctrl" | "alt" | "shift" | "meta" | "mod" | "cmdOrCtrl"`.
+Modifiers supported in shortcut bindings. Values: `"ctrl" | "alt" | "shift" | "meta" | "cmdOrCtrl"`.
 
-The `"mod"` and `"cmdOrCtrl"` modifiers resolve to `"meta"` on macOS/iOS, and `"ctrl"` elsewhere.
+The `"cmdOrCtrl"` modifier resolves to `"meta"` on macOS/iOS, and `"ctrl"` elsewhere.
 
 #### `KeyboardShortcut`
 
@@ -138,23 +154,25 @@ interface KeyboardShortcut {
 
 #### `KeyboardSubscriptionOptions`
 
-| Property          | Type                   | Description                                                                                                                           |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`          | `EventTarget`          | Event target to listen on. (Default: `document`)                                                                                      |
-| `event`           | `"keydown" \| "keyup"` | Event type to bind. (Default: `"keydown"`)                                                                                            |
-| `stopPropagation` | `boolean`              | If `true`, stops event propagation immediately after handler runs. (Default: `false`)                                                 |
-| `ignoreInput`     | `boolean`              | If `true`, ignores events originating from form inputs/textareas unless a modifier key (ctrl/alt/meta/mod) is held. (Default: `true`) |
+| Property          | Type                   | Description                                                                                                                       |
+| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `target`          | `EventTarget`          | Event target to listen on. (Default: `document`)                                                                                  |
+| `event`           | `"keydown" \| "keyup"` | Event type to bind. (Default: `"keydown"`)                                                                                        |
+| `stopPropagation` | `boolean`              | If `true`, stops event propagation immediately after handler runs. (Default: `false`)                                             |
+| `ignoreInput`     | `boolean`              | If `true`, ignores events originating from form inputs/textareas unless a modifier key (ctrl/alt/meta) is held. (Default: `true`) |
 
 #### `KeyboardRegistration`
 
 ```ts
 interface KeyboardRegistration {
+  readonly active: boolean;
   unregister(): void;
   enable(): void;
   disable(): void;
 }
 ```
 
+- `active`: Indicates whether this registration is active. Will be `false` in server-side rendering or environments where the target cannot be resolved.
 - `unregister()`: Removes the binding permanently and cleans up the DOM listener if it was the last binding.
 - `enable()`: Re-enables the binding handler.
 - `disable()`: Temporarily silences the binding handler.
@@ -186,9 +204,9 @@ If a key is not part of the standard `KEYS` mapping, it can still be registered 
 ```ts
 import { keyboard } from "@codenhub/kbd";
 
-// @ts-expect-error - Custom media play/pause key
-keyboard.register("MediaPlayPause", (event) => {
-  console.log("Play/Pause clicked");
+// @ts-expect-error - Custom key not in KEYS mapping
+keyboard.register("CustomTriggerKey", (event) => {
+  console.log("Custom trigger clicked");
 });
 ```
 
@@ -202,7 +220,7 @@ import { Keyboard } from "@codenhub/kbd";
 // Force macOS key mappings in tests or special containers
 const macKeyboard = new Keyboard({ isMac: true });
 
-macKeyboard.register({ key: "k", modifiers: ["mod"] }, (event) => {
+macKeyboard.register({ key: "k", modifiers: ["cmdOrCtrl"] }, (event) => {
   console.log("Command+K pressed");
 });
 ```

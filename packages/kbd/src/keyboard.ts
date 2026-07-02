@@ -9,7 +9,7 @@ export type { KeyboardKey } from "./keys";
  * Matching is exact: every listed modifier must be active and no unlisted
  * modifier may be active at the time the event fires.
  */
-export type ModifierKey = "ctrl" | "alt" | "shift" | "meta" | "mod" | "cmdOrCtrl";
+export type ModifierKey = "ctrl" | "alt" | "shift" | "meta" | "cmdOrCtrl";
 
 /**
  * DOM keyboard event type to listen on.
@@ -96,6 +96,13 @@ export type KeyboardHandler = (event: KeyboardEvent) => void;
  */
 export interface KeyboardRegistration {
   /**
+   * Indicates whether this registration is active (meaning the target was
+   * successfully resolved and the binding was registered).
+   * Will be `false` in server-side rendering or environments where the target
+   * cannot be resolved.
+   */
+  readonly active: boolean;
+  /**
    * Removes this binding permanently. When the last subscription on a
    * target+event scope is unregistered, the underlying DOM listener is also
    * removed.
@@ -144,11 +151,13 @@ interface SimpleKeySubscription {
   enabled: boolean;
 }
 
+type ConcreteModifierKey = "ctrl" | "alt" | "shift" | "meta";
+
 interface ShortcutSubscription {
   readonly kind: "shortcut";
   readonly binding: KeyboardShortcut;
   /** Pre-built from `binding.modifiers` for O(1) per-modifier lookup. */
-  readonly modifierSet: Set<ModifierKey>;
+  readonly modifierSet: Set<ConcreteModifierKey>;
   readonly handler: KeyboardHandler;
   readonly options: ResolvedOptions;
   enabled: boolean;
@@ -164,11 +173,21 @@ interface KeyboardScope {
 }
 
 const KEY_SET = new Set<string>(KEY_VALUES);
-const ALL_MODIFIERS: readonly ModifierKey[] = ["ctrl", "alt", "shift", "meta"];
+const ALL_MODIFIERS: readonly ConcreteModifierKey[] = ["ctrl", "alt", "shift", "meta"];
 const DEFAULT_EVENT: KeyboardEventName = "keydown";
 
-const DEFAULT_IS_MAC =
-  typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+const DEFAULT_IS_MAC = (() => {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+  const userAgentData = (navigator as unknown as { userAgentData?: { platform?: string } }).userAgentData;
+  if (userAgentData?.platform) {
+    return /macOS/i.test(userAgentData.platform);
+  }
+  const platform = navigator.platform || "";
+  const userAgent = navigator.userAgent || "";
+  return /Mac|iPod|iPhone|iPad/.test(platform) || /Mac|iPod|iPhone|iPad/.test(userAgent);
+})();
 
 function isInputElement(target: EventTarget | null): boolean {
   if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
@@ -243,7 +262,12 @@ export class Keyboard {
         new Error("[Keyboard] Cannot register a keyboard binding without an event target."),
         "Keyboard binding could not be registered.",
       );
-      return { unregister: () => {}, enable: () => {}, disable: () => {} };
+      return {
+        active: false,
+        unregister: () => {},
+        enable: () => {},
+        disable: () => {},
+      };
     }
 
     const event = options.event ?? DEFAULT_EVENT;
@@ -267,8 +291,8 @@ export class Keyboard {
             binding: { ...binding, key: normalizedBindingKey as KeyboardKey },
             modifierSet: new Set(
               binding.modifiers.map((mod) =>
-                mod === "mod" || mod === "cmdOrCtrl" ? (this.isMac ? "meta" : "ctrl") : mod,
-              ),
+                mod === "cmdOrCtrl" ? (this.isMac ? "meta" : "ctrl") : mod,
+              ) as ConcreteModifierKey[],
             ),
             handler,
             options: resolvedOptions,
@@ -278,6 +302,7 @@ export class Keyboard {
     scope.subscriptions.add(subscription);
 
     return {
+      active: true,
       unregister: () => this.unregister(scope, subscription),
       enable: () => {
         subscription.enabled = true;
@@ -354,9 +379,10 @@ export class Keyboard {
   }
 
   /**
-   * Removes all bindings and their DOM listeners, then resets the instance-
-   * level enabled state to `true`. Useful for cleanup on page teardown or in
-   * tests.
+   * Removes all bindings and their DOM listeners.
+   *
+   * Note: The instance-level enabled state set by {@link enable}/{@link disable}
+   * is preserved.
    */
   clear(): void {
     this.scopes.forEach((scope) => {
@@ -364,7 +390,6 @@ export class Keyboard {
       scope.subscriptions.clear();
     });
     this.scopes.clear();
-    this.enabled = true;
   }
 
   private handleEvent(scope: KeyboardScope, event: Event): void {
@@ -455,17 +480,21 @@ export class Keyboard {
     return normalizedValue as KeyboardKey;
   }
 
-  private getModifierState(event: KeyboardEvent, mod: ModifierKey): boolean {
-    if (mod === "ctrl") {
-      return event.ctrlKey;
+  private getModifierState(event: KeyboardEvent, mod: ConcreteModifierKey): boolean {
+    switch (mod) {
+      case "ctrl":
+        return event.ctrlKey;
+      case "alt":
+        return event.altKey;
+      case "shift":
+        return event.shiftKey;
+      case "meta":
+        return event.metaKey;
+      default: {
+        const _exhaustive: never = mod;
+        return _exhaustive;
+      }
     }
-    if (mod === "alt") {
-      return event.altKey;
-    }
-    if (mod === "shift") {
-      return event.shiftKey;
-    }
-    return event.metaKey;
   }
 
   private getDefaultTarget(): EventTarget | undefined {
