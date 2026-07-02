@@ -177,6 +177,29 @@ interface KeyboardRegistration {
 - `enable()`: Re-enables the binding handler.
 - `disable()`: Temporarily silences the binding handler.
 
+#### `KeyboardKey`
+
+Union type representing any valid key value in the standard mapping (e.g., `"Escape"`, `"Enter"`, `"a"`, `"F1"`, etc.).
+
+#### `KeyboardBinding`
+
+Represents a target keyboard combination:
+
+- **String form** (`KeyboardKey`): matches the key pressed with no active modifiers.
+- **Object form** (`KeyboardShortcut`): matches the key pressed with exactly the specified modifiers active.
+
+#### `KeyboardEventName`
+
+The event name to listen on. Values: `"keydown" | "keyup"`. (Default: `"keydown"`).
+
+#### `KeyboardHandler`
+
+```ts
+type KeyboardHandler = (event: KeyboardEvent) => void;
+```
+
+Callback function invoked when a shortcut combination matches the incoming event.
+
 ## Examples
 
 ### Target-Scoped Bindings

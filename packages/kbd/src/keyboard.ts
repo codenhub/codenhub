@@ -173,6 +173,7 @@ interface KeyboardScope {
 }
 
 const KEY_SET = new Set<string>(KEY_VALUES);
+const LOWERCASE_TO_STANDARD_KEYS = new Map<string, KeyboardKey>(KEY_VALUES.map((val) => [val.toLowerCase(), val]));
 const ALL_MODIFIERS: readonly ConcreteModifierKey[] = ["ctrl", "alt", "shift", "meta"];
 const DEFAULT_EVENT: KeyboardEventName = "keydown";
 
@@ -243,8 +244,50 @@ export class Keyboard {
     handler: KeyboardHandler,
     options: KeyboardSubscriptionOptions = {},
   ): KeyboardRegistration {
-    const bindingKey = typeof binding === "string" ? binding : binding.key;
-    const normalizedBindingKey = bindingKey.length === 1 ? bindingKey.toLowerCase() : bindingKey;
+    if (!binding) {
+      this.onError?.(
+        new Error("[Keyboard] Cannot register a keyboard binding without a binding configuration."),
+        "Keyboard binding could not be registered.",
+      );
+      return {
+        active: false,
+        unregister: () => {},
+        enable: () => {},
+        disable: () => {},
+      };
+    }
+
+    const bindingKey =
+      typeof binding === "string" ? binding : binding && typeof binding === "object" ? binding.key : undefined;
+    if (typeof bindingKey !== "string") {
+      this.onError?.(
+        new Error("[Keyboard] Invalid binding key. Binding key must be a string."),
+        "Keyboard binding could not be registered.",
+      );
+      return {
+        active: false,
+        unregister: () => {},
+        enable: () => {},
+        disable: () => {},
+      };
+    }
+
+    if (typeof handler !== "function") {
+      this.onError?.(
+        new Error("[Keyboard] Cannot register a keyboard binding without a valid handler function."),
+        "Keyboard binding could not be registered.",
+      );
+      return {
+        active: false,
+        unregister: () => {},
+        enable: () => {},
+        disable: () => {},
+      };
+    }
+
+    const lowerKey = bindingKey.toLowerCase();
+    const normalizedBindingKey = (LOWERCASE_TO_STANDARD_KEYS.get(lowerKey) ??
+      (bindingKey.length === 1 ? lowerKey : bindingKey)) as KeyboardKey;
 
     if (!KEY_SET.has(normalizedBindingKey)) {
       this.onError?.(
@@ -330,7 +373,7 @@ export class Keyboard {
       }
       return ALL_MODIFIERS.every((mod) => {
         if (mod === "shift") {
-          const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^[a-zA-Z]$/.test(event.key);
+          const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^\p{L}$/u.test(event.key);
           if (isNonLetterSymbolOrDigit) {
             return true;
           }
@@ -346,7 +389,7 @@ export class Keyboard {
     return ALL_MODIFIERS.every((mod) => {
       const required = subscription.modifierSet.has(mod);
       if (mod === "shift" && !required) {
-        const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^[a-zA-Z]$/.test(event.key);
+        const isNonLetterSymbolOrDigit = event.key.length === 1 && !/^\p{L}$/u.test(event.key);
         if (isNonLetterSymbolOrDigit) {
           return true;
         }
@@ -476,8 +519,8 @@ export class Keyboard {
   }
 
   private normalizeKey(value: string): KeyboardKey {
-    const normalizedValue = value.length === 1 ? value.toLowerCase() : value;
-    return normalizedValue as KeyboardKey;
+    const lower = value.toLowerCase();
+    return (LOWERCASE_TO_STANDARD_KEYS.get(lower) ?? (value.length === 1 ? lower : value)) as KeyboardKey;
   }
 
   private getModifierState(event: KeyboardEvent, mod: ConcreteModifierKey): boolean {

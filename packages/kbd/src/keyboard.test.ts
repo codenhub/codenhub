@@ -449,4 +449,74 @@ describe("Keyboard", () => {
 
     customKeyboard.clear();
   });
+
+  it("should validate input arguments and report to onError", () => {
+    const onError = vi.fn();
+    const customKeyboard = new Keyboard({ onError });
+
+    // 1. null binding
+    // @ts-expect-error - testing invalid null binding
+    let reg = customKeyboard.register(null, () => {});
+    expect(reg.active).toBe(false);
+    expect(onError).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: "[Keyboard] Cannot register a keyboard binding without a binding configuration.",
+      }),
+      "Keyboard binding could not be registered.",
+    );
+
+    // 2. undefined/invalid binding key
+    // @ts-expect-error - testing invalid shortcut object missing key
+    reg = customKeyboard.register({}, () => {});
+    expect(reg.active).toBe(false);
+    expect(onError).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: "[Keyboard] Invalid binding key. Binding key must be a string.",
+      }),
+      "Keyboard binding could not be registered.",
+    );
+
+    // 3. invalid handler function
+    // @ts-expect-error - testing invalid non-function handler
+    reg = customKeyboard.register(KEYS.escape, "not-a-function");
+    expect(reg.active).toBe(false);
+    expect(onError).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        message: "[Keyboard] Cannot register a keyboard binding without a valid handler function.",
+      }),
+      "Keyboard binding could not be registered.",
+    );
+  });
+
+  it("should normalize lowercase multi-character keys case-insensitively", () => {
+    const handler = vi.fn();
+    // Register "escape" in lowercase (which standard is "Escape")
+    // @ts-expect-error - testing lowercase typo
+    keyboard.register("escape", handler);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should support Unicode accented letters in key matching and shift logic", () => {
+    const handlerSimple = vi.fn();
+    const handlerShift = vi.fn();
+
+    // Accented French letter "é"
+    // @ts-expect-error - using accented letter
+    keyboard.register("é", handlerSimple);
+    // @ts-expect-error - using accented letter with shift
+    keyboard.register({ key: "é", modifiers: ["shift"] }, handlerShift);
+
+    // Dispatch "é" (Shift is false) -> should trigger handlerSimple, not handlerShift
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "é" }));
+    expect(handlerSimple).toHaveBeenCalledTimes(1);
+    expect(handlerShift).not.toHaveBeenCalled();
+
+    // Dispatch "É" with shiftKey: true -> should trigger handlerShift, not handlerSimple
+    // because "é" is recognized as a Unicode letter, so shift check is not bypassed
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "É", shiftKey: true }));
+    expect(handlerSimple).toHaveBeenCalledTimes(1);
+    expect(handlerShift).toHaveBeenCalledTimes(1);
+  });
 });
