@@ -320,11 +320,10 @@ importers:
         version: 4.1.8(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
 
   packages/toast:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles
-    devDependencies:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.8(vitest@4.1.8)

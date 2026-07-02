@@ -38,10 +38,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@codenhub/styles": "workspace:*"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@codenhub/styles": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",

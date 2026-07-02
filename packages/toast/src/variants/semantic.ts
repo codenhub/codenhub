@@ -12,10 +12,10 @@ const TOAST_SHAPE_CLASS_NAME =
   "rounded-xl border-2 text-sm font-medium font-default pointer-events-auto flex items-center min-w-40 p-3 gap-2";
 
 const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticToastType, string> = {
-  success: `${TOAST_SHAPE_CLASS_NAME} border-success bg-success-light text-success-dark`,
-  error: `${TOAST_SHAPE_CLASS_NAME} border-destructive bg-destructive-light text-destructive-dark`,
-  warning: `${TOAST_SHAPE_CLASS_NAME} border-warning bg-warning-light text-warning-dark`,
-  info: `${TOAST_SHAPE_CLASS_NAME} border-info bg-info-light text-info-dark`,
+  success: `${TOAST_SHAPE_CLASS_NAME} toast-success`,
+  error: `${TOAST_SHAPE_CLASS_NAME} toast-error`,
+  warning: `${TOAST_SHAPE_CLASS_NAME} toast-warning`,
+  info: `${TOAST_SHAPE_CLASS_NAME} toast-info`,
 };
 
 const SEMANTIC_ICONS: Record<SemanticToastType, ToastIcon> = {

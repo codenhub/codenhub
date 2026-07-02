@@ -5,7 +5,7 @@ type WithoutLoadingPreset<T> = T extends unknown ? Omit<T, "icon" | "role"> : ne
 type LoadingToastOptions = WithoutLoadingPreset<ToastOptions>;
 
 const LOADING_TOAST_ROOT_CLASS_NAME =
-  "rounded-xl border-2 border-border text-sm font-medium font-default pointer-events-auto flex items-center min-w-44 p-3 gap-2 bg-surface text-text";
+  "rounded-xl border-2 text-sm font-medium font-default pointer-events-auto flex items-center min-w-44 p-3 gap-2 toast-default";
 
 export class LoadingToast extends Toast {
   protected static override getPresetOptions() {

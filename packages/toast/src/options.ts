@@ -27,8 +27,8 @@ const DEFAULT_ROLE: ToastRole = "status";
 const DEFAULT_AUTO_DISMISS = true;
 const DEFAULT_IS_DISMISSABLE = false;
 const TOAST_SHAPE_CLASS_NAME =
-  "rounded-xl border-2 border-border text-sm font-medium font-default pointer-events-auto flex items-center";
-const DEFAULT_ROOT_CLASS_NAME = `${TOAST_SHAPE_CLASS_NAME} min-w-40 p-3 gap-2 border-border bg-surface text-text`;
+  "rounded-xl border-2 text-sm font-medium font-default pointer-events-auto flex items-center";
+const DEFAULT_ROOT_CLASS_NAME = `${TOAST_SHAPE_CLASS_NAME} min-w-40 p-3 gap-2 toast-default`;
 
 function hasNonEmptyString(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
