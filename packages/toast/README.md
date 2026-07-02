@@ -1,0 +1,154 @@
+# @codenhub/toast
+
+A robust and intuitive factory singleton toast manager for Codenhub interfaces. It provides semantic, loading, and interactive alert/confirm/prompt support with optional native API overrides.
+
+## Installation
+
+```sh
+pnpm add @codenhub/toast
+npm install @codenhub/toast
+```
+
+## Features
+
+- **Factory Singleton**: Exposes a `createToaster()` factory function which lazy-initializes a single global `Toaster` manager.
+- **Promise-Based Dialogs**: Interactive `confirm()`, `prompt()`, and `alert()` return Promises that resolve upon user interaction.
+- **Semantic Types**: Pre-styled semantic variants for `success`, `error`, `warning`, and `info`.
+- **Async Loader**: Easily show persistent loading indicators that can be programmatically dismissed.
+- **Native Replacements**: Optionally replace browser native `window.alert()`, `window.confirm()`, and `window.prompt()` with modern custom dialog toasts.
+
+## Usage
+
+First, import the styles in your main CSS or layout entrypoint:
+
+```ts
+import "@codenhub/toast/styles";
+```
+
+### Basic Notifications
+
+```ts
+import { createToaster } from "@codenhub/toast";
+
+const toaster = createToaster();
+
+// Basic notifications
+toaster.success("Changes saved successfully!");
+toaster.error("Failed to load resources.");
+toaster.warning("Please check your configuration.");
+toaster.info("System will undergo maintenance in 10 minutes.");
+```
+
+### Loading State
+
+```ts
+const loader = toaster.loading("Processing transaction...");
+
+try {
+  await processPayment();
+  loader.hide();
+  toaster.success("Payment complete!");
+} catch (err) {
+  loader.hide();
+  toaster.error("Payment failed.");
+}
+```
+
+### Interactive Dialogs
+
+```ts
+// Confirm dialog (Promise-based)
+const userConfirmed = await toaster.confirm("Are you sure you want to delete this project?", {
+  confirmLabel: "Delete Project",
+  cancelLabel: "Keep Project",
+});
+
+if (userConfirmed) {
+  await deleteProject();
+  toaster.success("Project deleted.");
+}
+
+// Prompt dialog (Promise-based)
+const name = await toaster.prompt("Enter your new project name:", "New Project", {
+  placeholder: "My Workspace",
+});
+
+if (name !== null) {
+  toaster.success(`Project "${name}" created.`);
+}
+
+// Alert dialog (Promise-based)
+await toaster.alert("This action cannot be undone.");
+```
+
+### Overriding Native Browser Dialogs
+
+Enable this in the initialization config. It will replace `window.alert()`, `window.confirm()`, and `window.prompt()` globally.
+
+> [!WARNING]
+> Since native browser dialogs are synchronous and block execution, replacing them with DOM-based toasts changes their return type to Promises. You must use `await` when calling `window.confirm()` or `window.prompt()`.
+
+```ts
+import { createToaster } from "@codenhub/toast";
+
+const toaster = createToaster({
+  replaceNative: true, // Defaults to false
+});
+
+// Overridden APIs return Promises
+const confirmed = await window.confirm("Do you accept the terms?");
+```
+
+## Reference
+
+### `@codenhub/toast`
+
+Primary entrypoint for the package's public API.
+
+```ts
+import { createToaster, Toast } from "@codenhub/toast";
+```
+
+#### `createToaster()`
+
+Lazy-initializes and returns the singleton `Toaster` instance. Calling it again returns the same instance. Passing a configuration updates the singleton's settings.
+
+```ts
+function createToaster(config?: ToasterConfig): Toaster;
+```
+
+#### `Toaster` Interface
+
+```ts
+interface Toaster {
+  /** Display a generic or custom toast */
+  showToast(options: ToastOptions): Toast;
+
+  /** Short-hand semantic methods */
+  success(message: string, options?: Partial<ToastOptions>): Toast;
+  error(message: string, options?: Partial<ToastOptions>): Toast;
+  warning(message: string, options?: Partial<ToastOptions>): Toast;
+  info(message: string, options?: Partial<ToastOptions>): Toast;
+  loading(message: string, options?: Partial<ToastOptions>): Toast;
+
+  /** Interactive dialogs returning Promises */
+  confirm(message: string, options?: ConfirmToastOptions): Promise<boolean>;
+  prompt(message: string, defaultValue?: string, options?: PromptToastOptions): Promise<string | null>;
+  alert(message: string, options?: AlertToastOptions): Promise<void>;
+
+  /** Dismiss all active and queued toasts */
+  clear(): void;
+
+  /** Update configuration settings */
+  configure(config: ToasterConfig): void;
+}
+```
+
+## Requirements
+
+- **DOM Environment**: Runs only in browser/DOM environments.
+- **CSS Import**: Requires importing `@codenhub/toast/styles` (or compiling Tailwind with `@source` directories pointing to `@codenhub/toast` source files).
+
+## License
+
+This project is licensed under the [Apache-2.0](LICENSE) license.
