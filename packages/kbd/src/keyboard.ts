@@ -286,8 +286,7 @@ export class Keyboard {
     }
 
     const lowerKey = bindingKey.toLowerCase();
-    const normalizedBindingKey = (LOWERCASE_TO_STANDARD_KEYS.get(lowerKey) ??
-      (bindingKey.length === 1 ? lowerKey : bindingKey)) as KeyboardKey;
+    const normalizedBindingKey = (LOWERCASE_TO_STANDARD_KEYS.get(lowerKey) ?? lowerKey) as KeyboardKey;
 
     if (!KEY_SET.has(normalizedBindingKey)) {
       this.onError?.(
@@ -520,7 +519,7 @@ export class Keyboard {
 
   private normalizeKey(value: string): KeyboardKey {
     const lower = value.toLowerCase();
-    return (LOWERCASE_TO_STANDARD_KEYS.get(lower) ?? (value.length === 1 ? lower : value)) as KeyboardKey;
+    return (LOWERCASE_TO_STANDARD_KEYS.get(lower) ?? lower) as KeyboardKey;
   }
 
   private getModifierState(event: KeyboardEvent, mod: ConcreteModifierKey): boolean {

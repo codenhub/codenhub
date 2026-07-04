@@ -154,12 +154,12 @@ interface KeyboardShortcut {
 
 #### `KeyboardSubscriptionOptions`
 
-| Property          | Type                   | Description                                                                                                                       |
-| ----------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `target`          | `EventTarget`          | Event target to listen on. (Default: `document`)                                                                                  |
-| `event`           | `"keydown" \| "keyup"` | Event type to bind. (Default: `"keydown"`)                                                                                        |
-| `stopPropagation` | `boolean`              | If `true`, stops event propagation immediately after handler runs. (Default: `false`)                                             |
-| `ignoreInput`     | `boolean`              | If `true`, ignores events originating from form inputs/textareas unless a modifier key (ctrl/alt/meta) is held. (Default: `true`) |
+| Property          | Type                   | Description                                                                                                                                                                                                                                                                     |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`          | `EventTarget`          | Event target to listen on. (Default: `document`)                                                                                                                                                                                                                                |
+| `event`           | `"keydown" \| "keyup"` | Event type to bind. (Default: `"keydown"`)                                                                                                                                                                                                                                      |
+| `stopPropagation` | `boolean`              | If `true`, stops event propagation immediately after handler runs. (Default: `false`)                                                                                                                                                                                           |
+| `ignoreInput`     | `boolean`              | If `true`, ignores events originating from form inputs/textareas unless a modifier key (ctrl/alt/meta) is held. (Default: `true`). _Note: Plain shortcuts like `Escape` will be ignored by default when focused inside an input. Register with `ignoreInput: false` to bypass._ |
 
 #### `KeyboardRegistration`
 
@@ -257,7 +257,8 @@ macKeyboard.register({ key: "k", modifiers: ["cmdOrCtrl"] }, (event) => {
 ## Notes
 
 - **Shadow DOM Support**: The registry resolves the event source target using `event.composedPath()[0]` when available. This allows inputs nested inside web components and shadow DOM roots to be ignored correctly under `ignoreInput: true`.
-- **Case Normalization**: Case-insensitive matching is guaranteed by normalizing all single-character keys to lowercase during both registration and event dispatching.
+- **Case Normalization**: Case-insensitive matching is guaranteed by normalizing all single-character keys to lowercase during both registration and event dispatching. Unrecognized custom keys are also normalized to lowercase, allowing them to match case-insensitively.
+- **Escape Key inside Inputs**: Because `ignoreInput` is `true` by default, plain keys like `Escape` are ignored inside input fields. Register with `ignoreInput: false` if you want a global escape shortcut to close modal overlays while form elements have focus.
 
 ## License
 

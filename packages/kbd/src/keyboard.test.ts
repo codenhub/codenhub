@@ -17,8 +17,9 @@ describe("Keyboard", () => {
     keyboard.register(KEYS.escape, handler);
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(handler).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Esc" }));
-    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).not.toHaveBeenCalled();
   });
 
   it("should normalize printable letter keys to lowercase", () => {
@@ -448,6 +449,18 @@ describe("Keyboard", () => {
     expect(handler).toHaveBeenCalledTimes(1);
 
     customKeyboard.clear();
+  });
+
+  it("should match unregistered custom keys case-insensitively", () => {
+    const handler = vi.fn();
+    // @ts-expect-error - testing arbitrary unrecognized key
+    keyboard.register("MyCustomKey", handler);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "mycustomkey" }));
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "MYCUSTOMKEY" }));
+    expect(handler).toHaveBeenCalledTimes(2);
   });
 
   it("should validate input arguments and report to onError", () => {
