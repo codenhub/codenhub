@@ -35,7 +35,7 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "pnpm --filter=@codenhub/styles-dev dev",
+    "dev": "pnpm build && pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "build": "pnpm build:styles",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify",

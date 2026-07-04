@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const vanillaPreviewUrl = "http://localhost:5184/";
+const vanillaPreviewUrl = "http://localhost:5184/?env=vanilla";
+const tailwindBuildUrl = "http://localhost:5184/?env=build";
 
 interface LinearColor {
   blue: number;
@@ -808,6 +809,29 @@ test.describe("compiled CSS preview", () => {
     expect(values.badgeFg).toBe(values.tokenText);
     expect(values.progressBg).toBe(values.tokenText);
   });
+
+  test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See build");
+    await page.goto(tailwindBuildUrl);
+    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
+  });
+
+  test("switches between preview environments from the environment toggle", async ({ page }) => {
+    await page.goto(vanillaPreviewUrl);
+    await page.getByTestId("environment-toggle").click();
+    await expect(page).toHaveURL(/env=build/);
+    await expect(page.locator("html")).toHaveAttribute("data-env", "build");
+    await page.getByTestId("environment-toggle").click();
+    await expect(page).toHaveURL(/env=vanilla/);
+    await expect(page.locator("html")).toHaveAttribute("data-env", "vanilla");
+  });
 });
 
-test.describe("Tailwind source build", () => {});
+test.describe("Tailwind source build", () => {
+  test("loads source build correctly and applies classes", async ({ page }) => {
+    await page.goto(tailwindBuildUrl);
+    await expect(page.getByTestId("preview-root")).toBeVisible();
+    await expect(page.getByTestId("primary-button")).toBeVisible();
+  });
+});
