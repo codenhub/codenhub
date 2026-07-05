@@ -97,7 +97,6 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #options: ResolvedThemeOptions<TSchema>;
   #activeName: string;
   #activeTokens: Partial<Record<keyof TSchema, string>> = {};
-  #computedTokens: Partial<Record<keyof TSchema, string>> = {};
   #listeners = new Set<ThemeChangeListener<TSchema>>();
   #mediaQueryList: MediaQueryList | null = null;
   #hasStorageListener = false;
@@ -164,10 +163,37 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   get(): ThemeDefinition<TSchema> {
     const baseTheme = this.#getTheme(this.#activeName);
+    const computedTokens: Partial<Record<keyof TSchema, string>> = {};
+
+    if (isBrowser() && this.#options.tokenSchema) {
+      const root = document.documentElement;
+      try {
+        const style = window.getComputedStyle(root);
+        if (style !== null) {
+          const schema = this.#options.tokenSchema;
+          const mergedTokens = {
+            ...baseTheme.tokens,
+            ...this.#activeTokens,
+          };
+
+          for (const key of Object.keys(schema) as Array<keyof TSchema>) {
+            if (mergedTokens[key] === undefined) {
+              const val = style.getPropertyValue(schema[key]).trim();
+              if (val) {
+                computedTokens[key] = val;
+              }
+            }
+          }
+        }
+      } catch {
+        // Fallback silently if computed style access fails
+      }
+    }
+
     return {
       ...baseTheme,
       tokens: {
-        ...this.#computedTokens,
+        ...computedTokens,
         ...baseTheme.tokens,
         ...this.#activeTokens,
       },
@@ -213,10 +239,13 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       return this.#getTheme(this.#options.defaultTheme);
     }
 
-    const name = window.matchMedia(PREFERS_DARK_QUERY).matches
-      ? this.#options.systemTheme.dark
-      : this.#options.systemTheme.light;
-    return this.#getTheme(name);
+    try {
+      const mql = window.matchMedia(PREFERS_DARK_QUERY);
+      const name = mql && mql.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
+      return this.#getTheme(name);
+    } catch {
+      return this.#getTheme(this.#options.defaultTheme);
+    }
   }
 
   subscribe(listener: ThemeChangeListener<TSchema>): () => void {
@@ -228,7 +257,15 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   destroy(): void {
     if (this.#mediaQueryList !== null) {
-      this.#mediaQueryList.removeEventListener("change", this.#handleSystemChange);
+      try {
+        if (typeof this.#mediaQueryList.removeEventListener === "function") {
+          this.#mediaQueryList.removeEventListener("change", this.#handleSystemChange);
+        } else if (typeof this.#mediaQueryList.removeListener === "function") {
+          this.#mediaQueryList.removeListener(this.#handleSystemChange);
+        }
+      } catch {
+        // Ignore removal errors
+      }
       this.#mediaQueryList = null;
     }
 
@@ -302,7 +339,6 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       root.classList.toggle(DARK_CLASS, theme.colorScheme === "dark");
     }
 
-    this.#computedTokens = {};
     if (this.#options.tokenSchema) {
       const schema = this.#options.tokenSchema;
       const mergedTokens = {
@@ -317,18 +353,6 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
           root.style.setProperty(cssVarName, tokenValue);
         } else {
           root.style.removeProperty(cssVarName);
-        }
-      }
-
-      const style = window.getComputedStyle(root);
-      if (style !== null) {
-        for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-          if (mergedTokens[key] === undefined) {
-            const val = style.getPropertyValue(schema[key]).trim();
-            if (val) {
-              this.#computedTokens[key] = val;
-            }
-          }
         }
       }
     }
@@ -365,8 +389,19 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       return;
     }
 
-    this.#mediaQueryList = window.matchMedia(PREFERS_DARK_QUERY);
-    this.#mediaQueryList.addEventListener("change", this.#handleSystemChange);
+    try {
+      const mql = window.matchMedia(PREFERS_DARK_QUERY);
+      if (mql) {
+        if (typeof mql.addEventListener === "function") {
+          mql.addEventListener("change", this.#handleSystemChange);
+        } else if (typeof mql.addListener === "function") {
+          mql.addListener(this.#handleSystemChange);
+        }
+        this.#mediaQueryList = mql;
+      }
+    } catch {
+      // Ignore system change errors and fail silently
+    }
   }
 
   #store(name: string): void {

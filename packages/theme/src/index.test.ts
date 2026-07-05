@@ -792,4 +792,105 @@ describe("Theme CSS tokens support", () => {
 
     expect(resolver).not.toHaveBeenCalled();
   });
+
+  it("should reject null or non-object theme definitions", () => {
+    expect(() =>
+      createTheme({
+        themes: [null as unknown as ThemeDefinition],
+      }),
+    ).toThrow("Theme definitions must be objects.");
+  });
+
+  it("should early exit on storage event clearPreference when active theme is already system theme", () => {
+    createMatchMedia(false); // system theme light
+    const theme = createTheme().init();
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    // Active theme is "light" (matches system).
+    // Now trigger storage clear event (newValue: null)
+    const storageEvent = new StorageEvent("storage", {
+      key: "app-theme-preference",
+      newValue: null,
+    });
+    window.dispatchEvent(storageEvent);
+
+    expect(listener).not.toHaveBeenCalled();
+    theme.destroy();
+  });
+
+  it("should dynamically resolve computed styles when stylesheet finishes loading after init", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({
+      tokenSchema,
+    }).init();
+
+    // Before stylesheet loaded: tokens is empty
+    expect(theme.get().tokens).toEqual({});
+
+    // Inject stylesheet
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `:root { --color-primary: purple; }`;
+    document.head.appendChild(styleEl);
+
+    try {
+      // Now get() should dynamically query the style and return the correct value
+      expect(theme.get().tokens).toEqual({ primary: "purple" });
+    } finally {
+      document.head.removeChild(styleEl);
+      theme.destroy();
+    }
+  });
+
+  it("should handle matchMedia throwing an error in getSystem and init", () => {
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation(() => {
+        throw new Error("Sandbox error");
+      }),
+    });
+
+    try {
+      const theme = createTheme();
+      // getSystem should catch the error and fallback to default theme
+      expect(theme.getSystem().name).toBe("light");
+
+      // init should not throw
+      expect(() => theme.init()).not.toThrow();
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: originalMatchMedia,
+      });
+    }
+  });
+
+  it("should use addListener and removeListener fallback on older browsers", () => {
+    const addListener = vi.fn();
+    const removeListener = vi.fn();
+    const mqlMock = {
+      matches: true,
+      addListener,
+      removeListener,
+    };
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockReturnValue(mqlMock as unknown as MediaQueryList),
+    });
+
+    try {
+      const theme = createTheme().init();
+      expect(addListener).toHaveBeenCalled();
+
+      theme.destroy();
+      expect(removeListener).toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(window, "matchMedia", {
+        configurable: true,
+        value: originalMatchMedia,
+      });
+    }
+  });
 });
