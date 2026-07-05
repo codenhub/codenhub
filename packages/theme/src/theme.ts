@@ -109,7 +109,9 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     const name = event.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
-    this.#activate(name, "system", { shouldStore: false });
+    if (this.#activeName !== name) {
+      this.#activate(name, "system", { shouldStore: false });
+    }
   };
 
   #handleStorageChange = (event: StorageEvent): void => {

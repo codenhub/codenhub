@@ -13,6 +13,9 @@ Small zero-dependency theme preference helper for browser apps. It applies a the
 
 ```sh
 pnpm add @codenhub/theme
+npm install @codenhub/theme
+yarn add @codenhub/theme
+bun add @codenhub/theme
 ```
 
 ## Usage

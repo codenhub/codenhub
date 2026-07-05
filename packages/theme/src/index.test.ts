@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DARK_THEME,
   LIGHT_THEME,
-  createTheme,
+  createTheme as originalCreateTheme,
   THEME_CHANGE_EVENT,
   type ThemeChangeDetail,
   type ThemeDefinition,
 } from ".";
+
+const activeThemes: ReturnType<typeof originalCreateTheme<Record<string, string>>>[] = [];
+const createTheme = <TSchema extends Record<string, string> = Record<string, string>>(
+  options?: Parameters<typeof originalCreateTheme<TSchema>>[0],
+): ReturnType<typeof originalCreateTheme<TSchema>> => {
+  const theme = originalCreateTheme(options);
+  activeThemes.push(theme);
+  return theme;
+};
 
 interface MockMediaQueryList {
   matches: boolean;
@@ -50,6 +59,13 @@ beforeEach(() => {
   document.documentElement.removeAttribute("style");
   window.localStorage.clear();
   createMatchMedia(false);
+});
+
+afterEach(() => {
+  for (const theme of activeThemes) {
+    theme.destroy();
+  }
+  activeThemes.length = 0;
 });
 
 describe("Theme config", () => {
