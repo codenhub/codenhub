@@ -52,7 +52,7 @@ export interface ThemeOptions<TSchema extends Record<string, string> = Record<st
   /** Attribute set on `document.documentElement` with the active theme name. */
   attribute?: string;
   /** Whether to toggle Tailwind CSS's `dark` class for themes with `colorScheme: "dark"`. */
-  isTailwindcss?: boolean;
+  isTailwindCss?: boolean;
   /** Whether and how to apply a theme-specific class to `document.documentElement`. */
   shouldApplyClass?: boolean | ThemeClassResolver<TSchema>;
   /** Schema mapping theme token names to their corresponding CSS Custom Property names. */
@@ -75,7 +75,7 @@ export interface ResolvedThemeOptions<TSchema extends Record<string, string> = R
   /** The HTML attribute on `document.documentElement` where the active theme name is applied. */
   attribute: string;
   /** Whether Tailwind CSS's dark mode class should be automatically toggled on the document element. */
-  isTailwindcss: boolean;
+  isTailwindCss: boolean;
   /** Custom resolver function or boolean determining whether and how theme-specific CSS classes are applied to the document element. */
   shouldApplyClass: boolean | ThemeClassResolver<TSchema>;
   /** Optional schema mapping token names to their corresponding CSS Custom Property names. */

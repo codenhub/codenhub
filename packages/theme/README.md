@@ -25,7 +25,7 @@ By default, `init()` uses a valid stored preference first. If there is no valid 
 ```ts
 import { createTheme } from "@codenhub/theme";
 
-const theme = createTheme({ isTailwindcss: false, shouldApplyClass: true });
+const theme = createTheme({ isTailwindCss: false, shouldApplyClass: true });
 
 theme.init();
 theme.set("dark");
@@ -213,7 +213,7 @@ interface ThemeOptions<TSchema extends Record<string, string> = Record<string, s
   systemTheme?: SystemThemeMap;
   storageKey?: string;
   attribute?: string;
-  isTailwindcss?: boolean;
+  isTailwindCss?: boolean;
   shouldApplyClass?: boolean | ThemeClassResolver<TSchema>;
   tokenSchema?: TSchema;
 }
@@ -226,7 +226,7 @@ interface ThemeOptions<TSchema extends Record<string, string> = Record<string, s
 | `systemTheme`      | `SystemThemeMap`                                  | `{ light: "light", dark: "dark" }` | Maps OS light and dark preferences to configured theme names.                               |
 | `storageKey`       | `string`                                          | `"app-theme-preference"`           | Key used for `localStorage`.                                                                |
 | `attribute`        | `string`                                          | `"data-theme"`                     | Attribute set on `document.documentElement`.                                                |
-| `isTailwindcss`    | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
+| `isTailwindCss`    | `boolean`                                         | `false`                            | Toggles the `dark` class when the active theme has `colorScheme: "dark"`.                   |
 | `shouldApplyClass` | `boolean` or `(theme: ThemeDefinition) => string` | `true`                             | Adds `theme-${name}`, no class, or a resolver-provided class to `document.documentElement`. |
 | `tokenSchema`      | `TSchema`                                         | `undefined`                        | Schema mapping theme token names to their corresponding CSS Custom Property names.          |
 

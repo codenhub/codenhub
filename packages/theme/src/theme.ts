@@ -1,5 +1,16 @@
-import { THEME_CHANGE_EVENT, PREFERS_DARK_QUERY, DARK_CLASS, DEFAULT_OPTIONS } from "./constants";
-import { isBrowser, getThemeClass, assertThemeConfig, assertRuntimeTokens } from "./helpers";
+import { DEFAULT_OPTIONS } from "./constants";
+import {
+  readStorage,
+  writeStorage,
+  removeStorage,
+  readSystemTheme,
+  registerSystemListener,
+  registerStorageListener,
+  applyTheme,
+  readComputedTokens,
+  emitThemeEvent,
+} from "./dom";
+import { assertThemeConfig, assertRuntimeTokens } from "./helpers";
 import type {
   Theme,
   ThemeDefinition,
@@ -15,12 +26,12 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #activeName: string;
   #activeTokens: Partial<Record<keyof TSchema, string>> = {};
   #listeners = new Set<ThemeChangeListener<TSchema>>();
-  #mediaQueryList: MediaQueryList | null = null;
-  #hasStorageListener = false;
+  #systemListenerCleanup: (() => void) | null = null;
+  #storageListenerCleanup: (() => void) | null = null;
   #isInitialized = false;
 
   #handleSystemChange = (event: MediaQueryListEvent): void => {
-    if (this.getStored() !== null) {
+    if (readStorage(this.#options.storageKey, this.#options.themes) !== null) {
       return;
     }
 
@@ -60,14 +71,9 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     if (this.#isInitialized) {
       return this;
     }
-    this.#registerSystemListener();
-    this.#registerStorageListener();
-    if (typeof this.#options.shouldApplyClass === "function") {
-      for (const theme of this.#options.themes) {
-        getThemeClass(theme, this.#options.shouldApplyClass);
-      }
-    }
-    this.#activate(this.getStored() ?? this.getSystem().name, {
+    this.#systemListenerCleanup = registerSystemListener(this.#handleSystemChange);
+    this.#storageListenerCleanup = registerStorageListener(this.#handleStorageChange);
+    this.#activate(readStorage(this.#options.storageKey, this.#options.themes) ?? this.getSystem().name, {
       source: "init",
       shouldStore: false,
       tokens,
@@ -78,32 +84,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   get(): ThemeDefinition<TSchema> {
     const baseTheme = this.#getTheme(this.#activeName);
-    const computedTokens: Partial<Record<keyof TSchema, string>> = {};
-
-    if (isBrowser() && this.#options.tokenSchema) {
-      const root = document.documentElement;
-      try {
-        const style = window.getComputedStyle(root);
-        if (style !== null) {
-          const schema = this.#options.tokenSchema;
-          const mergedTokens = {
-            ...baseTheme.tokens,
-            ...this.#activeTokens,
-          };
-
-          for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-            if (mergedTokens[key] === undefined) {
-              const val = style.getPropertyValue(schema[key]).trim();
-              if (val) {
-                computedTokens[key] = val;
-              }
-            }
-          }
-        }
-      } catch {
-        // Fallback silently if computed style access fails
-      }
-    }
+    const computedTokens = readComputedTokens(baseTheme, this.#options, this.#activeTokens);
 
     return {
       ...baseTheme,
@@ -128,39 +109,16 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   clearPreference(): ThemeDefinition<TSchema> {
-    this.#removeStored();
+    removeStorage(this.#options.storageKey);
     return this.#activate(this.getSystem().name, { source: "clearPreference", shouldStore: false });
   }
 
   getStored(): string | null {
-    if (!isBrowser()) {
-      return null;
-    }
-
-    try {
-      const storedName = window.localStorage.getItem(this.#options.storageKey);
-      if (storedName === null) {
-        return null;
-      }
-      const isConfigured = this.#options.themes.some((t) => t.name === storedName);
-      return isConfigured ? storedName : null;
-    } catch {
-      return null;
-    }
+    return readStorage(this.#options.storageKey, this.#options.themes);
   }
 
   getSystem(): ThemeDefinition<TSchema> {
-    if (!isBrowser() || typeof window.matchMedia !== "function") {
-      return this.#getTheme(this.#options.defaultTheme);
-    }
-
-    try {
-      const mql = window.matchMedia(PREFERS_DARK_QUERY);
-      const name = mql && mql.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
-      return this.#getTheme(name);
-    } catch {
-      return this.#getTheme(this.#options.defaultTheme);
-    }
+    return readSystemTheme(this.#options.defaultTheme, this.#options.systemTheme, this.#options.themes);
   }
 
   subscribe(listener: ThemeChangeListener<TSchema>): () => void {
@@ -171,34 +129,18 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   destroy(): void {
-    if (this.#mediaQueryList !== null) {
-      try {
-        if (typeof this.#mediaQueryList.removeEventListener === "function") {
-          this.#mediaQueryList.removeEventListener("change", this.#handleSystemChange);
-        } else if (typeof this.#mediaQueryList.removeListener === "function") {
-          this.#mediaQueryList.removeListener(this.#handleSystemChange);
-        }
-      } catch {
-        // Ignore removal errors
-      }
-      this.#mediaQueryList = null;
+    if (this.#systemListenerCleanup) {
+      this.#systemListenerCleanup();
+      this.#systemListenerCleanup = null;
     }
 
-    if (this.#hasStorageListener) {
-      window.removeEventListener("storage", this.#handleStorageChange);
-      this.#hasStorageListener = false;
+    if (this.#storageListenerCleanup) {
+      this.#storageListenerCleanup();
+      this.#storageListenerCleanup = null;
     }
 
     this.#listeners.clear();
     this.#isInitialized = false;
-  }
-
-  #registerStorageListener(): void {
-    if (!isBrowser() || this.#hasStorageListener) {
-      return;
-    }
-    window.addEventListener("storage", this.#handleStorageChange);
-    this.#hasStorageListener = true;
   }
 
   #activate(
@@ -217,60 +159,15 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     if (options.shouldStore) {
-      this.#store(theme.name);
+      writeStorage(this.#options.storageKey, theme.name);
     }
 
-    this.#apply(theme);
+    applyTheme(theme, this.#options, this.#activeTokens);
 
     const activeTheme = this.get();
     this.#emit({ name: activeTheme.name, theme: activeTheme, source: options.source });
 
     return activeTheme;
-  }
-
-  #apply(theme: ThemeDefinition<TSchema>): void {
-    if (!isBrowser()) {
-      return;
-    }
-
-    const root = document.documentElement;
-    const nextClass = getThemeClass(theme, this.#options.shouldApplyClass);
-    const configuredClasses = this.#options.themes
-      .map((configuredTheme) => getThemeClass(configuredTheme, this.#options.shouldApplyClass))
-      .filter((configuredClass): configuredClass is string => configuredClass !== null);
-
-    root.setAttribute(this.#options.attribute, theme.name);
-    root.style.colorScheme = theme.colorScheme;
-
-    for (const configuredClass of configuredClasses) {
-      root.classList.remove(configuredClass);
-    }
-
-    if (nextClass !== null) {
-      root.classList.add(nextClass);
-    }
-
-    if (this.#options.isTailwindcss) {
-      root.classList.toggle(DARK_CLASS, theme.colorScheme === "dark");
-    }
-
-    if (this.#options.tokenSchema) {
-      const schema = this.#options.tokenSchema;
-      const mergedTokens = {
-        ...theme.tokens,
-        ...this.#activeTokens,
-      };
-
-      for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-        const cssVarName = schema[key];
-        const tokenValue = mergedTokens[key];
-        if (tokenValue !== undefined && tokenValue !== null) {
-          root.style.setProperty(cssVarName, tokenValue);
-        } else {
-          root.style.removeProperty(cssVarName);
-        }
-      }
-    }
   }
 
   #emit(detail: ThemeChangeDetail<TSchema>): void {
@@ -282,11 +179,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       }
     }
 
-    if (!isBrowser()) {
-      return;
-    }
-
-    window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TSchema>>(THEME_CHANGE_EVENT, { detail }));
+    emitThemeEvent(detail);
   }
 
   #getTheme(name: string): ThemeDefinition<TSchema> {
@@ -297,50 +190,6 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     return theme;
-  }
-
-  #registerSystemListener(): void {
-    if (!isBrowser() || typeof window.matchMedia !== "function" || this.#mediaQueryList !== null) {
-      return;
-    }
-
-    try {
-      const mql = window.matchMedia(PREFERS_DARK_QUERY);
-      if (mql) {
-        if (typeof mql.addEventListener === "function") {
-          mql.addEventListener("change", this.#handleSystemChange);
-        } else if (typeof mql.addListener === "function") {
-          mql.addListener(this.#handleSystemChange);
-        }
-        this.#mediaQueryList = mql;
-      }
-    } catch {
-      // Ignore system change errors and fail silently
-    }
-  }
-
-  #store(name: string): void {
-    if (!isBrowser()) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(this.#options.storageKey, name);
-    } catch {
-      return;
-    }
-  }
-
-  #removeStored(): void {
-    if (!isBrowser()) {
-      return;
-    }
-
-    try {
-      window.localStorage.removeItem(this.#options.storageKey);
-    } catch {
-      return;
-    }
   }
 }
 

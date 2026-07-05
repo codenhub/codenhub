@@ -1,10 +1,6 @@
 import { CLASS_TOKEN_WHITESPACE } from "./constants";
 import type { ThemeDefinition, ThemeClassResolver, ResolvedThemeOptions } from "./types";
 
-export const isBrowser = (): boolean => {
-  return typeof window !== "undefined" && typeof document !== "undefined";
-};
-
 export const getThemeClass = <TSchema extends Record<string, string>>(
   theme: ThemeDefinition<TSchema>,
   shouldApplyClass: boolean | ThemeClassResolver<TSchema>,

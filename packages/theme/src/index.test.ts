@@ -154,7 +154,7 @@ describe("Theme behavior", () => {
   });
 
   it("should store and apply an explicit theme", () => {
-    const theme = createTheme({ isTailwindcss: true }).init();
+    const theme = createTheme({ isTailwindCss: true }).init();
 
     const nextTheme = theme.set("dark");
 
@@ -166,8 +166,8 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should keep shouldApplyClass independent from isTailwindcss", () => {
-    const theme = createTheme({ shouldApplyClass: false, isTailwindcss: true }).init();
+  it("should keep shouldApplyClass independent from isTailwindCss", () => {
+    const theme = createTheme({ shouldApplyClass: false, isTailwindCss: true }).init();
 
     theme.set("dark");
 
@@ -175,10 +175,10 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should not remove pre-existing dark classes when isTailwindcss is disabled", () => {
+  it("should not remove pre-existing dark classes when isTailwindCss is disabled", () => {
     document.documentElement.className = "dark app-shell";
 
-    createTheme({ isTailwindcss: false }).init();
+    createTheme({ isTailwindCss: false }).init();
 
     expect(document.documentElement.classList.contains("dark")).toBe(true);
     expect(document.documentElement.classList.contains("app-shell")).toBe(true);
@@ -202,7 +202,7 @@ describe("Theme behavior", () => {
       systemTheme: { light: "light", dark: "high contrast" },
       attribute: "data-mode",
       shouldApplyClass: (definition) => `mode-${definition.name.replace(" ", "-")}`,
-      isTailwindcss: true,
+      isTailwindCss: true,
     }).init();
 
     theme.set("high contrast");

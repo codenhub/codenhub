@@ -37,6 +37,6 @@ export const DEFAULT_OPTIONS: ResolvedThemeOptions<Record<string, string>> = {
   systemTheme: { light: LIGHT_THEME.name, dark: DARK_THEME.name },
   storageKey: DEFAULT_STORAGE_KEY,
   attribute: DEFAULT_ATTRIBUTE,
-  isTailwindcss: false,
+  isTailwindCss: false,
   shouldApplyClass: true,
 };
