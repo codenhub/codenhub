@@ -53,9 +53,27 @@ beforeEach(() => {
 });
 
 describe("Theme config", () => {
+  it("should reject non-array themes option", () => {
+    expect(() => createTheme({ themes: {} as unknown as readonly ThemeDefinition[] })).toThrow(
+      "Theme options.themes must be an array.",
+    );
+  });
+
+  it("should reject non-string theme names", () => {
+    expect(() => createTheme({ themes: [{ name: 123 as unknown as string, colorScheme: "light" }] })).toThrow(
+      "Theme names must be non-empty strings.",
+    );
+  });
+
   it("should reject empty theme names", () => {
     expect(() => createTheme({ themes: [{ name: "", colorScheme: "light" }] })).toThrow(
-      "Theme names must be non-empty.",
+      "Theme names must be non-empty strings.",
+    );
+  });
+
+  it("should reject invalid color schemes", () => {
+    expect(() => createTheme({ themes: [{ name: "custom", colorScheme: "invalid" as unknown as "light" }] })).toThrow(
+      'Theme "custom" has an invalid colorScheme: invalid. Must be "light" or "dark".',
     );
   });
 
@@ -652,5 +670,49 @@ describe("Theme CSS tokens support", () => {
     } finally {
       window.getComputedStyle = originalGetComputedStyle;
     }
+  });
+
+  it("should be idempotent on multiple init calls", () => {
+    const addListenerSpy = vi.spyOn(window, "addEventListener");
+    const theme = createTheme();
+
+    // First init
+    theme.init();
+    const listenersCountAfterFirst = addListenerSpy.mock.calls.length;
+
+    // Second init
+    theme.init();
+    expect(addListenerSpy.mock.calls.length).toBe(listenersCountAfterFirst);
+
+    theme.destroy();
+    addListenerSpy.mockRestore();
+  });
+
+  it("should ignore storage events if targeted theme matches active theme", () => {
+    const theme = createTheme().init();
+    const listener = vi.fn();
+    const unsubscribe = theme.subscribe(listener);
+
+    // Trigger storage event with the current theme name
+    const storageEvent = new StorageEvent("storage", {
+      key: "app-theme-preference",
+      newValue: theme.get().name,
+    });
+    window.dispatchEvent(storageEvent);
+
+    expect(listener).not.toHaveBeenCalled();
+
+    // Trigger storage event with a different theme name
+    const nextTheme = theme.get().name === "light" ? "dark" : "light";
+    const storageEventDiff = new StorageEvent("storage", {
+      key: "app-theme-preference",
+      newValue: nextTheme,
+    });
+    window.dispatchEvent(storageEventDiff);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    theme.destroy();
   });
 });

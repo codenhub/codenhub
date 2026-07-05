@@ -41,6 +41,10 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
     throw new Error("Theme storageKey option must be a non-empty string.");
   }
 
+  if (!Array.isArray(options.themes)) {
+    throw new Error("Theme options.themes must be an array.");
+  }
+
   const names = new Set<string>();
 
   if (options.tokenSchema) {
@@ -54,8 +58,18 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
   }
 
   for (const theme of options.themes) {
-    if (theme.name.trim().length === 0) {
-      throw new Error("Theme names must be non-empty.");
+    if (typeof theme !== "object" || theme === null) {
+      throw new Error("Theme definitions must be objects.");
+    }
+
+    if (typeof theme.name !== "string" || theme.name.trim().length === 0) {
+      throw new Error("Theme names must be non-empty strings.");
+    }
+
+    if (theme.colorScheme !== "light" && theme.colorScheme !== "dark") {
+      throw new Error(
+        `Theme "${theme.name}" has an invalid colorScheme: ${theme.colorScheme}. Must be "light" or "dark".`,
+      );
     }
 
     if (names.has(theme.name)) {

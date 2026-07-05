@@ -101,6 +101,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #listeners = new Set<ThemeChangeListener<TSchema>>();
   #mediaQueryList: MediaQueryList | null = null;
   #hasStorageListener = false;
+  #isInitialized = false;
 
   #handleSystemChange = (event: MediaQueryListEvent): void => {
     if (this.getStored() !== null) {
@@ -117,10 +118,13 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     if (event.newValue === null) {
-      this.#activate(this.getSystem().name, "clearPreference", { shouldStore: false });
+      const systemTheme = this.getSystem().name;
+      if (this.#activeName !== systemTheme) {
+        this.#activate(systemTheme, "clearPreference", { shouldStore: false });
+      }
     } else {
       const isConfigured = this.#options.themes.some((t) => t.name === event.newValue);
-      if (isConfigured) {
+      if (isConfigured && this.#activeName !== event.newValue) {
         this.#activate(event.newValue, "set", { shouldStore: false });
       }
     }
@@ -137,9 +141,13 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   init(tokens?: Partial<Record<keyof TSchema, string>>): this {
+    if (this.#isInitialized) {
+      return this;
+    }
     this.#registerSystemListener();
     this.#registerStorageListener();
     this.#activate(this.getStored() ?? this.getSystem().name, "init", { shouldStore: false, tokens });
+    this.#isInitialized = true;
     return this;
   }
 
@@ -219,6 +227,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     this.#listeners.clear();
+    this.#isInitialized = false;
   }
 
   #registerStorageListener(): void {
