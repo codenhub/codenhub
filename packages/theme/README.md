@@ -54,6 +54,9 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
       document.documentElement.setAttribute(attribute, theme);
       document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
       document.documentElement.classList.add("theme-" + theme);
+
+      // If using Tailwind CSS, also toggle "dark" class:
+      // document.documentElement.classList.toggle("dark", theme === "dark");
     } catch (_) {}
   })();
 </script>
