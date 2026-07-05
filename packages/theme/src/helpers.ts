@@ -78,7 +78,9 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
 
     names.add(theme.name);
 
-    getThemeClass(theme, options.shouldApplyClass);
+    if (typeof options.shouldApplyClass !== "function") {
+      getThemeClass(theme, options.shouldApplyClass);
+    }
 
     if (theme.tokens) {
       if (!options.tokenSchema) {

@@ -213,14 +213,14 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should reject invalid custom theme classes on creation", () => {
-    expect(() => createTheme({ shouldApplyClass: () => "two classes" })).toThrow(
+  it("should reject invalid custom theme classes on initialization", () => {
+    expect(() => createTheme({ shouldApplyClass: () => "two classes" }).init()).toThrow(
       "Theme class resolver returned an invalid class for theme: light.",
     );
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 
-  it("should reject invalid non-active custom theme classes on creation", () => {
+  it("should reject invalid non-active custom theme classes on initialization", () => {
     document.documentElement.className = "app-shell";
     document.documentElement.setAttribute("data-theme", "server");
     document.documentElement.style.colorScheme = "dark";
@@ -228,7 +228,7 @@ describe("Theme behavior", () => {
     expect(() =>
       createTheme({
         shouldApplyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
-      }),
+      }).init(),
     ).toThrow("Theme class resolver returned an invalid class for theme: dark.");
     expect(document.documentElement.getAttribute("data-theme")).toBe("server");
     expect(document.documentElement.style.colorScheme).toBe("dark");
@@ -656,12 +656,11 @@ describe("Theme CSS tokens support", () => {
     );
   });
 
-  it("should reject custom resolvers returning non-string on creation", () => {
-    expect(() =>
-      createTheme({
-        shouldApplyClass: (() => 123) as unknown as boolean,
-      }),
-    ).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  it("should reject custom resolvers returning non-string on initialization", () => {
+    const theme = createTheme({
+      shouldApplyClass: (() => 123) as unknown as boolean,
+    });
+    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
   });
 
   it("should throw when passing runtime tokens without tokenSchema", () => {
@@ -730,5 +729,67 @@ describe("Theme CSS tokens support", () => {
 
     unsubscribe();
     theme.destroy();
+  });
+
+  it("should preserve active token overrides on argless set and toggle", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({
+      tokenSchema,
+    }).init({ primary: "orange" });
+
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+
+    // Set to dark without overrides
+    theme.set("dark");
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+
+    // Toggle back without overrides
+    theme.toggle();
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+  });
+
+  it("should preserve active token overrides on system scheme changes", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const mediaQueryList = createMatchMedia(false);
+    const theme = createTheme({
+      tokenSchema,
+    }).init({ primary: "orange" });
+
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+
+    // Change system preference to dark
+    mediaQueryList.dispatch(true);
+    expect(theme.get().name).toBe("dark");
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+  });
+
+  it("should preserve active token overrides on storage changes", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({
+      tokenSchema,
+    }).init({ primary: "orange" });
+
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+
+    // Dispatch storage event to switch theme
+    const storageEvent = new StorageEvent("storage", {
+      key: "app-theme-preference",
+      newValue: "dark",
+    });
+    window.dispatchEvent(storageEvent);
+
+    expect(theme.get().name).toBe("dark");
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+  });
+
+  it("should not throw or run custom resolver function during constructor", () => {
+    const resolver = vi.fn().mockReturnValue("theme-custom");
+    expect(() =>
+      createTheme({
+        shouldApplyClass: resolver,
+      }),
+    ).not.toThrow();
+
+    expect(resolver).not.toHaveBeenCalled();
   });
 });

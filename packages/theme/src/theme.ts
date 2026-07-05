@@ -110,7 +110,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
     const name = event.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
     if (this.#activeName !== name) {
-      this.#activate(name, "system", { shouldStore: false });
+      this.#activate(name, { source: "system", shouldStore: false });
     }
   };
 
@@ -122,12 +122,12 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     if (event.newValue === null) {
       const systemTheme = this.getSystem().name;
       if (this.#activeName !== systemTheme) {
-        this.#activate(systemTheme, "clearPreference", { shouldStore: false });
+        this.#activate(systemTheme, { source: "clearPreference", shouldStore: false });
       }
     } else {
       const isConfigured = this.#options.themes.some((t) => t.name === event.newValue);
       if (isConfigured && this.#activeName !== event.newValue) {
-        this.#activate(event.newValue, "set", { shouldStore: false });
+        this.#activate(event.newValue, { source: "set", shouldStore: false });
       }
     }
   };
@@ -148,7 +148,16 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
     this.#registerSystemListener();
     this.#registerStorageListener();
-    this.#activate(this.getStored() ?? this.getSystem().name, "init", { shouldStore: false, tokens });
+    if (typeof this.#options.shouldApplyClass === "function") {
+      for (const theme of this.#options.themes) {
+        getThemeClass(theme, this.#options.shouldApplyClass);
+      }
+    }
+    this.#activate(this.getStored() ?? this.getSystem().name, {
+      source: "init",
+      shouldStore: false,
+      tokens,
+    });
     this.#isInitialized = true;
     return this;
   }
@@ -166,7 +175,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
-    return this.#activate(name, "set", { shouldStore: true, tokens });
+    return this.#activate(name, { source: "set", shouldStore: true, tokens });
   }
 
   toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
@@ -174,12 +183,12 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       this.get().name === this.#options.systemTheme.dark
         ? this.#options.systemTheme.light
         : this.#options.systemTheme.dark;
-    return this.#activate(nextName, "toggle", { shouldStore: true, tokens });
+    return this.#activate(nextName, { source: "toggle", shouldStore: true, tokens });
   }
 
   clearPreference(): ThemeDefinition<TSchema> {
     this.#removeStored();
-    return this.#activate(this.getSystem().name, "clearPreference", { shouldStore: false });
+    return this.#activate(this.getSystem().name, { source: "clearPreference", shouldStore: false });
   }
 
   getStored(): string | null {
@@ -242,13 +251,18 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   #activate(
     name: string,
-    source: ThemeChangeSource,
-    options: { shouldStore: boolean; tokens?: Partial<Record<keyof TSchema, string>> } = { shouldStore: false },
+    options: {
+      source: ThemeChangeSource;
+      shouldStore?: boolean;
+      tokens?: Partial<Record<keyof TSchema, string>>;
+    },
   ): ThemeDefinition<TSchema> {
     assertRuntimeTokens(options.tokens, this.#options.tokenSchema);
     const theme = this.#getTheme(name);
     this.#activeName = theme.name;
-    this.#activeTokens = options.tokens ?? {};
+    if (options.tokens !== undefined) {
+      this.#activeTokens = options.tokens;
+    }
 
     if (options.shouldStore) {
       this.#store(theme.name);
@@ -257,7 +271,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     this.#apply(theme);
 
     const activeTheme = this.get();
-    this.#emit({ name: activeTheme.name, theme: activeTheme, source });
+    this.#emit({ name: activeTheme.name, theme: activeTheme, source: options.source });
 
     return activeTheme;
   }

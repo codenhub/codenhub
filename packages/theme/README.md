@@ -41,13 +41,20 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
 ```html
 <script>
   (function () {
-    const key = "app-theme-preference";
-    const attribute = "data-theme";
-    const stored = localStorage.getItem(key);
-    const theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    document.documentElement.setAttribute(attribute, theme);
-    document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
-    document.documentElement.classList.add("theme-" + theme);
+    try {
+      const key = "app-theme-preference";
+      const attribute = "data-theme";
+      let theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored && /^[a-zA-Z0-9_-]+$/.test(stored)) {
+          theme = stored;
+        }
+      } catch (_) {}
+      document.documentElement.setAttribute(attribute, theme);
+      document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
+      document.documentElement.classList.add("theme-" + theme);
+    } catch (_) {}
   })();
 </script>
 ```
