@@ -1,5 +1,5 @@
 import { THEME_CHANGE_EVENT, PREFERS_DARK_QUERY, DARK_CLASS, DEFAULT_OPTIONS } from "./constants";
-import { isBrowser, getThemeClass, assertThemeConfig } from "./helpers";
+import { isBrowser, getThemeClass, assertThemeConfig, assertRuntimeTokens } from "./helpers";
 import type {
   ThemeDefinition,
   ThemeChangeSource,
@@ -203,6 +203,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     source: ThemeChangeSource,
     options: { shouldStore: boolean; tokens?: Partial<Record<keyof TSchema, string>> } = { shouldStore: false },
   ): ThemeDefinition<TSchema> {
+    assertRuntimeTokens(options.tokens, this.#options.tokenSchema);
     const theme = this.#getTheme(name);
     this.#activeName = theme.name;
     this.#activeTokens = options.tokens ?? {};

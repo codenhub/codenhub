@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DARK_THEME, LIGHT_THEME, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail } from ".";
+import { DARK_THEME, LIGHT_THEME, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail, type ThemeDefinition } from ".";
 
 interface MockMediaQueryList {
   matches: boolean;
@@ -472,5 +472,46 @@ describe("Theme CSS tokens support", () => {
       Object.defineProperty(globalThis, "window", { configurable: true, value: originalWindow });
       Object.defineProperty(globalThis, "document", { configurable: true, value: originalDocument });
     }
+  });
+
+  it("should reject tokenSchema values that do not start with --", () => {
+    expect(() =>
+      createTheme({
+        tokenSchema: { primary: "color-primary" },
+      }),
+    ).toThrow(
+      'Token schema key "primary" must map to a CSS custom property starting with "--". Received: "color-primary".',
+    );
+  });
+
+  it("should reject theme static tokens not present in tokenSchema", () => {
+    const customTheme = {
+      name: "custom",
+      colorScheme: "light" as const,
+      tokens: { secondary: "red" },
+    };
+    expect(() =>
+      createTheme({
+        tokenSchema: { primary: "--color-primary" },
+        themes: [customTheme as unknown as ThemeDefinition],
+      }),
+    ).toThrow('Theme "custom" defines token "secondary" which is not present in tokenSchema.');
+  });
+
+  it("should reject runtime overrides not present in tokenSchema", () => {
+    const theme = createTheme({
+      tokenSchema: { primary: "--color-primary" },
+    }).init();
+
+    expect(() => theme.set("dark", { secondary: "red" } as unknown as Partial<Record<string, string>>)).toThrow(
+      'Runtime token override "secondary" is not present in tokenSchema.',
+    );
+  });
+
+  it("should reject custom resolvers returning non-string", () => {
+    const theme = createTheme({
+      shouldApplyClass: (() => 123) as unknown as boolean,
+    });
+    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
   });
 });
