@@ -801,7 +801,7 @@ describe("Theme CSS tokens support", () => {
     ).toThrow("Theme definitions must be objects.");
   });
 
-  it("should early exit on storage event clearPreference when active theme is already system theme", () => {
+  it("should sync clearPreference storage events when active theme matches system theme", () => {
     createMatchMedia(false); // system theme light
     const theme = createTheme().init();
     const listener = vi.fn();
@@ -815,7 +815,9 @@ describe("Theme CSS tokens support", () => {
     });
     window.dispatchEvent(storageEvent);
 
-    expect(listener).not.toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener.mock.calls[0]?.[0]?.name).toBe("light");
+    expect(listener.mock.calls[0]?.[0]?.source).toBe("clearPreference");
     theme.destroy();
   });
 
