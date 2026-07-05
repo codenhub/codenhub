@@ -31,6 +31,14 @@ export const assertClassToken = (className: unknown, message: string): void => {
 export const assertThemeConfig = <TSchema extends Record<string, string>>(
   options: ResolvedThemeOptions<TSchema>,
 ): void => {
+  if (typeof options.attribute !== "string" || options.attribute.trim().length === 0) {
+    throw new Error("Theme attribute option must be a non-empty string.");
+  }
+
+  if (typeof options.storageKey !== "string" || options.storageKey.trim().length === 0) {
+    throw new Error("Theme storageKey option must be a non-empty string.");
+  }
+
   const names = new Set<string>();
 
   if (options.tokenSchema) {

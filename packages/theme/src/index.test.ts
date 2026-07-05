@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DARK_THEME, LIGHT_THEME, createTheme, THEME_CHANGE_EVENT, type ThemeChangeDetail, type ThemeDefinition } from ".";
+import {
+  DARK_THEME,
+  LIGHT_THEME,
+  createTheme,
+  THEME_CHANGE_EVENT,
+  type ThemeChangeDetail,
+  type ThemeDefinition,
+} from ".";
 
 interface MockMediaQueryList {
   matches: boolean;
@@ -65,6 +72,17 @@ describe("Theme config", () => {
     );
     expect(() => createTheme({ systemTheme: { light: "light", dark: "missing" } })).toThrow(
       "System dark theme is not configured: missing.",
+    );
+  });
+
+  it("should reject invalid attribute and storageKey options", () => {
+    expect(() => createTheme({ attribute: "" })).toThrow("Theme attribute option must be a non-empty string.");
+    expect(() => createTheme({ attribute: 123 as unknown as string })).toThrow(
+      "Theme attribute option must be a non-empty string.",
+    );
+    expect(() => createTheme({ storageKey: "" })).toThrow("Theme storageKey option must be a non-empty string.");
+    expect(() => createTheme({ storageKey: 123 as unknown as string })).toThrow(
+      "Theme storageKey option must be a non-empty string.",
     );
   });
 
@@ -225,12 +243,38 @@ describe("Theme behavior", () => {
     expect(eventListener.mock.results[0]?.value?.source).toBe("set");
   });
 
+  it("should throw when setting an unconfigured theme", () => {
+    const theme = createTheme().init();
+    expect(() => theme.set("missing")).toThrow("Theme is not configured: missing.");
+  });
+
+  it("should isolate errors in theme change listeners", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const theme = createTheme().init();
+    const badListener = () => {
+      throw new Error("Bad listener error");
+    };
+    const goodListener = vi.fn();
+
+    theme.subscribe(badListener);
+    theme.subscribe(goodListener);
+
+    theme.set("dark");
+
+    expect(goodListener).toHaveBeenCalledOnce();
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Error in theme change listener:", expect.any(Error));
+    consoleErrorSpy.mockRestore();
+  });
+
   it("should respond to system changes only without a stored preference", () => {
     const mediaQueryList = createMatchMedia(false);
     const theme = createTheme().init();
 
     mediaQueryList.dispatch(true);
     expect(theme.get().name).toBe("dark");
+
+    mediaQueryList.dispatch(false);
+    expect(theme.get().name).toBe("light");
 
     theme.set("light");
     mediaQueryList.dispatch(true);
@@ -513,5 +557,29 @@ describe("Theme CSS tokens support", () => {
       shouldApplyClass: (() => 123) as unknown as boolean,
     });
     expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  });
+
+  it("should throw when passing runtime tokens without tokenSchema", () => {
+    const theme = createTheme().init();
+    expect(() => theme.set("dark", { primary: "blue" } as unknown as Partial<Record<string, string>>)).toThrow(
+      "Runtime tokens provided but no tokenSchema is configured.",
+    );
+  });
+
+  it("should handle null getComputedStyle gracefully", () => {
+    const originalGetComputedStyle = window.getComputedStyle;
+    window.getComputedStyle = vi.fn().mockReturnValue(null);
+
+    try {
+      const tokenSchema = { primary: "--color-primary" };
+      const theme = createTheme({
+        tokenSchema,
+      }).init();
+
+      expect(() => theme.set("dark")).not.toThrow();
+      expect(theme.get().tokens).toEqual({});
+    } finally {
+      window.getComputedStyle = originalGetComputedStyle;
+    }
   });
 });

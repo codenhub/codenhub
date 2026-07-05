@@ -265,11 +265,13 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       }
 
       const style = window.getComputedStyle(root);
-      for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-        if (mergedTokens[key] === undefined) {
-          const val = style.getPropertyValue(schema[key]).trim();
-          if (val) {
-            this.#computedTokens[key] = val;
+      if (style !== null) {
+        for (const key of Object.keys(schema) as Array<keyof TSchema>) {
+          if (mergedTokens[key] === undefined) {
+            const val = style.getPropertyValue(schema[key]).trim();
+            if (val) {
+              this.#computedTokens[key] = val;
+            }
           }
         }
       }
@@ -278,7 +280,11 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   #emit(detail: ThemeChangeDetail<TSchema>): void {
     for (const listener of this.#listeners) {
-      listener(detail);
+      try {
+        listener(detail);
+      } catch (error) {
+        console.error("Error in theme change listener:", error);
+      }
     }
 
     if (!isBrowser()) {
