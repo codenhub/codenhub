@@ -19,7 +19,9 @@ export const getThemeClass = <TSchema extends Record<string, string>>(
     return className;
   }
 
-  return `theme-${theme.name}`;
+  const className = `theme-${theme.name}`;
+  assertClassToken(className, `Theme name cannot be used as a default theme class: ${theme.name}.`);
+  return className;
 };
 
 export const assertClassToken = (className: unknown, message: string): void => {
@@ -62,9 +64,7 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
 
     names.add(theme.name);
 
-    if (options.shouldApplyClass === true) {
-      assertClassToken(`theme-${theme.name}`, `Theme name cannot be used as a default theme class: ${theme.name}.`);
-    }
+    getThemeClass(theme, options.shouldApplyClass);
 
     if (theme.tokens) {
       if (!options.tokenSchema) {

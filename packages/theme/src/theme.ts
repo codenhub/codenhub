@@ -100,6 +100,8 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #computedTokens: Partial<Record<keyof TSchema, string>> = {};
   #listeners = new Set<ThemeChangeListener<TSchema>>();
   #mediaQueryList: MediaQueryList | null = null;
+  #hasStorageListener = false;
+
   #handleSystemChange = (event: MediaQueryListEvent): void => {
     if (this.getStored() !== null) {
       return;
@@ -107,6 +109,21 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
     const name = event.matches ? this.#options.systemTheme.dark : this.#options.systemTheme.light;
     this.#activate(name, "system", { shouldStore: false });
+  };
+
+  #handleStorageChange = (event: StorageEvent): void => {
+    if (event.key !== this.#options.storageKey) {
+      return;
+    }
+
+    if (event.newValue === null) {
+      this.#activate(this.getSystem().name, "clearPreference", { shouldStore: false });
+    } else {
+      const isConfigured = this.#options.themes.some((t) => t.name === event.newValue);
+      if (isConfigured) {
+        this.#activate(event.newValue, "set", { shouldStore: false });
+      }
+    }
   };
 
   constructor(options: ThemeOptions<TSchema> = {}) {
@@ -121,6 +138,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   init(tokens?: Partial<Record<keyof TSchema, string>>): this {
     this.#registerSystemListener();
+    this.#registerStorageListener();
     this.#activate(this.getStored() ?? this.getSystem().name, "init", { shouldStore: false, tokens });
     return this;
   }
@@ -195,7 +213,20 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       this.#mediaQueryList = null;
     }
 
+    if (this.#hasStorageListener) {
+      window.removeEventListener("storage", this.#handleStorageChange);
+      this.#hasStorageListener = false;
+    }
+
     this.#listeners.clear();
+  }
+
+  #registerStorageListener(): void {
+    if (!isBrowser() || this.#hasStorageListener) {
+      return;
+    }
+    window.addEventListener("storage", this.#handleStorageChange);
+    this.#hasStorageListener = true;
   }
 
   #activate(

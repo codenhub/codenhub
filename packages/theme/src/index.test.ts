@@ -179,23 +179,23 @@ describe("Theme behavior", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("should reject invalid custom theme classes before applying", () => {
-    const theme = createTheme({ shouldApplyClass: () => "two classes" });
-
-    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  it("should reject invalid custom theme classes on creation", () => {
+    expect(() => createTheme({ shouldApplyClass: () => "two classes" })).toThrow(
+      "Theme class resolver returned an invalid class for theme: light.",
+    );
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 
-  it("should reject invalid non-active custom theme classes before DOM writes", () => {
+  it("should reject invalid non-active custom theme classes on creation", () => {
     document.documentElement.className = "app-shell";
     document.documentElement.setAttribute("data-theme", "server");
     document.documentElement.style.colorScheme = "dark";
 
-    const theme = createTheme({
-      shouldApplyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
-    });
-
-    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: dark.");
+    expect(() =>
+      createTheme({
+        shouldApplyClass: (definition) => (definition.name === "dark" ? "two classes" : "theme-light"),
+      }),
+    ).toThrow("Theme class resolver returned an invalid class for theme: dark.");
     expect(document.documentElement.getAttribute("data-theme")).toBe("server");
     expect(document.documentElement.style.colorScheme).toBe("dark");
     expect(document.documentElement.className).toBe("app-shell");
@@ -282,6 +282,76 @@ describe("Theme behavior", () => {
 
     theme.destroy();
     expect(mediaQueryList.removeEventListener).toHaveBeenCalledOnce();
+  });
+
+  it("should sync theme changes across tabs on storage events", () => {
+    const theme = createTheme().init();
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "app-theme-preference",
+        newValue: "dark",
+      }),
+    );
+
+    expect(theme.get().name).toBe("dark");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener.mock.calls[0]?.[0]?.name).toBe("dark");
+    expect(listener.mock.calls[0]?.[0]?.source).toBe("set");
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "app-theme-preference",
+        newValue: null,
+      }),
+    );
+
+    expect(theme.get().name).toBe("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(listener.mock.calls[1]?.[0]?.name).toBe("light");
+    expect(listener.mock.calls[1]?.[0]?.source).toBe("clearPreference");
+
+    theme.destroy();
+  });
+
+  it("should ignore unrelated storage events", () => {
+    const theme = createTheme().init();
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "unrelated-key",
+        newValue: "dark",
+      }),
+    );
+
+    expect(theme.get().name).toBe("light");
+    expect(listener).not.toHaveBeenCalled();
+
+    theme.destroy();
+  });
+
+  it("should ignore unconfigured themes on storage events", () => {
+    const theme = createTheme().init();
+    const listener = vi.fn();
+    theme.subscribe(listener);
+
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "app-theme-preference",
+        newValue: "unknown-theme",
+      }),
+    );
+
+    expect(theme.get().name).toBe("light");
+    expect(listener).not.toHaveBeenCalled();
+
+    theme.destroy();
   });
 
   it("should stay safe when localStorage operations throw", () => {
@@ -552,11 +622,12 @@ describe("Theme CSS tokens support", () => {
     );
   });
 
-  it("should reject custom resolvers returning non-string", () => {
-    const theme = createTheme({
-      shouldApplyClass: (() => 123) as unknown as boolean,
-    });
-    expect(() => theme.init()).toThrow("Theme class resolver returned an invalid class for theme: light.");
+  it("should reject custom resolvers returning non-string on creation", () => {
+    expect(() =>
+      createTheme({
+        shouldApplyClass: (() => 123) as unknown as boolean,
+      }),
+    ).toThrow("Theme class resolver returned an invalid class for theme: light.");
   });
 
   it("should throw when passing runtime tokens without tokenSchema", () => {

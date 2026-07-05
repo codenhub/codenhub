@@ -31,6 +31,24 @@ theme.toggle();
 
 Call `destroy()` during app or test cleanup when the instance is no longer used.
 
+### Preventing Flash of Unstyled Content (FOUC)
+
+Because the client-side JS bundle loads asynchronously, there can be a brief flash of the default theme before the theme manager initializes. To prevent this, inject a tiny blocking script in your HTML `<head>` before any stylesheet or content:
+
+```html
+<script>
+  (function () {
+    const key = "app-theme-preference";
+    const attribute = "data-theme";
+    const stored = localStorage.getItem(key);
+    const theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute(attribute, theme);
+    document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
+    document.documentElement.classList.add("theme-" + theme);
+  })();
+</script>
+```
+
 ## Reference
 
 ### `@codenhub/theme`
@@ -410,7 +428,6 @@ theme.destroy();
 - Does not provide design tokens or generated CSS.
 - Does not provide React, Vue, or other framework bindings.
 - Does not provide server-side persistence.
-- Does not synchronize theme changes across tabs.
 - Does not manage user consent requirements for storage.
 
 ## License
