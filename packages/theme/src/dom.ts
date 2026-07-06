@@ -159,7 +159,9 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
   root.style.colorScheme = theme.colorScheme;
 
   for (const configuredClass of configuredClasses) {
-    root.classList.remove(configuredClass);
+    if (configuredClass !== nextClass) {
+      root.classList.remove(configuredClass);
+    }
   }
 
   if (nextClass !== null) {
