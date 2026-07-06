@@ -1,16 +1,9 @@
 import { DEFAULT_OPTIONS } from "./constants";
-import {
-  readStorage,
-  writeStorage,
-  removeStorage,
-  readSystemTheme,
-  registerSystemListener,
-  registerStorageListener,
-  applyTheme,
-  readComputedTokens,
-  emitThemeEvent,
-} from "./dom";
-import { assertThemeConfig, assertRuntimeTokens, getThemeClass } from "./helpers";
+import { applyTheme, readComputedTokens, emitThemeEvent } from "./dom";
+import { getThemeClass } from "./class-resolver";
+import { readStorage, writeStorage, removeStorage } from "./storage";
+import { readSystemTheme, registerSystemListener, registerStorageListener } from "./system";
+import { assertThemeConfig, assertRuntimeTokens } from "./validation";
 import type {
   Theme,
   ThemeDefinition,

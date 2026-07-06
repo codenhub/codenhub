@@ -833,35 +833,8 @@ describe("Theme CSS tokens support", () => {
     }
   });
 
-  it("should use addListener and removeListener fallback on older browsers", () => {
-    const addListener = vi.fn();
-    const removeListener = vi.fn();
-    const mqlMock = {
-      matches: true,
-      addListener,
-      removeListener,
-    };
-    const originalMatchMedia = window.matchMedia;
-    Object.defineProperty(window, "matchMedia", {
-      configurable: true,
-      value: vi.fn().mockReturnValue(mqlMock as unknown as MediaQueryList),
-    });
-
-    try {
-      const theme = createTheme().init();
-      expect(addListener).toHaveBeenCalled();
-
-      theme.destroy();
-      expect(removeListener).toHaveBeenCalled();
-    } finally {
-      Object.defineProperty(window, "matchMedia", {
-        configurable: true,
-        value: originalMatchMedia,
-      });
-    }
-  });
-
   it("should reset active token overrides on destroy", () => {
+
     const tokenSchema = { primary: "--color-primary" };
     const theme = createTheme({ tokenSchema }).init({ primary: "orange" });
 

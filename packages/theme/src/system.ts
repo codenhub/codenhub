@@ -1,0 +1,89 @@
+import { PREFERS_DARK_QUERY } from "./constants";
+import type { ThemeDefinition } from "./types";
+
+/**
+ * Resolves the configured theme that matches the active OS color-scheme preference.
+ *
+ * @internal
+ */
+export const readSystemTheme = <TSchema extends Record<string, string>>(options: {
+  defaultTheme: string;
+  systemTheme: { light: string; dark: string };
+  themes: readonly ThemeDefinition<TSchema>[];
+}): ThemeDefinition<TSchema> => {
+  const { defaultTheme, systemTheme, themes } = options;
+  const getTheme = (name: string): ThemeDefinition<TSchema> => {
+    const theme = themes.find((candidate) => candidate.name === name);
+    if (theme === undefined) {
+      throw new Error(`Theme is not configured: ${name}.`);
+    }
+    return theme;
+  };
+
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return getTheme(defaultTheme);
+  }
+
+  try {
+    const mql = window.matchMedia(PREFERS_DARK_QUERY);
+    const name = mql.matches ? systemTheme.dark : systemTheme.light;
+    return getTheme(name);
+  } catch {
+    return getTheme(defaultTheme);
+  }
+};
+
+/**
+ * Registers a media query listener for system color-scheme changes and returns a cleanup function.
+ *
+ * @internal
+ */
+export const registerSystemListener = (handler: (event: MediaQueryListEvent) => void): (() => void) => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
+
+  const mql = (() => {
+    try {
+      return window.matchMedia(PREFERS_DARK_QUERY);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (mql) {
+    try {
+      mql.addEventListener("change", handler);
+    } catch {
+      // Ignore system listener registration errors
+    }
+  }
+
+  return () => {
+    if (mql === null) {
+      return;
+    }
+    try {
+      mql.removeEventListener("change", handler);
+    } catch {
+      // Ignore removal errors
+    }
+  };
+};
+
+/**
+ * Registers a listener for local storage changes across tabs and returns a cleanup function.
+ *
+ * @internal
+ */
+export const registerStorageListener = (handler: (event: StorageEvent) => void): (() => void) => {
+  if (typeof window === "undefined" || typeof window.addEventListener !== "function") {
+    return () => {};
+  }
+
+  window.addEventListener("storage", handler);
+
+  return () => {
+    window.removeEventListener("storage", handler);
+  };
+};

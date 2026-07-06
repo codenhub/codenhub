@@ -1,156 +1,21 @@
-import { DARK_CLASS, PREFERS_DARK_QUERY, THEME_CHANGE_EVENT } from "./constants";
-import { getThemeClass } from "./helpers";
+import { DARK_CLASS, THEME_CHANGE_EVENT } from "./constants";
 import type { ThemeDefinition, ResolvedThemeOptions, ThemeChangeDetail } from "./types";
 
+
 /**
- * Reads and validates the user's stored theme preference from `localStorage`.
- * Returns the theme name if it exists and matches a configured theme; otherwise `null`.
+ * Applies the active theme configuration, class/attribute updates, and CSS Custom Properties to the DOM.
+ *
+ * @param resolvedClasses - Pre-computed class strings for all configured themes. Callers must supply
+ *   this value; computing it on each activation is the caller's responsibility (see `ThemeImpl`).
+ * @param nextClass - Pre-computed class string for the active theme, or `null` when class application is disabled.
+ * @internal
  */
-export const readStorage = <TSchema extends Record<string, string>>(
-  storageKey: string,
-  themes: readonly ThemeDefinition<TSchema>[],
-): string | null => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    if (typeof window.localStorage === "undefined") {
-      return null;
-    }
-    const storedName = window.localStorage.getItem(storageKey);
-    if (storedName === null) {
-      return null;
-    }
-    const isConfigured = themes.some((t) => t.name === storedName);
-    return isConfigured ? storedName : null;
-  } catch {
-    return null;
-  }
-};
-
-/** Writes the explicit theme preference to `localStorage`. */
-export const writeStorage = (storageKey: string, themeName: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    if (typeof window.localStorage === "undefined") {
-      return;
-    }
-    window.localStorage.setItem(storageKey, themeName);
-  } catch {
-    // Ignore storage write errors
-  }
-};
-
-/** Removes the explicit theme preference from `localStorage`. */
-export const removeStorage = (storageKey: string): void => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  try {
-    if (typeof window.localStorage === "undefined") {
-      return;
-    }
-    window.localStorage.removeItem(storageKey);
-  } catch {
-    // Ignore storage removal errors
-  }
-};
-
-/** Resolves the configured theme that matches the active OS color-scheme preference. */
-export const readSystemTheme = <TSchema extends Record<string, string>>(options: {
-  defaultTheme: string;
-  systemTheme: { light: string; dark: string };
-  themes: readonly ThemeDefinition<TSchema>[];
-}): ThemeDefinition<TSchema> => {
-  const { defaultTheme, systemTheme, themes } = options;
-  const getTheme = (name: string): ThemeDefinition<TSchema> => {
-    const theme = themes.find((candidate) => candidate.name === name);
-    if (theme === undefined) {
-      throw new Error(`Theme is not configured: ${name}.`);
-    }
-    return theme;
-  };
-
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return getTheme(defaultTheme);
-  }
-
-  try {
-    const mql = window.matchMedia(PREFERS_DARK_QUERY);
-    const name = mql && mql.matches ? systemTheme.dark : systemTheme.light;
-    return getTheme(name);
-  } catch {
-    return getTheme(defaultTheme);
-  }
-};
-
-/** Registers a media query listener for system color-scheme changes and returns a cleanup function. */
-export const registerSystemListener = (handler: (event: MediaQueryListEvent) => void): (() => void) => {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return () => {};
-  }
-
-  const mql = (() => {
-    try {
-      return window.matchMedia(PREFERS_DARK_QUERY);
-    } catch {
-      return null;
-    }
-  })();
-
-  if (mql) {
-    try {
-      if (typeof mql.addEventListener === "function") {
-        mql.addEventListener("change", handler);
-      } else if (typeof mql.addListener === "function") {
-        mql.addListener(handler);
-      }
-    } catch {
-      // Ignore system listener registration errors
-    }
-  }
-
-  return () => {
-    if (mql === null) {
-      return;
-    }
-    try {
-      if (typeof mql.removeEventListener === "function") {
-        mql.removeEventListener("change", handler);
-      } else if (typeof mql.removeListener === "function") {
-        mql.removeListener(handler);
-      }
-    } catch {
-      // Ignore removal errors
-    }
-  };
-};
-
-/** Registers a listener for local storage changes and returns a cleanup function. */
-export const registerStorageListener = (handler: (event: StorageEvent) => void): (() => void) => {
-  if (typeof window === "undefined" || typeof window.addEventListener !== "function") {
-    return () => {};
-  }
-
-  window.addEventListener("storage", handler);
-
-  return () => {
-    window.removeEventListener("storage", handler);
-  };
-};
-
-/** Applies the active theme configuration, class/attribute classes, and CSS Custom Properties to the DOM. */
 export const applyTheme = <TSchema extends Record<string, string>>(args: {
   theme: ThemeDefinition<TSchema>;
   options: ResolvedThemeOptions<TSchema>;
   activeTokens: Partial<Record<keyof TSchema, string>>;
-  resolvedClasses?: readonly string[];
-  nextClass?: string | null;
+  resolvedClasses: readonly string[];
+  nextClass: string | null;
 }): void => {
   const { theme, options, activeTokens, resolvedClasses, nextClass } = args;
   if (typeof document === "undefined") {
@@ -158,24 +23,18 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
   }
 
   const root = document.documentElement;
-  const activeClass = nextClass !== undefined ? nextClass : getThemeClass(theme, options.shouldApplyClass);
-  const configuredClasses =
-    resolvedClasses ??
-    options.themes
-      .map((configuredTheme) => getThemeClass(configuredTheme, options.shouldApplyClass))
-      .filter((configuredClass): configuredClass is string => configuredClass !== null);
 
   root.setAttribute(options.attribute, theme.name);
   root.style.colorScheme = theme.colorScheme;
 
-  for (const configuredClass of configuredClasses) {
-    if (configuredClass !== activeClass) {
+  for (const configuredClass of resolvedClasses) {
+    if (configuredClass !== nextClass) {
       root.classList.remove(configuredClass);
     }
   }
 
-  if (activeClass !== null) {
-    root.classList.add(activeClass);
+  if (nextClass !== null) {
+    root.classList.add(nextClass);
   }
 
   if (options.isTailwindCss) {
@@ -201,7 +60,11 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
   }
 };
 
-/** Resolves any missing CSS variables from the computed style of the root DOM element. */
+/**
+ * Resolves any missing CSS variables from the computed style of the root DOM element.
+ *
+ * @internal
+ */
 export const readComputedTokens = <TSchema extends Record<string, string>>(args: {
   theme: ThemeDefinition<TSchema>;
   options: ResolvedThemeOptions<TSchema>;
@@ -253,7 +116,11 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
   return computedTokens;
 };
 
-/** Dispatches a custom `themechange` event on the window. */
+/**
+ * Dispatches a custom `themechange` event on the window.
+ *
+ * @internal
+ */
 export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: ThemeChangeDetail<TSchema>): void => {
   if (
     typeof window === "undefined" ||
@@ -265,3 +132,5 @@ export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: T
 
   window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TSchema>>(THEME_CHANGE_EVENT, { detail }));
 };
+
+

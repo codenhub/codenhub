@@ -1,31 +1,11 @@
-import { CLASS_TOKEN_WHITESPACE } from "./constants";
-import type { ThemeDefinition, ThemeClassResolver, ResolvedThemeOptions } from "./types";
+import { getThemeClass } from "./class-resolver";
+import type { ResolvedThemeOptions } from "./types";
 
-export const getThemeClass = <TSchema extends Record<string, string>>(
-  theme: ThemeDefinition<TSchema>,
-  shouldApplyClass: boolean | ThemeClassResolver<TSchema>,
-): string | null => {
-  if (shouldApplyClass === false) {
-    return null;
-  }
-
-  if (typeof shouldApplyClass === "function") {
-    const className = shouldApplyClass(theme);
-    assertClassToken(className, `Theme class resolver returned an invalid class for theme: ${theme.name}.`);
-    return className;
-  }
-
-  const className = `theme-${theme.name}`;
-  assertClassToken(className, `Theme name cannot be used as a default theme class: ${theme.name}.`);
-  return className;
-};
-
-export const assertClassToken = (className: unknown, message: string): void => {
-  if (typeof className !== "string" || className.length === 0 || CLASS_TOKEN_WHITESPACE.test(className)) {
-    throw new Error(message);
-  }
-};
-
+/**
+ * Validates the resolved theme configuration, throwing descriptive errors on misconfiguration.
+ *
+ * @internal
+ */
 export const assertThemeConfig = <TSchema extends Record<string, string>>(
   options: ResolvedThemeOptions<TSchema>,
 ): void => {
@@ -107,6 +87,11 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
   }
 };
 
+/**
+ * Validates runtime token overrides against the configured token schema.
+ *
+ * @internal
+ */
 export const assertRuntimeTokens = <TSchema extends Record<string, string>>(
   tokens: Partial<Record<keyof TSchema, string>> | undefined,
   tokenSchema: TSchema | undefined,
