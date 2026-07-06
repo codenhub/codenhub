@@ -15,7 +15,6 @@
 
       document.addEventListener("DOMContentLoaded", () => {
         const environmentToggle = document.getElementById("environment-toggle");
-        let isDarkTheme = localStorage.getItem("theme") === "dark";
 
         if (environmentToggle) {
           const tooltip = `See ${nextEnv}`;
@@ -28,10 +27,24 @@
           });
         }
 
-        doc.classList.toggle("dark", isDarkTheme);
+        const updateTheme = (dark) => {
+          if (dark) {
+            doc.classList.add("dark");
+            doc.classList.remove("light");
+          } else {
+            doc.classList.add("light");
+            doc.classList.remove("dark");
+          }
+        };
+
+        const themePref = localStorage.getItem("theme");
+        let isDarkTheme = themePref === "dark" || (!themePref && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+        updateTheme(isDarkTheme);
+
         document.getElementById("theme-toggle").addEventListener("click", () => {
-          doc.classList.toggle("dark");
-          isDarkTheme = doc.classList.contains("dark");
+          isDarkTheme = !isDarkTheme;
+          updateTheme(isDarkTheme);
           localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
         });
       });
@@ -194,7 +207,7 @@
             <span class="text-body font-medium">Checked</span>
           </label>
           <label class="cluster" style="gap: 0.5rem; cursor: pointer">
-            <input type="checkbox" class="checkbox" disabled />
+            <input type="checkbox" class="checkbox" disabled data-testid="checkbox-disabled" />
             <span class="text-body font-medium">Disabled</span>
           </label>
           <label class="cluster" style="gap: 0.5rem; cursor: pointer">
@@ -232,7 +245,7 @@
             <span class="text-body font-medium">Checked</span>
           </label>
           <label class="cluster" style="gap: 0.5rem; cursor: pointer">
-            <input type="checkbox" class="switch" disabled />
+            <input type="checkbox" class="switch" disabled data-testid="switch-disabled" />
             <span class="text-body font-medium">Disabled</span>
           </label>
           <label class="cluster" style="gap: 0.5rem; cursor: pointer">

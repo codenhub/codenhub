@@ -139,7 +139,7 @@
   @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm bg-transparent transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
   border: var(--border-width) solid var(--color-border);
 
-  &:hover {
+  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     @apply border-(--color-border-hover);
   }
 
@@ -157,8 +157,8 @@
 
     background-color: var(--control-contrast);
     content: "";
-    mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
-    -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>');
+    mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
     mask-size: contain;
     -webkit-mask-size: contain;
   }
@@ -219,7 +219,8 @@
   --control-color: var(--color-text);
   --control-contrast: var(--color-text-contrast);
 
-  @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  border: var(--border-width) solid transparent;
 
   &::after {
     @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
@@ -227,7 +228,7 @@
     content: "";
   }
 
-  &:hover {
+  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     @apply border-(--color-border-hover);
   }
 

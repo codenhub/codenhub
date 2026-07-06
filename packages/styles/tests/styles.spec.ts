@@ -474,6 +474,7 @@ test.describe("compiled CSS preview", () => {
         layoutDisplay: layoutStyles.display,
         layoutMaxWidth: layoutStyles.maxWidth,
         progressOverflow: progressStyles.overflow,
+        progressBgColor: progressStyles.backgroundColor,
         skeletonAnimationName: skeletonStyles.animationName,
         loaderSmWidth: loaderSmStyles.width,
         loaderDefaultWidth: loaderDefaultStyles.width,
@@ -492,6 +493,7 @@ test.describe("compiled CSS preview", () => {
     expect(styles.alertIconPaddingLeft).toBe("44px");
     expect(styles.skeletonAnimationName).not.toBe("none");
     expect(styles.progressOverflow).toBe("hidden");
+    expect(styles.progressBgColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.loaderSmWidth).toBe("24px");
     expect(styles.loaderDefaultWidth).toBe("32px");
     expect(styles.loaderLgWidth).toBe("40px");
@@ -758,6 +760,21 @@ test.describe("compiled CSS preview", () => {
     expect(switchStyles.width).toBe("36px");
     expect(switchStyles.height).toBe("18px");
     expect(switchStyles.cursor).toBe("pointer");
+
+    const checkboxDisabled = page.getByTestId("checkbox-disabled");
+    const switchDisabled = page.getByTestId("switch-disabled");
+    await expect(checkboxDisabled).toBeVisible();
+    await expect(switchDisabled).toBeVisible();
+
+    const checkboxDisabledBorderBeforeHover = await checkboxDisabled.evaluate((el) => getComputedStyle(el).borderColor);
+    await checkboxDisabled.hover();
+    const checkboxDisabledBorderAfterHover = await checkboxDisabled.evaluate((el) => getComputedStyle(el).borderColor);
+    expect(checkboxDisabledBorderAfterHover).toBe(checkboxDisabledBorderBeforeHover);
+
+    const switchDisabledBorderBeforeHover = await switchDisabled.evaluate((el) => getComputedStyle(el).borderColor);
+    await switchDisabled.hover();
+    const switchDisabledBorderAfterHover = await switchDisabled.evaluate((el) => getComputedStyle(el).borderColor);
+    expect(switchDisabledBorderAfterHover).toBe(switchDisabledBorderBeforeHover);
   });
 
   test("uses default neutral text tokens when no semantic intent is specified", async ({ page }) => {
