@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRouter } from ".";
-import type { Router } from ".";
+import { createRouter } from "../../src";
+import type { Router } from "../../src";
 
 /**
  * Integration tests for the public Router contract.

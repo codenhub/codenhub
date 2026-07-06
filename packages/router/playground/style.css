@@ -1,0 +1,118 @@
+/* Flat, minimalist, simple design */
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #fcfcfc;
+  color: #333333;
+}
+
+.app-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.app-header {
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 10px 0;
+  font-weight: 600;
+}
+
+.nav-links {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  color: #0066cc;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+.app-main {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.content-section,
+.controls-section,
+.inspector-section {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+button:hover {
+  background: #e0e0e0;
+}
+
+button:active {
+  background: #d0d0d0;
+}
+
+.state-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.state-table th,
+.state-table td {
+  border: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.state-table th {
+  background-color: #f7f7f7;
+  width: 200px;
+  font-weight: 500;
+}
+
+pre,
+code {
+  font-family: monospace;
+  margin: 0;
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+pre {
+  padding: 8px;
+  overflow-x: auto;
+}

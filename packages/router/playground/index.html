@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Router Playground</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <header class="app-header">
+        <h1>Router Playground</h1>
+        <nav class="nav-links">
+          <a href="/" id="link-home">Home</a>
+          <a href="/about" id="link-about">About</a>
+          <a href="/users/alice" id="link-user-alice">User: Alice</a>
+          <a href="/settings?tab=profile" id="link-settings-profile">Settings (Profile)</a>
+          <a href="/settings?tab=security#passwords" id="link-settings-security">Settings (Security #passwords)</a>
+          <a href="/non-existent" id="link-404">Non-existent Route</a>
+        </nav>
+      </header>
+
+      <main class="app-main">
+        <section class="content-section">
+          <h2 id="view-title">Loading...</h2>
+          <div id="view-content">Please wait...</div>
+        </section>
+
+        <section class="controls-section">
+          <h3>Programmatic Navigation</h3>
+          <div class="button-group">
+            <button id="btn-nav-home">Go Home</button>
+            <button id="btn-nav-about">Go About</button>
+            <button id="btn-nav-user-bob">Go User Bob</button>
+            <button id="btn-nav-settings-billing">Go Settings Billing</button>
+            <button id="btn-nav-back">Back</button>
+            <button id="btn-nav-forward">Forward</button>
+          </div>
+        </section>
+
+        <section class="inspector-section">
+          <h3>Router State Inspector</h3>
+          <table class="state-table">
+            <tr>
+              <th>Active Path Pattern</th>
+              <td><code id="state-path">None</code></td>
+            </tr>
+            <tr>
+              <th>Pathname</th>
+              <td><code id="state-pathname">None</code></td>
+            </tr>
+            <tr>
+              <th>Route Params</th>
+              <td><pre id="state-params">{}</pre></td>
+            </tr>
+            <tr>
+              <th>Query Params</th>
+              <td><pre id="state-search">{}</pre></td>
+            </tr>
+            <tr>
+              <th>Hash</th>
+              <td><code id="state-hash">None</code></td>
+            </tr>
+            <tr>
+              <th>Missed Route?</th>
+              <td><span id="state-miss">No</span></td>
+            </tr>
+          </table>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>

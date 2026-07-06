@@ -28,15 +28,20 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "dev": "pnpm --filter=@codenhub/router-dev dev",
+    "debug": "pnpm build && pnpm --filter=@codenhub/router-debug dev",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/router version dist-tags time --json && npm dist-tag ls @codenhub/router && npm access get status @codenhub/router",
     "status:pack": "npm pack --dry-run",
-    "test": "vitest run",
+    "test": "vitest run && pnpm build && pnpm test:visual",
     "test:coverage": "vitest run --coverage",
+    "test:visual": "playwright test",
     "test:watch": "vitest",
+    "test:visual:watch": "playwright test --ui",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tsdown": "catalog:",
