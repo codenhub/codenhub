@@ -39,80 +39,89 @@ const isPersistedLocaleState = <TLocale extends string>(
   }
 
   const locale = (raw as Record<string, unknown>).locale;
+  const isLocale =
+    config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
 
-  return locale === undefined || (typeof locale === "string" && config.isLocale(locale));
+  return locale === undefined || (typeof locale === "string" && isLocale(locale));
 };
 
-/**
- * Creates a browser-compatible translation manager instance using a factory pattern.
- * Uses localStorage for persistent locale preference, resolves user locales
- * automatically, and synchronizes document attributes and translated DOM elements.
- *
- * @typeParam TLocale - Union of supported locale string literals.
- * @param config - The translation configuration.
- * @returns An initialized translation manager interface.
- */
-export function createI18n<TLocale extends string = string>(config: I18nConfig<TLocale>): I18n<TLocale> {
-  let currentLocale: TLocale = config.defaultLocale;
-  let isReadyState = false;
-  let storageKey = DEFAULT_STORAGE_KEY;
-  let root: ParentNode | null = null;
-  let storage: Store<PersistedLocaleState> | null = null;
-  let currentDictionary: LocaleDictionary = createEmptyDictionary();
-  let isCurrentLocaleLoaded = false;
-  const warnedMissingKeys = new Set<string>();
-  let localeRequestId = 0;
-  let isSilent = config.silent ?? false;
+class I18nInstance<TLocale extends string = string> extends EventTarget implements I18n<TLocale> {
+  private currentLocale: TLocale;
+  private isReadyState = false;
+  private storageKey = DEFAULT_STORAGE_KEY;
+  private root: ParentNode | null = null;
+  private storage: Store<PersistedLocaleState> | null = null;
+  private currentDictionary: LocaleDictionary = createEmptyDictionary();
+  private isCurrentLocaleLoaded = false;
+  private readonly warnedMissingKeys = new Set<string>();
+  private localeRequestId = 0;
+  private isSilent: boolean;
 
-  const localeLoader = createLocaleLoader(config);
-  const domTranslator = createDomTranslator();
-  const eventTarget = new EventTarget();
+  private readonly config: I18nConfig<TLocale>;
+  private readonly localeLoader: ReturnType<typeof createLocaleLoader<TLocale>>;
+  private readonly domTranslator = createDomTranslator();
 
-  const getDocumentRoot = (): ParentNode | null => {
+  constructor(config: I18nConfig<TLocale>) {
+    super();
+    this.config = config;
+    this.currentLocale = config.defaultLocale;
+    this.isSilent = config.isSilent ?? false;
+    this.localeLoader = createLocaleLoader(config);
+  }
+
+  get locale() {
+    return this.currentLocale;
+  }
+
+  get isReady() {
+    return this.isReadyState;
+  }
+
+  private getDocumentRoot(): ParentNode | null {
     if (typeof document === "undefined") {
       return null;
     }
     return document;
-  };
+  }
 
-  const syncDocumentLocale = (): void => {
+  private syncDocumentLocale(): void {
     if (typeof document === "undefined" || !document.documentElement) {
       return;
     }
-    document.documentElement.lang = currentLocale;
-    document.documentElement.dir = config.getLocaleDirection(currentLocale);
-  };
+    document.documentElement.lang = this.currentLocale;
+    document.documentElement.dir = this.config.getLocaleDirection(this.currentLocale);
+  }
 
-  const createLocaleRequest = (): number => {
-    localeRequestId += 1;
-    return localeRequestId;
-  };
+  private createLocaleRequest(): number {
+    this.localeRequestId += 1;
+    return this.localeRequestId;
+  }
 
-  const isLatestLocaleRequest = (requestId: number): boolean => {
-    return requestId === localeRequestId;
-  };
+  private isLatestLocaleRequest(requestId: number): boolean {
+    return requestId === this.localeRequestId;
+  }
 
-  const hasTranslations = (): boolean => {
-    return Object.keys(currentDictionary).length > 0;
-  };
+  private hasTranslations(): boolean {
+    return Object.keys(this.currentDictionary).length > 0;
+  }
 
-  const warnMissingKey = (key: string, message: string): void => {
-    if (isSilent) {
+  private warnMissingKey(key: string, message: string): void {
+    if (this.isSilent) {
       return;
     }
-    const warningKey = `${currentLocale}::${key}`;
+    const warningKey = `${this.currentLocale}::${key}`;
 
-    if (warnedMissingKeys.has(warningKey)) {
+    if (this.warnedMissingKeys.has(warningKey)) {
       return;
     }
 
-    warnedMissingKeys.add(warningKey);
+    this.warnedMissingKeys.add(warningKey);
     console.warn(message);
-  };
+  }
 
-  const translate = (key: string): string | undefined => {
-    if (!isReadyState) {
-      if (!isSilent) {
+  translate = (key: string): string | undefined => {
+    if (!this.isReadyState) {
+      if (!this.isSilent) {
         console.warn("[I18n] translate() was called before init() completed. Call init() first.");
       }
       return undefined;
@@ -124,162 +133,141 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
       return undefined;
     }
 
-    const translation = currentDictionary[normalizedKey];
+    const translation = this.currentDictionary[normalizedKey];
 
     if (translation !== undefined) {
       return translation;
     }
 
-    warnMissingKey(normalizedKey, `[I18n] Missing key "${normalizedKey}" in locale "${currentLocale}".`);
+    this.warnMissingKey(normalizedKey, `[I18n] Missing key "${normalizedKey}" in locale "${this.currentLocale}".`);
     return undefined;
   };
 
-  const translateDocument = (): void => {
-    domTranslator.translateDocument(root, (key) => translate(key));
-  };
+  private translateDocument(): void {
+    this.domTranslator.translateDocument(this.root, (key) => this.translate(key));
+  }
 
-  const i18nInstance: I18n<TLocale> = {
-    get locale() {
-      return currentLocale;
-    },
+  async init(options: I18nInitOptions = {}): Promise<void> {
+    this.isReadyState = false;
+    this.isSilent = options.isSilent ?? this.config.isSilent ?? false;
+    this.storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
+    this.root = options.root ?? this.getDocumentRoot();
+    this.storage = createStore<PersistedLocaleState>({
+      storageKey: this.storageKey,
+      initialState: {},
+      validate: (raw): raw is PersistedLocaleState => isPersistedLocaleState(this.config, raw),
+    });
+    this.localeLoader.resetFailedCache();
+    this.warnedMissingKeys.clear();
 
-    get isReady() {
-      return isReadyState;
-    },
+    const requestId = this.createLocaleRequest();
+    const initialLocale = getInitialLocale(this.config, this.storage.getItem("locale"));
+    const localeState = await resolveLocaleState({
+      config: this.config,
+      loader: this.localeLoader,
+      requestedLocale: initialLocale,
+    });
 
-    async init(options: I18nInitOptions = {}): Promise<void> {
-      isReadyState = false;
-      isSilent = options.silent ?? config.silent ?? false;
-      storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
-      root = options.root ?? getDocumentRoot();
-      storage = createStore<PersistedLocaleState>({
-        storageKey,
-        initialState: {},
-        validate: (raw): raw is PersistedLocaleState => isPersistedLocaleState(config, raw),
-      });
-      localeLoader.resetFailedCache();
-      warnedMissingKeys.clear();
+    if (!this.isLatestLocaleRequest(requestId)) {
+      return;
+    }
 
-      const requestId = createLocaleRequest();
-      const initialLocale = getInitialLocale(config, storage.getItem("locale"));
-      const localeState = await resolveLocaleState({
-        config,
-        loader: localeLoader,
-        requestedLocale: initialLocale,
-      });
+    this.currentLocale = localeState.locale;
+    this.currentDictionary = localeState.dictionary;
+    this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
-      if (!isLatestLocaleRequest(requestId)) {
-        return;
+    if (localeState.isRequestedLocaleLoaded) {
+      this.storage.set({ locale: localeState.locale });
+    }
+
+    this.isReadyState = true;
+    this.syncDocumentLocale();
+    this.translateDocument();
+    this.dispatchEvent(
+      new CustomEvent<I18nReadyEventDetail>("ready", {
+        detail: {
+          locale: this.currentLocale,
+          hasTranslationsAvailable: this.hasTranslations(),
+        },
+      }),
+    );
+  }
+
+  async setLocale(locale: string): Promise<boolean> {
+    if (!this.isReadyState) {
+      if (!this.isSilent) {
+        console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
       }
+      return false;
+    }
 
-      currentLocale = localeState.locale;
-      currentDictionary = localeState.dictionary;
-      isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
+    const nextLocale = normalizeLocale(this.config, locale);
 
-      if (localeState.isRequestedLocaleLoaded) {
-        storage.set({ locale: localeState.locale });
-      }
+    if (nextLocale === undefined) {
+      return false;
+    }
 
-      isReadyState = true;
-      syncDocumentLocale();
-      translateDocument();
-      eventTarget.dispatchEvent(
-        new CustomEvent<I18nReadyEventDetail>("ready", {
+    const requestId = this.createLocaleRequest();
+
+    if (nextLocale === this.currentLocale && this.isCurrentLocaleLoaded) {
+      return true;
+    }
+
+    this.localeLoader.retryLocale(nextLocale);
+
+    const localeState = await resolveLocaleState({
+      config: this.config,
+      loader: this.localeLoader,
+      requestedLocale: nextLocale,
+    });
+
+    if (!this.isLatestLocaleRequest(requestId)) {
+      return false;
+    }
+
+    const previousLocale = this.currentLocale;
+    const previousDictionary = this.currentDictionary;
+    this.currentLocale = localeState.locale;
+    this.currentDictionary = localeState.dictionary;
+    this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
+
+    if (localeState.isRequestedLocaleLoaded) {
+      this.storage?.set({ locale: localeState.locale });
+    }
+
+    const hasDocumentChanged = localeState.locale !== previousLocale || localeState.dictionary !== previousDictionary;
+
+    if (hasDocumentChanged) {
+      this.syncDocumentLocale();
+      this.translateDocument();
+    }
+
+    if (localeState.locale !== previousLocale) {
+      this.dispatchEvent(
+        new CustomEvent<I18nLocaleChangeEventDetail>("locale-change", {
           detail: {
-            locale: currentLocale,
-            hasTranslationsAvailable: hasTranslations(),
+            locale: localeState.locale,
+            previousLocale,
           },
         }),
       );
-    },
+    }
 
-    async setLocale(locale: string): Promise<boolean> {
-      if (!isReadyState) {
-        if (!isSilent) {
-          console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
-        }
-        return false;
-      }
+    return localeState.isRequestedLocaleLoaded;
+  }
+}
 
-      const nextLocale = normalizeLocale(config, locale);
-
-      if (nextLocale === undefined) {
-        return false;
-      }
-
-      const requestId = createLocaleRequest();
-
-      if (nextLocale === currentLocale && isCurrentLocaleLoaded) {
-        return true;
-      }
-
-      localeLoader.retryLocale(nextLocale);
-
-      const localeState = await resolveLocaleState({
-        config,
-        loader: localeLoader,
-        requestedLocale: nextLocale,
-      });
-
-      if (!isLatestLocaleRequest(requestId)) {
-        return false;
-      }
-
-      const previousLocale = currentLocale;
-      const previousDictionary = currentDictionary;
-      currentLocale = localeState.locale;
-      currentDictionary = localeState.dictionary;
-      isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
-
-      if (localeState.isRequestedLocaleLoaded) {
-        storage?.set({ locale: localeState.locale });
-      }
-
-      const hasDocumentChanged = localeState.locale !== previousLocale || localeState.dictionary !== previousDictionary;
-
-      if (hasDocumentChanged) {
-        syncDocumentLocale();
-        translateDocument();
-      }
-
-      if (localeState.locale !== previousLocale) {
-        eventTarget.dispatchEvent(
-          new CustomEvent<I18nLocaleChangeEventDetail>("locale-change", {
-            detail: {
-              locale: localeState.locale,
-              previousLocale,
-            },
-          }),
-        );
-      }
-
-      return localeState.isRequestedLocaleLoaded;
-    },
-
-    translate,
-
-    addEventListener(
-      type: string,
-      callback: EventListenerOrEventListenerObject | null,
-      options?: AddEventListenerOptions | boolean,
-    ) {
-      eventTarget.addEventListener(type, callback, options);
-    },
-
-    removeEventListener(
-      type: string,
-      callback: EventListenerOrEventListenerObject | null,
-      options?: EventListenerOptions | boolean,
-    ) {
-      eventTarget.removeEventListener(type, callback, options);
-    },
-
-    dispatchEvent(event) {
-      return eventTarget.dispatchEvent(event);
-    },
-  };
-
-  return i18nInstance;
+/**
+ * Creates a browser-compatible translation manager instance using a factory pattern.
+ * Uses localStorage for persistent locale preference, resolves user locales
+ * automatically, and synchronizes document attributes and translated DOM elements.
+ *
+ * @typeParam TLocale - Union of supported locale string literals.
+ * @param config - The translation configuration.
+ * @returns An initialized translation manager interface.
+ */
+export function createI18n<TLocale extends string = string>(config: I18nConfig<TLocale>): I18n<TLocale> {
+  return new I18nInstance(config);
 }
 
 /**

@@ -37,12 +37,12 @@ export interface I18nConfig<TLocale extends string = string> {
    * @param value - The raw string value to validate.
    * @returns True if value is a supported locale code, false otherwise.
    */
-  isLocale(value: string): value is TLocale;
+  isLocale?(value: string): value is TLocale;
   /**
    * Silences warnings about missing translation keys or pre-init calls.
    * Useful in production environments.
    */
-  silent?: boolean;
+  isSilent?: boolean;
 }
 
 /** Record of translation key-value pairs. */
@@ -66,7 +66,7 @@ export interface I18nInitOptions {
    * Silences warnings about missing translation keys or pre-init calls.
    * Overrides config-level silent option if provided.
    */
-  silent?: boolean;
+  isSilent?: boolean;
 }
 
 /** Map of i18n event types to their respective CustomEvent details. */

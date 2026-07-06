@@ -436,7 +436,7 @@ describe("I18n", () => {
     expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
   });
 
-  it("should skip a custom element when it is the translation root", async () => {
+  it("should translate custom element contents when it is the explicit translation root", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -451,7 +451,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
   });
 
   it("should fall back to the default locale when a persisted locale fails to load", async () => {
@@ -721,7 +721,7 @@ describe("I18n", () => {
     );
   });
 
-  it("should skip translation when the bound root is inside a custom element", async () => {
+  it("should translate when the explicit bound root is inside a custom element", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -736,7 +736,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
   });
 
   it("should return true immediately when setLocale is called for the already-active loaded locale", async () => {
@@ -859,15 +859,15 @@ describe("I18n", () => {
     expect(i18n.translate("constructor")).toBeUndefined();
   });
 
-  it("should silence warnings when silent option is enabled", async () => {
+  it("should silence warnings when isSilent option is enabled", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    // Calling translate before init with silent: true should not warn
-    const silentI18n = createI18n({ ...i18nConfig, silent: true });
+    // Calling translate before init with isSilent: true should not warn
+    const silentI18n = createI18n({ ...i18nConfig, isSilent: true });
     silentI18n.translate("any.key");
     expect(warnSpy).not.toHaveBeenCalled();
 
-    await silentI18n.init({ silent: true });
+    await silentI18n.init({ isSilent: true });
 
     // Missing key check should not warn
     silentI18n.translate("missing.key");
@@ -936,5 +936,37 @@ describe("I18n", () => {
     expect(i18n.translate("home.title")).toBe("Safe Title");
     expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
     expect(i18n.translate("home.__proto__.polluted")).toBeUndefined();
+  });
+
+  it("should preserve this context and target in event listeners as the I18n instance", async () => {
+    let readyThis: unknown = null;
+    let readyTarget: unknown = null;
+
+    i18n.addEventListener("ready", function (event) {
+      // oxlint-disable-next-line typescript/no-this-alias
+      readyThis = this;
+      readyTarget = event.target;
+    });
+
+    await i18n.init();
+
+    expect(readyThis).toBe(i18n);
+    expect(readyTarget).toBe(i18n);
+  });
+
+  it("should work when isLocale is omitted from config", async () => {
+    const configWithoutIsLocale: Omit<I18nConfig<Locale>, "isLocale"> & { isLocale?: I18nConfig<Locale>["isLocale"] } =
+      {
+        defaultLocale: "en-US",
+        locales: ["en-US", "pt-BR"],
+        getLocaleFile: (locale) => `/data/locales/${locale}.json`,
+        getLocaleDirection: () => "ltr",
+      };
+
+    const i18nWithoutIsLocale = createI18n(configWithoutIsLocale);
+    await i18nWithoutIsLocale.init();
+
+    expect(i18nWithoutIsLocale.locale).toBe("en-US");
+    expect(i18nWithoutIsLocale.translate("home.hero.cta")).toBe("Get started");
   });
 });

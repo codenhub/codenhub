@@ -62,7 +62,10 @@ export const getInitialLocale = <TLocale extends string>(
   config: I18nConfig<TLocale>,
   persistedLocale: string | undefined,
 ): TLocale => {
-  if (persistedLocale !== undefined && config.isLocale(persistedLocale)) {
+  const isLocale =
+    config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
+
+  if (persistedLocale !== undefined && isLocale(persistedLocale)) {
     return persistedLocale;
   }
 

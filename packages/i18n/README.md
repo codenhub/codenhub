@@ -24,7 +24,6 @@ const config: I18nConfig<Locale> = {
   locales: LOCALES,
   getLocaleFile: (locale) => `/locales/${locale}.json`,
   getLocaleDirection: (locale) => (locale === "ar" ? "rtl" : "ltr"),
-  isLocale: (value): value is Locale => LOCALES.includes(value as Locale),
 };
 
 const i18n = createI18n(config);
@@ -130,7 +129,7 @@ Translates the given key using the active locale's loaded dictionary. Supports d
 
 - **Parameters**: `key: string`
 - **Returns**: `string | undefined` - The translated string, or undefined if the key is missing or invalid.
-- **Observable Failure Behavior**: Returns `undefined` and logs a warning on missing keys (warns once per key per locale) or if called before `init()`, unless silenced by `silent`.
+- **Observable Failure Behavior**: Returns `undefined` and logs a warning on missing keys (warns once per key per locale) or if called before `init()`, unless silenced by `isSilent`.
 
 ##### Event Listeners
 
@@ -152,19 +151,19 @@ interface I18nConfig<TLocale extends string = string> {
   locales: readonly TLocale[];
   getLocaleFile(locale: TLocale): string;
   getLocaleDirection(locale: TLocale): LocaleDirection;
-  isLocale(value: string): value is TLocale;
-  silent?: boolean;
+  isLocale?(value: string): value is TLocale;
+  isSilent?: boolean;
 }
 ```
 
-| Property             | Type                                   | Default | Description                                                  |
-| -------------------- | -------------------------------------- | ------- | ------------------------------------------------------------ |
-| `defaultLocale`      | `TLocale`                              | None    | Fallback locale when translations fail to load.              |
-| `locales`            | `readonly TLocale[]`                   | None    | List of all supported locale strings.                        |
-| `getLocaleFile`      | `(locale: TLocale) => string`          | None    | Callback returning path or URL to translation JSON.          |
-| `getLocaleDirection` | `(locale: TLocale) => LocaleDirection` | None    | Callback returning text direction (`ltr` or `rtl`).          |
-| `isLocale`           | `(value: string) => value is TLocale`  | None    | Type guard validating if a string is a supported locale.     |
-| `silent`             | `boolean`                              | `false` | If true, silences missing key and pre-init console warnings. |
+| Property             | Type                                   | Default                | Description                                                         |
+| -------------------- | -------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `defaultLocale`      | `TLocale`                              | None                   | Fallback locale when translations fail to load.                     |
+| `locales`            | `readonly TLocale[]`                   | None                   | List of all supported locale strings.                               |
+| `getLocaleFile`      | `(locale: TLocale) => string`          | None                   | Callback returning path or URL to translation JSON.                 |
+| `getLocaleDirection` | `(locale: TLocale) => LocaleDirection` | None                   | Callback returning text direction (`ltr` or `rtl`).                 |
+| `isLocale`           | `(value: string) => value is TLocale`  | Derives from `locales` | Type guard validating if a string is a supported locale (optional). |
+| `isSilent`           | `boolean`                              | `false`                | If true, silences missing key and pre-init console warnings.        |
 
 ---
 
@@ -176,15 +175,15 @@ Optional initialization parameters passed to `i18n.init()`.
 interface I18nInitOptions {
   storageKey?: string;
   root?: ParentNode;
-  silent?: boolean;
+  isSilent?: boolean;
 }
 ```
 
-| Property     | Type         | Default         | Description                                                    |
-| ------------ | ------------ | --------------- | -------------------------------------------------------------- |
-| `storageKey` | `string`     | `"i18n"`        | LocalStorage key used to persist the user's locale choice.     |
-| `root`       | `ParentNode` | `document`      | DOM subtree to automatically scan and translate.               |
-| `silent`     | `boolean`    | `config.silent` | If true, overrides config setting to silence console warnings. |
+| Property     | Type         | Default           | Description                                                    |
+| ------------ | ------------ | ----------------- | -------------------------------------------------------------- |
+| `storageKey` | `string`     | `"i18n"`          | LocalStorage key used to persist the user's locale choice.     |
+| `root`       | `ParentNode` | `document`        | DOM subtree to automatically scan and translate.               |
+| `isSilent`   | `boolean`    | `config.isSilent` | If true, overrides config setting to silence console warnings. |
 
 ---
 
@@ -271,6 +270,21 @@ const greeting = i18n.translate("home.welcome.greeting") ?? "Welcome!";
 
 - **SSR State Pollution**: The global i18n instance (`setI18nInstance`/`getI18nInstance`) is shared across all concurrent requests in Node/SSR. Do not use global instances in multi-tenant server environments to avoid state leakages. Instead, manage request-scoped instances.
 - **SSR Translation Limitation**: Server-side translation is not executed as `document` is missing. The client-side will initialize and translate once the document loads.
+- **Leaf-Only DOM Translation**: Automatic DOM translation is restricted to leaf elements (elements with no child elements, i.e., `childElementCount === 0`). This prevents erasing inner markup or icon elements (e.g. `<svg>`) inside buttons or links. To translate elements with children/icons, place the text content inside a dedicated sibling element:
+
+  ```html
+  <!-- Incorrect (will be skipped with warning): -->
+  <button data-i18n="actions.save">
+    Save
+    <svg>...</svg>
+  </button>
+
+  <!-- Correct (recommended workaround): -->
+  <button>
+    <span data-i18n="actions.save">Save</span>
+    <svg>...</svg>
+  </button>
+  ```
 
 ## License
 

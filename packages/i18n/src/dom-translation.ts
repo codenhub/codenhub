@@ -105,10 +105,6 @@ export function createDomTranslator(): DomTranslator {
         return;
       }
 
-      if (root instanceof Element && getClosestCustomElement(root) !== null) {
-        return;
-      }
-
       const customElementBoundary = getCustomElementBoundary(root);
 
       collectTranslatableElements(root).forEach((element) => {
