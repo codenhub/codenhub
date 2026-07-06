@@ -67,6 +67,9 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
 </script>
 ```
 
+> [!WARNING]
+> If you customize `systemTheme`, `themes`, `storageKey`, or `attribute` in `createTheme`, make sure to update the inline FOUC script to match those values. Mismatched configurations will cause a flash of the wrong theme.
+
 ## Reference
 
 ### `@codenhub/theme`

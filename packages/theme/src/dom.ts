@@ -2,9 +2,6 @@ import { DARK_CLASS, PREFERS_DARK_QUERY, THEME_CHANGE_EVENT } from "./constants"
 import { getThemeClass } from "./helpers";
 import type { ThemeDefinition, ResolvedThemeOptions, ThemeChangeDetail } from "./types";
 
-/** Constant flag checking if the runtime environment is a browser. */
-export const isBrowser = typeof window !== "undefined" && typeof document !== "undefined";
-
 /**
  * Reads and validates the user's stored theme preference from `localStorage`.
  * Returns the theme name if it exists and matches a configured theme; otherwise `null`.
@@ -207,14 +204,22 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
 
   const root = document.documentElement;
   try {
+    const schema = options.tokenSchema;
+    const mergedTokens = {
+      ...theme.tokens,
+      ...activeTokens,
+    };
+
+    const hasMissingTokens = (Object.keys(schema) as Array<keyof TSchema>).some(
+      (key) => mergedTokens[key] === undefined,
+    );
+
+    if (!hasMissingTokens) {
+      return computedTokens;
+    }
+
     const style = window.getComputedStyle(root);
     if (style !== null) {
-      const schema = options.tokenSchema;
-      const mergedTokens = {
-        ...theme.tokens,
-        ...activeTokens,
-      };
-
       for (const key of Object.keys(schema) as Array<keyof TSchema>) {
         if (mergedTokens[key] === undefined) {
           const val = style.getPropertyValue(schema[key]).trim();
