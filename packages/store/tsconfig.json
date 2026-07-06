@@ -2,7 +2,9 @@
   "compilerOptions": {
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"]
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["node"]
   },
-  "extends": "../../tsconfig.json"
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*"]
 }

@@ -105,6 +105,15 @@ describe("History — browser integration", () => {
       expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/outside" }));
     });
 
+    it("shouldStripBasePathFromMissPathnameWhenLocationInsideBasePathIsInvalid", () => {
+      const fallback = vi.fn();
+      const router = withRouter(createRouter({ basePath: "/app" }).notFound(fallback), startedRouters);
+      history.replaceState(null, "", "/app/users//settings?tab=profile#details");
+
+      router.start();
+      expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/users//settings" }));
+    });
+
     it("shouldMatchBasePathPlusTrailingSlashAsRootRoute", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ basePath: "/app" }).on("/", handler), startedRouters);
@@ -216,6 +225,42 @@ describe("History — browser integration", () => {
       router.navigate("/start");
 
       expect(stateDuringHandler).toEqual({ val: "queued" });
+    });
+
+    it("shouldReplayQueuedPopstateUrlAndStateWhenTargetIsOutsideBasePath", () => {
+      const log: Array<{ locationPathname: string; missPathname: string; state: unknown }> = [];
+      const router = withRouter(createRouter({ basePath: "/app" }), startedRouters);
+
+      router.on("/start", () => {
+        history.pushState({ current: "outside1" }, "", "/outside1");
+        dispatchEvent(new PopStateEvent("popstate", { state: { queued: "outside1" } }));
+
+        history.pushState({ current: "outside2" }, "", "/outside2");
+        dispatchEvent(new PopStateEvent("popstate", { state: { queued: "outside2" } }));
+      });
+      router.notFound((miss) => {
+        log.push({
+          locationPathname: location.pathname,
+          missPathname: miss.pathname,
+          state: history.state,
+        });
+      });
+
+      history.replaceState(null, "", "/app/start");
+      router.start();
+
+      expect(log).toEqual([
+        {
+          locationPathname: "/outside1",
+          missPathname: "/outside1",
+          state: { queued: "outside1" },
+        },
+        {
+          locationPathname: "/outside2",
+          missPathname: "/outside2",
+          state: { queued: "outside2" },
+        },
+      ]);
     });
 
     it("shouldRemovePopstateListenerWhenDestroyed", () => {

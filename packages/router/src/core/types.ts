@@ -26,11 +26,12 @@ export interface NavigateOptions {
  * Path parameters keyed by route parameter name on a null-prototype object.
  * Route registration rejects `__proto__`, `constructor`, and `prototype`; use
  * `Object.hasOwn()` for presence checks because parameter names can still
- * overlap object method names.
+ * overlap object method names. Values are URL-derived input; sanitize before
+ * using them in unsafe sinks.
  */
 export type RouteParams = Record<string, string>;
 
-/** Information for the route that matched the current navigation target. */
+/** Information for the route that matched the current navigation target. Values are URL-derived input. */
 export interface RouterMatch {
   /** Registered route pattern that matched the target pathname. */
   path: string;
@@ -44,7 +45,7 @@ export interface RouterMatch {
   hash: string;
 }
 
-/** Information for a navigation target that did not match any registered route. */
+/** Information for a navigation target that did not match any registered route. Values are URL-derived input. */
 export interface RouterMiss {
   /** Unmatched pathname after the router base path has been removed when applicable. */
   pathname: string;

@@ -85,8 +85,9 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
 
   function buildMissFromLocation(location: Location): RouterMiss {
     const { search } = location;
+    const browserPathname = stripTrailingSlash(normalizePercentEscapes(location.pathname || "/"));
     return {
-      pathname: stripTrailingSlash(normalizePercentEscapes(location.pathname || "/")),
+      pathname: stripBasePath(browserPathname, basePath) ?? browserPathname,
       searchParams: new URLSearchParams(search),
       hash: location.hash,
     };
@@ -107,16 +108,15 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     try {
       if (nav.isActive()) {
         const state = e.state;
+        const browserHref =
+          normalizePercentEscapes(browserWindow.location.pathname || "/") +
+          browserWindow.location.search +
+          browserWindow.location.hash;
         nav.runFromHistory({
           target,
           miss,
           historyUpdate: () => {
-            const href =
-              target !== null
-                ? buildBrowserHref(target, basePath)
-                : normalizePercentEscapes(browserWindow.location.pathname || "/") +
-                  browserWindow.location.search +
-                  browserWindow.location.hash;
+            const href = target !== null ? buildBrowserHref(target, basePath) : browserHref;
             browserWindow.history.replaceState(state, "", href);
           },
         });

@@ -333,6 +333,10 @@ are rejected during route registration. Because route parameter names can still
 overlap object method names, use `Object.hasOwn(params, name)` instead of
 `params.hasOwnProperty(name)` for presence checks.
 
+Route params, pathnames, query strings, and hashes come from the current URL.
+Treat them as untrusted input: render them as text or sanitize them before using
+them in HTML, script, CSS, URL, storage, or server-bound contexts.
+
 #### `RouterListener`
 
 Listener called after router navigation.
@@ -389,6 +393,9 @@ In a browser, this writes `/app/settings` to history and matches the route path
 - Route matching is exact for supported path patterns.
 - Query strings and hashes are available on matches, but they do not affect
   route matching.
+- Route match and miss values are URL-derived input. The router does not sanitize
+  values for application-specific sinks such as `innerHTML`, templates, storage,
+  requests, or logs.
 - The package does not provide nested routes, wildcard routes, route ranking,
   route guards, data loading, suspense, transitions, scroll restoration, focus
   management, or form helpers.
