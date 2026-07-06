@@ -85,4 +85,3 @@ Plans and similar temporary documents MAY live in `docs/plans/`. This directory 
 - **Where it applies:** `packages/styles/`.
 - **Why acceptable:** The package is CSS-only and does not expose JavaScript or TypeScript APIs. Adding `main`, `module`, and `types` is unnecessary since there is no JS runtime or type declarations to export.
 - **Temporary or permanent:** Permanent.
-

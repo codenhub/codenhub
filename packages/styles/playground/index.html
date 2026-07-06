@@ -38,7 +38,8 @@
         };
 
         const themePref = localStorage.getItem("theme");
-        let isDarkTheme = themePref === "dark" || (!themePref && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        let isDarkTheme =
+          themePref === "dark" || (!themePref && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
         updateTheme(isDarkTheme);
 
