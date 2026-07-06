@@ -98,13 +98,11 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
     }
 
     const style = window.getComputedStyle(root);
-    if (style !== null) {
-      for (const key of Object.keys(schema) as Array<keyof TSchema>) {
-        if (mergedTokens[key] === undefined) {
-          const val = style.getPropertyValue(schema[key]).trim();
-          if (val) {
-            computedTokens[key] = val;
-          }
+    for (const key of Object.keys(schema) as Array<keyof TSchema>) {
+      if (mergedTokens[key] === undefined) {
+        const val = style.getPropertyValue(schema[key]).trim();
+        if (val) {
+          computedTokens[key] = val;
         }
       }
     }

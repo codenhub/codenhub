@@ -21,7 +21,8 @@ export const readStorage = <TSchema extends Record<string, string>>(
     }
     const isConfigured = themes.some((t) => t.name === storedName);
     return isConfigured ? storedName : null;
-  } catch {
+  } catch (error) {
+    console.error("[theme] Failed to read from localStorage:", error);
     return null;
   }
 };
@@ -38,8 +39,8 @@ export const writeStorage = (storageKey: string, themeName: string): void => {
 
   try {
     window.localStorage.setItem(storageKey, themeName);
-  } catch {
-    // Ignore storage write errors
+  } catch (error) {
+    console.error("[theme] Failed to write to localStorage:", error);
   }
 };
 
@@ -55,7 +56,7 @@ export const removeStorage = (storageKey: string): void => {
 
   try {
     window.localStorage.removeItem(storageKey);
-  } catch {
-    // Ignore storage removal errors
+  } catch (error) {
+    console.error("[theme] Failed to remove from localStorage:", error);
   }
 };

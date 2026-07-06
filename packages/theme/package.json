@@ -38,8 +38,7 @@
     "test:visual": "playwright test",
     "test:watch": "vitest",
     "test:visual:watch": "playwright test --ui",
-    "typecheck": "tsc --noEmit",
-    "lint:check": "oxlint"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@codenhub/styles": "workspace:*",

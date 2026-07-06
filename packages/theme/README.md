@@ -448,7 +448,7 @@ theme.destroy();
 - Browser integration uses `document.documentElement`, `document.documentElement.style.colorScheme`, `window.matchMedia`, `localStorage`, and `CustomEvent`.
 - SSR is supported; DOM, storage, media query, and event work is skipped when browser APIs are unavailable.
 - System preference changes update the active theme only when there is no valid stored preference.
-- `localStorage` read, write, and remove errors are ignored and treated as unavailable storage.
+- `localStorage` read, write, and remove errors are logged to the console via `console.error` and treated as unavailable storage.
 - Consumers own CSS variables, selectors, visual tokens, and persistence consent requirements.
 - No CSS file, design tokens, framework adapter, or peer dependency is provided.
 

@@ -62,6 +62,8 @@ export interface ThemeOptions<TSchema extends Record<string, string> = Record<st
 /**
  * Fully resolved configuration options for theme management.
  * Contains defaults for any option not explicitly provided in the initial configuration.
+ *
+ * @internal
  */
 export interface ResolvedThemeOptions<TSchema extends Record<string, string> = Record<string, string>> {
   /** The complete list of available theme definitions. */

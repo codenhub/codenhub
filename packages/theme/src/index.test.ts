@@ -389,6 +389,7 @@ describe("Theme behavior", () => {
   });
 
   it("should stay safe when localStorage operations throw", () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const originalLocalStorage = window.localStorage;
     const throwingStorage = {
       getItem: vi.fn(() => {
@@ -421,6 +422,7 @@ describe("Theme behavior", () => {
         configurable: true,
         value: originalLocalStorage,
       });
+      consoleErrorSpy.mockRestore();
     }
   });
 });

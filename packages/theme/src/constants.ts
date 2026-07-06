@@ -3,19 +3,39 @@ import type { ThemeDefinition, ResolvedThemeOptions } from "./types";
 /** Window event name dispatched with `ThemeChangeDetail` after a theme change is applied in browser environments. */
 export const THEME_CHANGE_EVENT = "themechange";
 
-/** Default `localStorage` key used to store the user's explicit theme preference. */
+/**
+ * Default `localStorage` key used to store the user's explicit theme preference.
+ *
+ * @internal
+ */
 export const DEFAULT_STORAGE_KEY = "app-theme-preference";
 
-/** Default HTML attribute set on `document.documentElement` to reflect the active theme. */
+/**
+ * Default HTML attribute set on `document.documentElement` to reflect the active theme.
+ *
+ * @internal
+ */
 export const DEFAULT_ATTRIBUTE = "data-theme";
 
-/** Default CSS class name applied to `document.documentElement` when a dark color scheme theme is active. */
+/**
+ * Default CSS class name applied to `document.documentElement` when a dark color scheme theme is active.
+ *
+ * @internal
+ */
 export const DARK_CLASS = "dark";
 
-/** Media query used to detect if the user's OS preference is set to a dark color scheme. */
+/**
+ * Media query used to detect if the user's OS preference is set to a dark color scheme.
+ *
+ * @internal
+ */
 export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 
-/** Regular expression used to match and validate whitespace characters in CSS class names. */
+/**
+ * Regular expression used to match and validate whitespace characters in CSS class names.
+ *
+ * @internal
+ */
 export const CLASS_TOKEN_WHITESPACE = /\s/;
 
 /** Built-in light theme used by default and available for custom theme lists. */
@@ -30,7 +50,11 @@ export const DARK_THEME: ThemeDefinition = Object.freeze({
   colorScheme: "dark",
 });
 
-/** Default resolved options used to initialize theme management when custom options are not provided. */
+/**
+ * Default resolved options used to initialize theme management when custom options are not provided.
+ *
+ * @internal
+ */
 export const DEFAULT_OPTIONS: ResolvedThemeOptions<Record<string, string>> = Object.freeze({
   themes: Object.freeze([LIGHT_THEME, DARK_THEME]),
   defaultTheme: LIGHT_THEME.name,
