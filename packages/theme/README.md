@@ -44,7 +44,12 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
     try {
       const key = "app-theme-preference";
       const attribute = "data-theme";
-      let theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      let theme = "light";
+      try {
+        if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+          theme = "dark";
+        }
+      } catch (_) {}
       try {
         const stored = localStorage.getItem(key);
         if (stored && /^[a-zA-Z0-9_-]+$/.test(stored)) {
@@ -140,7 +145,7 @@ function get(): ThemeDefinition<TSchema>;
 
 ##### `set()`
 
-Activates a configured theme by name, applies any dynamic token overrides, and stores the explicit preference when browser storage is available.
+Activates a configured theme by name, applies any dynamic token overrides, and stores the explicit preference when browser storage is available. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
 
 ```ts
 function set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
@@ -150,7 +155,7 @@ Throws `Error` when `name` is not configured.
 
 ##### `toggle()`
 
-Toggles between the configured system light and dark theme names, applies any dynamic token overrides, then stores the explicit preference when browser storage is available.
+Toggles between the configured system light and dark theme names, applies any dynamic token overrides, then stores the explicit preference when browser storage is available. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
 
 ```ts
 function toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;

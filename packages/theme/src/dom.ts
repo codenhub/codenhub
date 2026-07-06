@@ -13,11 +13,14 @@ export const readStorage = <TSchema extends Record<string, string>>(
   storageKey: string,
   themes: readonly ThemeDefinition<TSchema>[],
 ): string | null => {
-  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+  if (typeof window === "undefined") {
     return null;
   }
 
   try {
+    if (typeof window.localStorage === "undefined") {
+      return null;
+    }
     const storedName = window.localStorage.getItem(storageKey);
     if (storedName === null) {
       return null;
@@ -31,11 +34,14 @@ export const readStorage = <TSchema extends Record<string, string>>(
 
 /** Writes the explicit theme preference to `localStorage`. */
 export const writeStorage = (storageKey: string, themeName: string): void => {
-  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+  if (typeof window === "undefined") {
     return;
   }
 
   try {
+    if (typeof window.localStorage === "undefined") {
+      return;
+    }
     window.localStorage.setItem(storageKey, themeName);
   } catch {
     // Ignore storage write errors
@@ -44,11 +50,14 @@ export const writeStorage = (storageKey: string, themeName: string): void => {
 
 /** Removes the explicit theme preference from `localStorage`. */
 export const removeStorage = (storageKey: string): void => {
-  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+  if (typeof window === "undefined") {
     return;
   }
 
   try {
+    if (typeof window.localStorage === "undefined") {
+      return;
+    }
     window.localStorage.removeItem(storageKey);
   } catch {
     // Ignore storage removal errors
@@ -224,7 +233,11 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
 
 /** Dispatches a custom `themechange` event on the window. */
 export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: ThemeChangeDetail<TSchema>): void => {
-  if (typeof window === "undefined" || typeof window.dispatchEvent !== "function") {
+  if (
+    typeof window === "undefined" ||
+    typeof window.dispatchEvent !== "function" ||
+    typeof window.CustomEvent !== "function"
+  ) {
     return;
   }
 
