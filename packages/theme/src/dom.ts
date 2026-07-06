@@ -95,18 +95,24 @@ export const registerSystemListener = (handler: (event: MediaQueryListEvent) => 
     return () => {};
   }
 
-  let mql: MediaQueryList | null = null;
-  try {
-    mql = window.matchMedia(PREFERS_DARK_QUERY);
-    if (mql) {
+  const mql = (() => {
+    try {
+      return window.matchMedia(PREFERS_DARK_QUERY);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (mql) {
+    try {
       if (typeof mql.addEventListener === "function") {
         mql.addEventListener("change", handler);
       } else if (typeof mql.addListener === "function") {
         mql.addListener(handler);
       }
+    } catch {
+      // Ignore system listener registration errors
     }
-  } catch {
-    // Ignore system listener registration errors
   }
 
   return () => {
@@ -204,7 +210,12 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
   const { theme, options, activeTokens } = args;
   const computedTokens: Partial<Record<keyof TSchema, string>> = {};
 
-  if (typeof window === "undefined" || typeof document === "undefined" || !options.tokenSchema) {
+  if (
+    typeof window === "undefined" ||
+    typeof window.getComputedStyle !== "function" ||
+    typeof document === "undefined" ||
+    !options.tokenSchema
+  ) {
     return computedTokens;
   }
 
