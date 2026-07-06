@@ -272,11 +272,11 @@ describe("matchRoute", () => {
     expect(params?.["__proto__"]).toBe("alice");
   });
 
-  it("shouldKeepParamsAsPlainObjectsWithObjectPrototype", () => {
+  it("shouldKeepParamsAsPlainObjectsWithNullPrototype", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/alice");
     const params = matchRoute(pattern, target);
-    expect(Object.getPrototypeOf(params)).toBe(Object.prototype);
+    expect(Object.getPrototypeOf(params)).toBeNull();
   });
 });
 

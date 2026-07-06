@@ -19,7 +19,7 @@
   }
 
   .inspector-td {
-    @apply text-text p-3 bg-background;
+    @apply text-text bg-background p-3;
   }
 
   .inspector-code {

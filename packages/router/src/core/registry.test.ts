@@ -160,12 +160,12 @@ describe("createRegistry", () => {
       expect(registry.findMatch(parseAppPath("/users/%E0%A4%A"))).toBeNull();
     });
 
-    it("shouldReturnParamsAsPlainObjectsWithObjectPrototype", () => {
+    it("shouldReturnParamsAsPlainObjectsWithNullPrototype", () => {
       const registry = createRegistry();
       registry.add("/users/:id", vi.fn());
 
       const result = registry.findMatch(parseAppPath("/users/alice"));
-      expect(Object.getPrototypeOf(result?.match.params)).toBe(Object.prototype);
+      expect(Object.getPrototypeOf(result?.match.params)).toBeNull();
     });
 
     it("shouldCapturePrototypePollutingParameterNamesAsSafeOwnProperties", () => {

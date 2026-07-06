@@ -192,7 +192,7 @@ describe("createRouter", () => {
 
     const match = router.navigate("/users/alice");
 
-    expect(Object.getPrototypeOf(match?.params)).toBe(Object.prototype);
+    expect(Object.getPrototypeOf(match?.params)).toBeNull();
     expect(Object.hasOwn(match?.params ?? {}, "id")).toBe(true);
   });
 

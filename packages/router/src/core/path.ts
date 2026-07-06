@@ -161,7 +161,7 @@ export function matchRoute(pattern: RoutePattern, target: ParsedPath): RoutePara
     return null;
   }
 
-  const params: RouteParams = {};
+  const params: RouteParams = Object.create(null);
 
   for (const [index, segment] of pattern.segments.entries()) {
     const targetSegment = targetSegments[index];
