@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "@codenhub/styles";
+
+/* Extra utilities for playground layout and style.css */
+@layer utilities {
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+  .bg-background {
+    background-color: var(--color-background);
+  }
+  .border-border {
+    border-color: var(--color-border);
+  }
+  .text-text {
+    color: var(--color-text);
+  }
+  .text-text-secondary {
+    color: var(--color-text-secondary);
+  }
+  .text-text-strong {
+    color: var(--color-text-strong);
+  }
+  .font-default {
+    font-family: var(--font-default);
+  }
+  .text-primary {
+    color: var(--color-primary);
+  }
+}

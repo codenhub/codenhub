@@ -1,0 +1,33 @@
+import { defineConfig, devices } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "./tests",
+  fullyParallel: true,
+  reporter: [["list"], ["./tests/exit-reporter.ts"]],
+  webServer: [
+    {
+      command: "pnpm --filter=@codenhub/theme-dev dev",
+      url: "http://localhost:5185",
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "pnpm --filter=@codenhub/theme-debug dev",
+      url: "http://localhost:5186",
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "firefox",
+      use: { ...devices["Desktop Firefox"] },
+    },
+    {
+      name: "webkit",
+      use: { ...devices["Desktop Safari"] },
+    },
+  ],
+});
