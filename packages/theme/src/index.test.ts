@@ -895,4 +895,38 @@ describe("Theme CSS tokens support", () => {
       });
     }
   });
+
+  it("should reset active token overrides on destroy", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({ tokenSchema }).init({ primary: "orange" });
+
+    expect(theme.get().tokens).toEqual({ primary: "orange" });
+
+    theme.destroy();
+    theme.init();
+    expect(theme.get().tokens).toEqual({});
+  });
+
+  it("should reject token definitions or overrides that use prototype properties", () => {
+    expect(() =>
+      createTheme({
+        tokenSchema: { primary: "--color-primary" },
+        themes: [
+          {
+            name: "light",
+            colorScheme: "light",
+            tokens: { toString: "bad" } as unknown as Partial<Record<string, string>>,
+          },
+        ],
+      }),
+    ).toThrow('Theme "light" defines token "toString" which is not present in tokenSchema.');
+
+    const theme = createTheme({
+      tokenSchema: { primary: "--color-primary" },
+    }).init();
+
+    expect(() => theme.set("dark", { toString: "bad" } as unknown as Partial<Record<string, string>>)).toThrow(
+      'Runtime token override "toString" is not present in tokenSchema.',
+    );
+  });
 });

@@ -148,6 +148,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     }
 
     this.#listeners.clear();
+    this.#activeTokens = {};
     this.#isInitialized = false;
   }
 

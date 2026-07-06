@@ -83,7 +83,7 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
         throw new Error(`Theme "${theme.name}" defines tokens but no tokenSchema is configured.`);
       }
       for (const tokenKey of Object.keys(theme.tokens)) {
-        if (!(tokenKey in options.tokenSchema)) {
+        if (!Object.hasOwn(options.tokenSchema, tokenKey)) {
           throw new Error(`Theme "${theme.name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
         }
       }
@@ -114,7 +114,7 @@ export const assertRuntimeTokens = <TSchema extends Record<string, string>>(
     throw new Error("Runtime tokens provided but no tokenSchema is configured.");
   }
   for (const tokenKey of Object.keys(tokens)) {
-    if (!(tokenKey in tokenSchema)) {
+    if (!Object.hasOwn(tokenSchema, tokenKey)) {
       throw new Error(`Runtime token override "${tokenKey}" is not present in tokenSchema.`);
     }
   }
