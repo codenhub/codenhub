@@ -186,7 +186,7 @@ browser history.
 If navigation is already running, the new navigation is queued and executed synchronously
 after the current route handler completes.
 
-Returns the active `RouterMatch`, or `null` when no route matches. It throws
+Returns the active `RouterMatch`, or `null` when no route matches or the navigation was queued. It throws
 `Error` when `to` is not an app-local path or contains backslashes or `.`/`..`
 path segments.
 
@@ -247,8 +247,8 @@ Handler called when a route becomes active.
 type RouteHandler = (match: RouterMatch) => void;
 ```
 
-Route handler errors are not caught by the router. Starting another navigation
-synchronously from a route handler is queued and executed after the current handler returns.
+Route handler errors are not caught by the router; any thrown error will clear/drain the pending navigation queue.
+Starting another navigation synchronously from a route handler is queued and executed after the current handler returns.
 
 #### `NotFoundHandler`
 
@@ -258,8 +258,8 @@ Handler called when navigation has no matching route.
 type NotFoundHandler = (miss: RouterMiss) => void;
 ```
 
-Fallback handler errors are not caught by the router. Starting another
-navigation synchronously from the fallback handler is queued and executed after the fallback handler returns.
+Fallback handler errors are not caught by the router; any thrown error will clear/drain the pending navigation queue.
+Starting another navigation synchronously from the fallback handler is queued and executed after the fallback handler returns.
 
 #### `NavigateOptions`
 
@@ -338,8 +338,8 @@ Listener called after router navigation.
 type RouterListener = (match: RouterMatch | null) => void;
 ```
 
-Subscriber errors are not caught by the router. Starting another navigation
-synchronously from a subscriber is queued and executed after the listener returns.
+Subscriber errors are not caught by the router; any thrown error will clear/drain the pending navigation queue.
+Starting another navigation synchronously from a subscriber is queued and executed after the listener returns.
 
 ## Examples
 

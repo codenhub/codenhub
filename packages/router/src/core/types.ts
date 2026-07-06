@@ -56,21 +56,21 @@ export interface RouterMiss {
 /**
  * Handler called when a registered route becomes active.
  * Synchronous navigation started from the handler is queued.
- * Any errors thrown by the handler are not caught by the router.
+ * Any errors thrown by the handler are not caught by the router and will clear/drain the pending navigation queue.
  */
 export type RouteHandler = (match: RouterMatch) => void;
 
 /**
  * Handler called when navigation does not match any registered route.
  * Synchronous navigation started from the handler is queued.
- * Any errors thrown by the handler are not caught by the router.
+ * Any errors thrown by the handler are not caught by the router and will clear/drain the pending navigation queue.
  */
 export type NotFoundHandler = (miss: RouterMiss) => void;
 
 /**
  * Listener called after route navigation completes.
  * Synchronous navigation started from the listener is queued.
- * Any errors thrown by the listener are not caught by the router.
+ * Any errors thrown by the listener are not caught by the router and will clear/drain the pending navigation queue.
  */
 export type RouterListener = (match: RouterMatch | null) => void;
 
@@ -145,6 +145,7 @@ export interface Router {
 
   /**
    * Removes router-owned browser listeners and clears subscribers.
+   * Repeated calls are allowed.
    */
   destroy(): void;
 }

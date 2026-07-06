@@ -88,9 +88,13 @@ export function createNavigation(registry: Registry): Navigation {
       let currentTarget: ParsedPath | null = initialTarget;
       let currentMiss: RouterMiss | undefined = initialMiss;
 
+      // Outer loop: continues running until all navigations are fully processed.
+      // This includes any new navigations enqueued by subscribers during the `notify()` phase below.
       while (currentTarget !== null || currentMiss !== undefined) {
         let loopMatch: RouterMatch | null = null;
 
+        // Inner loop: processes the current navigation path and any nested redirections
+        // queued synchronously by route handlers.
         while (currentTarget !== null || currentMiss !== undefined) {
           if (currentTarget !== null) {
             const result = registry.findMatch(currentTarget);

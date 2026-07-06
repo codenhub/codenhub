@@ -1,5 +1,7 @@
 import type { RouteParams } from "./types";
 
+// Dummy base URL used to allow standard, consistent URL parsing and normalization
+// via the browser-native `URL` object for app-local paths.
 const ROUTER_URL_BASE = "http://router.local";
 const PATHNAME_END_PATTERN = /[?#]/;
 const PERCENT_ESCAPE_PATTERN = /%[0-9a-fA-F]{2}/g;
