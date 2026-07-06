@@ -24,7 +24,10 @@
 @utility auto-grid {
   @apply grid gap-(--layout-stack-gap);
 
-  grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--layout-grid-min), 100%), 1fr)
+  );
 }
 
 @utility selection-contrast {
@@ -36,5 +39,9 @@
 }
 
 @utility code {
-  @apply bg-surface rounded-(--radius-small) px-1 py-0.5 font-mono;
+  @apply bg-surface rounded-(--radius-small) px-1.25 py-0.75 font-mono;
+}
+
+@utility pre {
+  @apply bg-surface rounded-(--radius-control) px-2.5 py-1.5 font-mono;
 }
