@@ -1,6 +1,6 @@
 import { normalizeValue } from "./helpers";
-import { createEmptyDictionary, type LocaleLoader } from "./locale-loader";
-import type { I18nConfig, ResolvedLocaleState } from "./types";
+import { createEmptyDictionary } from "./locale-loader";
+import type { I18nConfig, ResolvedLocaleState, ResolveLocaleStateOptions } from "./types";
 
 const matchLocaleIgnoreCase = <TLocale extends string>(
   config: I18nConfig<TLocale>,
@@ -98,11 +98,11 @@ export const normalizeLocale = <TLocale extends string>(
  * @returns A promise resolving to the next active state.
  * @internal
  */
-export const resolveLocaleState = async <TLocale extends string>(
-  config: I18nConfig<TLocale>,
-  loader: LocaleLoader<TLocale>,
-  requestedLocale: TLocale,
-): Promise<ResolvedLocaleState<TLocale>> => {
+export const resolveLocaleState = async <TLocale extends string>({
+  config,
+  loader,
+  requestedLocale,
+}: ResolveLocaleStateOptions<TLocale>): Promise<ResolvedLocaleState<TLocale>> => {
   const requestedDictionary = await loader.loadLocale(requestedLocale);
 
   if (requestedDictionary !== undefined) {

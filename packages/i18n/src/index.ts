@@ -53,12 +53,12 @@ const isPersistedLocaleState = <TLocale extends string>(
  */
 export function createI18n<TLocale extends string = string>(config: I18nConfig<TLocale>): I18n<TLocale> {
   let currentLocale: TLocale = config.defaultLocale;
-  let readyState = false;
+  let isReadyState = false;
   let storageKey = DEFAULT_STORAGE_KEY;
   let root: ParentNode | null = null;
   let storage: Store<PersistedLocaleState> | null = null;
   let currentDictionary: LocaleDictionary = createEmptyDictionary();
-  let currentLocaleLoaded = false;
+  let isCurrentLocaleLoaded = false;
   const warnedMissingKeys = new Set<string>();
   let localeRequestId = 0;
 
@@ -106,7 +106,7 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
   };
 
   const translate = (key: string): string | undefined => {
-    if (!readyState) {
+    if (!isReadyState) {
       console.warn("[I18n] translate() was called before init() completed. Call init() first.");
       return undefined;
     }
@@ -136,12 +136,12 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
       return currentLocale;
     },
 
-    get ready() {
-      return readyState;
+    get isReady() {
+      return isReadyState;
     },
 
     async init(options: I18nInitOptions = {}): Promise<void> {
-      readyState = false;
+      isReadyState = false;
       storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
       root = options.root ?? getDocumentRoot();
       storage = createStore<PersistedLocaleState>({
@@ -154,7 +154,11 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
       const requestId = createLocaleRequest();
       const initialLocale = getInitialLocale(config, storage.getItem("locale"));
-      const localeState = await resolveLocaleState(config, localeLoader, initialLocale);
+      const localeState = await resolveLocaleState({
+        config,
+        loader: localeLoader,
+        requestedLocale: initialLocale,
+      });
 
       if (!isLatestLocaleRequest(requestId)) {
         return;
@@ -162,27 +166,27 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
       currentLocale = localeState.locale;
       currentDictionary = localeState.dictionary;
-      currentLocaleLoaded = localeState.isAppliedLocaleLoaded;
+      isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
       if (localeState.isRequestedLocaleLoaded) {
         storage.set({ locale: localeState.locale });
       }
 
-      readyState = true;
+      isReadyState = true;
       syncDocumentLocale();
       translateDocument();
       eventTarget.dispatchEvent(
         new CustomEvent<I18nReadyEventDetail>("ready", {
           detail: {
             locale: currentLocale,
-            translationsAvailable: hasTranslations(),
+            hasTranslationsAvailable: hasTranslations(),
           },
         }),
       );
     },
 
     async setLocale(locale: string): Promise<boolean> {
-      if (!readyState) {
+      if (!isReadyState) {
         console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
         return false;
       }
@@ -195,13 +199,17 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
       const requestId = createLocaleRequest();
 
-      if (nextLocale === currentLocale && currentLocaleLoaded) {
+      if (nextLocale === currentLocale && isCurrentLocaleLoaded) {
         return true;
       }
 
       localeLoader.retryLocale(nextLocale);
 
-      const localeState = await resolveLocaleState(config, localeLoader, nextLocale);
+      const localeState = await resolveLocaleState({
+        config,
+        loader: localeLoader,
+        requestedLocale: nextLocale,
+      });
 
       if (!isLatestLocaleRequest(requestId)) {
         return false;
@@ -211,20 +219,20 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
       const previousDictionary = currentDictionary;
       currentLocale = localeState.locale;
       currentDictionary = localeState.dictionary;
-      currentLocaleLoaded = localeState.isAppliedLocaleLoaded;
+      isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
       if (localeState.isRequestedLocaleLoaded) {
         storage?.set({ locale: localeState.locale });
       }
 
-      const documentChanged = localeState.locale !== previousLocale || localeState.dictionary !== previousDictionary;
+      const hasDocumentChanged = localeState.locale !== previousLocale || localeState.dictionary !== previousDictionary;
 
-      if (documentChanged) {
+      if (hasDocumentChanged) {
         syncDocumentLocale();
         translateDocument();
       }
 
-      if (localeState.isRequestedLocaleLoaded && localeState.locale !== previousLocale) {
+      if (localeState.locale !== previousLocale) {
         eventTarget.dispatchEvent(
           new CustomEvent<I18nLocaleChangeEventDetail>("locale-change", {
             detail: {

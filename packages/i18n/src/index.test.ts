@@ -210,7 +210,7 @@ describe("I18n", () => {
   });
 
   it("should start not ready", () => {
-    expect(i18n.ready).toBe(false);
+    expect(i18n.isReady).toBe(false);
   });
 
   it("should initialize with the default locale and translate matching DOM elements", async () => {
@@ -222,7 +222,7 @@ describe("I18n", () => {
 
     await i18n.init();
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     expect(i18n.locale).toBe("en-US");
     expect(document.documentElement.lang).toBe("en-US");
     expect(document.documentElement.dir).toBe("ltr");
@@ -300,7 +300,7 @@ describe("I18n", () => {
     });
   });
 
-  it("should not emit locale-change when the requested locale fails to load", async () => {
+  it("should emit locale-change when fallback switches the active locale during setLocale", async () => {
     localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
     document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
 
@@ -310,11 +310,31 @@ describe("I18n", () => {
     const listener = vi.fn();
     i18n.addEventListener("locale-change", listener as EventListener);
 
-    // en-US is the default and the only fallback; failing it leaves no successful
-    // locale to switch to, so locale-change must not fire.
+    // en-US is the default and the only fallback; failing it switches the active locale
+    // from pt-BR to en-US (fallback), so locale-change must fire.
     fetchOverrides[EN_US_URL] = { ok: false, status: 404 };
 
     expect(await i18n.setLocale("en-US")).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+    const event = listener.mock.calls[0]?.[0];
+    expect((event as CustomEvent).detail).toEqual({
+      locale: "en-US",
+      previousLocale: "pt-BR",
+    });
+  });
+
+  it("should not emit locale-change when the active locale remains unchanged on load failure", async () => {
+    document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
+    await i18n.init();
+    expect(i18n.locale).toBe("en-US");
+
+    const listener = vi.fn();
+    i18n.addEventListener("locale-change", listener as EventListener);
+
+    // pt-BR fails to load and falls back to en-US. Active locale stays en-US, so no event fires.
+    fetchOverrides[PT_BR_URL] = { ok: false, status: 503 };
+
+    expect(await i18n.setLocale("pt-BR")).toBe(false);
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -347,7 +367,7 @@ describe("I18n", () => {
     expect(event).toBeInstanceOf(CustomEvent);
     expect((event as CustomEvent).detail).toEqual({
       locale: "en-US",
-      translationsAvailable: true,
+      hasTranslationsAvailable: true,
     });
   });
 
@@ -361,13 +381,13 @@ describe("I18n", () => {
     await vi.runAllTimersAsync();
     await initPromise;
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     const event = listener.mock.calls[0]?.[0];
 
     expect(event).toBeInstanceOf(CustomEvent);
     expect((event as CustomEvent).detail).toEqual({
       locale: "en-US",
-      translationsAvailable: false,
+      hasTranslationsAvailable: false,
     });
   });
 
@@ -376,7 +396,7 @@ describe("I18n", () => {
 
     await i18n.init();
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Locale "en-US" loaded successfully but contains no translations'),
     );
@@ -444,7 +464,7 @@ describe("I18n", () => {
     await vi.runAllTimersAsync();
     await initPromise;
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     expect(i18n.locale).toBe("en-US");
     expect(document.querySelector("p")?.textContent).toBe("Get started");
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Falling back to default locale "en-US"'));
@@ -534,7 +554,7 @@ describe("I18n", () => {
     await vi.runAllTimersAsync();
     await initPromise;
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     expect(i18n.locale).toBe("en-US");
     expect(document.querySelector("p")?.textContent).toBe("Get started");
   });
@@ -559,7 +579,7 @@ describe("I18n", () => {
 
     await i18n.init();
 
-    expect(i18n.ready).toBe(true);
+    expect(i18n.isReady).toBe(true);
     expect(i18n.translate("constructor")).toBeUndefined();
     expect(i18n.translate("toString")).toBeUndefined();
   });

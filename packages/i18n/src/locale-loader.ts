@@ -16,7 +16,14 @@ const isLocaleDictionary = (raw: unknown): raw is LocaleDictionary => {
   return Object.values(raw as Record<string, unknown>).every((value) => typeof value === "string");
 };
 
-const isRetryableStatus = (status: number): boolean => status === 408 || status === 429 || status >= 500;
+const HTTP_STATUS_REQUEST_TIMEOUT = 408;
+const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
+const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
+
+const isRetryableStatus = (status: number): boolean =>
+  status === HTTP_STATUS_REQUEST_TIMEOUT ||
+  status === HTTP_STATUS_TOO_MANY_REQUESTS ||
+  status >= HTTP_STATUS_INTERNAL_SERVER_ERROR;
 
 /**
  * Interface for the locale file loader.

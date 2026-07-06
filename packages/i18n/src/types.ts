@@ -1,3 +1,5 @@
+import type { LocaleLoader } from "./locale-loader";
+
 /** Text direction for a locale. */
 export type LocaleDirection = "ltr" | "rtl";
 
@@ -37,7 +39,7 @@ export interface I18nReadyEventDetail {
   /** The active locale after initialization. */
   locale: string;
   /** Whether translations were successfully loaded and are available. */
-  translationsAvailable: boolean;
+  hasTranslationsAvailable: boolean;
 }
 
 /** Detail payload for the "locale-change" event. */
@@ -77,7 +79,7 @@ export interface I18n<TLocale extends string = string> {
   /** The currently active locale. */
   readonly locale: TLocale;
   /** Whether the translation manager is initialized and ready. */
-  readonly ready: boolean;
+  readonly isReady: boolean;
 
   /**
    * Initializes the translation manager, loading the resolved locale
@@ -123,4 +125,18 @@ export interface I18n<TLocale extends string = string> {
 
   /** Dispatches an event on the translation manager. */
   dispatchEvent(event: Event): boolean;
+}
+
+/**
+ * Options for resolving the locale state.
+ *
+ * @internal
+ */
+export interface ResolveLocaleStateOptions<TLocale extends string = string> {
+  /** The translation config. */
+  config: I18nConfig<TLocale>;
+  /** The locale loader manager. */
+  loader: LocaleLoader<TLocale>;
+  /** The locale code that was requested. */
+  requestedLocale: TLocale;
 }

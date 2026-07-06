@@ -81,7 +81,7 @@ Public translation manager interface.
 ```ts
 interface I18n<TLocale extends string = string> {
   readonly locale: TLocale;
-  readonly ready: boolean;
+  readonly isReady: boolean;
   init(options?: I18nInitOptions): Promise<void>;
   setLocale(locale: string): Promise<boolean>;
   translate(key: string): string | undefined;
@@ -100,7 +100,7 @@ interface I18n<TLocale extends string = string> {
 ```
 
 - `locale`: The currently active locale.
-- `ready`: Whether initialization has finished.
+- `isReady`: Whether initialization has finished.
 - `init(options)`: Initializes storage, checks locale preferences, loads translations, and translates the DOM.
 - `setLocale(locale)`: Switches the current locale, fetching translations if necessary, and re-translating the DOM. Emits a `locale-change` event on success.
 - `translate(key)`: Returns the translated string for `key` or `undefined` if missing.
@@ -148,7 +148,7 @@ Emitted when `init()` completes successfully.
 ```ts
 interface I18nReadyEventDetail {
   locale: string;
-  translationsAvailable: boolean;
+  hasTranslationsAvailable: boolean;
 }
 ```
 
@@ -161,6 +161,32 @@ interface I18nLocaleChangeEventDetail {
   locale: string;
   previousLocale: string;
 }
+```
+
+## Examples
+
+### Listening to translation events
+
+You can listen to `ready` and `locale-change` events on the i18n manager instance:
+
+```ts
+i18n.addEventListener("ready", (event) => {
+  const { locale, hasTranslationsAvailable } = (event as CustomEvent<I18nReadyEventDetail>).detail;
+  console.log(`i18n ready for locale: ${locale}. Translations available: ${hasTranslationsAvailable}`);
+});
+
+i18n.addEventListener("locale-change", (event) => {
+  const { locale, previousLocale } = (event as CustomEvent<I18nLocaleChangeEventDetail>).detail;
+  console.log(`locale changed from ${previousLocale} to ${locale}`);
+});
+```
+
+### Translating programmatic strings manually
+
+Use `translate` to resolve translation keys in JavaScript:
+
+```ts
+const greeting = i18n.translate("home.welcome.greeting") ?? "Welcome!";
 ```
 
 ## Requirements
