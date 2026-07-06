@@ -45,12 +45,11 @@ function stripTrailingSlash(pathname: string): string {
 
 function isDotSegment(segment: string): boolean {
   if (!segment.includes("%")) {
-    const normalized = segment.replace(ENCODED_DOT_PATTERN, ".");
-    return normalized === "." || normalized === "..";
+    return segment === "." || segment === "..";
   }
   let prev = "";
   let curr = segment;
-  for (let i = 0; i < 3 && curr !== prev; i++) {
+  while (curr !== prev) {
     prev = curr;
     try {
       curr = decodeURIComponent(curr);

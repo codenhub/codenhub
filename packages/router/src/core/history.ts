@@ -151,7 +151,10 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       return;
     }
 
-    const href = anchor.getAttribute("href") ?? anchor.getAttribute("xlink:href");
+    const href =
+      anchor.getAttribute("href") ??
+      anchor.getAttributeNS("http://www.w3.org/1999/xlink", "href") ??
+      anchor.getAttribute("xlink:href");
     if (href === null) {
       return;
     }

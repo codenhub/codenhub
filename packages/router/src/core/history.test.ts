@@ -458,6 +458,26 @@ describe("History — browser integration", () => {
       document.body.removeChild(svg);
     });
 
+    it("shouldInterceptSvgAnchorClicksUsingNamespacedXlinkHref", () => {
+      const handler = vi.fn();
+      const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
+      router.start();
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      const link = document.createElementNS("http://www.w3.org/2000/svg", "a");
+      link.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "/target");
+      link.setAttribute("data-router-link", "");
+      svg.appendChild(link);
+      document.body.appendChild(svg);
+
+      const event = clickLink(link);
+      expect(event.defaultPrevented).toBe(true);
+      expect(handler).toHaveBeenCalled();
+      expect(location.pathname).toBe("/target");
+
+      document.body.removeChild(svg);
+    });
+
     it("shouldInterceptAnchorClicksInsideShadowDom", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ shouldInterceptLinks: true }).on("/target", handler), startedRouters);
