@@ -97,7 +97,11 @@ export interface Router {
   /**
    * Starts browser history integration and matches the current browser location when available.
    *
-   * @returns The matched route info, or null if no route matched or not in a browser environment.
+   * Locations outside the configured `basePath` trigger the fallback (notFound) handler and
+   * notify subscribers with null.
+   *
+   * @returns The matched route info, or null if no route matched, location is outside basePath,
+   *   or not in a browser environment.
    * @throws {Error} If called during active navigation.
    */
   start(): RouterMatch | null;

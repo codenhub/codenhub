@@ -43,14 +43,35 @@ function stripTrailingSlash(pathname: string): string {
   return pathname;
 }
 
+function isDotSegment(segment: string): boolean {
+  if (!segment.includes("%")) {
+    const normalized = segment.replace(ENCODED_DOT_PATTERN, ".");
+    return normalized === "." || normalized === "..";
+  }
+  let prev = "";
+  let curr = segment;
+  for (let i = 0; i < 3 && curr !== prev; i++) {
+    prev = curr;
+    try {
+      curr = decodeURIComponent(curr);
+    } catch (error) {
+      if (error instanceof URIError) {
+        break;
+      }
+      throw error;
+    }
+  }
+  const normalized = curr.replace(ENCODED_DOT_PATTERN, ".");
+  return normalized === "." || normalized === "..";
+}
+
 /** @internal */
 export function hasDotPathSegments(value: string): boolean {
   const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
   const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);
 
   for (const segment of pathname.split("/")) {
-    const normalizedSegment = segment.replace(ENCODED_DOT_PATTERN, ".");
-    if (normalizedSegment === "." || normalizedSegment === "..") {
+    if (isDotSegment(segment)) {
       return true;
     }
   }
@@ -79,15 +100,24 @@ export function normalizeBasePath(basePath = ""): string {
   }
   assertNoDotPathSegments(basePath, "Router basePath");
 
-  return toUrlPathname(basePath);
+  const normalized = toUrlPathname(basePath);
+  if (hasDotPathSegments(normalized)) {
+    throw new Error('Router basePath must not include "." or ".." path segments.');
+  }
+
+  return normalized;
 }
 
 /** @internal */
 export function parseRoutePath(path: string): RoutePattern {
   assertRoutePath(path);
+  const normalized = toUrlPathname(path);
+  if (hasDotPathSegments(normalized)) {
+    throw new Error('Route paths must not include "." or ".." path segments.');
+  }
   const paramNames = new Set<string>();
 
-  const segments = splitPath(toUrlPathname(path)).map((segment): RouteSegment => {
+  const segments = splitPath(normalized).map((segment): RouteSegment => {
     if (!segment.startsWith(":")) {
       return { kind: "static", value: segment };
     }
@@ -115,7 +145,12 @@ export function parseRoutePath(path: string): RoutePattern {
 export function parseAppPath(to: string): ParsedPath {
   assertAppPath(to);
 
-  return parseUrlPath(new URL(to, ROUTER_URL_BASE));
+  const parsed = parseUrlPath(new URL(to, ROUTER_URL_BASE));
+  if (hasDotPathSegments(parsed.pathname)) {
+    throw new Error('Router navigation targets must not include "." or ".." path segments.');
+  }
+
+  return parsed;
 }
 
 /** @internal */
@@ -250,8 +285,7 @@ function assertNoDotPathSegments(value: string, subject: string): void {
   const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);
 
   for (const segment of pathname.split("/")) {
-    const normalizedSegment = segment.replace(ENCODED_DOT_PATTERN, ".");
-    if (normalizedSegment === "." || normalizedSegment === "..") {
+    if (isDotSegment(segment)) {
       throw new Error(`${subject} must not include "." or ".." path segments.`);
     }
   }
