@@ -39,6 +39,11 @@ export interface History {
   start(): RouterMatch | null;
 
   /**
+   * Captures the current browser URL and state as the restore target before navigation writes.
+   */
+  captureCurrent(): void;
+
+  /**
    * Restores the last successful browser history URL and state if a navigation failed.
    */
   restore(): void;
@@ -67,6 +72,14 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     const browserWindow = getBrowserWindow();
     if (browserWindow !== null && lastGoodHref !== null) {
       browserWindow.history.replaceState(lastGoodState, "", lastGoodHref);
+    }
+  }
+
+  function captureCurrentHistory(): void {
+    const browserWindow = getBrowserWindow();
+    if (browserWindow !== null) {
+      lastGoodHref = browserWindow.location.href;
+      lastGoodState = browserWindow.history.state;
     }
   }
 
@@ -228,9 +241,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       }
       isStarted = true;
 
-      // Track last good href and state
-      lastGoodHref = browserWindow.location.href;
-      lastGoodState = browserWindow.history.state;
+      captureCurrentHistory();
 
       unsubscribe = nav.subscribe(() => {
         const win = getBrowserWindow();
@@ -252,6 +263,10 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       }
 
       return nav.currentMatch();
+    },
+
+    captureCurrent() {
+      captureCurrentHistory();
     },
 
     restore() {

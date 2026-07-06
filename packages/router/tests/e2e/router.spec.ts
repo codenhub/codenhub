@@ -69,6 +69,16 @@ for (const port of ports) {
       await expect(page.locator("#state-pathname")).toHaveText("/non-existent");
     });
 
+    test("renders route parameters as text", async ({ page }) => {
+      const payload = '<img src="x" alt="xss">';
+
+      await page.goto(`${url}users/${encodeURIComponent(payload)}`);
+
+      await expect(page.locator("#view-title")).toHaveText("User Profile");
+      await expect(page.locator("#username-display")).toHaveText(payload);
+      await expect(page.locator("#username-display img")).toHaveCount(0);
+    });
+
     test("supports browser back/forward history navigation", async ({ page }) => {
       await page.locator("#link-about").click();
       await expect(page.locator("#view-title")).toHaveText("About Page");

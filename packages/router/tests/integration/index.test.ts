@@ -184,7 +184,7 @@ describe("createRouter", () => {
     );
   });
 
-  it("shouldReturnRouteParamsAsOrdinaryObjects", () => {
+  it("shouldReturnRouteParamsAsNullPrototypeObjects", () => {
     const router = createRouter().on("/users/:id", vi.fn());
 
     const match = router.navigate("/users/alice");

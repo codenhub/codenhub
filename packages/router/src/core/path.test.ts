@@ -166,6 +166,13 @@ describe("parseAppPath", () => {
     expect(result.searchParams.get("tab")).toBe("posts");
   });
 
+  it("shouldAllowConsecutiveSlashesInsideQueryStringsAndHashes", () => {
+    const result = parseAppPath("/callback?return=https://example.com#https://example.com/next");
+    expect(result.pathname).toBe("/callback");
+    expect(result.searchParams.get("return")).toBe("https://example.com");
+    expect(result.hash).toBe("#https://example.com/next");
+  });
+
   it("shouldNormalisePercentEscapeCasingInPathname", () => {
     const result = parseAppPath("/caf%c3%a9");
     expect(result.pathname).toBe("/caf%C3%A9");
@@ -255,6 +262,11 @@ describe("parseLocationPath", () => {
     const location = makeLocation({ pathname: "/settings" });
     const result = parseLocationPath(location, "");
     expect(result?.pathname).toBe("/settings");
+  });
+
+  it("shouldReturnNullWhenLocationPathnameContainsConsecutiveSlashes", () => {
+    const location = makeLocation({ pathname: "//admin" });
+    expect(parseLocationPath(location, "")).toBeNull();
   });
 });
 

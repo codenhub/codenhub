@@ -61,8 +61,9 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
         return null;
       }
 
-      updateHistory();
       try {
+        history.captureCurrent();
+        updateHistory();
         return nav.run(target);
       } catch (error) {
         history.restore();

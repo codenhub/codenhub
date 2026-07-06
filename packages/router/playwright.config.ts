@@ -3,6 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  workers: 1,
   retries: process.env.CI ? 2 : 1,
   reporter: [["list"], ["./tests/exit-reporter.ts"]],
   webServer: [

@@ -642,6 +642,21 @@ describe("History — browser integration", () => {
       expect(location.pathname).toBe("/first");
     });
 
+    it("shouldRestoreBrowserUrlIfRouteHandlerThrowsBeforeStart", () => {
+      const router = withRouter(
+        createRouter().on("/fail", () => {
+          throw new Error("handler failed");
+        }),
+        startedRouters,
+      );
+
+      history.replaceState({ source: "initial" }, "", "/initial");
+
+      expect(() => router.navigate("/fail")).toThrow("handler failed");
+      expect(location.pathname).toBe("/initial");
+      expect(history.state).toEqual({ source: "initial" });
+    });
+
     it("shouldRestoreBrowserUrlIfStartRouteHandlerThrows", () => {
       const router = withRouter(
         createRouter().on("/fail", () => {

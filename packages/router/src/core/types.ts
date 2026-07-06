@@ -23,9 +23,10 @@ export interface NavigateOptions {
 }
 
 /**
- * Path parameters keyed by route parameter name. Captured names are own data
- * properties; use `Object.hasOwn()` for presence checks because parameter names
- * can overlap object method names.
+ * Path parameters keyed by route parameter name on a null-prototype object.
+ * Route registration rejects `__proto__`, `constructor`, and `prototype`; use
+ * `Object.hasOwn()` for presence checks because parameter names can still
+ * overlap object method names.
  */
 export type RouteParams = Record<string, string>;
 

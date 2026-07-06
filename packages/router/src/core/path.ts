@@ -77,6 +77,12 @@ export function hasDotPathSegments(value: string): boolean {
   return false;
 }
 
+function hasConsecutiveSlashesInPathname(value: string): boolean {
+  const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
+  const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);
+  return pathname.includes("//");
+}
+
 /** @internal */
 export function normalizeBasePath(basePath = ""): string {
   if (basePath === "" || basePath === "/") {
@@ -152,6 +158,9 @@ export function parseLocationPath(currentLocation: Location, basePath: string): 
   const browserPathname = stripTrailingSlash(normalizePercentEscapes(currentLocation.pathname || "/"));
   const appPathname = stripBasePath(browserPathname, basePath);
   if (appPathname === null) {
+    return null;
+  }
+  if (hasConsecutiveSlashesInPathname(appPathname)) {
     return null;
   }
   if (hasDotPathSegments(appPathname)) {
@@ -241,7 +250,7 @@ function assertAppPath(to: string): void {
   if (to.length === 0 || !to.startsWith("/") || to.startsWith("//")) {
     throw new Error("Router navigation targets must be app-local paths starting with a slash.");
   }
-  if (to.includes("//")) {
+  if (hasConsecutiveSlashesInPathname(to)) {
     throw new Error("Router navigation targets must not include consecutive slashes.");
   }
   if (to.includes("\\")) {

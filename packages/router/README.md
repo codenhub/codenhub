@@ -136,8 +136,9 @@ pathname.
 
 `on()` throws `Error` when the path is empty, does not start with `/`, starts
 with `//`, contains backslashes, `.`/`..` path segments, a query string,
-hash, empty path parameter name, duplicate path parameter name, or if a
-structurally equivalent route pattern (differing only in parameter names) is already registered.
+hash, empty path parameter name, disallowed path parameter name, duplicate path
+parameter name, or if a structurally equivalent route pattern (differing only
+in parameter names) is already registered.
 
 ##### `notFound()`
 
@@ -326,9 +327,10 @@ Path parameters from a route match.
 type RouteParams = Record<string, string>;
 ```
 
-`RouteParams` is an ordinary object. Special parameter names such as
-`__proto__` are captured as own data properties. Because route parameter names
-can overlap object method names, use `Object.hasOwn(params, name)` instead of
+`RouteParams` is a null-prototype object. Special parameter names that can
+overlap prototype behavior, such as `__proto__`, `constructor`, and `prototype`,
+are rejected during route registration. Because route parameter names can still
+overlap object method names, use `Object.hasOwn(params, name)` instead of
 `params.hasOwnProperty(name)` for presence checks.
 
 #### `RouterListener`

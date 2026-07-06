@@ -15,6 +15,25 @@ const stateSearch = document.getElementById("state-search")!;
 const stateHash = document.getElementById("state-hash")!;
 const stateMiss = document.getElementById("state-miss")!;
 
+function setViewParagraph(...children: (Node | string)[]) {
+  const paragraph = document.createElement("p");
+  paragraph.append(...children);
+  viewContent.replaceChildren(paragraph);
+}
+
+function strongText(id: string, text: string) {
+  const strong = document.createElement("strong");
+  strong.id = id;
+  strong.textContent = text;
+  return strong;
+}
+
+function codeText(text: string) {
+  const code = document.createElement("code");
+  code.textContent = text;
+  return code;
+}
+
 function updateInspector(match: RouterMatch | RouterMiss, isMiss = false) {
   if (isMiss) {
     statePath.textContent = "None";
@@ -39,29 +58,29 @@ router
   .on("/", (match) => {
     updateInspector(match);
     viewTitle.textContent = "Home Page";
-    viewContent.innerHTML = "<p>Welcome to the router playground! This is a simple, minimalist demo.</p>";
+    setViewParagraph("Welcome to the router playground! This is a simple, minimalist demo.");
   })
   .on("/about", (match) => {
     updateInspector(match);
     viewTitle.textContent = "About Page";
-    viewContent.innerHTML = "<p>This is the about page. Testing route matching, static paths.</p>";
+    setViewParagraph("This is the about page. Testing route matching, static paths.");
   })
   .on("/users/:id", (match) => {
     updateInspector(match);
     const userId = match.params.id;
     viewTitle.textContent = "User Profile";
-    viewContent.innerHTML = `<p>Viewing user profile for ID: <strong id="username-display">${userId}</strong>.</p>`;
+    setViewParagraph("Viewing user profile for ID: ", strongText("username-display", userId), ".");
   })
   .on("/settings", (match) => {
     updateInspector(match);
     const tab = match.searchParams.get("tab") || "general";
     viewTitle.textContent = "Settings";
-    viewContent.innerHTML = `<p>Active settings tab: <strong id="settings-tab-display">${tab}</strong>.</p>`;
+    setViewParagraph("Active settings tab: ", strongText("settings-tab-display", tab), ".");
   })
   .notFound((miss) => {
     updateInspector(miss, true);
     viewTitle.textContent = "404 - Not Found";
-    viewContent.innerHTML = `<p>No route found for <code>${miss.pathname}</code>.</p>`;
+    setViewParagraph("No route found for ", codeText(miss.pathname), ".");
   });
 
 // Programmatic navigation buttons
