@@ -194,6 +194,11 @@ const greeting = i18n.translate("home.welcome.greeting") ?? "Welcome!";
 - Browser environment supporting `EventTarget`, `WeakMap`, `localStorage`, and `fetch`.
 - Node/SSR: If run server-side (where `document`/`navigator` is undefined), `init()` completes gracefully without translating or throwing.
 
+## Notes
+
+- **SSR State Pollution**: The global i18n instance (`setI18nInstance`/`getI18nInstance`) is shared across all concurrent requests in Node/SSR. Do not use global instances in multi-tenant server environments to avoid state leakages. Instead, manage request-scoped instances.
+- **SSR Translation Limitation**: Server-side translation is not executed as `document` is missing. The client-side will initialize and translate once the document loads.
+
 ## License
 
 This project is licensed under the [Apache-2.0](LICENSE) license.

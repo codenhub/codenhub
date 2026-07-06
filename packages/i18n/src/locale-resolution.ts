@@ -34,14 +34,16 @@ const detectBrowserLocale = <TLocale extends string>(config: I18nConfig<TLocale>
       continue;
     }
 
-    const match = config.locales.find((locale) => {
-      const normalizedLocale = locale.toLowerCase();
+    const exactSubtagMatch = config.locales.find((locale) => locale.toLowerCase() === subtag);
 
-      return normalizedLocale === subtag || normalizedLocale.startsWith(`${subtag}-`);
-    });
+    if (exactSubtagMatch !== undefined) {
+      return exactSubtagMatch;
+    }
 
-    if (match !== undefined) {
-      return match;
+    const prefixMatch = config.locales.find((locale) => locale.toLowerCase().startsWith(`${subtag}-`));
+
+    if (prefixMatch !== undefined) {
+      return prefixMatch;
     }
   }
 
@@ -103,6 +105,15 @@ export const resolveLocaleState = async <TLocale extends string>({
   loader,
   requestedLocale,
 }: ResolveLocaleStateOptions<TLocale>): Promise<ResolvedLocaleState<TLocale>> => {
+  if (typeof window === "undefined") {
+    return {
+      locale: requestedLocale,
+      dictionary: createEmptyDictionary(),
+      isRequestedLocaleLoaded: false,
+      isAppliedLocaleLoaded: false,
+    };
+  }
+
   const requestedDictionary = await loader.loadLocale(requestedLocale);
 
   if (requestedDictionary !== undefined) {

@@ -761,4 +761,58 @@ describe("I18n", () => {
     expect(i18n.locale).toBe("en-US");
     expect(document.querySelector("p")?.textContent).toBe("Learn more");
   });
+
+  it("should prioritize exact subtag matches over prefix matches in browser locale resolution", async () => {
+    stubNavigatorLanguages(["en-GB"]);
+    // Configure locales such that "en-US" appears first, but "en" also exists.
+    const customConfig: I18nConfig<"en-US" | "en"> = {
+      defaultLocale: "en-US",
+      locales: ["en-US", "en"],
+      getLocaleFile: (locale) => `/locales/${locale}.json`,
+      getLocaleDirection: () => "ltr",
+      isLocale: (value: string): value is "en-US" | "en" => ["en-US", "en"].includes(value),
+    };
+    const customI18n = createI18n(customConfig);
+    // Stub fetch for the resolved locale "en"
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            json: async () => ({ key: "value" }),
+          }) as Response,
+      ),
+    );
+
+    await customI18n.init();
+    expect(customI18n.locale).toBe("en");
+  });
+
+  it("should reject arrays in isPersistedLocaleState validation check", async () => {
+    localStorage.setItem("i18n", JSON.stringify([]));
+    await i18n.init();
+    // Invalid state (array) should fall back to default locale
+    expect(i18n.locale).toBe("en-US");
+  });
+
+  it("should complete gracefully and immediately on server-side rendering when window is undefined", async () => {
+    const originalWindow = globalThis.window;
+    // @ts-expect-error - testing SSR scenario where window is undefined
+    delete globalThis.window;
+
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const ssrI18n = createI18n(i18nConfig);
+    await ssrI18n.init();
+
+    expect(ssrI18n.isReady).toBe(true);
+    expect(ssrI18n.locale).toBe("en-US");
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    // Restore window
+    globalThis.window = originalWindow;
+  });
 });

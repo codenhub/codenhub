@@ -33,7 +33,7 @@ const isPersistedLocaleState = <TLocale extends string>(
   config: I18nConfig<TLocale>,
   raw: unknown,
 ): raw is PersistedLocaleState => {
-  if (typeof raw !== "object" || raw === null) {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return false;
   }
 
