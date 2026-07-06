@@ -228,9 +228,11 @@
   border: var(--border-width) solid transparent;
 
   &::after {
-    @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply absolute size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     content: "";
+    top: 1px;
+    left: 1px;
   }
 
   &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
