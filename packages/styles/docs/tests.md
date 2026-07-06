@@ -43,12 +43,12 @@ Shared manual and automated preview page. Contains:
 ## `dev/`
 
 Vite application running against live package source CSS in `src/` for fast iteration.
-Starts on http://localhost:5173.
+Starts on http://localhost:5183.
 
 ## `debug/`
 
 Vite application running against built package CSS in `dist/` for pre-ship debugging.
-Starts on http://localhost:5174.
+Starts on http://localhost:5184.
 
 ## `tests/`
 

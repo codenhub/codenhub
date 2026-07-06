@@ -29,6 +29,8 @@
     "./tw/feedback": "./src/components/feedback.css",
     "./tw/loader": "./src/components/loader.css",
     "./tw/tooltip": "./src/components/tooltip.css",
+    "./tw/overrides": "./src/overrides.css",
+    "./tw/typography": "./src/typography.css",
     "./tw/utilities": "./src/utilities.css"
   },
   "publishConfig": {

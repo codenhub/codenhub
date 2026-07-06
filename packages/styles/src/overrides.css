@@ -3,6 +3,11 @@
 @import "./typography.css";
 
 @layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--color-background);
+  }
+
   ::-webkit-scrollbar {
     width: calc(var(--spacing) * 4);
   }

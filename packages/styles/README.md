@@ -29,14 +29,10 @@ Use compiled CSS when the app does not process this package through Tailwind.
 ```
 
 ```html
-<main class="sect">
-  <section class="sect-container stack">
-    <article class="card">
-      <p class="text-label">Status</p>
-      <h1 class="text-title">Ready to publish</h1>
-      <button class="btn primary">Continue</button>
-    </article>
-  </section>
+<main class="stack">
+  <p class="text-label">Status</p>
+  <h1 class="text-title">Ready to publish</h1>
+  <button class="btn primary">Continue</button>
 </main>
 ```
 
