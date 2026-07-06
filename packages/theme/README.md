@@ -57,11 +57,15 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
         }
       } catch (_) {}
       document.documentElement.setAttribute(attribute, theme);
-      document.documentElement.style.colorScheme = theme === "dark" ? "dark" : "light";
+
+      // Determine if active theme is dark to set color-scheme and Tailwind classes
+      // If using custom theme names, adjust this check to match your dark themes
+      const isDark = theme === "dark" || theme.includes("dark");
+      document.documentElement.style.colorScheme = isDark ? "dark" : "light";
       document.documentElement.classList.add("theme-" + theme);
 
       // If using Tailwind CSS, also toggle "dark" class:
-      // document.documentElement.classList.toggle("dark", theme === "dark");
+      // document.documentElement.classList.toggle("dark", isDark);
     } catch (_) {}
   })();
 </script>
@@ -158,7 +162,7 @@ Throws `Error` when `name` is not configured.
 
 ##### `toggle()`
 
-Toggles between the configured system light and dark theme names, applies any dynamic token overrides, then stores the explicit preference when browser storage is available. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
+Toggles between the configured system light and dark themes based on the active theme's color scheme, applies any dynamic token overrides, then stores the explicit preference when browser storage is available. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
 
 ```ts
 function toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;

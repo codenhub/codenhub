@@ -1,6 +1,6 @@
 import { createTheme } from "@codenhub/theme";
 
-const themeManager = createTheme({ isTailwindcss: true });
+const themeManager = createTheme({ isTailwindCss: true });
 
 export const THEME_CHANGE_EVENT = "themechange";
 

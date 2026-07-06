@@ -106,9 +106,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
     const nextName =
-      this.get().name === this.#options.systemTheme.dark
-        ? this.#options.systemTheme.light
-        : this.#options.systemTheme.dark;
+      this.get().colorScheme === "dark" ? this.#options.systemTheme.light : this.#options.systemTheme.dark;
     return this.#activate(nextName, { source: "toggle", shouldStore: true, tokens });
   }
 
