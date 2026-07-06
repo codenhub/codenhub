@@ -119,8 +119,6 @@
 
   &.icon {
     @apply aspect-square min-w-(--control-height,2.5rem) p-2;
-
-    aspect-ratio: 1;
   }
 
   &.pill {

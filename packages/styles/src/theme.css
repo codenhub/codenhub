@@ -133,4 +133,53 @@
   --color-info-strong: var(--color-indigo-100);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+
+    --color-primary: var(--color-neutral-50);
+    --color-primary-contrast: var(--color-neutral-950);
+    --color-primary-hover: var(--color-neutral-200);
+    --color-primary-subtle: var(--color-neutral-900);
+    --color-primary-strong: var(--color-neutral-100);
+    --color-accent: var(--color-neutral-400);
+    --color-accent-contrast: var(--color-neutral-950);
+    --color-accent-hover: var(--color-neutral-300);
+    --color-accent-subtle: var(--color-neutral-800);
+    --color-accent-strong: var(--color-neutral-200);
+    --color-border: var(--color-neutral-700);
+    --color-border-hover: var(--color-neutral-500);
+    --color-background: var(--color-neutral-950);
+    --color-foreground: var(--color-neutral-900);
+    --color-surface: var(--color-neutral-800);
+    --color-text: var(--color-neutral-50);
+    --color-text-secondary: var(--color-neutral-400);
+    --color-text-contrast: var(--color-neutral-950);
+    --color-text-hover: var(--color-neutral-200);
+    --color-text-subtle: var(--color-neutral-900);
+    --color-text-strong: var(--color-neutral-100);
+
+    --color-success: var(--color-emerald-600);
+    --color-success-contrast: var(--color-neutral-50);
+    --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
+    --color-success-subtle: var(--color-emerald-800);
+    --color-success-strong: var(--color-emerald-100);
+    --color-warning: var(--color-amber-600);
+    --color-warning-contrast: var(--color-neutral-50);
+    --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
+    --color-warning-subtle: var(--color-amber-800);
+    --color-warning-strong: var(--color-amber-100);
+    --color-destructive: var(--color-rose-700);
+    --color-destructive-contrast: var(--color-neutral-50);
+    --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
+    --color-destructive-subtle: var(--color-rose-800);
+    --color-destructive-strong: var(--color-rose-100);
+    --color-info: var(--color-indigo-600);
+    --color-info-contrast: var(--color-neutral-50);
+    --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
+    --color-info-subtle: var(--color-indigo-800);
+    --color-info-strong: var(--color-indigo-100);
+  }
+}
+
 @custom-variant dark (&:where(.dark, .dark *));

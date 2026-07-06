@@ -75,6 +75,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--layout-stack-gap`        | Default vertical stack gap.                                                  |
 | `--layout-cluster-gap`      | Default horizontal/wrapped cluster gap.                                      |
 | `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
+| `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
 | `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
 | `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
 | `--control-height`          | Default minimum height for controls.                                         |

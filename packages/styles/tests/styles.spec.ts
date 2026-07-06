@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-const vanillaPreviewUrl = "http://localhost:5184/?env=vanilla";
-const tailwindBuildUrl = "http://localhost:5184/?env=build";
+const VANILLA_PREVIEW_URL = "http://localhost:5184/?env=vanilla";
+const TAILWIND_BUILD_URL = "http://localhost:5184/?env=build";
 
 interface LinearColor {
   blue: number;
@@ -14,7 +14,7 @@ interface ButtonIntentToken {
   tokenName: string;
 }
 
-const buttonIntentTokens = [
+const BUTTON_INTENT_TOKENS = [
   { className: "primary", tokenName: "primary" },
   { className: "secondary", tokenName: "accent" },
   { className: "success", tokenName: "success" },
@@ -96,7 +96,7 @@ const getContrastRatio = (foreground: string, background: string) => {
 
 test.describe("compiled CSS preview", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     await expect(page.getByTestId("preview-root")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Typography" })).toBeVisible();
@@ -117,7 +117,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("exposes foundation tokens", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const tokenValues = await page.evaluate(() => {
       const styles = getComputedStyle(document.documentElement);
@@ -143,7 +143,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("exposes semantic hover color tokens", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const tokenValues = await page.evaluate(() => {
       const styles = getComputedStyle(document.documentElement);
@@ -163,7 +163,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("does not expose legacy root tokens", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const tokenValues = await page.evaluate(() => {
       const styles = getComputedStyle(document.documentElement);
@@ -181,7 +181,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("keeps filled semantic button text readable", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const buttonColors = await page.evaluate(() =>
       [
@@ -205,7 +205,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("composes button intent classes with presentation classes", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const styles = await page.evaluate(() => {
       const successButton = document.querySelector('[data-testid="success-button"]');
@@ -309,7 +309,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses intent tone slots for button presentation classes", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const buttonPresentationStyles = await page.evaluate((intents) => {
       const resolveTokenColor = ({ host, tokenName }: { host: Element; tokenName: string }) => {
@@ -386,7 +386,7 @@ test.describe("compiled CSS preview", () => {
       darkHost.remove();
 
       return styles;
-    }, buttonIntentTokens);
+    }, BUTTON_INTENT_TOKENS);
 
     for (const styles of buttonPresentationStyles) {
       const label = `${styles.theme} ${styles.intent}`;
@@ -400,7 +400,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses contrast text on filled outline hover", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const successContrast = await page.evaluate(() => {
       const probe = document.createElement("span");
@@ -421,7 +421,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("styles layout, form, and feedback helper classes", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const styles = await page.evaluate(() => {
       const layoutSection = document.querySelector('[data-testid="layout-section"]');
@@ -500,7 +500,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     // Flat info alert
     const flatInfoStyles = await page.getByTestId("flat-info-alert").evaluate((element) => {
@@ -544,7 +544,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders flat and soft badge variants with correct styles", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     // Flat badge: background = intent color, border = intent color (non-transparent)
     const flatBadgeStyles = await page.getByTestId("badge-flat-info").evaluate((element) => {
@@ -622,7 +622,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const tooltipStyles = await page.getByTestId("fallback-tooltip").evaluate((element) => {
       const styles = getComputedStyle(element, "::after");
@@ -640,7 +640,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("applies intent classes to checkbox, switch, and progress bar", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const intentStyles = await page.evaluate(() => {
       const resolveToken = (tokenName: string) => {
@@ -717,7 +717,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const checkbox = page.getByTestId("checkbox-test");
     const checkboxChecked = page.getByTestId("checkbox-checked-test");
@@ -761,7 +761,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses default neutral text tokens when no semantic intent is specified", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
 
     const values = await page.evaluate(() => {
       const resolveToken = (tokenName: string) => {
@@ -811,14 +811,14 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
     await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See build");
-    await page.goto(tailwindBuildUrl);
+    await page.goto(TAILWIND_BUILD_URL);
     await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
   });
 
   test("switches between preview environments from the environment toggle", async ({ page }) => {
-    await page.goto(vanillaPreviewUrl);
+    await page.goto(VANILLA_PREVIEW_URL);
     await page.getByTestId("environment-toggle").click();
     await expect(page).toHaveURL(/env=build/);
     await expect(page.locator("html")).toHaveAttribute("data-env", "build");
@@ -830,7 +830,7 @@ test.describe("compiled CSS preview", () => {
 
 test.describe("Tailwind source build", () => {
   test("loads source build correctly and applies classes", async ({ page }) => {
-    await page.goto(tailwindBuildUrl);
+    await page.goto(TAILWIND_BUILD_URL);
     await expect(page.getByTestId("preview-root")).toBeVisible();
     await expect(page.getByTestId("primary-button")).toBeVisible();
   });

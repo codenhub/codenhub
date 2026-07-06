@@ -19,7 +19,7 @@
 }
 
 @utility ipt {
-  --control-bg: var(--color-background);
+  --control-bg: transparent;
   --control-border: var(--color-border);
   --control-border-active: var(--color-primary);
   --control-fg: var(--color-text);
@@ -56,7 +56,7 @@
 }
 
 @utility textarea {
-  --control-bg: var(--color-background);
+  --control-bg: transparent;
   --control-border: var(--color-border);
   --control-border-active: var(--color-primary);
   --control-fg: var(--color-text);
@@ -95,7 +95,7 @@
 }
 
 @utility select {
-  --control-bg: var(--color-background);
+  --control-bg: transparent;
   --control-border: var(--color-border);
   --control-border-active: var(--color-primary);
   --control-fg: var(--color-text);
@@ -137,7 +137,7 @@
   --control-color: var(--color-text);
   --control-contrast: var(--color-text-contrast);
 
-  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm bg-(--color-background) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm bg-transparent transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
   border: var(--border-width) solid var(--color-border);
 
   &:hover {

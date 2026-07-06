@@ -196,3 +196,4 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 | `.text-label`         | Default label text.                                          |
 | `.text-body`          | Default body copy.                                           |
 | `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
+| `.code`               | Inline code formatting.                                      |

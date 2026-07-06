@@ -78,3 +78,11 @@ Plans and similar temporary documents MAY live in `docs/plans/`. This directory 
 - **Where it applies:** `packages/plugins/tauri/webview/src/webview_commands.rs` and associated Rust command/module identifiers (e.g. `webview_commands`, `navigate_webview`, `reload_webview`).
 - **Why acceptable:** Companion Rust code must follow idiomatic Rust naming conventions (snake_case for files, functions, and modules) to prevent compiler warnings and maintain consistency with Tauri Rust APIs.
 - **Temporary or permanent:** Permanent.
+
+### `@codenhub/styles` — CSS-only package
+
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main`, `module`, and `types` required in `package.json`).
+- **Where it applies:** `packages/styles/`.
+- **Why acceptable:** The package is CSS-only and does not expose JavaScript or TypeScript APIs. Adding `main`, `module`, and `types` is unnecessary since there is no JS runtime or type declarations to export.
+- **Temporary or permanent:** Permanent.
+
