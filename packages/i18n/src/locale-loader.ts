@@ -36,6 +36,36 @@ export interface LocaleLoader<TLocale extends string = string> {
 }
 
 /**
+ * Recursively flattens a nested dictionary object into flat dot-separated string keys.
+ * Filters out prototype pollution keys at any depth.
+ */
+const flattenDictionary = (
+  raw: Record<string, unknown>,
+  locale: string,
+  prefix = "",
+  result: LocaleDictionary = createEmptyDictionary(),
+): LocaleDictionary => {
+  for (const [key, val] of Object.entries(raw)) {
+    if (key === "__proto__" || key === "constructor") {
+      continue;
+    }
+
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+      flattenDictionary(val as Record<string, unknown>, locale, fullKey, result);
+    } else if (typeof val !== "string") {
+      console.warn(`[I18n] Non-string value found for key "${fullKey}" in locale "${locale}". Coercing to string.`);
+      result[fullKey] = String(val);
+    } else {
+      result[fullKey] = val;
+    }
+  }
+
+  return result;
+};
+
+/**
  * Creates a locale loader instance.
  *
  * @param config - The translation configuration.
@@ -111,19 +141,7 @@ export function createLocaleLoader<TLocale extends string = string>(
             return undefined;
           }
 
-          const dictionary = createEmptyDictionary();
-
-          for (const [key, val] of Object.entries(result.body)) {
-            if (key === "__proto__" || key === "constructor") {
-              continue;
-            }
-            if (typeof val !== "string") {
-              console.warn(`[I18n] Non-string value found for key "${key}" in locale "${locale}". Coercing to string.`);
-              dictionary[key] = String(val);
-            } else {
-              dictionary[key] = val;
-            }
-          }
+          const dictionary = flattenDictionary(result.body, locale, "", createEmptyDictionary());
 
           if (Object.keys(dictionary).length === 0) {
             console.warn(`[I18n] Locale "${locale}" loaded successfully but contains no translations.`);

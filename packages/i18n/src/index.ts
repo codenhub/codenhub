@@ -284,8 +284,13 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
 /**
  * Registers the global translation manager instance.
+ * This instance will be shared and accessible globally via {@link getI18nInstance}.
  *
- * @param i18n - The translation manager instance, or null to clear.
+ * @param i18n - The translation manager instance, or null to clear the global registration.
+ *
+ * @remarks
+ * In multi-tenant server-side environments, do not use a global instance to prevent state leakage
+ * between requests. Use request-scoped instances instead.
  */
 export const setI18nInstance = (i18n: I18n<string> | null): void => {
   activeI18n = i18n;

@@ -47,7 +47,7 @@ export function createDomTranslator(): DomTranslator {
     return getClosestCustomElement(root);
   };
 
-  const belongsToCustomElementBoundary = (element: Element, boundary: Element | null): boolean => {
+  const isBelongingToCustomElementBoundary = (element: Element, boundary: Element | null): boolean => {
     return getClosestCustomElement(element) === boundary;
   };
 
@@ -112,7 +112,7 @@ export function createDomTranslator(): DomTranslator {
       const customElementBoundary = getCustomElementBoundary(root);
 
       collectTranslatableElements(root).forEach((element) => {
-        if (belongsToCustomElementBoundary(element, customElementBoundary)) {
+        if (isBelongingToCustomElementBoundary(element, customElementBoundary)) {
           translateElement(element, translate);
         }
       });

@@ -893,4 +893,48 @@ describe("I18n", () => {
     i18n.removeEventListener("ready", readySpy);
     i18n.removeEventListener("locale-change", changeSpy);
   });
+
+  it("should recursively flatten nested translation dictionaries", async () => {
+    fetchOverrides[EN_US_URL] = {
+      body: {
+        home: {
+          hero: {
+            title: "Nested Welcome Title",
+            description: "Nested description text",
+          },
+          cta: "Click me",
+        },
+        common: {
+          ok: "Okay",
+        },
+        simple: "Simple string",
+      },
+    };
+
+    await i18n.init();
+
+    expect(i18n.translate("home.hero.title")).toBe("Nested Welcome Title");
+    expect(i18n.translate("home.hero.description")).toBe("Nested description text");
+    expect(i18n.translate("home.cta")).toBe("Click me");
+    expect(i18n.translate("common.ok")).toBe("Okay");
+    expect(i18n.translate("simple")).toBe("Simple string");
+  });
+
+  it("should prevent prototype pollution in nested structures", async () => {
+    fetchOverrides[EN_US_URL] = {
+      body: {
+        home: {
+          __proto__: { polluted: "dangerous" },
+          constructor: { polluted: "dangerous" },
+          title: "Safe Title",
+        },
+      },
+    };
+
+    await i18n.init();
+
+    expect(i18n.translate("home.title")).toBe("Safe Title");
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+    expect(i18n.translate("home.__proto__.polluted")).toBeUndefined();
+  });
 });

@@ -68,11 +68,15 @@ Creates the main public `I18n` instance.
 function createI18n<TLocale extends string = string>(config: I18nConfig<TLocale>): I18n<TLocale>;
 ```
 
-| Parameter | Type                  | Description                     |
-| --------- | --------------------- | ------------------------------- |
-| `config`  | `I18nConfig<TLocale>` | Configuration for i18n manager. |
+| Parameter | Type                  | Description                               |
+| --------- | --------------------- | ----------------------------------------- |
+| `config`  | `I18nConfig<TLocale>` | Static configuration for the translation. |
 
-Returns `I18n<TLocale>`.
+##### Returns
+
+`I18n<TLocale>` - The created translation manager instance.
+
+---
 
 #### `I18n`
 
@@ -99,15 +103,48 @@ interface I18n<TLocale extends string = string> {
 }
 ```
 
-- `locale`: The currently active locale.
-- `isReady`: Whether initialization has finished.
-- `init(options)`: Initializes storage, checks locale preferences, loads translations, and translates the DOM.
-- `setLocale(locale)`: Switches the current locale, fetching translations if necessary, and re-translating the DOM. Emits a `locale-change` event on success.
-- `translate(key)`: Returns the translated string for `key` or `undefined` if missing.
+##### Properties
+
+- `locale`: The currently active locale string.
+- `isReady`: True if `init()` has completed, false otherwise.
+
+##### `init(options)`
+
+Initializes state, resolves the active locale, fetches matching translations (recursively flattening nested keys), and translates the DOM.
+
+- **Parameters**: `options?: I18nInitOptions`
+- **Returns**: `Promise<void>`
+- **Observable Failure Behavior**: If the resolved locale fails to load, it attempts to load `defaultLocale`. If that also fails, initialization completes but `hasTranslationsAvailable` is emitted as false. If run in a server-side (Node) environment, resolves immediately without loading or translating.
+
+##### `setLocale(locale)`
+
+Switches the active locale, fetches translations if needed, synchronizes document `lang`/`dir`, re-translates the DOM, and fires a `locale-change` event.
+
+- **Parameters**: `locale: string`
+- **Returns**: `Promise<boolean>` - True if the requested locale loaded successfully, false if validation/fetch failed (causing a fallback to `defaultLocale` or retaining the active locale).
+- **Observable Failure Behavior**: Returns false immediately if the locale is invalid. If fetching fails, falls back to `defaultLocale`. If that also fails, it retains the previously active locale.
+
+##### `translate(key)`
+
+Translates the given key using the active locale's loaded dictionary. Supports dot-notation (e.g. `home.hero.title`) for resolving nested structures.
+
+- **Parameters**: `key: string`
+- **Returns**: `string | undefined` - The translated string, or undefined if the key is missing or invalid.
+- **Observable Failure Behavior**: Returns `undefined` and logs a warning on missing keys (warns once per key per locale) or if called before `init()`, unless silenced by `silent`.
+
+##### Event Listeners
+
+Add or remove event listeners for `ready` and `locale-change` custom events.
+
+- `addEventListener(type, callback, options)`
+- `removeEventListener(type, callback, options)`
+- `dispatchEvent(event)`
+
+---
 
 #### `I18nConfig`
 
-Configuration structure for creating an `I18n` instance.
+Configuration structure passed to `createI18n()`.
 
 ```ts
 interface I18nConfig<TLocale extends string = string> {
@@ -116,52 +153,88 @@ interface I18nConfig<TLocale extends string = string> {
   getLocaleFile(locale: TLocale): string;
   getLocaleDirection(locale: TLocale): LocaleDirection;
   isLocale(value: string): value is TLocale;
+  silent?: boolean;
 }
 ```
+
+| Property             | Type                                   | Default | Description                                                  |
+| -------------------- | -------------------------------------- | ------- | ------------------------------------------------------------ |
+| `defaultLocale`      | `TLocale`                              | None    | Fallback locale when translations fail to load.              |
+| `locales`            | `readonly TLocale[]`                   | None    | List of all supported locale strings.                        |
+| `getLocaleFile`      | `(locale: TLocale) => string`          | None    | Callback returning path or URL to translation JSON.          |
+| `getLocaleDirection` | `(locale: TLocale) => LocaleDirection` | None    | Callback returning text direction (`ltr` or `rtl`).          |
+| `isLocale`           | `(value: string) => value is TLocale`  | None    | Type guard validating if a string is a supported locale.     |
+| `silent`             | `boolean`                              | `false` | If true, silences missing key and pre-init console warnings. |
+
+---
 
 #### `I18nInitOptions`
 
-Options for `i18n.init()`.
+Optional initialization parameters passed to `i18n.init()`.
 
 ```ts
 interface I18nInitOptions {
-  storageKey?: string; // Key used for localStorage persistence. Defaults to "i18n".
-  root?: ParentNode; // DOM subtree to translate. Defaults to document.
+  storageKey?: string;
+  root?: ParentNode;
+  silent?: boolean;
 }
 ```
 
+| Property     | Type         | Default         | Description                                                    |
+| ------------ | ------------ | --------------- | -------------------------------------------------------------- |
+| `storageKey` | `string`     | `"i18n"`        | LocalStorage key used to persist the user's locale choice.     |
+| `root`       | `ParentNode` | `document`      | DOM subtree to automatically scan and translate.               |
+| `silent`     | `boolean`    | `config.silent` | If true, overrides config setting to silence console warnings. |
+
+---
+
 #### Global Instances
 
-For convenience, you can store and retrieve a global i18n instance:
+Helpers to register and fetch a single shared translation manager.
 
-- `setI18nInstance(instance: I18n | null): void`
-- `getI18nInstance(): I18n` (throws an error if no instance has been set)
+##### `setI18nInstance(instance)`
+
+Registers a global `I18n` instance.
+
+- **Parameters**: `instance: I18n<string> | null`
+- **Returns**: `void`
+
+##### `getI18nInstance()`
+
+Retrieves the registered global `I18n` instance.
+
+- **Returns**: `I18n<string>`
+- **Observable Failure Behavior**: Throws an `Error` if no active instance has been registered.
+
+---
 
 ### Events
 
-`I18n` instances are `EventTarget`s and emit these custom events:
+`I18n` instances are `EventTarget`s and emit custom events:
 
 #### `ready`
 
 Emitted when `init()` completes successfully.
 
-```ts
-interface I18nReadyEventDetail {
-  locale: string;
-  hasTranslationsAvailable: boolean;
-}
-```
+- **Detail Shape**:
+  ```ts
+  interface I18nReadyEventDetail {
+    locale: string;
+    hasTranslationsAvailable: boolean;
+  }
+  ```
 
 #### `locale-change`
 
-Emitted when the locale changes successfully.
+Emitted when the active locale has successfully changed.
 
-```ts
-interface I18nLocaleChangeEventDetail {
-  locale: string;
-  previousLocale: string;
-}
-```
+- **Detail Shape**:
+  ```ts
+  interface I18nLocaleChangeEventDetail {
+    locale: string;
+    previousLocale: string;
+  }
+  ```
 
 ## Examples
 
