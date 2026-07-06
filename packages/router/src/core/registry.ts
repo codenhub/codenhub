@@ -36,6 +36,23 @@ export interface Registry {
   getFallback(): NotFoundHandler | undefined;
 }
 
+function arePatternsEquivalent(a: RoutePattern, b: RoutePattern): boolean {
+  if (a.segments.length !== b.segments.length) {
+    return false;
+  }
+  for (let i = 0; i < a.segments.length; i++) {
+    const segA = a.segments[i]!;
+    const segB = b.segments[i]!;
+    if (segA.kind !== segB.kind) {
+      return false;
+    }
+    if (segA.kind === "static" && segB.kind === "static" && segA.value !== segB.value) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /** @internal */
 export function createRegistry(): Registry {
   const routes: RegisteredRoute[] = [];
@@ -44,8 +61,8 @@ export function createRegistry(): Registry {
   return {
     add(path, handler) {
       const pattern = parseRoutePath(path);
-      if (routes.some((r) => r.pattern.path === pattern.path)) {
-        throw new Error(`Route path "${path}" is already registered.`);
+      if (routes.some((r) => arePatternsEquivalent(r.pattern, pattern))) {
+        throw new Error(`Route path "${path}" is structurally equivalent to an already registered route.`);
       }
       routes.push({ pattern, handler });
     },

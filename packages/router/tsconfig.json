@@ -4,5 +4,6 @@
     "moduleResolution": "bundler",
     "lib": ["DOM", "DOM.Iterable", "ES2022"]
   },
-  "extends": "../../tsconfig.json"
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*"]
 }

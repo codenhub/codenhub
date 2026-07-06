@@ -56,6 +56,14 @@ describe("createRegistry", () => {
       registry.add("/users/:id", vi.fn());
       expect(() => registry.add("/users/:id", vi.fn())).toThrow(Error);
     });
+
+    it("shouldRejectStructurallyEquivalentRoutePaths", () => {
+      const registry = createRegistry();
+      registry.add("/users/:id", vi.fn());
+      expect(() => registry.add("/users/:name", vi.fn())).toThrow(
+        'Route path "/users/:name" is structurally equivalent to an already registered route.',
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------

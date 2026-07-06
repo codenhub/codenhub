@@ -345,3 +345,51 @@ describe("normalizePercentEscapes", () => {
     expect(normalizePercentEscapes("/settings")).toBe("/settings");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Trailing slash and dot segment location parsing tests
+// ---------------------------------------------------------------------------
+
+describe("parseLocationPath with trailing slash and dot segments", () => {
+  function makeLocation(overrides: Partial<Location>): Location {
+    return {
+      pathname: "/",
+      search: "",
+      hash: "",
+      href: "",
+      host: "",
+      hostname: "",
+      port: "",
+      protocol: "",
+      origin: "",
+      ancestorOrigins: {} as DOMStringList,
+      assign: () => {},
+      reload: () => {},
+      replace: () => {},
+      toString: () => "",
+      ...overrides,
+    };
+  }
+
+  it("shouldStripTrailingSlashFromLocationPathname", () => {
+    const location = makeLocation({ pathname: "/app/settings/" });
+    const result = parseLocationPath(location, "/app");
+    expect(result?.pathname).toBe("/settings");
+  });
+
+  it("shouldReturnNullWhenLocationPathnameContainsDotSegments", () => {
+    const location1 = makeLocation({ pathname: "/app/admin/%2e%2e/users" });
+    const result1 = parseLocationPath(location1, "/app");
+    expect(result1).toBeNull();
+
+    const location2 = makeLocation({ pathname: "/app/admin/../users" });
+    const result2 = parseLocationPath(location2, "/app");
+    expect(result2).toBeNull();
+  });
+
+  it("shouldStripTrailingSlashInParseAppPath", () => {
+    const result = parseAppPath("/users/");
+    expect(result.pathname).toBe("/users");
+    expect(result.segments).toEqual(["users"]);
+  });
+});

@@ -36,12 +36,37 @@ export interface RoutePattern {
 }
 
 /** @internal */
+function stripTrailingSlash(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
+}
+
+/** @internal */
+export function hasDotPathSegments(value: string): boolean {
+  const pathnameEndIndex = value.search(PATHNAME_END_PATTERN);
+  const pathname = pathnameEndIndex === -1 ? value : value.slice(0, pathnameEndIndex);
+
+  for (const segment of pathname.split("/")) {
+    const normalizedSegment = segment.replace(ENCODED_DOT_PATTERN, ".");
+    if (normalizedSegment === "." || normalizedSegment === "..") {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** @internal */
 export function normalizeBasePath(basePath = ""): string {
   if (basePath === "" || basePath === "/") {
     return "";
   }
   if (!basePath.startsWith("/") || basePath.startsWith("//")) {
     throw new Error("Router basePath must start with a slash.");
+  }
+  if (basePath.endsWith("/") && basePath !== "/") {
+    throw new Error("Router basePath must not end with a slash.");
   }
   if (basePath.includes("\\")) {
     throw new Error("Router basePath must not include backslashes.");
@@ -94,9 +119,12 @@ export function parseAppPath(to: string): ParsedPath {
 
 /** @internal */
 export function parseLocationPath(currentLocation: Location, basePath: string): ParsedPath | null {
-  const browserPathname = normalizePercentEscapes(currentLocation.pathname || "/");
+  const browserPathname = stripTrailingSlash(normalizePercentEscapes(currentLocation.pathname || "/"));
   const appPathname = stripBasePath(browserPathname, basePath);
   if (appPathname === null) {
+    return null;
+  }
+  if (hasDotPathSegments(appPathname)) {
     return null;
   }
   const search = currentLocation.search;
@@ -187,7 +215,7 @@ function assertAppPath(to: string): void {
 }
 
 function parseUrlPath(url: URL): ParsedPath {
-  const pathname = normalizePercentEscapes(url.pathname || "/");
+  const pathname = stripTrailingSlash(normalizePercentEscapes(url.pathname || "/"));
   const search = url.search;
   const hash = url.hash;
 
@@ -202,7 +230,7 @@ function parseUrlPath(url: URL): ParsedPath {
 }
 
 function toUrlPathname(pathname: string): string {
-  return normalizePercentEscapes(new URL(pathname, ROUTER_URL_BASE).pathname || "/");
+  return stripTrailingSlash(normalizePercentEscapes(new URL(pathname, ROUTER_URL_BASE).pathname || "/"));
 }
 
 /** @internal */

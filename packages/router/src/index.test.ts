@@ -324,4 +324,39 @@ describe("createRouter", () => {
     expect(removeSpy).toHaveBeenCalledWith("popstate", expect.any(Function));
     expect(docRemoveSpy).toHaveBeenCalledWith("click", expect.any(Function));
   });
+
+  it("shouldNormalizeTrailingSlashesOnRouteRegistrationAndNavigate", () => {
+    const handler = vi.fn();
+    const router = createRouter().on("/users", handler);
+
+    const match1 = router.navigate("/users/");
+    expect(match1).not.toBeNull();
+    expect(match1?.pathname).toBe("/users");
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    const router2 = createRouter().on("/posts/", handler);
+    const match2 = router2.navigate("/posts");
+    expect(match2).not.toBeNull();
+    expect(match2?.pathname).toBe("/posts");
+  });
+
+  it("shouldTreatDotSegmentsInBrowserLocationAsNotFoundMiss", () => {
+    const handler = vi.fn();
+    const fallback = vi.fn();
+    const router = trackStartedRouter(createRouter().on("/users/:id", handler).notFound(fallback));
+
+    // Mock window.location since JSDOM/URL parses and resolves %2e%2e automatically
+    const mockLocation = {
+      pathname: "/users/%2e%2e",
+      search: "",
+      hash: "",
+    };
+    vi.spyOn(window, "location", "get").mockReturnValue(mockLocation as unknown as Location);
+
+    const match = router.start();
+
+    expect(match).toBeNull();
+    expect(handler).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/users/%2E%2E" }));
+  });
 });
