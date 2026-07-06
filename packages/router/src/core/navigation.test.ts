@@ -350,5 +350,29 @@ describe("createNavigation", () => {
       nav.run(parseAppPath("/home"));
       expect(listener).not.toHaveBeenCalled();
     });
+
+    it("shouldThrowErrorWhenSyncRedirectLimitIsExceeded", () => {
+      const { registry, nav } = makeNav();
+
+      registry.add("/loop-a", () => {
+        nav.enqueue(parseAppPath("/loop-b"));
+      });
+      registry.add("/loop-b", () => {
+        nav.enqueue(parseAppPath("/loop-a"));
+      });
+
+      expect(() => nav.run(parseAppPath("/loop-a"))).toThrow("Max redirect limit exceeded.");
+    });
+
+    it("shouldThrowErrorWhenSubscriberRedirectLimitIsExceeded", () => {
+      const { registry, nav } = makeNav();
+
+      registry.add("/home", vi.fn());
+      nav.subscribe(() => {
+        nav.enqueue(parseAppPath("/home"));
+      });
+
+      expect(() => nav.run(parseAppPath("/home"))).toThrow("Max redirect limit exceeded.");
+    });
   });
 });

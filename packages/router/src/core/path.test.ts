@@ -123,6 +123,14 @@ describe("parseRoutePath", () => {
     expect(() => parseRoutePath("/teams/:id/users/:id")).toThrow("Route path parameters must use unique names.");
   });
 
+  it("shouldRejectDisallowedParameterNames", () => {
+    expect(() => parseRoutePath("/users/:__proto__")).toThrow('Route path parameter name "__proto__" is not allowed.');
+    expect(() => parseRoutePath("/users/:constructor")).toThrow(
+      'Route path parameter name "constructor" is not allowed.',
+    );
+    expect(() => parseRoutePath("/users/:prototype")).toThrow('Route path parameter name "prototype" is not allowed.');
+  });
+
   it("shouldRejectDotSegmentsInRoutePaths", () => {
     expect(() => parseRoutePath("/admin/../users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseRoutePath("/admin/./users")).toThrow('must not include "." or ".." path segments.');
@@ -276,14 +284,6 @@ describe("matchRoute", () => {
     const pattern = parseRoutePath("/users/:id");
     const target = parseAppPath("/users/%E0%A4%A");
     expect(matchRoute(pattern, target)).toBeNull();
-  });
-
-  it("shouldSetPrototypePollutingParameterNamesAsSafeOwnProperties", () => {
-    const pattern = parseRoutePath("/users/:__proto__");
-    const target = parseAppPath("/users/alice");
-    const params = matchRoute(pattern, target);
-    expect(Object.hasOwn(params ?? {}, "__proto__")).toBe(true);
-    expect(params?.["__proto__"]).toBe("alice");
   });
 
   it("shouldKeepParamsAsPlainObjectsWithNullPrototype", () => {

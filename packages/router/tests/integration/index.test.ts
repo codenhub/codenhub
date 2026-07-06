@@ -178,13 +178,10 @@ describe("createRouter", () => {
   // Prototype safety
   // ---------------------------------------------------------------------------
 
-  it("shouldCaptureParameterNamesThatOverlapObjectPrototypeFields", () => {
-    const router = createRouter().on("/users/:__proto__", vi.fn());
-
-    const match = router.navigate("/users/alice");
-
-    expect(match?.params["__proto__"]).toBe("alice");
-    expect(Object.hasOwn(match?.params ?? {}, "__proto__")).toBe(true);
+  it("shouldRejectDisallowedParameterNames", () => {
+    expect(() => createRouter().on("/users/:__proto__", vi.fn())).toThrow(
+      'Route path parameter name "__proto__" is not allowed.',
+    );
   });
 
   it("shouldReturnRouteParamsAsOrdinaryObjects", () => {

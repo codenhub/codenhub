@@ -178,6 +178,21 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     // consistently with programmatic navigation calls.
     navigateFn(to);
   }
+  function cleanup(): void {
+    const browserWindow = getBrowserWindow();
+    if (browserWindow !== null && isStarted) {
+      browserWindow.removeEventListener("popstate", handlePopState);
+      if (shouldInterceptLinks) {
+        browserWindow.document.removeEventListener("click", handleLinkClick);
+      }
+    }
+    if (unsubscribe !== null) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+    isStarted = false;
+    nav.reset();
+  }
 
   return {
     start() {
@@ -216,6 +231,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       try {
         nav.runFromHistory({ target, miss });
       } catch (error) {
+        cleanup();
         restoreHistory();
         throw error;
       }
@@ -228,19 +244,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     },
 
     destroy() {
-      const browserWindow = getBrowserWindow();
-      if (browserWindow !== null && isStarted) {
-        browserWindow.removeEventListener("popstate", handlePopState);
-        if (shouldInterceptLinks) {
-          browserWindow.document.removeEventListener("click", handleLinkClick);
-        }
-      }
-      if (unsubscribe !== null) {
-        unsubscribe();
-        unsubscribe = null;
-      }
-      isStarted = false;
-      nav.reset();
+      cleanup();
     },
   };
 }

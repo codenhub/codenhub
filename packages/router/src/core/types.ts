@@ -82,7 +82,7 @@ export interface Router {
    * @param path - The route path pattern to match, e.g., `/users/:id`.
    * @param handler - Callback called when the route matches and becomes active.
    * @returns The router instance.
-   * @throws {Error} If the route path is empty, invalid, or contains dot segments.
+   * @throws {Error} If the route path is empty, invalid, contains dot segments, or contains disallowed parameter names.
    */
   on(path: string, handler: RouteHandler): Router;
 

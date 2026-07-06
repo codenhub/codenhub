@@ -96,6 +96,9 @@ export function parseRoutePath(path: string): RoutePattern {
     if (name.length === 0) {
       throw new Error("Route path parameters must have a name.");
     }
+    if (name === "__proto__" || name === "constructor" || name === "prototype") {
+      throw new Error(`Route path parameter name "${name}" is not allowed.`);
+    }
     if (paramNames.has(name)) {
       throw new Error("Route path parameters must use unique names.");
     }

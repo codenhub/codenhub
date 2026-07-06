@@ -116,6 +116,19 @@ describe("History — browser integration", () => {
 
       expect(handler).toHaveBeenCalledTimes(2);
     });
+
+    it("shouldCleanupListenersAndNotBeStartedIfInitialRunThrows", () => {
+      const handler = vi.fn().mockImplementation(() => {
+        throw new Error("Initial route failed.");
+      });
+      const router = withRouter(createRouter().on("/", handler), startedRouters);
+
+      expect(() => router.start()).toThrow("Initial route failed.");
+
+      // If the router is not started, calling start() again will attempt to run the route handler again.
+      expect(() => router.start()).toThrow("Initial route failed.");
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("navigate — browser history writes", () => {

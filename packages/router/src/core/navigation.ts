@@ -3,6 +3,8 @@ import type { Registry } from "./registry";
 import type { RouterListener, RouterMatch, RouterMiss } from "./types";
 
 const REENTRANT_NAVIGATION_ERROR = "Router navigation is already running.";
+const MAX_REDIRECT_LIMIT_ERROR = "Max redirect limit exceeded.";
+const MAX_REDIRECTS = 20;
 
 interface PendingNavigation {
   target: ParsedPath | null;
@@ -87,6 +89,7 @@ export function createNavigation(registry: Registry): Navigation {
     try {
       let currentTarget: ParsedPath | null = initialTarget;
       let currentMiss: RouterMiss | undefined = initialMiss;
+      let redirectCount = 0;
 
       // Outer loop: continues running until all navigations are fully processed.
       // This includes any new navigations enqueued by subscribers during the `notify()` phase below.
@@ -96,6 +99,11 @@ export function createNavigation(registry: Registry): Navigation {
         // Inner loop: processes the current navigation path and any nested redirections
         // queued synchronously by route handlers.
         while (currentTarget !== null || currentMiss !== undefined) {
+          if (redirectCount >= MAX_REDIRECTS) {
+            throw new Error(MAX_REDIRECT_LIMIT_ERROR);
+          }
+          redirectCount++;
+
           if (currentTarget !== null) {
             const result = registry.findMatch(currentTarget);
 

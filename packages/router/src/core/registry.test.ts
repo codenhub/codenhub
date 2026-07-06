@@ -168,13 +168,11 @@ describe("createRegistry", () => {
       expect(Object.getPrototypeOf(result?.match.params)).toBeNull();
     });
 
-    it("shouldCapturePrototypePollutingParameterNamesAsSafeOwnProperties", () => {
+    it("shouldRejectDisallowedParameterNames", () => {
       const registry = createRegistry();
-      registry.add("/users/:__proto__", vi.fn());
-
-      const result = registry.findMatch(parseAppPath("/users/alice"));
-      expect(Object.hasOwn(result?.match.params ?? {}, "__proto__")).toBe(true);
-      expect(result?.match.params["__proto__"]).toBe("alice");
+      expect(() => registry.add("/users/:__proto__", vi.fn())).toThrow(
+        'Route path parameter name "__proto__" is not allowed.',
+      );
     });
   });
 });
