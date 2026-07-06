@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildBrowserHref,
@@ -405,5 +405,19 @@ describe("parseLocationPath with trailing slash and dot segments", () => {
     const result = parseAppPath("/users/");
     expect(result.pathname).toBe("/users");
     expect(result.segments).toEqual(["users"]);
+  });
+});
+
+describe("decodeRouteParam error handling", () => {
+  it("shouldThrowGenericErrorsFromDecodeURIComponent", () => {
+    const spy = vi.spyOn(globalThis, "decodeURIComponent").mockImplementationOnce(() => {
+      throw new Error("Custom decode error");
+    });
+
+    const pattern = parseRoutePath("/users/:id");
+    const target = parseAppPath("/users/123");
+
+    expect(() => matchRoute(pattern, target)).toThrow("Custom decode error");
+    spy.mockRestore();
   });
 });

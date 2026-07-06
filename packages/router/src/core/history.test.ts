@@ -655,4 +655,50 @@ describe("History — browser integration", () => {
       expect(location.pathname).toBe("/first");
     });
   });
+
+  describe("active instances and link clicks", () => {
+    it("shouldWarnWhenMultipleRoutersAreStartedConcurrently", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const router1 = withRouter(createRouter(), startedRouters);
+      const router2 = withRouter(createRouter(), startedRouters);
+      router1.start();
+      router2.start();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Multiple active router instances detected"));
+      warnSpy.mockRestore();
+    });
+
+    it("shouldNotInterceptClicksWhenTargetIsNotAnElement", () => {
+      const router = withRouter(createRouter({ shouldInterceptLinks: true }), startedRouters);
+      router.start();
+
+      const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+      // target is document (which is not an Element)
+      Object.defineProperty(clickEvent, "target", {
+        value: document,
+        configurable: true,
+      });
+
+      document.dispatchEvent(clickEvent);
+      expect(clickEvent.defaultPrevented).toBe(false);
+    });
+
+    it("shouldNotInterceptClicksWhenComposedPathIsEmpty", () => {
+      const router = withRouter(createRouter({ shouldInterceptLinks: true }), startedRouters);
+      router.start();
+
+      const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+      // composedPath returns empty list, and target is document
+      Object.defineProperty(clickEvent, "composedPath", {
+        value: () => [],
+        configurable: true,
+      });
+      Object.defineProperty(clickEvent, "target", {
+        value: document,
+        configurable: true,
+      });
+
+      document.dispatchEvent(clickEvent);
+      expect(clickEvent.defaultPrevented).toBe(false);
+    });
+  });
 });

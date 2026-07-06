@@ -50,6 +50,8 @@ export interface History {
   destroy(): void;
 }
 
+let activeInstances = 0;
+
 /** @internal */
 export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn }: HistoryOptions): History {
   let isStarted = false;
@@ -181,6 +183,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
   function cleanup(): void {
     const browserWindow = getBrowserWindow();
     if (browserWindow !== null && isStarted) {
+      activeInstances = Math.max(0, activeInstances - 1);
       browserWindow.removeEventListener("popstate", handlePopState);
       if (shouldInterceptLinks) {
         browserWindow.document.removeEventListener("click", handleLinkClick);
@@ -206,6 +209,11 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       if (browserWindow === null) {
         return null;
       }
+
+      if (activeInstances > 0 && typeof console !== "undefined") {
+        console.warn("Multiple active router instances detected. Ensure previous routers are destroyed.");
+      }
+      activeInstances++;
 
       browserWindow.addEventListener("popstate", handlePopState);
       if (shouldInterceptLinks) {

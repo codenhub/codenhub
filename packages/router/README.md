@@ -135,8 +135,9 @@ literal non-ASCII characters match their equivalent percent-encoded browser
 pathname.
 
 `on()` throws `Error` when the path is empty, does not start with `/`, starts
-with `//`, or contains backslashes, `.`/`..` path segments, a query string,
-hash, empty path parameter name, or duplicate path parameter name.
+with `//`, contains backslashes, `.`/`..` path segments, a query string,
+hash, empty path parameter name, duplicate path parameter name, or if a
+structurally equivalent route pattern (differing only in parameter names) is already registered.
 
 ##### `notFound()`
 
