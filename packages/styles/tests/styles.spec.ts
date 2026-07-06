@@ -663,11 +663,11 @@ test.describe("compiled CSS preview", () => {
       };
 
       const getProgressFill = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"] > *`) as HTMLElement | null;
+        const el = document.querySelector(`[data-testid="${testId}"]`) as HTMLElement | null;
         if (!el) {
           throw new Error(`Missing fixture: ${testId}`);
         }
-        return getComputedStyle(el).backgroundColor;
+        return getComputedStyle(el, "::after").backgroundColor;
       };
 
       return {
@@ -801,8 +801,8 @@ test.describe("compiled CSS preview", () => {
       };
 
       const getProgressBg = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"] > *`);
-        return el ? getComputedStyle(el).backgroundColor : "";
+        const el = document.querySelector(`[data-testid="${testId}"]`);
+        return el ? getComputedStyle(el, "::after").backgroundColor : "";
       };
 
       return {
@@ -842,6 +842,27 @@ test.describe("compiled CSS preview", () => {
     await page.getByTestId("environment-toggle").click();
     await expect(page).toHaveURL(/env=vanilla/);
     await expect(page.locator("html")).toHaveAttribute("data-env", "vanilla");
+  });
+
+  test("renders active progress bar with skeleton animation on pseudo-element", async ({ page }) => {
+    await page.goto(VANILLA_PREVIEW_URL);
+
+    const activeProgressStyles = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="progress-bar-active"]');
+      if (!el) {
+        throw new Error("Missing active progress bar fixture");
+      }
+      const beforeStyles = getComputedStyle(el, "::before");
+      return {
+        animationName: beforeStyles.animationName,
+        display: beforeStyles.display,
+        backgroundImage: beforeStyles.backgroundImage,
+      };
+    });
+
+    expect(activeProgressStyles.animationName).toContain("anim-skeleton");
+    expect(activeProgressStyles.display).toBe("block");
+    expect(activeProgressStyles.backgroundImage).toContain("linear-gradient");
   });
 });
 

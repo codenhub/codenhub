@@ -24,10 +24,7 @@
 @utility auto-grid {
   @apply grid gap-(--layout-stack-gap);
 
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(min(var(--layout-grid-min), 100%), 1fr)
-  );
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
 }
 
 @utility selection-contrast {

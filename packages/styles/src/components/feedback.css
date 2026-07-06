@@ -171,13 +171,28 @@
   --progress-color: var(--color-text);
   --progress-surface: color-mix(in srgb, var(--color-text-subtle) 60%, transparent);
 
-  @apply h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
+  @apply relative h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
 
-  > * {
-    @apply block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
-
+  &::after {
+    content: "";
+    @apply absolute top-0 bottom-0 left-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
     background-color: var(--progress-color);
     width: var(--progress-value, 0%);
+    z-index: 2;
+  }
+
+  &.active::before {
+    content: "";
+    @apply absolute inset-0 block h-full;
+    animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--progress-color) 15%, transparent),
+      transparent
+    );
+    background-size: 200% 100%;
+    z-index: 1;
   }
 
   &.primary {

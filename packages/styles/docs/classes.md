@@ -126,7 +126,8 @@ Example:
 | `.ai`       | Low-level activity indicator. Applies CSS masking.                  |
 | `.loader`   | Standalone inline loader. Composes `.ai` with visual styles.        |
 | `.skeleton` | Ambient loading placeholder.                                        |
-| `.progress` | Progress track. Fill element uses `--progress-value`.               |
+| `.progress` | Progress track. Uses `--progress-value` variable.                   |
+| `.active`   | Optional on `.progress` to add skeleton shimmer animation.          |
 
 Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
 
@@ -150,8 +151,8 @@ Examples:
 <span class="badge info soft">Draft</span>
 <span class="loader" aria-hidden="true"></span>
 <span class="loader dots-wave" aria-hidden="true"></span>
-<div class="progress" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
-<div class="progress success" aria-label="Upload progress"><span style="--progress-value: 64%"></span></div>
+<div class="progress" aria-label="Upload progress" style="--progress-value: 64%"></div>
+<div class="progress success active" aria-label="Upload progress" style="--progress-value: 64%"></div>
 ```
 
 ## Tooltips
