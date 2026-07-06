@@ -72,7 +72,7 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
 ```
 
 > [!WARNING]
-> If you customize `systemTheme`, `themes`, `storageKey`, or `attribute` in `createTheme`, make sure to update the inline FOUC script to match those values. Mismatched configurations will cause a flash of the wrong theme.
+> If you customize `systemTheme`, `themes`, `storageKey`, or `attribute` in `createTheme`, make sure to update the inline FOUC script to match those values. Mismatched configurations will cause a flash of the wrong theme. Also, if you set `shouldApplyClass` to `false` or use a custom class resolver, update or remove the FOUC class application block (`classList.add`) accordingly to prevent visual shifts on initialization.
 
 ## Reference
 

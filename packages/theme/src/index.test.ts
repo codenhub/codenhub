@@ -618,6 +618,23 @@ describe("Theme CSS tokens support", () => {
     );
   });
 
+  it("should handle null or invalid runtime token types", () => {
+    const theme = createTheme({
+      tokenSchema: { primary: "--color-primary" },
+    }).init();
+
+    // null should be ignored (like undefined) and not throw
+    expect(() => theme.set("dark", null as unknown as Partial<Record<string, string>>)).not.toThrow();
+
+    // primitive or array overrides should throw
+    expect(() => theme.set("dark", "invalid-token" as unknown as Partial<Record<string, string>>)).toThrow(
+      "Runtime tokens must be an object.",
+    );
+    expect(() => theme.set("dark", [] as unknown as Partial<Record<string, string>>)).toThrow(
+      "Runtime tokens must be an object.",
+    );
+  });
+
   it("should handle null getComputedStyle gracefully", () => {
     const originalGetComputedStyle = window.getComputedStyle;
     window.getComputedStyle = vi.fn().mockReturnValue(null);

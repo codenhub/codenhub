@@ -107,8 +107,11 @@ export const assertRuntimeTokens = <TSchema extends Record<string, string>>(
   tokens: Partial<Record<keyof TSchema, string>> | undefined,
   tokenSchema: TSchema | undefined,
 ): void => {
-  if (tokens === undefined) {
+  if (tokens === undefined || tokens === null) {
     return;
+  }
+  if (typeof tokens !== "object" || Array.isArray(tokens)) {
+    throw new Error("Runtime tokens must be an object.");
   }
   if (tokenSchema === undefined) {
     throw new Error("Runtime tokens provided but no tokenSchema is configured.");
