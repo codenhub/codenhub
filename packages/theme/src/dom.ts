@@ -143,29 +143,33 @@ export const applyTheme = <TSchema extends Record<string, string>>(args: {
   theme: ThemeDefinition<TSchema>;
   options: ResolvedThemeOptions<TSchema>;
   activeTokens: Partial<Record<keyof TSchema, string>>;
+  resolvedClasses?: readonly string[];
+  nextClass?: string | null;
 }): void => {
-  const { theme, options, activeTokens } = args;
+  const { theme, options, activeTokens, resolvedClasses, nextClass } = args;
   if (typeof document === "undefined") {
     return;
   }
 
   const root = document.documentElement;
-  const nextClass = getThemeClass(theme, options.shouldApplyClass);
-  const configuredClasses = options.themes
-    .map((configuredTheme) => getThemeClass(configuredTheme, options.shouldApplyClass))
-    .filter((configuredClass): configuredClass is string => configuredClass !== null);
+  const activeClass = nextClass !== undefined ? nextClass : getThemeClass(theme, options.shouldApplyClass);
+  const configuredClasses =
+    resolvedClasses ??
+    options.themes
+      .map((configuredTheme) => getThemeClass(configuredTheme, options.shouldApplyClass))
+      .filter((configuredClass): configuredClass is string => configuredClass !== null);
 
   root.setAttribute(options.attribute, theme.name);
   root.style.colorScheme = theme.colorScheme;
 
   for (const configuredClass of configuredClasses) {
-    if (configuredClass !== nextClass) {
+    if (configuredClass !== activeClass) {
       root.classList.remove(configuredClass);
     }
   }
 
-  if (nextClass !== null) {
-    root.classList.add(nextClass);
+  if (activeClass !== null) {
+    root.classList.add(activeClass);
   }
 
   if (options.isTailwindCss) {

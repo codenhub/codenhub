@@ -894,4 +894,31 @@ describe("Theme CSS tokens support", () => {
       'Runtime token override "toString" is not present in tokenSchema.',
     );
   });
+
+  it("should reject attribute option containing invalid characters", () => {
+    expect(() => createTheme({ attribute: "data theme" })).toThrow(
+      "Theme attribute option must be a valid HTML attribute name.",
+    );
+    expect(() => createTheme({ attribute: 'data-theme"' })).toThrow(
+      "Theme attribute option must be a valid HTML attribute name.",
+    );
+    expect(() => createTheme({ attribute: "data-theme>" })).toThrow(
+      "Theme attribute option must be a valid HTML attribute name.",
+    );
+  });
+
+  it("should cache class resolution and call custom resolver only once per theme", () => {
+    const resolver = vi.fn().mockImplementation((theme) => `custom-${theme.name}`);
+    const theme = createTheme({
+      shouldApplyClass: resolver,
+    });
+
+    theme.init();
+    expect(resolver).toHaveBeenCalledTimes(2); // Resolved once for light, once for dark
+
+    resolver.mockClear();
+    theme.set("dark");
+    theme.set("light");
+    expect(resolver).not.toHaveBeenCalled(); // Cached, no more resolver calls
+  });
 });

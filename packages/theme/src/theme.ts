@@ -10,7 +10,7 @@ import {
   readComputedTokens,
   emitThemeEvent,
 } from "./dom";
-import { assertThemeConfig, assertRuntimeTokens } from "./helpers";
+import { assertThemeConfig, assertRuntimeTokens, getThemeClass } from "./helpers";
 import type {
   Theme,
   ThemeDefinition,
@@ -29,6 +29,17 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #systemListenerCleanup: (() => void) | null = null;
   #storageListenerCleanup: (() => void) | null = null;
   #isInitialized = false;
+  #resolvedClasses: Map<string, string | null> | null = null;
+
+  #getResolvedClasses(): Map<string, string | null> {
+    if (this.#resolvedClasses === null) {
+      this.#resolvedClasses = new Map();
+      for (const t of this.#options.themes) {
+        this.#resolvedClasses.set(t.name, getThemeClass(t, this.#options.shouldApplyClass));
+      }
+    }
+    return this.#resolvedClasses;
+  }
 
   #handleSystemChange = (event: MediaQueryListEvent): void => {
     if (readStorage(this.#options.storageKey, this.#options.themes) !== null) {
@@ -147,6 +158,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
     this.#listeners.clear();
     this.#activeTokens = {};
+    this.#resolvedClasses = null;
     this.#isInitialized = false;
   }
 
@@ -169,10 +181,13 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       writeStorage(this.#options.storageKey, theme.name);
     }
 
+    const resolved = this.#getResolvedClasses();
     applyTheme({
       theme,
       options: this.#options,
       activeTokens: this.#activeTokens,
+      resolvedClasses: Array.from(resolved.values()).filter((c): c is string => c !== null),
+      nextClass: resolved.get(theme.name) ?? null,
     });
 
     const activeTheme = this.get();

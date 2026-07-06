@@ -33,6 +33,10 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
     throw new Error("Theme attribute option must be a non-empty string.");
   }
 
+  if (/[\s"'/>=]/.test(options.attribute)) {
+    throw new Error("Theme attribute option must be a valid HTML attribute name.");
+  }
+
   if (typeof options.storageKey !== "string" || options.storageKey.trim().length === 0) {
     throw new Error("Theme storageKey option must be a non-empty string.");
   }

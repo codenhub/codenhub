@@ -19,24 +19,24 @@ export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 export const CLASS_TOKEN_WHITESPACE = /\s/;
 
 /** Built-in light theme used by default and available for custom theme lists. */
-export const LIGHT_THEME: ThemeDefinition = {
+export const LIGHT_THEME: ThemeDefinition = Object.freeze({
   name: "light",
   colorScheme: "light",
-};
+});
 
 /** Built-in dark theme used by default and available for custom theme lists. */
-export const DARK_THEME: ThemeDefinition = {
+export const DARK_THEME: ThemeDefinition = Object.freeze({
   name: "dark",
   colorScheme: "dark",
-};
+});
 
 /** Default resolved options used to initialize theme management when custom options are not provided. */
-export const DEFAULT_OPTIONS: ResolvedThemeOptions<Record<string, string>> = {
-  themes: [LIGHT_THEME, DARK_THEME],
+export const DEFAULT_OPTIONS: ResolvedThemeOptions<Record<string, string>> = Object.freeze({
+  themes: Object.freeze([LIGHT_THEME, DARK_THEME]),
   defaultTheme: LIGHT_THEME.name,
-  systemTheme: { light: LIGHT_THEME.name, dark: DARK_THEME.name },
+  systemTheme: Object.freeze({ light: LIGHT_THEME.name, dark: DARK_THEME.name }),
   storageKey: DEFAULT_STORAGE_KEY,
   attribute: DEFAULT_ATTRIBUTE,
   isTailwindCss: false,
   shouldApplyClass: true,
-};
+});
