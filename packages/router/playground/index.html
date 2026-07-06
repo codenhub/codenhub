@@ -2,69 +2,91 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Router Playground</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
-  <body>
-    <div class="app-container">
-      <header class="app-header">
-        <h1>Router Playground</h1>
-        <nav class="nav-links">
-          <a href="/" id="link-home">Home</a>
-          <a href="/about" id="link-about">About</a>
-          <a href="/users/alice" id="link-user-alice">User: Alice</a>
-          <a href="/settings?tab=profile" id="link-settings-profile">Settings (Profile)</a>
-          <a href="/settings?tab=security#passwords" id="link-settings-security">Settings (Security #passwords)</a>
-          <a href="/non-existent" id="link-404">Non-existent Route</a>
+  <body class="bg-background text-text font-default min-h-screen transition-colors duration-200">
+    <div class="mx-auto max-w-4xl px-4 py-8">
+      <header class="border-border mb-8 border-b pb-6">
+        <h1 class="text-title text-text-strong mb-4">Router playground</h1>
+        <nav class="flex flex-wrap gap-4">
+          <a href="/" id="link-home" class="nav-link">Home</a>
+          <a href="/about" id="link-about" class="nav-link">About</a>
+          <a href="/users/alice" id="link-user-alice" class="nav-link">User: Alice</a>
+          <a href="/settings?tab=profile" id="link-settings-profile" class="nav-link">Settings (Profile)</a>
+          <a href="/settings?tab=security#passwords" id="link-settings-security" class="nav-link">
+            Settings (Security #passwords)
+          </a>
+          <a href="/non-existent" id="link-404" class="nav-link">Non-existent Route</a>
         </nav>
       </header>
 
-      <main class="app-main">
+      <main class="flex flex-col gap-8">
+        <!-- Active Route Content -->
         <section class="content-section">
-          <h2 id="view-title">Loading...</h2>
-          <div id="view-content">Please wait...</div>
+          <h2 id="view-title" class="text-title text-text-strong">Loading...</h2>
+          <div id="view-content" class="text-body text-text-secondary mt-2">Please wait...</div>
         </section>
 
+        <!-- Programmatic Actions -->
         <section class="controls-section">
-          <h3>Programmatic Navigation</h3>
-          <div class="button-group">
-            <button id="btn-nav-home">Go Home</button>
-            <button id="btn-nav-about">Go About</button>
-            <button id="btn-nav-user-bob">Go User Bob</button>
-            <button id="btn-nav-settings-billing">Go Settings Billing</button>
-            <button id="btn-nav-back">Back</button>
-            <button id="btn-nav-forward">Forward</button>
+          <h3 class="text-title-sm text-text-strong mb-3">Programmatic Navigation</h3>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-nav-home" class="btn secondary">Go Home</button>
+            <button id="btn-nav-about" class="btn secondary">Go About</button>
+            <button id="btn-nav-user-bob" class="btn secondary">Go User Bob</button>
+            <button id="btn-nav-settings-billing" class="btn secondary">Go Settings Billing</button>
+            <button id="btn-nav-back" class="btn secondary">Back</button>
+            <button id="btn-nav-forward" class="btn secondary">Forward</button>
           </div>
         </section>
 
+        <!-- Router State Table -->
         <section class="inspector-section">
-          <h3>Router State Inspector</h3>
-          <table class="state-table">
-            <tr>
-              <th>Active Path Pattern</th>
-              <td><code id="state-path">None</code></td>
-            </tr>
-            <tr>
-              <th>Pathname</th>
-              <td><code id="state-pathname">None</code></td>
-            </tr>
-            <tr>
-              <th>Route Params</th>
-              <td><pre id="state-params">{}</pre></td>
-            </tr>
-            <tr>
-              <th>Query Params</th>
-              <td><pre id="state-search">{}</pre></td>
-            </tr>
-            <tr>
-              <th>Hash</th>
-              <td><code id="state-hash">None</code></td>
-            </tr>
-            <tr>
-              <th>Missed Route?</th>
-              <td><span id="state-miss">No</span></td>
-            </tr>
-          </table>
+          <h3 class="text-title-sm text-text-strong mb-3">Router State Inspector</h3>
+          <div class="border-border bg-surface overflow-x-auto rounded-md border">
+            <table class="inspector-table">
+              <tbody>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Active Path Pattern</th>
+                  <td class="inspector-td">
+                    <code id="state-path" class="code">None</code>
+                  </td>
+                </tr>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Pathname</th>
+                  <td class="inspector-td">
+                    <code id="state-pathname" class="code">None</code>
+                  </td>
+                </tr>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Route Params</th>
+                  <td class="inspector-td">
+                    <pre id="state-params" class="code">{}</pre>
+                  </td>
+                </tr>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Query Params</th>
+                  <td class="inspector-td">
+                    <pre id="state-search" class="code">{}</pre>
+                  </td>
+                </tr>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Hash</th>
+                  <td class="inspector-td">
+                    <code id="state-hash" class="code">None</code>
+                  </td>
+                </tr>
+                <tr class="inspector-tr">
+                  <th class="inspector-th">Missed Route?</th>
+                  <td class="inspector-td">
+                    <span id="state-miss" class="text-text-strong font-medium">No</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       </main>
     </div>
