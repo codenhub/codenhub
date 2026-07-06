@@ -7,6 +7,7 @@ import {
   parseAppPath,
   parseLocationPath,
   stripBasePath,
+  stripTrailingSlash,
 } from "./path";
 import type { NavigateOptions, RouterMatch, RouterMiss } from "./types";
 
@@ -50,6 +51,9 @@ export interface History {
   destroy(): void;
 }
 
+// Module-level counter intentionally shared across all createHistory calls in the same
+// JS module scope. Used only to emit a development warning when multiple router instances
+// are active simultaneously, which is a common misconfiguration. Not load-bearing.
 let activeInstances = 0;
 
 /** @internal */
@@ -69,7 +73,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
   function buildMissFromLocation(location: Location): RouterMiss {
     const { search } = location;
     return {
-      pathname: normalizePercentEscapes(location.pathname || "/"),
+      pathname: stripTrailingSlash(normalizePercentEscapes(location.pathname || "/")),
       searchParams: new URLSearchParams(search),
       hash: location.hash,
     };

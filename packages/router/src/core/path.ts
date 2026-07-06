@@ -36,7 +36,7 @@ export interface RoutePattern {
 }
 
 /** @internal */
-function stripTrailingSlash(pathname: string): string {
+export function stripTrailingSlash(pathname: string): string {
   if (pathname.length > 1 && pathname.endsWith("/")) {
     return pathname.slice(0, -1);
   }
@@ -99,12 +99,7 @@ export function normalizeBasePath(basePath = ""): string {
   }
   assertNoDotPathSegments(basePath, "Router basePath");
 
-  const normalized = toUrlPathname(basePath);
-  if (hasDotPathSegments(normalized)) {
-    throw new Error('Router basePath must not include "." or ".." path segments.');
-  }
-
-  return normalized;
+  return toUrlPathname(basePath);
 }
 
 /** @internal */

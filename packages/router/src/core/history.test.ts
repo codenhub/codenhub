@@ -96,6 +96,15 @@ describe("History — browser integration", () => {
       expect(listener).toHaveBeenCalledWith(null);
     });
 
+    it("shouldStripTrailingSlashFromMissPathnameWhenLocationIsOutsideBasePath", () => {
+      const fallback = vi.fn();
+      const router = withRouter(createRouter({ basePath: "/app" }).notFound(fallback), startedRouters);
+      history.replaceState(null, "", "/outside/");
+
+      router.start();
+      expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ pathname: "/outside" }));
+    });
+
     it("shouldMatchBasePathPlusTrailingSlashAsRootRoute", () => {
       const handler = vi.fn();
       const router = withRouter(createRouter({ basePath: "/app" }).on("/", handler), startedRouters);

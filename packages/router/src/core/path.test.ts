@@ -136,7 +136,9 @@ describe("parseRoutePath", () => {
     expect(() => parseRoutePath("/admin/../users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseRoutePath("/admin/./users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseRoutePath("/admin/%252e%252e/users")).toThrow('must not include "." or ".." path segments.');
-    expect(() => parseRoutePath("/admin/%252525252e%252525252e/users")).toThrow('must not include "." or ".." path segments.');
+    expect(() => parseRoutePath("/admin/%252525252e%252525252e/users")).toThrow(
+      'must not include "." or ".." path segments.',
+    );
   });
 
   it("shouldRejectConsecutiveSlashesInRoutePaths", () => {
@@ -193,7 +195,9 @@ describe("parseAppPath", () => {
   it("shouldRejectDotSegmentsBeforeUrlNormalisation", () => {
     expect(() => parseAppPath("/admin/%2e%2e/users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseAppPath("/admin/%252e%252e/users")).toThrow('must not include "." or ".." path segments.');
-    expect(() => parseAppPath("/admin/%252525252e%252525252e/users")).toThrow('must not include "." or ".." path segments.');
+    expect(() => parseAppPath("/admin/%252525252e%252525252e/users")).toThrow(
+      'must not include "." or ".." path segments.',
+    );
   });
 
   it("shouldRejectConsecutiveSlashesInAppPaths", () => {
