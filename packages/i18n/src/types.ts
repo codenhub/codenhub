@@ -19,6 +19,8 @@ export interface I18nConfig<TLocale extends string = string> {
   getLocaleDirection(locale: TLocale): LocaleDirection;
   /** Type guard to verify if a string matches a supported locale. */
   isLocale(value: string): value is TLocale;
+  /** Silences warnings about missing translation keys or pre-init calls. */
+  silent?: boolean;
 }
 
 /** Record of translation key-value pairs. */
@@ -32,6 +34,14 @@ export interface I18nInitOptions {
   storageKey?: string;
   /** DOM element or document subtree to watch and translate. Defaults to document. */
   root?: ParentNode;
+  /** Silences warnings about missing translation keys or pre-init calls. */
+  silent?: boolean;
+}
+
+/** Map of i18n event types to their respective CustomEvent details. */
+export interface I18nEventMap {
+  ready: CustomEvent<I18nReadyEventDetail>;
+  "locale-change": CustomEvent<I18nLocaleChangeEventDetail>;
 }
 
 /** Detail payload for the "ready" event. */
@@ -100,16 +110,15 @@ export interface I18n<TLocale extends string = string> {
    */
   setLocale(locale: string): Promise<boolean>;
 
-  /**
-   * Translates a given translation key using the active locale's dictionary.
-   * Returns undefined and warns if the key is missing.
-   *
-   * @param key - The translation key to look up.
-   * @returns The translated string, or undefined if not found.
-   */
+  /** Translates a given translation key using the active locale's dictionary. */
   translate(key: string): string | undefined;
 
   /** Adds an event listener for translation events. */
+  addEventListener<K extends keyof I18nEventMap>(
+    type: K,
+    callback: (this: I18n<TLocale>, ev: I18nEventMap[K]) => void,
+    options?: AddEventListenerOptions | boolean,
+  ): void;
   addEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,
@@ -117,6 +126,11 @@ export interface I18n<TLocale extends string = string> {
   ): void;
 
   /** Removes an event listener for translation events. */
+  removeEventListener<K extends keyof I18nEventMap>(
+    type: K,
+    callback: (this: I18n<TLocale>, ev: I18nEventMap[K]) => void,
+    options?: EventListenerOptions | boolean,
+  ): void;
   removeEventListener(
     type: string,
     callback: EventListenerOrEventListenerObject | null,

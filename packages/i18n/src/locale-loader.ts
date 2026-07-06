@@ -8,12 +8,8 @@ const FETCH_TIMEOUT_MS = 10_000;
 /** Creates a dictionary object without prototype properties. */
 export const createEmptyDictionary = (): LocaleDictionary => Object.create(null) as LocaleDictionary;
 
-const isLocaleDictionary = (raw: unknown): raw is LocaleDictionary => {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return false;
-  }
-
-  return Object.values(raw as Record<string, unknown>).every((value) => typeof value === "string");
+const isLocaleDictionary = (raw: unknown): raw is Record<string, unknown> => {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
 };
 
 const HTTP_STATUS_REQUEST_TIMEOUT = 408;
@@ -115,7 +111,19 @@ export function createLocaleLoader<TLocale extends string = string>(
             return undefined;
           }
 
-          const dictionary = Object.assign(createEmptyDictionary(), result.body);
+          const dictionary = createEmptyDictionary();
+
+          for (const [key, val] of Object.entries(result.body)) {
+            if (key === "__proto__" || key === "constructor") {
+              continue;
+            }
+            if (typeof val !== "string") {
+              console.warn(`[I18n] Non-string value found for key "${key}" in locale "${locale}". Coercing to string.`);
+              dictionary[key] = String(val);
+            } else {
+              dictionary[key] = val;
+            }
+          }
 
           if (Object.keys(dictionary).length === 0) {
             console.warn(`[I18n] Locale "${locale}" loaded successfully but contains no translations.`);

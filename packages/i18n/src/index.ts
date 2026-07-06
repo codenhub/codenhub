@@ -27,6 +27,7 @@ export type {
   I18nReadyEventDetail,
   LocaleDictionary,
   LocaleDirection,
+  I18nEventMap,
 } from "./types";
 
 const isPersistedLocaleState = <TLocale extends string>(
@@ -61,6 +62,7 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
   let isCurrentLocaleLoaded = false;
   const warnedMissingKeys = new Set<string>();
   let localeRequestId = 0;
+  let isSilent = config.silent ?? false;
 
   const localeLoader = createLocaleLoader(config);
   const domTranslator = createDomTranslator();
@@ -74,7 +76,7 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
   };
 
   const syncDocumentLocale = (): void => {
-    if (typeof document === "undefined") {
+    if (typeof document === "undefined" || !document.documentElement) {
       return;
     }
     document.documentElement.lang = currentLocale;
@@ -95,6 +97,9 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
   };
 
   const warnMissingKey = (key: string, message: string): void => {
+    if (isSilent) {
+      return;
+    }
     const warningKey = `${currentLocale}::${key}`;
 
     if (warnedMissingKeys.has(warningKey)) {
@@ -107,7 +112,9 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
   const translate = (key: string): string | undefined => {
     if (!isReadyState) {
-      console.warn("[I18n] translate() was called before init() completed. Call init() first.");
+      if (!isSilent) {
+        console.warn("[I18n] translate() was called before init() completed. Call init() first.");
+      }
       return undefined;
     }
 
@@ -142,6 +149,7 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
     async init(options: I18nInitOptions = {}): Promise<void> {
       isReadyState = false;
+      isSilent = options.silent ?? config.silent ?? false;
       storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
       root = options.root ?? getDocumentRoot();
       storage = createStore<PersistedLocaleState>({
@@ -187,7 +195,9 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
     async setLocale(locale: string): Promise<boolean> {
       if (!isReadyState) {
-        console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
+        if (!isSilent) {
+          console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
+        }
         return false;
       }
 
@@ -248,11 +258,19 @@ export function createI18n<TLocale extends string = string>(config: I18nConfig<T
 
     translate,
 
-    addEventListener(type, callback, options) {
+    addEventListener(
+      type: string,
+      callback: EventListenerOrEventListenerObject | null,
+      options?: AddEventListenerOptions | boolean,
+    ) {
       eventTarget.addEventListener(type, callback, options);
     },
 
-    removeEventListener(type, callback, options) {
+    removeEventListener(
+      type: string,
+      callback: EventListenerOrEventListenerObject | null,
+      options?: EventListenerOptions | boolean,
+    ) {
       eventTarget.removeEventListener(type, callback, options);
     },
 

@@ -815,4 +815,82 @@ describe("I18n", () => {
     // Restore window
     globalThis.window = originalWindow;
   });
+
+  it("should coerce non-string values in dictionary with warning", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const mixedUrl = getLocaleFile("pt-BR");
+    fetchOverrides[mixedUrl] = {
+      body: {
+        "key.number": 123,
+        "key.boolean": true,
+        "key.null": null,
+        "key.string": "valid",
+      },
+    };
+
+    await i18n.init();
+    await i18n.setLocale("pt-BR");
+
+    expect(i18n.translate("key.number")).toBe("123");
+    expect(i18n.translate("key.boolean")).toBe("true");
+    expect(i18n.translate("key.null")).toBe("null");
+    expect(i18n.translate("key.string")).toBe("valid");
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Non-string value found for key "key.number"'));
+    warnSpy.mockRestore();
+  });
+
+  it("should filter prototype/constructor pollution keys from dictionary", async () => {
+    const pollutionUrl = getLocaleFile("pt-BR");
+    fetchOverrides[pollutionUrl] = {
+      body: {
+        __proto__: { polluted: "yes" },
+        constructor: { polluted: "yes" },
+        "valid.key": "hello",
+      },
+    };
+
+    await i18n.init();
+    await i18n.setLocale("pt-BR");
+
+    expect(i18n.translate("valid.key")).toBe("hello");
+    // Ensure polluted properties are not queryable or set on the dictionary
+    expect(i18n.translate("__proto__")).toBeUndefined();
+    expect(i18n.translate("constructor")).toBeUndefined();
+  });
+
+  it("should silence warnings when silent option is enabled", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Calling translate before init with silent: true should not warn
+    const silentI18n = createI18n({ ...i18nConfig, silent: true });
+    silentI18n.translate("any.key");
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    await silentI18n.init({ silent: true });
+
+    // Missing key check should not warn
+    silentI18n.translate("missing.key");
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it("should dispatch and handle ready and locale-change events properly", async () => {
+    const readySpy = vi.fn();
+    const changeSpy = vi.fn();
+
+    i18n.addEventListener("ready", readySpy);
+    i18n.addEventListener("locale-change", changeSpy);
+
+    await i18n.init();
+    expect(readySpy).toHaveBeenCalledTimes(1);
+
+    await i18n.setLocale("pt-BR");
+    expect(changeSpy).toHaveBeenCalledTimes(1);
+
+    // Clean up
+    i18n.removeEventListener("ready", readySpy);
+    i18n.removeEventListener("locale-change", changeSpy);
+  });
 });
