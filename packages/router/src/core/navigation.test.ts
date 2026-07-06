@@ -126,6 +126,27 @@ describe("createNavigation", () => {
       expect(listenerA).toHaveBeenCalledTimes(1);
       expect(listenerB).toHaveBeenCalledTimes(1);
     });
+
+    it("shouldQueueAndExecuteNavigationStartedFromListener", () => {
+      const { registry, nav } = makeNav();
+      const nextHandler = vi.fn();
+      registry.add("/home", vi.fn());
+      registry.add("/next", nextHandler);
+
+      const listenerCalls: unknown[] = [];
+      nav.subscribe((match) => {
+        listenerCalls.push(match);
+        if (match?.pathname === "/home") {
+          nav.enqueue(parseAppPath("/next"));
+        }
+      });
+
+      nav.run(parseAppPath("/home"));
+      expect(nextHandler).toHaveBeenCalledTimes(1);
+      expect(listenerCalls).toHaveLength(2);
+      expect(listenerCalls[0]).toMatchObject({ pathname: "/home" });
+      expect(listenerCalls[1]).toMatchObject({ pathname: "/next" });
+    });
   });
 
   // ---------------------------------------------------------------------------

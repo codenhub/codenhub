@@ -78,7 +78,7 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
         historyUpdate: () => {
           const href =
             target !== null
-              ? buildBrowserHref(target.href, basePath)
+              ? buildBrowserHref(target, basePath)
               : normalizePercentEscapes(browserWindow.location.pathname || "/") +
                 browserWindow.location.search +
                 browserWindow.location.hash;

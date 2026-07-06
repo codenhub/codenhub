@@ -18,7 +18,8 @@ export interface Registry {
    * Parses and appends a route pattern + handler to the registration table.
    *
    * @throws {Error} If the path is empty, not app-local, contains backslashes,
-   *   a query string, a hash, dot segments, or duplicate parameter names.
+   *   a query string, a hash, dot segments, duplicate parameter names, or if
+   *   the exact same route path is already registered.
    */
   add(path: string, handler: RouteHandler): void;
 
@@ -42,7 +43,11 @@ export function createRegistry(): Registry {
 
   return {
     add(path, handler) {
-      routes.push({ pattern: parseRoutePath(path), handler });
+      const pattern = parseRoutePath(path);
+      if (routes.some((r) => r.pattern.path === pattern.path)) {
+        throw new Error(`Route path "${path}" is already registered.`);
+      }
+      routes.push({ pattern, handler });
     },
 
     setFallback(handler) {

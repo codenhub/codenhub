@@ -50,6 +50,12 @@ describe("createRegistry", () => {
       expect(() => registry.add("/admin/../users", vi.fn())).toThrow(Error);
       expect(() => registry.add("/admin/./users", vi.fn())).toThrow(Error);
     });
+
+    it("shouldRejectDuplicateRoutePaths", () => {
+      const registry = createRegistry();
+      registry.add("/users/:id", vi.fn());
+      expect(() => registry.add("/users/:id", vi.fn())).toThrow(Error);
+    });
   });
 
   // ---------------------------------------------------------------------------

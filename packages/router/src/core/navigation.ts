@@ -87,48 +87,57 @@ export function createNavigation(registry: Registry): Navigation {
     try {
       let currentTarget: ParsedPath | null = initialTarget;
       let currentMiss: RouterMiss | undefined = initialMiss;
-      let loopMatch: RouterMatch | null = null;
 
       while (currentTarget !== null || currentMiss !== undefined) {
-        if (currentTarget !== null) {
-          const result = registry.findMatch(currentTarget);
+        let loopMatch: RouterMatch | null = null;
 
-          if (result !== null) {
-            result.route.handler(result.match);
-            loopMatch = result.match;
+        while (currentTarget !== null || currentMiss !== undefined) {
+          if (currentTarget !== null) {
+            const result = registry.findMatch(currentTarget);
+
+            if (result !== null) {
+              result.route.handler(result.match);
+              loopMatch = result.match;
+            } else {
+              const miss: RouterMiss = {
+                pathname: currentTarget.pathname,
+                searchParams: currentTarget.searchParams,
+                hash: currentTarget.hash,
+              };
+
+              registry.getFallback()?.(miss);
+              loopMatch = null;
+            }
           } else {
-            const miss: RouterMiss = {
-              pathname: currentTarget.pathname,
-              searchParams: currentTarget.searchParams,
-              hash: currentTarget.hash,
-            };
-
-            registry.getFallback()?.(miss);
+            // Invariant: since the loop condition is (currentTarget !== null || currentMiss !== undefined),
+            // if currentTarget is null, currentMiss must be defined.
+            registry.getFallback()?.(currentMiss!);
             loopMatch = null;
           }
-        } else {
-          // Invariant: since the loop condition is (currentTarget !== null || currentMiss !== undefined),
-          // if currentTarget is null, currentMiss must be defined.
-          registry.getFallback()?.(currentMiss!);
-          loopMatch = null;
+
+          const next = pendingNavigations.shift();
+          if (next !== undefined) {
+            next.historyUpdate?.();
+            currentTarget = next.target;
+            currentMiss = next.miss;
+          } else {
+            currentTarget = null;
+            currentMiss = undefined;
+          }
         }
 
-        const next = pendingNavigations.shift();
-        if (next !== undefined) {
-          next.historyUpdate?.();
-          currentTarget = next.target;
-          currentMiss = next.miss;
-        } else {
-          currentTarget = null;
-          currentMiss = undefined;
+        lastMatch = loopMatch;
+        notify(loopMatch);
+
+        const nextFromListener = pendingNavigations.shift();
+        if (nextFromListener !== undefined) {
+          nextFromListener.historyUpdate?.();
+          currentTarget = nextFromListener.target;
+          currentMiss = nextFromListener.miss;
         }
       }
 
-      lastMatch = loopMatch;
-      notify(loopMatch);
-      // Draining the queue means the loop returns the final match resolved by
-      // the last executed navigation in this cycle (e.g. following redirects).
-      return loopMatch;
+      return lastMatch;
     } catch (error) {
       pendingNavigations.length = 0;
       throw error;

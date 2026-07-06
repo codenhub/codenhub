@@ -95,6 +95,25 @@ describe("createRouter", () => {
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({ path: "/redirected" }));
   });
 
+  it("shouldQueueAndExecuteNavigationStartedFromSubscriber", () => {
+    const router = createRouter();
+    const handler = vi.fn();
+    const nextHandler = vi.fn();
+    router.on("/start", handler).on("/next", nextHandler);
+
+    router.subscribe((match) => {
+      if (match?.pathname === "/start") {
+        router.navigate("/next");
+      }
+    });
+
+    const match = router.navigate("/start");
+    expect(match).toMatchObject({ path: "/next", pathname: "/next" });
+    expect(location.pathname).toBe("/next");
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(nextHandler).toHaveBeenCalledTimes(1);
+  });
+
   it("shouldProcessMultipleQueuedNavigationsInFifoOrder", () => {
     const router = createRouter();
     const log: string[] = [];
@@ -276,6 +295,8 @@ describe("createRouter", () => {
     expect(() => router.on("/users?tab=active", handler)).toThrow(Error);
     expect(() => router.on("/users#active", handler)).toThrow(Error);
     expect(() => router.on("/teams/:id/users/:id", handler)).toThrow(Error);
+    router.on("/settings", handler);
+    expect(() => router.on("/settings", handler)).toThrow(Error);
   });
 
   // ---------------------------------------------------------------------------
