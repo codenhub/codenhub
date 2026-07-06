@@ -581,4 +581,65 @@ describe("History — browser integration", () => {
       expect(listener).not.toHaveBeenCalled();
     });
   });
+
+  describe("error restoration", () => {
+    it("shouldRestoreBrowserUrlIfRouteHandlerThrows", () => {
+      const router = withRouter(createRouter(), startedRouters);
+      router.on("/first", () => {
+        // Success
+      });
+      router.on("/fail", () => {
+        throw new Error("handler failed");
+      });
+
+      router.start();
+      router.navigate("/first");
+      expect(location.pathname).toBe("/first");
+
+      expect(() => router.navigate("/fail")).toThrow("handler failed");
+      expect(location.pathname).toBe("/first");
+    });
+
+    it("shouldRestoreBrowserUrlIfStartRouteHandlerThrows", () => {
+      const router = withRouter(
+        createRouter().on("/fail", () => {
+          throw new Error("start failed");
+        }),
+        startedRouters,
+      );
+      history.replaceState(null, "", "/fail");
+
+      expect(() => router.start()).toThrow("start failed");
+      expect(location.pathname).toBe("/fail");
+    });
+
+    it("shouldRestoreBrowserUrlIfPopstateRouteHandlerThrows", () => {
+      const router = withRouter(createRouter(), startedRouters);
+      router.on("/first", () => {});
+      router.on("/fail", () => {
+        throw new Error("popstate failed");
+      });
+
+      router.start();
+      router.navigate("/first");
+      expect(location.pathname).toBe("/first");
+
+      let errorEvent: ErrorEvent | null = null;
+      const onError = (e: ErrorEvent) => {
+        errorEvent = e;
+        e.preventDefault();
+      };
+      window.addEventListener("error", onError);
+
+      // Trigger popstate to /fail
+      history.pushState(null, "", "/fail");
+      dispatchEvent(new PopStateEvent("popstate"));
+
+      window.removeEventListener("error", onError);
+
+      expect(errorEvent).not.toBeNull();
+      expect((errorEvent as unknown as ErrorEvent).message).toContain("popstate failed");
+      expect(location.pathname).toBe("/first");
+    });
+  });
 });

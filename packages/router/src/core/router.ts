@@ -60,7 +60,12 @@ export function createRouter(options: CreateRouterOptions = {}): Router {
       }
 
       updateHistory();
-      return nav.run(target);
+      try {
+        return nav.run(target);
+      } catch (error) {
+        history.restore();
+        throw error;
+      }
     },
 
     match(to) {

@@ -61,6 +61,10 @@ describe("normalizeBasePath", () => {
     expect(() => normalizeBasePath("/admin/../app")).toThrow('must not include "." or ".." path segments.');
     expect(() => normalizeBasePath("/admin/./app")).toThrow('must not include "." or ".." path segments.');
   });
+
+  it("shouldRejectBasePathWithConsecutiveSlashes", () => {
+    expect(() => normalizeBasePath("/app//sub")).toThrow("Router basePath must not include consecutive slashes.");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -123,6 +127,10 @@ describe("parseRoutePath", () => {
     expect(() => parseRoutePath("/admin/../users")).toThrow('must not include "." or ".." path segments.');
     expect(() => parseRoutePath("/admin/./users")).toThrow('must not include "." or ".." path segments.');
   });
+
+  it("shouldRejectConsecutiveSlashesInRoutePaths", () => {
+    expect(() => parseRoutePath("/users//settings")).toThrow("Route paths must not include consecutive slashes.");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -173,6 +181,12 @@ describe("parseAppPath", () => {
 
   it("shouldRejectDotSegmentsBeforeUrlNormalisation", () => {
     expect(() => parseAppPath("/admin/%2e%2e/users")).toThrow('must not include "." or ".." path segments.');
+  });
+
+  it("shouldRejectConsecutiveSlashesInAppPaths", () => {
+    expect(() => parseAppPath("/users//settings")).toThrow(
+      "Router navigation targets must not include consecutive slashes.",
+    );
   });
 });
 

@@ -68,6 +68,9 @@ export function normalizeBasePath(basePath = ""): string {
   if (basePath.endsWith("/") && basePath !== "/") {
     throw new Error("Router basePath must not end with a slash.");
   }
+  if (basePath.includes("//")) {
+    throw new Error("Router basePath must not include consecutive slashes.");
+  }
   if (basePath.includes("\\")) {
     throw new Error("Router basePath must not include backslashes.");
   }
@@ -76,12 +79,7 @@ export function normalizeBasePath(basePath = ""): string {
   }
   assertNoDotPathSegments(basePath, "Router basePath");
 
-  const pathname = toUrlPathname(basePath);
-  if (pathname.endsWith("/")) {
-    throw new Error("Router basePath must not end with a slash.");
-  }
-
-  return pathname;
+  return toUrlPathname(basePath);
 }
 
 /** @internal */
@@ -195,6 +193,9 @@ function assertRoutePath(path: string): void {
   if (path.length === 0 || !path.startsWith("/") || path.startsWith("//")) {
     throw new Error("Route paths must be app-local paths starting with a slash.");
   }
+  if (path.includes("//")) {
+    throw new Error("Route paths must not include consecutive slashes.");
+  }
   if (path.includes("\\")) {
     throw new Error("Route paths must not include backslashes.");
   }
@@ -207,6 +208,9 @@ function assertRoutePath(path: string): void {
 function assertAppPath(to: string): void {
   if (to.length === 0 || !to.startsWith("/") || to.startsWith("//")) {
     throw new Error("Router navigation targets must be app-local paths starting with a slash.");
+  }
+  if (to.includes("//")) {
+    throw new Error("Router navigation targets must not include consecutive slashes.");
   }
   if (to.includes("\\")) {
     throw new Error("Router navigation targets must not include backslashes.");

@@ -38,6 +38,11 @@ export interface History {
   start(): RouterMatch | null;
 
   /**
+   * Restores the last successful browser history URL and state if a navigation failed.
+   */
+  restore(): void;
+
+  /**
    * Removes all browser event listeners and resets navigation state.
    *
    * The router can be restarted after destroy.
@@ -48,6 +53,16 @@ export interface History {
 /** @internal */
 export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn }: HistoryOptions): History {
   let isStarted = false;
+  let lastGoodHref: string | null = null;
+  let lastGoodState: unknown = null;
+  let unsubscribe: (() => void) | null = null;
+
+  function restoreHistory(): void {
+    const browserWindow = getBrowserWindow();
+    if (browserWindow !== null && lastGoodHref !== null) {
+      browserWindow.history.replaceState(lastGoodState, "", lastGoodHref);
+    }
+  }
 
   function buildMissFromLocation(location: Location): RouterMiss {
     const { search } = location;
@@ -70,25 +85,30 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
     // When popstate fires mid-navigation, queue the entry so ordering is preserved.
     // The historyUpdate replays replaceState with the original state object so that
     // the browser history entry reflects exactly what the popstate carried.
-    if (nav.isActive()) {
-      const state = e.state;
-      nav.runFromHistory({
-        target,
-        miss,
-        historyUpdate: () => {
-          const href =
-            target !== null
-              ? buildBrowserHref(target, basePath)
-              : normalizePercentEscapes(browserWindow.location.pathname || "/") +
-                browserWindow.location.search +
-                browserWindow.location.hash;
-          browserWindow.history.replaceState(state, "", href);
-        },
-      });
-      return;
-    }
+    try {
+      if (nav.isActive()) {
+        const state = e.state;
+        nav.runFromHistory({
+          target,
+          miss,
+          historyUpdate: () => {
+            const href =
+              target !== null
+                ? buildBrowserHref(target, basePath)
+                : normalizePercentEscapes(browserWindow.location.pathname || "/") +
+                  browserWindow.location.search +
+                  browserWindow.location.hash;
+            browserWindow.history.replaceState(state, "", href);
+          },
+        });
+        return;
+      }
 
-    nav.runFromHistory({ target, miss });
+      nav.runFromHistory({ target, miss });
+    } catch (error) {
+      restoreHistory();
+      throw error;
+    }
   }
 
   function resolveAnchor(e: MouseEvent): HTMLAnchorElement | SVGAElement | null {
@@ -178,11 +198,33 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
       }
       isStarted = true;
 
+      // Track last good href and state
+      lastGoodHref = browserWindow.location.href;
+      lastGoodState = browserWindow.history.state;
+
+      unsubscribe = nav.subscribe(() => {
+        const win = getBrowserWindow();
+        if (win !== null) {
+          lastGoodHref = win.location.href;
+          lastGoodState = win.history.state;
+        }
+      });
+
       const target = parseLocationPath(browserWindow.location, basePath);
       const miss = target === null ? buildMissFromLocation(browserWindow.location) : undefined;
-      nav.runFromHistory({ target, miss });
+
+      try {
+        nav.runFromHistory({ target, miss });
+      } catch (error) {
+        restoreHistory();
+        throw error;
+      }
 
       return nav.currentMatch();
+    },
+
+    restore() {
+      restoreHistory();
     },
 
     destroy() {
@@ -192,6 +234,10 @@ export function createHistory({ nav, basePath, shouldInterceptLinks, navigateFn 
         if (shouldInterceptLinks) {
           browserWindow.document.removeEventListener("click", handleLinkClick);
         }
+      }
+      if (unsubscribe !== null) {
+        unsubscribe();
+        unsubscribe = null;
       }
       isStarted = false;
       nav.reset();
