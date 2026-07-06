@@ -56,11 +56,12 @@ export const removeStorage = (storageKey: string): void => {
 };
 
 /** Resolves the configured theme that matches the active OS color-scheme preference. */
-export const readSystemTheme = <TSchema extends Record<string, string>>(
-  defaultTheme: string,
-  systemTheme: { light: string; dark: string },
-  themes: readonly ThemeDefinition<TSchema>[],
-): ThemeDefinition<TSchema> => {
+export const readSystemTheme = <TSchema extends Record<string, string>>(options: {
+  defaultTheme: string;
+  systemTheme: { light: string; dark: string };
+  themes: readonly ThemeDefinition<TSchema>[];
+}): ThemeDefinition<TSchema> => {
+  const { defaultTheme, systemTheme, themes } = options;
   const getTheme = (name: string): ThemeDefinition<TSchema> => {
     const theme = themes.find((candidate) => candidate.name === name);
     if (theme === undefined) {
@@ -132,11 +133,12 @@ export const registerStorageListener = (handler: (event: StorageEvent) => void):
 };
 
 /** Applies the active theme configuration, class/attribute classes, and CSS Custom Properties to the DOM. */
-export const applyTheme = <TSchema extends Record<string, string>>(
-  theme: ThemeDefinition<TSchema>,
-  options: ResolvedThemeOptions<TSchema>,
-  activeTokens: Partial<Record<keyof TSchema, string>>,
-): void => {
+export const applyTheme = <TSchema extends Record<string, string>>(args: {
+  theme: ThemeDefinition<TSchema>;
+  options: ResolvedThemeOptions<TSchema>;
+  activeTokens: Partial<Record<keyof TSchema, string>>;
+}): void => {
+  const { theme, options, activeTokens } = args;
   if (typeof document === "undefined") {
     return;
   }
@@ -182,11 +184,12 @@ export const applyTheme = <TSchema extends Record<string, string>>(
 };
 
 /** Resolves any missing CSS variables from the computed style of the root DOM element. */
-export const readComputedTokens = <TSchema extends Record<string, string>>(
-  theme: ThemeDefinition<TSchema>,
-  options: ResolvedThemeOptions<TSchema>,
-  activeTokens: Partial<Record<keyof TSchema, string>>,
-): Partial<Record<keyof TSchema, string>> => {
+export const readComputedTokens = <TSchema extends Record<string, string>>(args: {
+  theme: ThemeDefinition<TSchema>;
+  options: ResolvedThemeOptions<TSchema>;
+  activeTokens: Partial<Record<keyof TSchema, string>>;
+}): Partial<Record<keyof TSchema, string>> => {
+  const { theme, options, activeTokens } = args;
   const computedTokens: Partial<Record<keyof TSchema, string>> = {};
 
   if (typeof window === "undefined" || typeof document === "undefined" || !options.tokenSchema) {

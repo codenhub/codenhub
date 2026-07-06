@@ -4,5 +4,6 @@
     "moduleResolution": "bundler",
     "lib": ["DOM", "ES2024"]
   },
-  "extends": "../../tsconfig.json"
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*"]
 }

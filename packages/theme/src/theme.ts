@@ -84,7 +84,11 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   get(): ThemeDefinition<TSchema> {
     const baseTheme = this.#getTheme(this.#activeName);
-    const computedTokens = readComputedTokens(baseTheme, this.#options, this.#activeTokens);
+    const computedTokens = readComputedTokens({
+      theme: baseTheme,
+      options: this.#options,
+      activeTokens: this.#activeTokens,
+    });
 
     return {
       ...baseTheme,
@@ -118,7 +122,11 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   getSystem(): ThemeDefinition<TSchema> {
-    return readSystemTheme(this.#options.defaultTheme, this.#options.systemTheme, this.#options.themes);
+    return readSystemTheme({
+      defaultTheme: this.#options.defaultTheme,
+      systemTheme: this.#options.systemTheme,
+      themes: this.#options.themes,
+    });
   }
 
   subscribe(listener: ThemeChangeListener<TSchema>): () => void {
@@ -162,7 +170,11 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       writeStorage(this.#options.storageKey, theme.name);
     }
 
-    applyTheme(theme, this.#options, this.#activeTokens);
+    applyTheme({
+      theme,
+      options: this.#options,
+      activeTokens: this.#activeTokens,
+    });
 
     const activeTheme = this.get();
     this.#emit({ name: activeTheme.name, theme: activeTheme, source: options.source });
