@@ -77,7 +77,7 @@ Examples:
 | `.field`                                                              | Vertical field wrapper.             |
 | `.label`                                                              | Form label text.                    |
 | `.hint`                                                               | Secondary helper text.              |
-| `.error` inside `.field` except `.btn.error`, `.field-error`          | Destructive helper text.            |
+| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.            |
 | `.ipt`                                                                | Input control styling.              |
 | `.textarea`                                                           | Textarea control styling.           |
 | `.select`                                                             | Select control styling.             |

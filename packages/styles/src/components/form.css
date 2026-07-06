@@ -12,8 +12,7 @@
     @apply text-text-secondary text-[0.8125rem];
   }
 
-  .error:not(.btn),
-  &-error {
+  .error:not(.btn) {
     @apply text-destructive text-[0.8125rem] font-medium;
   }
 }

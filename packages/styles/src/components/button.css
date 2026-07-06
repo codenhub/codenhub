@@ -144,8 +144,10 @@
     @apply pointer-events-none text-transparent! transition-[opacity,transform];
 
     &::after {
-      @apply absolute top-[calc(50%+var(--border-width))] left-[calc(50%+var(--border-width))] block size-4 -translate-1/2 rounded-full bg-(--button-spinner);
+      @apply absolute block size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--button-spinner);
 
+      top: calc(50% + var(--border-width));
+      left: calc(50% + var(--border-width));
       content: "";
       @apply ai;
     }
