@@ -15,6 +15,8 @@ export const readSystemTheme = <TSchema extends Record<string, string>>(options:
   const getTheme = (name: string): ThemeDefinition<TSchema> => {
     const theme = themes.find((candidate) => candidate.name === name);
     if (theme === undefined) {
+      // Constructor validation (assertThemeConfig) prevents this path via the public API.
+      // c8 ignore next
       throw new Error(`Theme is not configured: ${name}.`);
     }
     return theme;

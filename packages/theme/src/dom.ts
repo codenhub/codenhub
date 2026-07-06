@@ -1,7 +1,6 @@
 import { DARK_CLASS, THEME_CHANGE_EVENT } from "./constants";
 import type { ThemeDefinition, ResolvedThemeOptions, ThemeChangeDetail } from "./types";
 
-
 /**
  * Applies the active theme configuration, class/attribute updates, and CSS Custom Properties to the DOM.
  *
@@ -109,8 +108,10 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
         }
       }
     }
-  } catch {
-    // Fallback silently if computed style access fails
+  } catch (error) {
+    // getComputedStyle can fail in sandboxed or restricted environments;
+    // log in development so unexpected failures are visible, then fall back gracefully.
+    console.error("[theme] Failed to read computed token styles:", error);
   }
 
   return computedTokens;
@@ -132,5 +133,3 @@ export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: T
 
   window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TSchema>>(THEME_CHANGE_EVENT, { detail }));
 };
-
-

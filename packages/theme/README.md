@@ -52,7 +52,7 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
       } catch (_) {}
       try {
         const stored = localStorage.getItem(key);
-        // Add all your configured theme names to this array to validate storage value
+        // Add all your configured theme names here to validate the stored value.
         const allowed = ["light", "dark"];
         if (stored && allowed.includes(stored)) {
           theme = stored;
@@ -60,9 +60,11 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
       } catch (_) {}
       document.documentElement.setAttribute(attribute, theme);
 
-      // Determine if active theme is dark to set color-scheme and Tailwind classes
-      // If using custom theme names, adjust this check to match your dark themes
-      const isDark = theme === "dark" || theme.includes("dark");
+      // List the names of all your dark-scheme themes here.
+      // Using an explicit set avoids false matches from substring checks (e.g. "midnight" is dark
+      // but would not match "dark"; "darkroom" would match but may not be a dark theme).
+      const darkThemes = new Set(["dark"]);
+      const isDark = darkThemes.has(theme);
       document.documentElement.style.colorScheme = isDark ? "dark" : "light";
       document.documentElement.classList.add("theme-" + theme);
 
@@ -164,7 +166,7 @@ Throws `Error` when `name` is not configured.
 
 ##### `toggle()`
 
-Toggles between the configured system light and dark themes based on the active theme's color scheme, applies any dynamic token overrides, then stores the explicit preference when browser storage is available. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
+Toggles between the configured system light and dark themes based on the active theme's `colorScheme`, applies any dynamic token overrides, then stores the explicit preference when browser storage is available. The target name is always taken from `systemTheme.light` or `systemTheme.dark`, not by cycling the active theme name. In multi-theme setups where the active theme is not one of the system themes, `toggle()` still targets `systemTheme.light` or `systemTheme.dark`. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
 
 ```ts
 function toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
@@ -210,7 +212,7 @@ Returns an unsubscribe function.
 
 ##### `destroy()`
 
-Removes the system preference listener and clears in-process subscribers.
+Removes the system preference listener, clears in-process subscribers, and resets active tokens and the active theme name to `defaultTheme`. Safe to call before re-initializing with `init()`.
 
 ```ts
 function destroy(): void;

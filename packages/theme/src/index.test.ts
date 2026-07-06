@@ -834,7 +834,6 @@ describe("Theme CSS tokens support", () => {
   });
 
   it("should reset active token overrides on destroy", () => {
-
     const tokenSchema = { primary: "--color-primary" };
     const theme = createTheme({ tokenSchema }).init({ primary: "orange" });
 
@@ -843,6 +842,25 @@ describe("Theme CSS tokens support", () => {
     theme.destroy();
     theme.init();
     expect(theme.get().tokens).toEqual({});
+  });
+
+  it("should reset active theme name to defaultTheme on destroy", () => {
+    const theme = createTheme().init();
+
+    theme.set("dark");
+    expect(theme.get().name).toBe("dark");
+
+    // After destroy, activeName resets to defaultTheme ("light").
+    // get() before re-init should reflect defaultTheme, not the stale "dark".
+    theme.destroy();
+    expect(theme.get().name).toBe("light");
+
+    // Clear storage so re-init does not restore the previous explicit preference.
+    window.localStorage.clear();
+
+    // Re-init resolves from system preference (light, no media override), starting clean.
+    theme.init();
+    expect(theme.get().name).toBe("light");
   });
 
   it("should reject token definitions or overrides that use prototype properties", () => {

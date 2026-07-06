@@ -1,9 +1,8 @@
+import { getThemeClass } from "./class-resolver";
 import { DEFAULT_OPTIONS } from "./constants";
 import { applyTheme, readComputedTokens, emitThemeEvent } from "./dom";
-import { getThemeClass } from "./class-resolver";
 import { readStorage, writeStorage, removeStorage } from "./storage";
 import { readSystemTheme, registerSystemListener, registerStorageListener } from "./system";
-import { assertThemeConfig, assertRuntimeTokens } from "./validation";
 import type {
   Theme,
   ThemeDefinition,
@@ -13,6 +12,7 @@ import type {
   ThemeOptions,
   ResolvedThemeOptions,
 } from "./types";
+import { assertThemeConfig, assertRuntimeTokens } from "./validation";
 
 class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>> implements Theme<TSchema> {
   #options: ResolvedThemeOptions<TSchema>;
@@ -153,6 +153,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
     this.#listeners.clear();
     this.#activeTokens = {};
+    this.#activeName = this.#options.defaultTheme;
     this.#resolvedClasses = null;
     this.#isInitialized = false;
   }
@@ -215,10 +216,10 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 }
 
 /**
- * Factory function that creates and returns a `Theme` manager instance.
+ * Factory function that creates and returns a `Theme` instance.
  *
  * @param options - Configuration options for theme definitions, persistence keys, DOM attributes, custom class resolvers, and dynamic token schemas.
- * @returns A theme manager instance conforming to the `Theme` interface.
+ * @returns A `Theme` instance.
  * @throws {Error} If configured theme names are empty, duplicated, invalid for CSS class application, or if the default/system themes are not present in the configured list.
  */
 export function createTheme<TSchema extends Record<string, string> = Record<string, string>>(

@@ -83,7 +83,7 @@ export interface ResolvedThemeOptions<TSchema extends Record<string, string> = R
 }
 
 /**
- * Core theme preference manager. Handles initialization, switching themes,
+ * Core theme preference handler. Manages initialization, switching themes,
  * persistence to localStorage, synchronizing with the OS prefers-color-scheme preference,
  * dynamic token mapping to CSS Custom Properties, and dispatching change events.
  */
@@ -101,6 +101,11 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
 
   /**
    * Retrieves the active theme configuration including static and computed tokens.
+   *
+   * Token values are merged in this priority order (last wins):
+   * 1. CSS computed style — values read from `window.getComputedStyle` for tokens not defined in JS.
+   * 2. Theme static tokens — values defined in `ThemeDefinition.tokens` for the active theme.
+   * 3. Runtime overrides — values passed to `init()`, `set()`, `toggle()`, or other methods.
    *
    * @returns The active `ThemeDefinition` object. If `tokenSchema` is configured and a token is not
    * explicitly defined in JS, its value is dynamically resolved from the computed style of the root DOM element in browser environments.
@@ -121,6 +126,10 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
 
   /**
    * Switches the theme between the configured system light and dark themes and persists the change.
+   * The next theme is always selected from `systemTheme.light` or `systemTheme.dark` based on the
+   * active theme's `colorScheme`, not by cycling the active theme name. In multi-theme setups where
+   * the active theme is not one of the system themes, `toggle()` still targets `systemTheme.light`
+   * or `systemTheme.dark`.
    *
    * @param tokens - Optional runtime override token values to apply. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
    * @returns The activated `ThemeDefinition` with merged and resolved tokens.
@@ -160,7 +169,9 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
   subscribe(listener: ThemeChangeListener<TSchema>): () => void;
 
   /**
-   * Cleans up the theme manager instance by removing all in-process change listeners and the system preference media query listener.
+   * Cleans up the theme instance by removing all in-process change listeners and the system
+   * preference media query listener. Resets active tokens and the active theme name to the
+   * configured `defaultTheme` so the instance can be safely re-initialized with `init()`.
    *
    * @sideEffect Removes event listeners from `window` and clears internal subscriber sets.
    */
