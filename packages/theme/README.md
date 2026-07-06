@@ -52,7 +52,9 @@ Because the client-side JS bundle loads asynchronously, there can be a brief fla
       } catch (_) {}
       try {
         const stored = localStorage.getItem(key);
-        if (stored && /^[a-zA-Z0-9_-]+$/.test(stored)) {
+        // Add all your configured theme names to this array to validate storage value
+        const allowed = ["light", "dark"];
+        if (stored && allowed.includes(stored)) {
           theme = stored;
         }
       } catch (_) {}
