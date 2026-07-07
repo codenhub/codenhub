@@ -21,6 +21,8 @@ export interface DomTranslator {
 export function createDomTranslator(): DomTranslator {
   const fallbackTextByElement = new WeakMap<Element, string>();
 
+  const translatedTextByElement = new WeakMap<Element, string>();
+
   const isCustomElement = (element: Element): boolean => {
     return element.tagName.includes("-");
   };
@@ -63,14 +65,15 @@ export function createDomTranslator(): DomTranslator {
 
   const getElementFallbackText = (element: Element): string => {
     const existingFallback = fallbackTextByElement.get(element);
+    const currentText = element.textContent ?? "";
+    const lastTranslated = translatedTextByElement.get(element);
 
-    if (existingFallback !== undefined) {
-      return existingFallback;
+    if (existingFallback === undefined || (lastTranslated !== undefined && currentText !== lastTranslated)) {
+      fallbackTextByElement.set(element, currentText);
+      return currentText;
     }
 
-    const fallbackText = element.textContent ?? "";
-    fallbackTextByElement.set(element, fallbackText);
-    return fallbackText;
+    return existingFallback;
   };
 
   const translateElement = (element: Element, translate: (key: string) => string | undefined): boolean => {
@@ -92,10 +95,12 @@ export function createDomTranslator(): DomTranslator {
 
     if (translation === undefined) {
       element.textContent = fallbackText;
+      translatedTextByElement.set(element, fallbackText);
       return false;
     }
 
     element.textContent = translation;
+    translatedTextByElement.set(element, translation);
     return true;
   };
 

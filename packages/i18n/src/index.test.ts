@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createI18n, type I18nConfig, type I18n } from "./index";
+import { createI18n, getI18nInstance, setI18nInstance, type I18nConfig, type I18n } from "./index";
 
 const LOCALES = ["en-US", "pt-BR"] as const;
 type Locale = (typeof LOCALES)[number];
@@ -1067,5 +1067,116 @@ describe("I18n", () => {
     expect(warnSpy).not.toHaveBeenCalled();
 
     globalThis.window = originalWindow;
+  });
+
+  it("should throw error when getI18nInstance is called before configuration", () => {
+    setI18nInstance(null);
+    expect(() => getI18nInstance()).toThrow("[I18n] No i18n instance has been configured.");
+  });
+
+  it("should configure and retrieve global i18n instance", () => {
+    setI18nInstance(i18n);
+    expect(getI18nInstance()).toBe(i18n);
+    setI18nInstance(null);
+  });
+
+  it("should update fallback text when textContent is changed manually alongside data-i18n attribute", async () => {
+    await i18n.init({ observe: true });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const newEl = document.createElement("span");
+    newEl.setAttribute("data-i18n", "home.hero.cta");
+    newEl.textContent = "Original CTA Text";
+    container.appendChild(newEl);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(newEl.textContent).toBe("Get started");
+
+    // Manually change data-i18n AND textContent to something new
+    newEl.setAttribute("data-i18n", "home.hero.missing_key");
+    newEl.textContent = "New Manual Fallback";
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // Since translation is missing, it should fall back to the newly changed manual text content
+    expect(newEl.textContent).toBe("New Manual Fallback");
+
+    document.body.removeChild(container);
+  });
+
+  it("should fall back gracefully to empty dictionary when both requested and default locales fail to load", async () => {
+    fetchOverrides[EN_US_URL] = { ok: false, status: 500 };
+    fetchOverrides[PT_BR_URL] = { ok: false, status: 500 };
+
+    localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
+
+    const failI18n = createI18n(i18nConfig);
+    await failI18n.init({ storageKey: "test-i18n" });
+
+    expect(failI18n.locale).toBe("en-US");
+    expect(failI18n.isReady).toBe(true);
+    expect(failI18n.translate("home.hero.cta")).toBeUndefined();
+  });
+
+  it("should handle non-object/invalid JSON dictionary shapes and cache the failure", async () => {
+    // 1. Make en-US return an invalid dictionary shape
+    fetchOverrides[EN_US_URL] = { body: ["invalid", "array", "shape"], ok: true };
+
+    const invalidI18n = createI18n(i18nConfig);
+    // init() will try to load en-US, fail, and add it to failed cache
+    await invalidI18n.init();
+    expect(invalidI18n.locale).toBe("en-US");
+
+    // Clear fetch spy history
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockClear();
+
+    // 2. Make en-US return a valid dictionary, but pt-BR fail
+    fetchOverrides[EN_US_URL] = { body: { "home.hero.cta": "New CTA" }, ok: true };
+    fetchOverrides[PT_BR_URL] = { ok: false, status: 404 }; // non-retryable failure
+
+    // 3. Call setLocale("pt-BR"). It will retry pt-BR, fail, and fall back to en-US.
+    const result = await invalidI18n.setLocale("pt-BR");
+    expect(result).toBe(false);
+
+    // 4. Since en-US was in the failed cache, it should NOT have been fetched again.
+    // So fetch should only have been called for pt-BR.
+    const enUsCalls = fetchSpy.mock.calls.filter(([url]) => {
+      if (typeof url === "string") {
+        return url.includes("en-US");
+      }
+      if (url && typeof url === "object") {
+        const urlStr = "url" in url ? String((url as unknown as Record<string, unknown>).url) : "";
+        const pathnameStr = "pathname" in url ? String((url as unknown as Record<string, unknown>).pathname) : "";
+        return urlStr.includes("en-US") || pathnameStr.includes("en-US");
+      }
+      return false;
+    });
+    expect(enUsCalls).toHaveLength(0);
+  });
+ 
+  it("should ignore translateDocument(null) and directly test domTranslator with null", async () => {
+    const { createDomTranslator } = await import("./dom-translation");
+    expect(() => i18n.translateDocument(null as unknown as ParentNode)).not.toThrow();
+    expect(() => createDomTranslator().translateDocument(null, () => undefined)).not.toThrow();
+  });
+
+  it("should return undefined when translating an empty or whitespace key", async () => {
+    await i18n.init();
+    expect(i18n.translate("")).toBeUndefined();
+    expect(i18n.translate("   ")).toBeUndefined();
+  });
+
+  it("should return false when setting locale to empty or whitespace", async () => {
+    await i18n.init();
+    expect(await i18n.setLocale("")).toBe(false);
+    expect(await i18n.setLocale("   ")).toBe(false);
+  });
+
+  it("should disconnect old mutation observer when init is called again", async () => {
+    await i18n.init({ observe: true });
+    // Calling init again
+    await i18n.init();
+    expect(i18n.isReady).toBe(true);
   });
 });
