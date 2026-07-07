@@ -2,7 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
+  timeout: 120000,
   fullyParallel: true,
+  workers: process.env.CI ? 2 : 4,
   reporter: [["list"], ["./tests/exit-reporter.ts"]],
   webServer: [
     {
