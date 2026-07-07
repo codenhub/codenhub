@@ -968,4 +968,34 @@ describe("I18n", () => {
     expect(i18nWithoutIsLocale.locale).toBe("en-US");
     expect(i18nWithoutIsLocale.translate("home.hero.cta")).toBe("Get started");
   });
+
+  it("should support translateDocument to manually translate subtrees", async () => {
+    await i18n.init();
+    const container = document.createElement("div");
+    container.innerHTML = `<span data-i18n="home.hero.cta">Original</span>`;
+    i18n.translateDocument(container);
+    expect(container.querySelector("span")?.textContent).toBe("Get started");
+  });
+
+  it("should support MutationObserver to auto-translate dynamic DOM changes", async () => {
+    await i18n.init({ observe: true });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const newEl = document.createElement("span");
+    newEl.setAttribute("data-i18n", "home.hero.cta");
+    newEl.textContent = "Original";
+    container.appendChild(newEl);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(newEl.textContent).toBe("Get started");
+
+    newEl.setAttribute("data-i18n", "home.hero.secondaryCta");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(newEl.textContent).toBe("Learn more");
+
+    document.body.removeChild(container);
+  });
 });

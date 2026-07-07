@@ -87,6 +87,7 @@ interface I18n<TLocale extends string = string> {
   readonly locale: TLocale;
   readonly isReady: boolean;
   init(options?: I18nInitOptions): Promise<void>;
+  translateDocument(root?: ParentNode): void;
   setLocale(locale: string): Promise<boolean>;
   translate(key: string): string | undefined;
   addEventListener(
@@ -110,11 +111,18 @@ interface I18n<TLocale extends string = string> {
 
 ##### `init(options)`
 
-Initializes state, resolves the active locale, fetches matching translations (recursively flattening nested keys), and translates the DOM.
+Initializes state, resolves the active locale, fetches matching translations (recursively flattening nested keys), and translates the DOM. If `options.observe` is true, sets up a MutationObserver to translate new or modified dynamic elements.
 
 - **Parameters**: `options?: I18nInitOptions`
 - **Returns**: `Promise<void>`
 - **Observable Failure Behavior**: If the resolved locale fails to load, it attempts to load `defaultLocale`. If that also fails, initialization completes but `hasTranslationsAvailable` is emitted as false. If run in a server-side (Node) environment, resolves immediately without loading or translating.
+
+##### `translateDocument(root)`
+
+Re-scans and translates translatable elements inside the given root element or subtree. Useful for manually translating dynamically loaded content.
+
+- **Parameters**: `root?: ParentNode` (Defaults to the configured instance root)
+- **Returns**: `void`
 
 ##### `setLocale(locale)`
 
@@ -177,14 +185,16 @@ interface I18nInitOptions {
   storageKey?: string;
   root?: ParentNode;
   isSilent?: boolean;
+  observe?: boolean;
 }
 ```
 
-| Property     | Type         | Default           | Description                                                    |
-| ------------ | ------------ | ----------------- | -------------------------------------------------------------- |
-| `storageKey` | `string`     | `"i18n"`          | LocalStorage key used to persist the user's locale choice.     |
-| `root`       | `ParentNode` | `document`        | DOM subtree to automatically scan and translate.               |
-| `isSilent`   | `boolean`    | `config.isSilent` | If true, overrides config setting to silence console warnings. |
+| Property     | Type         | Default           | Description                                                          |
+| ------------ | ------------ | ----------------- | -------------------------------------------------------------------- |
+| `storageKey` | `string`     | `"i18n"`          | LocalStorage key used to persist the user's locale choice.           |
+| `root`       | `ParentNode` | `document`        | DOM subtree to automatically scan and translate.                     |
+| `isSilent`   | `boolean`    | `config.isSilent` | If true, overrides config setting to silence console warnings.       |
+| `observe`    | `boolean`    | `false`           | If true, auto-translates dynamic DOM additions via MutationObserver. |
 
 ---
 

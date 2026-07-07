@@ -67,6 +67,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
   private readonly warnedMissingKeys = new Set<string>();
   private localeRequestId = 0;
   private isSilent: boolean;
+  private mutationObserver: MutationObserver | null = null;
 
   private readonly config: I18nConfig<TLocale>;
   private readonly localeLoader: ReturnType<typeof createLocaleLoader<TLocale>>;
@@ -158,11 +159,18 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     return this.translateNormalized(normalizedKey);
   };
 
-  private translateDocument(): void {
-    this.domTranslator.translateDocument(this.root, this.translateNormalized);
-  }
+  translateDocument = (root?: ParentNode): void => {
+    const targetRoot = root ?? this.root;
+    if (targetRoot) {
+      this.domTranslator.translateDocument(targetRoot, this.translateNormalized);
+    }
+  };
 
   async init(options: I18nInitOptions = {}): Promise<void> {
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
     this.isReadyState = false;
     this.isSilent = options.isSilent ?? this.config.isSilent ?? false;
     this.storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
@@ -198,6 +206,29 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     this.isReadyState = true;
     this.syncDocumentLocale();
     this.translateDocument();
+
+    if (options.observe && typeof MutationObserver !== "undefined" && this.root) {
+      this.mutationObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          if (mutation.type === "childList") {
+            for (const node of mutation.addedNodes) {
+              if (node instanceof Element) {
+                this.translateDocument(node);
+              }
+            }
+          } else if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            this.translateDocument(mutation.target);
+          }
+        }
+      });
+      this.mutationObserver.observe(this.root as Node, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-i18n"],
+      });
+    }
+
     this.dispatchEvent(
       new SafeCustomEvent<I18nReadyEventDetail>("ready", {
         detail: {

@@ -67,6 +67,11 @@ export interface I18nInitOptions {
    * Overrides config-level silent option if provided.
    */
   isSilent?: boolean;
+  /**
+   * Automatically translate dynamic DOM changes using MutationObserver.
+   * @defaultValue false
+   */
+  observe?: boolean;
 }
 
 /** Map of i18n event types to their respective CustomEvent details. */
@@ -138,6 +143,14 @@ export interface I18n<TLocale extends string = string> {
    * If both fail, it completes initialization but marks translations as unavailable.
    */
   init(options?: I18nInitOptions): Promise<void>;
+
+  /**
+   * Re-scans and translates translatable elements inside the given root element or subtree.
+   * Useful when dynamic elements are added to the DOM after initialization.
+   *
+   * @param root - The DOM element or subtree root to translate. Defaults to the configured instance root.
+   */
+  translateDocument(root?: ParentNode): void;
 
   /**
    * Changes the active locale. Loads new translations if needed,
