@@ -65,21 +65,24 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 
 ### Import Paths
 
-| Path                             | Kind                | Contents                                                            |
-| -------------------------------- | ------------------- | ------------------------------------------------------------------- |
-| `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.        |
-| `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.          |
-| `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                                |
-| `@codenhub/styles/tw`            | Tailwind source CSS | Full Tailwind v4 source: theme, base styles, components, utilities. |
-| `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.            |
-| `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                                |
-| `@codenhub/styles/tw/surface`    | Tailwind source CSS | Surface styles and empty-state utility.                             |
-| `@codenhub/styles/tw/button`     | Tailwind source CSS | Composable button utilities.                                        |
-| `@codenhub/styles/tw/form`       | Tailwind source CSS | Form, input, textarea, select, checkbox, switch utilities.          |
-| `@codenhub/styles/tw/feedback`   | Tailwind source CSS | Alert, badge, skeleton, progress utilities.                         |
-| `@codenhub/styles/tw/loader`     | Tailwind source CSS | Loader and activity indicator utilities.                            |
-| `@codenhub/styles/tw/tooltip`    | Tailwind source CSS | Tooltip utility.                                                    |
-| `@codenhub/styles/tw/utilities`  | Tailwind source CSS | Layout primitives and contrast utilities.                           |
+| Path                             | Kind                | Contents                                                              |
+| -------------------------------- | ------------------- | --------------------------------------------------------------------- |
+| `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.          |
+| `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.            |
+| `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                                  |
+| `@codenhub/styles/tw`            | Tailwind source CSS | Full Tailwind v4 source: theme, base styles, components, utilities.   |
+| `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.              |
+| `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                                  |
+| `@codenhub/styles/tw/surface`    | Tailwind source CSS | Surface styles and empty-state utility.                               |
+| `@codenhub/styles/tw/button`     | Tailwind source CSS | Composable button utilities.                                          |
+| `@codenhub/styles/tw/form`       | Tailwind source CSS | Form, input, textarea, select, checkbox, switch utilities.            |
+| `@codenhub/styles/tw/feedback`   | Tailwind source CSS | Alert, badge, skeleton, progress utilities.                           |
+| `@codenhub/styles/tw/loader`     | Tailwind source CSS | Loader and activity indicator utilities.                              |
+| `@codenhub/styles/tw/tooltip`    | Tailwind source CSS | Tooltip utility.                                                      |
+| `@codenhub/styles/tw/reset`      | Tailwind source CSS | Core resets: scrollbar, selection, body structure.                    |
+| `@codenhub/styles/tw/overrides`  | Tailwind source CSS | Opt-in classless styling for native HTML elements (headings, inputs). |
+| `@codenhub/styles/tw/typography` | Tailwind source CSS | Typography helper classes.                                            |
+| `@codenhub/styles/tw/utilities`  | Tailwind source CSS | Layout primitives and contrast utilities.                             |
 
 ### Detailed Docs
 

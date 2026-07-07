@@ -1,81 +1,74 @@
 @import "tailwindcss";
 @import "./theme.css";
 @import "./typography.css";
+@import "./components/index.css";
 
 @layer base {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-primary) var(--color-background);
+  /* Headings */
+  h1 {
+    @apply text-title-lg;
   }
 
-  ::-webkit-scrollbar {
-    width: calc(var(--spacing) * 4);
+  h2 {
+    @apply text-title;
   }
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-primary);
-    border: var(--spacing) solid var(--color-background);
-    border-radius: calc(var(--spacing) * 2);
+  h3 {
+    @apply text-title-sm;
   }
 
-  html,
-  body {
-    @apply bg-background text-text font-default min-h-dvh overflow-x-hidden;
+  h4 {
+    @apply text-label-lg;
   }
 
-  body {
-    @apply flex flex-col;
+  h5,
+  h6 {
+    @apply text-label;
   }
 
-  button {
-    @apply not-disabled:cursor-pointer;
+  /* Form controls */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"],
+  input[type="time"] {
+    @apply ipt;
   }
 
-  img {
-    @apply select-none;
+  textarea {
+    @apply textarea;
   }
 
-  ::selection {
-    background: var(--color-primary);
-    color: var(--color-primary-contrast);
+  select {
+    @apply select;
   }
 
-  :focus-visible {
-    outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+  input[type="checkbox"] {
+    @apply checkbox;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      scroll-behavior: auto !important;
-      transition-duration: 0.01ms !important;
+  input[type="radio"] {
+    @apply checkbox rounded-full;
+
+    &::after {
+      @apply rounded-full;
+      mask-image: none;
+      -webkit-mask-image: none;
     }
   }
 
-  p,
-  li,
-  a {
-    @apply text-body;
-  }
-}
-
-@layer components {
-  [aria-current="page"] {
-    @apply text-primary font-bold;
-  }
-
-  @media (forced-colors: active) {
-    .btn,
-    .ipt,
-    .textarea,
-    .select,
-    .alert,
-    .badge {
-      border-color: CanvasText;
-    }
+  /* Buttons */
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    @apply btn secondary;
   }
 }
