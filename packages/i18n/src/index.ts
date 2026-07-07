@@ -51,7 +51,11 @@ const isPersistedLocaleState = <TLocale extends string>(
 
   const locale = (raw as Record<string, unknown>).locale;
   const isLocale =
-    config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
+    config.isLocale ??
+    ((val: string): val is TLocale => {
+      const normalized = val.toLowerCase();
+      return config.locales.some((l) => l.toLowerCase() === normalized);
+    });
 
   return locale === undefined || (typeof locale === "string" && isLocale(locale));
 };

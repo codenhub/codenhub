@@ -60,11 +60,19 @@ export const getInitialLocale = <TLocale extends string>(
   config: I18nConfig<TLocale>,
   persistedLocale: string | undefined,
 ): TLocale => {
-  const isLocale =
-    config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
+  if (persistedLocale !== undefined) {
+    const normalized = normalizeValue(persistedLocale);
+    if (normalized !== undefined) {
+      const matched = matchLocaleIgnoreCase(config, normalized);
+      if (matched !== undefined) {
+        const isLocale =
+          config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
 
-  if (persistedLocale !== undefined && isLocale(persistedLocale)) {
-    return persistedLocale;
+        if (isLocale(matched)) {
+          return matched;
+        }
+      }
+    }
   }
 
   return detectBrowserLocale(config) ?? config.defaultLocale;
