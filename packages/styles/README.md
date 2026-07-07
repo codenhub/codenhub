@@ -88,13 +88,39 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 
 Detailed package reference ships with the package under `docs/`:
 
-| Document                                 | Purpose                                                       |
-| ---------------------------------------- | ------------------------------------------------------------- |
-| [Overview](./docs/index.md)              | Package model, entrypoints, and class model.                  |
-| [Tokens](./docs/tokens.md)               | Color and foundation token contracts.                         |
-| [Classes](./docs/classes.md)             | Layout, surface, action, form, feedback, and tooltip helpers. |
-| [Accessibility](./docs/accessibility.md) | CSS accessibility hooks and non-goals.                        |
-| [Tests](./docs/tests.md)                 | Build and browser validation strategy.                        |
+| Document                                 | Purpose                                                               |
+| ---------------------------------------- | --------------------------------------------------------------------- |
+| [Overview](./docs/index.md)              | Package model, entrypoints, and class model.                          |
+| [Tokens](./docs/tokens.md)               | Color and foundation token contracts.                                 |
+| [Classes](./docs/classes.md)             | Layout, surface, action, form, feedback, loader, and tooltip helpers. |
+| [Accessibility](./docs/accessibility.md) | CSS accessibility hooks and non-goals.                                |
+| [Tests](./docs/tests.md)                 | Build and browser validation strategy.                                |
+
+### Loader Utilities (`@codenhub/styles/tw/loader`)
+
+Activity indicator classes. Compose with `.loader` (standalone element) or use `.ai` as a low-level mask base on any element.
+
+| Class                  | Animation                                     |
+| ---------------------- | --------------------------------------------- |
+| `.ai`                  | Base mask utility. Default: circular spinner. |
+| `.loader`              | Standalone inline loader. Composes `.ai`.     |
+| `.dots-wave`           | Three dots bouncing in a wave.                |
+| `.dots-fade`           | Three dots fading in and out.                 |
+| `.dots-queue`          | Dot queuing from left to right.               |
+| `.dots-rotate`         | Side dots rotating around a center dot.       |
+| `.dots-grow`           | Three dots growing and shrinking.             |
+| `.dots-grow-alternate` | Outer dots small, center dot pulses.          |
+| `.dot-bounce`          | Single dot bouncing with squash effect.       |
+| `.bars-wave`           | Three vertical bars scaling in a wave.        |
+| `.pulse-ring`          | Two concentric rings pulsing outward.         |
+
+Size variants `.sm` and `.lg` work on `.loader`. Always add `aria-hidden="true"` or a visible label.
+
+```html
+<span class="loader" aria-hidden="true"></span>
+<span class="loader dots-wave" aria-hidden="true"></span>
+<span class="loader bars-wave lg" aria-hidden="true"></span>
+```
 
 ## Examples
 

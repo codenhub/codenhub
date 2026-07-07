@@ -142,6 +142,8 @@
   }
 
   &.loading {
+    /* text-transparent! forces text invisible regardless of intent color so the
+       CSS spinner (::after pseudo-element) is the only visible element while loading. */
     @apply pointer-events-none text-transparent! transition-[opacity,transform];
 
     &::after {

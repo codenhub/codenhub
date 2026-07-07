@@ -88,6 +88,8 @@ Examples:
 
 `.checkbox` and `.switch` accept the same intent classes as buttons to set the checked color:
 
+> **Note:** `control-base` is an internal composition utility that `ipt`, `textarea`, and `select` build on. It is accessible via `./tw/form` but is not part of the public consumer API. Use `ipt`, `textarea`, or `select` instead.
+
 | Class                               | Meaning            |
 | ----------------------------------- | ------------------ |
 | _(default)_                         | Primary color.     |
@@ -118,16 +120,31 @@ Example:
 
 ## Feedback
 
-| Class       | Purpose                                                             |
-| ----------- | ------------------------------------------------------------------- |
-| `.alert`    | Inline feedback surface.                                            |
-| `.icon`     | Subclass of `.alert`. Adds a corresponding intent icon and padding. |
-| `.badge`    | Compact status pill.                                                |
-| `.ai`       | Low-level activity indicator. Applies CSS masking.                  |
-| `.loader`   | Standalone inline loader. Composes `.ai` with visual styles.        |
-| `.skeleton` | Ambient loading placeholder.                                        |
-| `.progress` | Progress track. Uses `--progress-value` variable.                   |
-| `.active`   | Optional on `.progress` to add skeleton shimmer animation.          |
+| Class       | Purpose                                                                    |
+| ----------- | -------------------------------------------------------------------------- |
+| `.alert`    | Inline feedback surface.                                                   |
+| `.icon`     | Subclass of `.alert`. Adds a corresponding intent icon and padding.        |
+| `.badge`    | Compact status pill.                                                       |
+| `.ai`       | Low-level activity indicator base. Applies CSS mask to show a spinner SVG. |
+| `.loader`   | Standalone inline loader. Composes `.ai` with size and color styles.       |
+| `.skeleton` | Ambient loading placeholder.                                               |
+| `.progress` | Progress track. Uses `--progress-value` variable.                          |
+| `.active`   | Optional on `.progress` to add skeleton shimmer animation.                 |
+
+Activity indicator modifier classes (compose with `.loader` or any element using `.ai`):
+
+| Class                  | Animation style                         |
+| ---------------------- | --------------------------------------- |
+| _(default / `.ai`)_    | Circular spinner (rotating arc).        |
+| `.dots-wave`           | Three dots bouncing up/down in a wave.  |
+| `.dots-fade`           | Three dots fading in and out.           |
+| `.dots-queue`          | Dot queuing from left to right.         |
+| `.dots-rotate`         | Side dots rotating around a center dot. |
+| `.dots-grow`           | Three dots growing and shrinking.       |
+| `.dots-grow-alternate` | Outer dots small, center dot pulses.    |
+| `.dot-bounce`          | Single dot bouncing with squash effect. |
+| `.bars-wave`           | Three vertical bars scaling in a wave.  |
+| `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
 Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
 
@@ -151,6 +168,8 @@ Examples:
 <span class="badge info soft">Draft</span>
 <span class="loader" aria-hidden="true"></span>
 <span class="loader dots-wave" aria-hidden="true"></span>
+<span class="loader dots-fade" aria-hidden="true"></span>
+<span class="loader bars-wave" aria-hidden="true"></span>
 <div class="progress" aria-label="Upload progress" style="--progress-value: 64%"></div>
 <div class="progress success active" aria-label="Upload progress" style="--progress-value: 64%"></div>
 ```
@@ -198,3 +217,4 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 | `.text-body`          | Default body copy.                                           |
 | `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
 | `.code`               | Inline code formatting.                                      |
+| `.pre`                | Block code formatting with larger padding.                   |

@@ -63,7 +63,7 @@ Example future-ready profile shape:
 }
 ```
 
-Aesthetic profile classes such as `.glassmorphism` or `.brutalism` are not part of v0.0.2. v0.0.2 provides the token foundation that makes them possible later.
+Aesthetic profile classes such as `.glassmorphism` or `.brutalism` are not part of the current version. The token foundation that makes them possible is available now.
 
 ## Documentation Map
 
