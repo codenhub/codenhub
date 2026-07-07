@@ -87,6 +87,7 @@ interface I18n<TLocale extends string = string> {
   readonly locale: TLocale;
   readonly isReady: boolean;
   init(options?: I18nInitOptions): Promise<void>;
+  disconnect(): void;
   translateDocument(root?: ParentNode): void;
   setLocale(locale: string): Promise<boolean>;
   translate(key: string): string | undefined;
@@ -116,6 +117,12 @@ Initializes state, resolves the active locale, fetches matching translations (re
 - **Parameters**: `options?: I18nInitOptions`
 - **Returns**: `Promise<void>`
 - **Observable Failure Behavior**: If the resolved locale fails to load, it attempts to load `defaultLocale`. If that also fails, initialization completes but `hasTranslationsAvailable` is emitted as false. If run in a server-side (Node) environment, resolves immediately without loading or translating.
+
+##### `disconnect()`
+
+Disconnects the translation manager, stopping any DOM observation and cleaning up resources. Must be called when discarding the instance if `MutationObserver` was started (i.e. when `options.observe` is true) to prevent memory leaks.
+
+- **Returns**: `void`
 
 ##### `translateDocument(root)`
 
@@ -204,6 +211,18 @@ Text direction for a locale.
 
 ```ts
 type LocaleDirection = "ltr" | "rtl";
+```
+
+---
+
+#### `LocaleDictionary`
+
+Record of translation key-value pairs where keys can be nested dot-notation strings.
+
+```ts
+interface LocaleDictionary {
+  [key: string]: string;
+}
 ```
 
 ---

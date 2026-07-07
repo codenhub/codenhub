@@ -39,17 +39,25 @@ export interface LocaleLoader<TLocale extends string = string> {
   loadLocale(locale: TLocale, isSilent?: boolean): Promise<LocaleDictionary | undefined>;
 }
 
+interface FlattenDictionaryOptions {
+  raw: Record<string, unknown>;
+  locale: string;
+  prefix?: string;
+  result?: LocaleDictionary;
+  isSilent?: boolean;
+}
+
 /**
  * Recursively flattens a nested dictionary object into flat dot-separated string keys.
  * Filters out prototype pollution keys at any depth.
  */
-const flattenDictionary = (
-  raw: Record<string, unknown>,
-  locale: string,
+const flattenDictionary = ({
+  raw,
+  locale,
   prefix = "",
-  result: LocaleDictionary = createEmptyDictionary(),
+  result = createEmptyDictionary(),
   isSilent = false,
-): LocaleDictionary => {
+}: FlattenDictionaryOptions): LocaleDictionary => {
   for (const [key, val] of Object.entries(raw)) {
     if (key === "__proto__" || key === "constructor") {
       continue;
@@ -58,7 +66,13 @@ const flattenDictionary = (
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-      flattenDictionary(val as Record<string, unknown>, locale, fullKey, result, isSilent);
+      flattenDictionary({
+        raw: val as Record<string, unknown>,
+        locale,
+        prefix: fullKey,
+        result,
+        isSilent,
+      });
     } else if (typeof val !== "string") {
       if (!isSilent) {
         console.warn(`[I18n] Non-string value found for key "${fullKey}" in locale "${locale}". Coercing to string.`);
@@ -152,7 +166,11 @@ export function createLocaleLoader<TLocale extends string = string>(
             return undefined;
           }
 
-          const dictionary = flattenDictionary(result.body, locale, "", createEmptyDictionary(), isSilent);
+          const dictionary = flattenDictionary({
+            raw: result.body as Record<string, unknown>,
+            locale,
+            isSilent,
+          });
 
           if (Object.keys(dictionary).length === 0) {
             if (!isSilent) {
