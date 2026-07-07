@@ -462,7 +462,7 @@ describe("I18n", () => {
     expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
   });
 
-  it("should skip custom element contents even when it is the explicit translation root", async () => {
+  it("should translate custom element contents when it is the explicit translation root", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -477,7 +477,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
   });
 
   it("should fall back to the default locale when a persisted locale fails to load", async () => {
@@ -755,7 +755,7 @@ describe("I18n", () => {
     );
   });
 
-  it("should skip translation when the explicit bound root is inside a custom element", async () => {
+  it("should translate when the explicit bound root is inside a custom element", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -770,7 +770,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
   });
 
   it("should return true immediately when setLocale is called for the already-active loaded locale", async () => {
@@ -1201,5 +1201,36 @@ describe("I18n", () => {
     // Calling init again
     await i18n.init();
     expect(i18n.isReady).toBe(true);
+  });
+
+  it("should not mark ready or enable MutationObserver if disconnect is called while init is pending", async () => {
+    const readyCallback = vi.fn();
+    i18n.addEventListener("ready", readyCallback);
+
+    const initPromise = i18n.init({ observe: true });
+    i18n.disconnect();
+
+    await initPromise;
+
+    expect(i18n.isReady).toBe(false);
+    expect(readyCallback).not.toHaveBeenCalled();
+  });
+
+  it("should translate elements inside a custom element if it is passed explicitly as root", async () => {
+    await i18n.init();
+
+    const customEl = document.createElement("my-custom-element");
+    const childEl = document.createElement("span");
+    childEl.setAttribute("data-i18n", "home.hero.cta");
+    childEl.textContent = "Original";
+    customEl.appendChild(childEl);
+
+    // If we translate with document, it gets skipped because it is inside a custom element
+    i18n.translateDocument(document);
+    expect(childEl.textContent).toBe("Original");
+
+    // If we pass customEl explicitly as the root boundary, it translates successfully
+    i18n.translateDocument(customEl);
+    expect(childEl.textContent).toBe("Get started");
   });
 });

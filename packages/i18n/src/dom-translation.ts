@@ -27,10 +27,10 @@ export function createDomTranslator(): DomTranslator {
     return element.tagName.includes("-");
   };
 
-  const getClosestCustomElement = (element: Element): Element | null => {
+  const getClosestCustomElement = (element: Element, boundary: ParentNode): Element | null => {
     let currentElement: Element | null = element;
 
-    while (currentElement !== null) {
+    while (currentElement !== null && currentElement !== boundary) {
       if (isCustomElement(currentElement)) {
         return currentElement;
       }
@@ -99,7 +99,7 @@ export function createDomTranslator(): DomTranslator {
       }
 
       collectTranslatableElements(root).forEach((element) => {
-        if (getClosestCustomElement(element) === null) {
+        if (getClosestCustomElement(element, root) === null) {
           translateElement(element, translate);
         }
       });

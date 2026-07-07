@@ -258,6 +258,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
   }
 
   disconnect(): void {
+    this.createLocaleRequest();
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
       this.mutationObserver = null;

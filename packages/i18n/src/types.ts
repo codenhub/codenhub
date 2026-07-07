@@ -141,11 +141,16 @@ export interface I18n<TLocale extends string = string> {
    * the promise resolves immediately without fetching or throwing.
    * If loading the initial locale fails, it will attempt to load the default locale.
    * If both fail, it completes initialization but marks translations as unavailable.
+   *
+   * @warning
+   * When `options.observe` is true, a MutationObserver is attached to the DOM.
+   * Call {@link disconnect} to clean up the observer and avoid memory leaks.
    */
   init(options?: I18nInitOptions): Promise<void>;
 
   /**
    * Disconnects the translation manager, stopping any DOM observation and cleaning up resources.
+   * Must be called when discarding the instance if MutationObserver was started to prevent memory leaks.
    */
   disconnect(): void;
 
