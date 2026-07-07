@@ -50,14 +50,12 @@ const isPersistedLocaleState = <TLocale extends string>(
   }
 
   const locale = (raw as Record<string, unknown>).locale;
-  const isLocale =
-    config.isLocale ??
-    ((val: string): val is TLocale => {
-      const normalized = val.toLowerCase();
-      return config.locales.some((l) => l.toLowerCase() === normalized);
-    });
+  const isLocaleCaseInsensitive = (val: string): boolean => {
+    const normalized = val.toLowerCase();
+    return config.locales.some((l) => l.toLowerCase() === normalized);
+  };
 
-  return locale === undefined || (typeof locale === "string" && isLocale(locale));
+  return locale === undefined || (typeof locale === "string" && isLocaleCaseInsensitive(locale));
 };
 
 class I18nInstance<TLocale extends string = string> extends EventTarget implements I18n<TLocale> {
@@ -199,9 +197,10 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
           config: this.config,
           loader: this.localeLoader,
           requestedLocale: initialLocale,
+          isSilent: this.isSilent,
         }),
         initialLocale !== this.config.defaultLocale && typeof window !== "undefined"
-          ? this.localeLoader.loadLocale(this.config.defaultLocale)
+          ? this.localeLoader.loadLocale(this.config.defaultLocale, this.isSilent)
           : Promise.resolve(undefined),
       ]);
 
@@ -298,6 +297,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
       config: this.config,
       loader: this.localeLoader,
       requestedLocale: nextLocale,
+      isSilent: this.isSilent,
     });
 
     if (!this.isLatestLocaleRequest(requestId)) {
