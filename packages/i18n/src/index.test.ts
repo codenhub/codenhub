@@ -149,6 +149,17 @@ describe("I18n", () => {
     expect(i18n.locale).toBe("en-US");
   });
 
+  it("should wait for init to complete if setLocale is called during init", async () => {
+    const initPromise = i18n.init({ storageKey: "test-i18n" });
+    const setLocalePromise = i18n.setLocale("pt-BR");
+
+    await Promise.all([initPromise, setLocalePromise]);
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(i18n.isReady).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it("should return undefined and warn when translate is called before init", () => {
     expect(i18n.translate("home.hero.cta")).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("called before init"));
@@ -244,6 +255,18 @@ describe("I18n", () => {
     expect(i18n.locale).toBe("pt-BR");
     expect(document.documentElement.lang).toBe("pt-BR");
     expect(document.querySelector("p")?.textContent).toBe("Comece agora");
+  });
+
+  it("should restore a persisted locale case-insensitively and normalize it in storage", async () => {
+    localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-br" }));
+    document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
+
+    await i18n.init({ storageKey: "test-i18n" });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(document.documentElement.lang).toBe("pt-BR");
+    expect(document.querySelector("p")?.textContent).toBe("Comece agora");
+    expect(localStorage.getItem("test-i18n")).toBe(JSON.stringify({ locale: "pt-BR" }));
   });
 
   it("should fall back to en-US when the persisted locale is not a valid exact match", async () => {
@@ -439,7 +462,7 @@ describe("I18n", () => {
     expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
   });
 
-  it("should translate custom element contents when it is the explicit translation root", async () => {
+  it("should skip custom element contents even when it is the explicit translation root", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -454,7 +477,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
   });
 
   it("should fall back to the default locale when a persisted locale fails to load", async () => {
@@ -732,7 +755,7 @@ describe("I18n", () => {
     );
   });
 
-  it("should translate when the explicit bound root is inside a custom element", async () => {
+  it("should skip translation when the explicit bound root is inside a custom element", async () => {
     document.body.innerHTML = `
       <custom-card>
         <span data-i18n="home.hero.cta">Component greeting</span>
@@ -747,7 +770,7 @@ describe("I18n", () => {
 
     await i18n.init({ root });
 
-    expect(document.querySelector("custom-card span")?.textContent).toBe("Get started");
+    expect(document.querySelector("custom-card span")?.textContent).toBe("Component greeting");
   });
 
   it("should return true immediately when setLocale is called for the already-active loaded locale", async () => {

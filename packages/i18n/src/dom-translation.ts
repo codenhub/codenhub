@@ -41,18 +41,6 @@ export function createDomTranslator(): DomTranslator {
     return null;
   };
 
-  const getCustomElementBoundary = (root: ParentNode): Element | null => {
-    if (!(root instanceof Element)) {
-      return null;
-    }
-
-    return getClosestCustomElement(root);
-  };
-
-  const isBelongingToCustomElementBoundary = (element: Element, boundary: Element | null): boolean => {
-    return getClosestCustomElement(element) === boundary;
-  };
-
   const collectTranslatableElements = (root: ParentNode): Element[] => {
     const elements = Array.from(root.querySelectorAll(`[${TRANSLATION_ATTRIBUTE}]`));
 
@@ -110,10 +98,8 @@ export function createDomTranslator(): DomTranslator {
         return;
       }
 
-      const customElementBoundary = getCustomElementBoundary(root);
-
       collectTranslatableElements(root).forEach((element) => {
-        if (isBelongingToCustomElementBoundary(element, customElementBoundary)) {
+        if (getClosestCustomElement(element) === null) {
           translateElement(element, translate);
         }
       });

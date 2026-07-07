@@ -244,4 +244,6 @@ export interface ResolveLocaleStateOptions<TLocale extends string = string> {
   loader: LocaleLoader<TLocale>;
   /** The locale code that was requested. */
   requestedLocale: TLocale;
+  /** Whether to silence warnings. */
+  isSilent?: boolean;
 }

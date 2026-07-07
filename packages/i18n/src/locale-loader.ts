@@ -5,7 +5,11 @@ const MAX_LOCALE_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 300;
 const FETCH_TIMEOUT_MS = 10_000;
 
-/** Creates a dictionary object without prototype properties. */
+/**
+ * Creates a dictionary object without prototype properties.
+ *
+ * @internal
+ */
 export const createEmptyDictionary = (): LocaleDictionary => Object.create(null) as LocaleDictionary;
 
 const isLocaleDictionary = (raw: unknown): raw is Record<string, unknown> => {
@@ -32,7 +36,7 @@ export interface LocaleLoader<TLocale extends string = string> {
   /** Retries loading a specific locale, clearing it from the failed cache. */
   retryLocale(locale: TLocale): void;
   /** Fetches and caches the locale dictionary. */
-  loadLocale(locale: TLocale): Promise<LocaleDictionary | undefined>;
+  loadLocale(locale: TLocale, isSilent?: boolean): Promise<LocaleDictionary | undefined>;
 }
 
 /**
@@ -44,6 +48,7 @@ const flattenDictionary = (
   locale: string,
   prefix = "",
   result: LocaleDictionary = createEmptyDictionary(),
+  isSilent = false,
 ): LocaleDictionary => {
   for (const [key, val] of Object.entries(raw)) {
     if (key === "__proto__" || key === "constructor") {
@@ -53,9 +58,11 @@ const flattenDictionary = (
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-      flattenDictionary(val as Record<string, unknown>, locale, fullKey, result);
+      flattenDictionary(val as Record<string, unknown>, locale, fullKey, result, isSilent);
     } else if (typeof val !== "string") {
-      console.warn(`[I18n] Non-string value found for key "${fullKey}" in locale "${locale}". Coercing to string.`);
+      if (!isSilent) {
+        console.warn(`[I18n] Non-string value found for key "${fullKey}" in locale "${locale}". Coercing to string.`);
+      }
       result[fullKey] = String(val);
     } else {
       result[fullKey] = val;
@@ -108,7 +115,7 @@ export function createLocaleLoader<TLocale extends string = string>(
     }
   };
 
-  const fetchAndCacheLocale = async (locale: TLocale): Promise<LocaleDictionary | undefined> => {
+  const fetchAndCacheLocale = async (locale: TLocale, isSilent = false): Promise<LocaleDictionary | undefined> => {
     const localeFile = config.getLocaleFile(locale);
 
     try {
@@ -126,7 +133,9 @@ export function createLocaleLoader<TLocale extends string = string>(
               continue;
             }
 
-            console.warn(`[I18n] Failed to load locale "${locale}" from "${localeFile}".`);
+            if (!isSilent) {
+              console.warn(`[I18n] Failed to load locale "${locale}" from "${localeFile}".`);
+            }
 
             if (isPermanentFailure) {
               localeFailedCache.add(locale);
@@ -136,15 +145,19 @@ export function createLocaleLoader<TLocale extends string = string>(
           }
 
           if (!isLocaleDictionary(result.body)) {
-            console.warn(`[I18n] Locale "${locale}" has an invalid dictionary shape.`);
+            if (!isSilent) {
+              console.warn(`[I18n] Locale "${locale}" has an invalid dictionary shape.`);
+            }
             localeFailedCache.add(locale);
             return undefined;
           }
 
-          const dictionary = flattenDictionary(result.body, locale, "", createEmptyDictionary());
+          const dictionary = flattenDictionary(result.body, locale, "", createEmptyDictionary(), isSilent);
 
           if (Object.keys(dictionary).length === 0) {
-            console.warn(`[I18n] Locale "${locale}" loaded successfully but contains no translations.`);
+            if (!isSilent) {
+              console.warn(`[I18n] Locale "${locale}" loaded successfully but contains no translations.`);
+            }
             return dictionary;
           }
 
@@ -152,7 +165,9 @@ export function createLocaleLoader<TLocale extends string = string>(
           return dictionary;
         } catch (error) {
           if (error instanceof SyntaxError) {
-            console.warn(`[I18n] Locale "${locale}" returned malformed JSON.`);
+            if (!isSilent) {
+              console.warn(`[I18n] Locale "${locale}" returned malformed JSON.`);
+            }
             localeFailedCache.add(locale);
             return undefined;
           }
@@ -162,7 +177,9 @@ export function createLocaleLoader<TLocale extends string = string>(
             continue;
           }
 
-          console.warn(`[I18n] Failed to fetch locale "${locale}":`, error);
+          if (!isSilent) {
+            console.warn(`[I18n] Failed to fetch locale "${locale}":`, error);
+          }
           return undefined;
         }
       }
@@ -182,7 +199,7 @@ export function createLocaleLoader<TLocale extends string = string>(
       localeFailedCache.delete(locale);
     },
 
-    loadLocale(locale: TLocale) {
+    loadLocale(locale: TLocale, isSilent = false) {
       const cachedDictionary = localeCache[locale];
 
       if (cachedDictionary !== undefined) {
@@ -199,7 +216,7 @@ export function createLocaleLoader<TLocale extends string = string>(
         return inflight;
       }
 
-      const promise = fetchAndCacheLocale(locale);
+      const promise = fetchAndCacheLocale(locale, isSilent);
       localeFetchCache[locale] = promise;
       return promise;
     },

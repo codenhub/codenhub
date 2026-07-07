@@ -60,11 +60,19 @@ export const getInitialLocale = <TLocale extends string>(
   config: I18nConfig<TLocale>,
   persistedLocale: string | undefined,
 ): TLocale => {
-  const isLocale =
-    config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
+  if (persistedLocale !== undefined) {
+    const normalized = normalizeValue(persistedLocale);
+    if (normalized !== undefined) {
+      const matched = matchLocaleIgnoreCase(config, normalized);
+      if (matched !== undefined) {
+        const isLocale =
+          config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
 
-  if (persistedLocale !== undefined && isLocale(persistedLocale)) {
-    return persistedLocale;
+        if (isLocale(matched)) {
+          return matched;
+        }
+      }
+    }
   }
 
   return detectBrowserLocale(config) ?? config.defaultLocale;
@@ -105,6 +113,7 @@ export const resolveLocaleState = async <TLocale extends string>({
   config,
   loader,
   requestedLocale,
+  isSilent,
 }: ResolveLocaleStateOptions<TLocale>): Promise<ResolvedLocaleState<TLocale>> => {
   if (typeof window === "undefined") {
     return {
@@ -115,7 +124,7 @@ export const resolveLocaleState = async <TLocale extends string>({
     };
   }
 
-  const requestedDictionary = await loader.loadLocale(requestedLocale);
+  const requestedDictionary = await loader.loadLocale(requestedLocale, isSilent);
 
   if (requestedDictionary !== undefined) {
     return {
@@ -127,9 +136,11 @@ export const resolveLocaleState = async <TLocale extends string>({
   }
 
   if (requestedLocale === config.defaultLocale) {
-    console.warn(
-      `[I18n] Default locale "${config.defaultLocale}" could not be loaded. Translations will be unavailable.`,
-    );
+    if (!isSilent) {
+      console.warn(
+        `[I18n] Default locale "${config.defaultLocale}" could not be loaded. Translations will be unavailable.`,
+      );
+    }
 
     return {
       locale: config.defaultLocale,
@@ -139,16 +150,20 @@ export const resolveLocaleState = async <TLocale extends string>({
     };
   }
 
-  console.warn(
-    `[I18n] Falling back to default locale "${config.defaultLocale}" because locale "${requestedLocale}" could not be loaded.`,
-  );
+  if (!isSilent) {
+    console.warn(
+      `[I18n] Falling back to default locale "${config.defaultLocale}" because locale "${requestedLocale}" could not be loaded.`,
+    );
+  }
 
-  const recoveredDefaultDictionary = await loader.loadLocale(config.defaultLocale);
+  const recoveredDefaultDictionary = await loader.loadLocale(config.defaultLocale, isSilent);
 
   if (recoveredDefaultDictionary === undefined) {
-    console.warn(
-      `[I18n] Default locale "${config.defaultLocale}" also failed to load. Translations will be unavailable.`,
-    );
+    if (!isSilent) {
+      console.warn(
+        `[I18n] Default locale "${config.defaultLocale}" also failed to load. Translations will be unavailable.`,
+      );
+    }
 
     return {
       locale: config.defaultLocale,
