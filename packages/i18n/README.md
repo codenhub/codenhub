@@ -286,6 +286,8 @@ const greeting = i18n.translate("home.welcome.greeting") ?? "Welcome!";
   </button>
   ```
 
+- **Custom Element Boundaries**: During automatic translation of a document or subtree, the manager skips translating elements nested inside custom elements (tags containing a hyphen `-`). This keeps component translations isolated. To translate elements inside a custom element, either pass the custom element (or its shadow root) as the explicit `root` option during `init()`, or run a separate `I18n` instance for the component.
+
 ## License
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
