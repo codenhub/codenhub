@@ -1154,7 +1154,7 @@ describe("I18n", () => {
     });
     expect(enUsCalls).toHaveLength(0);
   });
- 
+
   it("should ignore translateDocument(null) and directly test domTranslator with null", async () => {
     const { createDomTranslator } = await import("./dom-translation");
     expect(() => i18n.translateDocument(null as unknown as ParentNode)).not.toThrow();
