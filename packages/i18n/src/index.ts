@@ -69,6 +69,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
   private localeRequestId = 0;
   private isSilent: boolean;
   private mutationObserver: MutationObserver | null = null;
+  private initPromise: Promise<void> | null = null;
 
   private readonly config: I18nConfig<TLocale>;
   private readonly localeLoader: ReturnType<typeof createLocaleLoader<TLocale>>;
@@ -181,70 +182,76 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
       initialState: {},
       validate: (raw): raw is PersistedLocaleState => isPersistedLocaleState(this.config, raw),
     });
+    const storage = this.storage;
     this.localeLoader.resetFailedCache();
     this.warnedMissingKeys.clear();
 
     const requestId = this.createLocaleRequest();
-    const initialLocale = getInitialLocale(this.config, this.storage.getItem("locale"));
-    const [localeState, defaultDict] = await Promise.all([
-      resolveLocaleState({
-        config: this.config,
-        loader: this.localeLoader,
-        requestedLocale: initialLocale,
-      }),
-      initialLocale !== this.config.defaultLocale && typeof window !== "undefined"
-        ? this.localeLoader.loadLocale(this.config.defaultLocale)
-        : Promise.resolve(undefined),
-    ]);
 
-    if (!this.isLatestLocaleRequest(requestId)) {
-      return;
-    }
+    this.initPromise = (async () => {
+      const initialLocale = getInitialLocale(this.config, storage.getItem("locale"));
+      const [localeState, defaultDict] = await Promise.all([
+        resolveLocaleState({
+          config: this.config,
+          loader: this.localeLoader,
+          requestedLocale: initialLocale,
+        }),
+        initialLocale !== this.config.defaultLocale && typeof window !== "undefined"
+          ? this.localeLoader.loadLocale(this.config.defaultLocale)
+          : Promise.resolve(undefined),
+      ]);
 
-    this.currentLocale = localeState.locale;
-    this.currentDictionary = localeState.dictionary;
-    this.defaultDictionary =
-      defaultDict ?? (initialLocale === this.config.defaultLocale ? localeState.dictionary : createEmptyDictionary());
-    this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
+      if (!this.isLatestLocaleRequest(requestId)) {
+        return;
+      }
 
-    if (localeState.isRequestedLocaleLoaded) {
-      this.storage.set({ locale: localeState.locale });
-    }
+      this.currentLocale = localeState.locale;
+      this.currentDictionary = localeState.dictionary;
+      this.defaultDictionary =
+        defaultDict ?? (initialLocale === this.config.defaultLocale ? localeState.dictionary : createEmptyDictionary());
+      this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
-    this.isReadyState = true;
-    this.syncDocumentLocale();
-    this.translateDocument();
+      if (localeState.isRequestedLocaleLoaded) {
+        storage.set({ locale: localeState.locale });
+      }
 
-    if (options.observe && typeof MutationObserver !== "undefined" && this.root) {
-      this.mutationObserver = new MutationObserver((mutations) => {
-        for (const mutation of mutations) {
-          if (mutation.type === "childList") {
-            for (const node of mutation.addedNodes) {
-              if (node instanceof Element) {
-                this.translateDocument(node);
+      this.isReadyState = true;
+      this.syncDocumentLocale();
+      this.translateDocument();
+
+      if (options.observe && typeof MutationObserver !== "undefined" && this.root) {
+        this.mutationObserver = new MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            if (mutation.type === "childList") {
+              for (const node of mutation.addedNodes) {
+                if (node instanceof Element) {
+                  this.translateDocument(node);
+                }
               }
+            } else if (mutation.type === "attributes" && mutation.target instanceof Element) {
+              this.translateDocument(mutation.target);
             }
-          } else if (mutation.type === "attributes" && mutation.target instanceof Element) {
-            this.translateDocument(mutation.target);
           }
-        }
-      });
-      this.mutationObserver.observe(this.root as Node, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["data-i18n"],
-      });
-    }
+        });
+        this.mutationObserver.observe(this.root as Node, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["data-i18n"],
+        });
+      }
 
-    this.dispatchEvent(
-      new SafeCustomEvent<I18nReadyEventDetail>("ready", {
-        detail: {
-          locale: this.currentLocale,
-          hasTranslationsAvailable: this.hasTranslations(),
-        },
-      }),
-    );
+      this.dispatchEvent(
+        new SafeCustomEvent<I18nReadyEventDetail>("ready", {
+          detail: {
+            locale: this.currentLocale,
+            hasTranslationsAvailable: this.hasTranslations(),
+          },
+        }),
+      );
+    })();
+
+    return this.initPromise;
   }
 
   disconnect(): void {
@@ -253,9 +260,15 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
       this.mutationObserver = null;
     }
     this.root = null;
+    this.initPromise = null;
+    this.isReadyState = false;
   }
 
   async setLocale(locale: string): Promise<boolean> {
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
     if (!this.isReadyState) {
       if (!this.isSilent) {
         console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");

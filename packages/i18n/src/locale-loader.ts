@@ -5,7 +5,11 @@ const MAX_LOCALE_RETRIES = 3;
 const RETRY_BASE_DELAY_MS = 300;
 const FETCH_TIMEOUT_MS = 10_000;
 
-/** Creates a dictionary object without prototype properties. */
+/**
+ * Creates a dictionary object without prototype properties.
+ *
+ * @internal
+ */
 export const createEmptyDictionary = (): LocaleDictionary => Object.create(null) as LocaleDictionary;
 
 const isLocaleDictionary = (raw: unknown): raw is Record<string, unknown> => {

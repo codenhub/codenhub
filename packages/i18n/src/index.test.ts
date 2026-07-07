@@ -149,6 +149,17 @@ describe("I18n", () => {
     expect(i18n.locale).toBe("en-US");
   });
 
+  it("should wait for init to complete if setLocale is called during init", async () => {
+    const initPromise = i18n.init({ storageKey: "test-i18n" });
+    const setLocalePromise = i18n.setLocale("pt-BR");
+
+    await Promise.all([initPromise, setLocalePromise]);
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(i18n.isReady).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it("should return undefined and warn when translate is called before init", () => {
     expect(i18n.translate("home.hero.cta")).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("called before init"));
@@ -1154,7 +1165,7 @@ describe("I18n", () => {
     });
     expect(enUsCalls).toHaveLength(0);
   });
- 
+
   it("should ignore translateDocument(null) and directly test domTranslator with null", async () => {
     const { createDomTranslator } = await import("./dom-translation");
     expect(() => i18n.translateDocument(null as unknown as ParentNode)).not.toThrow();
