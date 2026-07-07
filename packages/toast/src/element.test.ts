@@ -89,4 +89,18 @@ describe("Toast rendering", () => {
     );
     expect(element.className).toContain("custom-toast");
   });
+
+  it("should apply tokens option as inline styles on the root element", () => {
+    const element = renderToast(
+      new Toast({
+        message: "Custom styled",
+        tokens: {
+          success: "rgb(255, 0, 0)",
+          successSubtle: "rgb(0, 255, 0)",
+        },
+      }),
+    );
+    expect(element.style.getPropertyValue("--toast-color-success")).toBe("rgb(255, 0, 0)");
+    expect(element.style.getPropertyValue("--toast-color-success-subtle")).toBe("rgb(0, 255, 0)");
+  });
 });

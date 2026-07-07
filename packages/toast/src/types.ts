@@ -5,6 +5,39 @@ export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
 export type ToastPosition = "top-left" | "top-right" | "bottom-right" | "bottom-left";
 export type ToastRole = "alert" | "status";
 
+export interface ToastTokens {
+  /** Border/accent color for the toast-success variant. */
+  success?: string;
+  /** Muted background color for the toast-success variant. */
+  successSubtle?: string;
+  /** High-contrast foreground color for the toast-success variant. */
+  successStrong?: string;
+  /** Border/accent color for the toast-error variant. */
+  destructive?: string;
+  /** Muted background color for the toast-error variant. */
+  destructiveSubtle?: string;
+  /** High-contrast foreground color for the toast-error variant. */
+  destructiveStrong?: string;
+  /** Border/accent color for the toast-warning variant. */
+  warning?: string;
+  /** Muted background color for the toast-warning variant. */
+  warningSubtle?: string;
+  /** High-contrast foreground color for the toast-warning variant. */
+  warningStrong?: string;
+  /** Border/accent color for the toast-info variant. */
+  info?: string;
+  /** Muted background color for the toast-info variant. */
+  infoSubtle?: string;
+  /** High-contrast foreground color for the toast-info variant. */
+  infoStrong?: string;
+  /** Border color for the toast-default variant. */
+  border?: string;
+  /** Background color for the toast-default variant. */
+  surface?: string;
+  /** Text color for the toast-default variant. */
+  text?: string;
+}
+
 export interface ToastBaseOptions {
   /** Auto-dismiss delay in milliseconds. Must be a finite number >= 0. */
   duration?: number;
@@ -24,6 +57,8 @@ export interface ToastBaseOptions {
   role?: ToastRole;
   /** Additional wrapper classes. */
   className?: string;
+  /** Per-toast CSS token overrides. Applied as inline styles on the toast element. */
+  tokens?: ToastTokens;
 }
 
 export type ToastOptions =

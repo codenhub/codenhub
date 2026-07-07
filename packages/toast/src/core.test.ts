@@ -55,6 +55,20 @@ describe("createToaster Factory Singleton", () => {
     expect(toast.options.duration).toBe(1000);
     toast.hide();
   });
+
+  it("should support global token configurations", () => {
+    const existing = document.getElementById("global-toast-tokens");
+    if (existing) {
+      existing.remove();
+    }
+    const toaster = createToaster({ tokens: { success: "rgb(0, 0, 255)" } });
+    const styleElement = document.getElementById("global-toast-tokens") as HTMLStyleElement | null;
+    expect(styleElement).not.toBeNull();
+    expect(styleElement?.textContent).toContain("--toast-color-success: rgb(0, 0, 255);");
+
+    toaster.configure({ tokens: { success: "rgb(255, 255, 0)" } });
+    expect(styleElement?.textContent).toContain("--toast-color-success: rgb(255, 255, 0);");
+  });
 });
 
 describe("Toaster Actions", () => {

@@ -6,4 +6,4 @@ export { ConfirmToast } from "./variants/confirm";
 export { PromptToast } from "./variants/prompt";
 export { AlertToast } from "./variants/alert";
 export type { Toaster, ToasterConfig } from "./core";
-export type { ToastOptions, ToastIcon, ToastPosition } from "./types";
+export type { ToastOptions, ToastIcon, ToastPosition, ToastTokens } from "./types";

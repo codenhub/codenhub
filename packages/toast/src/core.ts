@@ -1,5 +1,6 @@
 import { Toast } from "./toast-base";
-import type { ToastOptions, ConfirmToastOptions, PromptToastOptions, AlertToastOptions } from "./types";
+import { applyGlobalTokens } from "./tokens";
+import type { ToastOptions, ConfirmToastOptions, PromptToastOptions, AlertToastOptions, ToastTokens } from "./types";
 import { AlertToast } from "./variants/alert";
 import { ConfirmToast } from "./variants/confirm";
 import { LoadingToast } from "./variants/loading";
@@ -11,6 +12,8 @@ export { Toast } from "./toast-base";
 export interface ToasterConfig {
   replaceNative?: boolean;
   defaults?: Partial<ToastOptions>;
+  /** Global CSS token overrides applied to all toasts. */
+  tokens?: ToastTokens;
 }
 
 export interface Toaster {
@@ -39,6 +42,9 @@ class ToastManager implements Toaster {
     if (config.replaceNative) {
       this.replaceNativeAPIs();
     }
+    if (config.tokens) {
+      applyGlobalTokens(config.tokens);
+    }
   }
 
   public configure(config: ToasterConfig): void {
@@ -49,6 +55,10 @@ class ToastManager implements Toaster {
       this.replaceNativeAPIs();
     } else if (config.replaceNative === false && oldReplaceNative) {
       this.restoreNativeAPIs();
+    }
+
+    if (config.tokens !== undefined) {
+      applyGlobalTokens(this.config.tokens);
     }
   }
 

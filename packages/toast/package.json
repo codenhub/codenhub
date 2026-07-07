@@ -47,5 +47,13 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@codenhub/styles": ">=0.0.4"
+  },
+  "peerDependenciesMeta": {
+    "@codenhub/styles": {
+      "optional": true
+    }
   }
 }

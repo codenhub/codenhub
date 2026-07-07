@@ -1,4 +1,4 @@
-@import "@codenhub/styles/tw";
+@import "tailwindcss";
 
 @source "../core.ts";
 @source "../dom.ts";
@@ -7,26 +7,26 @@
 
 .toast-success {
   border-color: var(--toast-color-success, var(--color-success, #059669));
-  background-color: var(--toast-color-success-light, var(--color-success-subtle, #d1fae5));
-  color: var(--toast-color-success-dark, var(--color-success-strong, #065f46));
+  background-color: var(--toast-color-success-subtle, var(--color-success-subtle, #d1fae5));
+  color: var(--toast-color-success-strong, var(--color-success-strong, #065f46));
 }
 
 .toast-error {
   border-color: var(--toast-color-destructive, var(--color-destructive, #be123c));
-  background-color: var(--toast-color-destructive-light, var(--color-destructive-subtle, #ffe4e6));
-  color: var(--toast-color-destructive-dark, var(--color-destructive-strong, #9f1239));
+  background-color: var(--toast-color-destructive-subtle, var(--color-destructive-subtle, #ffe4e6));
+  color: var(--toast-color-destructive-strong, var(--color-destructive-strong, #9f1239));
 }
 
 .toast-warning {
   border-color: var(--toast-color-warning, var(--color-warning, #d97706));
-  background-color: var(--toast-color-warning-light, var(--color-warning-subtle, #fef3c7));
-  color: var(--toast-color-warning-dark, var(--color-warning-strong, #92400e));
+  background-color: var(--toast-color-warning-subtle, var(--color-warning-subtle, #fef3c7));
+  color: var(--toast-color-warning-strong, var(--color-warning-strong, #92400e));
 }
 
 .toast-info {
   border-color: var(--toast-color-info, var(--color-info, #4f46e5));
-  background-color: var(--toast-color-info-light, var(--color-info-subtle, #e0e7ff));
-  color: var(--toast-color-info-dark, var(--color-info-strong, #3730a3));
+  background-color: var(--toast-color-info-subtle, var(--color-info-subtle, #e0e7ff));
+  color: var(--toast-color-info-strong, var(--color-info-strong, #3730a3));
 }
 
 .toast-default {

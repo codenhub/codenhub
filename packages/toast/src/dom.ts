@@ -1,9 +1,10 @@
 import type { NormalizedToastOptions } from "./options";
+import { buildInlineStyle } from "./tokens";
 import type { ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
   NormalizedToastOptions,
-  "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName"
+  "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName" | "tokens"
 >;
 
 const CONTAINER_ID_PREFIX = "global-toast-container";
@@ -73,6 +74,11 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
 
   if (options.isDismissable) {
     container.appendChild(createDismissButton(onDismiss));
+  }
+
+  const inlineStyle = buildInlineStyle(options.tokens);
+  if (inlineStyle) {
+    container.style.cssText = inlineStyle;
   }
 
   return container;

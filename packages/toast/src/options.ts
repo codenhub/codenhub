@@ -1,4 +1,4 @@
-import type { ToastIcon, ToastOptions, ToastPosition, ToastRole } from "./types";
+import type { ToastIcon, ToastOptions, ToastPosition, ToastRole, ToastTokens } from "./types";
 
 type ToastContent = NonNullable<ToastOptions["content"]>;
 
@@ -12,6 +12,7 @@ export interface NormalizedToastOptions {
   readonly position: ToastPosition;
   readonly role: ToastRole;
   readonly rootClassName: string;
+  readonly tokens: ToastTokens | null;
 }
 
 export interface ToastPresetOptions {
@@ -103,5 +104,6 @@ export function normalizeToastOptions(
     position: options.position ?? DEFAULT_POSITION,
     role: preset?.role ?? options.role ?? DEFAULT_ROLE,
     rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_ROOT_CLASS_NAME, options.className),
+    tokens: options.tokens ?? null,
   });
 }
