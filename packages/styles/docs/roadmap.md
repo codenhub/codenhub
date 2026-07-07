@@ -1,16 +1,12 @@
 # Roadmap
 
 **Status:** APPROVED
-**Last updated:** 2026-06-23
+**Last updated:** 2026-07-07
 **Scope:** `@codenhub/styles` package direction.
 
 ## Purpose
 
 This roadmap tracks durable direction for `@codenhub/styles`. It captures styling-system improvements that should guide future changes without turning this document into a release checklist.
-
-## Recently Completed
-
-- Published the v0.0.2 foundation: design tokens (colors, layout, radius, motion, focus, shadows, layering, dark mode), presentation/helper classes (buttons, forms, feedback, loaders, tooltips), accessibility contrast verification, and multi-path bundler visual regression tests.
 
 ## Planned
 

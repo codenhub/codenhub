@@ -30,7 +30,7 @@
     "./tw/loader": "./src/components/loader.css",
     "./tw/tooltip": "./src/components/tooltip.css",
     "./tw/reset": "./src/reset.css",
-    "./tw/overrides": "./src/overrides.css",
+    "./tw/native": "./src/native.css",
     "./tw/typography": "./src/typography.css",
     "./tw/utilities": "./src/utilities.css"
   },

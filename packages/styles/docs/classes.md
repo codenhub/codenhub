@@ -88,8 +88,6 @@ Examples:
 
 `.checkbox` and `.switch` accept the same intent classes as buttons to set the checked color:
 
-> **Note:** `control-base` is an internal composition utility that `ipt`, `textarea`, and `select` build on. It is accessible via `./tw/form` but is not part of the public consumer API. Use `ipt`, `textarea`, or `select` instead.
-
 | Class                               | Meaning            |
 | ----------------------------------- | ------------------ |
 | _(default)_                         | Primary color.     |
@@ -97,6 +95,8 @@ Examples:
 | `.warning`                          | Warning color.     |
 | `.destructive`, `.danger`, `.error` | Destructive color. |
 | `.info`                             | Info color.        |
+
+> **Note:** `control-base` is an internal composition utility that `ipt`, `textarea`, and `select` build on. It is accessible via `./tw/form` but is not part of the public consumer API. Use `ipt`, `textarea`, or `select` instead.
 
 Example:
 

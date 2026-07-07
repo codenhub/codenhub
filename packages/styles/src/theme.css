@@ -86,6 +86,10 @@
   --surface-hover-transform: translateY(-1px);
 }
 
+/* Intentional duplication of :root tokens. CSS-only tradeoff: .light can be
+   applied to any subtree element (not just :root), so tokens must be re-declared
+   here to cascade correctly into that scope. Sync with :root when changing light
+   mode values. */
 .light,
 .theme-light,
 [data-theme="light"] {
@@ -182,6 +186,10 @@
   --color-info-strong: var(--color-indigo-100);
 }
 
+/* Intentional duplication of .dark tokens. CSS-only tradeoff: @media cannot
+   reference class-based token values directly, so dark-mode values must be
+   re-declared here for the system-preference fallback. Sync with .dark when
+   changing dark mode values. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light, .theme-light, [data-theme="light"]) {
     color-scheme: dark;
