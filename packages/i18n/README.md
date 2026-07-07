@@ -56,6 +56,7 @@ import type {
   I18nReadyEventDetail,
   LocaleDictionary,
   LocaleDirection,
+  I18nEventMap,
 } from "@codenhub/i18n";
 ```
 
@@ -184,6 +185,29 @@ interface I18nInitOptions {
 | `storageKey` | `string`     | `"i18n"`          | LocalStorage key used to persist the user's locale choice.     |
 | `root`       | `ParentNode` | `document`        | DOM subtree to automatically scan and translate.               |
 | `isSilent`   | `boolean`    | `config.isSilent` | If true, overrides config setting to silence console warnings. |
+
+---
+
+#### `LocaleDirection`
+
+Text direction for a locale.
+
+```ts
+type LocaleDirection = "ltr" | "rtl";
+```
+
+---
+
+#### `I18nEventMap`
+
+Map of i18n event types to their respective CustomEvent details.
+
+```ts
+interface I18nEventMap {
+  ready: CustomEvent<I18nReadyEventDetail>;
+  "locale-change": CustomEvent<I18nLocaleChangeEventDetail>;
+}
+```
 
 ---
 

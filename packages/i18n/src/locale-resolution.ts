@@ -25,9 +25,7 @@ const detectBrowserLocale = <TLocale extends string>(config: I18nConfig<TLocale>
     if (exactMatch !== undefined) {
       return exactMatch;
     }
-  }
 
-  for (const lang of validLanguages) {
     const subtag = lang.split("-")[0]?.toLowerCase();
 
     if (subtag === undefined || subtag.length === 0) {

@@ -19,6 +19,17 @@ const DEFAULT_STORAGE_KEY = "i18n";
 // Let activeI18n hold any I18n instance.
 let activeI18n: I18n<string> | null = null;
 
+const SafeCustomEvent =
+  typeof CustomEvent !== "undefined"
+    ? CustomEvent
+    : class<T> extends Event {
+        readonly detail: T;
+        constructor(type: string, eventInitDict?: CustomEventInit<T>) {
+          super(type, eventInitDict);
+          this.detail = eventInitDict?.detail as T;
+        }
+      };
+
 export type {
   I18n,
   I18nConfig,
@@ -119,7 +130,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     console.warn(message);
   }
 
-  translate = (key: string): string | undefined => {
+  private translateNormalized = (key: string): string | undefined => {
     if (!this.isReadyState) {
       if (!this.isSilent) {
         console.warn("[I18n] translate() was called before init() completed. Call init() first.");
@@ -127,24 +138,28 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
       return undefined;
     }
 
+    const translation = this.currentDictionary[key];
+
+    if (translation !== undefined) {
+      return translation;
+    }
+
+    this.warnMissingKey(key, `[I18n] Missing key "${key}" in locale "${this.currentLocale}".`);
+    return undefined;
+  };
+
+  translate = (key: string): string | undefined => {
     const normalizedKey = normalizeValue(key);
 
     if (normalizedKey === undefined) {
       return undefined;
     }
 
-    const translation = this.currentDictionary[normalizedKey];
-
-    if (translation !== undefined) {
-      return translation;
-    }
-
-    this.warnMissingKey(normalizedKey, `[I18n] Missing key "${normalizedKey}" in locale "${this.currentLocale}".`);
-    return undefined;
+    return this.translateNormalized(normalizedKey);
   };
 
   private translateDocument(): void {
-    this.domTranslator.translateDocument(this.root, (key) => this.translate(key));
+    this.domTranslator.translateDocument(this.root, this.translateNormalized);
   }
 
   async init(options: I18nInitOptions = {}): Promise<void> {
@@ -184,7 +199,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     this.syncDocumentLocale();
     this.translateDocument();
     this.dispatchEvent(
-      new CustomEvent<I18nReadyEventDetail>("ready", {
+      new SafeCustomEvent<I18nReadyEventDetail>("ready", {
         detail: {
           locale: this.currentLocale,
           hasTranslationsAvailable: this.hasTranslations(),
@@ -244,7 +259,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
 
     if (localeState.locale !== previousLocale) {
       this.dispatchEvent(
-        new CustomEvent<I18nLocaleChangeEventDetail>("locale-change", {
+        new SafeCustomEvent<I18nLocaleChangeEventDetail>("locale-change", {
           detail: {
             locale: localeState.locale,
             previousLocale,
@@ -264,7 +279,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
  *
  * @typeParam TLocale - Union of supported locale string literals.
  * @param config - The translation configuration.
- * @returns An initialized translation manager interface.
+ * @returns An uninitialized translation manager instance. Call {@link I18n.init} to initialize it.
  */
 export function createI18n<TLocale extends string = string>(config: I18nConfig<TLocale>): I18n<TLocale> {
   return new I18nInstance(config);

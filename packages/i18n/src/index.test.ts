@@ -185,17 +185,16 @@ describe("I18n", () => {
     expect(document.querySelector("p")?.textContent).toBe("Comece agora");
   });
 
-  it("should prefer an exact locale match over a subtag match from an earlier browser preference", async () => {
-    // "pt-PT" is not in the manifest so it would subtag-match to "pt-BR", but
-    // "en-US" is an exact match later in the list. The two-pass approach must
-    // exhaust exact matches before trying subtag matches, so "en-US" wins.
+  it("should prefer a subtag match from a higher browser preference over an exact match of a lower preference", async () => {
+    // "pt-PT" is not in the manifest so it would subtag-match to "pt-BR", and since
+    // it is higher preference than "en-US", it should win (respect user preference order).
     stubNavigatorLanguages(["pt-PT", "en-US"]);
     document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
 
     await i18n.init({ storageKey: "test-i18n" });
 
-    expect(i18n.locale).toBe("en-US");
-    expect(document.querySelector("p")?.textContent).toBe("Get started");
+    expect(i18n.locale).toBe("pt-BR");
+    expect(document.querySelector("p")?.textContent).toBe("Comece agora");
   });
 
   it("should not override a persisted locale with the browser language", async () => {
