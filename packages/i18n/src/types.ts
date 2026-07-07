@@ -145,6 +145,11 @@ export interface I18n<TLocale extends string = string> {
   init(options?: I18nInitOptions): Promise<void>;
 
   /**
+   * Disconnects the translation manager, stopping any DOM observation and cleaning up resources.
+   */
+  disconnect(): void;
+
+  /**
    * Re-scans and translates translatable elements inside the given root element or subtree.
    * Useful when dynamic elements are added to the DOM after initialization.
    *

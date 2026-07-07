@@ -137,6 +137,7 @@ describe("I18n", () => {
   });
 
   afterEach(() => {
+    i18n.disconnect();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -302,6 +303,9 @@ describe("I18n", () => {
   it("should emit locale-change when fallback switches the active locale during setLocale", async () => {
     localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
     document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
+
+    // Fail the default locale fetch from the start so it is not cached
+    fetchOverrides[EN_US_URL] = { ok: false, status: 404 };
 
     await i18n.init({ storageKey: "test-i18n" });
     expect(i18n.locale).toBe("pt-BR");
@@ -651,13 +655,20 @@ describe("I18n", () => {
     expect(document.querySelector("p")?.textContent).toBe("Comece agora");
   });
 
-  it("should keep the element's fallback text when the active locale is missing a key", async () => {
+  it("should keep the element's fallback text when both the active and default locales are missing a key", async () => {
     localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
     fetchOverrides[PT_BR_URL] = {
       body: {
         "home.hero.headline": "Este é um título",
         "home.hero.description": "Lorem ipsum dolor sit amet consectetur adipisicing elit.",
         "home.hero.cta": "Comece agora",
+      },
+    };
+    fetchOverrides[EN_US_URL] = {
+      body: {
+        "home.hero.headline": "This is a headline",
+        "home.hero.description": "Lorem ipsum dolor sit amet consectetur adipisicing elit.",
+        "home.hero.cta": "Get started",
       },
     };
     document.body.innerHTML = `<p data-i18n="home.hero.secondaryCta">Keep this text</p>`;
@@ -691,7 +702,7 @@ describe("I18n", () => {
     expect(document.querySelector("p")?.textContent).toBe("Learn more");
   });
 
-  it("should fetch only the active locale and skip the default when it loads", async () => {
+  it("should fetch both the active locale and the default locale when they are different", async () => {
     localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
     document.body.innerHTML = `<p data-i18n="home.hero.cta">Old greeting</p>`;
 
@@ -699,8 +710,9 @@ describe("I18n", () => {
 
     expect(i18n.locale).toBe("pt-BR");
     expect(document.querySelector("p")?.textContent).toBe("Comece agora");
-    // The default locale is fetched only as a failure recovery, not eagerly.
-    expect(vi.mocked(fetch).mock.calls.some(([url]) => url === EN_US_URL)).toBe(false);
+    // Both active and default locales must be fetched to support key-by-key fallback.
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => url === PT_BR_URL)).toBe(true);
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => url === EN_US_URL)).toBe(true);
   });
 
   it("should preserve markup and warn when data-i18n is used on a non-leaf element", async () => {
@@ -997,5 +1009,63 @@ describe("I18n", () => {
     expect(newEl.textContent).toBe("Learn more");
 
     document.body.removeChild(container);
+  });
+
+  it("should disconnect MutationObserver and stop translating dynamic DOM changes", async () => {
+    await i18n.init({ observe: true });
+
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+
+    const newEl = document.createElement("span");
+    newEl.setAttribute("data-i18n", "home.hero.cta");
+    newEl.textContent = "Original";
+    container.appendChild(newEl);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(newEl.textContent).toBe("Get started");
+
+    i18n.disconnect();
+
+    newEl.setAttribute("data-i18n", "home.hero.secondaryCta");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(newEl.textContent).toBe("Get started"); // Should NOT change to "Learn more"
+
+    document.body.removeChild(container);
+  });
+
+  it("should fall back key-by-key to default locale dictionary", async () => {
+    localStorage.setItem("test-i18n", JSON.stringify({ locale: "pt-BR" }));
+    fetchOverrides[PT_BR_URL] = {
+      body: {
+        "home.hero.cta": "Comece agora",
+        // home.hero.secondaryCta is missing in pt-BR, but present in en-US
+      },
+    };
+    document.body.innerHTML = `
+      <span id="cta" data-i18n="home.hero.cta">Original CTA</span>
+      <span id="sec" data-i18n="home.hero.secondaryCta">Original Secondary</span>
+    `;
+
+    await i18n.init({ storageKey: "test-i18n" });
+
+    expect(i18n.locale).toBe("pt-BR");
+    expect(document.querySelector("#cta")?.textContent).toBe("Comece agora");
+    expect(document.querySelector("#sec")?.textContent).toBe("Learn more"); // Fell back to en-US key-by-key
+    expect(i18n.translate("home.hero.secondaryCta")).toBe("Learn more");
+  });
+
+  it("should suppress warnings on missing keys during SSR", async () => {
+    const originalWindow = globalThis.window;
+    // @ts-expect-error - testing SSR scenario
+    delete globalThis.window;
+
+    const ssrI18n = createI18n(i18nConfig);
+    await ssrI18n.init();
+
+    ssrI18n.translate("home.hero.cta");
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    globalThis.window = originalWindow;
   });
 });

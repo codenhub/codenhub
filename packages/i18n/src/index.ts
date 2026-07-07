@@ -63,6 +63,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
   private root: ParentNode | null = null;
   private storage: Store<PersistedLocaleState> | null = null;
   private currentDictionary: LocaleDictionary = createEmptyDictionary();
+  private defaultDictionary: LocaleDictionary = createEmptyDictionary();
   private isCurrentLocaleLoaded = false;
   private readonly warnedMissingKeys = new Set<string>();
   private localeRequestId = 0;
@@ -118,7 +119,7 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
   }
 
   private warnMissingKey(key: string, message: string): void {
-    if (this.isSilent) {
+    if (this.isSilent || typeof window === "undefined") {
       return;
     }
     const warningKey = `${this.currentLocale}::${key}`;
@@ -133,13 +134,13 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
 
   private translateNormalized = (key: string): string | undefined => {
     if (!this.isReadyState) {
-      if (!this.isSilent) {
+      if (!this.isSilent && typeof window !== "undefined") {
         console.warn("[I18n] translate() was called before init() completed. Call init() first.");
       }
       return undefined;
     }
 
-    const translation = this.currentDictionary[key];
+    const translation = this.currentDictionary[key] ?? this.defaultDictionary[key];
 
     if (translation !== undefined) {
       return translation;
@@ -185,11 +186,16 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
 
     const requestId = this.createLocaleRequest();
     const initialLocale = getInitialLocale(this.config, this.storage.getItem("locale"));
-    const localeState = await resolveLocaleState({
-      config: this.config,
-      loader: this.localeLoader,
-      requestedLocale: initialLocale,
-    });
+    const [localeState, defaultDict] = await Promise.all([
+      resolveLocaleState({
+        config: this.config,
+        loader: this.localeLoader,
+        requestedLocale: initialLocale,
+      }),
+      initialLocale !== this.config.defaultLocale && typeof window !== "undefined"
+        ? this.localeLoader.loadLocale(this.config.defaultLocale)
+        : Promise.resolve(undefined),
+    ]);
 
     if (!this.isLatestLocaleRequest(requestId)) {
       return;
@@ -197,6 +203,8 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
 
     this.currentLocale = localeState.locale;
     this.currentDictionary = localeState.dictionary;
+    this.defaultDictionary =
+      defaultDict ?? (initialLocale === this.config.defaultLocale ? localeState.dictionary : createEmptyDictionary());
     this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
     if (localeState.isRequestedLocaleLoaded) {
@@ -239,6 +247,14 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     );
   }
 
+  disconnect(): void {
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+    this.root = null;
+  }
+
   async setLocale(locale: string): Promise<boolean> {
     if (!this.isReadyState) {
       if (!this.isSilent) {
@@ -275,6 +291,9 @@ class I18nInstance<TLocale extends string = string> extends EventTarget implemen
     const previousDictionary = this.currentDictionary;
     this.currentLocale = localeState.locale;
     this.currentDictionary = localeState.dictionary;
+    if (localeState.locale === this.config.defaultLocale && localeState.isAppliedLocaleLoaded) {
+      this.defaultDictionary = localeState.dictionary;
+    }
     this.isCurrentLocaleLoaded = localeState.isAppliedLocaleLoaded;
 
     if (localeState.isRequestedLocaleLoaded) {
