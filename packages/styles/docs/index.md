@@ -24,6 +24,9 @@ The package has no JavaScript runtime. It does not create DOM nodes, attach even
 | `@codenhub/styles/tw/feedback`   | Tailwind v4 source for alert, badge, skeleton, and progress.          |
 | `@codenhub/styles/tw/loader`     | Tailwind v4 source for loader and activity indicator utilities.       |
 | `@codenhub/styles/tw/tooltip`    | Tailwind v4 source for tooltip utility.                               |
+| `@codenhub/styles/tw/reset`      | Tailwind v4 source for core resets (scrollbar, body, selection).      |
+| `@codenhub/styles/tw/overrides`  | Tailwind v4 source for opt-in classless native element styling.       |
+| `@codenhub/styles/tw/typography` | Tailwind v4 source for typography helper classes.                     |
 | `@codenhub/styles/tw/utilities`  | Tailwind v4 source for layout primitives and contrast utilities.      |
 
 `components` entrypoints include theme tokens because component classes depend on those variables.

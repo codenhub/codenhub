@@ -1,0 +1,81 @@
+@import "tailwindcss";
+@import "./theme.css";
+@import "./typography.css";
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) var(--color-background);
+  }
+
+  ::-webkit-scrollbar {
+    width: calc(var(--spacing) * 4);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border: var(--spacing) solid var(--color-background);
+    border-radius: calc(var(--spacing) * 2);
+  }
+
+  html,
+  body {
+    @apply bg-background text-text font-default min-h-dvh overflow-x-hidden;
+  }
+
+  body {
+    @apply flex flex-col;
+  }
+
+  button {
+    @apply not-disabled:cursor-pointer;
+  }
+
+  img {
+    @apply select-none;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+  }
+
+  :focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  p,
+  li,
+  a {
+    @apply text-body;
+  }
+}
+
+@layer components {
+  [aria-current="page"] {
+    @apply text-primary font-bold;
+  }
+
+  @media (forced-colors: active) {
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .alert,
+    .badge {
+      border-color: CanvasText;
+    }
+  }
+}
