@@ -77,7 +77,7 @@ export function applyGlobalTokens(tokens: ToastTokens | null | undefined, styleI
     document.head.appendChild(styleElement);
   }
 
-  styleElement.textContent = `:root {\n${styles.join("\n")}\n}`;
+  styleElement.textContent = `[data-toast-instance="${styleId}"] {\n${styles.join("\n")}\n}`;
 }
 
 /**

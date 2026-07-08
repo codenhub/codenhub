@@ -1,11 +1,26 @@
-// Position and a11y roles
+/**
+ * Toast notification positions on the viewport.
+ */
 export type ToastPosition = "top-left" | "top-right" | "bottom-right" | "bottom-left";
+
+/**
+ * Accessibility roles for toast elements.
+ */
 export type ToastRole = "alert" | "status";
+
+/**
+ * Presets for icons embedded in semantic and loading toasts.
+ */
 export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
+
+/**
+ * Public lifecycle states of a toast notification.
+ */
 export type ToastState = "visible" | "hiding" | "hidden";
 
-// --- Token overrides ---------------------------------------------------------
-
+/**
+ * Design tokens for overriding colors per toast or globally per instance.
+ */
 export interface ToastTokens {
   /** Border/accent color for the toast-success variant. */
   success?: string;
@@ -39,141 +54,233 @@ export interface ToastTokens {
   text?: string;
 }
 
-// --- Public handle (returned from every show method) -------------------------
-
-/** Options that can be updated on a live toast. */
+/**
+ * Options that can be dynamically updated on a live toast instance.
+ */
 export interface ToastUpdateOptions {
+  /** The new message text. */
   message?: string;
+  /** Scoped design token color overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS classes to append. */
   className?: string;
 }
 
-/** Control object returned by every show call. */
+/**
+ * Control handle returned upon dispatching a toast notification.
+ * Allows programmatic lifecycle management.
+ */
 export interface ToastHandle {
-  /** Programmatically dismiss the toast. */
+  /**
+   * Programmatically dismisses the toast. Triggers exit animations.
+   */
   dismiss(): void;
-  /** Update message / tokens / className on a live toast. */
+
+  /**
+   * Patches the message text, styles, or classes of a live toast.
+   *
+   * @param options Partial updates to apply.
+   */
   update(options: ToastUpdateOptions): void;
-  /** Resolves when the toast has fully hidden and removed from DOM. */
+
+  /**
+   * A promise that resolves when the toast has fully completed its
+   * exit animation and has been removed from the DOM.
+   */
   readonly settled: Promise<void>;
-  /** Current lifecycle state. */
+
+  /**
+   * Current lifecycle state of the toast.
+   */
   readonly state: ToastState;
 }
 
 /**
- * Extended handle returned by interactive (confirm / prompt / alert) toasts.
- * `result` resolves with the user response. Calling `dismiss()` resolves it
- * with the cancel value (false / null / undefined).
+ * Control handle returned by interactive (confirm / prompt / alert) modals.
  */
 export interface InteractiveToastHandle<T> extends ToastHandle {
+  /**
+   * A promise that resolves with the user's input/decision:
+   * - `confirm`: resolves with `boolean`.
+   * - `prompt`: resolves with `string` (input value) or `null` (canceled).
+   * - `alert`: resolves with `void` when acknowledged.
+   */
   readonly result: Promise<T>;
 }
 
-// --- Per-call option types ---------------------------------------------------
-
+/**
+ * Union type representing the acceptable content values inside custom toasts.
+ */
 type ToastContentValue = string | Node;
+
+/**
+ * Supported formats for custom toast content. Can be a string, a DOM Node,
+ * or a function returning either.
+ */
 export type ToastContent = ToastContentValue | (() => ToastContentValue);
 
+/**
+ * Options for dispatching a semantic notification (success/error/warning/info).
+ */
 export interface SemanticToastOptions {
+  /** The message text to display. */
   message: string;
+  /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
+  /** Visibility duration in milliseconds. Defaults to toaster configuration. */
   duration?: number;
+  /** Whether to render a close button. Defaults to toaster configuration. */
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  /** Whether to automatically close after the duration. Defaults to toaster configuration. */
+  shouldAutoDismiss?: boolean;
+  /** Instance token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
+  /** Accessibility role. Defaults to variant default. */
   role?: ToastRole;
 }
 
+/**
+ * Category names for predefined styles.
+ */
 export type SemanticType = "success" | "error" | "warning" | "info";
 
+/**
+ * Options for dispatching a loading toast notification.
+ */
 export interface LoadingToastOptions {
+  /** The progress message. */
   message: string;
+  /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
-  /** Defaults to false - loading toasts do not auto-dismiss. */
+  /** Whether the user can manually close it. Defaults to false. */
   isDismissable?: boolean;
+  /** Color token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
 }
 
+/**
+ * Options for dispatching a custom layout toast.
+ */
 export interface CustomToastOptions {
+  /** The custom HTML string, DOM Node, or creator function. */
   content: ToastContent;
+  /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
+  /** Visibility duration in milliseconds. Defaults to toaster configuration. */
   duration?: number;
+  /** Whether to render a close button. Defaults to toaster configuration. */
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  /** Whether to automatically close after duration. Defaults to toaster configuration. */
+  shouldAutoDismiss?: boolean;
+  /** Color token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
+  /** Accessibility role. Defaults to "status". */
   role?: ToastRole;
 }
 
+/**
+ * Customization settings for interactive confirmation dialogs.
+ */
 export interface ConfirmOptions {
+  /** Label for the positive action button. Defaults to "Confirm". */
   confirmLabel?: string;
+  /** Label for the negative action button. Defaults to "Cancel". */
   cancelLabel?: string;
-  /** Dismiss (cancel) when the backdrop is clicked. Defaults to false. */
-  backdropDismiss?: boolean;
+  /** Whether clicking the backdrop overlay cancels the modal. Defaults to false. */
+  shouldBackdropDismiss?: boolean;
+  /** Color token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
 }
 
+/**
+ * Customization settings for interactive prompt input dialogs.
+ */
 export interface PromptOptions {
+  /** Initial value prefilled in the text input field. */
   defaultValue?: string;
+  /** Placeholder text when the input field is empty. */
   placeholder?: string;
+  /** Label for the submit button. Defaults to "Submit". */
   submitLabel?: string;
+  /** Label for the cancel button. Defaults to "Cancel". */
   cancelLabel?: string;
-  /** Dismiss (cancel) when the backdrop is clicked. Defaults to false. */
-  backdropDismiss?: boolean;
+  /** Whether clicking the backdrop overlay cancels the modal. Defaults to false. */
+  shouldBackdropDismiss?: boolean;
+  /** Color token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
 }
 
+/**
+ * Customization settings for blocking alert dialogs.
+ */
 export interface AlertOptions {
+  /** Label for the confirmation button. Defaults to "OK". */
   okLabel?: string;
-  /** Dismiss when the backdrop is clicked. Defaults to true. */
-  backdropDismiss?: boolean;
+  /** Whether clicking the backdrop overlay closes the alert. Defaults to true. */
+  shouldBackdropDismiss?: boolean;
+  /** Color token overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS class name. */
   className?: string;
 }
 
-// --- Category-level defaults (inside ToasterConfig) -------------------------
-
+/**
+ * Fallback defaults for semantic toasts.
+ */
 export interface SemanticDefaults {
   position?: ToastPosition;
   duration?: number;
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  shouldAutoDismiss?: boolean;
 }
 
+/**
+ * Fallback defaults for loading toasts.
+ */
 export interface LoadingDefaults {
   position?: ToastPosition;
   isDismissable?: boolean;
 }
 
+/**
+ * Fallback defaults for custom toasts.
+ */
 export interface CustomDefaults {
   position?: ToastPosition;
   duration?: number;
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  shouldAutoDismiss?: boolean;
 }
 
-// --- Toaster config ----------------------------------------------------------
-
+/**
+ * Global configuration settings for a Toaster manager instance.
+ */
 export interface ToasterConfig {
-  /** Default position for all toasts. Defaults to "top-right". */
+  /** Default viewport position. Defaults to "top-right". */
   position?: ToastPosition;
-  /** Parent element that receives toast stack containers. Defaults to document.body. */
+  /** Parent DOM element receiving container stacks. Defaults to document.body. */
   container?: HTMLElement;
-  /** Maximum number of simultaneously visible toasts. Defaults to 5. */
+  /** Maximum active toasts displayed simultaneously. Defaults to 5. */
   maxVisible?: number;
-  /** Default auto-dismiss duration in milliseconds. Defaults to 4000. */
+  /** Default timeout in milliseconds. Defaults to 4000. */
   duration?: number;
-  /** Show a dismiss button by default. Defaults to false. */
+  /** Render close button by default. Defaults to false. */
   isDismissable?: boolean;
-  /** Auto-dismiss toasts by default. Defaults to true. */
-  autoDismiss?: boolean;
-  /** Global CSS token overrides applied to all toasts. */
+  /** Dismiss automatically when duration expires by default. Defaults to true. */
+  shouldAutoDismiss?: boolean;
+  /** Dynamic CSS variables applied to all toasts inside this instance. */
   tokens?: ToastTokens;
-  /** Per-category defaults that override the top-level defaults. */
+  /** Scoped fallback overrides per notification type. */
   semantic?: SemanticDefaults;
   loading?: LoadingDefaults;
   custom?: CustomDefaults;

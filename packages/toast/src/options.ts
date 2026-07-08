@@ -2,18 +2,19 @@ import { buildInlineStyle } from "./tokens";
 import type { ToastContent, ToastIcon, ToastPosition, ToastRole, ToastTokens, ToastUpdateOptions } from "./types";
 
 export interface ResolvedToastConfig {
+  readonly instanceId: string;
   readonly position: ToastPosition;
   readonly duration: number;
   readonly isDismissable: boolean;
-  readonly autoDismiss: boolean;
+  readonly shouldAutoDismiss: boolean;
   readonly maxVisible: number;
 }
 
-export const DEFAULT_CONFIG: ResolvedToastConfig = {
+export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId"> = {
   position: "top-right",
   duration: 4000,
   isDismissable: false,
-  autoDismiss: true,
+  shouldAutoDismiss: true,
   maxVisible: 5,
 };
 
@@ -27,7 +28,8 @@ export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toas
 // --- Normalized options used internally by Toast ----------------------------
 
 export interface NormalizedToastOptions {
-  readonly autoDismiss: boolean;
+  readonly instanceId: string;
+  readonly shouldAutoDismiss: boolean;
   readonly content: readonly Node[] | null;
   readonly duration: number;
   readonly icon: ToastIcon | null;
@@ -40,7 +42,7 @@ export interface NormalizedToastOptions {
 }
 
 export interface ToastPresetOptions {
-  readonly defaultAutoDismiss?: boolean;
+  readonly shouldAutoDismiss?: boolean;
   readonly icon?: ToastIcon;
   readonly role?: ToastRole;
   readonly rootClassName?: string;
@@ -65,6 +67,27 @@ function resolveToastContent(content: ToastContent): readonly Node[] {
     }
     const template = document.createElement("template");
     template.innerHTML = resolved;
+
+    // Sanitize to prevent XSS
+    const scripts = template.content.querySelectorAll("script");
+    scripts.forEach((s) => s.remove());
+
+    const allElements = template.content.querySelectorAll("*");
+    allElements.forEach((el) => {
+      const attrs = Array.from(el.attributes);
+      for (const attr of attrs) {
+        const attrName = attr.name.toLowerCase();
+        if (attrName.startsWith("on")) {
+          el.removeAttribute(attr.name);
+        } else if (
+          (attrName === "href" || attrName === "src" || attrName === "action") &&
+          attr.value.trim().toLowerCase().startsWith("javascript:")
+        ) {
+          el.removeAttribute(attr.name);
+        }
+      }
+    });
+
     return Object.freeze(Array.from(template.content.childNodes));
   }
 
@@ -97,17 +120,18 @@ export interface RawToastOptions {
   position?: ToastPosition;
   duration?: number;
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  shouldAutoDismiss?: boolean;
   tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
 }
 
-export function normalizeToastOptions(
-  options: RawToastOptions,
-  preset: ToastPresetOptions | null,
-  config: ResolvedToastConfig,
-): Readonly<NormalizedToastOptions> {
+export function normalizeToastOptions(params: {
+  options: RawToastOptions;
+  preset: ToastPresetOptions | null;
+  config: ResolvedToastConfig;
+}): Readonly<NormalizedToastOptions> {
+  const { options, preset, config } = params;
   const { content, message } = options;
 
   if (content === undefined) {
@@ -121,7 +145,8 @@ export function normalizeToastOptions(
   assertDuration(options.duration);
 
   return Object.freeze({
-    autoDismiss: options.autoDismiss ?? preset?.defaultAutoDismiss ?? config.autoDismiss,
+    instanceId: config.instanceId,
+    shouldAutoDismiss: options.shouldAutoDismiss ?? preset?.shouldAutoDismiss ?? config.shouldAutoDismiss,
     content: content === undefined ? null : resolveToastContent(content),
     duration: options.duration ?? config.duration,
     icon: content === undefined ? (preset?.icon ?? options.icon ?? null) : null,

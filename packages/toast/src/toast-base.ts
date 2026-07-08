@@ -17,7 +17,12 @@ import {
 import type { ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
-type ToastLifecycleSubscriber = (toast: Toast) => void;
+
+/**
+ * Subscriber callback function signature for toast lifecycle events.
+ */
+export type ToastLifecycleSubscriber = (toast: Toast) => void;
+
 type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
 function toPublicState(internal: InternalToastState): ToastState {
@@ -42,12 +47,15 @@ function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<Toast
 const dismissingElements = new WeakSet<HTMLDivElement>();
 const toastByElement = new WeakMap<HTMLDivElement, Toast>();
 
-function removeToastElement(
-  element: HTMLDivElement,
-  parent: HTMLElement,
-  position: ToastPosition,
-  onComplete: () => void,
-): void {
+interface RemoveToastElementParams {
+  element: HTMLDivElement;
+  parent: HTMLElement;
+  position: ToastPosition;
+  onComplete: () => void;
+}
+
+function removeToastElement(params: RemoveToastElementParams): void {
+  const { element, parent, position, onComplete } = params;
   const container = getContainer(parent, position);
   if (!container || !container.contains(element)) {
     onComplete();
@@ -69,12 +77,15 @@ function removeToastElement(
   });
 }
 
-function requestSlot(
-  parent: HTMLElement,
-  position: ToastPosition,
-  maxVisible: number,
-  onAvailable: () => void,
-): (() => void) | null {
+interface RequestSlotParams {
+  parent: HTMLElement;
+  position: ToastPosition;
+  maxVisible: number;
+  onAvailable: () => void;
+}
+
+function requestSlot(params: RequestSlotParams): (() => void) | null {
+  const { parent, position, maxVisible, onAvailable } = params;
   const container = getContainer(parent, position);
   if (!container || container.children.length < maxVisible) {
     return null;
@@ -101,12 +112,15 @@ function requestSlot(
     };
   }
 
-  removeToastElement(oldestElement, parent, position, releaseSlot);
+  removeToastElement({ element: oldestElement, parent, position, onComplete: releaseSlot });
   return () => {
     isCanceled = true;
   };
 }
 
+/**
+ * Base Toast class representing a single active or queued notification element.
+ */
 export class Toast {
   protected readonly options: Readonly<NormalizedToastOptions>;
   private readonly subscribers = createLifecycleSubscribers();
@@ -125,39 +139,86 @@ export class Toast {
     return null;
   }
 
+  /**
+   * Constructs a new base Toast instance.
+   *
+   * @param options Raw user-provided notification options.
+   * @param config The resolved configuration of the parent toaster.
+   * @param parent The DOM container element where the stack container lives.
+   */
   public constructor(options: RawToastOptions, config: ResolvedToastConfig, parent: HTMLElement) {
     this.parent = parent;
     this.maxVisible = config.maxVisible;
-    this.options = normalizeToastOptions(options, (this.constructor as typeof Toast).getPresetOptions(options), config);
+    this.options = normalizeToastOptions({
+      options,
+      preset: (this.constructor as typeof Toast).getPresetOptions(options),
+      config,
+    });
     this._settled = new Promise<void>((resolve) => {
       this.settledResolve = resolve;
     });
   }
 
+  /**
+   * Gets the public-facing lifecycle state of this toast.
+   */
   public get publicState(): ToastState {
     return toPublicState(this.internalState);
   }
 
+  /**
+   * A promise that resolves when the toast has completed its exit
+   * animation and has been removed from the DOM.
+   */
   public get settled(): Promise<void> {
     return this._settled;
   }
 
+  /**
+   * Registers a callback to trigger when the toast is initially requested to show.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
   public onShow(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("show", subscriber);
   }
 
+  /**
+   * Registers a callback to trigger when the entrance animation completes.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
   public onShown(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("shown", subscriber);
   }
 
+  /**
+   * Registers a callback to trigger when the toast begins to hide.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
   public onHide(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("hide", subscriber);
   }
 
+  /**
+   * Registers a callback to trigger when the toast is fully removed from DOM.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
   public onHidden(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("hidden", subscriber);
   }
 
+  /**
+   * Updates properties of a visible toast in place.
+   *
+   * @param updateOpts Scoped updates to apply to the toast element.
+   */
   public update(updateOpts: ToastUpdateOptions): void {
     if (this.internalState !== "visible" || this.element === null) {
       return;
@@ -165,6 +226,10 @@ export class Toast {
     applyUpdateToElement(this.element, updateOpts);
   }
 
+  /**
+   * Schedules the toast to be rendered. If the active stack is full,
+   * places it in a queue until a slot is made available.
+   */
   public show(): void {
     if (this.internalState !== "idle") {
       return;
@@ -172,13 +237,18 @@ export class Toast {
 
     const position = this.options.position;
     this.internalState = "queued";
-    this.queuedSlotCancel = requestSlot(this.parent, position, this.maxVisible, () => {
-      this.queuedSlotCancel = null;
-      if (this.internalState !== "queued") {
-        return;
-      }
-      this.internalState = "idle";
-      this.show();
+    this.queuedSlotCancel = requestSlot({
+      parent: this.parent,
+      position,
+      maxVisible: this.maxVisible,
+      onAvailable: () => {
+        this.queuedSlotCancel = null;
+        if (this.internalState !== "queued") {
+          return;
+        }
+        this.internalState = "idle";
+        this.show();
+      },
     });
 
     if (this.queuedSlotCancel !== null) {
@@ -212,6 +282,9 @@ export class Toast {
     });
   }
 
+  /**
+   * Dismisses the toast and triggers its exit animations.
+   */
   public hide(): void {
     if (this.internalState === "queued") {
       this.clearQueuedShow();
@@ -230,7 +303,12 @@ export class Toast {
 
     this.internalState = "hiding";
     this.notify("hide");
-    removeToastElement(element, this.parent, position, () => this.finishHide(element));
+    removeToastElement({
+      element,
+      parent: this.parent,
+      position,
+      onComplete: () => this.finishHide(element),
+    });
   }
 
   private clearAutoDismiss(): void {
@@ -263,7 +341,7 @@ export class Toast {
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
-    if (!this.options.autoDismiss) {
+    if (!this.options.shouldAutoDismiss) {
       return;
     }
     this.dismissTimeoutId = window.setTimeout(() => {

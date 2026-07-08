@@ -212,6 +212,19 @@ describe("toaster.custom", () => {
     h.dismiss();
     toaster.destroy();
   });
+
+  it("show() sanitizes dangerous scripts and event attributes", () => {
+    const toaster = createToaster();
+    const h = toaster.custom.show({
+      content: '<span onclick="alert(1)">Custom!</span><script>alert(2)</script>',
+    });
+    const html = document.body.innerHTML;
+    expect(html).toContain("<span>Custom!</span>");
+    expect(html).not.toContain("onclick");
+    expect(html).not.toContain("<script>");
+    h.dismiss();
+    toaster.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -289,15 +302,17 @@ describe("interactive.confirm", () => {
     toaster.destroy();
   });
 
-  it("resolves false when cancel button clicked", async () => {
+  it("resolves false and closes the dialog when dismissed programmatically", async () => {
     const toaster = createToaster();
-    const handle = toaster.confirm("Delete?", { cancelLabel: "Abort" });
+    const handle = toaster.confirm("Delete?");
 
-    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
-    expect(cancelBtn).toBeTruthy();
-    cancelBtn!.click();
+    const dialog = document.body.querySelector("dialog");
+    expect(dialog?.open).toBe(true);
+
+    handle.dismiss();
 
     await expect(handle.result).resolves.toBe(false);
+    expect(dialog?.open).toBe(false);
     toaster.destroy();
   });
 });

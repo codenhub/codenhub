@@ -33,33 +33,69 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string): 
 
 interface ModalJob {
   run: () => void;
+  dismiss: () => void;
 }
 
+interface BuildDialogContentParams {
+  dialog: HTMLDialogElement;
+  message: string;
+  tokens?: ToastTokens;
+  className?: string;
+}
+
+/**
+ * Manages native dialog modals for interactive alerts, confirmations, and prompts.
+ * Leverages a queue to serialize multiple modal dialogs.
+ */
 export class ModalManager {
   private dialog: HTMLDialogElement | null = null;
   private queue: ModalJob[] = [];
+  private activeJob: ModalJob | null = null;
   private isRunning = false;
-  private destroyed = false;
+  private isDestroyed = false;
 
-  constructor(private readonly parent: HTMLElement) {}
+  /**
+   * Constructs a new ModalManager instance.
+   *
+   * @param parent The parent DOM container.
+   * @param instanceId The unique toaster instance ID for CSS variable scoping.
+   */
+  constructor(
+    private readonly parent: HTMLElement,
+    private readonly instanceId: string,
+  ) {}
 
   // --- Public factory methods -----------------------------------------------
 
+  /**
+   * Enqueues and displays a confirmation dialog.
+   *
+   * @param message Question or statement to confirm.
+   * @param options Confirm action configurations.
+   */
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
     let resolve!: (value: boolean) => void;
     const result = new Promise<boolean>((res) => (resolve = res));
     let settleFn!: () => void;
     const settled = new Promise<void>((res) => (settleFn = res));
     let currentState: ToastState = "visible";
+    let isCanceled = false;
+    let activeClose: ((value: boolean) => void) | null = null;
 
-    const dismiss = (): void => {
-      resolve(false);
-    };
-
-    this.enqueue({
+    const job: ModalJob = {
       run: () => {
+        if (isCanceled) {
+          this.next();
+          return;
+        }
+
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent(dialog, message, options.tokens, options.className);
+        const container = this.buildDialogContent({
+          dialog,
+          message,
+          tokens: options.tokens,
+          className: options.className,
+        });
 
         const cancelBtn = el("button");
         cancelBtn.type = "button";
@@ -77,6 +113,7 @@ export class ModalManager {
         container.appendChild(actions);
 
         const close = (value: boolean): void => {
+          activeClose = null;
           resolve(value);
           this.closeDialog(dialog, () => {
             currentState = "hidden";
@@ -84,6 +121,8 @@ export class ModalManager {
             this.next();
           });
         };
+
+        activeClose = close;
 
         cancelBtn.addEventListener("click", () => close(false));
         confirmBtn.addEventListener("click", () => close(true));
@@ -94,7 +133,7 @@ export class ModalManager {
         };
         dialog.addEventListener("cancel", onCancel, { once: true });
 
-        if (options.backdropDismiss === true) {
+        if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
               close(false);
@@ -106,10 +145,22 @@ export class ModalManager {
         dialog.showModal();
         confirmBtn.focus();
       },
-    });
+      dismiss: () => {
+        if (activeClose) {
+          activeClose(false);
+        } else {
+          isCanceled = true;
+          resolve(false);
+          currentState = "hidden";
+          settleFn();
+        }
+      },
+    };
+
+    this.enqueue(job);
 
     return {
-      dismiss,
+      dismiss: () => job.dismiss(),
       update: () => {
         /* no-op for modals */
       },
@@ -123,21 +174,35 @@ export class ModalManager {
     };
   }
 
+  /**
+   * Enqueues and displays an input prompt dialog.
+   *
+   * @param message Label description for the input text field.
+   * @param options Prompt configuration settings.
+   */
   public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
     let resolve!: (value: string | null) => void;
     const result = new Promise<string | null>((res) => (resolve = res));
     let settleFn!: () => void;
     const settled = new Promise<void>((res) => (settleFn = res));
     let currentState: ToastState = "visible";
+    let isCanceled = false;
+    let activeClose: ((value: string | null) => void) | null = null;
 
-    const dismiss = (): void => {
-      resolve(null);
-    };
-
-    this.enqueue({
+    const job: ModalJob = {
       run: () => {
+        if (isCanceled) {
+          this.next();
+          return;
+        }
+
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent(dialog, message, options.tokens, options.className);
+        const container = this.buildDialogContent({
+          dialog,
+          message,
+          tokens: options.tokens,
+          className: options.className,
+        });
 
         const input = el("input");
         input.type = "text";
@@ -162,6 +227,7 @@ export class ModalManager {
         container.appendChild(actions);
 
         const close = (value: string | null): void => {
+          activeClose = null;
           resolve(value);
           this.closeDialog(dialog, () => {
             currentState = "hidden";
@@ -169,6 +235,8 @@ export class ModalManager {
             this.next();
           });
         };
+
+        activeClose = close;
 
         cancelBtn.addEventListener("click", () => close(null));
         submitBtn.addEventListener("click", () => close(input.value));
@@ -184,7 +252,7 @@ export class ModalManager {
         };
         dialog.addEventListener("cancel", onCancel, { once: true });
 
-        if (options.backdropDismiss === true) {
+        if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
               close(null);
@@ -197,10 +265,22 @@ export class ModalManager {
         // Autofocus input after paint so animation doesn't glitch
         requestAnimationFrame(() => input.focus());
       },
-    });
+      dismiss: () => {
+        if (activeClose) {
+          activeClose(null);
+        } else {
+          isCanceled = true;
+          resolve(null);
+          currentState = "hidden";
+          settleFn();
+        }
+      },
+    };
+
+    this.enqueue(job);
 
     return {
-      dismiss,
+      dismiss: () => job.dismiss(),
       update: () => {
         /* no-op for modals */
       },
@@ -214,21 +294,35 @@ export class ModalManager {
     };
   }
 
+  /**
+   * Enqueues and displays a blocking message alert dialog.
+   *
+   * @param message Informational statement text.
+   * @param options Alert customization options.
+   */
   public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
     let resolve!: () => void;
     const result = new Promise<void>((res) => (resolve = res));
     let settleFn!: () => void;
     const settled = new Promise<void>((res) => (settleFn = res));
     let currentState: ToastState = "visible";
+    let isCanceled = false;
+    let activeClose: (() => void) | null = null;
 
-    const dismiss = (): void => {
-      resolve();
-    };
-
-    this.enqueue({
+    const job: ModalJob = {
       run: () => {
+        if (isCanceled) {
+          this.next();
+          return;
+        }
+
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent(dialog, message, options.tokens, options.className);
+        const container = this.buildDialogContent({
+          dialog,
+          message,
+          tokens: options.tokens,
+          className: options.className,
+        });
 
         const okBtn = el("button");
         okBtn.type = "button";
@@ -240,6 +334,7 @@ export class ModalManager {
         container.appendChild(actions);
 
         const close = (): void => {
+          activeClose = null;
           resolve();
           this.closeDialog(dialog, () => {
             currentState = "hidden";
@@ -247,6 +342,8 @@ export class ModalManager {
             this.next();
           });
         };
+
+        activeClose = close;
 
         okBtn.addEventListener("click", close);
 
@@ -256,8 +353,8 @@ export class ModalManager {
         };
         dialog.addEventListener("cancel", onCancel, { once: true });
 
-        const backdropDismiss = options.backdropDismiss !== false;
-        if (backdropDismiss) {
+        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
+        if (shouldBackdropDismiss) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
               close();
@@ -269,10 +366,22 @@ export class ModalManager {
         dialog.showModal();
         okBtn.focus();
       },
-    });
+      dismiss: () => {
+        if (activeClose) {
+          activeClose();
+        } else {
+          isCanceled = true;
+          resolve();
+          currentState = "hidden";
+          settleFn();
+        }
+      },
+    };
+
+    this.enqueue(job);
 
     return {
-      dismiss,
+      dismiss: () => job.dismiss(),
       update: () => {
         /* no-op for modals */
       },
@@ -288,9 +397,21 @@ export class ModalManager {
 
   // --- Cleanup ---------------------------------------------------------------
 
+  /**
+   * Tear down the manager, resolving any pending queued modal promises,
+   * closing the dialog, and removing elements from the DOM.
+   */
   public destroy(): void {
-    this.destroyed = true;
+    this.isDestroyed = true;
+    const currentQueue = this.queue;
     this.queue = [];
+
+    currentQueue.forEach((job) => job.dismiss());
+    if (this.activeJob) {
+      this.activeJob.dismiss();
+      this.activeJob = null;
+    }
+
     if (this.dialog) {
       if (this.dialog.open) {
         this.dialog.close();
@@ -303,7 +424,7 @@ export class ModalManager {
   // --- Internals -------------------------------------------------------------
 
   private enqueue(job: ModalJob): void {
-    if (this.destroyed) {
+    if (this.isDestroyed) {
       return;
     }
     this.queue.push(job);
@@ -313,13 +434,14 @@ export class ModalManager {
   }
 
   private next(): void {
-    if (this.destroyed || this.queue.length === 0) {
+    if (this.isDestroyed || this.queue.length === 0) {
       this.isRunning = false;
+      this.activeJob = null;
       return;
     }
     this.isRunning = true;
-    const job = this.queue.shift()!;
-    job.run();
+    this.activeJob = this.queue.shift()!;
+    this.activeJob.run();
   }
 
   private ensureDialog(): HTMLDialogElement {
@@ -327,6 +449,7 @@ export class ModalManager {
       const dialog = document.createElement("dialog");
       // Use CSS class for backdrop; native ::backdrop handled in styles
       dialog.className = DIALOG_CLASS;
+      dialog.setAttribute("data-toast-instance", this.instanceId);
       // Wrap in a flex backdrop container so we get the overlay effect
       // via the native ::backdrop pseudo-element (styled via CSS)
       this.parent.appendChild(dialog);
@@ -338,12 +461,9 @@ export class ModalManager {
     return this.dialog;
   }
 
-  private buildDialogContent(
-    dialog: HTMLDialogElement,
-    message: string,
-    tokens?: ToastTokens,
-    className?: string,
-  ): HTMLDivElement {
+  private buildDialogContent(params: BuildDialogContentParams): HTMLDivElement {
+    const { dialog, message, tokens, className } = params;
+
     if (className) {
       dialog.className = `${DIALOG_CLASS} ${className}`;
     } else {

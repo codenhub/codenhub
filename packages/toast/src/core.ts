@@ -49,28 +49,115 @@ function makeHandle(toast: Toast): ToastHandle {
 // Category managers
 // ---------------------------------------------------------------------------
 
+/**
+ * Manager for dispatching and clearing pre-styled semantic toasts (success, error, warning, info).
+ */
 export interface SemanticManager {
+  /**
+   * Displays a semantic toast notification.
+   *
+   * @param options Config options including message and semantic type.
+   */
   show(options: SemanticToastOptions & { type?: SemanticType }): ToastHandle;
+
+  /**
+   * Displays a success notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an error notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays a warning notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an informational notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Dismisses all active semantic toasts.
+   */
   clear(): void;
 }
 
+/**
+ * Manager for showing and clearing persistent loading toasts.
+ */
 export interface LoadingManager {
+  /**
+   * Displays a loading progress indicator toast.
+   *
+   * @param options Toast settings.
+   */
   show(options: LoadingToastOptions): ToastHandle;
+
+  /**
+   * Dismisses all active loading toasts.
+   */
   clear(): void;
 }
 
+/**
+ * Manager for displaying interactive modal confirm, prompt, and alert dialogs.
+ */
 export interface InteractiveManager {
+  /**
+   * Dispatches a confirmation modal dialog.
+   *
+   * @param message Question or description statement.
+   * @param options Buttons labels and cancel behavior settings.
+   */
   confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
+
+  /**
+   * Dispatches a text input prompt modal dialog.
+   *
+   * @param message Label description for the input text field.
+   * @param options Default values, placeholders, and buttons settings.
+   */
   prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
+
+  /**
+   * Dispatches a blocking warning alert modal dialog.
+   *
+   * @param message Statement message.
+   * @param options OK button configuration.
+   */
   alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 }
 
+/**
+ * Manager for custom layout toasts.
+ */
 export interface CustomManager {
+  /**
+   * Displays a custom HTML or DOM node toast.
+   *
+   * @param options Layout content options.
+   */
   show(options: CustomToastOptions): ToastHandle;
+
+  /**
+   * Dismisses all active custom toasts.
+   */
   clear(): void;
 }
 
@@ -78,25 +165,81 @@ export interface CustomManager {
 // Toaster — public interface
 // ---------------------------------------------------------------------------
 
+/**
+ * Represents the main Toaster instance controller.
+ */
 export interface Toaster {
+  /** Semantic toast dispatcher sub-manager. */
   readonly semantic: SemanticManager;
+  /** Loading indicator dispatcher sub-manager. */
   readonly loading: LoadingManager;
+  /** Interactive native dialog dispatcher sub-manager. */
   readonly interactive: InteractiveManager;
+  /** Custom DOM layout dispatcher sub-manager. */
   readonly custom: CustomManager;
 
-  // Flat convenience aliases
+  /**
+   * Displays a success notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an error notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays a warning notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an informational notification.
+   *
+   * @param message Description text.
+   * @param options Extensible options.
+   */
   info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Dispatches a confirmation modal dialog.
+   *
+   * @param message Question or description statement.
+   * @param options Buttons labels and cancel behavior settings.
+   */
   confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
+
+  /**
+   * Dispatches a text input prompt modal dialog.
+   *
+   * @param message Label description for the input text field.
+   * @param options Default values, placeholders, and buttons settings.
+   */
   prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
+
+  /**
+   * Dispatches a blocking warning alert modal dialog.
+   *
+   * @param message Statement message.
+   * @param options OK button configuration.
+   */
   alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 
   /** Clear all non-interactive toasts. */
   clear(): void;
+
   /** Reconfigure the toaster at runtime. */
   configure(config: Partial<ToasterConfig>): void;
+
   /**
    * Fully tear down this toaster instance: dismisses all toasts, closes any
    * open modal, removes all created DOM nodes and the injected style element.
@@ -113,7 +256,7 @@ class ToastManager implements Toaster {
   private config: ToasterConfig;
   private resolved: ResolvedToastConfig;
   private readonly instanceId: string;
-  private destroyed = false;
+  private isDestroyed = false;
 
   // Tracks active toasts per category for scoped clear()
   private readonly semanticToasts = new Set<Toast>();
@@ -137,7 +280,7 @@ class ToastManager implements Toaster {
     }
 
     const parent = this.getParent();
-    this.modalManager = new ModalManager(parent);
+    this.modalManager = new ModalManager(parent, this.instanceId);
 
     this.semantic = this.buildSemanticManager();
     this.loading = this.buildLoadingManager();
@@ -195,10 +338,10 @@ class ToastManager implements Toaster {
   }
 
   public destroy(): void {
-    if (this.destroyed) {
+    if (this.isDestroyed) {
       return;
     }
-    this.destroyed = true;
+    this.isDestroyed = true;
 
     // Immediately hide all active toasts (no animation)
     this.semanticToasts.forEach((t) => t.hide());
@@ -314,16 +457,17 @@ class ToastManager implements Toaster {
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {
     return {
+      instanceId: this.instanceId,
       position: config.position ?? DEFAULT_CONFIG.position,
       duration: config.duration ?? DEFAULT_CONFIG.duration,
       isDismissable: config.isDismissable ?? DEFAULT_CONFIG.isDismissable,
-      autoDismiss: config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
+      shouldAutoDismiss: config.shouldAutoDismiss ?? DEFAULT_CONFIG.shouldAutoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
     };
   }
 
   private assertAlive(): void {
-    if (this.destroyed) {
+    if (this.isDestroyed) {
       throw new Error("This toaster instance has been destroyed. Create a new one with createToaster().");
     }
   }
@@ -336,12 +480,15 @@ class ToastManager implements Toaster {
 /**
  * Creates a new independent toaster instance.
  *
- * Unlike the previous singleton pattern, each call returns a fresh instance.
- * Consumers who want a singleton are responsible for that themselves:
+ * Each call returns a fresh instance.
+ * Consumers who want a singleton are responsible for maintaining it:
  *
  * @example
  * // toaster.ts (your singleton module)
  * export const toaster = createToaster({ position: "top-right" });
+ *
+ * @param config Optional initial configuration overrides for the toaster.
+ * @returns An independent Toaster instance controller.
  */
 export function createToaster(config?: ToasterConfig): Toaster {
   return new ToastManager(config);

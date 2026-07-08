@@ -1,4 +1,4 @@
-﻿import { TOAST_SHAPE_CLASS } from "../options";
+import { TOAST_SHAPE_CLASS } from "../options";
 import type { ResolvedToastConfig } from "../options";
 import { Toast } from "../toast-base";
 import type { SemanticType, ToastIcon, ToastPosition, ToastRole, ToastTokens } from "../types";
@@ -9,7 +9,7 @@ interface SemanticRawOptions {
   position?: ToastPosition;
   duration?: number;
   isDismissable?: boolean;
-  autoDismiss?: boolean;
+  shouldAutoDismiss?: boolean;
   tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
@@ -36,6 +36,10 @@ const SEMANTIC_ROLES: Record<SemanticType, "alert" | "status"> = {
   info: "status",
 };
 
+/**
+ * Toast variant for semantic notifications (success, error, warning, info)
+ * with preconfigured icons and accessibility roles.
+ */
 export class SemanticToast extends Toast {
   protected static override getPresetOptions(options: SemanticRawOptions) {
     const type: SemanticType = options.type ?? "success";
@@ -46,6 +50,13 @@ export class SemanticToast extends Toast {
     } as const;
   }
 
+  /**
+   * Constructs a new SemanticToast instance.
+   *
+   * @param options Raw user-provided semantic notification options.
+   * @param config The resolved configuration of the parent toaster.
+   * @param parent The DOM container element where the stack container lives.
+   */
   public constructor(options: SemanticRawOptions, config: ResolvedToastConfig, parent: HTMLElement) {
     super(options, config, parent);
   }

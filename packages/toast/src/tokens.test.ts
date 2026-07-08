@@ -57,7 +57,7 @@ describe("tokens utilities", () => {
       applyGlobalTokens({ success: "purple", border: "yellow" }, TEST_STYLE_ID);
       const styleElement = document.getElementById(TEST_STYLE_ID) as HTMLStyleElement | null;
       expect(styleElement).not.toBeNull();
-      expect(styleElement?.textContent).toContain(":root {");
+      expect(styleElement?.textContent).toContain(`[data-toast-instance="${TEST_STYLE_ID}"] {`);
       expect(styleElement?.textContent).toContain("--toast-color-success: purple;");
       expect(styleElement?.textContent).toContain("--toast-color-border: yellow;");
     });

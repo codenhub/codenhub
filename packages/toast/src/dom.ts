@@ -4,7 +4,7 @@ import type { ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
   NormalizedToastOptions,
-  "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName" | "tokens"
+  "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName" | "tokens" | "instanceId"
 >;
 
 const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
@@ -58,6 +58,7 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
   container.className = options.rootClassName;
   // Store the base class for update() to reference later
   container.setAttribute("data-root-class", options.rootClassName);
+  container.setAttribute("data-toast-instance", options.instanceId);
   container.setAttribute("role", options.role);
   container.setAttribute("aria-live", ariaLive);
   container.setAttribute("aria-atomic", "true");

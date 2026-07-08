@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 function makeToast(options: ConstructorParameters<typeof Toast>[0]): Toast {
-  return new Toast(options, DEFAULT_CONFIG, document.body);
+  return new Toast(options, { ...DEFAULT_CONFIG, instanceId: "test-instance" }, document.body);
 }
 
 function renderToast(toast: Toast): HTMLDivElement {
