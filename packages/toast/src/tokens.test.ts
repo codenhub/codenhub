@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { applyGlobalTokens, buildInlineStyle } from "./tokens";
 
+const TEST_STYLE_ID = "test-toast-tokens";
+
 describe("tokens utilities", () => {
   describe("buildInlineStyle", () => {
     it("should return empty string when tokens is null or undefined", () => {
@@ -33,33 +35,27 @@ describe("tokens utilities", () => {
 
   describe("applyGlobalTokens", () => {
     beforeEach(() => {
-      const existing = document.getElementById("global-toast-tokens");
-      if (existing) {
-        existing.remove();
-      }
+      document.getElementById(TEST_STYLE_ID)?.remove();
     });
 
     afterEach(() => {
-      const existing = document.getElementById("global-toast-tokens");
-      if (existing) {
-        existing.remove();
-      }
+      document.getElementById(TEST_STYLE_ID)?.remove();
     });
 
     it("should do nothing when tokens is null, undefined, or empty", () => {
-      applyGlobalTokens(null);
-      expect(document.getElementById("global-toast-tokens")).toBeNull();
+      applyGlobalTokens(null, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
 
-      applyGlobalTokens(undefined);
-      expect(document.getElementById("global-toast-tokens")).toBeNull();
+      applyGlobalTokens(undefined, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
 
-      applyGlobalTokens({});
-      expect(document.getElementById("global-toast-tokens")).toBeNull();
+      applyGlobalTokens({}, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
     });
 
-    it("should create a global style element when valid tokens are supplied", () => {
-      applyGlobalTokens({ success: "purple", border: "yellow" });
-      const styleElement = document.getElementById("global-toast-tokens") as HTMLStyleElement | null;
+    it("should create an instance-scoped style element when valid tokens are supplied", () => {
+      applyGlobalTokens({ success: "purple", border: "yellow" }, TEST_STYLE_ID);
+      const styleElement = document.getElementById(TEST_STYLE_ID) as HTMLStyleElement | null;
       expect(styleElement).not.toBeNull();
       expect(styleElement?.textContent).toContain(":root {");
       expect(styleElement?.textContent).toContain("--toast-color-success: purple;");
@@ -67,22 +63,35 @@ describe("tokens utilities", () => {
     });
 
     it("should replace/update the existing style element on subsequent calls", () => {
-      applyGlobalTokens({ success: "purple" });
-      let styleElement = document.getElementById("global-toast-tokens") as HTMLStyleElement | null;
-      expect(styleElement?.textContent).toContain("--toast-color-success: purple;");
+      applyGlobalTokens({ success: "purple" }, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)?.textContent).toContain("--toast-color-success: purple;");
 
-      applyGlobalTokens({ success: "orange", border: "yellow" });
-      styleElement = document.getElementById("global-toast-tokens") as HTMLStyleElement | null;
-      expect(styleElement?.textContent).toContain("--toast-color-success: orange;");
-      expect(styleElement?.textContent).toContain("--toast-color-border: yellow;");
+      applyGlobalTokens({ success: "orange", border: "yellow" }, TEST_STYLE_ID);
+      const el = document.getElementById(TEST_STYLE_ID);
+      expect(el?.textContent).toContain("--toast-color-success: orange;");
+      expect(el?.textContent).toContain("--toast-color-border: yellow;");
     });
 
     it("should remove the style element if subsequent call passes empty or null tokens", () => {
-      applyGlobalTokens({ success: "purple" });
-      expect(document.getElementById("global-toast-tokens")).not.toBeNull();
+      applyGlobalTokens({ success: "purple" }, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)).not.toBeNull();
 
-      applyGlobalTokens(null);
-      expect(document.getElementById("global-toast-tokens")).toBeNull();
+      applyGlobalTokens(null, TEST_STYLE_ID);
+      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
+    });
+
+    it("should scope style elements per styleId so instances do not clobber each other", () => {
+      const idA = "toast-instance-a";
+      const idB = "toast-instance-b";
+
+      applyGlobalTokens({ success: "red" }, idA);
+      applyGlobalTokens({ success: "blue" }, idB);
+
+      expect(document.getElementById(idA)?.textContent).toContain("red");
+      expect(document.getElementById(idB)?.textContent).toContain("blue");
+
+      document.getElementById(idA)?.remove();
+      document.getElementById(idB)?.remove();
     });
   });
 });

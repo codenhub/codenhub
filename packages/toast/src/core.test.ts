@@ -14,11 +14,18 @@ interface MockAnimation {
 
 let animations: MockAnimation[] = [];
 
+function flushAnimations(): void {
+  animations.forEach((anim) => {
+    if (anim.onfinish) {
+      anim.onfinish();
+    }
+  });
+}
+
 beforeEach(() => {
   document.body.innerHTML = "";
   animations = [];
 
-  // jsdom doesn't implement the Web Animations API — stub it so show() doesn't throw.
   HTMLElement.prototype.animate = vi.fn().mockImplementation(function (
     this: HTMLDivElement,
     keyframes: Keyframe[],
@@ -35,160 +42,303 @@ beforeEach(() => {
     animations.push(animation);
     return animation as unknown as Animation;
   });
+
+  // jsdom does not implement HTMLDialogElement.showModal / close
+  if (!HTMLDialogElement.prototype.showModal) {
+    HTMLDialogElement.prototype.showModal = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
+      this.setAttribute("open", "");
+    });
+  }
+  if (!HTMLDialogElement.prototype.close) {
+    HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
+      this.removeAttribute("open");
+    });
+  }
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("createToaster Factory Singleton", () => {
-  it("should return the same singleton instance", () => {
+// ---------------------------------------------------------------------------
+// Factory
+// ---------------------------------------------------------------------------
+
+describe("createToaster", () => {
+  it("should return independent instances on each call", () => {
     const t1 = createToaster();
     const t2 = createToaster();
-    expect(t1).toBe(t2);
+    expect(t1).not.toBe(t2);
+    t1.destroy();
+    t2.destroy();
   });
 
-  it("should support configuration overrides", () => {
-    const toaster = createToaster({ defaults: { duration: 1000 } });
-    const toast = toaster.showToast({ message: "test" });
-    // @ts-expect-error accessing protected options
-    expect(toast.options.duration).toBe(1000);
-    toast.hide();
-  });
-
-  it("should support global token configurations", () => {
-    const existing = document.getElementById("global-toast-tokens");
-    if (existing) {
-      existing.remove();
-    }
+  it("should inject a per-instance style element for token overrides", () => {
     const toaster = createToaster({ tokens: { success: "rgb(0, 0, 255)" } });
-    const styleElement = document.getElementById("global-toast-tokens") as HTMLStyleElement | null;
-    expect(styleElement).not.toBeNull();
-    expect(styleElement?.textContent).toContain("--toast-color-success: rgb(0, 0, 255);");
+    const styleElements = document.head.querySelectorAll("style[id^='toast-instance-']");
+    expect(styleElements.length).toBeGreaterThan(0);
+    const content = Array.from(styleElements)
+      .map((el) => el.textContent)
+      .join("");
+    expect(content).toContain("--toast-color-success: rgb(0, 0, 255);");
+    toaster.destroy();
+  });
 
-    toaster.configure({ tokens: { success: "rgb(255, 255, 0)" } });
-    expect(styleElement?.textContent).toContain("--toast-color-success: rgb(255, 255, 0);");
+  it("two instances should use separate style elements that do not clobber each other", () => {
+    const t1 = createToaster({ tokens: { success: "red" } });
+    const t2 = createToaster({ tokens: { success: "blue" } });
+    const styles = document.head.querySelectorAll("style[id^='toast-instance-']");
+    const texts = Array.from(styles).map((el) => el.textContent ?? "");
+    expect(texts.some((t) => t.includes("red"))).toBe(true);
+    expect(texts.some((t) => t.includes("blue"))).toBe(true);
+    t1.destroy();
+    t2.destroy();
   });
 });
 
-describe("Toaster Actions", () => {
-  it("should show semantic toasts", () => {
+// ---------------------------------------------------------------------------
+// configure()
+// ---------------------------------------------------------------------------
+
+describe("configure", () => {
+  it("should update token overrides at runtime", () => {
+    const toaster = createToaster({ tokens: { success: "red" } });
+    toaster.configure({ tokens: { success: "green" } });
+    const styles = document.head.querySelectorAll("style[id^='toast-instance-']");
+    const content = Array.from(styles)
+      .map((el) => el.textContent)
+      .join("");
+    expect(content).toContain("green");
+    toaster.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Flat semantic aliases
+// ---------------------------------------------------------------------------
+
+describe("flat semantic aliases", () => {
+  it("success/error/warning/info render to DOM and return a handle", () => {
     const toaster = createToaster();
-    const toast = toaster.success("Saved successfully");
-    expect(document.body.innerHTML).toContain("Saved successfully");
-    toast.hide();
+    const h = toaster.success("Saved!");
+    expect(document.body.innerHTML).toContain("Saved!");
+    expect(typeof h.dismiss).toBe("function");
+    expect(typeof h.update).toBe("function");
+    expect(h.state).toBe("visible");
+    h.dismiss();
+    toaster.destroy();
   });
 
-  it("should show loading toast", () => {
+  it("handle.dismiss() hides the toast", () => {
     const toaster = createToaster();
-    const toast = toaster.loading("Loading...");
-    expect(document.body.innerHTML).toContain("Loading...");
-    // @ts-expect-error accessing protected options
-    expect(toast.options.autoDismiss).toBe(false);
-    toast.hide();
+    const h = toaster.error("Oops");
+    expect(document.body.innerHTML).toContain("Oops");
+    h.dismiss();
+    flushAnimations();
+    expect(document.body.querySelector("[role='alert']")).toBeNull();
+    toaster.destroy();
   });
 
-  it("should clear all active toasts", () => {
+  it("handle.update() patches message text in place", () => {
+    const toaster = createToaster();
+    const h = toaster.info("Loading…");
+    h.update({ message: "Done!" });
+    expect(document.body.innerHTML).toContain("Done!");
+    h.dismiss();
+    toaster.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Category managers
+// ---------------------------------------------------------------------------
+
+describe("toaster.semantic", () => {
+  it("show() renders a toast and returns a handle", () => {
+    const toaster = createToaster();
+    const h = toaster.semantic.show({ message: "Hello", type: "success" });
+    expect(document.body.innerHTML).toContain("Hello");
+    h.dismiss();
+    toaster.destroy();
+  });
+
+  it("clear() hides only semantic toasts", () => {
+    const toaster = createToaster();
+    toaster.semantic.success("S1");
+    toaster.semantic.error("S2");
+    toaster.loading.show({ message: "L1" });
+
+    toaster.semantic.clear();
+    flushAnimations();
+
+    expect(document.body.innerHTML).not.toContain("S1");
+    expect(document.body.innerHTML).not.toContain("S2");
+    expect(document.body.innerHTML).toContain("L1");
+    toaster.destroy();
+  });
+});
+
+describe("toaster.loading", () => {
+  it("show() renders a loading toast and does not auto-dismiss", () => {
+    const toaster = createToaster();
+    const h = toaster.loading.show({ message: "Fetching…" });
+    expect(document.body.innerHTML).toContain("Fetching…");
+    expect(h.state).toBe("visible");
+    h.dismiss();
+    toaster.destroy();
+  });
+
+  it("clear() hides only loading toasts", () => {
+    const toaster = createToaster();
+    toaster.semantic.success("Keep me");
+    toaster.loading.show({ message: "Remove me" });
+
+    toaster.loading.clear();
+    flushAnimations();
+
+    expect(document.body.innerHTML).toContain("Keep me");
+    expect(document.body.innerHTML).not.toContain("Remove me");
+    toaster.destroy();
+  });
+});
+
+describe("toaster.custom", () => {
+  it("show() renders arbitrary content", () => {
+    const toaster = createToaster();
+    const node = document.createElement("span");
+    node.textContent = "Custom!";
+    const h = toaster.custom.show({ content: node });
+    expect(document.body.innerHTML).toContain("Custom!");
+    h.dismiss();
+    toaster.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Global clear()
+// ---------------------------------------------------------------------------
+
+describe("toaster.clear()", () => {
+  it("hides all non-interactive toasts", () => {
     const toaster = createToaster();
     toaster.success("T1");
     toaster.error("T2");
-    expect(document.body.innerHTML).toContain("T1");
-    expect(document.body.innerHTML).toContain("T2");
+    toaster.loading.show({ message: "L1" });
 
     toaster.clear();
-
-    // Trigger animation completion for hides
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
+    flushAnimations();
 
     expect(document.body.querySelector("[role='status'], [role='alert']")).toBeNull();
+    toaster.destroy();
   });
 });
 
-describe("Interactive Dialogs", () => {
-  it("should resolve confirm promise correctly on Confirm and Cancel", async () => {
-    const toaster = createToaster();
+// ---------------------------------------------------------------------------
+// destroy()
+// ---------------------------------------------------------------------------
 
-    // Test Confirm
-    const p1 = toaster.confirm("Are you sure?");
-    const confirmBtn = document.body.querySelector(".btn.primary") as HTMLButtonElement;
+describe("destroy()", () => {
+  it("removes toast containers from DOM", () => {
+    const toaster = createToaster();
+    toaster.success("Bye");
+    expect(document.body.querySelector("[data-toast-container]")).not.toBeNull();
+
+    toaster.destroy();
+    expect(document.body.querySelector("[data-toast-container]")).toBeNull();
+  });
+
+  it("removes the instance style element", () => {
+    const toaster = createToaster({ tokens: { success: "purple" } });
+    const before = document.head.querySelectorAll("style[id^='toast-instance-']").length;
+    toaster.destroy();
+    const after = document.head.querySelectorAll("style[id^='toast-instance-']").length;
+    expect(after).toBe(before - 1);
+  });
+
+  it("subsequent calls after destroy() throw", () => {
+    const toaster = createToaster();
+    toaster.destroy();
+    expect(() => toaster.success("Ghost")).toThrow(/destroyed/);
+    expect(() => toaster.clear()).toThrow(/destroyed/);
+    expect(() => toaster.configure({})).toThrow(/destroyed/);
+  });
+
+  it("calling destroy() twice does not throw", () => {
+    const toaster = createToaster();
+    expect(() => {
+      toaster.destroy();
+      toaster.destroy();
+    }).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Interactive dialogs (toaster.interactive + flat aliases)
+// ---------------------------------------------------------------------------
+
+describe("interactive.confirm", () => {
+  it("resolves true when confirm button clicked", async () => {
+    const toaster = createToaster();
+    const handle = toaster.interactive.confirm("Delete?");
+
+    const confirmBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
     expect(confirmBtn).toBeTruthy();
-    confirmBtn.click();
+    confirmBtn!.click();
 
-    // Trigger hidden animation
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
+    await expect(handle.result).resolves.toBe(true);
+    toaster.destroy();
+  });
 
-    await expect(p1).resolves.toBe(true);
+  it("resolves false when cancel button clicked", async () => {
+    const toaster = createToaster();
+    const handle = toaster.confirm("Delete?", { cancelLabel: "Abort" });
 
-    // Test Cancel
-    const p2 = toaster.confirm("Are you sure?");
-    const cancelBtn = document.body.querySelector(".btn.secondary") as HTMLButtonElement;
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
     expect(cancelBtn).toBeTruthy();
-    cancelBtn.click();
+    cancelBtn!.click();
 
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
+    await expect(handle.result).resolves.toBe(false);
+    toaster.destroy();
+  });
+});
 
-    await expect(p2).resolves.toBe(false);
+describe("interactive.prompt", () => {
+  it("resolves with typed value when submitted", async () => {
+    const toaster = createToaster();
+    const handle = toaster.interactive.prompt("Your name?", { defaultValue: "Gustavo" });
+
+    const input = document.body.querySelector<HTMLInputElement>("input");
+    expect(input?.value).toBe("Gustavo");
+    input!.value = "Antigravity";
+
+    const submitBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
+    submitBtn!.click();
+
+    await expect(handle.result).resolves.toBe("Antigravity");
+    toaster.destroy();
   });
 
-  it("should resolve prompt promise with value on Submit and null on Cancel", async () => {
+  it("resolves null when cancelled", async () => {
     const toaster = createToaster();
+    const handle = toaster.prompt("Name?");
 
-    // Test Submit
-    const p1 = toaster.prompt("Your name?", "Gustavo");
-    const input = document.body.querySelector("input") as HTMLInputElement;
-    expect(input.value).toBe("Gustavo");
-    input.value = "Antigravity";
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
+    cancelBtn!.click();
 
-    const submitBtn = document.body.querySelector(".btn.primary") as HTMLButtonElement;
-    submitBtn.click();
-
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
-
-    await expect(p1).resolves.toBe("Antigravity");
-
-    // Test Cancel
-    const p2 = toaster.prompt("Your name?");
-    const cancelBtn = document.body.querySelector(".btn.secondary") as HTMLButtonElement;
-    cancelBtn.click();
-
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
-
-    await expect(p2).resolves.toBe(null);
+    await expect(handle.result).resolves.toBeNull();
+    toaster.destroy();
   });
+});
 
-  it("should resolve alert promise on OK", async () => {
+describe("interactive.alert", () => {
+  it("resolves void when OK clicked", async () => {
     const toaster = createToaster();
-    const p = toaster.alert("Notice");
+    const handle = toaster.alert("Notice!", { okLabel: "Got it" });
 
-    const okBtn = document.body.querySelector(".btn.primary") as HTMLButtonElement;
-    okBtn.click();
+    const okBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
+    okBtn!.click();
 
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
-
-    await expect(p).resolves.toBeUndefined();
+    await expect(handle.result).resolves.toBeUndefined();
+    toaster.destroy();
   });
 });

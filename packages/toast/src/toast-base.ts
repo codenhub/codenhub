@@ -6,16 +6,29 @@ import {
   getContainer,
   getOrCreateContainer,
 } from "./dom";
-import { normalizeToastOptions, type NormalizedToastOptions, type ToastPresetOptions } from "./options";
-import type { ToastOptions, ToastPosition } from "./types";
+import {
+  applyUpdateToElement,
+  normalizeToastOptions,
+  type NormalizedToastOptions,
+  type RawToastOptions,
+  type ResolvedToastConfig,
+  type ToastPresetOptions,
+} from "./options";
+import type { ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
 type ToastLifecycleSubscriber = (toast: Toast) => void;
-type ToastState = "idle" | "queued" | "visible" | "hiding";
+type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
-const MAX_VISIBLE_TOASTS = 5;
-const dismissingElements = new WeakSet<HTMLDivElement>();
-const toastByElement = new WeakMap<HTMLDivElement, Toast>();
+function toPublicState(internal: InternalToastState): ToastState {
+  if (internal === "visible" || internal === "queued") {
+    return "visible";
+  }
+  if (internal === "hiding") {
+    return "hiding";
+  }
+  return "hidden";
+}
 
 function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<ToastLifecycleSubscriber>> {
   return {
@@ -26,8 +39,16 @@ function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<Toast
   };
 }
 
-function removeToastElement(element: HTMLDivElement, position: ToastPosition, onComplete: () => void): void {
-  const container = getContainer(position);
+const dismissingElements = new WeakSet<HTMLDivElement>();
+const toastByElement = new WeakMap<HTMLDivElement, Toast>();
+
+function removeToastElement(
+  element: HTMLDivElement,
+  parent: HTMLElement,
+  position: ToastPosition,
+  onComplete: () => void,
+): void {
+  const container = getContainer(parent, position);
   if (!container || !container.contains(element)) {
     onComplete();
     return;
@@ -48,9 +69,14 @@ function removeToastElement(element: HTMLDivElement, position: ToastPosition, on
   });
 }
 
-function requestSlot(position: ToastPosition, onAvailable: () => void): (() => void) | null {
-  const container = getContainer(position);
-  if (!container || container.children.length < MAX_VISIBLE_TOASTS) {
+function requestSlot(
+  parent: HTMLElement,
+  position: ToastPosition,
+  maxVisible: number,
+  onAvailable: () => void,
+): (() => void) | null {
+  const container = getContainer(parent, position);
+  if (!container || container.children.length < maxVisible) {
     return null;
   }
   const oldestElement = container.firstElementChild as HTMLDivElement | null;
@@ -75,7 +101,7 @@ function requestSlot(position: ToastPosition, onAvailable: () => void): (() => v
     };
   }
 
-  removeToastElement(oldestElement, position, releaseSlot);
+  removeToastElement(oldestElement, parent, position, releaseSlot);
   return () => {
     isCanceled = true;
   };
@@ -87,15 +113,33 @@ export class Toast {
   private dismissTimeoutId: number | null = null;
   private element: HTMLDivElement | null = null;
   private queuedSlotCancel: (() => void) | null = null;
-  private state: ToastState = "idle";
+  private internalState: InternalToastState = "idle";
   private visiblePosition: ToastPosition | null = null;
+  private readonly parent: HTMLElement;
+  private readonly maxVisible: number;
+
+  private settledResolve!: () => void;
+  private readonly _settled: Promise<void>;
 
   protected static getPresetOptions(_options: unknown): ToastPresetOptions | null {
     return null;
   }
 
-  public constructor(options: ToastOptions) {
-    this.options = normalizeToastOptions(options, (this.constructor as typeof Toast).getPresetOptions(options));
+  public constructor(options: RawToastOptions, config: ResolvedToastConfig, parent: HTMLElement) {
+    this.parent = parent;
+    this.maxVisible = config.maxVisible;
+    this.options = normalizeToastOptions(options, (this.constructor as typeof Toast).getPresetOptions(options), config);
+    this._settled = new Promise<void>((resolve) => {
+      this.settledResolve = resolve;
+    });
+  }
+
+  public get publicState(): ToastState {
+    return toPublicState(this.internalState);
+  }
+
+  public get settled(): Promise<void> {
+    return this._settled;
   }
 
   public onShow(subscriber: ToastLifecycleSubscriber): () => void {
@@ -114,19 +158,26 @@ export class Toast {
     return this.subscribe("hidden", subscriber);
   }
 
+  public update(updateOpts: ToastUpdateOptions): void {
+    if (this.internalState !== "visible" || this.element === null) {
+      return;
+    }
+    applyUpdateToElement(this.element, updateOpts);
+  }
+
   public show(): void {
-    if (this.state !== "idle") {
+    if (this.internalState !== "idle") {
       return;
     }
 
     const position = this.options.position;
-    this.state = "queued";
-    this.queuedSlotCancel = requestSlot(position, () => {
+    this.internalState = "queued";
+    this.queuedSlotCancel = requestSlot(this.parent, position, this.maxVisible, () => {
       this.queuedSlotCancel = null;
-      if (this.state !== "queued") {
+      if (this.internalState !== "queued") {
         return;
       }
-      this.state = "idle";
+      this.internalState = "idle";
       this.show();
     });
 
@@ -135,16 +186,16 @@ export class Toast {
     }
 
     const element = createToastElement(this.options, () => this.hide());
-    const container = getOrCreateContainer(position);
+    const container = getOrCreateContainer(this.parent, position);
 
     this.element = element;
-    this.state = "visible";
+    this.internalState = "visible";
     this.visiblePosition = position;
     toastByElement.set(element, this);
 
     this.notify("show");
 
-    if (this.state !== "visible" || this.element !== element) {
+    if (this.internalState !== "visible" || this.element !== element) {
       toastByElement.delete(element);
       return;
     }
@@ -153,7 +204,7 @@ export class Toast {
       container.appendChild(element);
     });
     animateIn(element, position, () => {
-      if (this.state !== "visible" || this.element !== element) {
+      if (this.internalState !== "visible" || this.element !== element) {
         return;
       }
       this.notify("shown");
@@ -162,13 +213,14 @@ export class Toast {
   }
 
   public hide(): void {
-    if (this.state === "queued") {
+    if (this.internalState === "queued") {
       this.clearQueuedShow();
-      this.state = "idle";
+      this.internalState = "done";
+      this.settledResolve();
       return;
     }
 
-    if (this.state !== "visible" || this.element === null || this.visiblePosition === null) {
+    if (this.internalState !== "visible" || this.element === null || this.visiblePosition === null) {
       return;
     }
 
@@ -176,9 +228,9 @@ export class Toast {
     const element = this.element;
     const position = this.visiblePosition;
 
-    this.state = "hiding";
+    this.internalState = "hiding";
     this.notify("hide");
-    removeToastElement(element, position, () => this.finishHide(element));
+    removeToastElement(element, this.parent, position, () => this.finishHide(element));
   }
 
   private clearAutoDismiss(): void {
@@ -200,15 +252,14 @@ export class Toast {
   private finishHide(element: HTMLDivElement): void {
     toastByElement.delete(element);
     this.element = null;
-    this.state = "idle";
+    this.internalState = "done";
     this.visiblePosition = null;
     this.notify("hidden");
+    this.settledResolve();
   }
 
   private notify(eventName: ToastLifecycleEventName): void {
-    this.subscribers[eventName].forEach((subscriber) => {
-      subscriber(this);
-    });
+    this.subscribers[eventName].forEach((subscriber) => subscriber(this));
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
@@ -216,7 +267,7 @@ export class Toast {
       return;
     }
     this.dismissTimeoutId = window.setTimeout(() => {
-      if (this.state !== "visible" || this.element !== element) {
+      if (this.internalState !== "visible" || this.element !== element) {
         return;
       }
       this.hide();

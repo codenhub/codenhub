@@ -1,17 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Toast, type ToastOptions } from ".";
 import * as toastModule from ".";
+import { DEFAULT_CONFIG } from "./options";
+import { Toast } from "./toast-base";
 
 interface MockAnimation {
   onfinish: (() => void) | null;
   oncancel: (() => void) | null;
   finished: Promise<void>;
 }
-
-const validToastOptions: ToastOptions = { message: "Saved successfully", className: "custom-toast" };
-void validToastOptions;
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -26,6 +24,10 @@ beforeEach(() => {
   });
 });
 
+function makeToast(options: ConstructorParameters<typeof Toast>[0]): Toast {
+  return new Toast(options, DEFAULT_CONFIG, document.body);
+}
+
 function renderToast(toast: Toast): HTMLDivElement {
   toast.show();
   const element = document.body.querySelector("[role='status'], [role='alert']");
@@ -37,21 +39,13 @@ function renderToast(toast: Toast): HTMLDivElement {
 
 describe("toast public surface", () => {
   it("should only expose public runtime exports from the barrel", () => {
-    expect(Object.keys(toastModule).sort()).toEqual([
-      "AlertToast",
-      "ConfirmToast",
-      "LoadingToast",
-      "PromptToast",
-      "SemanticToast",
-      "Toast",
-      "createToaster",
-    ]);
+    expect(Object.keys(toastModule).sort()).toEqual(["LoadingToast", "SemanticToast", "Toast", "createToaster"]);
   });
 });
 
 describe("Toast rendering", () => {
   it("should render toast content on a single root element", () => {
-    const element = renderToast(new Toast({ message: "Saved successfully", isDismissable: true }));
+    const element = renderToast(makeToast({ message: "Saved successfully", isDismissable: true }));
 
     expect(element.children).toHaveLength(2);
     expect(element.querySelector("div")).toBeNull();
@@ -61,7 +55,7 @@ describe("Toast rendering", () => {
   });
 
   it("should use a compact dismiss button with a larger close icon", () => {
-    const element = renderToast(new Toast({ message: "Saved successfully", isDismissable: true }));
+    const element = renderToast(makeToast({ message: "Saved successfully", isDismissable: true }));
     const dismissButton = element.querySelector("button");
     const dismissIcon = dismissButton?.querySelector("i");
 
@@ -71,7 +65,7 @@ describe("Toast rendering", () => {
   });
 
   it("should render a public icon before the message", () => {
-    const element = renderToast(new Toast({ message: "Heads up", icon: "info" }));
+    const element = renderToast(makeToast({ message: "Heads up", icon: "info" }));
     const icon = element.querySelector("i");
 
     expect(icon).toBeInstanceOf(HTMLElement);
@@ -81,18 +75,13 @@ describe("Toast rendering", () => {
   });
 
   it("should append className as the only public style hook", () => {
-    const element = renderToast(
-      new Toast({
-        message: "Saved successfully",
-        className: "custom-toast",
-      }),
-    );
+    const element = renderToast(makeToast({ message: "Saved successfully", className: "custom-toast" }));
     expect(element.className).toContain("custom-toast");
   });
 
   it("should apply tokens option as inline styles on the root element", () => {
     const element = renderToast(
-      new Toast({
+      makeToast({
         message: "Custom styled",
         tokens: {
           success: "rgb(255, 0, 0)",

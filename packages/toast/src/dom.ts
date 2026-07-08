@@ -7,7 +7,6 @@ type ToastElementOptions = Pick<
   "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName" | "tokens"
 >;
 
-const CONTAINER_ID_PREFIX = "global-toast-container";
 const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
   "top-left": "fixed top-4 left-4 z-50 flex flex-col-reverse gap-2 pointer-events-none",
   "top-right": "fixed top-4 right-4 z-50 flex flex-col-reverse gap-2 pointer-events-none",
@@ -20,6 +19,7 @@ const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
   easing: "ease-in-out",
   fill: "both",
 };
+
 const TOAST_ICON_HTML: Record<ToastIcon, string> = {
   success: '<i class="ic-success size-5 shrink-0" aria-hidden="true" />',
   error: '<i class="ic-error size-5 shrink-0" aria-hidden="true" />',
@@ -56,6 +56,8 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
   const container = document.createElement("div");
 
   container.className = options.rootClassName;
+  // Store the base class for update() to reference later
+  container.setAttribute("data-root-class", options.rootClassName);
   container.setAttribute("role", options.role);
   container.setAttribute("aria-live", ariaLive);
   container.setAttribute("aria-atomic", "true");
@@ -84,33 +86,40 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
   return container;
 }
 
-function getContainerId(position: ToastPosition): string {
-  return `${CONTAINER_ID_PREFIX}-${position}`;
+// --- Container management (now accepts a configurable parent) ----------------
+
+function getContainerKey(parentId: string, position: ToastPosition): string {
+  return `toast-container-${parentId}-${position}`;
 }
 
-export function getContainer(position: ToastPosition): HTMLDivElement | null {
-  return document.getElementById(getContainerId(position)) as HTMLDivElement | null;
+export function getContainer(parent: HTMLElement, position: ToastPosition): HTMLDivElement | null {
+  const id = getContainerKey(parent.id || "body", position);
+  return parent.querySelector(`[data-toast-container="${id}"]`) as HTMLDivElement | null;
 }
 
-export function getOrCreateContainer(position: ToastPosition): HTMLDivElement {
-  let container = getContainer(position);
+export function getOrCreateContainer(parent: HTMLElement, position: ToastPosition): HTMLDivElement {
+  let container = getContainer(parent, position);
 
   if (!container) {
+    const id = getContainerKey(parent.id || "body", position);
     container = document.createElement("div");
-    container.id = getContainerId(position);
+    container.setAttribute("data-toast-container", id);
     container.className = POSITION_CONTAINER_CLASSES[position];
-
-    const target = document.body ?? document.documentElement;
-    target.appendChild(container);
+    parent.appendChild(container);
   }
 
   return container;
 }
 
+export function removeAllContainers(parent: HTMLElement): void {
+  parent.querySelectorAll("[data-toast-container]").forEach((el) => el.remove());
+}
+
+// --- Animation helpers -------------------------------------------------------
+
 function getKeyframes(position: ToastPosition): Keyframe[] {
   const isRight = position === "top-right" || position === "bottom-right";
   const start = isRight ? "translateX(100%)" : "translateX(-100%)";
-
   return [
     { transform: start, opacity: 0 },
     { transform: "translateX(0)", opacity: 1 },
@@ -121,7 +130,6 @@ function createSingleRunCallback(callback?: () => void): (() => void) | undefine
   if (!callback) {
     return undefined;
   }
-
   let hasRun = false;
   return () => {
     if (hasRun) {
@@ -144,7 +152,7 @@ function runAnimation(
     try {
       element.animate(keyframes, ANIMATION_OPTIONS);
     } catch {
-      // No completion work is pending when animation support is unavailable.
+      // Animation support unavailable, nothing pending.
     }
     return;
   }
@@ -157,7 +165,6 @@ function runAnimation(
   try {
     const animation = element.animate(keyframes, ANIMATION_OPTIONS);
     animation.onfinish = finish;
-
     if (completeOnCancel) {
       animation.oncancel = finish;
     }

@@ -1,19 +1,22 @@
 import { createToaster } from "@codenhub/toast";
-import type { Toast, ToastPosition, ToastTokens } from "@codenhub/toast";
+import type { ToastPosition } from "@codenhub/toast";
 
 const toaster = createToaster();
 
-// Theme Toggle
+// --- Theme Toggle ------------------------------------------------------------
+// Theme init is handled in the HTML inline script to prevent FOUC.
+// This listener only handles the toggle click.
 const btnToggleTheme = document.getElementById("btn-toggle-theme") as HTMLButtonElement;
 if (btnToggleTheme) {
   btnToggleTheme.addEventListener("click", () => {
     const isDark = document.documentElement.classList.toggle("dark");
-    localStorage.setItem("playground-theme-pref", isDark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
     document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+    localStorage.setItem("playground-theme-pref", isDark ? "dark" : "light");
   });
 }
 
-// Get Dynamic Options
+// --- Shared dispatch options -------------------------------------------------
 function getOptions() {
   const positionSelect = document.getElementById("select-position") as HTMLSelectElement;
   const durationInput = document.getElementById("input-duration") as HTMLInputElement;
@@ -28,139 +31,102 @@ function getOptions() {
   };
 }
 
-// Semantic Buttons
-const btnSuccess = document.getElementById("btn-success") as HTMLButtonElement;
-btnSuccess?.addEventListener("click", () => {
-  const options = getOptions();
-  toaster.success("Changes saved successfully!", options);
+// --- Semantic toasts ---------------------------------------------------------
+document.getElementById("btn-success")?.addEventListener("click", () => {
+  toaster.success("Changes saved successfully!", getOptions());
 });
 
-const btnError = document.getElementById("btn-error") as HTMLButtonElement;
-btnError?.addEventListener("click", () => {
-  const options = getOptions();
-  toaster.error("Failed to sync database records.", options);
+document.getElementById("btn-error")?.addEventListener("click", () => {
+  toaster.error("Failed to sync database records.", getOptions());
 });
 
-const btnWarning = document.getElementById("btn-warning") as HTMLButtonElement;
-btnWarning?.addEventListener("click", () => {
-  const options = getOptions();
-  toaster.warning("Disk space running low (92% used).", options);
+document.getElementById("btn-warning")?.addEventListener("click", () => {
+  toaster.warning("Disk space running low (92% used).", getOptions());
 });
 
-const btnInfo = document.getElementById("btn-info") as HTMLButtonElement;
-btnInfo?.addEventListener("click", () => {
-  const options = getOptions();
-  toaster.info("System maintenance scheduled at midnight.", options);
+document.getElementById("btn-info")?.addEventListener("click", () => {
+  toaster.info("System maintenance scheduled at midnight.", getOptions());
 });
 
-// Interactive Dialog Buttons
-const btnAlert = document.getElementById("btn-alert") as HTMLButtonElement;
-btnAlert?.addEventListener("click", async () => {
-  const options = getOptions();
-  await toaster.alert("This action cannot be undone. Are you sure you understand the consequences?", {
-    position: options.position,
-    duration: options.duration,
+// --- Interactive dialogs -----------------------------------------------------
+document.getElementById("btn-alert")?.addEventListener("click", async () => {
+  const handle = toaster.alert("This action cannot be undone. Are you sure you understand the consequences?", {
     okLabel: "Understood",
   });
+  await handle.result;
+  toaster.semantic.success("Alert acknowledged.");
 });
 
-const btnConfirm = document.getElementById("btn-confirm") as HTMLButtonElement;
-btnConfirm?.addEventListener("click", async () => {
-  const options = getOptions();
-  await toaster.confirm("Do you want to permanently delete this project workspace?", {
-    position: options.position,
-    duration: options.duration,
+document.getElementById("btn-confirm")?.addEventListener("click", async () => {
+  const handle = toaster.confirm("Do you want to permanently delete this project workspace?", {
     confirmLabel: "Delete Workspace",
     cancelLabel: "Abort",
   });
+  const confirmed = await handle.result;
+  toaster.semantic[confirmed ? "success" : "info"](confirmed ? "Workspace deleted." : "Action cancelled.");
 });
 
-const btnPrompt = document.getElementById("btn-prompt") as HTMLButtonElement;
-btnPrompt?.addEventListener("click", async () => {
-  const options = getOptions();
-  await toaster.prompt("Enter new workspace namespace:", "my-organization", {
-    position: options.position,
-    duration: options.duration,
+document.getElementById("btn-prompt")?.addEventListener("click", async () => {
+  const handle = toaster.prompt("Enter new workspace namespace:", {
+    defaultValue: "my-organization",
     placeholder: "workspace-slug",
     submitLabel: "Register",
     cancelLabel: "Cancel",
   });
-});
-
-// Loading Toast Buttons
-let activeLoader: Toast | null = null;
-
-const btnLoading = document.getElementById("btn-loading") as HTMLButtonElement;
-btnLoading?.addEventListener("click", () => {
-  const options = getOptions();
-  if (activeLoader) {
-    activeLoader.hide();
+  const value = await handle.result;
+  if (value !== null) {
+    toaster.success(`Namespace registered: ${value}`);
   }
-  activeLoader = toaster.loading("Processing payment gateway request...", options);
 });
 
-const btnLoadingSim = document.getElementById("btn-loading-sim") as HTMLButtonElement;
-btnLoadingSim?.addEventListener("click", () => {
-  const options = getOptions();
-  const loader = toaster.loading("Fetching API data. Please wait...", options);
+// --- Loading toasts ----------------------------------------------------------
+let activeLoader: ReturnType<typeof toaster.loading.show> | null = null;
+
+document.getElementById("btn-loading")?.addEventListener("click", () => {
+  activeLoader?.dismiss();
+  activeLoader = toaster.loading.show({
+    message: "Processing payment gateway request...",
+    ...getOptions(),
+  });
+});
+
+document.getElementById("btn-loading-sim")?.addEventListener("click", () => {
+  const opts = getOptions();
+  const loader = toaster.loading.show({ message: "Fetching API data. Please wait...", ...opts });
 
   setTimeout(() => {
-    loader.hide();
-    toaster.success("Data loaded successfully!", {
-      position: options.position,
-      duration: options.duration,
-    });
+    loader.dismiss();
+    toaster.success("Data loaded successfully!", { position: opts.position, duration: opts.duration });
   }, 2000);
 });
 
-const btnClearAll = document.getElementById("btn-clear-all") as HTMLButtonElement;
-btnClearAll?.addEventListener("click", () => {
+document.getElementById("btn-clear-all")?.addEventListener("click", () => {
   toaster.clear();
   activeLoader = null;
 });
 
-// Custom Tokens Config
-const btnApplyTokens = document.getElementById("btn-apply-tokens") as HTMLButtonElement;
-btnApplyTokens?.addEventListener("click", () => {
-  const successVal = (document.getElementById("token-success") as HTMLInputElement)?.value.trim();
-  const destructiveVal = (document.getElementById("token-destructive") as HTMLInputElement)?.value.trim();
-  const warningVal = (document.getElementById("token-warning") as HTMLInputElement)?.value.trim();
-  const infoVal = (document.getElementById("token-info") as HTMLInputElement)?.value.trim();
-  const surfaceVal = (document.getElementById("token-surface") as HTMLInputElement)?.value.trim();
-  const textVal = (document.getElementById("token-text") as HTMLInputElement)?.value.trim();
+// --- Custom token overrides --------------------------------------------------
+document.getElementById("btn-apply-tokens")?.addEventListener("click", () => {
+  const get = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() || undefined;
 
-  const tokens: ToastTokens = {};
-  if (successVal) {
-    tokens.success = successVal;
-  }
-  if (destructiveVal) {
-    tokens.destructive = destructiveVal;
-  }
-  if (warningVal) {
-    tokens.warning = warningVal;
-  }
-  if (infoVal) {
-    tokens.info = infoVal;
-  }
-  if (surfaceVal) {
-    tokens.surface = surfaceVal;
-  }
-  if (textVal) {
-    tokens.text = textVal;
-  }
-
-  toaster.configure({ tokens });
+  toaster.configure({
+    tokens: {
+      success: get("token-success"),
+      destructive: get("token-destructive"),
+      warning: get("token-warning"),
+      info: get("token-info"),
+      surface: get("token-surface"),
+      text: get("token-text"),
+    },
+  });
 });
 
-const btnResetTokens = document.getElementById("btn-reset-tokens") as HTMLButtonElement;
-btnResetTokens?.addEventListener("click", () => {
-  // Clear inputs
+document.getElementById("btn-reset-tokens")?.addEventListener("click", () => {
   ["token-success", "token-destructive", "token-warning", "token-info", "token-surface", "token-text"].forEach((id) => {
-    const el = document.getElementById(id) as HTMLInputElement;
+    const el = document.getElementById(id) as HTMLInputElement | null;
     if (el) {
       el.value = "";
     }
   });
-
   toaster.configure({ tokens: {} });
 });

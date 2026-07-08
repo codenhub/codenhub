@@ -38,15 +38,16 @@ export function buildInlineStyle(tokens: ToastTokens | null | undefined): string
 }
 
 /**
- * Injects a global <style> element into document.head with the overridden tokens.
+ * Injects an instance-scoped <style> element into document.head with the
+ * overridden tokens. Each toaster instance uses a unique styleId so multiple
+ * toasters do not clobber each other.
  */
-export function applyGlobalTokens(tokens: ToastTokens | null | undefined): void {
+export function applyGlobalTokens(tokens: ToastTokens | null | undefined, styleId: string): void {
   if (typeof document === "undefined") {
     return;
   }
 
-  const id = "global-toast-tokens";
-  let styleElement = document.getElementById(id) as HTMLStyleElement | null;
+  let styleElement = document.getElementById(styleId) as HTMLStyleElement | null;
 
   if (!tokens || Object.keys(tokens).length === 0) {
     if (styleElement) {
@@ -72,9 +73,19 @@ export function applyGlobalTokens(tokens: ToastTokens | null | undefined): void 
 
   if (!styleElement) {
     styleElement = document.createElement("style");
-    styleElement.id = id;
+    styleElement.id = styleId;
     document.head.appendChild(styleElement);
   }
 
   styleElement.textContent = `:root {\n${styles.join("\n")}\n}`;
+}
+
+/**
+ * Removes the instance-scoped <style> element if it exists.
+ */
+export function removeGlobalTokens(styleId: string): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+  document.getElementById(styleId)?.remove();
 }
