@@ -33,7 +33,11 @@
     "./tw/native": "./src/native.css",
     "./tw/typography": "./src/typography.css",
     "./tw/utilities": "./src/utilities.css",
-    "./native": "./dist/native.css"
+    "./native": {
+      "style": "./dist/native.css",
+      "import": "./dist/native.css",
+      "default": "./dist/native.css"
+    }
   },
   "publishConfig": {
     "access": "public"
