@@ -20,7 +20,7 @@
   --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
   --button-spinner: var(--button-fg);
 
-  @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none;
+  @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none cursor-pointer;
   border: var(--border-width) solid var(--button-border);
 
   &.primary {

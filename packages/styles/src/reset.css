@@ -27,8 +27,11 @@
     @apply flex flex-col;
   }
 
-  button {
-    @apply not-disabled:cursor-pointer;
+  button,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    @apply enabled:cursor-pointer;
   }
 
   img {

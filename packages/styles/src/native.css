@@ -26,6 +26,12 @@
     @apply text-label;
   }
 
+  p,
+  span,
+  a {
+    @apply text-body;
+  }
+
   /* Form controls */
   input[type="text"],
   input[type="email"],
@@ -55,13 +61,7 @@
   }
 
   input[type="radio"] {
-    @apply checkbox rounded-full;
-
-    &::after {
-      @apply rounded-full;
-      mask-image: none;
-      -webkit-mask-image: none;
-    }
+    @apply radio;
   }
 
   /* Buttons */

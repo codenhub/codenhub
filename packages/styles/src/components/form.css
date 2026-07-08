@@ -156,6 +156,86 @@
   }
 }
 
+@utility radio {
+  --control-color: var(--color-text);
+  --control-contrast: var(--color-text-contrast);
+
+  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-full bg-transparent transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  border: var(--border-width) solid var(--color-border);
+
+  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+    @apply border-(--color-border-hover);
+  }
+
+  &:focus {
+    @apply outline-none;
+  }
+
+  &:focus-visible {
+    border-color: var(--control-color);
+    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+  }
+
+  &::after {
+    @apply block size-2 scale-0 opacity-0 rounded-full transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
+
+    background-color: var(--control-contrast);
+    content: "";
+  }
+
+  &:checked {
+    border-color: var(--control-color);
+    background-color: var(--control-color);
+
+    &::after {
+      @apply scale-100 opacity-100;
+    }
+  }
+
+  &.primary {
+    --control-color: var(--color-primary);
+    --control-contrast: var(--color-primary-contrast);
+  }
+
+  &.secondary {
+    --control-color: var(--color-accent);
+    --control-contrast: var(--color-accent-contrast);
+  }
+
+  &.success {
+    --control-color: var(--color-success);
+    --control-contrast: var(--color-success-contrast);
+  }
+
+  &.warning {
+    --control-color: var(--color-warning);
+    --control-contrast: var(--color-warning-contrast);
+  }
+
+  &.destructive,
+  &.danger,
+  &.error {
+    --control-color: var(--color-destructive);
+    --control-contrast: var(--color-destructive-contrast);
+  }
+
+  &.info {
+    --control-color: var(--color-info);
+    --control-contrast: var(--color-info-contrast);
+  }
+
+  &[aria-invalid="true"] {
+    @apply border-(--color-destructive);
+  }
+
+  &:disabled,
+  &[aria-disabled="true"],
+  &[data-disabled] {
+    @apply cursor-not-allowed opacity-[0.58];
+  }
+}
+
+
 @utility switch {
   --control-color: var(--color-text);
   --control-contrast: var(--color-text-contrast);
