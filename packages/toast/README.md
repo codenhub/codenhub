@@ -32,10 +32,10 @@ import { createToaster } from "@codenhub/toast";
 const toaster = createToaster();
 
 // Basic notifications
-toaster.success("Changes saved successfully!");
-toaster.error("Failed to load resources.");
-toaster.warning("Please check your configuration.");
-toaster.info("System will undergo maintenance in 10 minutes.");
+toaster.semantic.success("Changes saved successfully!");
+toaster.semantic.error("Failed to load resources.");
+toaster.semantic.warning("Please check your configuration.");
+toaster.semantic.info("System will undergo maintenance in 10 minutes.");
 ```
 
 ### Loading State
@@ -58,7 +58,7 @@ try {
 
 ```ts
 // Confirm dialog (Promise-based)
-const confirmHandle = toaster.confirm("Are you sure you want to delete this project?", {
+const confirmHandle = toaster.interactive.confirm("Are you sure you want to delete this project?", {
   confirmLabel: "Delete Project",
   cancelLabel: "Keep Project",
   shouldBackdropDismiss: true,
@@ -67,11 +67,11 @@ const confirmHandle = toaster.confirm("Are you sure you want to delete this proj
 const userConfirmed = await confirmHandle.result;
 if (userConfirmed) {
   await deleteProject();
-  toaster.success("Project deleted.");
+  toaster.semantic.success("Project deleted.");
 }
 
 // Prompt dialog (Promise-based)
-const promptHandle = toaster.prompt("Enter your new project name:", {
+const promptHandle = toaster.interactive.prompt("Enter your new project name:", {
   defaultValue: "New Project",
   placeholder: "My Workspace",
   shouldBackdropDismiss: true,
@@ -79,11 +79,11 @@ const promptHandle = toaster.prompt("Enter your new project name:", {
 
 const name = await promptHandle.result;
 if (name !== null) {
-  toaster.success(`Project "${name}" created.`);
+  toaster.semantic.success(`Project "${name}" created.`);
 }
 
 // Alert dialog (Promise-based)
-const alertHandle = toaster.alert("This action cannot be undone.");
+const alertHandle = toaster.interactive.alert("This action cannot be undone.");
 await alertHandle.result;
 ```
 
@@ -115,14 +115,6 @@ interface Toaster {
   readonly loading: LoadingManager;
   readonly interactive: InteractiveManager;
   readonly custom: CustomManager;
-
-  success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-  error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-  warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-  info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-  confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
-  prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
-  alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 
   clear(): void;
   configure(config: Partial<ToasterConfig>): void;
@@ -228,7 +220,7 @@ This dynamically injects a `<style>` element targeting only elements scoped to t
 You can subscribe to lifecycle hooks to chain asynchronous logic or trigger cleanup:
 
 ```ts
-const handle = toaster.success("Process started");
+const handle = toaster.semantic.success("Process started");
 
 handle.onShow(() => console.log("Toast requested to show"));
 handle.onShown(() => console.log("Toast entrance animation complete"));

@@ -8,16 +8,7 @@ import { DEFAULT_CONFIG } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
 import { applyGlobalTokens, removeGlobalTokens } from "./tokens";
-import type {
-  AlertOptions,
-  ConfirmOptions,
-  InteractiveToastHandle,
-  PromptOptions,
-  SemanticToastOptions,
-  ToasterConfig,
-  ToastHandle,
-  ToastUpdateOptions,
-} from "./types";
+import type { ToasterConfig, ToastHandle, ToastUpdateOptions } from "./types";
 
 export type { SemanticManager } from "./managers/semantic";
 export type { LoadingManager } from "./managers/loading";
@@ -54,69 +45,6 @@ export interface Toaster {
   readonly interactive: InteractiveManager;
   /** Custom DOM layout dispatcher sub-manager. */
   readonly custom: CustomManager;
-
-  /**
-   * Displays a success notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays an error notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays a warning notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays an informational notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Dispatches a confirmation modal dialog.
-   *
-   * @param message Question or description statement.
-   * @param options Buttons labels and cancel behavior settings.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
-
-  /**
-   * Dispatches a text input prompt modal dialog.
-   *
-   * @param message Label description for the input text field.
-   * @param options Default values, placeholders, and buttons settings.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
-
-  /**
-   * Dispatches a blocking warning alert modal dialog.
-   *
-   * @param message Statement message.
-   * @param options OK button configuration.
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 
   /**
    * Clear all active, non-interactive toasts.
@@ -194,34 +122,6 @@ class ToastManager implements Toaster {
       assertAlive: () => this.assertAlive(),
       modalManager: this.modalManager,
     });
-  }
-
-  public success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle {
-    return this.semantic.success(message, options);
-  }
-
-  public error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle {
-    return this.semantic.error(message, options);
-  }
-
-  public warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle {
-    return this.semantic.warning(message, options);
-  }
-
-  public info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle {
-    return this.semantic.info(message, options);
-  }
-
-  public confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean> {
-    return this.interactive.confirm(message, options);
-  }
-
-  public prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null> {
-    return this.interactive.prompt(message, options);
-  }
-
-  public alert(message: string, options?: AlertOptions): InteractiveToastHandle<void> {
-    return this.interactive.alert(message, options);
   }
 
   public clear(): void {

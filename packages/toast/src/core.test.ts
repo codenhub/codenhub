@@ -114,42 +114,6 @@ describe("configure", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Flat semantic aliases
-// ---------------------------------------------------------------------------
-
-describe("flat semantic aliases", () => {
-  it("success/error/warning/info render to DOM and return a handle", () => {
-    const toaster = createToaster();
-    const h = toaster.success("Saved!");
-    expect(document.body.innerHTML).toContain("Saved!");
-    expect(typeof h.dismiss).toBe("function");
-    expect(typeof h.update).toBe("function");
-    expect(h.state).toBe("visible");
-    h.dismiss();
-    toaster.destroy();
-  });
-
-  it("handle.dismiss() hides the toast", () => {
-    const toaster = createToaster();
-    const h = toaster.error("Oops");
-    expect(document.body.innerHTML).toContain("Oops");
-    h.dismiss();
-    flushAnimations();
-    expect(document.body.querySelector("[role='alert']")).toBeNull();
-    toaster.destroy();
-  });
-
-  it("handle.update() patches message text in place", () => {
-    const toaster = createToaster();
-    const h = toaster.info("Loading…");
-    h.update({ message: "Done!" });
-    expect(document.body.innerHTML).toContain("Done!");
-    h.dismiss();
-    toaster.destroy();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Category managers
 // ---------------------------------------------------------------------------
 
@@ -234,8 +198,8 @@ describe("toaster.custom", () => {
 describe("toaster.clear()", () => {
   it("hides all non-interactive toasts", () => {
     const toaster = createToaster();
-    toaster.success("T1");
-    toaster.error("T2");
+    toaster.semantic.success("T1");
+    toaster.semantic.error("T2");
     toaster.loading.show({ message: "L1" });
 
     toaster.clear();
@@ -253,7 +217,7 @@ describe("toaster.clear()", () => {
 describe("destroy()", () => {
   it("removes toast containers from DOM", () => {
     const toaster = createToaster();
-    toaster.success("Bye");
+    toaster.semantic.success("Bye");
     expect(document.body.querySelector("[data-toast-container]")).not.toBeNull();
 
     toaster.destroy();
@@ -271,7 +235,7 @@ describe("destroy()", () => {
   it("subsequent calls after destroy() throw", () => {
     const toaster = createToaster();
     toaster.destroy();
-    expect(() => toaster.success("Ghost")).toThrow(/destroyed/);
+    expect(() => toaster.semantic.success("Ghost")).toThrow(/destroyed/);
     expect(() => toaster.clear()).toThrow(/destroyed/);
     expect(() => toaster.configure({})).toThrow(/destroyed/);
   });
@@ -304,7 +268,7 @@ describe("interactive.confirm", () => {
 
   it("resolves false and closes the dialog when dismissed programmatically", async () => {
     const toaster = createToaster();
-    const handle = toaster.confirm("Delete?");
+    const handle = toaster.interactive.confirm("Delete?");
 
     const dialog = document.body.querySelector("dialog");
     expect(dialog?.open).toBe(true);
@@ -335,7 +299,7 @@ describe("interactive.prompt", () => {
 
   it("resolves null when cancelled", async () => {
     const toaster = createToaster();
-    const handle = toaster.prompt("Name?");
+    const handle = toaster.interactive.prompt("Name?");
 
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
     cancelBtn!.click();
@@ -348,7 +312,7 @@ describe("interactive.prompt", () => {
 describe("interactive.alert", () => {
   it("resolves void when OK clicked", async () => {
     const toaster = createToaster();
-    const handle = toaster.alert("Notice!", { okLabel: "Got it" });
+    const handle = toaster.interactive.alert("Notice!", { okLabel: "Got it" });
 
     const okBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
     okBtn!.click();
@@ -360,11 +324,11 @@ describe("interactive.alert", () => {
   it("should clean up event listeners on dialog reuse via AbortController", async () => {
     const toaster = createToaster();
 
-    const handle1 = toaster.confirm("First confirm?");
+    const handle1 = toaster.interactive.confirm("First confirm?");
     handle1.dismiss();
     await handle1.settled;
 
-    const handle2 = toaster.confirm("Second confirm?");
+    const handle2 = toaster.interactive.confirm("Second confirm?");
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
     cancelBtn!.click();
 

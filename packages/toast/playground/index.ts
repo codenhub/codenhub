@@ -33,32 +33,35 @@ function getOptions() {
 
 // --- Semantic toasts ---------------------------------------------------------
 document.getElementById("btn-success")?.addEventListener("click", () => {
-  toaster.success("Changes saved successfully!", getOptions());
+  toaster.semantic.success("Changes saved successfully!", getOptions());
 });
 
 document.getElementById("btn-error")?.addEventListener("click", () => {
-  toaster.error("Failed to sync database records.", getOptions());
+  toaster.semantic.error("Failed to sync database records.", getOptions());
 });
 
 document.getElementById("btn-warning")?.addEventListener("click", () => {
-  toaster.warning("Disk space running low (92% used).", getOptions());
+  toaster.semantic.warning("Disk space running low (92% used).", getOptions());
 });
 
 document.getElementById("btn-info")?.addEventListener("click", () => {
-  toaster.info("System maintenance scheduled at midnight.", getOptions());
+  toaster.semantic.info("System maintenance scheduled at midnight.", getOptions());
 });
 
 // --- Interactive dialogs -----------------------------------------------------
 document.getElementById("btn-alert")?.addEventListener("click", async () => {
-  const handle = toaster.alert("This action cannot be undone. Are you sure you understand the consequences?", {
-    okLabel: "Understood",
-  });
+  const handle = toaster.interactive.alert(
+    "This action cannot be undone. Are you sure you understand the consequences?",
+    {
+      okLabel: "Understood",
+    },
+  );
   await handle.result;
   toaster.semantic.success("Alert acknowledged.");
 });
 
 document.getElementById("btn-confirm")?.addEventListener("click", async () => {
-  const handle = toaster.confirm("Do you want to permanently delete this project workspace?", {
+  const handle = toaster.interactive.confirm("Do you want to permanently delete this project workspace?", {
     confirmLabel: "Delete Workspace",
     cancelLabel: "Abort",
   });
@@ -67,7 +70,7 @@ document.getElementById("btn-confirm")?.addEventListener("click", async () => {
 });
 
 document.getElementById("btn-prompt")?.addEventListener("click", async () => {
-  const handle = toaster.prompt("Enter new workspace namespace:", {
+  const handle = toaster.interactive.prompt("Enter new workspace namespace:", {
     defaultValue: "my-organization",
     placeholder: "workspace-slug",
     submitLabel: "Register",
@@ -75,7 +78,7 @@ document.getElementById("btn-prompt")?.addEventListener("click", async () => {
   });
   const value = await handle.result;
   if (value !== null) {
-    toaster.success(`Namespace registered: ${value}`);
+    toaster.semantic.success(`Namespace registered: ${value}`);
   }
 });
 
@@ -96,7 +99,7 @@ document.getElementById("btn-loading-sim")?.addEventListener("click", () => {
 
   setTimeout(() => {
     loader.dismiss();
-    toaster.success("Data loaded successfully!", { position: opts.position, duration: opts.duration });
+    toaster.semantic.success("Data loaded successfully!", { position: opts.position, duration: opts.duration });
   }, 2000);
 });
 
