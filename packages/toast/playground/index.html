@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@codenhub/toast Playground</title>
+    <!-- Inline FOUC script to set initial classes/attributes -->
+    <script>
+      (function () {
+        try {
+          const key = "playground-theme-pref";
+          const attribute = "data-theme";
+          let theme = "light";
+          if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "dark";
+          }
+          const stored = localStorage.getItem(key);
+          if (stored === "dark" || stored === "light") {
+            theme = stored;
+          }
+          document.documentElement.setAttribute(attribute, theme);
+          const isDark = theme === "dark";
+          document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+          document.documentElement.classList.toggle("dark", isDark);
+        } catch (_) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./index.ts"></script>
+  </head>
+  <body class="bg-background text-text font-default min-h-screen transition-colors duration-200">
+    <header class="border-border bg-surface flex items-center justify-between border-b px-6 py-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <span
+          class="text-title rounded-md bg-neutral-900 px-3 py-1 text-xl font-bold text-white dark:bg-white dark:text-neutral-950"
+        >
+          codenhub
+        </span>
+        <h1 class="text-title text-text-strong text-lg font-semibold">/toast playground</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-toggle-theme" class="btn secondary" data-testid="btn-toggle-theme">Toggle Theme</button>
+      </div>
+    </header>
+
+    <main class="container mx-auto grid grid-cols-1 gap-6 p-6 lg:grid-cols-12">
+      <!-- Controls Column -->
+      <section class="flex flex-col gap-6 lg:col-span-7">
+        <!-- Toast Configuration Options -->
+        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+          <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">1. Dispatch Options</h2>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="select-position">Position</label>
+              <select id="select-position" class="bg-background border-border rounded border px-3 py-1.5 text-sm">
+                <option value="top-right">Top Right</option>
+                <option value="top-left">Top Left</option>
+                <option value="bottom-right" selected>Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="input-duration">Duration (ms)</label>
+              <input type="number" id="input-duration" class="bg-background border-border rounded border px-3 py-1.5 text-sm" value="4000" />
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <label class="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" id="check-auto-dismiss" checked />
+              <span>Auto Dismiss</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" id="check-dismissable" checked />
+              <span>Dismiss Button</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" id="check-native-override" />
+              <span class="text-amber-600 dark:text-amber-400 font-semibold">Override window.confirm/alert/prompt</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Semantic & Custom Triggers -->
+        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+          <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">2. Triggers</h2>
+          
+          <div class="flex flex-col gap-2">
+            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Semantic Notifications</span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-success" class="btn success sm">Success Toast</button>
+              <button id="btn-error" class="btn destructive sm">Error Toast</button>
+              <button id="btn-warning" class="btn warning sm">Warning Toast</button>
+              <button id="btn-info" class="btn primary sm">Info Toast</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Interactive Dialogs (Promise-based)</span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-alert" class="btn out sm">Alert Dialog</button>
+              <button id="btn-confirm" class="btn out sm">Confirm Dialog</button>
+              <button id="btn-prompt" class="btn out sm">Prompt Dialog</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Async Loaders</span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-loading" class="btn secondary sm">Show Persistent Loader</button>
+              <button id="btn-loading-sim" class="btn primary sm">Simulate Async Work (2s)</button>
+              <button id="btn-clear-all" class="btn out sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20">Clear All Toasts</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Token Customization -->
+        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+          <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">3. Global Custom Design Tokens</h2>
+          <p class="text-text-secondary text-xs">Customize the toast color variables live. Leave blank to inherit system defaults.</p>
+          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-success">Success Accent</label>
+              <input type="text" id="token-success" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#10b981" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-destructive">Destructive Accent</label>
+              <input type="text" id="token-destructive" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#ef4444" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-warning">Warning Accent</label>
+              <input type="text" id="token-warning" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#f59e0b" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-info">Info Accent</label>
+              <input type="text" id="token-info" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#3b82f6" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-surface">Surface Color</label>
+              <input type="text" id="token-surface" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#ffffff" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="token-text">Text Color</label>
+              <input type="text" id="token-text" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#1f2937" />
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button id="btn-reset-tokens" class="btn secondary sm text-xs" style="height: auto">Reset Tokens</button>
+            <button id="btn-apply-tokens" class="btn primary sm text-xs" style="height: auto">Apply Tokens</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logs / Outputs Column -->
+      <section class="flex flex-col gap-6 lg:col-span-5">
+        <!-- Native Browser Fallbacks testing -->
+        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+          <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">Native API Verification</h2>
+          <p class="text-text-secondary text-xs">Verify behavior of the replaced native browser global functions. <i>Must check override option above first.</i></p>
+          <div class="flex flex-wrap gap-2">
+            <button id="btn-native-alert" class="btn secondary sm">window.alert()</button>
+            <button id="btn-native-confirm" class="btn secondary sm">window.confirm()</button>
+            <button id="btn-native-prompt" class="btn secondary sm">window.prompt()</button>
+          </div>
+        </div>
+
+        <!-- Playground Logs -->
+        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm flex-1">
+          <div class="border-border flex items-center justify-between border-b pb-2">
+            <h2 class="text-text-strong text-md font-bold">Activity Logs</h2>
+            <button id="btn-clear-logs" class="btn secondary pill px-2 py-1 text-xs" style="height: auto">Clear Logs</button>
+          </div>
+          <div id="log-container" class="bg-background border-border text-text font-mono text-xs overflow-y-auto rounded border p-3 flex flex-col gap-1.5 h-96 max-h-[30rem] scrollbar-thin">
+            <div class="text-text-secondary italic">[Ready to log user actions, toast state changes, and promise resolutions...]</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

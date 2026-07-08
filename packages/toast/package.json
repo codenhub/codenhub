@@ -27,6 +27,8 @@
     "access": "public"
   },
   "scripts": {
+    "dev": "pnpm --filter=@codenhub/toast-dev dev",
+    "debug": "pnpm build && pnpm --filter=@codenhub/toast-debug dev",
     "build": "pnpm build:scripts && pnpm build:styles",
     "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
