@@ -37,7 +37,9 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
+      "@codenhub/styles/tw/native": resolve(__dirname, "../src/native.css"),
       "@codenhub/styles/tw": resolve(__dirname, "../src/index.css"),
+      "@codenhub/styles/native": resolve(__dirname, "../dist/native.css"),
       "@codenhub/styles": resolve(__dirname, "../dist/index.css"),
     },
   },

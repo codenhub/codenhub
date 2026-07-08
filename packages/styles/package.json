@@ -32,7 +32,8 @@
     "./tw/reset": "./src/reset.css",
     "./tw/native": "./src/native.css",
     "./tw/typography": "./src/typography.css",
-    "./tw/utilities": "./src/utilities.css"
+    "./tw/utilities": "./src/utilities.css",
+    "./native": "./dist/native.css"
   },
   "publishConfig": {
     "access": "public"
@@ -41,7 +42,7 @@
     "dev": "pnpm build && pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "build": "pnpm build:styles",
-    "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify",
+    "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run",
