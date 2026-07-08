@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as toastModule from ".";
 import { DEFAULT_CONFIG } from "./options";
+import type { RawToastOptions } from "./options";
 import { Toast } from "./toast-base";
 
 interface MockAnimation {
@@ -24,8 +25,12 @@ beforeEach(() => {
   });
 });
 
-function makeToast(options: ConstructorParameters<typeof Toast>[0]): Toast {
-  return new Toast(options, { ...DEFAULT_CONFIG, instanceId: "test-instance" }, document.body);
+function makeToast(options: RawToastOptions): Toast {
+  return new Toast({
+    options,
+    config: { ...DEFAULT_CONFIG, instanceId: "test-instance" },
+    parent: document.body,
+  });
 }
 
 function renderToast(toast: Toast): HTMLDivElement {

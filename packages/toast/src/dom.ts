@@ -174,11 +174,13 @@ function runAnimation(
   }
 }
 
-export function animateIn(element: HTMLDivElement, position: ToastPosition, onFinish?: () => void): void {
+export function animateIn(params: { element: HTMLDivElement; position: ToastPosition; onFinish?: () => void }): void {
+  const { element, position, onFinish } = params;
   runAnimation(element, getKeyframes(position), onFinish);
 }
 
-export function animateOut(element: HTMLDivElement, position: ToastPosition, onComplete: () => void): void {
+export function animateOut(params: { element: HTMLDivElement; position: ToastPosition; onComplete: () => void }): void {
+  const { element, position, onComplete } = params;
   runAnimation(element, [...getKeyframes(position)].reverse(), onComplete, true);
 }
 

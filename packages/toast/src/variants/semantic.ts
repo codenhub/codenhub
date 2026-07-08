@@ -53,11 +53,9 @@ export class SemanticToast extends Toast {
   /**
    * Constructs a new SemanticToast instance.
    *
-   * @param options Raw user-provided semantic notification options.
-   * @param config The resolved configuration of the parent toaster.
-   * @param parent The DOM container element where the stack container lives.
+   * @param params Parameter object containing options, config, and parent.
    */
-  public constructor(options: SemanticRawOptions, config: ResolvedToastConfig, parent: HTMLElement) {
-    super(options, config, parent);
+  public constructor(params: { options: SemanticRawOptions; config: ResolvedToastConfig; parent: HTMLElement }) {
+    super(params);
   }
 }

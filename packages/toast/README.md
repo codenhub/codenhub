@@ -156,6 +156,45 @@ interface InteractiveToastHandle<T> extends ToastHandle {
 }
 ```
 
+#### `Toast` Class
+
+Represents an individual base toast notification instance. Generally managed internally by the toaster.
+
+```ts
+class Toast {
+  constructor(params: { options: RawToastOptions; config: ResolvedToastConfig; parent: HTMLElement });
+  show(): void;
+  hide(): void;
+  update(updateOpts: ToastUpdateOptions): void;
+  onShow(subscriber: ToastLifecycleSubscriber): () => void;
+  onShown(subscriber: ToastLifecycleSubscriber): () => void;
+  onHide(subscriber: ToastLifecycleSubscriber): () => void;
+  onHidden(subscriber: ToastLifecycleSubscriber): () => void;
+  readonly settled: Promise<void>;
+  readonly publicState: ToastState;
+}
+```
+
+#### `SemanticToast` Class
+
+Extends `Toast`. Pre-styled for semantic notifications (success, error, warning, info) with icon presets and aria-live status roles.
+
+```ts
+class SemanticToast extends Toast {
+  constructor(params: { options: SemanticRawOptions; config: ResolvedToastConfig; parent: HTMLElement });
+}
+```
+
+#### `LoadingToast` Class
+
+Extends `Toast`. Preconfigured for progress loader states. Does not auto-dismiss by default.
+
+```ts
+class LoadingToast extends Toast {
+  constructor(params: { options: LoadingToastOptions; config: ResolvedToastConfig; parent: HTMLElement });
+}
+```
+
 ---
 
 ## Token Customization
@@ -182,10 +221,38 @@ This dynamically injects a `<style>` element targeting only elements scoped to t
 
 ---
 
+## Examples
+
+### Lifecycle Callback Subscriptions
+
+You can subscribe to lifecycle hooks to chain asynchronous logic or trigger cleanup:
+
+```ts
+const handle = toaster.success("Process started");
+
+handle.onShow(() => console.log("Toast requested to show"));
+handle.onShown(() => console.log("Toast entrance animation complete"));
+handle.onHide(() => console.log("Toast exit animation started"));
+handle.onHidden(() => console.log("Toast fully removed from the DOM"));
+
+// Await completion programmatically
+await handle.settled;
+console.log("Toast cycle fully finished.");
+```
+
+---
+
 ## Requirements
 
 - **DOM Environment**: Runs only in browser/DOM environments.
 - **CSS Import**: Requires importing `@codenhub/toast/styles` (or compiling Tailwind CSS with `@source` directories pointing to `@codenhub/toast` source files).
+
+---
+
+## Notes
+
+- **HTML Sanitization Whitelist**: Custom HTML toasts are sanitized against XSS. Allowed tags: `div`, `p`, `span`, `b`, `i`, `strong`, `em`, `pre`, `code`, `a`, `ul`, `ol`, `li`, `br`. Allowed attributes: `class`, `id`, `style`, `target`, `rel`, and `href` (URL schemes are restricted to block `javascript:`, `data:`, and `vbscript:` URLs).
+- **Dialog Serialization**: Multiple concurrent modal calls (`alert`, `confirm`, `prompt`) are queued using a FIFO scheduler and resolve sequentially.
 
 ---
 

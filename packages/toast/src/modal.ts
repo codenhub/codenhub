@@ -1,46 +1,9 @@
-import { buildInlineStyle } from "./tokens";
-import type {
-  AlertOptions,
-  ConfirmOptions,
-  InteractiveToastHandle,
-  PromptOptions,
-  ToastState,
-  ToastTokens,
-} from "./types";
-
-// ---------------------------------------------------------------------------
-// Native <dialog>-based blocking modal
-//
-// Interactive toasts use a completely separate render path from the toast
-// stack. A single <dialog> element is created per toaster instance and reused
-// across calls via a FIFO queue so multiple concurrent calls serialize.
-// ---------------------------------------------------------------------------
-
-const DIALOG_CLASS =
-  "relative m-0 rounded-xl border-2 border-border bg-surface p-5 text-text shadow-2xl w-full max-w-sm pointer-events-auto";
-const MESSAGE_CLASS = "text-sm font-medium mb-4 leading-relaxed";
-const ACTIONS_CLASS = "flex justify-end gap-2";
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  return node;
-}
-
-// ---------------------------------------------------------------------------
+import { ACTIONS_CLASS, DIALOG_CLASS, buildDialogContent, createHTMLElement } from "./modal-templates";
+import type { AlertOptions, ConfirmOptions, InteractiveToastHandle, PromptOptions, ToastState } from "./types";
 
 interface ModalJob {
   run: () => void;
   dismiss: () => void;
-}
-
-interface BuildDialogContentParams {
-  dialog: HTMLDialogElement;
-  message: string;
-  tokens?: ToastTokens;
-  className?: string;
 }
 
 /**
@@ -49,7 +12,7 @@ interface BuildDialogContentParams {
  */
 export class ModalManager {
   private dialog: HTMLDialogElement | null = null;
-  private queue: ModalJob[] = [];
+  private jobs: ModalJob[] = [];
   private activeJob: ModalJob | null = null;
   private isRunning = false;
   private isDestroyed = false;
@@ -64,8 +27,6 @@ export class ModalManager {
     private readonly parent: HTMLElement,
     private readonly instanceId: string,
   ) {}
-
-  // --- Public factory methods -----------------------------------------------
 
   /**
    * Enqueues and displays a confirmation dialog.
@@ -82,6 +43,9 @@ export class ModalManager {
     let isCanceled = false;
     let activeClose: ((value: boolean) => void) | null = null;
 
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
     const job: ModalJob = {
       run: () => {
         if (isCanceled) {
@@ -90,29 +54,30 @@ export class ModalManager {
         }
 
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent({
+        const container = buildDialogContent({
           dialog,
           message,
           tokens: options.tokens,
           className: options.className,
         });
 
-        const cancelBtn = el("button");
+        const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
         cancelBtn.className = "btn secondary sm";
 
-        const confirmBtn = el("button");
+        const confirmBtn = createHTMLElement("button");
         confirmBtn.type = "button";
         confirmBtn.textContent = options.confirmLabel ?? "Confirm";
         confirmBtn.className = "btn primary sm";
 
-        const actions = el("div", ACTIONS_CLASS);
+        const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
         actions.appendChild(confirmBtn);
         container.appendChild(actions);
 
         const close = (value: boolean): void => {
+          abortController.abort();
           activeClose = null;
           resolve(value);
           this.closeDialog(dialog, () => {
@@ -124,14 +89,14 @@ export class ModalManager {
 
         activeClose = close;
 
-        cancelBtn.addEventListener("click", () => close(false));
-        confirmBtn.addEventListener("click", () => close(true));
+        cancelBtn.addEventListener("click", () => close(false), { signal });
+        confirmBtn.addEventListener("click", () => close(true), { signal });
 
         const onCancel = (e: Event): void => {
           e.preventDefault();
           close(false);
         };
-        dialog.addEventListener("cancel", onCancel, { once: true });
+        dialog.addEventListener("cancel", onCancel, { signal });
 
         if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
@@ -139,7 +104,7 @@ export class ModalManager {
               close(false);
             }
           };
-          dialog.addEventListener("click", onBackdropClick, { once: true });
+          dialog.addEventListener("click", onBackdropClick, { signal });
         }
 
         dialog.showModal();
@@ -150,6 +115,7 @@ export class ModalManager {
           activeClose(false);
         } else {
           isCanceled = true;
+          abortController.abort();
           resolve(false);
           currentState = "hidden";
           settleFn();
@@ -189,6 +155,9 @@ export class ModalManager {
     let isCanceled = false;
     let activeClose: ((value: string | null) => void) | null = null;
 
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
     const job: ModalJob = {
       run: () => {
         if (isCanceled) {
@@ -197,36 +166,37 @@ export class ModalManager {
         }
 
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent({
+        const container = buildDialogContent({
           dialog,
           message,
           tokens: options.tokens,
           className: options.className,
         });
 
-        const input = el("input");
+        const input = createHTMLElement("input");
         input.type = "text";
         input.value = options.defaultValue ?? "";
         input.placeholder = options.placeholder ?? "";
         input.className = "input sm w-full border border-border rounded p-2 bg-background text-text text-sm mt-1 mb-3";
         container.appendChild(input);
 
-        const cancelBtn = el("button");
+        const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
         cancelBtn.className = "btn secondary sm";
 
-        const submitBtn = el("button");
+        const submitBtn = createHTMLElement("button");
         submitBtn.type = "button";
         submitBtn.textContent = options.submitLabel ?? "Submit";
         submitBtn.className = "btn primary sm";
 
-        const actions = el("div", ACTIONS_CLASS);
+        const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
         actions.appendChild(submitBtn);
         container.appendChild(actions);
 
         const close = (value: string | null): void => {
+          abortController.abort();
           activeClose = null;
           resolve(value);
           this.closeDialog(dialog, () => {
@@ -238,19 +208,23 @@ export class ModalManager {
 
         activeClose = close;
 
-        cancelBtn.addEventListener("click", () => close(null));
-        submitBtn.addEventListener("click", () => close(input.value));
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            close(input.value);
-          }
-        });
+        cancelBtn.addEventListener("click", () => close(null), { signal });
+        submitBtn.addEventListener("click", () => close(input.value), { signal });
+        input.addEventListener(
+          "keydown",
+          (e) => {
+            if (e.key === "Enter") {
+              close(input.value);
+            }
+          },
+          { signal },
+        );
 
         const onCancel = (e: Event): void => {
           e.preventDefault();
           close(null);
         };
-        dialog.addEventListener("cancel", onCancel, { once: true });
+        dialog.addEventListener("cancel", onCancel, { signal });
 
         if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
@@ -258,11 +232,10 @@ export class ModalManager {
               close(null);
             }
           };
-          dialog.addEventListener("click", onBackdropClick, { once: true });
+          dialog.addEventListener("click", onBackdropClick, { signal });
         }
 
         dialog.showModal();
-        // Autofocus input after paint so animation doesn't glitch
         requestAnimationFrame(() => input.focus());
       },
       dismiss: () => {
@@ -270,6 +243,7 @@ export class ModalManager {
           activeClose(null);
         } else {
           isCanceled = true;
+          abortController.abort();
           resolve(null);
           currentState = "hidden";
           settleFn();
@@ -309,6 +283,9 @@ export class ModalManager {
     let isCanceled = false;
     let activeClose: (() => void) | null = null;
 
+    const abortController = new AbortController();
+    const { signal } = abortController;
+
     const job: ModalJob = {
       run: () => {
         if (isCanceled) {
@@ -317,23 +294,24 @@ export class ModalManager {
         }
 
         const dialog = this.ensureDialog();
-        const container = this.buildDialogContent({
+        const container = buildDialogContent({
           dialog,
           message,
           tokens: options.tokens,
           className: options.className,
         });
 
-        const okBtn = el("button");
+        const okBtn = createHTMLElement("button");
         okBtn.type = "button";
         okBtn.textContent = options.okLabel ?? "OK";
         okBtn.className = "btn primary sm";
 
-        const actions = el("div", ACTIONS_CLASS);
+        const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(okBtn);
         container.appendChild(actions);
 
         const close = (): void => {
+          abortController.abort();
           activeClose = null;
           resolve();
           this.closeDialog(dialog, () => {
@@ -345,13 +323,13 @@ export class ModalManager {
 
         activeClose = close;
 
-        okBtn.addEventListener("click", close);
+        okBtn.addEventListener("click", close, { signal });
 
         const onCancel = (e: Event): void => {
           e.preventDefault();
           close();
         };
-        dialog.addEventListener("cancel", onCancel, { once: true });
+        dialog.addEventListener("cancel", onCancel, { signal });
 
         const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
         if (shouldBackdropDismiss) {
@@ -360,7 +338,7 @@ export class ModalManager {
               close();
             }
           };
-          dialog.addEventListener("click", onBackdropClick, { once: true });
+          dialog.addEventListener("click", onBackdropClick, { signal });
         }
 
         dialog.showModal();
@@ -371,6 +349,7 @@ export class ModalManager {
           activeClose();
         } else {
           isCanceled = true;
+          abortController.abort();
           resolve();
           currentState = "hidden";
           settleFn();
@@ -395,18 +374,16 @@ export class ModalManager {
     };
   }
 
-  // --- Cleanup ---------------------------------------------------------------
-
   /**
    * Tear down the manager, resolving any pending queued modal promises,
    * closing the dialog, and removing elements from the DOM.
    */
   public destroy(): void {
     this.isDestroyed = true;
-    const currentQueue = this.queue;
-    this.queue = [];
+    const currentJobs = this.jobs;
+    this.jobs = [];
 
-    currentQueue.forEach((job) => job.dismiss());
+    currentJobs.forEach((job) => job.dismiss());
     if (this.activeJob) {
       this.activeJob.dismiss();
       this.activeJob = null;
@@ -421,70 +398,38 @@ export class ModalManager {
     }
   }
 
-  // --- Internals -------------------------------------------------------------
-
   private enqueue(job: ModalJob): void {
     if (this.isDestroyed) {
       return;
     }
-    this.queue.push(job);
+    this.jobs.push(job);
     if (!this.isRunning) {
       this.next();
     }
   }
 
   private next(): void {
-    if (this.isDestroyed || this.queue.length === 0) {
+    if (this.isDestroyed || this.jobs.length === 0) {
       this.isRunning = false;
       this.activeJob = null;
       return;
     }
     this.isRunning = true;
-    this.activeJob = this.queue.shift()!;
+    this.activeJob = this.jobs.shift()!;
     this.activeJob.run();
   }
 
   private ensureDialog(): HTMLDialogElement {
     if (!this.dialog) {
       const dialog = document.createElement("dialog");
-      // Use CSS class for backdrop; native ::backdrop handled in styles
       dialog.className = DIALOG_CLASS;
       dialog.setAttribute("data-toast-instance", this.instanceId);
-      // Wrap in a flex backdrop container so we get the overlay effect
-      // via the native ::backdrop pseudo-element (styled via CSS)
       this.parent.appendChild(dialog);
       this.dialog = dialog;
     } else {
-      // Clear previous content
       this.dialog.innerHTML = "";
     }
     return this.dialog;
-  }
-
-  private buildDialogContent(params: BuildDialogContentParams): HTMLDivElement {
-    const { dialog, message, tokens, className } = params;
-
-    if (className) {
-      dialog.className = `${DIALOG_CLASS} ${className}`;
-    } else {
-      dialog.className = DIALOG_CLASS;
-    }
-
-    if (tokens) {
-      const inlineStyle = buildInlineStyle(tokens);
-      if (inlineStyle) {
-        dialog.style.cssText = inlineStyle;
-      }
-    } else {
-      dialog.style.cssText = "";
-    }
-
-    const content = el("div");
-    const p = el("p", MESSAGE_CLASS);
-    p.textContent = message;
-    content.appendChild(p);
-    dialog.appendChild(content);
-    return content;
   }
 
   private closeDialog(dialog: HTMLDialogElement, onClosed: () => void): void {

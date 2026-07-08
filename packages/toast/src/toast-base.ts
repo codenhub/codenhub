@@ -1,19 +1,7 @@
-import {
-  animateIn,
-  animateOut,
-  animateStackChange,
-  createToastElement,
-  getContainer,
-  getOrCreateContainer,
-} from "./dom";
-import {
-  applyUpdateToElement,
-  normalizeToastOptions,
-  type NormalizedToastOptions,
-  type RawToastOptions,
-  type ResolvedToastConfig,
-  type ToastPresetOptions,
-} from "./options";
+import { animateIn, animateStackChange, createToastElement, getOrCreateContainer } from "./dom";
+import { applyUpdateToElement, normalizeToastOptions } from "./options";
+import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
+import { removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
 import type { ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
@@ -25,7 +13,7 @@ export type ToastLifecycleSubscriber = (toast: Toast) => void;
 
 type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
-function toPublicState(internal: InternalToastState): ToastState {
+function convertToPublicState(internal: InternalToastState): ToastState {
   if (internal === "visible" || internal === "queued") {
     return "visible";
   }
@@ -41,80 +29,6 @@ function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<Toast
     shown: new Set(),
     hide: new Set(),
     hidden: new Set(),
-  };
-}
-
-const dismissingElements = new WeakSet<HTMLDivElement>();
-const toastByElement = new WeakMap<HTMLDivElement, Toast>();
-
-interface RemoveToastElementParams {
-  element: HTMLDivElement;
-  parent: HTMLElement;
-  position: ToastPosition;
-  onComplete: () => void;
-}
-
-function removeToastElement(params: RemoveToastElementParams): void {
-  const { element, parent, position, onComplete } = params;
-  const container = getContainer(parent, position);
-  if (!container || !container.contains(element)) {
-    onComplete();
-    return;
-  }
-  if (dismissingElements.has(element)) {
-    return;
-  }
-  dismissingElements.add(element);
-
-  animateOut(element, position, () => {
-    dismissingElements.delete(element);
-    animateStackChange(container, () => {
-      if (container.contains(element)) {
-        container.removeChild(element);
-      }
-    });
-    onComplete();
-  });
-}
-
-interface RequestSlotParams {
-  parent: HTMLElement;
-  position: ToastPosition;
-  maxVisible: number;
-  onAvailable: () => void;
-}
-
-function requestSlot(params: RequestSlotParams): (() => void) | null {
-  const { parent, position, maxVisible, onAvailable } = params;
-  const container = getContainer(parent, position);
-  if (!container || container.children.length < maxVisible) {
-    return null;
-  }
-  const oldestElement = container.firstElementChild as HTMLDivElement | null;
-  if (!oldestElement) {
-    return null;
-  }
-
-  let isCanceled = false;
-  const releaseSlot = (): void => {
-    if (!isCanceled) {
-      onAvailable();
-    }
-  };
-
-  const ownerToast = toastByElement.get(oldestElement);
-  if (ownerToast) {
-    const unsubscribe = ownerToast.onHidden(releaseSlot);
-    ownerToast.hide();
-    return () => {
-      isCanceled = true;
-      unsubscribe();
-    };
-  }
-
-  removeToastElement({ element: oldestElement, parent, position, onComplete: releaseSlot });
-  return () => {
-    isCanceled = true;
   };
 }
 
@@ -142,11 +56,10 @@ export class Toast {
   /**
    * Constructs a new base Toast instance.
    *
-   * @param options Raw user-provided notification options.
-   * @param config The resolved configuration of the parent toaster.
-   * @param parent The DOM container element where the stack container lives.
+   * @param params Parameter object containing options, config, and parent.
    */
-  public constructor(options: RawToastOptions, config: ResolvedToastConfig, parent: HTMLElement) {
+  public constructor(params: { options: RawToastOptions; config: ResolvedToastConfig; parent: HTMLElement }) {
+    const { options, config, parent } = params;
     this.parent = parent;
     this.maxVisible = config.maxVisible;
     this.options = normalizeToastOptions({
@@ -163,7 +76,7 @@ export class Toast {
    * Gets the public-facing lifecycle state of this toast.
    */
   public get publicState(): ToastState {
-    return toPublicState(this.internalState);
+    return convertToPublicState(this.internalState);
   }
 
   /**
@@ -216,6 +129,7 @@ export class Toast {
 
   /**
    * Updates properties of a visible toast in place.
+   * This is a no-op if the toast is not currently visible.
    *
    * @param updateOpts Scoped updates to apply to the toast element.
    */
@@ -273,12 +187,16 @@ export class Toast {
     animateStackChange(container, () => {
       container.appendChild(element);
     });
-    animateIn(element, position, () => {
-      if (this.internalState !== "visible" || this.element !== element) {
-        return;
-      }
-      this.notify("shown");
-      this.scheduleAutoDismiss(element);
+    animateIn({
+      element,
+      position,
+      onFinish: () => {
+        if (this.internalState !== "visible" || this.element !== element) {
+          return;
+        }
+        this.notify("shown");
+        this.scheduleAutoDismiss(element);
+      },
     });
   }
 

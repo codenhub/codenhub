@@ -1,36 +1,33 @@
 import { removeAllContainers } from "./dom";
+import { createCustomManager, type CustomManager } from "./managers/custom";
+import { createInteractiveManager, type InteractiveManager } from "./managers/interactive";
+import { createLoadingManager, type LoadingManager } from "./managers/loading";
+import { createSemanticManager, type SemanticManager } from "./managers/semantic";
 import { ModalManager } from "./modal";
-import { DEFAULT_CONFIG, type ResolvedToastConfig } from "./options";
-import { Toast } from "./toast-base";
+import { DEFAULT_CONFIG } from "./options";
+import type { ResolvedToastConfig } from "./options";
+import type { Toast } from "./toast-base";
 import { applyGlobalTokens, removeGlobalTokens } from "./tokens";
 import type {
   AlertOptions,
   ConfirmOptions,
-  CustomToastOptions,
   InteractiveToastHandle,
-  LoadingToastOptions,
   PromptOptions,
   SemanticToastOptions,
-  SemanticType,
-  ToastHandle,
   ToasterConfig,
+  ToastHandle,
   ToastUpdateOptions,
 } from "./types";
-import { LoadingToast } from "./variants/loading";
-import { SemanticToast } from "./variants/semantic";
 
-// ---------------------------------------------------------------------------
-// Unique ID generator for style element scoping
-// ---------------------------------------------------------------------------
+export type { SemanticManager } from "./managers/semantic";
+export type { LoadingManager } from "./managers/loading";
+export type { CustomManager } from "./managers/custom";
+export type { InteractiveManager } from "./managers/interactive";
 
 let instanceCounter = 0;
-function nextInstanceId(): string {
+function generateInstanceId(): string {
   return `toast-instance-${++instanceCounter}`;
 }
-
-// ---------------------------------------------------------------------------
-// ToastHandle factory — wraps internal Toast; the only public API consumers get
-// ---------------------------------------------------------------------------
 
 function makeHandle(toast: Toast): ToastHandle {
   return {
@@ -44,126 +41,6 @@ function makeHandle(toast: Toast): ToastHandle {
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Category managers
-// ---------------------------------------------------------------------------
-
-/**
- * Manager for dispatching and clearing pre-styled semantic toasts (success, error, warning, info).
- */
-export interface SemanticManager {
-  /**
-   * Displays a semantic toast notification.
-   *
-   * @param options Config options including message and semantic type.
-   */
-  show(options: SemanticToastOptions & { type?: SemanticType }): ToastHandle;
-
-  /**
-   * Displays a success notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   */
-  success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays an error notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   */
-  error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays a warning notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   */
-  warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Displays an informational notification.
-   *
-   * @param message Description text.
-   * @param options Extensible options.
-   */
-  info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
-
-  /**
-   * Dismisses all active semantic toasts.
-   */
-  clear(): void;
-}
-
-/**
- * Manager for showing and clearing persistent loading toasts.
- */
-export interface LoadingManager {
-  /**
-   * Displays a loading progress indicator toast.
-   *
-   * @param options Toast settings.
-   */
-  show(options: LoadingToastOptions): ToastHandle;
-
-  /**
-   * Dismisses all active loading toasts.
-   */
-  clear(): void;
-}
-
-/**
- * Manager for displaying interactive modal confirm, prompt, and alert dialogs.
- */
-export interface InteractiveManager {
-  /**
-   * Dispatches a confirmation modal dialog.
-   *
-   * @param message Question or description statement.
-   * @param options Buttons labels and cancel behavior settings.
-   */
-  confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
-
-  /**
-   * Dispatches a text input prompt modal dialog.
-   *
-   * @param message Label description for the input text field.
-   * @param options Default values, placeholders, and buttons settings.
-   */
-  prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
-
-  /**
-   * Dispatches a blocking warning alert modal dialog.
-   *
-   * @param message Statement message.
-   * @param options OK button configuration.
-   */
-  alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
-}
-
-/**
- * Manager for custom layout toasts.
- */
-export interface CustomManager {
-  /**
-   * Displays a custom HTML or DOM node toast.
-   *
-   * @param options Layout content options.
-   */
-  show(options: CustomToastOptions): ToastHandle;
-
-  /**
-   * Dismisses all active custom toasts.
-   */
-  clear(): void;
-}
-
-// ---------------------------------------------------------------------------
-// Toaster — public interface
-// ---------------------------------------------------------------------------
 
 /**
  * Represents the main Toaster instance controller.
@@ -183,6 +60,7 @@ export interface Toaster {
    *
    * @param message Description text.
    * @param options Extensible options.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -191,6 +69,7 @@ export interface Toaster {
    *
    * @param message Description text.
    * @param options Extensible options.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -199,6 +78,7 @@ export interface Toaster {
    *
    * @param message Description text.
    * @param options Extensible options.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -207,6 +87,7 @@ export interface Toaster {
    *
    * @param message Description text.
    * @param options Extensible options.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -215,6 +96,7 @@ export interface Toaster {
    *
    * @param message Question or description statement.
    * @param options Buttons labels and cancel behavior settings.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
 
@@ -223,6 +105,7 @@ export interface Toaster {
    *
    * @param message Label description for the input text field.
    * @param options Default values, placeholders, and buttons settings.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
 
@@ -231,13 +114,23 @@ export interface Toaster {
    *
    * @param message Statement message.
    * @param options OK button configuration.
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 
-  /** Clear all non-interactive toasts. */
+  /**
+   * Clear all active, non-interactive toasts.
+   *
+   * @throws {Error} If the toaster instance has been destroyed.
+   */
   clear(): void;
 
-  /** Reconfigure the toaster at runtime. */
+  /**
+   * Reconfigure the toaster at runtime.
+   *
+   * @param config Partial configurations to update.
+   * @throws {Error} If the toaster instance has been destroyed.
+   */
   configure(config: Partial<ToasterConfig>): void;
 
   /**
@@ -248,17 +141,12 @@ export interface Toaster {
   destroy(): void;
 }
 
-// ---------------------------------------------------------------------------
-// ToastManager implementation
-// ---------------------------------------------------------------------------
-
 class ToastManager implements Toaster {
   private config: ToasterConfig;
   private resolved: ResolvedToastConfig;
   private readonly instanceId: string;
   private isDestroyed = false;
 
-  // Tracks active toasts per category for scoped clear()
   private readonly semanticToasts = new Set<Toast>();
   private readonly loadingToasts = new Set<Toast>();
   private readonly customToasts = new Set<Toast>();
@@ -271,7 +159,7 @@ class ToastManager implements Toaster {
   public readonly custom: CustomManager;
 
   constructor(config: ToasterConfig = {}) {
-    this.instanceId = nextInstanceId();
+    this.instanceId = generateInstanceId();
     this.config = config;
     this.resolved = this.buildResolvedConfig(config);
 
@@ -282,13 +170,31 @@ class ToastManager implements Toaster {
     const parent = this.getParent();
     this.modalManager = new ModalManager(parent, this.instanceId);
 
-    this.semantic = this.buildSemanticManager();
-    this.loading = this.buildLoadingManager();
-    this.interactive = this.buildInteractiveManager();
-    this.custom = this.buildCustomManager();
-  }
+    const context = {
+      assertAlive: () => this.assertAlive(),
+      getParent: () => this.getParent(),
+      registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
+      config: this.config,
+      resolved: this.resolved,
+    };
 
-  // --- Public flat aliases --------------------------------------------------
+    this.semantic = createSemanticManager({
+      ...context,
+      semanticToasts: this.semanticToasts,
+    });
+    this.loading = createLoadingManager({
+      ...context,
+      loadingToasts: this.loadingToasts,
+    });
+    this.custom = createCustomManager({
+      ...context,
+      customToasts: this.customToasts,
+    });
+    this.interactive = createInteractiveManager({
+      assertAlive: () => this.assertAlive(),
+      modalManager: this.modalManager,
+    });
+  }
 
   public success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle {
     return this.semantic.success(message, options);
@@ -318,8 +224,6 @@ class ToastManager implements Toaster {
     return this.interactive.alert(message, options);
   }
 
-  // --- Toaster-level operations --------------------------------------------
-
   public clear(): void {
     this.assertAlive();
     this.semantic.clear();
@@ -343,7 +247,6 @@ class ToastManager implements Toaster {
     }
     this.isDestroyed = true;
 
-    // Immediately hide all active toasts (no animation)
     this.semanticToasts.forEach((t) => t.hide());
     this.loadingToasts.forEach((t) => t.hide());
     this.customToasts.forEach((t) => t.hide());
@@ -357,92 +260,6 @@ class ToastManager implements Toaster {
     removeAllContainers(parent);
     removeGlobalTokens(this.instanceId);
   }
-
-  // --- Category manager builders -------------------------------------------
-
-  private buildSemanticManager(): SemanticManager {
-    const showSemantic = (
-      type: SemanticType,
-      message: string,
-      options?: Omit<SemanticToastOptions, "message">,
-    ): ToastHandle => {
-      this.assertAlive();
-      const merged = { ...this.config.semantic, ...options, message, type };
-      const toast = new SemanticToast(merged, this.resolved, this.getParent());
-      return this.registerToast(toast, this.semanticToasts);
-    };
-
-    return {
-      show: (options) => {
-        this.assertAlive();
-        const merged = { ...this.config.semantic, ...options };
-        const toast = new SemanticToast(merged, this.resolved, this.getParent());
-        return this.registerToast(toast, this.semanticToasts);
-      },
-      success: (msg, opts) => showSemantic("success", msg, opts),
-      error: (msg, opts) => showSemantic("error", msg, opts),
-      warning: (msg, opts) => showSemantic("warning", msg, opts),
-      info: (msg, opts) => showSemantic("info", msg, opts),
-      clear: () => {
-        this.assertAlive();
-        this.semanticToasts.forEach((t) => t.hide());
-        this.semanticToasts.clear();
-      },
-    };
-  }
-
-  private buildLoadingManager(): LoadingManager {
-    return {
-      show: (options) => this.showLoadingToast(options),
-      clear: () => {
-        this.assertAlive();
-        this.loadingToasts.forEach((t) => t.hide());
-        this.loadingToasts.clear();
-      },
-    };
-  }
-
-  private showLoadingToast(options: LoadingToastOptions): ToastHandle {
-    this.assertAlive();
-    const merged = { ...this.config.loading, ...options };
-    const toast = new LoadingToast(merged, this.resolved, this.getParent());
-    return this.registerToast(toast, this.loadingToasts);
-  }
-
-  private buildInteractiveManager(): InteractiveManager {
-    return {
-      confirm: (msg, opts) => {
-        this.assertAlive();
-        return this.modalManager.confirm(msg, opts);
-      },
-      prompt: (msg, opts) => {
-        this.assertAlive();
-        return this.modalManager.prompt(msg, opts);
-      },
-      alert: (msg, opts) => {
-        this.assertAlive();
-        return this.modalManager.alert(msg, opts);
-      },
-    };
-  }
-
-  private buildCustomManager(): CustomManager {
-    return {
-      show: (options) => {
-        this.assertAlive();
-        const merged = { ...this.config.custom, ...options };
-        const toast = new Toast(merged, this.resolved, this.getParent());
-        return this.registerToast(toast, this.customToasts);
-      },
-      clear: () => {
-        this.assertAlive();
-        this.customToasts.forEach((t) => t.hide());
-        this.customToasts.clear();
-      },
-    };
-  }
-
-  // --- Internals ------------------------------------------------------------
 
   private registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle {
     bucket.add(toast);
@@ -473,19 +290,11 @@ class ToastManager implements Toaster {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
-
 /**
  * Creates a new independent toaster instance.
  *
  * Each call returns a fresh instance.
- * Consumers who want a singleton are responsible for maintaining it:
- *
- * @example
- * // toaster.ts (your singleton module)
- * export const toaster = createToaster({ position: "top-right" });
+ * Consumers who want a singleton are responsible for maintaining it.
  *
  * @param config Optional initial configuration overrides for the toaster.
  * @returns An independent Toaster instance controller.

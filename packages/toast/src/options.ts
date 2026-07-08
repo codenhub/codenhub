@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import { buildInlineStyle } from "./tokens";
 import type { ToastContent, ToastIcon, ToastPosition, ToastRole, ToastTokens, ToastUpdateOptions } from "./types";
 
@@ -58,6 +59,75 @@ function joinClassNames(...classNames: Array<string | undefined>): string {
   return classNames.filter((c): c is string => hasNonEmptyString(c)).join(" ");
 }
 
+const SAFE_TAGS = new Set([
+  "a",
+  "b",
+  "br",
+  "code",
+  "div",
+  "em",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "i",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "span",
+  "strong",
+  "ul",
+]);
+
+const SAFE_ATTRIBUTES = new Set(["class", "id", "style", "target", "rel"]);
+
+const URL_ATTRIBUTES = new Set(["href"]);
+
+function sanitizeElement(el: Element): void {
+  const tagName = el.tagName.toLowerCase();
+
+  if (!SAFE_TAGS.has(tagName)) {
+    if (["script", "style", "iframe", "object", "embed"].includes(tagName)) {
+      el.remove();
+      return;
+    }
+    const parent = el.parentNode;
+    if (parent) {
+      while (el.firstChild) {
+        parent.insertBefore(el.firstChild, el);
+      }
+      el.remove();
+    }
+    return;
+  }
+
+  const attrs = Array.from(el.attributes);
+  for (const attr of attrs) {
+    const attrName = attr.name.toLowerCase();
+
+    if (URL_ATTRIBUTES.has(attrName)) {
+      // eslint-disable-next-line no-control-regex
+      const val = attr.value
+        .replace(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/g, "")
+        .toLowerCase();
+      if (val.startsWith("javascript:") || val.startsWith("data:") || val.startsWith("vbscript:")) {
+        el.removeAttribute(attr.name);
+      }
+    } else if (!SAFE_ATTRIBUTES.has(attrName)) {
+      el.removeAttribute(attr.name);
+    }
+  }
+
+  Array.from(el.children).forEach(sanitizeElement);
+}
+
+function sanitizeFragment(fragment: DocumentFragment): void {
+  Array.from(fragment.children).forEach(sanitizeElement);
+}
+
 function resolveToastContent(content: ToastContent): readonly Node[] {
   const resolved = typeof content === "function" ? content() : content;
 
@@ -68,25 +138,7 @@ function resolveToastContent(content: ToastContent): readonly Node[] {
     const template = document.createElement("template");
     template.innerHTML = resolved;
 
-    // Sanitize to prevent XSS
-    const scripts = template.content.querySelectorAll("script");
-    scripts.forEach((s) => s.remove());
-
-    const allElements = template.content.querySelectorAll("*");
-    allElements.forEach((el) => {
-      const attrs = Array.from(el.attributes);
-      for (const attr of attrs) {
-        const attrName = attr.name.toLowerCase();
-        if (attrName.startsWith("on")) {
-          el.removeAttribute(attr.name);
-        } else if (
-          (attrName === "href" || attrName === "src" || attrName === "action") &&
-          attr.value.trim().toLowerCase().startsWith("javascript:")
-        ) {
-          el.removeAttribute(attr.name);
-        }
-      }
-    });
+    sanitizeFragment(template.content);
 
     return Object.freeze(Array.from(template.content.childNodes));
   }

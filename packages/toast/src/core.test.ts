@@ -356,4 +356,19 @@ describe("interactive.alert", () => {
     await expect(handle.result).resolves.toBeUndefined();
     toaster.destroy();
   });
+
+  it("should clean up event listeners on dialog reuse via AbortController", async () => {
+    const toaster = createToaster();
+
+    const handle1 = toaster.confirm("First confirm?");
+    handle1.dismiss();
+    await handle1.settled;
+
+    const handle2 = toaster.confirm("Second confirm?");
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
+    cancelBtn!.click();
+
+    await expect(handle2.result).resolves.toBe(false);
+    toaster.destroy();
+  });
 });

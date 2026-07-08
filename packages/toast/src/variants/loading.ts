@@ -22,11 +22,9 @@ export class LoadingToast extends Toast {
   /**
    * Constructs a new LoadingToast instance.
    *
-   * @param options Raw user-provided loading notification options.
-   * @param config The resolved configuration of the parent toaster.
-   * @param parent The DOM container element where the stack container lives.
+   * @param params Parameter object containing options, config, and parent.
    */
-  public constructor(options: LoadingToastOptions, config: ResolvedToastConfig, parent: HTMLElement) {
-    super(options, config, parent);
+  public constructor(params: { options: LoadingToastOptions; config: ResolvedToastConfig; parent: HTMLElement }) {
+    super(params);
   }
 }

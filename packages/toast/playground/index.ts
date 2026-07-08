@@ -26,7 +26,7 @@ function getOptions() {
   return {
     position: (positionSelect?.value || "bottom-right") as ToastPosition,
     duration: Number(durationInput?.value) || 4000,
-    autoDismiss: autoDismissCheck ? autoDismissCheck.checked : true,
+    shouldAutoDismiss: autoDismissCheck ? autoDismissCheck.checked : true,
     isDismissable: dismissableCheck ? dismissableCheck.checked : true,
   };
 }
