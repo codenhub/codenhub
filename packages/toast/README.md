@@ -1,6 +1,6 @@
 # @codenhub/toast
 
-A robust and intuitive factory singleton toast manager for Codenhub interfaces. It provides semantic, loading, and interactive alert/confirm/prompt support with optional native API overrides.
+A robust and intuitive factory singleton toast manager for Codenhub interfaces. It provides semantic, loading, and interactive alert/confirm/prompt support.
 
 ## Installation
 
@@ -15,7 +15,6 @@ npm install @codenhub/toast
 - **Promise-Based Dialogs**: Interactive `confirm()`, `prompt()`, and `alert()` return Promises that resolve upon user interaction.
 - **Semantic Types**: Pre-styled semantic variants for `success`, `error`, `warning`, and `info`.
 - **Async Loader**: Easily show persistent loading indicators that can be programmatically dismissed.
-- **Native Replacements**: Optionally replace browser native `window.alert()`, `window.confirm()`, and `window.prompt()` with modern custom dialog toasts.
 
 ## Usage
 
@@ -79,24 +78,6 @@ if (name !== null) {
 
 // Alert dialog (Promise-based)
 await toaster.alert("This action cannot be undone.");
-```
-
-### Overriding Native Browser Dialogs
-
-Enable this in the initialization config. It will replace `window.alert()`, `window.confirm()`, and `window.prompt()` globally.
-
-> [!WARNING]
-> Since native browser dialogs are synchronous and block execution, replacing them with DOM-based toasts changes their return type to Promises. You must use `await` when calling `window.confirm()` or `window.prompt()`.
-
-```ts
-import { createToaster } from "@codenhub/toast";
-
-const toaster = createToaster({
-  replaceNative: true, // Defaults to false
-});
-
-// Overridden APIs return Promises
-const confirmed = await window.confirm("Do you accept the terms?");
 ```
 
 ## Reference

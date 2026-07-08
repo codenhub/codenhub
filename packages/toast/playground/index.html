@@ -29,25 +29,12 @@
     <script type="module" src="./index.ts"></script>
   </head>
   <body class="bg-background text-text font-default min-h-screen transition-colors duration-200">
-    <header class="border-border bg-surface flex items-center justify-between border-b px-6 py-4 shadow-sm">
-      <div class="flex items-center gap-3">
-        <span
-          class="text-title rounded-md bg-neutral-900 px-3 py-1 text-xl font-bold text-white dark:bg-white dark:text-neutral-950"
-        >
-          codenhub
-        </span>
-        <h1 class="text-title text-text-strong text-lg font-semibold">/toast playground</h1>
-      </div>
-      <div class="flex items-center gap-2">
-        <button id="btn-toggle-theme" class="btn secondary" data-testid="btn-toggle-theme">Toggle Theme</button>
-      </div>
-    </header>
+    <div class="mx-auto max-w-4xl px-4 py-8">
+      <h1 class="text-title text-text-strong mb-6">Toast Playground</h1>
 
-    <main class="container mx-auto grid grid-cols-1 gap-6 p-6 lg:grid-cols-12">
-      <!-- Controls Column -->
-      <section class="flex flex-col gap-6 lg:col-span-7">
+      <main class="flex flex-col gap-8">
         <!-- Toast Configuration Options -->
-        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+        <section class="flex flex-col gap-4">
           <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">1. Dispatch Options</h2>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1">
@@ -61,7 +48,12 @@
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="input-duration">Duration (ms)</label>
-              <input type="number" id="input-duration" class="bg-background border-border rounded border px-3 py-1.5 text-sm" value="4000" />
+              <input
+                type="number"
+                id="input-duration"
+                class="bg-background border-border rounded border px-3 py-1.5 text-sm"
+                value="4000"
+              />
             </div>
           </div>
           <div class="flex flex-wrap gap-4 pt-2">
@@ -73,19 +65,15 @@
               <input type="checkbox" id="check-dismissable" checked />
               <span>Dismiss Button</span>
             </label>
-            <label class="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" id="check-native-override" />
-              <span class="text-amber-600 dark:text-amber-400 font-semibold">Override window.confirm/alert/prompt</span>
-            </label>
           </div>
-        </div>
+        </section>
 
         <!-- Semantic & Custom Triggers -->
-        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+        <section class="flex flex-col gap-4">
           <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">2. Triggers</h2>
-          
+
           <div class="flex flex-col gap-2">
-            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Semantic Notifications</span>
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">Semantic Notifications</span>
             <div class="flex flex-wrap gap-2">
               <button id="btn-success" class="btn success sm">Success Toast</button>
               <button id="btn-error" class="btn destructive sm">Error Toast</button>
@@ -95,7 +83,9 @@
           </div>
 
           <div class="flex flex-col gap-2 pt-2">
-            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Interactive Dialogs (Promise-based)</span>
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">
+              Interactive Dialogs (Promise-based)
+            </span>
             <div class="flex flex-wrap gap-2">
               <button id="btn-alert" class="btn out sm">Alert Dialog</button>
               <button id="btn-confirm" class="btn out sm">Confirm Dialog</button>
@@ -104,76 +94,135 @@
           </div>
 
           <div class="flex flex-col gap-2 pt-2">
-            <span class="text-text-secondary text-xs font-bold uppercase tracking-wider">Async Loaders</span>
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">Async Loaders</span>
             <div class="flex flex-wrap gap-2">
               <button id="btn-loading" class="btn secondary sm">Show Persistent Loader</button>
               <button id="btn-loading-sim" class="btn primary sm">Simulate Async Work (2s)</button>
-              <button id="btn-clear-all" class="btn out sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20">Clear All Toasts</button>
+              <button id="btn-clear-all" class="btn out sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20">
+                Clear All Toasts
+              </button>
             </div>
           </div>
-        </div>
+        </section>
 
         <!-- Real-Time Token Customization -->
-        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
+        <section class="flex flex-col gap-4">
           <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">3. Global Custom Design Tokens</h2>
-          <p class="text-text-secondary text-xs">Customize the toast color variables live. Leave blank to inherit system defaults.</p>
+          <p class="text-text-secondary text-xs">
+            Customize the toast color variables live. Leave blank to inherit system defaults.
+          </p>
           <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="token-success">Success Accent</label>
-              <input type="text" id="token-success" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#10b981" />
+              <input
+                type="text"
+                id="token-success"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#10b981"
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-destructive">Destructive Accent</label>
-              <input type="text" id="token-destructive" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#ef4444" />
+              <label class="text-text-secondary text-xs font-semibold" for="token-destructive">
+                Destructive Accent
+              </label>
+              <input
+                type="text"
+                id="token-destructive"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#ef4444"
+              />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="token-warning">Warning Accent</label>
-              <input type="text" id="token-warning" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#f59e0b" />
+              <input
+                type="text"
+                id="token-warning"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#f59e0b"
+              />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="token-info">Info Accent</label>
-              <input type="text" id="token-info" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#3b82f6" />
+              <input
+                type="text"
+                id="token-info"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#3b82f6"
+              />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="token-surface">Surface Color</label>
-              <input type="text" id="token-surface" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#ffffff" />
+              <input
+                type="text"
+                id="token-surface"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#ffffff"
+              />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="token-text">Text Color</label>
-              <input type="text" id="token-text" class="bg-background border-border rounded border px-2 py-1 text-sm font-mono" placeholder="#1f2937" />
+              <input
+                type="text"
+                id="token-text"
+                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
+                placeholder="#1f2937"
+              />
             </div>
           </div>
           <div class="flex justify-end gap-2 pt-2">
             <button id="btn-reset-tokens" class="btn secondary sm text-xs" style="height: auto">Reset Tokens</button>
             <button id="btn-apply-tokens" class="btn primary sm text-xs" style="height: auto">Apply Tokens</button>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
+    </div>
 
-      <!-- Logs / Outputs Column -->
-      <section class="flex flex-col gap-6 lg:col-span-5">
-        <!-- Native Browser Fallbacks testing -->
-        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm">
-          <h2 class="text-text-strong text-md border-border border-b pb-2 font-bold">Native API Verification</h2>
-          <p class="text-text-secondary text-xs">Verify behavior of the replaced native browser global functions. <i>Must check override option above first.</i></p>
-          <div class="flex flex-wrap gap-2">
-            <button id="btn-native-alert" class="btn secondary sm">window.alert()</button>
-            <button id="btn-native-confirm" class="btn secondary sm">window.confirm()</button>
-            <button id="btn-native-prompt" class="btn secondary sm">window.prompt()</button>
-          </div>
-        </div>
-
-        <!-- Playground Logs -->
-        <div class="border-border bg-surface flex flex-col gap-4 rounded-xl border p-5 shadow-sm flex-1">
-          <div class="border-border flex items-center justify-between border-b pb-2">
-            <h2 class="text-text-strong text-md font-bold">Activity Logs</h2>
-            <button id="btn-clear-logs" class="btn secondary pill px-2 py-1 text-xs" style="height: auto">Clear Logs</button>
-          </div>
-          <div id="log-container" class="bg-background border-border text-text font-mono text-xs overflow-y-auto rounded border p-3 flex flex-col gap-1.5 h-96 max-h-[30rem] scrollbar-thin">
-            <div class="text-text-secondary italic">[Ready to log user actions, toast state changes, and promise resolutions...]</div>
-          </div>
-        </div>
-      </section>
-    </main>
+    <!-- Theme Toggle Floating Button -->
+    <div
+      style="
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        display: inline-flex;
+        gap: 0.5rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <button
+        id="btn-toggle-theme"
+        class="tooltip"
+        data-tooltip="Toggle theme"
+        data-tooltip-position="left"
+        style="
+          height: 2.5rem;
+          width: 2.5rem;
+          padding: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-surface);
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--color-text);
+          border: 1px solid var(--color-border);
+        "
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style="width: 100%; height: 100%"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
+        </svg>
+      </button>
+    </div>
   </body>
 </html>

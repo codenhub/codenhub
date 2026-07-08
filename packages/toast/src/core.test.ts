@@ -192,35 +192,3 @@ describe("Interactive Dialogs", () => {
     await expect(p).resolves.toBeUndefined();
   });
 });
-
-describe("Native API Overrides", () => {
-  it("should override window alert, confirm, prompt when configured", async () => {
-    const originalAlert = window.alert;
-    const originalConfirm = window.confirm;
-    const originalPrompt = window.prompt;
-
-    const toaster = createToaster({ replaceNative: true });
-
-    expect(window.alert).not.toBe(originalAlert);
-    expect(window.confirm).not.toBe(originalConfirm);
-    expect(window.prompt).not.toBe(originalPrompt);
-
-    // Call window.alert
-    window.alert("Test Alert");
-    expect(document.body.innerHTML).toContain("Test Alert");
-
-    // Clear
-    toaster.clear();
-    animations.forEach((anim) => {
-      if (anim.onfinish) {
-        anim.onfinish();
-      }
-    });
-
-    // Disable native override
-    toaster.configure({ replaceNative: false });
-    expect(window.alert).toBe(originalAlert);
-    expect(window.confirm).toBe(originalConfirm);
-    expect(window.prompt).toBe(originalPrompt);
-  });
-});

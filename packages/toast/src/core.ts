@@ -10,7 +10,6 @@ import { SemanticToast } from "./variants/semantic";
 export { Toast } from "./toast-base";
 
 export interface ToasterConfig {
-  replaceNative?: boolean;
   defaults?: Partial<ToastOptions>;
   /** Global CSS token overrides applied to all toasts. */
   tokens?: ToastTokens;
@@ -33,64 +32,19 @@ export interface Toaster {
 class ToastManager implements Toaster {
   private activeToasts = new Set<Toast>();
   private config: ToasterConfig;
-  private originalAlert = typeof window !== "undefined" ? window.alert : undefined;
-  private originalConfirm = typeof window !== "undefined" ? window.confirm : undefined;
-  private originalPrompt = typeof window !== "undefined" ? window.prompt : undefined;
 
   constructor(config: ToasterConfig = {}) {
     this.config = config;
-    if (config.replaceNative) {
-      this.replaceNativeAPIs();
-    }
     if (config.tokens) {
       applyGlobalTokens(config.tokens);
     }
   }
 
   public configure(config: ToasterConfig): void {
-    const oldReplaceNative = this.config.replaceNative;
     this.config = { ...this.config, ...config };
-
-    if (config.replaceNative && !oldReplaceNative) {
-      this.replaceNativeAPIs();
-    } else if (config.replaceNative === false && oldReplaceNative) {
-      this.restoreNativeAPIs();
-    }
 
     if (config.tokens !== undefined) {
       applyGlobalTokens(this.config.tokens);
-    }
-  }
-
-  private replaceNativeAPIs(): void {
-    if (typeof window === "undefined") {
-      return;
-    }
-    window.alert = (message) => {
-      void this.alert(String(message));
-    };
-    // @ts-expect-error override with async signature
-    window.confirm = (message) => {
-      return this.confirm(String(message));
-    };
-    // @ts-expect-error override with async signature
-    window.prompt = (message, defaultValue) => {
-      return this.prompt(String(message), defaultValue ?? "");
-    };
-  }
-
-  private restoreNativeAPIs(): void {
-    if (typeof window === "undefined") {
-      return;
-    }
-    if (this.originalAlert) {
-      window.alert = this.originalAlert;
-    }
-    if (this.originalConfirm) {
-      window.confirm = this.originalConfirm;
-    }
-    if (this.originalPrompt) {
-      window.prompt = this.originalPrompt;
     }
   }
 

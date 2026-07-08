@@ -7,8 +7,8 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@codenhub/toast": "workspace:*",
-    "@codenhub/styles": "workspace:*"
+    "@codenhub/styles": "workspace:*",
+    "@codenhub/toast": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",
