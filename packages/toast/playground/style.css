@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "@codenhub/styles";
+@import "@codenhub/styles/native";
 @import "../src/styles/index.css";
 
 /* Custom styles for the Toast playground */
