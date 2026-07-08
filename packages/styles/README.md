@@ -70,6 +70,7 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 | `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.                   |
 | `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.                     |
 | `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                                           |
+| `@codenhub/styles/native`        | Compiled CSS        | Opt-in classless styling for native HTML elements (headings, inputs, buttons). |
 | `@codenhub/styles/tw`            | Tailwind source CSS | Full Tailwind v4 source: theme, base styles, components, utilities.            |
 | `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.                       |
 | `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                                           |

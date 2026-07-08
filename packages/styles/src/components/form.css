@@ -177,7 +177,7 @@
   }
 
   &::after {
-    @apply block size-2 scale-0 opacity-0 rounded-full transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply block size-2 scale-0 rounded-full opacity-0 transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     background-color: var(--control-contrast);
     content: "";
@@ -187,7 +187,7 @@
     @apply border-2 border-(--control-color) bg-transparent;
 
     &::after {
-      @apply scale-100 opacity-100 bg-(--control-color);
+      @apply scale-100 bg-(--control-color) opacity-100;
     }
   }
 
