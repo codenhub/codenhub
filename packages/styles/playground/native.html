@@ -9,8 +9,7 @@
       const params = new URLSearchParams(window.location.search);
       const env = params.get("env") === "build" ? "build" : "vanilla";
       const nextEnv = env === "build" ? "vanilla" : "build";
-      const href =
-        env === "build" ? "/entry-tw-native.css" : "/entry-vanilla-native.css";
+      const href = env === "build" ? "/entry-tw-native.css" : "/entry-vanilla-native.css";
       document.write(`<link rel="stylesheet" href="${href}" />`);
       doc.dataset.env = env;
 
@@ -40,29 +39,21 @@
 
         const themePref = localStorage.getItem("theme");
         let isDarkTheme =
-          themePref === "dark" ||
-          (!themePref &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
+          themePref === "dark" || (!themePref && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
         updateTheme(isDarkTheme);
 
-        document
-          .getElementById("theme-toggle")
-          .addEventListener("click", () => {
-            isDarkTheme = !isDarkTheme;
-            updateTheme(isDarkTheme);
-            localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
-          });
+        document.getElementById("theme-toggle").addEventListener("click", () => {
+          isDarkTheme = !isDarkTheme;
+          updateTheme(isDarkTheme);
+          localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
+        });
       });
     </script>
     <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <main
-      class="sect bg-background text-text font-default"
-      style="gap: 3rem"
-      data-testid="preview-root"
-    >
+    <main class="sect bg-background text-text font-default" style="gap: 3rem" data-testid="preview-root">
       <section class="sect-inn">
         <h1>Native Headings</h1>
         <div style="display: flex; flex-direction: column; gap: 0.5rem">
@@ -77,43 +68,24 @@
 
       <section class="sect-inn">
         <h2>Native Form Controls</h2>
-        <div
-          style="
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            max-width: 400px;
-          "
-        >
+        <div style="display: flex; flex-direction: column; gap: 1.5rem; max-width: 400px">
           <div>
-            <label
-              style="display: block; margin-bottom: 0.5rem; font-weight: 500"
-              >Text Input</label
-            >
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500">Text Input</label>
             <input type="text" placeholder="Type something..." />
           </div>
 
           <div>
-            <label
-              style="display: block; margin-bottom: 0.5rem; font-weight: 500"
-              >Email Input</label
-            >
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500">Email Input</label>
             <input type="email" placeholder="email@example.com" />
           </div>
 
           <div>
-            <label
-              style="display: block; margin-bottom: 0.5rem; font-weight: 500"
-              >Password Input</label
-            >
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500">Password Input</label>
             <input type="password" placeholder="Password" />
           </div>
 
           <div>
-            <label
-              style="display: block; margin-bottom: 0.5rem; font-weight: 500"
-              >Select Dropdown</label
-            >
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500">Select Dropdown</label>
             <select>
               <option value="">Choose an option...</option>
               <option value="1">Option 1</option>
@@ -122,45 +94,21 @@
           </div>
 
           <div>
-            <label
-              style="display: block; margin-bottom: 0.5rem; font-weight: 500"
-              >Textarea</label
-            >
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500">Textarea</label>
             <textarea rows="4" placeholder="Enter message..."></textarea>
           </div>
 
           <div style="display: flex; gap: 1.5rem; align-items: center">
-            <label
-              style="
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                cursor: pointer;
-              "
-            >
+            <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer">
               <input type="checkbox" checked />
               <span>Checkbox</span>
             </label>
 
-            <label
-              style="
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                cursor: pointer;
-              "
-            >
+            <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer">
               <input type="radio" name="radio-group" value="1" checked />
               <span>Radio 1</span>
             </label>
-            <label
-              style="
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                cursor: pointer;
-              "
-            >
+            <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer">
               <input type="radio" name="radio-group" value="2" />
               <span>Radio 2</span>
             </label>

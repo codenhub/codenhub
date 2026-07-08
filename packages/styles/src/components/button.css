@@ -16,16 +16,8 @@
   --button-hover-border: var(--button-hover-bg);
   --button-text: var(--button-strong);
   --button-soft-bg: var(--button-subtle);
-  --button-subtle-hover-bg: color-mix(
-    in srgb,
-    var(--button-soft-bg) 80%,
-    transparent
-  );
-  --button-soft-hover-bg: color-mix(
-    in srgb,
-    var(--button-soft-bg) 84%,
-    var(--button-text)
-  );
+  --button-subtle-hover-bg: color-mix(in srgb, var(--button-soft-bg) 80%, transparent);
+  --button-soft-hover-bg: color-mix(in srgb, var(--button-soft-bg) 84%, var(--button-text));
   --button-spinner: var(--button-fg);
 
   @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit items-center justify-center gap-2 rounded-(--radius-control) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none;
@@ -92,12 +84,7 @@
     }
 
     &.fill {
-      &:not(
-          :disabled,
-          .disabled,
-          [aria-disabled="true"],
-          [data-disabled]
-        ):hover {
+      &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
         @apply border-(--button-color) bg-(--button-color) text-(--button-contrast);
       }
     }
