@@ -1,4 +1,4 @@
-import { removeAllContainers } from "./dom";
+import { removeInstanceContainers } from "./dom";
 import { createCustomManager, type CustomManager } from "./managers/custom";
 import { createInteractiveManager, type InteractiveManager } from "./managers/interactive";
 import { createLoadingManager, type LoadingManager } from "./managers/loading";
@@ -79,7 +79,7 @@ class ToastManager implements Toaster {
   private readonly loadingToasts = new Set<Toast>();
   private readonly customToasts = new Set<Toast>();
 
-  private readonly modalManager: ModalManager;
+  private modalManager: ModalManager | null = null;
 
   public readonly semantic: SemanticManager;
   public readonly loading: LoadingManager;
@@ -94,9 +94,6 @@ class ToastManager implements Toaster {
     if (config.tokens) {
       applyGlobalTokens(config.tokens, this.instanceId);
     }
-
-    const parent = this.getParent();
-    this.modalManager = new ModalManager(parent, this.instanceId);
 
     const context = {
       assertAlive: () => this.assertAlive(),
@@ -120,7 +117,7 @@ class ToastManager implements Toaster {
     });
     this.interactive = createInteractiveManager({
       assertAlive: () => this.assertAlive(),
-      modalManager: this.modalManager,
+      getModalManager: () => this.getModalManager(),
     });
   }
 
@@ -154,10 +151,13 @@ class ToastManager implements Toaster {
     this.loadingToasts.clear();
     this.customToasts.clear();
 
-    this.modalManager.destroy();
+    if (this.modalManager) {
+      this.modalManager.destroy();
+      this.modalManager = null;
+    }
 
     const parent = this.getParent();
-    removeAllContainers(parent);
+    removeInstanceContainers({ parent, instanceId: this.instanceId });
     removeGlobalTokens(this.instanceId);
   }
 
@@ -168,8 +168,21 @@ class ToastManager implements Toaster {
     return makeHandle(toast);
   }
 
+  private getModalManager(): ModalManager {
+    if (!this.modalManager) {
+      this.modalManager = new ModalManager(this.getParent(), this.instanceId);
+    }
+    return this.modalManager;
+  }
+
   private getParent(): HTMLElement {
-    return this.config.container ?? document.body ?? document.documentElement;
+    if (this.config.container) {
+      return this.config.container;
+    }
+    if (typeof document !== "undefined") {
+      return document.body ?? document.documentElement;
+    }
+    throw new Error("DOM document is not available. Toaster operations require a browser environment.");
   }
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {

@@ -105,4 +105,13 @@ describe("Toast rendering", () => {
     expect(element.style.getPropertyValue("--toast-color-success")).toBe("rgb(255, 0, 0)");
     expect(element.style.getPropertyValue("--toast-color-success-subtle")).toBe("rgb(0, 255, 0)");
   });
+
+  it("should sanitize nested script elements inside invalid elements", () => {
+    const toast = makeToast({
+      content: '<div><invalid-tag><script>alert("nested")</script></invalid-tag></div>',
+    });
+    const element = renderToast(toast);
+    expect(element.innerHTML).not.toContain("<script>");
+    expect(element.innerHTML).not.toContain("alert");
+  });
 });

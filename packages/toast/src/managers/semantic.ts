@@ -12,12 +12,57 @@ export interface SemanticContext {
   semanticToasts: Set<Toast>;
 }
 
+/**
+ * Manager interface for dispatching pre-styled semantic notifications (success, error, warning, info).
+ */
 export interface SemanticManager {
+  /**
+   * Displays a semantic toast notification with custom options.
+   *
+   * @param options Scoped options including type, message, duration, and styling tokens.
+   * @returns A control handle to interact with the toast instance.
+   */
   show(options: SemanticToastOptions & { type?: SemanticType }): ToastHandle;
+
+  /**
+   * Displays a success notification.
+   *
+   * @param message Description text of the notification.
+   * @param options Extensible layout and timing options.
+   * @returns A control handle to interact with the toast instance.
+   */
   success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an error notification.
+   *
+   * @param message Description text of the notification.
+   * @param options Extensible layout and timing options.
+   * @returns A control handle to interact with the toast instance.
+   */
   error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays a warning notification.
+   *
+   * @param message Description text of the notification.
+   * @param options Extensible layout and timing options.
+   * @returns A control handle to interact with the toast instance.
+   */
   warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Displays an informational notification.
+   *
+   * @param message Description text of the notification.
+   * @param options Extensible layout and timing options.
+   * @returns A control handle to interact with the toast instance.
+   */
   info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+
+  /**
+   * Dismisses all active semantic toast notifications.
+   */
   clear(): void;
 }
 

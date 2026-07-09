@@ -336,3 +336,42 @@ describe("interactive.alert", () => {
     toaster.destroy();
   });
 });
+
+describe("container isolation", () => {
+  it("destroying one toaster should not remove containers or toasts of another instance", () => {
+    const t1 = createToaster();
+    const t2 = createToaster();
+
+    t1.semantic.success("Toaster 1 Success");
+    t2.semantic.success("Toaster 2 Success");
+
+    expect(document.body.innerHTML).toContain("Toaster 1 Success");
+    expect(document.body.innerHTML).toContain("Toaster 2 Success");
+
+    t1.destroy();
+
+    expect(document.body.innerHTML).not.toContain("Toaster 1 Success");
+    expect(document.body.innerHTML).toContain("Toaster 2 Success");
+
+    t2.destroy();
+    expect(document.body.innerHTML).not.toContain("Toaster 2 Success");
+  });
+});
+
+describe("SSR compatibility", () => {
+  it("should not access document/window during initialization to be SSR safe", () => {
+    const originalDocument = globalThis.document;
+    const originalWindow = globalThis.window;
+
+    try {
+      delete (globalThis as Record<string, unknown>).document;
+      delete (globalThis as Record<string, unknown>).window;
+
+      const toaster = createToaster();
+      expect(toaster).toBeDefined();
+    } finally {
+      globalThis.document = originalDocument;
+      globalThis.window = originalWindow;
+    }
+  });
+});

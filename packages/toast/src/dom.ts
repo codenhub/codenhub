@@ -118,24 +118,34 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
   return container;
 }
 
-// --- Container management (now accepts a configurable parent) ----------------
+// --- Container management (now accepts a configurable parent and instanceId) --------
 
-function getContainerKey(parentId: string, position: ToastPosition): string {
-  return `toast-container-${parentId}-${position}`;
+interface ContainerParams {
+  parent: HTMLElement;
+  position: ToastPosition;
+  instanceId: string;
 }
 
-export function getContainer(parent: HTMLElement, position: ToastPosition): HTMLDivElement | null {
-  const id = getContainerKey(parent.id || "body", position);
+function getContainerKey(params: { instanceId: string; parentId: string; position: ToastPosition }): string {
+  const { instanceId, parentId, position } = params;
+  return `toast-container-${instanceId}-${parentId}-${position}`;
+}
+
+export function getContainer(params: ContainerParams): HTMLDivElement | null {
+  const { parent, position, instanceId } = params;
+  const id = getContainerKey({ instanceId, parentId: parent.id || "body", position });
   return parent.querySelector(`[data-toast-container="${id}"]`) as HTMLDivElement | null;
 }
 
-export function getOrCreateContainer(parent: HTMLElement, position: ToastPosition): HTMLDivElement {
-  let container = getContainer(parent, position);
+export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
+  const { parent, position, instanceId } = params;
+  let container = getContainer({ parent, position, instanceId });
 
   if (!container) {
-    const id = getContainerKey(parent.id || "body", position);
+    const id = getContainerKey({ instanceId, parentId: parent.id || "body", position });
     container = document.createElement("div");
     container.setAttribute("data-toast-container", id);
+    container.setAttribute("data-toast-instance", instanceId);
     container.className = POSITION_CONTAINER_CLASSES[position];
     parent.appendChild(container);
   }
@@ -143,8 +153,9 @@ export function getOrCreateContainer(parent: HTMLElement, position: ToastPositio
   return container;
 }
 
-export function removeAllContainers(parent: HTMLElement): void {
-  parent.querySelectorAll("[data-toast-container]").forEach((el) => el.remove());
+export function removeInstanceContainers(params: { parent: HTMLElement; instanceId: string }): void {
+  const { parent, instanceId } = params;
+  parent.querySelectorAll(`[data-toast-container][data-toast-instance="${instanceId}"]`).forEach((el) => el.remove());
 }
 
 // --- Animation helpers -------------------------------------------------------
@@ -176,7 +187,7 @@ function runAnimation(
   element: HTMLDivElement,
   keyframes: Keyframe[],
   onFinish?: () => void,
-  completeOnCancel = false,
+  shouldCompleteOnCancel = false,
 ): void {
   const finish = createSingleRunCallback(onFinish);
 
@@ -197,7 +208,7 @@ function runAnimation(
   try {
     const animation = element.animate(keyframes, ANIMATION_OPTIONS);
     animation.onfinish = finish;
-    if (completeOnCancel) {
+    if (shouldCompleteOnCancel) {
       animation.oncancel = finish;
     }
   } catch {

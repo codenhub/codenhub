@@ -13,19 +13,21 @@ export interface RemoveToastElementParams {
   element: HTMLDivElement;
   parent: HTMLElement;
   position: ToastPosition;
+  instanceId: string;
   onComplete: () => void;
 }
 
 export function removeToastElement(params: RemoveToastElementParams): void {
-  const { element, parent, position, onComplete } = params;
+  const { element, parent, position, instanceId, onComplete } = params;
   const container = parent.querySelector(
-    `[data-toast-container="toast-container-${parent.id || "body"}-${position}"]`,
+    `[data-toast-container="toast-container-${instanceId}-${parent.id || "body"}-${position}"]`,
   ) as HTMLDivElement | null;
   if (!container || !container.contains(element)) {
     onComplete();
     return;
   }
   if (dismissingElements.has(element)) {
+    onComplete();
     return;
   }
   dismissingElements.add(element);
@@ -48,19 +50,29 @@ export function removeToastElement(params: RemoveToastElementParams): void {
 export interface RequestSlotParams {
   parent: HTMLElement;
   position: ToastPosition;
+  instanceId: string;
   maxVisible: number;
   onAvailable: () => void;
 }
 
 export function requestSlot(params: RequestSlotParams): (() => void) | null {
-  const { parent, position, maxVisible, onAvailable } = params;
+  const { parent, position, instanceId, maxVisible, onAvailable } = params;
   const container = parent.querySelector(
-    `[data-toast-container="toast-container-${parent.id || "body"}-${position}"]`,
+    `[data-toast-container="toast-container-${instanceId}-${parent.id || "body"}-${position}"]`,
   ) as HTMLDivElement | null;
-  if (!container || container.children.length < maxVisible) {
+  if (!container) {
     return null;
   }
-  const oldestElement = container.firstElementChild as HTMLDivElement | null;
+
+  const activeChildren = Array.from(container.children).filter(
+    (child): child is HTMLDivElement => child instanceof HTMLDivElement && !dismissingElements.has(child),
+  );
+
+  if (activeChildren.length < maxVisible) {
+    return null;
+  }
+
+  const oldestElement = activeChildren[0];
   if (!oldestElement) {
     return null;
   }
@@ -82,7 +94,7 @@ export function requestSlot(params: RequestSlotParams): (() => void) | null {
     };
   }
 
-  removeToastElement({ element: oldestElement, parent, position, onComplete: releaseSlot });
+  removeToastElement({ element: oldestElement, parent, position, instanceId, onComplete: releaseSlot });
   return () => {
     isCanceled = true;
   };

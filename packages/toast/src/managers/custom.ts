@@ -11,8 +11,21 @@ export interface CustomContext {
   customToasts: Set<Toast>;
 }
 
+/**
+ * Manager interface for dispatching custom DOM-rendered layouts.
+ */
 export interface CustomManager {
+  /**
+   * Displays a custom HTML string, DOM Node, or creator function as a toast.
+   *
+   * @param options Configuration options including custom content, placement, and duration.
+   * @returns A control handle to interact with the toast instance.
+   */
   show(options: CustomToastOptions): ToastHandle;
+
+  /**
+   * Dismisses all active custom toast notifications.
+   */
   clear(): void;
 }
 

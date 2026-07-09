@@ -106,6 +106,7 @@ function sanitizeElement(el: Element): void {
     }
     const parent = el.parentNode;
     if (parent) {
+      Array.from(el.children).forEach(sanitizeElement);
       while (el.firstChild) {
         parent.insertBefore(el.firstChild, el);
       }

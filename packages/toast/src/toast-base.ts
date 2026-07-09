@@ -154,6 +154,7 @@ export class Toast {
     this.queuedSlotCancel = requestSlot({
       parent: this.parent,
       position,
+      instanceId: this.options.instanceId,
       maxVisible: this.maxVisible,
       onAvailable: () => {
         this.queuedSlotCancel = null;
@@ -170,7 +171,7 @@ export class Toast {
     }
 
     const element = createToastElement(this.options, () => this.hide());
-    const container = getOrCreateContainer(this.parent, position);
+    const container = getOrCreateContainer({ parent: this.parent, position, instanceId: this.options.instanceId });
 
     this.element = element;
     this.internalState = "visible";
@@ -225,6 +226,7 @@ export class Toast {
       element,
       parent: this.parent,
       position,
+      instanceId: this.options.instanceId,
       onComplete: () => this.finishHide(element),
     });
   }

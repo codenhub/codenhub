@@ -101,7 +101,12 @@ export class ModalManager {
         if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
-              close(false);
+              const rect = dialog.getBoundingClientRect();
+              const isInDialog =
+                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+              if (!isInDialog) {
+                close(false);
+              }
             }
           };
           dialog.addEventListener("click", onBackdropClick, { signal });
@@ -229,7 +234,12 @@ export class ModalManager {
         if (options.shouldBackdropDismiss === true) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
-              close(null);
+              const rect = dialog.getBoundingClientRect();
+              const isInDialog =
+                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+              if (!isInDialog) {
+                close(null);
+              }
             }
           };
           dialog.addEventListener("click", onBackdropClick, { signal });
@@ -335,7 +345,12 @@ export class ModalManager {
         if (shouldBackdropDismiss) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
-              close();
+              const rect = dialog.getBoundingClientRect();
+              const isInDialog =
+                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+              if (!isInDialog) {
+                close();
+              }
             }
           };
           dialog.addEventListener("click", onBackdropClick, { signal });
