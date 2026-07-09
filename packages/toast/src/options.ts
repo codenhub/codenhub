@@ -9,9 +9,10 @@ export interface ResolvedToastConfig {
   readonly isDismissable: boolean;
   readonly shouldAutoDismiss: boolean;
   readonly maxVisible: number;
+  readonly margin?: string | { x?: string; y?: string };
 }
 
-export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId"> = {
+export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> = {
   position: "top-right",
   duration: 4000,
   isDismissable: false,
@@ -50,6 +51,7 @@ export interface NormalizedToastOptions {
   readonly role: ToastRole;
   readonly rootClassName: string;
   readonly tokens: ToastTokens | null;
+  readonly margin?: string | { x?: string; y?: string };
 }
 
 export interface ToastPresetOptions {
@@ -187,6 +189,7 @@ export interface RawToastOptions {
   tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
+  margin?: string | { x?: string; y?: string };
 }
 
 export function normalizeToastOptions(params: {
@@ -219,6 +222,7 @@ export function normalizeToastOptions(params: {
     role: preset?.role ?? options.role ?? DEFAULT_ROLE,
     rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, options.className),
     tokens: options.tokens ?? null,
+    margin: options.margin ?? config.margin,
   });
 }
 

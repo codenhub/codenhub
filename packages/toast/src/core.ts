@@ -136,6 +136,35 @@ class ToastManager implements Toaster {
     if (config.tokens !== undefined) {
       applyGlobalTokens(this.config.tokens, this.instanceId);
     }
+
+    if (config.margin !== undefined) {
+      const parent = this.getParent();
+      parent.querySelectorAll(`[data-toast-container][data-toast-instance="${this.instanceId}"]`).forEach((el) => {
+        if (el instanceof HTMLDivElement) {
+          const margin = config.margin;
+          if (margin) {
+            if (typeof margin === "string") {
+              el.style.setProperty("--toast-margin-x", margin);
+              el.style.setProperty("--toast-margin-y", margin);
+            } else {
+              if (margin.x) {
+                el.style.setProperty("--toast-margin-x", margin.x);
+              } else {
+                el.style.removeProperty("--toast-margin-x");
+              }
+              if (margin.y) {
+                el.style.setProperty("--toast-margin-y", margin.y);
+              } else {
+                el.style.removeProperty("--toast-margin-y");
+              }
+            }
+          } else {
+            el.style.removeProperty("--toast-margin-x");
+            el.style.removeProperty("--toast-margin-y");
+          }
+        }
+      });
+    }
   }
 
   public destroy(): void {
@@ -193,6 +222,7 @@ class ToastManager implements Toaster {
       isDismissable: config.isDismissable ?? DEFAULT_CONFIG.isDismissable,
       shouldAutoDismiss: config.shouldAutoDismiss ?? DEFAULT_CONFIG.shouldAutoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
+      margin: config.margin,
     };
   }
 

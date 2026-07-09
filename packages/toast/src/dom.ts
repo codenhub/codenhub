@@ -8,10 +8,20 @@ type ToastElementOptions = Pick<
 >;
 
 const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
-  "top-left": "fixed top-4 left-4 z-50 flex flex-col-reverse gap-2 pointer-events-none",
-  "top-right": "fixed top-4 right-4 z-50 flex flex-col-reverse gap-2 pointer-events-none",
-  "bottom-right": "fixed right-4 bottom-4 z-50 flex flex-col gap-2 pointer-events-none",
-  "bottom-left": "fixed bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none",
+  "top-left":
+    "fixed top-[var(--toast-margin-y,1rem)] left-[var(--toast-margin-x,1rem)] z-50 flex flex-col-reverse gap-2 pointer-events-none",
+  "top-right":
+    "fixed top-[var(--toast-margin-y,1rem)] right-[var(--toast-margin-x,1rem)] z-50 flex flex-col-reverse gap-2 pointer-events-none",
+  "bottom-right":
+    "fixed right-[var(--toast-margin-x,1rem)] bottom-[var(--toast-margin-y,1rem)] z-50 flex flex-col gap-2 pointer-events-none",
+  "bottom-left":
+    "fixed bottom-[var(--toast-margin-y,1rem)] left-[var(--toast-margin-x,1rem)] z-50 flex flex-col gap-2 pointer-events-none",
+  "top-center":
+    "fixed top-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2 z-50 flex flex-col-reverse gap-2 pointer-events-none items-center",
+  "bottom-center":
+    "fixed bottom-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none items-center",
+  center:
+    "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 pointer-events-none items-center",
 };
 
 const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
@@ -124,6 +134,7 @@ interface ContainerParams {
   parent: HTMLElement;
   position: ToastPosition;
   instanceId: string;
+  margin?: string | { x?: string; y?: string };
 }
 
 function getContainerKey(params: { instanceId: string; parentId: string; position: ToastPosition }): string {
@@ -138,7 +149,7 @@ export function getContainer(params: ContainerParams): HTMLDivElement | null {
 }
 
 export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
-  const { parent, position, instanceId } = params;
+  const { parent, position, instanceId, margin } = params;
   let container = getContainer({ parent, position, instanceId });
 
   if (!container) {
@@ -148,6 +159,28 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     container.setAttribute("data-toast-instance", instanceId);
     container.className = POSITION_CONTAINER_CLASSES[position];
     parent.appendChild(container);
+  }
+
+  // Update margin styles inline on the container
+  if (margin) {
+    if (typeof margin === "string") {
+      container.style.setProperty("--toast-margin-x", margin);
+      container.style.setProperty("--toast-margin-y", margin);
+    } else {
+      if (margin.x) {
+        container.style.setProperty("--toast-margin-x", margin.x);
+      } else {
+        container.style.removeProperty("--toast-margin-x");
+      }
+      if (margin.y) {
+        container.style.setProperty("--toast-margin-y", margin.y);
+      } else {
+        container.style.removeProperty("--toast-margin-y");
+      }
+    }
+  } else {
+    container.style.removeProperty("--toast-margin-x");
+    container.style.removeProperty("--toast-margin-y");
   }
 
   return container;
@@ -161,6 +194,25 @@ export function removeInstanceContainers(params: { parent: HTMLElement; instance
 // --- Animation helpers -------------------------------------------------------
 
 function getKeyframes(position: ToastPosition): Keyframe[] {
+  if (position === "top-center") {
+    return [
+      { transform: "translateY(-100%)", opacity: 0 },
+      { transform: "translateY(0)", opacity: 1 },
+    ];
+  }
+  if (position === "bottom-center") {
+    return [
+      { transform: "translateY(100%)", opacity: 0 },
+      { transform: "translateY(0)", opacity: 1 },
+    ];
+  }
+  if (position === "center") {
+    return [
+      { transform: "scale(0.9)", opacity: 0 },
+      { transform: "scale(1)", opacity: 1 },
+    ];
+  }
+
   const isRight = position === "top-right" || position === "bottom-right";
   const start = isRight ? "translateX(100%)" : "translateX(-100%)";
   return [

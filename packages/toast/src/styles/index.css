@@ -57,3 +57,52 @@
   background-color: var(--toast-color-surface, var(--color-surface, #e5e7eb));
   color: var(--toast-color-text, var(--color-text, #030712));
 }
+
+/* ── Dialog and backdrop premium animations/styling ───────────────────────── */
+
+dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  opacity: 0;
+  transform: scale(0.95);
+  transition:
+    opacity var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
+    overlay var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)) allow-discrete,
+    display var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)) allow-discrete;
+}
+
+dialog[open] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+dialog::backdrop {
+  background-color: rgba(15, 23, 42, 0);
+  backdrop-filter: blur(0px);
+  transition:
+    background-color var(--motion-duration-normal, 200ms) ease,
+    backdrop-filter var(--motion-duration-normal, 200ms) ease,
+    overlay var(--motion-duration-normal, 200ms) ease allow-discrete,
+    display var(--motion-duration-normal, 200ms) ease allow-discrete;
+}
+
+dialog[open]::backdrop {
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(8px);
+}
+
+@starting-style {
+  dialog[open]::backdrop {
+    background-color: rgba(15, 23, 42, 0);
+    backdrop-filter: blur(0px);
+  }
+}

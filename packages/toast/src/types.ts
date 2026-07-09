@@ -1,7 +1,14 @@
 /**
  * Toast notification positions on the viewport.
  */
-export type ToastPosition = "top-left" | "top-right" | "bottom-right" | "bottom-left";
+export type ToastPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-right"
+  | "bottom-left"
+  | "top-center"
+  | "bottom-center"
+  | "center";
 
 /**
  * Accessibility roles for toast elements.
@@ -147,6 +154,8 @@ export interface SemanticToastOptions {
   className?: string;
   /** Accessibility role. Defaults to variant default. */
   role?: ToastRole;
+  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  margin?: string | { x?: string; y?: string };
 }
 
 /**
@@ -168,6 +177,8 @@ export interface LoadingToastOptions {
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
+  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  margin?: string | { x?: string; y?: string };
 }
 
 /**
@@ -190,6 +201,8 @@ export interface CustomToastOptions {
   className?: string;
   /** Accessibility role. Defaults to "status". */
   role?: ToastRole;
+  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  margin?: string | { x?: string; y?: string };
 }
 
 /**
@@ -292,4 +305,6 @@ export interface ToasterConfig {
   semantic?: SemanticDefaults;
   loading?: LoadingDefaults;
   custom?: CustomDefaults;
+  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  margin?: string | { x?: string; y?: string };
 }

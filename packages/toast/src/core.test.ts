@@ -375,3 +375,70 @@ describe("SSR compatibility", () => {
     }
   });
 });
+
+describe("positioning and margins", () => {
+  it("should support top-center, bottom-center, and center positions", () => {
+    const toaster = createToaster();
+    const h1 = toaster.semantic.success("Top Center", { position: "top-center" });
+    const h2 = toaster.semantic.success("Bottom Center", { position: "bottom-center" });
+    const h3 = toaster.semantic.success("Center", { position: "center" });
+
+    const topCenterContainer = document.body.querySelector("[data-toast-container*='top-center']") as HTMLDivElement;
+    const bottomCenterContainer = document.body.querySelector(
+      "[data-toast-container*='bottom-center']",
+    ) as HTMLDivElement;
+    // Query exact container for center position
+    const centerContainer = document.body.querySelector("[data-toast-container$='-body-center']") as HTMLDivElement;
+
+    expect(topCenterContainer).not.toBeNull();
+    expect(bottomCenterContainer).not.toBeNull();
+    expect(centerContainer).not.toBeNull();
+
+    expect(topCenterContainer.className).toContain("top-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2");
+    expect(bottomCenterContainer.className).toContain("bottom-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2");
+    expect(centerContainer.className).toContain("top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2");
+
+    h1.dismiss();
+    h2.dismiss();
+    h3.dismiss();
+    toaster.destroy();
+  });
+
+  it("should apply margin as css variable on containers", () => {
+    const toaster = createToaster({ margin: "24px" });
+    toaster.semantic.success("Margin Test", { position: "top-left" });
+
+    const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
+    expect(container).not.toBeNull();
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("24px");
+    expect(container.style.getPropertyValue("--toast-margin-y")).toBe("24px");
+
+    toaster.destroy();
+  });
+
+  it("should apply granular margins (x and y) as css variables on containers", () => {
+    const toaster = createToaster({ margin: { x: "15px", y: "30px" } });
+    toaster.semantic.success("Granular Margin Test", { position: "top-left" });
+
+    const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
+    expect(container).not.toBeNull();
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("15px");
+    expect(container.style.getPropertyValue("--toast-margin-y")).toBe("30px");
+
+    toaster.destroy();
+  });
+
+  it("should support dynamic margin updates via configure()", () => {
+    const toaster = createToaster({ margin: "10px" });
+    toaster.semantic.success("Dynamic Margin", { position: "top-left" });
+
+    const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("10px");
+
+    toaster.configure({ margin: "40px" });
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("40px");
+    expect(container.style.getPropertyValue("--toast-margin-y")).toBe("40px");
+
+    toaster.destroy();
+  });
+});

@@ -171,7 +171,12 @@ export class Toast {
     }
 
     const element = createToastElement(this.options, () => this.hide());
-    const container = getOrCreateContainer({ parent: this.parent, position, instanceId: this.options.instanceId });
+    const container = getOrCreateContainer({
+      parent: this.parent,
+      position,
+      instanceId: this.options.instanceId,
+      margin: this.options.margin,
+    });
 
     this.element = element;
     this.internalState = "visible";
