@@ -20,35 +20,66 @@ const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
   fill: "both",
 };
 
+const SVG_SUCCESS =
+  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
+
+const SVG_ERROR =
+  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>';
+
+const SVG_WARNING =
+  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>';
+
+const SVG_INFO =
+  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>';
+
+const SVG_LOADER =
+  '<svg class="size-5 shrink-0 animate-spin" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4" /><path d="m16.2 7.8 2.9-2.9" /><path d="M18 12h4" /><path d="m16.2 16.2 2.9 2.9" /><path d="M12 18v4" /><path d="m4.9 19.1 2.9-2.9" /><path d="M2 12h4" /><path d="m4.9 4.9 2.9 2.9" /></svg>';
+
+const SVG_CLOSE =
+  '<svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>';
+
 const TOAST_ICON_HTML: Record<ToastIcon, string> = {
-  success: '<i class="ic-success size-5 shrink-0" aria-hidden="true" />',
-  error: '<i class="ic-error size-5 shrink-0" aria-hidden="true" />',
-  warning: '<i class="ic-warning size-5 shrink-0" aria-hidden="true" />',
-  info: '<i class="ic-info size-5 shrink-0" aria-hidden="true" />',
-  loader: '<i class="ic-loader size-5 shrink-0 animate-spin" aria-hidden="true" />',
+  success: SVG_SUCCESS,
+  error: SVG_ERROR,
+  warning: SVG_WARNING,
+  info: SVG_INFO,
+  loader: SVG_LOADER,
 };
+
+function parseSVGString(svgString: string): Element {
+  const template = document.createElement("template");
+  template.innerHTML = svgString;
+  const element = template.content.firstElementChild;
+  if (element === null) {
+    throw new Error("SVG string could not be parsed into an element.");
+  }
+  return element;
+}
 
 function createDismissButton(onDismiss: () => void): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className =
-    "ml-auto -mr-1 inline-flex size-4 items-center justify-center rounded-full cursor-pointer shrink-0 opacity-70 transition-opacity duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
-  button.innerHTML = '<i class="ic-close" />';
+    // `text-inherit` overrides the `color` set by @codenhub/styles btn base rule so that
+    // `stroke="currentColor"` on the inner SVG uses the toast container's text color.
+    // The reset classes (bg-transparent, border-0, p-0, min-h-0, font-inherit) neutralize
+    // the global `btn` base rule that @codenhub/styles/native.css applies to all <button>s.
+    "text-inherit bg-transparent border-0 p-0 min-h-0 font-inherit ml-auto -mr-1 inline-flex size-4 items-center justify-center rounded-full cursor-pointer shrink-0 opacity-70 transition-opacity duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
+
+  const svgEl = parseSVGString(SVG_CLOSE) as SVGElement;
+  // Set dimensions via inline styles so they are immune to any CSS rule override.
+  // SVG presentation attributes (width/height) have zero specificity and can be
+  // overridden by even the lowest-specificity CSS rule.
+  svgEl.style.width = "1rem";
+  svgEl.style.height = "1rem";
+  button.appendChild(svgEl);
   button.setAttribute("aria-label", "Dismiss toast");
   button.addEventListener("click", onDismiss);
   return button;
 }
 
 function createIcon(icon: ToastIcon): Element {
-  const template = document.createElement("template");
-  template.innerHTML = TOAST_ICON_HTML[icon];
-
-  const element = template.content.firstElementChild;
-  if (element === null) {
-    throw new Error(`Toast icon "${icon}" could not be rendered.`);
-  }
-
-  return element;
+  return parseSVGString(TOAST_ICON_HTML[icon]);
 }
 
 export function createToastElement(options: ToastElementOptions, onDismiss: () => void): HTMLDivElement {

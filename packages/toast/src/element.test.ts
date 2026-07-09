@@ -62,20 +62,28 @@ describe("Toast rendering", () => {
   it("should use a compact dismiss button with a larger close icon", () => {
     const element = renderToast(makeToast({ message: "Saved successfully", isDismissable: true }));
     const dismissButton = element.querySelector("button");
-    const dismissIcon = dismissButton?.querySelector("i");
+    const dismissIcon = dismissButton?.querySelector("svg");
 
     expect(element.className).toContain("p-3");
     expect(dismissButton?.className).toContain("size-4");
-    expect(dismissIcon?.className).toContain("ic-close");
+    // Dismiss button resets the global `btn` base rule applied by @codenhub/styles/native.css
+    expect(dismissButton?.className).toContain("bg-transparent");
+    expect(dismissButton?.className).toContain("border-0");
+    expect(dismissButton?.className).toContain("min-h-0");
+    expect(dismissIcon).toBeInstanceOf(SVGElement);
+    // Dimensions are set via inline styles (highest CSS specificity) so no CSS rule can override them.
+    // SVG presentation attributes (width/height HTML attrs) have zero specificity and are
+    // overridden by even the lowest-specificity CSS rule, causing the icon to render at 0×24.
+    expect((dismissIcon as SVGElement | null)?.style.width).toBe("1rem");
+    expect((dismissIcon as SVGElement | null)?.style.height).toBe("1rem");
   });
 
   it("should render a public icon before the message", () => {
     const element = renderToast(makeToast({ message: "Heads up", icon: "info" }));
-    const icon = element.querySelector("i");
+    const icon = element.querySelector("svg");
 
-    expect(icon).toBeInstanceOf(HTMLElement);
-    expect(icon?.className).toContain("ic-info");
-    expect(icon?.className).toContain("size-5");
+    expect(icon).toBeInstanceOf(SVGElement);
+    expect(icon?.getAttribute("class")).toContain("size-5");
     expect(element.firstElementChild).toBe(icon);
   });
 

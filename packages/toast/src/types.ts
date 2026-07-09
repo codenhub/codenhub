@@ -24,24 +24,32 @@ export type ToastState = "visible" | "hiding" | "hidden";
 export interface ToastTokens {
   /** Border/accent color for the toast-success variant. */
   success?: string;
+  /** Foreground-on-accent color for the toast-success variant (used with filled/solid styles). */
+  successContrast?: string;
   /** Muted background color for the toast-success variant. */
   successSubtle?: string;
   /** High-contrast foreground color for the toast-success variant. */
   successStrong?: string;
   /** Border/accent color for the toast-error variant. */
   destructive?: string;
+  /** Foreground-on-accent color for the toast-error variant (used with filled/solid styles). */
+  destructiveContrast?: string;
   /** Muted background color for the toast-error variant. */
   destructiveSubtle?: string;
   /** High-contrast foreground color for the toast-error variant. */
   destructiveStrong?: string;
   /** Border/accent color for the toast-warning variant. */
   warning?: string;
+  /** Foreground-on-accent color for the toast-warning variant (used with filled/solid styles). */
+  warningContrast?: string;
   /** Muted background color for the toast-warning variant. */
   warningSubtle?: string;
   /** High-contrast foreground color for the toast-warning variant. */
   warningStrong?: string;
   /** Border/accent color for the toast-info variant. */
   info?: string;
+  /** Foreground-on-accent color for the toast-info variant (used with filled/solid styles). */
+  infoContrast?: string;
   /** Muted background color for the toast-info variant. */
   infoSubtle?: string;
   /** High-contrast foreground color for the toast-info variant. */

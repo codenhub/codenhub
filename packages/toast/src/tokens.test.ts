@@ -21,11 +21,22 @@ describe("tokens utilities", () => {
       expect(
         buildInlineStyle({
           success: "red",
+          successContrast: "white",
           successSubtle: "blue",
           successStrong: "green",
         }),
-      ).toBe("--toast-color-success: red; --toast-color-success-subtle: blue; --toast-color-success-strong: green;");
+      ).toBe(
+        "--toast-color-success: red; --toast-color-success-contrast: white; --toast-color-success-subtle: blue; --toast-color-success-strong: green;",
+      );
+      expect(buildInlineStyle({ destructiveContrast: "#f9fafb" })).toBe(
+        "--toast-color-destructive-contrast: #f9fafb;",
+      );
+      expect(buildInlineStyle({ warningContrast: "#f9fafb" })).toBe(
+        "--toast-color-warning-contrast: #f9fafb;",
+      );
+      expect(buildInlineStyle({ infoContrast: "#f9fafb" })).toBe("--toast-color-info-contrast: #f9fafb;");
     });
+
 
     it("should ignore unsupported token keys", () => {
       // @ts-expect-error testing invalid token keys

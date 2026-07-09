@@ -28,8 +28,8 @@
     <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./index.ts"></script>
   </head>
-  <body class="bg-background text-text font-default min-h-screen transition-colors duration-200">
-    <div class="mx-auto max-w-4xl px-4 py-8">
+  <body>
+    <div class="mx-auto max-w-4xl px-4 py-8 flex flex-col gap-8">
       <h1>Toast Playground</h1>
 
       <main class="flex flex-col gap-8">
@@ -39,7 +39,7 @@
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="select-position">Position</label>
-              <select id="select-position" class="bg-background border-border rounded border px-3 py-1.5 text-sm">
+              <select id="select-position">
                 <option value="top-right">Top Right</option>
                 <option value="top-left">Top Left</option>
                 <option value="bottom-right" selected>Bottom Right</option>
@@ -51,7 +51,6 @@
               <input
                 type="number"
                 id="input-duration"
-                class="bg-background border-border rounded border px-3 py-1.5 text-sm"
                 value="4000"
               />
             </div>

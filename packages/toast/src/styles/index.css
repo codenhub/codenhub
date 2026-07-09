@@ -1,3 +1,16 @@
+/*
+ * @codenhub/toast — component styles
+ *
+ * Token cascade (three-tier):
+ *   1. Consumer override  — set --toast-color-<name> anywhere above the toast element
+ *   2. Theme token        — falls back to the @codenhub/styles --color-<name> variable
+ *   3. Hex fallback       — last resort for standalone use without @codenhub/styles
+ *
+ * See TOKEN_MAP in tokens.ts for the full key → CSS var → fallback reference table.
+ */
+
+/* ── Tailwind source scanning ─────────────────────────────────────────────── */
+
 @import "tailwindcss";
 
 @source "../core.ts";
@@ -5,32 +18,42 @@
 @source "../options.ts";
 @source "../variants/**/*.ts";
 
+/* ── Semantic variant color classes ──────────────────────────────────────── */
+/*    Each class maps the scoped --toast-color-* tokens to the three         */
+/*    CSS properties that drive the variant's visual appearance.             */
+
 .toast-success {
   border-color: var(--toast-color-success, var(--color-success, #059669));
   background-color: var(--toast-color-success-subtle, var(--color-success-subtle, #d1fae5));
   color: var(--toast-color-success-strong, var(--color-success-strong, #065f46));
+  --toast-contrast: var(--toast-color-success-contrast, var(--color-success-contrast, #f9fafb));
 }
 
 .toast-error {
   border-color: var(--toast-color-destructive, var(--color-destructive, #be123c));
   background-color: var(--toast-color-destructive-subtle, var(--color-destructive-subtle, #ffe4e6));
   color: var(--toast-color-destructive-strong, var(--color-destructive-strong, #9f1239));
+  --toast-contrast: var(--toast-color-destructive-contrast, var(--color-destructive-contrast, #f9fafb));
 }
 
 .toast-warning {
   border-color: var(--toast-color-warning, var(--color-warning, #d97706));
   background-color: var(--toast-color-warning-subtle, var(--color-warning-subtle, #fef3c7));
   color: var(--toast-color-warning-strong, var(--color-warning-strong, #92400e));
+  --toast-contrast: var(--toast-color-warning-contrast, var(--color-warning-contrast, #f9fafb));
 }
 
 .toast-info {
   border-color: var(--toast-color-info, var(--color-info, #4f46e5));
   background-color: var(--toast-color-info-subtle, var(--color-info-subtle, #e0e7ff));
   color: var(--toast-color-info-strong, var(--color-info-strong, #3730a3));
+  --toast-contrast: var(--toast-color-info-contrast, var(--color-info-contrast, #f9fafb));
 }
 
+/* ── Default/neutral variant ─────────────────────────────────────────────── */
+
 .toast-default {
-  border-color: var(--toast-color-border, var(--color-border, #e5e7eb));
-  background-color: var(--toast-color-surface, var(--color-surface, #ffffff));
-  color: var(--toast-color-text, var(--color-text, #111827));
+  border-color: var(--toast-color-border, var(--color-border, #d1d5db));
+  background-color: var(--toast-color-surface, var(--color-surface, #e5e7eb));
+  color: var(--toast-color-text, var(--color-text, #030712));
 }

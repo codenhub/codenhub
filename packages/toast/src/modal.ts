@@ -177,7 +177,7 @@ export class ModalManager {
         input.type = "text";
         input.value = options.defaultValue ?? "";
         input.placeholder = options.placeholder ?? "";
-        input.className = "input sm w-full border border-border rounded p-2 bg-background text-text text-sm mt-1 mb-3";
+        input.className = "ipt sm w-full mt-1 mb-3";
         container.appendChild(input);
 
         const cancelBtn = createHTMLElement("button");

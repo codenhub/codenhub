@@ -2,7 +2,7 @@ import { buildInlineStyle } from "./tokens";
 import type { ToastTokens } from "./types";
 
 export const DIALOG_CLASS =
-  "relative m-0 rounded-xl border-2 border-border bg-surface p-5 text-text shadow-2xl w-full max-w-sm pointer-events-auto";
+  "relative m-0 rounded-xl border-2 border-(--color-border) bg-(--color-surface) p-5 text-(--color-text) shadow-2xl w-full max-w-sm pointer-events-auto";
 export const MESSAGE_CLASS = "text-sm font-medium mb-4 leading-relaxed";
 export const ACTIONS_CLASS = "flex justify-end gap-2";
 

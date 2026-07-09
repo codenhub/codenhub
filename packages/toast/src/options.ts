@@ -21,9 +21,19 @@ export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId"> = {
 
 export const DEFAULT_ROLE: ToastRole = "status";
 
+/**
+ * Shared structural class applied to every toast element regardless of variant.
+ * Drives layout, typography, border radius, and pointer-events.
+ * Each variant (semantic/loading/custom) prepends this and appends its own
+ * spacing + color class (e.g. `toast-success`).
+ */
 export const TOAST_SHAPE_CLASS =
   "rounded-xl border-2 text-sm font-medium font-default pointer-events-auto flex items-center";
 
+/**
+ * Full root class for the default (custom/no-variant) toast.
+ * Used as the fallback when no variant-specific rootClassName is provided.
+ */
 export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-default`;
 
 // --- Normalized options used internally by Toast ----------------------------
