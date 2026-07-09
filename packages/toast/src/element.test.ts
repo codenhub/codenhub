@@ -114,4 +114,29 @@ describe("Toast rendering", () => {
     expect(element.innerHTML).not.toContain("<script>");
     expect(element.innerHTML).not.toContain("alert");
   });
+
+  it("should apply default appearance to root class name", () => {
+    const element = renderToast(makeToast({ message: "Default appearance" }));
+    expect(element.className).toContain("toast-appearance-flat-bordered");
+  });
+
+  it("should apply flat appearance to root class name", () => {
+    const element = renderToast(makeToast({ message: "Flat appearance", appearance: "flat" }));
+    expect(element.className).toContain("toast-appearance-flat");
+  });
+
+  it("should apply soft appearance to root class name", () => {
+    const element = renderToast(makeToast({ message: "Soft appearance", appearance: "soft" }));
+    expect(element.className).toContain("toast-appearance-soft");
+  });
+
+  it("should apply soft-bordered appearance to root class name", () => {
+    const element = renderToast(makeToast({ message: "Soft bordered appearance", appearance: "soft-bordered" }));
+    expect(element.className).toContain("toast-appearance-soft-bordered");
+  });
+
+  it("should apply left-accent appearance to root class name", () => {
+    const element = renderToast(makeToast({ message: "Left accent appearance", appearance: "left-accent" }));
+    expect(element.className).toContain("toast-appearance-left-accent");
+  });
 });

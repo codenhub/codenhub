@@ -23,39 +23,107 @@
 /*    CSS properties that drive the variant's visual appearance.             */
 
 .toast-success {
-  border-color: var(--toast-color-success, var(--color-success, #059669));
-  background-color: var(--toast-color-success-subtle, var(--color-success-subtle, #d1fae5));
-  color: var(--toast-color-success-strong, var(--color-success-strong, #065f46));
-  --toast-contrast: var(--toast-color-success-contrast, var(--color-success-contrast, #f9fafb));
+  --toast-main-color: var(--toast-color-success, var(--color-success, #059669));
+  --toast-contrast-color: var(--toast-color-success-contrast, var(--color-success-contrast, #f9fafb));
+  --toast-subtle-color: var(--toast-color-success-subtle, var(--color-success-subtle, #d1fae5));
+  --toast-strong-color: var(--toast-color-success-strong, var(--color-success-strong, #065f46));
+
+  /* Fallback/default styles if no appearance class is applied */
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+  --toast-contrast: var(--toast-contrast-color);
 }
 
 .toast-error {
-  border-color: var(--toast-color-destructive, var(--color-destructive, #be123c));
-  background-color: var(--toast-color-destructive-subtle, var(--color-destructive-subtle, #ffe4e6));
-  color: var(--toast-color-destructive-strong, var(--color-destructive-strong, #9f1239));
-  --toast-contrast: var(--toast-color-destructive-contrast, var(--color-destructive-contrast, #f9fafb));
+  --toast-main-color: var(--toast-color-destructive, var(--color-destructive, #be123c));
+  --toast-contrast-color: var(--toast-color-destructive-contrast, var(--color-destructive-contrast, #f9fafb));
+  --toast-subtle-color: var(--toast-color-destructive-subtle, var(--color-destructive-subtle, #ffe4e6));
+  --toast-strong-color: var(--toast-color-destructive-strong, var(--color-destructive-strong, #9f1239));
+
+  /* Fallback/default styles if no appearance class is applied */
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+  --toast-contrast: var(--toast-contrast-color);
 }
 
 .toast-warning {
-  border-color: var(--toast-color-warning, var(--color-warning, #d97706));
-  background-color: var(--toast-color-warning-subtle, var(--color-warning-subtle, #fef3c7));
-  color: var(--toast-color-warning-strong, var(--color-warning-strong, #92400e));
-  --toast-contrast: var(--toast-color-warning-contrast, var(--color-warning-contrast, #f9fafb));
+  --toast-main-color: var(--toast-color-warning, var(--color-warning, #d97706));
+  --toast-contrast-color: var(--toast-color-warning-contrast, var(--color-warning-contrast, #f9fafb));
+  --toast-subtle-color: var(--toast-color-warning-subtle, var(--color-warning-subtle, #fef3c7));
+  --toast-strong-color: var(--toast-color-warning-strong, var(--color-warning-strong, #92400e));
+
+  /* Fallback/default styles if no appearance class is applied */
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+  --toast-contrast: var(--toast-contrast-color);
 }
 
 .toast-info {
-  border-color: var(--toast-color-info, var(--color-info, #4f46e5));
-  background-color: var(--toast-color-info-subtle, var(--color-info-subtle, #e0e7ff));
-  color: var(--toast-color-info-strong, var(--color-info-strong, #3730a3));
-  --toast-contrast: var(--toast-color-info-contrast, var(--color-info-contrast, #f9fafb));
+  --toast-main-color: var(--toast-color-info, var(--color-info, #4f46e5));
+  --toast-contrast-color: var(--toast-color-info-contrast, var(--color-info-contrast, #f9fafb));
+  --toast-subtle-color: var(--toast-color-info-subtle, var(--color-info-subtle, #e0e7ff));
+  --toast-strong-color: var(--toast-color-info-strong, var(--color-info-strong, #3730a3));
+
+  /* Fallback/default styles if no appearance class is applied */
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+  --toast-contrast: var(--toast-contrast-color);
 }
 
 /* ── Default/neutral variant ─────────────────────────────────────────────── */
 
 .toast-default {
-  border-color: var(--toast-color-border, var(--color-border, #d1d5db));
-  background-color: var(--toast-color-surface, var(--color-surface, #e5e7eb));
-  color: var(--toast-color-text, var(--color-text, #030712));
+  --toast-main-color: var(--toast-color-border, var(--color-border, #d1d5db));
+  --toast-contrast-color: var(--toast-color-text, var(--color-text, #030712));
+  --toast-subtle-color: var(--toast-color-surface, var(--color-surface, #e5e7eb));
+  --toast-strong-color: var(--toast-color-text, var(--color-text, #030712));
+
+  /* Fallback/default styles if no appearance class is applied */
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+  --toast-contrast: var(--toast-contrast-color);
+}
+
+/* ── Appearance classes ──────────────────────────────────────────────────── */
+
+.toast-appearance-flat-bordered {
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+}
+
+.toast-appearance-flat {
+  border-color: var(--toast-main-color);
+  background-color: var(--toast-main-color);
+  color: var(--toast-contrast-color);
+  --toast-contrast: var(--toast-contrast-color);
+}
+
+.toast-appearance-soft {
+  border-color: transparent;
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+}
+
+.toast-appearance-soft-bordered {
+  border-color: color-mix(in srgb, var(--toast-main-color) 42%, var(--color-border, #d1d5db));
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
+}
+
+.toast-appearance-left-accent {
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-left-width: 4px;
+  border-left-color: var(--toast-main-color);
+  background-color: var(--toast-subtle-color);
+  color: var(--toast-strong-color);
 }
 
 /* ── Dialog and backdrop premium animations/styling ───────────────────────── */
@@ -184,28 +252,55 @@ dialog[open]::backdrop {
   font-weight: 600;
   border-radius: 0.375rem;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 
 .toast-dialog-btn-primary {
-  background-color: var(--toast-color-info, var(--color-primary, #3b82f6));
-  color: var(--toast-contrast, #ffffff);
+  background-color: var(--toast-color-primary, var(--color-primary, #1e293b));
+  color: var(--toast-color-primary-contrast, var(--color-primary-contrast, #ffffff));
+  --toast-contrast: var(--toast-color-primary-contrast, var(--color-primary-contrast, #ffffff));
 }
 
 .toast-dialog-btn-primary:hover {
-  background-color: var(--toast-color-info-strong, var(--color-primary-hover, #2563eb));
+  background-color: var(--toast-color-primary-hover, var(--color-primary-hover, #0f172a));
 }
 
 .toast-dialog-btn-secondary {
-  background-color: transparent;
-  border-color: var(--toast-color-border, var(--color-border, #cbd5e1));
-  color: var(--toast-color-text, var(--color-text, #0f172a));
+  background-color: var(--toast-color-accent, var(--color-accent, #64748b));
+  color: var(--toast-color-accent-contrast, var(--color-accent-contrast, #ffffff));
 }
 
 .toast-dialog-btn-secondary:hover {
-  background-color: rgba(15, 23, 42, 0.05);
+  background-color: var(--toast-color-accent-hover, var(--color-accent-hover, #475569));
+}
+
+.toast-dialog-btn-success {
+  background-color: var(--toast-color-success, var(--color-success, #059669));
+  color: var(--toast-color-success-contrast, var(--color-success-contrast, #ffffff));
+}
+
+.toast-dialog-btn-success:hover {
+  background-color: var(--toast-color-success-hover, var(--color-success-hover, #047857));
+}
+
+.toast-dialog-btn-danger {
+  background-color: var(--toast-color-destructive, var(--color-destructive, #be123c));
+  color: var(--toast-color-destructive-contrast, var(--color-destructive-contrast, #ffffff));
+}
+
+.toast-dialog-btn-danger:hover {
+  background-color: var(--toast-color-destructive-hover, var(--color-destructive-hover, #9f1239));
+}
+
+.toast-dialog-btn-cancel {
+  background-color: var(--toast-color-surface, var(--color-surface, #f1f5f9));
+  color: var(--toast-color-text, var(--color-text, #0f172a));
+}
+
+.toast-dialog-btn-cancel:hover {
+  background-color: var(--toast-color-border, var(--color-border, #e2e8f0));
 }
 
 /* Support dark mode overrides via both class (.dark) and attribute (data-theme="dark") */
@@ -225,13 +320,4 @@ dialog[open]::backdrop {
 :where(.dark, [data-theme="dark"]) .toast-dialog-input {
   border-color: var(--toast-color-border, var(--color-border, #334155));
   color: var(--toast-color-text, var(--color-text, #f8fafc));
-}
-
-:where(.dark, [data-theme="dark"]) .toast-dialog-btn-secondary {
-  border-color: var(--toast-color-border, var(--color-border, #334155));
-  color: var(--toast-color-text, var(--color-text, #f8fafc));
-}
-
-:where(.dark, [data-theme="dark"]) .toast-dialog-btn-secondary:hover {
-  background-color: rgba(255, 255, 255, 0.05);
 }

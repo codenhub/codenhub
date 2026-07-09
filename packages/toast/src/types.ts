@@ -26,6 +26,11 @@ export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
 export type ToastState = "visible" | "hiding" | "hidden";
 
 /**
+ * Visual aesthetics configurations for toast notifications.
+ */
+export type ToastAppearance = "flat-bordered" | "flat" | "soft" | "soft-bordered" | "left-accent";
+
+/**
  * Design tokens for overriding colors per toast or globally per instance.
  */
 export interface ToastTokens {
@@ -67,6 +72,22 @@ export interface ToastTokens {
   surface?: string;
   /** Text color for the toast-default variant. */
   text?: string;
+  /** Background color for primary action buttons. */
+  primary?: string;
+  /** Foreground/contrast color for primary action buttons. */
+  primaryContrast?: string;
+  /** Hover background color for primary action buttons. */
+  primaryHover?: string;
+  /** Background color for secondary action buttons. */
+  accent?: string;
+  /** Foreground/contrast color for secondary action buttons. */
+  accentContrast?: string;
+  /** Hover background color for secondary action buttons. */
+  accentHover?: string;
+  /** Hover background color for success action buttons. */
+  successHover?: string;
+  /** Hover background color for destructive action buttons. */
+  destructiveHover?: string;
 }
 
 /**
@@ -156,6 +177,8 @@ export interface SemanticToastOptions {
   role?: ToastRole;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
+  /** Visual appearance style of the toast. */
+  appearance?: ToastAppearance;
 }
 
 /**
@@ -179,6 +202,8 @@ export interface LoadingToastOptions {
   className?: string;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
+  /** Visual appearance style of the toast. */
+  appearance?: ToastAppearance;
 }
 
 /**
@@ -203,6 +228,8 @@ export interface CustomToastOptions {
   role?: ToastRole;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
+  /** Visual appearance style of the toast. */
+  appearance?: ToastAppearance;
 }
 
 /**
@@ -219,6 +246,8 @@ export interface ConfirmOptions {
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
+  /** Color semantic type for the main action button. */
+  type?: "primary" | "secondary" | "success" | "danger";
 }
 
 /**
@@ -239,6 +268,8 @@ export interface PromptOptions {
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
+  /** Color semantic type for the main action button. */
+  type?: "primary" | "secondary" | "success" | "danger";
 }
 
 /**
@@ -253,6 +284,8 @@ export interface AlertOptions {
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
+  /** Color semantic type for the main action button. */
+  type?: "primary" | "secondary" | "success" | "danger";
 }
 
 /**
@@ -306,5 +339,8 @@ export interface ToasterConfig {
   loading?: LoadingDefaults;
   custom?: CustomDefaults;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
+  /** Default visual appearance style for toasts. */
+  appearance?: ToastAppearance;
 }

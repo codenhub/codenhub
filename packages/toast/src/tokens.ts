@@ -55,6 +55,14 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   border: "--toast-color-border",
   surface: "--toast-color-surface",
   text: "--toast-color-text",
+  primary: "--toast-color-primary",
+  primaryContrast: "--toast-color-primary-contrast",
+  primaryHover: "--toast-color-primary-hover",
+  accent: "--toast-color-accent",
+  accentContrast: "--toast-color-accent-contrast",
+  accentHover: "--toast-color-accent-hover",
+  successHover: "--toast-color-success-hover",
+  destructiveHover: "--toast-color-destructive-hover",
 };
 
 /**

@@ -223,6 +223,7 @@ class ToastManager implements Toaster {
       shouldAutoDismiss: config.shouldAutoDismiss ?? DEFAULT_CONFIG.shouldAutoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
+      appearance: config.appearance ?? DEFAULT_CONFIG.appearance,
     };
   }
 

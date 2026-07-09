@@ -335,6 +335,33 @@ describe("interactive.alert", () => {
     await expect(handle2.result).resolves.toBe(false);
     toaster.destroy();
   });
+
+  it("applies correct button semantic class depending on type option", async () => {
+    const toaster = createToaster();
+
+    const handleConfirm = toaster.interactive.confirm("Delete danger?", { type: "danger" });
+    const dangerConfirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-danger");
+    expect(dangerConfirmBtn).toBeTruthy();
+    expect(dangerConfirmBtn?.className).toContain("toast-dialog-btn-danger");
+    handleConfirm.dismiss();
+    await handleConfirm.settled;
+
+    const handlePrompt = toaster.interactive.prompt("Name secondary?", { type: "secondary" });
+    const secondarySubmitBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
+    expect(secondarySubmitBtn).toBeTruthy();
+    expect(secondarySubmitBtn?.className).toContain("toast-dialog-btn-secondary");
+    handlePrompt.dismiss();
+    await handlePrompt.settled;
+
+    const handleAlert = toaster.interactive.alert("Success alert!", { type: "success" });
+    const successOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-success");
+    expect(successOkBtn).toBeTruthy();
+    expect(successOkBtn?.className).toContain("toast-dialog-btn-success");
+    handleAlert.dismiss();
+    await handleAlert.settled;
+
+    toaster.destroy();
+  });
 });
 
 describe("container isolation", () => {

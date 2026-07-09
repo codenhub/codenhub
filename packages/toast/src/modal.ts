@@ -64,12 +64,12 @@ export class ModalManager {
         const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-secondary";
+        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-cancel toast-dialog-btn-secondary";
 
         const confirmBtn = createHTMLElement("button");
         confirmBtn.type = "button";
         confirmBtn.textContent = options.confirmLabel ?? "Confirm";
-        confirmBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
+        confirmBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
@@ -188,12 +188,12 @@ export class ModalManager {
         const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-secondary";
+        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-cancel toast-dialog-btn-secondary";
 
         const submitBtn = createHTMLElement("button");
         submitBtn.type = "button";
         submitBtn.textContent = options.submitLabel ?? "Submit";
-        submitBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
+        submitBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
@@ -314,7 +314,7 @@ export class ModalManager {
         const okBtn = createHTMLElement("button");
         okBtn.type = "button";
         okBtn.textContent = options.okLabel ?? "OK";
-        okBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
+        okBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(okBtn);

@@ -1,6 +1,14 @@
 /* eslint-disable no-control-regex */
 import { buildInlineStyle } from "./tokens";
-import type { ToastContent, ToastIcon, ToastPosition, ToastRole, ToastTokens, ToastUpdateOptions } from "./types";
+import type {
+  ToastAppearance,
+  ToastContent,
+  ToastIcon,
+  ToastPosition,
+  ToastRole,
+  ToastTokens,
+  ToastUpdateOptions,
+} from "./types";
 
 export interface ResolvedToastConfig {
   readonly instanceId: string;
@@ -10,6 +18,7 @@ export interface ResolvedToastConfig {
   readonly shouldAutoDismiss: boolean;
   readonly maxVisible: number;
   readonly margin?: string | { x?: string; y?: string };
+  readonly appearance: ToastAppearance;
 }
 
 export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> = {
@@ -18,6 +27,7 @@ export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> 
   isDismissable: false,
   shouldAutoDismiss: true,
   maxVisible: 5,
+  appearance: "flat-bordered",
 };
 
 export const DEFAULT_ROLE: ToastRole = "status";
@@ -52,6 +62,7 @@ export interface NormalizedToastOptions {
   readonly rootClassName: string;
   readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
+  readonly appearance: ToastAppearance;
 }
 
 export interface ToastPresetOptions {
@@ -190,6 +201,7 @@ export interface RawToastOptions {
   className?: string;
   role?: ToastRole;
   margin?: string | { x?: string; y?: string };
+  appearance?: ToastAppearance;
 }
 
 export function normalizeToastOptions(params: {
@@ -210,6 +222,8 @@ export function normalizeToastOptions(params: {
 
   assertDuration(options.duration);
 
+  const appearance = options.appearance ?? config.appearance ?? "flat-bordered";
+
   return Object.freeze({
     instanceId: config.instanceId,
     shouldAutoDismiss: options.shouldAutoDismiss ?? preset?.shouldAutoDismiss ?? config.shouldAutoDismiss,
@@ -220,9 +234,14 @@ export function normalizeToastOptions(params: {
     message: content === undefined ? (message ?? "") : null,
     position: options.position ?? config.position,
     role: preset?.role ?? options.role ?? DEFAULT_ROLE,
-    rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, options.className),
+    rootClassName: joinClassNames(
+      preset?.rootClassName ?? DEFAULT_TOAST_CLASS,
+      `toast-appearance-${appearance}`,
+      options.className,
+    ),
     tokens: options.tokens ?? null,
     margin: options.margin ?? config.margin,
+    appearance,
   });
 }
 
