@@ -190,7 +190,7 @@ dialog[open]::backdrop {
   box-sizing: border-box;
   background-color: var(--toast-color-surface, var(--color-surface, #ffffff));
   color: var(--toast-color-text, var(--color-text, #0f172a));
-  border: 1px solid var(--toast-color-border, var(--color-border, #e2e8f0));
+  border: none;
   border-radius: 0.75rem;
   padding: 1.5rem;
   box-shadow:
@@ -307,7 +307,6 @@ dialog[open]::backdrop {
 :where(.dark, [data-theme="dark"]) .toast-dialog-container {
   background-color: var(--toast-color-surface, var(--color-surface, #0f172a));
   color: var(--toast-color-text, var(--color-text, #f8fafc));
-  border-color: var(--toast-color-border, var(--color-border, #334155));
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.5),
     0 10px 10px -5px rgba(0, 0, 0, 0.4);
