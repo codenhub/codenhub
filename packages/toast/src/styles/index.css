@@ -164,7 +164,7 @@ dialog[open] {
 }
 
 dialog::backdrop {
-  background-color: rgba(15, 23, 42, 0);
+  background-color: rgba(0, 0, 0, 0);
   backdrop-filter: blur(0px);
   transition:
     background-color var(--motion-duration-normal, 200ms) ease,
@@ -174,13 +174,13 @@ dialog::backdrop {
 }
 
 dialog[open]::backdrop {
-  background-color: rgba(15, 23, 42, 0.45);
+  background-color: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(8px);
 }
 
 @starting-style {
   dialog[open]::backdrop {
-    background-color: rgba(15, 23, 42, 0);
+    background-color: rgba(0, 0, 0, 0);
     backdrop-filter: blur(0px);
   }
 }
