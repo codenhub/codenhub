@@ -1,10 +1,9 @@
 import { buildInlineStyle } from "./tokens";
 import type { ToastTokens } from "./types";
 
-export const DIALOG_CLASS =
-  "rounded-xl border border-(--color-border) bg-(--color-background) p-6 text-(--color-text) shadow-2xl w-full max-w-sm pointer-events-auto";
-export const MESSAGE_CLASS = "text-[1.0625rem] font-medium mb-5 leading-snug";
-export const ACTIONS_CLASS = "flex justify-end gap-3";
+export const DIALOG_CLASS = "toast-dialog";
+export const MESSAGE_CLASS = "toast-dialog-message";
+export const ACTIONS_CLASS = "toast-dialog-actions";
 
 export function createHTMLElement<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -42,10 +41,10 @@ export function buildDialogContent(params: BuildDialogContentParams): HTMLDivEle
     dialog.style.cssText = "";
   }
 
-  const content = createHTMLElement("div");
+  const container = createHTMLElement("div", "toast-dialog-container");
   const p = createHTMLElement("p", MESSAGE_CLASS);
   p.textContent = message;
-  content.appendChild(p);
-  dialog.appendChild(content);
-  return content;
+  container.appendChild(p);
+  dialog.appendChild(container);
+  return container;
 }

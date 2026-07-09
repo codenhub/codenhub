@@ -64,12 +64,12 @@ export class ModalManager {
         const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "btn secondary sm";
+        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-secondary";
 
         const confirmBtn = createHTMLElement("button");
         confirmBtn.type = "button";
         confirmBtn.textContent = options.confirmLabel ?? "Confirm";
-        confirmBtn.className = "btn primary sm";
+        confirmBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
@@ -182,18 +182,18 @@ export class ModalManager {
         input.type = "text";
         input.value = options.defaultValue ?? "";
         input.placeholder = options.placeholder ?? "";
-        input.className = "ipt sm w-full mt-1 mb-3";
+        input.className = "toast-dialog-input";
         container.appendChild(input);
 
         const cancelBtn = createHTMLElement("button");
         cancelBtn.type = "button";
         cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "btn secondary sm";
+        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-secondary";
 
         const submitBtn = createHTMLElement("button");
         submitBtn.type = "button";
         submitBtn.textContent = options.submitLabel ?? "Submit";
-        submitBtn.className = "btn primary sm";
+        submitBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(cancelBtn);
@@ -314,7 +314,7 @@ export class ModalManager {
         const okBtn = createHTMLElement("button");
         okBtn.type = "button";
         okBtn.textContent = options.okLabel ?? "OK";
-        okBtn.className = "btn primary sm";
+        okBtn.className = "toast-dialog-btn toast-dialog-btn-primary";
 
         const actions = createHTMLElement("div", ACTIONS_CLASS);
         actions.appendChild(okBtn);

@@ -258,7 +258,7 @@ describe("interactive.confirm", () => {
     const toaster = createToaster();
     const handle = toaster.interactive.confirm("Delete?");
 
-    const confirmBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
+    const confirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     expect(confirmBtn).toBeTruthy();
     confirmBtn!.click();
 
@@ -290,7 +290,7 @@ describe("interactive.prompt", () => {
     expect(input?.value).toBe("Gustavo");
     input!.value = "Antigravity";
 
-    const submitBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
+    const submitBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     submitBtn!.click();
 
     await expect(handle.result).resolves.toBe("Antigravity");
@@ -301,7 +301,7 @@ describe("interactive.prompt", () => {
     const toaster = createToaster();
     const handle = toaster.interactive.prompt("Name?");
 
-    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
     cancelBtn!.click();
 
     await expect(handle.result).resolves.toBeNull();
@@ -314,7 +314,7 @@ describe("interactive.alert", () => {
     const toaster = createToaster();
     const handle = toaster.interactive.alert("Notice!", { okLabel: "Got it" });
 
-    const okBtn = document.body.querySelector<HTMLButtonElement>(".btn.primary");
+    const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     okBtn!.click();
 
     await expect(handle.result).resolves.toBeUndefined();
@@ -329,7 +329,7 @@ describe("interactive.alert", () => {
     await handle1.settled;
 
     const handle2 = toaster.interactive.confirm("Second confirm?");
-    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".btn.secondary");
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
     cancelBtn!.click();
 
     await expect(handle2.result).resolves.toBe(false);
