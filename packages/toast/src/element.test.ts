@@ -115,6 +115,46 @@ describe("Toast rendering", () => {
     expect(element.innerHTML).not.toContain("alert");
   });
 
+  it("should strip unsafe URL protocols and zero-width spaces in href", () => {
+    const toast = makeToast({
+      content: `<div>
+        <a id="link-js" href="javascript:alert(1)">JS Link</a>
+        <a id="link-js-zw" href="java\u200Bscript:alert(1)">JS Zero Width Link</a>
+        <a id="link-data" href="data:text/html,alert(1)">Data Link</a>
+        <a id="link-file" href="file:///etc/passwd">File Link</a>
+        <a id="link-http" href="https://example.com">HTTPS Link</a>
+        <a id="link-mail" href="mailto:test@example.com">Mail Link</a>
+        <a id="link-tel" href="tel:+12345">Tel Link</a>
+        <a id="link-rel" href="/dashboard">Relative Link</a>
+      </div>`,
+    });
+    const element = renderToast(toast);
+
+    const linkJs = element.querySelector("#link-js");
+    expect(linkJs?.hasAttribute("href")).toBe(false);
+
+    const linkJsZw = element.querySelector("#link-js-zw");
+    expect(linkJsZw?.hasAttribute("href")).toBe(false);
+
+    const linkData = element.querySelector("#link-data");
+    expect(linkData?.hasAttribute("href")).toBe(false);
+
+    const linkFile = element.querySelector("#link-file");
+    expect(linkFile?.hasAttribute("href")).toBe(false);
+
+    const linkHttp = element.querySelector("#link-http") as HTMLAnchorElement | null;
+    expect(linkHttp?.getAttribute("href")).toBe("https://example.com");
+
+    const linkMail = element.querySelector("#link-mail") as HTMLAnchorElement | null;
+    expect(linkMail?.getAttribute("href")).toBe("mailto:test@example.com");
+
+    const linkTel = element.querySelector("#link-tel") as HTMLAnchorElement | null;
+    expect(linkTel?.getAttribute("href")).toBe("tel:+12345");
+
+    const linkRel = element.querySelector("#link-rel") as HTMLAnchorElement | null;
+    expect(linkRel?.getAttribute("href")).toBe("/dashboard");
+  });
+
   it("should apply default appearance to root class name", () => {
     const element = renderToast(makeToast({ message: "Default appearance" }));
     expect(element.className).toContain("toast-appearance-soft-bordered");

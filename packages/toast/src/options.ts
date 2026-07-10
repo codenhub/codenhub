@@ -135,10 +135,15 @@ function sanitizeElement(el: Element): void {
     if (URL_ATTRIBUTES.has(attrName)) {
       // eslint-disable-next-line no-control-regex
       const val = attr.value
-        .replace(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]/g, "")
+        .replace(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
         .toLowerCase();
-      if (val.startsWith("javascript:") || val.startsWith("data:") || val.startsWith("vbscript:")) {
-        el.removeAttribute(attr.name);
+
+      const protocolMatch = val.match(/^[a-z0-9+.-]+:/);
+      if (protocolMatch) {
+        const protocol = protocolMatch[0];
+        if (!["http:", "https:", "mailto:", "tel:"].includes(protocol)) {
+          el.removeAttribute(attr.name);
+        }
       }
     } else if (!SAFE_ATTRIBUTES.has(attrName)) {
       el.removeAttribute(attr.name);

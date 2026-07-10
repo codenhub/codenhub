@@ -339,7 +339,6 @@ export interface ToasterConfig {
   loading?: LoadingDefaults;
   custom?: CustomDefaults;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
-  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
   /** Default visual appearance style for toasts. */
   appearance?: ToastAppearance;
