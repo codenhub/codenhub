@@ -43,7 +43,7 @@ function renderToast(toast: Toast): HTMLDivElement {
 
 describe("toast public surface", () => {
   it("should only expose public runtime exports from the barrel", () => {
-    expect(Object.keys(toastModule).sort()).toEqual(["LoadingToast", "SemanticToast", "Toast", "createToaster"]);
+    expect(Object.keys(toastModule)).toEqual(["createToaster"]);
   });
 });
 
@@ -63,18 +63,13 @@ describe("Toast rendering", () => {
     const dismissButton = element.querySelector("button");
     const dismissIcon = dismissButton?.querySelector("svg");
 
-    expect(element.className).toContain("p-3");
-    expect(dismissButton?.className).toContain("size-4");
-    // Dismiss button resets the global `btn` base rule applied by @codenhub/styles/native.css
-    expect(dismissButton?.className).toContain("bg-transparent");
-    expect(dismissButton?.className).toContain("border-0");
-    expect(dismissButton?.className).toContain("min-h-0");
+    expect(element.className).toContain("coden-toast");
+    expect(dismissButton?.className).toBe("coden-toast-dismiss");
     expect(dismissIcon).toBeInstanceOf(SVGElement);
     // Dimensions are set via inline styles (highest CSS specificity) so no CSS rule can override them.
     // SVG presentation attributes (width/height HTML attrs) have zero specificity and are
     // overridden by even the lowest-specificity CSS rule, causing the icon to render at 0×24.
-    expect((dismissIcon as SVGElement | null)?.style.width).toBe("1rem");
-    expect((dismissIcon as SVGElement | null)?.style.height).toBe("1rem");
+    expect(dismissIcon?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("should render a public icon before the message", () => {
@@ -82,7 +77,7 @@ describe("Toast rendering", () => {
     const icon = element.querySelector("svg");
 
     expect(icon).toBeInstanceOf(SVGElement);
-    expect(icon?.getAttribute("class")).toContain("size-5");
+    expect(icon?.getAttribute("class")).toContain("coden-toast-icon");
     expect(element.firstElementChild).toBe(icon);
   });
 
@@ -129,29 +124,12 @@ describe("Toast rendering", () => {
     });
     const element = renderToast(toast);
 
-    const linkJs = element.querySelector("#link-js");
-    expect(linkJs?.hasAttribute("href")).toBe(false);
-
-    const linkJsZw = element.querySelector("#link-js-zw");
-    expect(linkJsZw?.hasAttribute("href")).toBe(false);
-
-    const linkData = element.querySelector("#link-data");
-    expect(linkData?.hasAttribute("href")).toBe(false);
-
-    const linkFile = element.querySelector("#link-file");
-    expect(linkFile?.hasAttribute("href")).toBe(false);
-
-    const linkHttp = element.querySelector("#link-http") as HTMLAnchorElement | null;
-    expect(linkHttp?.getAttribute("href")).toBe("https://example.com");
-
-    const linkMail = element.querySelector("#link-mail") as HTMLAnchorElement | null;
-    expect(linkMail?.getAttribute("href")).toBe("mailto:test@example.com");
-
-    const linkTel = element.querySelector("#link-tel") as HTMLAnchorElement | null;
-    expect(linkTel?.getAttribute("href")).toBe("tel:+12345");
-
-    const linkRel = element.querySelector("#link-rel") as HTMLAnchorElement | null;
-    expect(linkRel?.getAttribute("href")).toBe("/dashboard");
+    const links = Array.from(element.querySelectorAll("a"));
+    expect(links.slice(0, 4).every((link) => !link.hasAttribute("href"))).toBe(true);
+    expect(links[4]?.getAttribute("href")).toBe("https://example.com");
+    expect(links[5]?.getAttribute("href")).toBe("mailto:test@example.com");
+    expect(links[6]?.getAttribute("href")).toBe("tel:+12345");
+    expect(links[7]?.getAttribute("href")).toBe("/dashboard");
   });
 
   it("should apply default appearance to root class name", () => {

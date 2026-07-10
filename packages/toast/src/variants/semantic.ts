@@ -12,10 +12,10 @@ export interface SemanticRawOptions extends SemanticToastOptions {
 }
 
 const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticType, string> = {
-  success: `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-success`,
-  error: `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-error`,
-  warning: `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-warning`,
-  info: `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-info`,
+  success: `${TOAST_SHAPE_CLASS} coden-toast-success`,
+  error: `${TOAST_SHAPE_CLASS} coden-toast-error`,
+  warning: `${TOAST_SHAPE_CLASS} coden-toast-warning`,
+  info: `${TOAST_SHAPE_CLASS} coden-toast-info`,
 };
 
 const SEMANTIC_ICONS: Record<SemanticType, ToastIcon> = {
@@ -32,6 +32,12 @@ const SEMANTIC_ROLES: Record<SemanticType, "alert" | "status"> = {
   info: "status",
 };
 
+function assertSemanticType(value: unknown): asserts value is SemanticType {
+  if (!Object.hasOwn(SEMANTIC_ROLES, value as PropertyKey)) {
+    throw new Error(`Invalid semantic toast type: ${String(value)}`);
+  }
+}
+
 /**
  * Toast variant for semantic notifications (success, error, warning, info)
  * with preconfigured icons and accessibility roles.
@@ -39,6 +45,7 @@ const SEMANTIC_ROLES: Record<SemanticType, "alert" | "status"> = {
 export class SemanticToast extends Toast {
   protected static override getPresetOptions(options: SemanticRawOptions) {
     const type: SemanticType = options.type ?? "success";
+    assertSemanticType(type);
     return {
       icon: SEMANTIC_ICONS[type],
       role: SEMANTIC_ROLES[type],

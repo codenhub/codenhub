@@ -75,10 +75,14 @@ describe("createToaster", () => {
 
   it("should inject a per-instance style element for token overrides", () => {
     const toaster = createToaster({ tokens: { success: "rgb(0, 0, 255)" } });
-    const styleElements = document.head.querySelectorAll("style[id^='toast-instance-']");
+    const styleElements = document.head.querySelectorAll("style[data-toast-token-owner]");
     expect(styleElements.length).toBeGreaterThan(0);
     const content = Array.from(styleElements)
-      .map((el) => el.textContent)
+      .map((el) =>
+        Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
+          .map((rule) => rule.cssText)
+          .join(""),
+      )
       .join("");
     expect(content).toContain("--toast-color-success: rgb(0, 0, 255);");
     toaster.destroy();
@@ -87,8 +91,12 @@ describe("createToaster", () => {
   it("two instances should use separate style elements that do not clobber each other", () => {
     const t1 = createToaster({ tokens: { success: "red" } });
     const t2 = createToaster({ tokens: { success: "blue" } });
-    const styles = document.head.querySelectorAll("style[id^='toast-instance-']");
-    const texts = Array.from(styles).map((el) => el.textContent ?? "");
+    const styles = document.head.querySelectorAll("style[data-toast-token-owner]");
+    const texts = Array.from(styles).map((el) =>
+      Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
+        .map((rule) => rule.cssText)
+        .join(""),
+    );
     expect(texts.some((t) => t.includes("red"))).toBe(true);
     expect(texts.some((t) => t.includes("blue"))).toBe(true);
     t1.destroy();
@@ -104,9 +112,13 @@ describe("configure", () => {
   it("should update token overrides at runtime", () => {
     const toaster = createToaster({ tokens: { success: "red" } });
     toaster.configure({ tokens: { success: "green" } });
-    const styles = document.head.querySelectorAll("style[id^='toast-instance-']");
+    const styles = document.head.querySelectorAll("style[data-toast-token-owner]");
     const content = Array.from(styles)
-      .map((el) => el.textContent)
+      .map((el) =>
+        Array.from((el as HTMLStyleElement).sheet?.cssRules ?? [])
+          .map((rule) => rule.cssText)
+          .join(""),
+      )
       .join("");
     expect(content).toContain("green");
     toaster.destroy();
@@ -247,9 +259,9 @@ describe("destroy()", () => {
 
   it("removes the instance style element", () => {
     const toaster = createToaster({ tokens: { success: "purple" } });
-    const before = document.head.querySelectorAll("style[id^='toast-instance-']").length;
+    const before = document.head.querySelectorAll("style[data-toast-token-owner]").length;
     toaster.destroy();
-    const after = document.head.querySelectorAll("style[id^='toast-instance-']").length;
+    const after = document.head.querySelectorAll("style[data-toast-token-owner]").length;
     expect(after).toBe(before - 1);
   });
 
@@ -322,7 +334,7 @@ describe("interactive.prompt", () => {
     const toaster = createToaster();
     const handle = toaster.interactive.prompt("Name?");
 
-    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
 
     await expect(handle.result).resolves.toBeNull();
@@ -350,7 +362,7 @@ describe("interactive.alert", () => {
     await handle1.settled;
 
     const handle2 = toaster.interactive.confirm("Second confirm?");
-    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
+    const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
 
     await expect(handle2.result).resolves.toBe(false);
@@ -436,15 +448,15 @@ describe("positioning and margins", () => {
       "[data-toast-container*='bottom-center']",
     ) as HTMLDivElement;
     // Query exact container for center position
-    const centerContainer = document.body.querySelector("[data-toast-container$='-body-center']") as HTMLDivElement;
+    const centerContainer = document.body.querySelector(".coden-toast-stack-center") as HTMLDivElement;
 
     expect(topCenterContainer).not.toBeNull();
     expect(bottomCenterContainer).not.toBeNull();
     expect(centerContainer).not.toBeNull();
 
-    expect(topCenterContainer.className).toContain("top-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2");
-    expect(bottomCenterContainer.className).toContain("bottom-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2");
-    expect(centerContainer.className).toContain("top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2");
+    expect(topCenterContainer.className).toContain("coden-toast-stack-top-center");
+    expect(bottomCenterContainer.className).toContain("coden-toast-stack-bottom-center");
+    expect(centerContainer.className).toContain("coden-toast-stack-center");
 
     h1.dismiss();
     h2.dismiss();

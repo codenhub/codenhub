@@ -8,11 +8,11 @@ import type { LoadingContext, LoadingDispatcher } from "./managers/loading";
 import { createSemanticDispatcher } from "./managers/semantic";
 import type { SemanticContext, SemanticDispatcher } from "./managers/semantic";
 import { ModalController } from "./modal";
-import { DEFAULT_CONFIG } from "./options";
+import { DEFAULT_CONFIG, assertToastAppearance, assertToastPosition } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
-import { applyGlobalTokens, removeGlobalTokens } from "./tokens";
-import type { ToasterConfig, ToastHandle, ToastUpdateOptions } from "./types";
+import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
+import type { ToasterConfig, ToasterRuntimeConfig, ToastHandle, ToastUpdateOptions } from "./types";
 
 export type { SemanticDispatcher } from "./managers/semantic";
 export type { LoadingDispatcher } from "./managers/loading";
@@ -21,7 +21,20 @@ export type { InteractiveDispatcher } from "./managers/interactive";
 
 let instanceCounter = 0;
 function generateInstanceId(): string {
-  return `toast-instance-${++instanceCounter}`;
+  const randomId =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `coden-toast-${randomId}-${++instanceCounter}`;
+}
+
+function copyConfig(config: ToasterConfig): ToasterConfig {
+  return {
+    ...config,
+    tokens: config.tokens ? { ...config.tokens } : undefined,
+    semantic: config.semantic ? { ...config.semantic } : undefined,
+    loading: config.loading ? { ...config.loading } : undefined,
+    custom: config.custom ? { ...config.custom } : undefined,
+    margin: typeof config.margin === "object" ? { ...config.margin } : config.margin,
+  };
 }
 
 export interface BaseContext {
@@ -33,7 +46,7 @@ export interface BaseContext {
 }
 
 function makeHandle(toast: Toast): ToastHandle {
-  return {
+  const handle: ToastHandle = {
     dismiss: () => toast.hide(),
     update: (opts: ToastUpdateOptions) => toast.update(opts),
     get settled(): Promise<void> {
@@ -47,6 +60,8 @@ function makeHandle(toast: Toast): ToastHandle {
     onHide: (sub) => toast.onHide(sub),
     onHidden: (sub) => toast.onHidden(sub),
   };
+  toast.setHandle(handle);
+  return handle;
 }
 
 /**
@@ -71,11 +86,12 @@ export interface Toaster {
 
   /**
    * Reconfigure the toaster at runtime.
+   * The construction-time container cannot be changed.
    *
-   * @param config Partial configurations to update.
-   * @throws {Error} If the toaster instance has been destroyed.
+   * @param config Runtime configuration to validate and apply.
+   * @throws {Error} If the instance is destroyed or configuration is invalid.
    */
-  configure(config: Partial<ToasterConfig>): void;
+  configure(config: ToasterRuntimeConfig): void;
 
   /**
    * Fully tear down this toaster instance: dismisses all toasts, closes any
@@ -104,11 +120,12 @@ class ToastManager implements Toaster {
 
   constructor(config: ToasterConfig = {}) {
     this.instanceId = generateInstanceId();
-    this.config = config;
-    this.resolved = this.buildResolvedConfig(config);
+    this.validateConfig(config);
+    this.config = copyConfig(config);
+    this.resolved = this.buildResolvedConfig(this.config);
 
-    if (config.tokens) {
-      applyGlobalTokens(config.tokens, this.instanceId);
+    if (this.config.tokens && typeof document !== "undefined") {
+      applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container?.ownerDocument ?? document);
     }
 
     const getToasterConfig = () => this.config;
@@ -144,39 +161,45 @@ class ToastManager implements Toaster {
     this.custom.clear();
   }
 
-  public configure(config: Partial<ToasterConfig>): void {
+  public configure(config: ToasterRuntimeConfig): void {
     this.assertAlive();
-    this.config = { ...this.config, ...config };
+    if ("container" in config) {
+      throw new Error("Toaster container cannot be changed after construction.");
+    }
+    this.validateConfig({ ...this.config, ...config });
+    this.config = copyConfig({ ...this.config, ...config });
     this.resolved = this.buildResolvedConfig(this.config);
 
     if (config.tokens !== undefined) {
-      applyGlobalTokens(this.config.tokens, this.instanceId);
+      const parent = this.getParent();
+      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument);
     }
 
     if (config.margin !== undefined) {
       const parent = this.getParent();
       parent.querySelectorAll(`[data-toast-container][data-toast-instance="${this.instanceId}"]`).forEach((el) => {
-        if (el instanceof HTMLDivElement) {
+        if (el.tagName === "DIV") {
+          const container = el as HTMLDivElement;
           const margin = config.margin;
           if (margin) {
             if (typeof margin === "string") {
-              el.style.setProperty("--toast-margin-x", margin);
-              el.style.setProperty("--toast-margin-y", margin);
+              container.style.setProperty("--toast-margin-x", margin);
+              container.style.setProperty("--toast-margin-y", margin);
             } else {
               if (margin.x) {
-                el.style.setProperty("--toast-margin-x", margin.x);
+                container.style.setProperty("--toast-margin-x", margin.x);
               } else {
-                el.style.removeProperty("--toast-margin-x");
+                container.style.removeProperty("--toast-margin-x");
               }
               if (margin.y) {
-                el.style.setProperty("--toast-margin-y", margin.y);
+                container.style.setProperty("--toast-margin-y", margin.y);
               } else {
-                el.style.removeProperty("--toast-margin-y");
+                container.style.removeProperty("--toast-margin-y");
               }
             }
           } else {
-            el.style.removeProperty("--toast-margin-x");
-            el.style.removeProperty("--toast-margin-y");
+            container.style.removeProperty("--toast-margin-x");
+            container.style.removeProperty("--toast-margin-y");
           }
         }
       });
@@ -208,9 +231,10 @@ class ToastManager implements Toaster {
 
   private registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle {
     bucket.add(toast);
-    toast.onHidden(() => bucket.delete(toast));
+    void this.removeWhenSettled(toast, bucket);
+    const handle = makeHandle(toast);
     toast.show();
-    return makeHandle(toast);
+    return handle;
   }
 
   private getModalController(): ModalController {
@@ -222,10 +246,17 @@ class ToastManager implements Toaster {
 
   private getParent(): HTMLElement {
     if (this.config.container) {
+      if (this.config.tokens) {
+        applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container.ownerDocument);
+      }
       return this.config.container;
     }
     if (typeof document !== "undefined") {
-      return document.body ?? document.documentElement;
+      const parent = document.body ?? document.documentElement;
+      if (this.config.tokens) {
+        applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument);
+      }
+      return parent;
     }
     throw new Error("DOM document is not available. Toaster operations require a browser environment.");
   }
@@ -243,6 +274,40 @@ class ToastManager implements Toaster {
     };
   }
 
+  private validateConfig(config: ToasterConfig): void {
+    if (config.position !== undefined) {
+      assertToastPosition(config.position);
+    }
+    if (config.appearance !== undefined) {
+      assertToastAppearance(config.appearance);
+    }
+    [config.semantic?.position, config.loading?.position, config.custom?.position].forEach((position) => {
+      if (position !== undefined) {
+        assertToastPosition(position);
+      }
+    });
+    if (config.duration !== undefined && (!Number.isFinite(config.duration) || config.duration < 0)) {
+      throw new Error("Toaster duration must be a finite number greater than or equal to 0.");
+    }
+    if (config.maxVisible !== undefined && (!Number.isInteger(config.maxVisible) || config.maxVisible <= 0)) {
+      throw new Error("Toaster maxVisible must be a positive integer.");
+    }
+    for (const duration of [config.semantic?.duration, config.custom?.duration]) {
+      if (duration !== undefined && (!Number.isFinite(duration) || duration < 0)) {
+        throw new Error("Toaster nested duration must be a finite number greater than or equal to 0.");
+      }
+    }
+    assertValidTokens(
+      config.tokens,
+      config.container?.ownerDocument ?? (typeof document === "undefined" ? undefined : document),
+    );
+  }
+
+  private async removeWhenSettled(toast: Toast, bucket: Set<Toast>): Promise<void> {
+    await toast.settled;
+    bucket.delete(toast);
+  }
+
   private assertAlive(): void {
     if (this.isDestroyed) {
       throw new Error("This toaster instance has been destroyed. Create a new one with createToaster().");
@@ -258,6 +323,7 @@ class ToastManager implements Toaster {
  *
  * @param config Optional initial configuration overrides for the toaster.
  * @returns An independent Toaster instance controller.
+ * @throws {Error} If duration, max-visible count, or token colors are invalid.
  */
 export function createToaster(config?: ToasterConfig): Toaster {
   return new ToastManager(config);

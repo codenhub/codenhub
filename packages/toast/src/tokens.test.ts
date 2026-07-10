@@ -1,88 +1,64 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { applyGlobalTokens, buildInlineStyle } from "./tokens";
+import { applyGlobalTokens } from "./tokens";
 
 const TEST_STYLE_ID = "test-toast-tokens";
 
+function getOwnedStyle(styleId: string): HTMLStyleElement | null {
+  return document.head.querySelector(`style[data-toast-token-owner="${styleId}"]`);
+}
+
+function getStyleText(styleId: string): string {
+  return Array.from(getOwnedStyle(styleId)?.sheet?.cssRules ?? [])
+    .map((rule) => rule.cssText)
+    .join("");
+}
+
 describe("tokens utilities", () => {
-  describe("buildInlineStyle", () => {
-    it("should return empty string when tokens is null or undefined", () => {
-      expect(buildInlineStyle(null)).toBe("");
-      expect(buildInlineStyle(undefined)).toBe("");
-    });
-
-    it("should return empty string when tokens is empty", () => {
-      expect(buildInlineStyle({})).toBe("");
-    });
-
-    it("should return correct inline css custom properties for supported tokens", () => {
-      expect(buildInlineStyle({ success: "red" })).toBe("--toast-color-success: red;");
-      expect(
-        buildInlineStyle({
-          success: "red",
-          successContrast: "white",
-          successSubtle: "blue",
-          successStrong: "green",
-        }),
-      ).toBe(
-        "--toast-color-success: red; --toast-color-success-contrast: white; --toast-color-success-subtle: blue; --toast-color-success-strong: green;",
-      );
-      expect(buildInlineStyle({ destructiveContrast: "#f9fafb" })).toBe("--toast-color-destructive-contrast: #f9fafb;");
-      expect(buildInlineStyle({ warningContrast: "#f9fafb" })).toBe("--toast-color-warning-contrast: #f9fafb;");
-      expect(buildInlineStyle({ infoContrast: "#f9fafb" })).toBe("--toast-color-info-contrast: #f9fafb;");
-    });
-
-    it("should ignore unsupported token keys", () => {
-      // @ts-expect-error testing invalid token keys
-      expect(buildInlineStyle({ invalid: "color", success: "red" })).toBe("--toast-color-success: red;");
-    });
-  });
-
   describe("applyGlobalTokens", () => {
     beforeEach(() => {
-      document.getElementById(TEST_STYLE_ID)?.remove();
+      getOwnedStyle(TEST_STYLE_ID)?.remove();
     });
 
     afterEach(() => {
-      document.getElementById(TEST_STYLE_ID)?.remove();
+      getOwnedStyle(TEST_STYLE_ID)?.remove();
     });
 
     it("should do nothing when tokens is null, undefined, or empty", () => {
       applyGlobalTokens(null, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
+      expect(getOwnedStyle(TEST_STYLE_ID)).toBeNull();
 
       applyGlobalTokens(undefined, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
+      expect(getOwnedStyle(TEST_STYLE_ID)).toBeNull();
 
       applyGlobalTokens({}, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
+      expect(getOwnedStyle(TEST_STYLE_ID)).toBeNull();
     });
 
     it("should create an instance-scoped style element when valid tokens are supplied", () => {
       applyGlobalTokens({ success: "purple", border: "yellow" }, TEST_STYLE_ID);
-      const styleElement = document.getElementById(TEST_STYLE_ID) as HTMLStyleElement | null;
+      const styleElement = getOwnedStyle(TEST_STYLE_ID);
       expect(styleElement).not.toBeNull();
-      expect(styleElement?.textContent).toContain(`[data-toast-instance="${TEST_STYLE_ID}"] {`);
-      expect(styleElement?.textContent).toContain("--toast-color-success: purple;");
-      expect(styleElement?.textContent).toContain("--toast-color-border: yellow;");
+      expect(getStyleText(TEST_STYLE_ID)).toContain(`[data-toast-instance="${TEST_STYLE_ID}"]`);
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-success: purple;");
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-border: yellow;");
     });
 
     it("should replace/update the existing style element on subsequent calls", () => {
       applyGlobalTokens({ success: "purple" }, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)?.textContent).toContain("--toast-color-success: purple;");
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-success: purple;");
 
       applyGlobalTokens({ success: "orange", border: "yellow" }, TEST_STYLE_ID);
-      const el = document.getElementById(TEST_STYLE_ID);
-      expect(el?.textContent).toContain("--toast-color-success: orange;");
-      expect(el?.textContent).toContain("--toast-color-border: yellow;");
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-success: orange;");
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-border: yellow;");
     });
 
     it("should remove the style element if subsequent call passes empty or null tokens", () => {
       applyGlobalTokens({ success: "purple" }, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)).not.toBeNull();
+      expect(getOwnedStyle(TEST_STYLE_ID)).not.toBeNull();
 
       applyGlobalTokens(null, TEST_STYLE_ID);
-      expect(document.getElementById(TEST_STYLE_ID)).toBeNull();
+      expect(getOwnedStyle(TEST_STYLE_ID)).toBeNull();
     });
 
     it("should scope style elements per styleId so instances do not clobber each other", () => {
@@ -92,11 +68,11 @@ describe("tokens utilities", () => {
       applyGlobalTokens({ success: "red" }, idA);
       applyGlobalTokens({ success: "blue" }, idB);
 
-      expect(document.getElementById(idA)?.textContent).toContain("red");
-      expect(document.getElementById(idB)?.textContent).toContain("blue");
+      expect(getStyleText(idA)).toContain("red");
+      expect(getStyleText(idB)).toContain("blue");
 
-      document.getElementById(idA)?.remove();
-      document.getElementById(idB)?.remove();
+      getOwnedStyle(idA)?.remove();
+      getOwnedStyle(idB)?.remove();
     });
   });
 });

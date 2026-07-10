@@ -23,7 +23,7 @@ export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
 /**
  * Public lifecycle states of a toast notification.
  */
-export type ToastState = "visible" | "hiding" | "hidden";
+export type ToastState = "queued" | "visible" | "hiding" | "hidden";
 
 /**
  * Visual aesthetics configurations for toast notifications.
@@ -105,7 +105,7 @@ export interface ToastUpdateOptions {
 /**
  * Subscriber callback function signature for toast lifecycle events.
  */
-export type ToastLifecycleSubscriber = (toast: unknown) => void;
+export type ToastLifecycleSubscriber = (handle: ToastHandle) => void;
 
 /**
  * Control handle returned upon dispatching a toast notification.
@@ -171,7 +171,16 @@ export interface ToastHandle {
 /**
  * Control handle returned by interactive (confirm / prompt / alert) modals.
  */
-export interface InteractiveToastHandle<T> extends ToastHandle {
+export interface InteractiveToastHandle<T> {
+  /** Dismisses an active or queued dialog. Safe to call more than once. */
+  dismiss(): void;
+
+  /** Resolves after the dialog leaves the top layer and cleanup completes. */
+  readonly settled: Promise<void>;
+
+  /** Current queue and visibility state of the dialog. */
+  readonly state: ToastState;
+
   /**
    * A promise that resolves with the user's input/decision:
    * - `confirm`: resolves with `boolean`.
@@ -187,8 +196,8 @@ export interface InteractiveToastHandle<T> extends ToastHandle {
 type ToastContentValue = string | Node;
 
 /**
- * Supported formats for custom toast content. Can be a string, a DOM Node,
- * or a function returning either.
+ * Supported custom content. Strings are sanitized by the package. DOM nodes
+ * are trusted application-owned content and are inserted without sanitizing.
  */
 export type ToastContent = ToastContentValue | (() => ToastContentValue);
 
@@ -396,3 +405,6 @@ export interface ToasterConfig {
   /** Default visual appearance style for toasts. */
   appearance?: ToastAppearance;
 }
+
+/** Runtime configuration fields that can change after construction. */
+export type ToasterRuntimeConfig = Omit<Partial<ToasterConfig>, "container">;

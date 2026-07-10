@@ -1,40 +1,5 @@
 import type { ToastTokens } from "./types";
 
-/**
- * Maps each ToastTokens key to its scoped CSS custom property name.
- *
- * Token cascade for every entry:
- *   consumer override (--toast-color-*)
- *     → @codenhub/styles theme token (--color-*)
- *       → hardcoded hex fallback (standalone / no styles package)
- *
- * Semantic variants (success / destructive / warning / info):
- *   Key              CSS var                          Fallback var                   Hex fallback
- *   ─────────────────────────────────────────────────────────────────────────────────────────────
- *   success          --toast-color-success            --color-success                #059669
- *   successContrast  --toast-color-success-contrast   --color-success-contrast       #f9fafb
- *   successSubtle    --toast-color-success-subtle     --color-success-subtle         #d1fae5
- *   successStrong    --toast-color-success-strong     --color-success-strong         #065f46
- *   destructive      --toast-color-destructive        --color-destructive            #be123c
- *   destructiveContrast --toast-color-destructive-contrast --color-destructive-contrast #f9fafb
- *   destructiveSubtle --toast-color-destructive-subtle --color-destructive-subtle    #ffe4e6
- *   destructiveStrong --toast-color-destructive-strong --color-destructive-strong    #9f1239
- *   warning          --toast-color-warning            --color-warning                #d97706
- *   warningContrast  --toast-color-warning-contrast   --color-warning-contrast       #f9fafb
- *   warningSubtle    --toast-color-warning-subtle     --color-warning-subtle         #fef3c7
- *   warningStrong    --toast-color-warning-strong     --color-warning-strong         #92400e
- *   info             --toast-color-info               --color-info                   #4f46e5
- *   infoContrast     --toast-color-info-contrast      --color-info-contrast          #f9fafb
- *   infoSubtle       --toast-color-info-subtle        --color-info-subtle            #e0e7ff
- *   infoStrong       --toast-color-info-strong        --color-info-strong            #3730a3
- *
- * Default/neutral variant (toast-default):
- *   Key     CSS var                  Fallback var       Hex fallback
- *   ────────────────────────────────────────────────────────────────
- *   border  --toast-color-border    --color-border     #d1d5db
- *   surface --toast-color-surface   --color-surface    #e5e7eb
- *   text    --toast-color-text      --color-text       #030712
- */
 const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   success: "--toast-color-success",
   successContrast: "--toast-color-success-contrast",
@@ -65,74 +30,83 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   destructiveHover: "--toast-color-destructive-hover",
 };
 
-/**
- * Builds an inline CSS style string from the given tokens.
- */
-export function buildInlineStyle(tokens: ToastTokens | null | undefined): string {
-  if (!tokens) {
-    return "";
+const ownedStyleElements = new Map<string, HTMLStyleElement>();
+
+function assertColor(value: string, documentRef?: Document): void {
+  if (value.trim().length === 0 || /[;{}]/.test(value)) {
+    throw new Error(`Toast token value must be a valid CSS color: ${value}`);
   }
 
-  const styles: string[] = [];
-  for (const [key, value] of Object.entries(tokens)) {
-    if (value && key in TOKEN_MAP) {
-      const cssVar = TOKEN_MAP[key as keyof ToastTokens];
-      styles.push(`${cssVar}: ${value};`);
-    }
+  const css = documentRef?.defaultView?.CSS ?? globalThis.CSS;
+  if (typeof css?.supports === "function" && !css.supports("color", value)) {
+    throw new Error(`Toast token value must be a valid CSS color: ${value}`);
   }
-
-  return styles.join(" ");
 }
 
-/**
- * Injects an instance-scoped <style> element into document.head with the
- * overridden tokens. Each toaster instance uses a unique styleId so multiple
- * toasters do not clobber each other.
- */
-export function applyGlobalTokens(tokens: ToastTokens | null | undefined, styleId: string): void {
-  if (typeof document === "undefined") {
+/** Validates all consumer-provided color tokens before DOM use. */
+export function assertValidTokens(tokens: ToastTokens | null | undefined, documentRef?: Document): void {
+  if (!tokens) {
     return;
   }
+  Object.values(tokens).forEach((value) => {
+    if (value !== undefined) {
+      assertColor(value, documentRef);
+    }
+  });
+}
 
-  let styleElement = document.getElementById(styleId) as HTMLStyleElement | null;
+/** Applies validated token values through CSSOM declaration APIs. */
+export function applyTokens(style: CSSStyleDeclaration, tokens: ToastTokens | null | undefined): void {
+  if (!tokens) {
+    return;
+  }
+  for (const [key, value] of Object.entries(tokens)) {
+    if (value !== undefined && key in TOKEN_MAP) {
+      style.setProperty(TOKEN_MAP[key as keyof ToastTokens], value);
+    }
+  }
+}
+
+/** Replaces all package token declarations on a style object. */
+export function replaceTokens(style: CSSStyleDeclaration, tokens: ToastTokens | null | undefined): void {
+  Object.values(TOKEN_MAP).forEach((property) => style.removeProperty(property));
+  applyTokens(style, tokens);
+}
+
+/** Applies instance tokens using an owned stylesheet and CSSOM declarations. */
+export function applyGlobalTokens(
+  tokens: ToastTokens | null | undefined,
+  styleId: string,
+  documentRef: Document = document,
+): void {
+  assertValidTokens(tokens, documentRef);
+  let styleElement = ownedStyleElements.get(styleId);
 
   if (!tokens || Object.keys(tokens).length === 0) {
-    if (styleElement) {
-      styleElement.remove();
-    }
+    styleElement?.remove();
+    ownedStyleElements.delete(styleId);
     return;
   }
 
-  const styles: string[] = [];
-  for (const [key, value] of Object.entries(tokens)) {
-    if (value && key in TOKEN_MAP) {
-      const cssVar = TOKEN_MAP[key as keyof ToastTokens];
-      styles.push(`  ${cssVar}: ${value};`);
-    }
+  if (!styleElement || styleElement.ownerDocument !== documentRef || !styleElement.isConnected) {
+    styleElement?.remove();
+    styleElement = documentRef.createElement("style");
+    styleElement.dataset.toastTokenOwner = styleId;
+    documentRef.head.appendChild(styleElement);
+    styleElement.sheet?.insertRule(`[data-toast-instance="${styleId}"] {}`);
+    ownedStyleElements.set(styleId, styleElement);
   }
 
-  if (styles.length === 0) {
-    if (styleElement) {
-      styleElement.remove();
-    }
-    return;
+  const rule = styleElement.sheet?.cssRules[0];
+  if (!(rule instanceof documentRef.defaultView!.CSSStyleRule)) {
+    throw new Error("Toast token stylesheet could not be initialized.");
   }
-
-  if (!styleElement) {
-    styleElement = document.createElement("style");
-    styleElement.id = styleId;
-    document.head.appendChild(styleElement);
-  }
-
-  styleElement.textContent = `[data-toast-instance="${styleId}"] {\n${styles.join("\n")}\n}`;
+  rule.style.cssText = "";
+  applyTokens(rule.style, tokens);
 }
 
-/**
- * Removes the instance-scoped <style> element if it exists.
- */
+/** Removes only the stylesheet owned by the matching toaster instance. */
 export function removeGlobalTokens(styleId: string): void {
-  if (typeof document === "undefined") {
-    return;
-  }
-  document.getElementById(styleId)?.remove();
+  ownedStyleElements.get(styleId)?.remove();
+  ownedStyleElements.delete(styleId);
 }

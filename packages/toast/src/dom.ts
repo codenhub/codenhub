@@ -1,5 +1,5 @@
 import type { NormalizedToastOptions } from "./options";
-import { buildInlineStyle } from "./tokens";
+import { applyTokens } from "./tokens";
 import type { ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
@@ -8,20 +8,13 @@ type ToastElementOptions = Pick<
 >;
 
 const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
-  "top-left":
-    "fixed top-[var(--toast-margin-y,1rem)] left-[var(--toast-margin-x,1rem)] z-50 flex flex-col-reverse gap-2 pointer-events-none",
-  "top-right":
-    "fixed top-[var(--toast-margin-y,1rem)] right-[var(--toast-margin-x,1rem)] z-50 flex flex-col-reverse gap-2 pointer-events-none",
-  "bottom-right":
-    "fixed right-[var(--toast-margin-x,1rem)] bottom-[var(--toast-margin-y,1rem)] z-50 flex flex-col gap-2 pointer-events-none",
-  "bottom-left":
-    "fixed bottom-[var(--toast-margin-y,1rem)] left-[var(--toast-margin-x,1rem)] z-50 flex flex-col gap-2 pointer-events-none",
-  "top-center":
-    "fixed top-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2 z-50 flex flex-col-reverse gap-2 pointer-events-none items-center",
-  "bottom-center":
-    "fixed bottom-[var(--toast-margin-y,1rem)] left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none items-center",
-  center:
-    "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 flex flex-col gap-2 pointer-events-none items-center",
+  "top-left": "coden-toast-stack coden-toast-stack-top-left",
+  "top-right": "coden-toast-stack coden-toast-stack-top-right",
+  "bottom-right": "coden-toast-stack coden-toast-stack-bottom-right",
+  "bottom-left": "coden-toast-stack coden-toast-stack-bottom-left",
+  "top-center": "coden-toast-stack coden-toast-stack-top-center",
+  "bottom-center": "coden-toast-stack coden-toast-stack-bottom-center",
+  center: "coden-toast-stack coden-toast-stack-center",
 };
 
 const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
@@ -31,27 +24,19 @@ const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
 };
 
 const SVG_SUCCESS =
-  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
+  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
 
 const SVG_ERROR =
-  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>';
+  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>';
 
 const SVG_WARNING =
-  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>';
+  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>';
 
 const SVG_INFO =
-  '<svg class="size-5 shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>';
+  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>';
 
 const SVG_LOADER =
-  '<svg class="size-5 shrink-0" aria-hidden="true" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
-  "<style>" +
-  ".spinner_V8m1{transform-origin:center;animation:spinner_zKoa 2s linear infinite}" +
-  ".spinner_V8m1 circle{stroke-linecap:round;animation:spinner_YpZS 1.5s ease-in-out infinite}" +
-  "@keyframes spinner_zKoa{100%{transform:rotate(360deg)}}" +
-  "@keyframes spinner_YpZS{0%{stroke-dasharray:0 150;stroke-dashoffset:0}47.5%{stroke-dasharray:42 150;stroke-dashoffset:-16}95%,100%{stroke-dasharray:42 150;stroke-dashoffset:-59}}" +
-  "</style>" +
-  '<g class="spinner_V8m1"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3"></circle></g>' +
-  "</svg>";
+  '<svg class="coden-toast-icon coden-toast-spinner" aria-hidden="true" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="42 150"></circle></svg>';
 
 const SVG_CLOSE =
   '<svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>';
@@ -64,8 +49,8 @@ const TOAST_ICON_HTML: Record<ToastIcon, string> = {
   loader: SVG_LOADER,
 };
 
-function parseSVGString(svgString: string): Element {
-  const template = document.createElement("template");
+function parseSVGString(svgString: string, documentRef: Document): Element {
+  const template = documentRef.createElement("template");
   template.innerHTML = svgString;
   const element = template.content.firstElementChild;
   if (element === null) {
@@ -74,35 +59,33 @@ function parseSVGString(svgString: string): Element {
   return element;
 }
 
-function createDismissButton(onDismiss: () => void): HTMLButtonElement {
-  const button = document.createElement("button");
+function createDismissButton(onDismiss: () => void, documentRef: Document): HTMLButtonElement {
+  const button = documentRef.createElement("button");
   button.type = "button";
-  button.className =
-    // `text-inherit` overrides the `color` set by @codenhub/styles btn base rule so that
-    // `stroke="currentColor"` on the inner SVG uses the toast container's text color.
-    // The reset classes (bg-transparent, border-0, p-0, min-h-0, font-inherit) neutralize
-    // the global `btn` base rule that @codenhub/styles/native.css applies to all <button>s.
-    "text-inherit bg-transparent border-0 p-0 min-h-0 font-inherit ml-auto -mr-1 inline-flex size-4 items-center justify-center rounded-full cursor-pointer shrink-0 opacity-70 transition-opacity duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
+  button.className = "coden-toast-dismiss";
 
-  const svgEl = parseSVGString(SVG_CLOSE) as SVGElement;
-  // Set dimensions via inline styles so they are immune to any CSS rule override.
-  // SVG presentation attributes (width/height) have zero specificity and can be
-  // overridden by even the lowest-specificity CSS rule.
-  svgEl.style.width = "1rem";
-  svgEl.style.height = "1rem";
+  const svgEl = parseSVGString(SVG_CLOSE, documentRef) as SVGElement;
   button.appendChild(svgEl);
   button.setAttribute("aria-label", "Dismiss toast");
   button.addEventListener("click", onDismiss);
   return button;
 }
 
-function createIcon(icon: ToastIcon): Element {
-  return parseSVGString(TOAST_ICON_HTML[icon]);
+function createIcon(icon: ToastIcon, documentRef: Document): Element {
+  const element = parseSVGString(TOAST_ICON_HTML[icon], documentRef);
+  if (icon === "loader" && documentRef.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    (element as SVGElement).style.animation = "none";
+  }
+  return element;
 }
 
-export function createToastElement(options: ToastElementOptions, onDismiss: () => void): HTMLDivElement {
+export function createToastElement(
+  options: ToastElementOptions,
+  onDismiss: () => void,
+  documentRef: Document,
+): HTMLDivElement {
   const ariaLive = options.role === "alert" ? "assertive" : "polite";
-  const container = document.createElement("div");
+  const container = documentRef.createElement("div");
 
   container.className = options.className ? `${options.rootClassName} ${options.className}` : options.rootClassName;
   // Store the base class for update() to reference later
@@ -116,23 +99,20 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
     container.append(...options.content);
   } else if (options.message !== null) {
     if (options.icon !== null) {
-      container.appendChild(createIcon(options.icon));
+      container.appendChild(createIcon(options.icon, documentRef));
     }
 
-    const messageSpan = document.createElement("span");
+    const messageSpan = documentRef.createElement("span");
     messageSpan.setAttribute("data-toast-message", "");
     messageSpan.textContent = options.message;
     container.appendChild(messageSpan);
   }
 
   if (options.isDismissable) {
-    container.appendChild(createDismissButton(onDismiss));
+    container.appendChild(createDismissButton(onDismiss, documentRef));
   }
 
-  const inlineStyle = buildInlineStyle(options.tokens);
-  if (inlineStyle) {
-    container.style.cssText = inlineStyle;
-  }
+  applyTokens(container.style, options.tokens);
 
   return container;
 }
@@ -146,15 +126,20 @@ interface ContainerParams {
   margin?: string | { x?: string; y?: string };
 }
 
-function getContainerKey(params: { instanceId: string; parentId: string; position: ToastPosition }): string {
-  const { instanceId, parentId, position } = params;
-  return `toast-container-${instanceId}-${parentId}-${position}`;
+function getContainerKey(params: { instanceId: string; position: ToastPosition }): string {
+  const { instanceId, position } = params;
+  return `${instanceId}-${position}`;
 }
 
 export function getContainer(params: ContainerParams): HTMLDivElement | null {
   const { parent, position, instanceId } = params;
-  const id = getContainerKey({ instanceId, parentId: parent.id || "body", position });
-  return parent.querySelector(`[data-toast-container="${id}"]`) as HTMLDivElement | null;
+  const id = getContainerKey({ instanceId, position });
+  return (
+    Array.from(parent.children).find(
+      (element): element is HTMLDivElement =>
+        element.tagName === "DIV" && element.getAttribute("data-toast-container") === id,
+    ) ?? null
+  );
 }
 
 export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
@@ -162,8 +147,8 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
   let container = getContainer({ parent, position, instanceId });
 
   if (!container) {
-    const id = getContainerKey({ instanceId, parentId: parent.id || "body", position });
-    container = document.createElement("div");
+    const id = getContainerKey({ instanceId, position });
+    container = parent.ownerDocument.createElement("div");
     container.setAttribute("data-toast-container", id);
     container.setAttribute("data-toast-instance", instanceId);
     container.className = POSITION_CONTAINER_CLASSES[position];
@@ -197,7 +182,9 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
 
 export function removeInstanceContainers(params: { parent: HTMLElement; instanceId: string }): void {
   const { parent, instanceId } = params;
-  parent.querySelectorAll(`[data-toast-container][data-toast-instance="${instanceId}"]`).forEach((el) => el.remove());
+  Array.from(parent.children)
+    .filter((element) => element.getAttribute("data-toast-instance") === instanceId)
+    .forEach((element) => element.remove());
 }
 
 // --- Animation helpers -------------------------------------------------------
@@ -251,6 +238,14 @@ function runAnimation(
   shouldCompleteOnCancel = false,
 ): void {
   const finish = createSingleRunCallback(onFinish);
+  const prefersReducedMotion = element.ownerDocument.defaultView?.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+
+  if (prefersReducedMotion) {
+    finish?.();
+    return;
+  }
 
   if (!finish) {
     try {
@@ -292,8 +287,9 @@ export function animateStackChange(container: HTMLDivElement, updateStack: () =>
   let stackOffset = 0;
 
   Array.from(container.children).forEach((child) => {
-    if (child instanceof HTMLDivElement) {
-      previousRects.set(child, child.getBoundingClientRect());
+    if (child.tagName === "DIV") {
+      const div = child as HTMLDivElement;
+      previousRects.set(div, div.getBoundingClientRect());
     }
   });
 
@@ -320,9 +316,9 @@ export function animateStackChange(container: HTMLDivElement, updateStack: () =>
   }
 
   Array.from(container.children).forEach((child) => {
-    if (!(child instanceof HTMLDivElement) || previousRects.has(child)) {
+    if (child.tagName !== "DIV" || previousRects.has(child as HTMLDivElement)) {
       return;
     }
-    runAnimation(child, [{ translate: `0 ${stackOffset}px` }, { translate: "0 0" }]);
+    runAnimation(child as HTMLDivElement, [{ translate: `0 ${stackOffset}px` }, { translate: "0 0" }]);
   });
 }

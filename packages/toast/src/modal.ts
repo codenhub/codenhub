@@ -1,432 +1,81 @@
-import { ACTIONS_CLASS, DIALOG_CLASS, buildDialogContent, createHTMLElement } from "./modal-templates";
+import { createAlertRenderer, createConfirmRenderer, createPromptRenderer } from "./modal-renderers";
+import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
+import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
+import { closeDialog } from "./modal-transition";
+import { assertValidTokens } from "./tokens";
 import type { AlertOptions, ConfirmOptions, InteractiveToastHandle, PromptOptions, ToastState } from "./types";
 
 interface ModalJob {
-  run: () => void;
-  dismiss: () => void;
+  run(): void;
+  dismiss(isForced?: boolean): void;
+  fail(error: unknown): void;
 }
 
-/**
- * Manages native dialog modals for interactive alerts, confirmations, and prompts.
- * Leverages a queue to serialize multiple modal dialogs.
- */
+interface ModalOptions {
+  title?: string;
+  shouldBackdropDismiss?: boolean;
+  tokens?: ConfirmOptions["tokens"];
+  className?: string;
+}
+
+interface CreateModalParams<T> {
+  message: string;
+  options: ModalOptions;
+  cancelValue: T;
+  render(context: ModalRenderContext<T>): ModalRenderResult;
+}
+
+/** Serializes native dialogs and owns their complete lifecycle. */
 export class ModalController {
   private dialog: HTMLDialogElement | null = null;
   private jobs: ModalJob[] = [];
   private activeJob: ModalJob | null = null;
-  private isRunning = false;
+  private restoreTarget: HTMLElement | null = null;
   private isDestroyed = false;
+  private jobCounter = 0;
 
-  /**
-   * Constructs a new ModalController instance.
-   *
-   * @param parent The parent DOM container.
-   * @param instanceId The unique toaster instance ID for CSS variable scoping.
-   */
-  constructor(
+  public constructor(
     private readonly parent: HTMLElement,
     private readonly instanceId: string,
   ) {}
 
-  /**
-   * Enqueues and displays a confirmation dialog.
-   *
-   * @param message Question or statement to confirm.
-   * @param options Confirm action configurations.
-   */
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
-    let resolve!: (value: boolean) => void;
-    const result = new Promise<boolean>((res) => (resolve = res));
-    let settleFn!: () => void;
-    const settled = new Promise<void>((res) => (settleFn = res));
-    let currentState: ToastState = "visible";
-    let isCanceled = false;
-    let activeClose: ((value: boolean) => void) | null = null;
-
-    const abortController = new AbortController();
-    const { signal } = abortController;
-
-    const job: ModalJob = {
-      run: () => {
-        if (isCanceled) {
-          this.next();
-          return;
-        }
-
-        const dialog = this.ensureDialog();
-        const container = buildDialogContent({
-          dialog,
-          message,
-          title: options.title,
-          tokens: options.tokens,
-          className: options.className,
-        });
-
-        const cancelBtn = createHTMLElement("button");
-        cancelBtn.type = "button";
-        cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-cancel toast-dialog-btn-secondary";
-
-        const confirmBtn = createHTMLElement("button");
-        confirmBtn.type = "button";
-        confirmBtn.textContent = options.confirmLabel ?? "Confirm";
-        confirmBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
-
-        const actions = createHTMLElement("div", ACTIONS_CLASS);
-        actions.appendChild(cancelBtn);
-        actions.appendChild(confirmBtn);
-        container.appendChild(actions);
-
-        const close = (value: boolean): void => {
-          abortController.abort();
-          activeClose = null;
-          resolve(value);
-          this.closeDialog(dialog, () => {
-            currentState = "hidden";
-            settleFn();
-            this.next();
-          });
-        };
-
-        activeClose = close;
-
-        cancelBtn.addEventListener("click", () => close(false), { signal });
-        confirmBtn.addEventListener("click", () => close(true), { signal });
-
-        const onCancel = (e: Event): void => {
-          e.preventDefault();
-          close(false);
-        };
-        dialog.addEventListener("cancel", onCancel, { signal });
-
-        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
-        if (shouldBackdropDismiss) {
-          const onBackdropClick = (e: MouseEvent): void => {
-            if (e.target === dialog) {
-              const rect = dialog.getBoundingClientRect();
-              const isInDialog =
-                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-              if (!isInDialog) {
-                close(false);
-              }
-            }
-          };
-          dialog.addEventListener("click", onBackdropClick, { signal });
-        }
-
-        dialog.showModal();
-        confirmBtn.focus();
-      },
-      dismiss: () => {
-        if (activeClose) {
-          activeClose(false);
-        } else {
-          isCanceled = true;
-          abortController.abort();
-          resolve(false);
-          currentState = "hidden";
-          settleFn();
-        }
-      },
-    };
-
-    this.enqueue(job);
-
-    const noopUnsubscribe = () => () => {};
-
-    return {
-      dismiss: () => job.dismiss(),
-      update: () => {
-        /* no-op for modals */
-      },
-      get settled() {
-        return settled;
-      },
-      get state() {
-        return currentState;
-      },
-      onShow: noopUnsubscribe,
-      onShown: noopUnsubscribe,
-      onHide: noopUnsubscribe,
-      onHidden: noopUnsubscribe,
-      result,
-    };
+    return this.createModal<boolean>({
+      message,
+      options,
+      cancelValue: false,
+      render: createConfirmRenderer(options),
+    });
   }
 
-  /**
-   * Enqueues and displays an input prompt dialog.
-   *
-   * @param message Label description for the input text field.
-   * @param options Prompt configuration settings.
-   */
   public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
-    let resolve!: (value: string | null) => void;
-    const result = new Promise<string | null>((res) => (resolve = res));
-    let settleFn!: () => void;
-    const settled = new Promise<void>((res) => (settleFn = res));
-    let currentState: ToastState = "visible";
-    let isCanceled = false;
-    let activeClose: ((value: string | null) => void) | null = null;
-
-    const abortController = new AbortController();
-    const { signal } = abortController;
-
-    const job: ModalJob = {
-      run: () => {
-        if (isCanceled) {
-          this.next();
-          return;
-        }
-
-        const dialog = this.ensureDialog();
-        const container = buildDialogContent({
-          dialog,
-          message,
-          title: options.title,
-          tokens: options.tokens,
-          className: options.className,
-        });
-
-        const input = createHTMLElement("input");
-        input.type = "text";
-        input.value = options.defaultValue ?? "";
-        input.placeholder = options.placeholder ?? "";
-        input.className = "toast-dialog-input";
-        container.appendChild(input);
-
-        const cancelBtn = createHTMLElement("button");
-        cancelBtn.type = "button";
-        cancelBtn.textContent = options.cancelLabel ?? "Cancel";
-        cancelBtn.className = "toast-dialog-btn toast-dialog-btn-cancel toast-dialog-btn-secondary";
-
-        const submitBtn = createHTMLElement("button");
-        submitBtn.type = "button";
-        submitBtn.textContent = options.submitLabel ?? "Submit";
-        submitBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
-
-        const actions = createHTMLElement("div", ACTIONS_CLASS);
-        actions.appendChild(cancelBtn);
-        actions.appendChild(submitBtn);
-        container.appendChild(actions);
-
-        const close = (value: string | null): void => {
-          abortController.abort();
-          activeClose = null;
-          resolve(value);
-          this.closeDialog(dialog, () => {
-            currentState = "hidden";
-            settleFn();
-            this.next();
-          });
-        };
-
-        activeClose = close;
-
-        cancelBtn.addEventListener("click", () => close(null), { signal });
-        submitBtn.addEventListener("click", () => close(input.value), { signal });
-        input.addEventListener(
-          "keydown",
-          (e) => {
-            if (e.key === "Enter") {
-              close(input.value);
-            }
-          },
-          { signal },
-        );
-
-        const onCancel = (e: Event): void => {
-          e.preventDefault();
-          close(null);
-        };
-        dialog.addEventListener("cancel", onCancel, { signal });
-
-        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
-        if (shouldBackdropDismiss) {
-          const onBackdropClick = (e: MouseEvent): void => {
-            if (e.target === dialog) {
-              const rect = dialog.getBoundingClientRect();
-              const isInDialog =
-                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-              if (!isInDialog) {
-                close(null);
-              }
-            }
-          };
-          dialog.addEventListener("click", onBackdropClick, { signal });
-        }
-
-        dialog.showModal();
-        requestAnimationFrame(() => input.focus());
-      },
-      dismiss: () => {
-        if (activeClose) {
-          activeClose(null);
-        } else {
-          isCanceled = true;
-          abortController.abort();
-          resolve(null);
-          currentState = "hidden";
-          settleFn();
-        }
-      },
-    };
-
-    this.enqueue(job);
-
-    const noopUnsubscribe = () => () => {};
-
-    return {
-      dismiss: () => job.dismiss(),
-      update: () => {
-        /* no-op for modals */
-      },
-      get settled() {
-        return settled;
-      },
-      get state() {
-        return currentState;
-      },
-      onShow: noopUnsubscribe,
-      onShown: noopUnsubscribe,
-      onHide: noopUnsubscribe,
-      onHidden: noopUnsubscribe,
-      result,
-    };
+    return this.createModal<string | null>({
+      message,
+      options,
+      cancelValue: null,
+      render: createPromptRenderer(options),
+    });
   }
 
-  /**
-   * Enqueues and displays a blocking message alert dialog.
-   *
-   * @param message Informational statement text.
-   * @param options Alert customization options.
-   */
   public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
-    let resolve!: () => void;
-    const result = new Promise<void>((res) => (resolve = res));
-    let settleFn!: () => void;
-    const settled = new Promise<void>((res) => (settleFn = res));
-    let currentState: ToastState = "visible";
-    let isCanceled = false;
-    let activeClose: (() => void) | null = null;
-
-    const abortController = new AbortController();
-    const { signal } = abortController;
-
-    const job: ModalJob = {
-      run: () => {
-        if (isCanceled) {
-          this.next();
-          return;
-        }
-
-        const dialog = this.ensureDialog();
-        const container = buildDialogContent({
-          dialog,
-          message,
-          title: options.title,
-          tokens: options.tokens,
-          className: options.className,
-        });
-
-        const okBtn = createHTMLElement("button");
-        okBtn.type = "button";
-        okBtn.textContent = options.okLabel ?? "OK";
-        okBtn.className = `toast-dialog-btn toast-dialog-btn-${options.type ?? "primary"}`;
-
-        const actions = createHTMLElement("div", ACTIONS_CLASS);
-        actions.appendChild(okBtn);
-        container.appendChild(actions);
-
-        const close = (): void => {
-          abortController.abort();
-          activeClose = null;
-          resolve();
-          this.closeDialog(dialog, () => {
-            currentState = "hidden";
-            settleFn();
-            this.next();
-          });
-        };
-
-        activeClose = close;
-
-        okBtn.addEventListener("click", close, { signal });
-
-        const onCancel = (e: Event): void => {
-          e.preventDefault();
-          close();
-        };
-        dialog.addEventListener("cancel", onCancel, { signal });
-
-        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
-        if (shouldBackdropDismiss) {
-          const onBackdropClick = (e: MouseEvent): void => {
-            if (e.target === dialog) {
-              const rect = dialog.getBoundingClientRect();
-              const isInDialog =
-                e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-              if (!isInDialog) {
-                close();
-              }
-            }
-          };
-          dialog.addEventListener("click", onBackdropClick, { signal });
-        }
-
-        dialog.showModal();
-        okBtn.focus();
-      },
-      dismiss: () => {
-        if (activeClose) {
-          activeClose();
-        } else {
-          isCanceled = true;
-          abortController.abort();
-          resolve();
-          currentState = "hidden";
-          settleFn();
-        }
-      },
-    };
-
-    this.enqueue(job);
-
-    const noopUnsubscribe = () => () => {};
-
-    return {
-      dismiss: () => job.dismiss(),
-      update: () => {
-        /* no-op for modals */
-      },
-      get settled() {
-        return settled;
-      },
-      get state() {
-        return currentState;
-      },
-      onShow: noopUnsubscribe,
-      onShown: noopUnsubscribe,
-      onHide: noopUnsubscribe,
-      onHidden: noopUnsubscribe,
-      result,
-    };
+    return this.createModal({
+      message,
+      options,
+      cancelValue: undefined,
+      render: createAlertRenderer(options),
+    });
   }
 
-  /**
-   * Tear down the manager, resolving any pending queued modal promises,
-   * closing the dialog, and removing elements from the DOM.
-   */
   public destroy(): void {
-    this.isDestroyed = true;
-    const currentJobs = this.jobs;
-    this.jobs = [];
-
-    currentJobs.forEach((job) => job.dismiss());
-    if (this.activeJob) {
-      this.activeJob.dismiss();
-      this.activeJob = null;
+    if (this.isDestroyed) {
+      return;
     }
-
+    this.isDestroyed = true;
+    const queuedJobs = this.jobs;
+    this.jobs = [];
+    queuedJobs.forEach((job) => job.dismiss(true));
+    this.activeJob?.dismiss(true);
+    this.activeJob = null;
     if (this.dialog) {
       if (this.dialog.open) {
         this.dialog.close();
@@ -436,108 +85,232 @@ export class ModalController {
     }
   }
 
+  private createModal<T>(params: CreateModalParams<T>): InteractiveToastHandle<T> {
+    if (params.message.trim().length === 0) {
+      throw new Error("Interactive dialog message must not be empty.");
+    }
+    assertValidTokens(params.options.tokens, this.parent.ownerDocument);
+
+    let resolveResult!: (value: T) => void;
+    let rejectResult!: (reason: unknown) => void;
+    const result = new Promise<T>((resolve, reject) => {
+      resolveResult = resolve;
+      rejectResult = reject;
+    });
+    let resolveSettled!: () => void;
+    const settled = new Promise<void>((resolve) => {
+      resolveSettled = resolve;
+    });
+
+    const documentRef = this.parent.ownerDocument;
+    if (!this.activeJob && this.jobs.length === 0) {
+      const activeElement = documentRef.activeElement;
+      this.restoreTarget = activeElement instanceof documentRef.defaultView!.HTMLElement ? activeElement : null;
+    }
+    const abortController = new AbortController();
+    let state: ToastState = "queued";
+    let dialog: HTMLDialogElement | null = null;
+    let focusFrame: number | null = null;
+    let hasStarted = false;
+    let isClosing = false;
+    let isResultSettled = false;
+    let isCleanupSettled = false;
+
+    const settleResult = (value: T, error?: unknown): void => {
+      if (isResultSettled) {
+        return;
+      }
+      isResultSettled = true;
+      if (error === undefined) {
+        resolveResult(value);
+      } else {
+        rejectResult(error);
+      }
+    };
+
+    const finishCleanup = (): void => {
+      if (isCleanupSettled) {
+        return;
+      }
+      isCleanupSettled = true;
+      if (focusFrame !== null) {
+        documentRef.defaultView?.cancelAnimationFrame(focusFrame);
+      }
+      abortController.abort();
+      state = "hidden";
+      resolveSettled();
+      this.complete(job);
+      this.restoreFocusIfIdle();
+    };
+
+    const close = (value: T, isForced = false): void => {
+      settleResult(value);
+      if (!hasStarted) {
+        finishCleanup();
+        return;
+      }
+      if (isClosing && !isForced) {
+        return;
+      }
+      isClosing = true;
+      state = "hiding";
+      abortController.abort();
+      if (!dialog || isForced) {
+        if (dialog?.open) {
+          dialog.close();
+        }
+        finishCleanup();
+        return;
+      }
+      closeDialog(dialog, finishCleanup);
+    };
+
+    const fail = (error: unknown): void => {
+      settleResult(params.cancelValue, error);
+      if (dialog?.open) {
+        dialog.close();
+      }
+      finishCleanup();
+    };
+
+    const job: ModalJob = {
+      run: () => {
+        if (isCleanupSettled) {
+          this.complete(job);
+          return;
+        }
+        hasStarted = true;
+        dialog = this.ensureDialog();
+        const idBase = `${this.instanceId}-dialog-${++this.jobCounter}`;
+        const messageId = `${idBase}-message`;
+        const container = buildDialogContent({
+          dialog,
+          message: params.message,
+          title: params.options.title,
+          tokens: params.options.tokens,
+          className: params.options.className,
+          titleId: `${idBase}-title`,
+          messageId,
+        });
+        const rendered = params.render({
+          container,
+          documentRef,
+          signal: abortController.signal,
+          messageId,
+          close: (value) => close(value),
+        });
+
+        dialog.addEventListener(
+          "cancel",
+          (event) => {
+            event.preventDefault();
+            close(params.cancelValue);
+          },
+          { signal: abortController.signal },
+        );
+        if (params.options.shouldBackdropDismiss !== false) {
+          dialog.addEventListener(
+            "click",
+            (event) => {
+              if (event.target !== dialog) {
+                return;
+              }
+              const rect = dialog!.getBoundingClientRect();
+              const mouseEvent = event as MouseEvent;
+              const isInside =
+                mouseEvent.clientX >= rect.left &&
+                mouseEvent.clientX <= rect.right &&
+                mouseEvent.clientY >= rect.top &&
+                mouseEvent.clientY <= rect.bottom;
+              if (!isInside) {
+                close(params.cancelValue);
+              }
+            },
+            { signal: abortController.signal },
+          );
+        }
+
+        dialog.showModal();
+        state = "visible";
+        if (rendered.shouldDeferFocus) {
+          focusFrame = documentRef.defaultView!.requestAnimationFrame(() => {
+            if (state === "visible" && rendered.initialFocus.isConnected) {
+              rendered.initialFocus.focus();
+            }
+          });
+        } else {
+          rendered.initialFocus.focus();
+        }
+      },
+      dismiss: (isForced = false) => close(params.cancelValue, isForced),
+      fail,
+    };
+
+    this.enqueue(job);
+    return {
+      dismiss: () => job.dismiss(),
+      get settled() {
+        return settled;
+      },
+      get state() {
+        return state;
+      },
+      result,
+    };
+  }
+
   private enqueue(job: ModalJob): void {
     if (this.isDestroyed) {
+      job.fail(new Error("Modal controller has been destroyed."));
       return;
     }
     this.jobs.push(job);
-    if (!this.isRunning) {
-      this.next();
-    }
+    this.next();
   }
 
   private next(): void {
-    if (this.isDestroyed || this.jobs.length === 0) {
-      this.isRunning = false;
-      this.activeJob = null;
+    if (this.isDestroyed || this.activeJob || this.jobs.length === 0) {
       return;
     }
-    this.isRunning = true;
-    this.activeJob = this.jobs.shift()!;
-    this.activeJob.run();
+    const job = this.jobs.shift()!;
+    this.activeJob = job;
+    try {
+      job.run();
+    } catch (error) {
+      job.fail(error);
+    }
+  }
+
+  private complete(job: ModalJob): void {
+    const queueIndex = this.jobs.indexOf(job);
+    if (queueIndex >= 0) {
+      this.jobs.splice(queueIndex, 1);
+    }
+    if (this.activeJob === job) {
+      this.activeJob = null;
+    }
+    this.next();
+  }
+
+  private restoreFocusIfIdle(): void {
+    if (this.activeJob || this.jobs.length > 0) {
+      return;
+    }
+    if (this.restoreTarget?.isConnected) {
+      this.restoreTarget.focus();
+    }
+    this.restoreTarget = null;
   }
 
   private ensureDialog(): HTMLDialogElement {
     if (!this.dialog) {
-      const dialog = document.createElement("dialog");
-      dialog.className = DIALOG_CLASS;
-      dialog.setAttribute("data-toast-instance", this.instanceId);
-      this.parent.appendChild(dialog);
-      this.dialog = dialog;
+      this.dialog = this.parent.ownerDocument.createElement("dialog");
+      this.dialog.className = DIALOG_CLASS;
+      this.dialog.setAttribute("data-toast-instance", this.instanceId);
+      this.parent.appendChild(this.dialog);
     } else {
-      this.dialog.innerHTML = "";
+      this.dialog.replaceChildren();
     }
     return this.dialog;
   }
-
-  private closeDialog(dialog: HTMLDialogElement, onClosed: () => void): void {
-    if (!dialog.open) {
-      onClosed();
-      return;
-    }
-
-    const style = window.getComputedStyle(dialog);
-    const transitionDuration = style.transitionDuration || "0s";
-    const transitionDelay = style.transitionDelay || "0s";
-    const totalDuration = parseTransitionDuration(transitionDuration, transitionDelay);
-
-    if (totalDuration <= 0) {
-      dialog.close();
-      onClosed();
-      return;
-    }
-
-    const win = typeof window !== "undefined" ? window : undefined;
-    const timer: { id: ReturnType<typeof setTimeout> | undefined } = { id: undefined };
-    let hasFinished = false;
-    const finish = (): void => {
-      if (hasFinished) {
-        return;
-      }
-      hasFinished = true;
-      dialog.removeEventListener("transitionend", finish);
-      dialog.removeEventListener("transitioncancel", finish);
-      if (timer.id !== undefined && win) {
-        win.clearTimeout(timer.id);
-      }
-      onClosed();
-    };
-
-    dialog.addEventListener("transitionend", finish);
-    dialog.addEventListener("transitioncancel", finish);
-    timer.id = win ? win.setTimeout(finish, totalDuration + 50) : undefined;
-
-    dialog.close();
-  }
-}
-
-function parseTransitionDuration(durationStr: string, delayStr?: string): number {
-  const parse = (str?: string): number[] => {
-    if (!str) {
-      return [0];
-    }
-    return str.split(",").map((d) => {
-      const val = d.trim();
-      if (val.endsWith("ms")) {
-        return parseFloat(val) || 0;
-      }
-      if (val.endsWith("s")) {
-        return (parseFloat(val) || 0) * 1000;
-      }
-      return 0;
-    });
-  };
-
-  const durations = parse(durationStr);
-  const delays = parse(delayStr);
-
-  let maxTotal = 0;
-  const count = Math.max(durations.length, delays.length);
-  for (let i = 0; i < count; i++) {
-    const duration = durations[i % durations.length] || 0;
-    const delay = delays[i % delays.length] || 0;
-    maxTotal = Math.max(maxTotal, duration + delay);
-  }
-
-  return maxTotal;
 }

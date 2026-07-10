@@ -1,4 +1,4 @@
-import { buildInlineStyle } from "./tokens";
+import { assertValidTokens, replaceTokens } from "./tokens";
 import type {
   ToastAppearance,
   ToastContent,
@@ -42,20 +42,49 @@ export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> 
 
 export const DEFAULT_ROLE: ToastRole = "status";
 
+const TOAST_POSITIONS: readonly ToastPosition[] = [
+  "top-left",
+  "top-right",
+  "bottom-right",
+  "bottom-left",
+  "top-center",
+  "bottom-center",
+  "center",
+];
+const TOAST_APPEARANCES: readonly ToastAppearance[] = ["flat", "soft", "soft-bordered", "left-accent"];
+const TOAST_ROLES: readonly ToastRole[] = ["alert", "status"];
+
+export function assertToastPosition(value: unknown): asserts value is ToastPosition {
+  if (!TOAST_POSITIONS.includes(value as ToastPosition)) {
+    throw new Error(`Invalid toast position: ${String(value)}`);
+  }
+}
+
+export function assertToastAppearance(value: unknown): asserts value is ToastAppearance {
+  if (!TOAST_APPEARANCES.includes(value as ToastAppearance)) {
+    throw new Error(`Invalid toast appearance: ${String(value)}`);
+  }
+}
+
+export function assertToastRole(value: unknown): asserts value is ToastRole {
+  if (!TOAST_ROLES.includes(value as ToastRole)) {
+    throw new Error(`Invalid toast role: ${String(value)}`);
+  }
+}
+
 /**
  * Shared structural class applied to every toast element regardless of variant.
  * Drives layout, typography, border radius, and pointer-events.
  * Each variant (semantic/loading/custom) prepends this and appends its own
  * spacing + color class (e.g. `toast-success`).
  */
-export const TOAST_SHAPE_CLASS =
-  "rounded-xl border-2 text-sm font-medium font-default pointer-events-auto flex items-center";
+export const TOAST_SHAPE_CLASS = "coden-toast";
 
 /**
  * Full root class for the default (custom/no-variant) toast.
  * Used as the fallback when no variant-specific rootClassName is provided.
  */
-export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} min-w-40 p-3 gap-2 toast-default`;
+export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
 
 // --- Normalized options used internally by Toast ----------------------------
 
@@ -116,7 +145,7 @@ const SAFE_TAGS = new Set([
   "ul",
 ]);
 
-const SAFE_ATTRIBUTES = new Set(["class", "id", "style", "target", "rel"]);
+const SAFE_ATTRIBUTES = new Set(["target", "rel"]);
 
 const URL_ATTRIBUTES = new Set(["href"]);
 
@@ -155,9 +184,20 @@ function sanitizeElement(el: Element): void {
           el.removeAttribute(attr.name);
         }
       }
+    } else if (attrName === "target") {
+      const target = attr.value.toLowerCase();
+      if (!["_blank", "_self"].includes(target)) {
+        el.removeAttribute(attr.name);
+      } else {
+        el.setAttribute("target", target);
+      }
     } else if (!SAFE_ATTRIBUTES.has(attrName)) {
       el.removeAttribute(attr.name);
     }
+  }
+
+  if (tagName === "a" && el.getAttribute("target")?.toLowerCase() === "_blank") {
+    el.setAttribute("rel", "noopener noreferrer");
   }
 
   Array.from(el.children).forEach(sanitizeElement);
@@ -167,14 +207,14 @@ function sanitizeFragment(fragment: DocumentFragment): void {
   Array.from(fragment.children).forEach(sanitizeElement);
 }
 
-function resolveToastContent(content: ToastContent): readonly Node[] {
+function resolveToastContent(content: ToastContent, documentRef: Document): readonly Node[] {
   const resolved = typeof content === "function" ? content() : content;
 
   if (typeof resolved === "string") {
     if (!hasNonEmptyString(resolved)) {
       throw new Error("Toast content must not be an empty string.");
     }
-    const template = document.createElement("template");
+    const template = documentRef.createElement("template");
     template.innerHTML = resolved;
 
     sanitizeFragment(template.content);
@@ -182,11 +222,17 @@ function resolveToastContent(content: ToastContent): readonly Node[] {
     return Object.freeze(Array.from(template.content.childNodes));
   }
 
-  if (!(resolved instanceof Node)) {
+  if (typeof resolved !== "object" || resolved === null || !("nodeType" in resolved)) {
     throw new Error("Toast content must resolve to a string or DOM Node.");
   }
 
-  if (resolved instanceof DocumentFragment) {
+  const ownerDocument = resolved.nodeType === 9 ? (resolved as Document) : resolved.ownerDocument;
+  const NodeConstructor = ownerDocument?.defaultView?.Node;
+  if (!NodeConstructor || !(resolved instanceof NodeConstructor) || ![1, 3, 11].includes(resolved.nodeType)) {
+    throw new Error("Toast content Node must be an Element, Text, or DocumentFragment.");
+  }
+
+  if (resolved.nodeType === 11) {
     return Object.freeze(Array.from(resolved.childNodes));
   }
 
@@ -223,8 +269,9 @@ export function normalizeToastOptions(params: {
   options: RawToastOptions;
   preset: ToastPresetOptions | null;
   config: ResolvedToastConfig;
+  documentRef: Document;
 }): Readonly<NormalizedToastOptions> {
-  const { options, preset, config } = params;
+  const { options, preset, config, documentRef } = params;
   const { content, message } = options;
 
   if (content === undefined) {
@@ -236,19 +283,25 @@ export function normalizeToastOptions(params: {
   }
 
   assertDuration(options.duration);
+  assertValidTokens(options.tokens, documentRef);
 
   const appearance = options.appearance ?? config.appearance ?? "soft-bordered";
+  const position = options.position ?? config.position;
+  const role = options.role ?? preset?.role ?? DEFAULT_ROLE;
+  assertToastAppearance(appearance);
+  assertToastPosition(position);
+  assertToastRole(role);
 
   return Object.freeze({
     instanceId: config.instanceId,
     shouldAutoDismiss: options.shouldAutoDismiss ?? preset?.shouldAutoDismiss ?? config.shouldAutoDismiss,
-    content: content === undefined ? null : resolveToastContent(content),
+    content: content === undefined ? null : resolveToastContent(content, documentRef),
     duration: options.duration ?? config.duration,
     icon: content === undefined ? (preset?.icon ?? options.icon ?? null) : null,
     isDismissable: options.isDismissable ?? config.isDismissable,
     message: content === undefined ? (message ?? "") : null,
-    position: options.position ?? config.position,
-    role: preset?.role ?? options.role ?? DEFAULT_ROLE,
+    position,
+    role,
     rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, `toast-appearance-${appearance}`),
     className: options.className,
     tokens: options.tokens ?? null,
@@ -268,8 +321,8 @@ export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdat
   }
 
   if (update.tokens !== undefined) {
-    const inlineStyle = buildInlineStyle(update.tokens);
-    element.style.cssText = inlineStyle;
+    assertValidTokens(update.tokens, element.ownerDocument);
+    replaceTokens(element.style, update.tokens);
   }
 
   if (update.className !== undefined) {

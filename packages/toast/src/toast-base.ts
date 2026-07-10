@@ -1,8 +1,8 @@
 import { animateIn, animateStackChange, createToastElement, getOrCreateContainer } from "./dom";
 import { applyUpdateToElement, normalizeToastOptions } from "./options";
 import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
-import { removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
-import type { ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
+import { releaseSlot, removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
+import type { ToastHandle, ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
 
@@ -10,7 +10,7 @@ type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
 function convertToPublicState(internal: InternalToastState): ToastState {
   if (internal === "visible" || internal === "queued") {
-    return "visible";
+    return internal;
   }
   if (internal === "hiding") {
     return "hiding";
@@ -33,7 +33,11 @@ function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<Toast
 export class Toast {
   protected readonly options: Readonly<NormalizedToastOptions>;
   private readonly subscribers = createLifecycleSubscribers();
+  private handle: ToastHandle | null = null;
+  private readonly reachedEvents = new Set<ToastLifecycleEventName>();
   private dismissTimeoutId: number | null = null;
+  private dismissDeadline: number | null = null;
+  private remainingDuration: number;
   private element: HTMLDivElement | null = null;
   private queuedSlotCancel: (() => void) | null = null;
   private internalState: InternalToastState = "idle";
@@ -59,14 +63,26 @@ export class Toast {
     const { options, config, parent } = params;
     this.parent = parent;
     this.maxVisible = config.maxVisible;
+    this.remainingDuration = config.duration;
     this.options = normalizeToastOptions({
       options,
       preset: (this.constructor as typeof Toast).getPresetOptions(options),
       config,
+      documentRef: parent.ownerDocument,
     });
+    this.remainingDuration = this.options.duration;
     this._settled = new Promise<void>((resolve) => {
       this.settledResolve = resolve;
     });
+  }
+
+  /**
+   * Connects the public ToastHandle instance to this toast.
+   *
+   * @param handle The public control handle.
+   */
+  public setHandle(handle: ToastHandle): void {
+    this.handle = handle;
   }
 
   /**
@@ -146,20 +162,19 @@ export class Toast {
       return;
     }
 
-    const position = this.options.position;
     this.internalState = "queued";
     this.queuedSlotCancel = requestSlot({
       parent: this.parent,
-      position,
+      position: this.options.position,
       instanceId: this.options.instanceId,
       maxVisible: this.maxVisible,
+      owner: this,
       onAvailable: () => {
         this.queuedSlotCancel = null;
         if (this.internalState !== "queued") {
           return;
         }
-        this.internalState = "idle";
-        this.show();
+        this.render();
       },
     });
 
@@ -167,12 +182,20 @@ export class Toast {
       return;
     }
 
-    const element = createToastElement(this.options, () => this.hide());
+    this.render();
+  }
+
+  private render(): void {
+    if (this.internalState !== "queued") {
+      return;
+    }
+    const position = this.options.position;
+    const element = createToastElement(this.options, () => this.hide(), this.parent.ownerDocument);
 
     if (this.options.shouldAutoDismiss) {
       element.addEventListener("mouseenter", () => {
         this.isHovered = true;
-        this.clearAutoDismiss();
+        this.pauseAutoDismiss();
       });
       element.addEventListener("mouseleave", () => {
         this.isHovered = false;
@@ -182,7 +205,7 @@ export class Toast {
       });
       element.addEventListener("focusin", () => {
         this.isFocused = true;
-        this.clearAutoDismiss();
+        this.pauseAutoDismiss();
       });
       element.addEventListener("focusout", () => {
         this.isFocused = false;
@@ -233,7 +256,10 @@ export class Toast {
   public hide(): void {
     if (this.internalState === "queued") {
       this.clearQueuedShow();
+      this.internalState = "hiding";
+      this.notify("hide");
       this.internalState = "done";
+      this.notify("hidden");
       this.settledResolve();
       return;
     }
@@ -263,6 +289,14 @@ export class Toast {
     }
     clearTimeout(this.dismissTimeoutId);
     this.dismissTimeoutId = null;
+    this.dismissDeadline = null;
+  }
+
+  private pauseAutoDismiss(): void {
+    if (this.dismissDeadline !== null) {
+      this.remainingDuration = Math.max(0, this.dismissDeadline - Date.now());
+    }
+    this.clearAutoDismiss();
   }
 
   private clearQueuedShow(): void {
@@ -278,12 +312,21 @@ export class Toast {
     this.element = null;
     this.internalState = "done";
     this.visiblePosition = null;
+    releaseSlot({
+      owner: this,
+      parent: this.parent,
+      position: this.options.position,
+      instanceId: this.options.instanceId,
+    });
     this.notify("hidden");
     this.settledResolve();
   }
 
   private notify(eventName: ToastLifecycleEventName): void {
-    this.subscribers[eventName].forEach((subscriber) => subscriber(this));
+    this.reachedEvents.add(eventName);
+    const subscribers = Array.from(this.subscribers[eventName]);
+    this.subscribers[eventName].clear();
+    subscribers.forEach((subscriber) => this.callSubscriber(subscriber));
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
@@ -293,25 +336,54 @@ export class Toast {
     if (typeof window === "undefined") {
       return;
     }
+    this.dismissDeadline = Date.now() + this.remainingDuration;
     this.dismissTimeoutId = window.setTimeout(() => {
+      this.dismissTimeoutId = null;
+      this.dismissDeadline = null;
       if (this.internalState !== "visible" || this.element !== element) {
         return;
       }
       this.hide();
-    }, this.options.duration);
+    }, this.remainingDuration);
   }
 
   private resumeAutoDismiss(): void {
-    if (!this.options.shouldAutoDismiss || this.internalState !== "visible" || this.element === null) {
+    if (
+      !this.options.shouldAutoDismiss ||
+      this.internalState !== "visible" ||
+      this.element === null ||
+      !this.reachedEvents.has("shown")
+    ) {
       return;
     }
     this.scheduleAutoDismiss(this.element);
   }
 
   private subscribe(eventName: ToastLifecycleEventName, subscriber: ToastLifecycleSubscriber): () => void {
+    if (this.reachedEvents.has(eventName)) {
+      this.callSubscriber(subscriber);
+      return () => {};
+    }
     this.subscribers[eventName].add(subscriber);
     return () => {
       this.subscribers[eventName].delete(subscriber);
     };
+  }
+
+  private callSubscriber(subscriber: ToastLifecycleSubscriber): void {
+    try {
+      if (this.handle) {
+        subscriber(this.handle);
+      }
+    } catch (error) {
+      const globalWithReportError = globalThis as typeof globalThis & { reportError?: (error: unknown) => void };
+      if (globalWithReportError.reportError) {
+        globalWithReportError.reportError(error);
+      } else {
+        queueMicrotask(() => {
+          throw error;
+        });
+      }
+    }
   }
 }

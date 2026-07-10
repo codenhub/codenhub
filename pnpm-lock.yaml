@@ -481,6 +481,9 @@ importers:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.61.1
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)

@@ -16,6 +16,8 @@ export interface InteractiveDispatcher {
    * @param message The confirmation message or question text.
    * @param options Configuration options for labels and backdrop behavior.
    * @returns An interactive handle containing the user decision promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   * The handle result rejects if native dialog setup fails.
    */
   confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
 
@@ -25,6 +27,8 @@ export interface InteractiveDispatcher {
    * @param message Label description for the text input.
    * @param options Prefilled default value, placeholder text, and cancel behavior options.
    * @returns An interactive handle containing the input value promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   * The handle result rejects if native dialog setup fails.
    */
   prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
 
@@ -34,6 +38,8 @@ export interface InteractiveDispatcher {
    * @param message The alert warning or notification statement.
    * @param options Custom OK button labels and backdrop click closing options.
    * @returns An interactive handle containing the acknowledgement promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   * The handle result rejects if native dialog setup fails.
    */
   alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 }

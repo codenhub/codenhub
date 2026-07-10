@@ -2,7 +2,8 @@
   "name": "@codenhub/toast",
   "version": "0.0.1",
   "private": false,
-  "description": "Factory singleton toast manager with semantic, loading, and interactive alert/confirm/prompt support.",
+  "description": "Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/toast",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -32,11 +33,13 @@
     "debug": "pnpm build && pnpm --filter=@codenhub/toast-debug dev",
     "build": "pnpm build:scripts && pnpm build:styles",
     "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
-    "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
+    "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify && node ./scripts/verify-css.mjs",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/toast version dist-tags time --json && npm dist-tag ls @codenhub/toast && npm access get status @codenhub/toast",
     "status:pack": "npm pack --dry-run",
-    "test": "vitest run",
+    "test": "vitest run && pnpm build && playwright test",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
@@ -44,6 +47,7 @@
   "dependencies": {},
   "devDependencies": {
     "@codenhub/styles": "workspace:*",
+    "@playwright/test": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",

@@ -1,121 +1,75 @@
 # @codenhub/toast
 
-A robust and intuitive toast manager package for Codenhub interfaces. It provides semantic, loading, and interactive alert/confirm/prompt support using native `<dialog>` elements and instance-scoped customization.
+Instance-based browser toasts and native interactive dialogs. Each
+`createToaster()` call owns independent stacks, configuration, dialog queue,
+DOM, and token styles.
 
 ## Installation
 
 ```sh
 pnpm add @codenhub/toast
-npm install @codenhub/toast
 ```
 
-## Features
-
-- **Independent Toaster Instances**: Exposes a `createToaster()` factory to instantiate fresh, isolated toaster managers.
-- **Instance-Scoped Styling**: Scopes CSS variable token overrides directly to each toaster's elements via unique attributes to avoid global stylesheet contamination.
-- **Promise-Based Dialogs**: Interactive `confirm()`, `prompt()`, and `alert()` modals return handles containing Promises resolving upon user interaction. They support clean programmatic dismissal.
-- **HTML Sanitization**: Automatic builtin sanitization for custom HTML toasts to protect against Cross-Site Scripting (XSS).
-
-## Usage
-
-First, import the styles in your main CSS or layout entrypoint:
+Import the required stylesheet once in the application's browser entrypoint:
 
 ```ts
 import "@codenhub/toast/styles";
 ```
 
-### Basic Notifications
+## Usage
 
 ```ts
 import { createToaster } from "@codenhub/toast";
+import "@codenhub/toast/styles";
 
 const toaster = createToaster();
 
-// Basic notifications
-toaster.semantic.success("Changes saved successfully!");
-toaster.semantic.error("Failed to load resources.");
-toaster.semantic.warning("Please check your configuration.");
-toaster.semantic.info("System will undergo maintenance in 10 minutes.");
-```
+toaster.semantic.success("Changes saved");
+toaster.semantic.error("Could not save changes", { isDismissable: true });
 
-### Loading State
+const loading = toaster.loading.show({ message: "Saving..." });
+await saveChanges();
+loading.dismiss();
 
-```ts
-// Loading toasts stay visible until explicitly hidden
-const loader = toaster.loading.show({ message: "Processing transaction..." });
-
-try {
-  await processPayment();
-  loader.dismiss();
-  toaster.semantic.success("Payment complete!");
-} catch (err) {
-  loader.dismiss();
-  toaster.semantic.error("Payment failed.");
-}
-```
-
-### Interactive Dialogs
-
-```ts
-// Confirm dialog (Promise-based)
-const confirmHandle = toaster.interactive.confirm("Are you sure you want to delete this project?", {
-  confirmLabel: "Delete Project",
-  cancelLabel: "Keep Project",
-  shouldBackdropDismiss: true,
+const confirmation = toaster.interactive.confirm("Delete this project?", {
+  confirmLabel: "Delete",
+  type: "danger",
 });
 
-const userConfirmed = await confirmHandle.result;
-if (userConfirmed) {
+if (await confirmation.result) {
   await deleteProject();
-  toaster.semantic.success("Project deleted.");
 }
 
-// Prompt dialog (Promise-based)
-const promptHandle = toaster.interactive.prompt("Enter your new project name:", {
-  defaultValue: "New Project",
-  placeholder: "My Workspace",
-  shouldBackdropDismiss: true,
-});
-
-const name = await promptHandle.result;
-if (name !== null) {
-  toaster.semantic.success(`Project "${name}" created.`);
-}
-
-// Alert dialog (Promise-based)
-const alertHandle = toaster.interactive.alert("This action cannot be undone.");
-await alertHandle.result;
+toaster.destroy();
 ```
 
----
+Keep the returned toaster for as long as it is needed and call `destroy()`
+when its owning view or application is torn down.
 
 ## Reference
 
 ### `@codenhub/toast`
 
-Primary entrypoint for the package's default public API.
-
-```ts
-import { createToaster, Toast, SemanticToast, LoadingToast } from "@codenhub/toast";
-```
+The root entrypoint exports the `createToaster` function and the types listed
+below. It does not export toast classes or DOM internals.
 
 #### `createToaster()`
-
-Creates and returns a new independent `Toaster` instance controller.
 
 ```ts
 function createToaster(config?: ToasterConfig): Toaster;
 ```
 
-| Parameter | Type            | Description                              |
-| --------- | --------------- | ---------------------------------------- |
-| `config`  | `ToasterConfig` | Optional global configuration overrides. |
+Creates a new independent instance. Construction is SSR-safe when no
+`document` is available. In a browser, initial instance tokens create their
+owned stylesheet during construction; without a DOM, that work is deferred
+until a rendering operation. Operations that need a parent element throw when
+no browser `document` is available.
 
-Returns `Toaster` instance.
+Initial configuration is validated synchronously. `duration` must be finite
+and at least `0`; `maxVisible` must be a positive integer; token values must be
+valid CSS colors. Invalid values throw an `Error`.
 
-#### `Toaster` Interface
-
-Provides namespaces to dispatch different styles of toasts, clear them, or reconfigure them.
+#### `Toaster`
 
 ```ts
 interface Toaster {
@@ -123,22 +77,63 @@ interface Toaster {
   readonly loading: LoadingDispatcher;
   readonly interactive: InteractiveDispatcher;
   readonly custom: CustomDispatcher;
-
   clear(): void;
-  configure(config: Partial<ToasterConfig>): void;
+  configure(config: ToasterRuntimeConfig): void;
   destroy(): void;
 }
 ```
 
-| Method      | Parameters                       | Returns | Description                                     |
-| ----------- | -------------------------------- | ------- | ----------------------------------------------- |
-| `clear`     | None                             | `void`  | Dismisses all active non-interactive toasts.    |
-| `configure` | `config: Partial<ToasterConfig>` | `void`  | Updates configurations dynamically at runtime.  |
-| `destroy`   | None                             | `void`  | Fully cleans up DOM, styles, and active toasts. |
+- `clear()` dismisses semantic, loading, and custom toasts. It does not close
+  interactive dialogs.
+- `configure()` validates and applies runtime defaults. The `container` is
+  immutable after construction: it is excluded from `ToasterRuntimeConfig`,
+  and JavaScript callers that provide it receive an `Error`.
+- `destroy()` is idempotent. It dismisses active and queued work, closes the
+  dialog, removes instance-owned DOM and token styles, aborts dialog listeners,
+  and restores focus when possible. Calls through the destroyed toaster or its
+  dispatchers throw; create a new instance instead.
 
-#### `ToastHandle` Interface
+#### Dispatchers
 
-Control handle returned when dispatching a toast to allow programmatic control.
+```ts
+interface SemanticDispatcher {
+  show(options: SemanticToastOptions & { type?: SemanticType }): ToastHandle;
+  success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+  error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+  warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+  info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
+  clear(): void;
+}
+
+interface LoadingDispatcher {
+  show(options: LoadingToastOptions): ToastHandle;
+  clear(): void;
+}
+
+interface CustomDispatcher {
+  show(options: CustomToastOptions): ToastHandle;
+  clear(): void;
+}
+
+interface InteractiveDispatcher {
+  confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
+  prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
+  alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
+}
+```
+
+Semantic defaults are `status` for success/info and `alert` for error/warning;
+`role` can override them. Loading toasts use `status` and do not auto-dismiss.
+Dispatcher `clear()` affects only that non-interactive category.
+
+Interactive calls require a non-empty message and use one native `<dialog>` at
+a time. Additional dialogs are FIFO queued with state `"queued"`. Dismissing a
+queued or visible confirm resolves `result` to `false`; a prompt resolves to
+`null`; an alert resolves to `undefined`. If `showModal()` or dialog setup
+fails, `result` rejects with that error, cleanup still settles, and the next
+queued dialog is attempted.
+
+#### Handles
 
 ```ts
 interface ToastHandle {
@@ -146,140 +141,198 @@ interface ToastHandle {
   update(options: ToastUpdateOptions): void;
   readonly settled: Promise<void>;
   readonly state: ToastState;
+  onShow(subscriber: (toast: unknown) => void): () => void;
+  onShown(subscriber: (toast: unknown) => void): () => void;
+  onHide(subscriber: (toast: unknown) => void): () => void;
+  onHidden(subscriber: (toast: unknown) => void): () => void;
 }
-```
 
-| Property/Method | Type                                 | Description                                                                 |
-| --------------- | ------------------------------------ | --------------------------------------------------------------------------- |
-| `dismiss()`     | `() => void`                         | Programmatically triggers the exit animation and hides the toast.           |
-| `update()`      | `(opts: ToastUpdateOptions) => void` | Updates message text, styles, or classes of a visible toast in place.       |
-| `settled`       | `Promise<void>`                      | Resolves when the exit animation completes and element is removed from DOM. |
-| `state`         | `ToastState`                         | Current lifecycle state of the toast (`"visible" \| "hiding" \| "hidden"`). |
-
-#### `InteractiveToastHandle<T>` Interface
-
-Extends `ToastHandle`. Returned by interactive confirm, prompt, and alert modals.
-
-```ts
-interface InteractiveToastHandle<T> extends ToastHandle {
+interface InteractiveToastHandle<T> {
+  dismiss(): void;
+  readonly settled: Promise<void>;
+  readonly state: ToastState;
   readonly result: Promise<T>;
 }
 ```
 
-| Property | Type         | Description                                                                                   |
-| -------- | ------------ | --------------------------------------------------------------------------------------------- |
-| `result` | `Promise<T>` | Resolves with user selection: `boolean` (confirm), `string \| null` (prompt), `void` (alert). |
+`ToastState` is `"queued" | "visible" | "hiding" | "hidden"`. When a stack
+reaches `maxVisible`, a new toast is queued and the oldest active toast is
+dismissed; queued toasts are admitted in FIFO order. A queued toast can be
+dismissed before rendering. `settled` resolves after removal and cleanup.
+`update()` changes only a currently visible toast and is otherwise a no-op.
+Lifecycle methods return unsubscribe functions; late subscribers to an event
+that already occurred are called immediately.
 
-#### `Toast` Class
-
-Represents an individual base toast notification instance.
+#### Configuration and option types
 
 ```ts
-class Toast {
-  constructor(params: { options: RawToastOptions; config: ResolvedToastConfig; parent: HTMLElement });
-  show(): void;
-  hide(): void;
-  update(updateOpts: ToastUpdateOptions): void;
-  onShow(subscriber: ToastLifecycleSubscriber): () => void;
-  onShown(subscriber: ToastLifecycleSubscriber): () => void;
-  onHide(subscriber: ToastLifecycleSubscriber): () => void;
-  onHidden(subscriber: ToastLifecycleSubscriber): () => void;
-  readonly settled: Promise<void>;
-  readonly publicState: ToastState;
+interface ToasterConfig {
+  position?: ToastPosition;
+  container?: HTMLElement;
+  maxVisible?: number;
+  duration?: number;
+  isDismissable?: boolean;
+  shouldAutoDismiss?: boolean;
+  tokens?: ToastTokens;
+  semantic?: SemanticDefaults;
+  loading?: LoadingDefaults;
+  custom?: CustomDefaults;
+  margin?: string | { x?: string; y?: string };
+  appearance?: ToastAppearance;
 }
+
+type ToasterRuntimeConfig = Omit<Partial<ToasterConfig>, "container">;
 ```
 
-#### `SemanticToast` Class
+Defaults are `position: "top-right"`, `maxVisible: 5`, `duration: 4000`,
+`isDismissable: false`, `shouldAutoDismiss: true`, and
+`appearance: "soft-bordered"`. `container` defaults to `document.body` (or the
+document element while the body is unavailable). `SemanticDefaults`,
+`LoadingDefaults`, and `CustomDefaults` provide dispatcher fallbacks.
+`SemanticDefaults` and `CustomDefaults` support `position`, `duration`,
+`isDismissable`, and `shouldAutoDismiss`; `LoadingDefaults` supports `position`
+and `isDismissable`.
 
-Extends `Toast`. Pre-styled for semantic notifications (success, error, warning, info) with icon presets and aria-live status roles.
+`SemanticToastOptions`, `LoadingToastOptions`, and `CustomToastOptions` contain
+their required `message` or `content` plus the applicable position, duration,
+dismissal, tokens, `className`, margin, appearance, and role overrides.
+Per-toast durations must also be finite and at least `0`; empty messages or
+empty string content throw synchronously. `ToastUpdateOptions` supports
+`message`, `tokens`, and `className`.
+
+`ConfirmOptions`, `PromptOptions`, and `AlertOptions` configure title, button
+labels, `shouldBackdropDismiss` (default `true`), tokens, `className`, and an
+action `type` of `"primary" | "secondary" | "success" | "danger"`. Prompt also
+supports `defaultValue` and `placeholder`.
+
+The remaining exported aliases are:
+
+- `ToastPosition`: `"top-left" | "top-right" | "bottom-right" |
+"bottom-left" | "top-center" | "bottom-center" | "center"`.
+- `ToastRole`: `"alert" | "status"`.
+- `ToastLifecycleSubscriber`: lifecycle callback receiving the internal toast
+  value as `unknown`.
+- `ToastAppearance`: `"flat" | "soft" | "soft-bordered" | "left-accent"`.
+- `SemanticType`: `"success" | "error" | "warning" | "info"`.
+- `ToastContent`: `string | Node | (() => string | Node)`.
+
+#### Tokens
+
+`ToastTokens` accepts these optional color values:
+
+```text
+success, successContrast, successSubtle, successStrong
+destructive, destructiveContrast, destructiveSubtle, destructiveStrong
+warning, warningContrast, warningSubtle, warningStrong
+info, infoContrast, infoSubtle, infoStrong
+border, surface, text
+primary, primaryContrast, primaryHover
+accent, accentContrast, accentHover
+successHover, destructiveHover
+```
+
+Every value must be a valid CSS color. Initial and runtime instance tokens are
+validated with `CSS.supports("color", value)` when available; empty values and
+values containing CSS declaration delimiters are always rejected. Instance
+tokens are emitted through an instance-owned scoped stylesheet. Toast and
+dialog option tokens are applied only to that element.
+
+### CSS: `@codenhub/toast/styles`
 
 ```ts
-class SemanticToast extends Toast {
-  constructor(params: { options: SemanticRawOptions; config: ResolvedToastConfig; parent: HTMLElement });
-}
+import "@codenhub/toast/styles";
 ```
 
-#### `LoadingToast` Class
-
-Extends `Toast`. Preconfigured for progress loader states. Does not auto-dismiss by default.
-
-```ts
-class LoadingToast extends Toast {
-  constructor(params: { options: LoadingToastOptions; config: ResolvedToastConfig; parent: HTMLElement });
-}
-```
-
----
-
-## Token Customization
-
-`@codenhub/toast` supports flexible styling through CSS custom properties. By default, it integrates with `@codenhub/styles` but works standalone using fallback styles.
-
-### Customization Options
-
-Pass CSS variable color values to `tokens` globally or individually.
-
-#### Global Customization
-
-```ts
-const toaster = createToaster({
-  tokens: {
-    success: "#22c55e",
-    successSubtle: "#f0fdf4",
-    successStrong: "#14532d",
-  },
-});
-```
-
-This dynamically injects a `<style>` element targeting only elements scoped to this toaster instance.
-
----
+This prebuilt CSS entrypoint is required for layout, variants, dialogs,
+animations, and responsive behavior. Its package selectors are scoped by the
+instance's `data-toast-instance` attribute, and token overrides are likewise
+instance- or element-scoped. No Tailwind source scanning or Tailwind consumer
+configuration is required. The optional `@codenhub/styles >=0.0.4` peer can
+supply shared variables; standalone fallback colors are included.
 
 ## Examples
 
-### Lifecycle Callback Subscriptions
+### Custom content
 
-You can subscribe to lifecycle hooks to chain asynchronous logic or trigger cleanup:
+String content is parsed as HTML and sanitized. A `Node`, or a function that
+returns one, is explicitly trusted application-owned content and is inserted
+without sanitization.
 
 ```ts
-const handle = toaster.semantic.success("Process started");
+toaster.custom.show({
+  content: '<strong>Connected</strong> to <a href="/account">your account</a>',
+});
 
-handle.onShow(() => console.log("Toast requested to show"));
-handle.onShown(() => console.log("Toast entrance animation complete"));
-handle.onHide(() => console.log("Toast exit animation started"));
-handle.onHidden(() => console.log("Toast fully removed from the DOM"));
-
-// Await completion programmatically
-await handle.settled;
-console.log("Toast cycle fully finished.");
+const actions = document.createElement("div");
+actions.textContent = "Trusted application content";
+toaster.custom.show({ content: actions, shouldAutoDismiss: false });
 ```
 
----
+The string sanitizer permits only these tags: `a`, `b`, `br`, `code`, `div`,
+`em`, `h1`, `h2`, `h3`, `h4`, `h5`, `h6`, `i`, `li`, `ol`, `p`, `pre`, `span`,
+`strong`, and `ul`. It permits only `href`, `target`, and `rel` attributes.
+Explicit `href` protocols are limited to `http:`, `https:`, `mailto:`, and
+`tel:`; relative, fragment, and protocol-relative URLs are retained. `target`
+is limited case-insensitively to `_blank` and `_self`. Every `_blank` target
+receives `rel="noopener noreferrer"`. `script`,
+`style`, `iframe`, `object`, and `embed` elements are removed with their
+contents. Other unsupported elements are unwrapped after their descendants are
+sanitized.
+
+### Runtime updates
+
+```ts
+const handle = toaster.semantic.info("Uploading...", {
+  shouldAutoDismiss: false,
+});
+
+handle.update({ message: "Upload complete", tokens: { info: "#2563eb" } });
+handle.dismiss();
+await handle.settled;
+```
+
+Auto-dismiss timers start after entrance, pause while hovered or focused, and
+resume with the remaining duration.
 
 ## Requirements
 
-- **DOM Environment**: Runs only in browser/DOM environments.
-- **Styles Dependency**: Integrates with `@codenhub/styles` (peer dependency `>=0.0.4`), but falls back gracefully to standalone hex styling if the styles package is not present.
-- **CSS Import**: Requires importing `@codenhub/toast/styles` (or compiling Tailwind CSS with `@source` directories pointing to `@codenhub/toast` source files).
-
-## Accessibility & WCAG
-
-- **ARIA Roles**: Semantic toasts use appropriate ARIA roles (`status` for success/info, `alert` for error/warning) to notify assistive technologies.
-- **Aria Live**: Toasts use `aria-live="polite"` (status) or `aria-live="assertive"` (alert) with `aria-atomic="true"` to ensure screen readers receive updates cleanly.
-- **Focus Preservation**: Modals (`confirm`, `prompt`, `alert`) leverage the native `<dialog>` element. Focus is trapped within the active dialog using standard browser behavior. Upon dismissal, focus is restored to the initiating element.
-- **Pause on Interaction**: Active toasts automatically pause their auto-dismiss timers on mouse hover (`mouseenter`) and keyboard focus (`focusin`) to allow users sufficient time to read or interact with the toast, resuming only after mouse/focus leaves.
-
----
+- Rendering requires a browser DOM. The package has no worker or server-side
+  rendering output; defer dispatches and DOM-dependent `configure()` calls
+  until the client is available.
+- Interactive APIs require native `HTMLDialogElement`, including `showModal()`
+  and `close()`. There is no non-modal dialog polyfill or fallback. Native
+  dialog behavior provides top-layer modality and focus containment. Prompt
+  focus also requires `requestAnimationFrame`; dialog listener cleanup uses
+  `AbortController`.
+- Toast movement uses the Web Animations API when available. If `animate()` is
+  absent or throws, lifecycle cleanup completes immediately without the
+  animation.
+- `matchMedia()` is optional. When available, the package honors
+  `prefers-reduced-motion: reduce` by skipping toast motion, stopping the loader
+  animation, and closing dialogs without waiting for transitions. Without it,
+  normal animation behavior is used.
+- Consumers must import `@codenhub/toast/styles`. No UI framework is required.
+- Call `destroy()` to release DOM, listeners, timers, queued dialogs, and
+  instance token styles. Individual lifecycle subscriptions can be removed
+  with their returned unsubscribe function.
 
 ## Notes
 
-- **HTML Sanitization Whitelist**: Custom HTML toasts are sanitized against XSS. Allowed tags: `div`, `p`, `span`, `b`, `i`, `strong`, `em`, `pre`, `code`, `a`, `ul`, `ol`, `li`, `br`. Allowed attributes: `class`, `id`, `style`, `target`, `rel`, and `href` (URL schemes are restricted to block `javascript:`, `data:`, and `vbscript:` URLs).
-- **Dialog Serialization**: Multiple concurrent modal calls (`alert`, `confirm`, `prompt`) are queued using a FIFO scheduler and resolve sequentially.
-
----
+- The package supplies semantic roles, live-region attributes, an accessible
+  dismiss label, dialog text associations, initial focus, and best-effort focus
+  restoration. Consumers remain responsible for meaningful messages, choosing
+  an appropriate role, accessible trusted `Node` content and custom classes,
+  sufficient token color contrast, and dismissal timing suitable for their
+  users.
+- Dialog title, message, labels, placeholder, and toast `message` values are
+  inserted as text, not HTML.
+- Multiple toaster instances are isolated. The configured `container` remains
+  fixed for the instance's lifetime and determines the owner document used for
+  created DOM.
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license.
+Licensed under the [Apache License 2.0](LICENSE).
 
-It includes third-party SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
+Bundled Lucide SVG icons are licensed under the ISC License. See the package
+[NOTICE](NOTICE) for the copyright and license text.

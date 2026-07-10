@@ -16,6 +16,7 @@ export interface SemanticDispatcher {
    *
    * @param options Scoped options including type, message, duration, and styling tokens.
    * @returns A control handle to interact with the toast instance.
+   * @throws {Error} If the instance is destroyed, options are invalid, or no DOM is available.
    */
   show(options: SemanticToastOptions & { type?: SemanticType }): ToastHandle;
 
@@ -25,6 +26,7 @@ export interface SemanticDispatcher {
    * @param message Description text of the notification.
    * @param options Extensible layout and timing options.
    * @returns A control handle to interact with the toast instance.
+   * @throws {Error} If the instance is destroyed, options are invalid, or no DOM is available.
    */
   success(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -34,6 +36,7 @@ export interface SemanticDispatcher {
    * @param message Description text of the notification.
    * @param options Extensible layout and timing options.
    * @returns A control handle to interact with the toast instance.
+   * @throws {Error} If the instance is destroyed, options are invalid, or no DOM is available.
    */
   error(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -43,6 +46,7 @@ export interface SemanticDispatcher {
    * @param message Description text of the notification.
    * @param options Extensible layout and timing options.
    * @returns A control handle to interact with the toast instance.
+   * @throws {Error} If the instance is destroyed, options are invalid, or no DOM is available.
    */
   warning(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
@@ -52,11 +56,14 @@ export interface SemanticDispatcher {
    * @param message Description text of the notification.
    * @param options Extensible layout and timing options.
    * @returns A control handle to interact with the toast instance.
+   * @throws {Error} If the instance is destroyed, options are invalid, or no DOM is available.
    */
   info(message: string, options?: Omit<SemanticToastOptions, "message">): ToastHandle;
 
   /**
    * Dismisses all active semantic toast notifications.
+   *
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   clear(): void;
 }

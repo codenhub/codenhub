@@ -16,11 +16,14 @@ export interface LoadingDispatcher {
    *
    * @param options Configuration options including message and styling tokens.
    * @returns A control handle to interact with or dismiss the loader toast instance.
+   * @throws {Error} If the instance is destroyed, the message is empty, tokens are invalid, or no DOM is available.
    */
   show(options: LoadingToastOptions): ToastHandle;
 
   /**
    * Dismisses all active loading toast notifications.
+   *
+   * @throws {Error} If the toaster instance has been destroyed.
    */
   clear(): void;
 }
