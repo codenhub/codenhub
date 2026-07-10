@@ -2,14 +2,9 @@ import { animateIn, animateStackChange, createToastElement, getOrCreateContainer
 import { applyUpdateToElement, normalizeToastOptions } from "./options";
 import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
 import { removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
-import type { ToastPosition, ToastState, ToastUpdateOptions } from "./types";
+import type { ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
-
-/**
- * Subscriber callback function signature for toast lifecycle events.
- */
-export type ToastLifecycleSubscriber = (toast: Toast) => void;
 
 type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
@@ -293,6 +288,9 @@ export class Toast {
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
     if (!this.options.shouldAutoDismiss || this.isHovered || this.isFocused) {
+      return;
+    }
+    if (typeof window === "undefined") {
       return;
     }
     this.dismissTimeoutId = window.setTimeout(() => {

@@ -103,6 +103,11 @@ export interface ToastUpdateOptions {
 }
 
 /**
+ * Subscriber callback function signature for toast lifecycle events.
+ */
+export type ToastLifecycleSubscriber = (toast: unknown) => void;
+
+/**
  * Control handle returned upon dispatching a toast notification.
  * Allows programmatic lifecycle management.
  */
@@ -129,6 +134,38 @@ export interface ToastHandle {
    * Current lifecycle state of the toast.
    */
   readonly state: ToastState;
+
+  /**
+   * Registers a callback to trigger when the toast is initially requested to show.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
+  onShow(subscriber: ToastLifecycleSubscriber): () => void;
+
+  /**
+   * Registers a callback to trigger when the entrance animation completes.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
+  onShown(subscriber: ToastLifecycleSubscriber): () => void;
+
+  /**
+   * Registers a callback to trigger when the toast begins to hide.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
+  onHide(subscriber: ToastLifecycleSubscriber): () => void;
+
+  /**
+   * Registers a callback to trigger when the toast is fully removed from DOM.
+   *
+   * @param subscriber Callback subscriber function.
+   * @returns Unsubscribe function.
+   */
+  onHidden(subscriber: ToastLifecycleSubscriber): () => void;
 }
 
 /**

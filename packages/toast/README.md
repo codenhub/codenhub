@@ -47,10 +47,10 @@ const loader = toaster.loading.show({ message: "Processing transaction..." });
 try {
   await processPayment();
   loader.dismiss();
-  toaster.success("Payment complete!");
+  toaster.semantic.success("Payment complete!");
 } catch (err) {
   loader.dismiss();
-  toaster.error("Payment failed.");
+  toaster.semantic.error("Payment failed.");
 }
 ```
 
@@ -119,10 +119,10 @@ Provides namespaces to dispatch different styles of toasts, clear them, or recon
 
 ```ts
 interface Toaster {
-  readonly semantic: SemanticManager;
-  readonly loading: LoadingManager;
-  readonly interactive: InteractiveManager;
-  readonly custom: CustomManager;
+  readonly semantic: SemanticDispatcher;
+  readonly loading: LoadingDispatcher;
+  readonly interactive: InteractiveDispatcher;
+  readonly custom: CustomDispatcher;
 
   clear(): void;
   configure(config: Partial<ToasterConfig>): void;
@@ -259,7 +259,15 @@ console.log("Toast cycle fully finished.");
 ## Requirements
 
 - **DOM Environment**: Runs only in browser/DOM environments.
+- **Styles Dependency**: Integrates with `@codenhub/styles` (peer dependency `>=0.0.4`), but falls back gracefully to standalone hex styling if the styles package is not present.
 - **CSS Import**: Requires importing `@codenhub/toast/styles` (or compiling Tailwind CSS with `@source` directories pointing to `@codenhub/toast` source files).
+
+## Accessibility & WCAG
+
+- **ARIA Roles**: Semantic toasts use appropriate ARIA roles (`status` for success/info, `alert` for error/warning) to notify assistive technologies.
+- **Aria Live**: Toasts use `aria-live="polite"` (status) or `aria-live="assertive"` (alert) with `aria-atomic="true"` to ensure screen readers receive updates cleanly.
+- **Focus Preservation**: Modals (`confirm`, `prompt`, `alert`) leverage the native `<dialog>` element. Focus is trapped within the active dialog using standard browser behavior. Upon dismissal, focus is restored to the initiating element.
+- **Pause on Interaction**: Active toasts automatically pause their auto-dismiss timers on mouse hover (`mouseenter`) and keyboard focus (`focusin`) to allow users sufficient time to read or interact with the toast, resuming only after mouse/focus leaves.
 
 ---
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-control-regex */
 import { buildInlineStyle } from "./tokens";
 import type {
   ToastAppearance,
@@ -134,7 +133,7 @@ function sanitizeElement(el: Element): void {
     const attrName = attr.name.toLowerCase();
 
     if (URL_ATTRIBUTES.has(attrName)) {
-      // eslint-disable-next-line no-control-regex
+      // oxlint-disable-next-line no-control-regex
       const val = attr.value
         .replace(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
         .toLowerCase();
@@ -252,10 +251,9 @@ export function normalizeToastOptions(params: {
 
 export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdateOptions): void {
   if (update.message !== undefined) {
-    // Update only the text span, leave icon intact
-    const spans = element.querySelectorAll("span");
-    if (spans.length > 0) {
-      spans[spans.length - 1].textContent = update.message;
+    const messageEl = element.querySelector("[data-toast-message]");
+    if (messageEl) {
+      messageEl.textContent = update.message;
     }
   }
 

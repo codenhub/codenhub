@@ -1,15 +1,15 @@
-import type { ModalManager } from "../modal";
+import type { ModalController } from "../modal";
 import type { AlertOptions, ConfirmOptions, InteractiveToastHandle, PromptOptions } from "../types";
 
 export interface InteractiveContext {
   assertAlive(): void;
-  getModalManager(): ModalManager;
+  getModalController(): ModalController;
 }
 
 /**
- * Manager interface for displaying interactive browser-native modal dialogs.
+ * Dispatcher interface for displaying interactive browser-native modal dialogs.
  */
-export interface InteractiveManager {
+export interface InteractiveDispatcher {
   /**
    * Displays a confirmation modal dialog with confirm and cancel buttons.
    *
@@ -38,19 +38,19 @@ export interface InteractiveManager {
   alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
 }
 
-export function createInteractiveManager(ctx: InteractiveContext): InteractiveManager {
+export function createInteractiveDispatcher(ctx: InteractiveContext): InteractiveDispatcher {
   return {
     confirm: (msg, opts) => {
       ctx.assertAlive();
-      return ctx.getModalManager().confirm(msg, opts);
+      return ctx.getModalController().confirm(msg, opts);
     },
     prompt: (msg, opts) => {
       ctx.assertAlive();
-      return ctx.getModalManager().prompt(msg, opts);
+      return ctx.getModalController().prompt(msg, opts);
     },
     alert: (msg, opts) => {
       ctx.assertAlive();
-      return ctx.getModalManager().alert(msg, opts);
+      return ctx.getModalController().alert(msg, opts);
     },
   };
 }

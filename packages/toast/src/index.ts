@@ -3,7 +3,7 @@ export { Toast } from "./toast-base";
 export { SemanticToast } from "./variants/semantic";
 export { LoadingToast } from "./variants/loading";
 
-export type { Toaster, SemanticManager, LoadingManager, InteractiveManager, CustomManager } from "./core";
+export type { Toaster, SemanticDispatcher, LoadingDispatcher, InteractiveDispatcher, CustomDispatcher } from "./core";
 export type { SemanticRawOptions } from "./variants/semantic";
 export type {
   ToasterConfig,

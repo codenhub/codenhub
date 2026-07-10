@@ -112,6 +112,7 @@ export function createToastElement(options: ToastElementOptions, onDismiss: () =
     }
 
     const messageSpan = document.createElement("span");
+    messageSpan.setAttribute("data-toast-message", "");
     messageSpan.textContent = options.message;
     container.appendChild(messageSpan);
   }

@@ -1,21 +1,16 @@
-import type { ResolvedToastConfig } from "../options";
+import type { BaseContext } from "../core";
 import type { Toast } from "../toast-base";
-import type { LoadingToastOptions, ToastHandle, ToasterConfig } from "../types";
+import type { LoadingToastOptions, ToastHandle } from "../types";
 import { LoadingToast } from "../variants/loading";
 
-export interface LoadingContext {
-  assertAlive(): void;
-  getParent(): HTMLElement;
-  registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle;
-  config: ToasterConfig;
-  resolved: ResolvedToastConfig;
+export interface LoadingContext extends BaseContext {
   loadingToasts: Set<Toast>;
 }
 
 /**
- * Manager interface for dispatching stateful progress/loading toast indicators.
+ * Dispatcher interface for sending stateful progress/loading toast indicators.
  */
-export interface LoadingManager {
+export interface LoadingDispatcher {
   /**
    * Displays a stateful progress loader toast. By default, loading toasts do not auto-dismiss.
    *
@@ -30,7 +25,7 @@ export interface LoadingManager {
   clear(): void;
 }
 
-export function createLoadingManager(ctx: LoadingContext): LoadingManager {
+export function createLoadingDispatcher(ctx: LoadingContext): LoadingDispatcher {
   return {
     show: (options) => {
       ctx.assertAlive();

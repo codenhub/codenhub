@@ -1,20 +1,15 @@
-import type { ResolvedToastConfig } from "../options";
+import type { BaseContext } from "../core";
 import { Toast } from "../toast-base";
-import type { CustomToastOptions, ToastHandle, ToasterConfig } from "../types";
+import type { CustomToastOptions, ToastHandle } from "../types";
 
-export interface CustomContext {
-  assertAlive(): void;
-  getParent(): HTMLElement;
-  registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle;
-  config: ToasterConfig;
-  resolved: ResolvedToastConfig;
+export interface CustomContext extends BaseContext {
   customToasts: Set<Toast>;
 }
 
 /**
- * Manager interface for dispatching custom DOM-rendered layouts.
+ * Dispatcher interface for sending custom DOM-rendered layouts.
  */
-export interface CustomManager {
+export interface CustomDispatcher {
   /**
    * Displays a custom HTML string, DOM Node, or creator function as a toast.
    *
@@ -29,7 +24,7 @@ export interface CustomManager {
   clear(): void;
 }
 
-export function createCustomManager(ctx: CustomContext): CustomManager {
+export function createCustomDispatcher(ctx: CustomContext): CustomDispatcher {
   return {
     show: (options) => {
       ctx.assertAlive();

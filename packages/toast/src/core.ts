@@ -1,23 +1,35 @@
 import { removeInstanceContainers } from "./dom";
-import { createCustomManager, type CustomManager, type CustomContext } from "./managers/custom";
-import { createInteractiveManager, type InteractiveManager } from "./managers/interactive";
-import { createLoadingManager, type LoadingManager, type LoadingContext } from "./managers/loading";
-import { createSemanticManager, type SemanticManager, type SemanticContext } from "./managers/semantic";
-import { ModalManager } from "./modal";
+import { createCustomDispatcher } from "./managers/custom";
+import type { CustomContext, CustomDispatcher } from "./managers/custom";
+import { createInteractiveDispatcher } from "./managers/interactive";
+import type { InteractiveDispatcher } from "./managers/interactive";
+import { createLoadingDispatcher } from "./managers/loading";
+import type { LoadingContext, LoadingDispatcher } from "./managers/loading";
+import { createSemanticDispatcher } from "./managers/semantic";
+import type { SemanticContext, SemanticDispatcher } from "./managers/semantic";
+import { ModalController } from "./modal";
 import { DEFAULT_CONFIG } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
 import { applyGlobalTokens, removeGlobalTokens } from "./tokens";
 import type { ToasterConfig, ToastHandle, ToastUpdateOptions } from "./types";
 
-export type { SemanticManager } from "./managers/semantic";
-export type { LoadingManager } from "./managers/loading";
-export type { CustomManager } from "./managers/custom";
-export type { InteractiveManager } from "./managers/interactive";
+export type { SemanticDispatcher } from "./managers/semantic";
+export type { LoadingDispatcher } from "./managers/loading";
+export type { CustomDispatcher } from "./managers/custom";
+export type { InteractiveDispatcher } from "./managers/interactive";
 
 let instanceCounter = 0;
 function generateInstanceId(): string {
   return `toast-instance-${++instanceCounter}`;
+}
+
+export interface BaseContext {
+  assertAlive(): void;
+  getParent(): HTMLElement;
+  registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle;
+  readonly config: ToasterConfig;
+  readonly resolved: ResolvedToastConfig;
 }
 
 function makeHandle(toast: Toast): ToastHandle {
@@ -30,6 +42,10 @@ function makeHandle(toast: Toast): ToastHandle {
     get state() {
       return toast.publicState;
     },
+    onShow: (sub) => toast.onShow(sub),
+    onShown: (sub) => toast.onShown(sub),
+    onHide: (sub) => toast.onHide(sub),
+    onHidden: (sub) => toast.onHidden(sub),
   };
 }
 
@@ -37,14 +53,14 @@ function makeHandle(toast: Toast): ToastHandle {
  * Represents the main Toaster instance controller.
  */
 export interface Toaster {
-  /** Semantic toast dispatcher sub-manager. */
-  readonly semantic: SemanticManager;
-  /** Loading indicator dispatcher sub-manager. */
-  readonly loading: LoadingManager;
-  /** Interactive native dialog dispatcher sub-manager. */
-  readonly interactive: InteractiveManager;
-  /** Custom DOM layout dispatcher sub-manager. */
-  readonly custom: CustomManager;
+  /** Semantic toast dispatcher. */
+  readonly semantic: SemanticDispatcher;
+  /** Loading indicator dispatcher. */
+  readonly loading: LoadingDispatcher;
+  /** Interactive native dialog dispatcher. */
+  readonly interactive: InteractiveDispatcher;
+  /** Custom DOM layout dispatcher. */
+  readonly custom: CustomDispatcher;
 
   /**
    * Clear all active, non-interactive toasts.
@@ -79,12 +95,12 @@ class ToastManager implements Toaster {
   private readonly loadingToasts = new Set<Toast>();
   private readonly customToasts = new Set<Toast>();
 
-  private modalManager: ModalManager | null = null;
+  private modalController: ModalController | null = null;
 
-  public readonly semantic: SemanticManager;
-  public readonly loading: LoadingManager;
-  public readonly interactive: InteractiveManager;
-  public readonly custom: CustomManager;
+  public readonly semantic: SemanticDispatcher;
+  public readonly loading: LoadingDispatcher;
+  public readonly interactive: InteractiveDispatcher;
+  public readonly custom: CustomDispatcher;
 
   constructor(config: ToasterConfig = {}) {
     this.instanceId = generateInstanceId();
@@ -95,36 +111,29 @@ class ToastManager implements Toaster {
       applyGlobalTokens(config.tokens, this.instanceId);
     }
 
-    const buildContext = <T extends object>(extra: T) => {
-      const ctx = {
+    const getToasterConfig = () => this.config;
+    const getToasterResolved = () => this.resolved;
+    const buildContext = <T extends object>(extra: T): BaseContext & T => {
+      return {
         assertAlive: () => this.assertAlive(),
         getParent: () => this.getParent(),
         registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
+        get config() {
+          return getToasterConfig();
+        },
+        get resolved() {
+          return getToasterResolved();
+        },
         ...extra,
       };
-      Object.defineProperty(ctx, "config", {
-        get: () => this.config,
-        enumerable: true,
-        configurable: true,
-      });
-      Object.defineProperty(ctx, "resolved", {
-        get: () => this.resolved,
-        enumerable: true,
-        configurable: true,
-      });
-      return ctx;
     };
 
-    this.semantic = createSemanticManager(
-      buildContext({ semanticToasts: this.semanticToasts }) as unknown as SemanticContext,
-    );
-    this.loading = createLoadingManager(
-      buildContext({ loadingToasts: this.loadingToasts }) as unknown as LoadingContext,
-    );
-    this.custom = createCustomManager(buildContext({ customToasts: this.customToasts }) as unknown as CustomContext);
-    this.interactive = createInteractiveManager({
+    this.semantic = createSemanticDispatcher(buildContext({ semanticToasts: this.semanticToasts }) as SemanticContext);
+    this.loading = createLoadingDispatcher(buildContext({ loadingToasts: this.loadingToasts }) as LoadingContext);
+    this.custom = createCustomDispatcher(buildContext({ customToasts: this.customToasts }) as CustomContext);
+    this.interactive = createInteractiveDispatcher({
       assertAlive: () => this.assertAlive(),
-      getModalManager: () => this.getModalManager(),
+      getModalController: () => this.getModalController(),
     });
   }
 
@@ -187,9 +196,9 @@ class ToastManager implements Toaster {
     this.loadingToasts.clear();
     this.customToasts.clear();
 
-    if (this.modalManager) {
-      this.modalManager.destroy();
-      this.modalManager = null;
+    if (this.modalController) {
+      this.modalController.destroy();
+      this.modalController = null;
     }
 
     const parent = this.getParent();
@@ -204,11 +213,11 @@ class ToastManager implements Toaster {
     return makeHandle(toast);
   }
 
-  private getModalManager(): ModalManager {
-    if (!this.modalManager) {
-      this.modalManager = new ModalManager(this.getParent(), this.instanceId);
+  private getModalController(): ModalController {
+    if (!this.modalController) {
+      this.modalController = new ModalController(this.getParent(), this.instanceId);
     }
-    return this.modalManager;
+    return this.modalController;
   }
 
   private getParent(): HTMLElement {

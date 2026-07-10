@@ -1,21 +1,16 @@
-import type { ResolvedToastConfig } from "../options";
+import type { BaseContext } from "../core";
 import type { Toast } from "../toast-base";
-import type { SemanticToastOptions, SemanticType, ToastHandle, ToasterConfig } from "../types";
+import type { SemanticToastOptions, SemanticType, ToastHandle } from "../types";
 import { SemanticToast } from "../variants/semantic";
 
-export interface SemanticContext {
-  assertAlive(): void;
-  getParent(): HTMLElement;
-  registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle;
-  config: ToasterConfig;
-  resolved: ResolvedToastConfig;
+export interface SemanticContext extends BaseContext {
   semanticToasts: Set<Toast>;
 }
 
 /**
- * Manager interface for dispatching pre-styled semantic notifications (success, error, warning, info).
+ * Dispatcher interface for sending pre-styled semantic notifications (success, error, warning, info).
  */
-export interface SemanticManager {
+export interface SemanticDispatcher {
   /**
    * Displays a semantic toast notification with custom options.
    *
@@ -66,7 +61,7 @@ export interface SemanticManager {
   clear(): void;
 }
 
-export function createSemanticManager(ctx: SemanticContext): SemanticManager {
+export function createSemanticDispatcher(ctx: SemanticContext): SemanticDispatcher {
   const showSemantic = (
     type: SemanticType,
     message: string,

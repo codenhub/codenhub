@@ -10,7 +10,7 @@ interface ModalJob {
  * Manages native dialog modals for interactive alerts, confirmations, and prompts.
  * Leverages a queue to serialize multiple modal dialogs.
  */
-export class ModalManager {
+export class ModalController {
   private dialog: HTMLDialogElement | null = null;
   private jobs: ModalJob[] = [];
   private activeJob: ModalJob | null = null;
@@ -18,7 +18,7 @@ export class ModalManager {
   private isDestroyed = false;
 
   /**
-   * Constructs a new ModalManager instance.
+   * Constructs a new ModalController instance.
    *
    * @param parent The parent DOM container.
    * @param instanceId The unique toaster instance ID for CSS variable scoping.
@@ -130,6 +130,8 @@ export class ModalManager {
 
     this.enqueue(job);
 
+    const noopUnsubscribe = () => () => {};
+
     return {
       dismiss: () => job.dismiss(),
       update: () => {
@@ -141,6 +143,10 @@ export class ModalManager {
       get state() {
         return currentState;
       },
+      onShow: noopUnsubscribe,
+      onShown: noopUnsubscribe,
+      onHide: noopUnsubscribe,
+      onHidden: noopUnsubscribe,
       result,
     };
   }
@@ -263,6 +269,8 @@ export class ModalManager {
 
     this.enqueue(job);
 
+    const noopUnsubscribe = () => () => {};
+
     return {
       dismiss: () => job.dismiss(),
       update: () => {
@@ -274,6 +282,10 @@ export class ModalManager {
       get state() {
         return currentState;
       },
+      onShow: noopUnsubscribe,
+      onShown: noopUnsubscribe,
+      onHide: noopUnsubscribe,
+      onHidden: noopUnsubscribe,
       result,
     };
   }
@@ -374,6 +386,8 @@ export class ModalManager {
 
     this.enqueue(job);
 
+    const noopUnsubscribe = () => () => {};
+
     return {
       dismiss: () => job.dismiss(),
       update: () => {
@@ -385,6 +399,10 @@ export class ModalManager {
       get state() {
         return currentState;
       },
+      onShow: noopUnsubscribe,
+      onShown: noopUnsubscribe,
+      onHide: noopUnsubscribe,
+      onHidden: noopUnsubscribe,
       result,
     };
   }
@@ -464,6 +482,8 @@ export class ModalManager {
       return;
     }
 
+    const win = typeof window !== "undefined" ? window : undefined;
+    const timer: { id: ReturnType<typeof setTimeout> | undefined } = { id: undefined };
     let hasFinished = false;
     const finish = (): void => {
       if (hasFinished) {
@@ -472,13 +492,15 @@ export class ModalManager {
       hasFinished = true;
       dialog.removeEventListener("transitionend", finish);
       dialog.removeEventListener("transitioncancel", finish);
-      clearTimeout(timeoutId);
+      if (timer.id !== undefined && win) {
+        win.clearTimeout(timer.id);
+      }
       onClosed();
     };
 
     dialog.addEventListener("transitionend", finish);
     dialog.addEventListener("transitioncancel", finish);
-    const timeoutId = window.setTimeout(finish, totalDuration + 50);
+    timer.id = win ? win.setTimeout(finish, totalDuration + 50) : undefined;
 
     dialog.close();
   }
