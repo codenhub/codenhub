@@ -191,15 +191,26 @@ dialog.toast-dialog[open]::backdrop {
   max-width: 24rem;
   display: flex;
   flex-direction: column;
+  gap: 0.75rem;
   pointer-events: auto;
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
+}
+.toast-dialog-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--toast-color-text, var(--color-text, #0f172a));
+}
+
+.toast-dialog-title + .toast-dialog-message {
+  font-size: 0.9375rem;
+  font-weight: 400;
 }
 
 .toast-dialog-message {
   font-size: 1.0625rem;
   font-weight: 500;
   line-height: 1.5;
-  margin: 0 0 1.25rem 0;
   color: var(--toast-color-text, var(--color-text, #0f172a));
 }
 
@@ -219,8 +230,6 @@ dialog.toast-dialog[open]::backdrop {
   color: var(--toast-color-text, var(--color-text, #0f172a));
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
-  margin-top: 0.25rem;
-  margin-bottom: 1.25rem;
   transition:
     border-color 0.15s ease-in-out,
     box-shadow 0.15s ease-in-out;
@@ -297,6 +306,9 @@ dialog.toast-dialog[open]::backdrop {
 /* Support dark mode overrides via both class (.dark) and attribute (data-theme="dark") */
 :where(.dark, [data-theme="dark"]) .toast-dialog-container {
   background-color: var(--toast-color-surface, var(--color-surface, #0f172a));
+  color: var(--toast-color-text, var(--color-text, #f8fafc));
+}
+:where(.dark, [data-theme="dark"]) .toast-dialog-title {
   color: var(--toast-color-text, var(--color-text, #f8fafc));
 }
 

@@ -273,11 +273,13 @@ export interface CustomToastOptions {
  * Customization settings for interactive confirmation dialogs.
  */
 export interface ConfirmOptions {
+  /** Optional title to display above the message. */
+  title?: string;
   /** Label for the positive action button. Defaults to "Confirm". */
   confirmLabel?: string;
   /** Label for the negative action button. Defaults to "Cancel". */
   cancelLabel?: string;
-  /** Whether clicking the backdrop overlay cancels the modal. Defaults to false. */
+  /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
   shouldBackdropDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
@@ -291,6 +293,8 @@ export interface ConfirmOptions {
  * Customization settings for interactive prompt input dialogs.
  */
 export interface PromptOptions {
+  /** Optional title to display above the message. */
+  title?: string;
   /** Initial value prefilled in the text input field. */
   defaultValue?: string;
   /** Placeholder text when the input field is empty. */
@@ -299,7 +303,7 @@ export interface PromptOptions {
   submitLabel?: string;
   /** Label for the cancel button. Defaults to "Cancel". */
   cancelLabel?: string;
-  /** Whether clicking the backdrop overlay cancels the modal. Defaults to false. */
+  /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
   shouldBackdropDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
@@ -313,6 +317,8 @@ export interface PromptOptions {
  * Customization settings for blocking alert dialogs.
  */
 export interface AlertOptions {
+  /** Optional title to display above the message. */
+  title?: string;
   /** Label for the confirmation button. Defaults to "OK". */
   okLabel?: string;
   /** Whether clicking the backdrop overlay closes the alert. Defaults to true. */

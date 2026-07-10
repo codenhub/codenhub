@@ -57,6 +57,7 @@ export class ModalController {
         const container = buildDialogContent({
           dialog,
           message,
+          title: options.title,
           tokens: options.tokens,
           className: options.className,
         });
@@ -98,7 +99,8 @@ export class ModalController {
         };
         dialog.addEventListener("cancel", onCancel, { signal });
 
-        if (options.shouldBackdropDismiss === true) {
+        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
+        if (shouldBackdropDismiss) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
               const rect = dialog.getBoundingClientRect();
@@ -180,6 +182,7 @@ export class ModalController {
         const container = buildDialogContent({
           dialog,
           message,
+          title: options.title,
           tokens: options.tokens,
           className: options.className,
         });
@@ -237,7 +240,8 @@ export class ModalController {
         };
         dialog.addEventListener("cancel", onCancel, { signal });
 
-        if (options.shouldBackdropDismiss === true) {
+        const shouldBackdropDismiss = options.shouldBackdropDismiss !== false;
+        if (shouldBackdropDismiss) {
           const onBackdropClick = (e: MouseEvent): void => {
             if (e.target === dialog) {
               const rect = dialog.getBoundingClientRect();
@@ -319,6 +323,7 @@ export class ModalController {
         const container = buildDialogContent({
           dialog,
           message,
+          title: options.title,
           tokens: options.tokens,
           className: options.className,
         });
