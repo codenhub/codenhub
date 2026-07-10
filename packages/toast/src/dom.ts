@@ -88,7 +88,6 @@ export function createToastElement(
   const container = documentRef.createElement("div");
 
   container.className = options.className ? `${options.rootClassName} ${options.className}` : options.rootClassName;
-  // Store the base class for update() to reference later
   container.setAttribute("data-root-class", options.rootClassName);
   container.setAttribute("data-toast-instance", options.instanceId);
   container.setAttribute("role", options.role);
@@ -117,7 +116,7 @@ export function createToastElement(
   return container;
 }
 
-// --- Container management (now accepts a configurable parent and instanceId) --------
+
 
 interface ContainerParams {
   parent: HTMLElement;
@@ -155,7 +154,6 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     parent.appendChild(container);
   }
 
-  // Update margin styles inline on the container
   if (margin) {
     if (typeof margin === "string") {
       container.style.setProperty("--toast-margin-x", margin);
@@ -187,7 +185,7 @@ export function removeInstanceContainers(params: { parent: HTMLElement; instance
     .forEach((element) => element.remove());
 }
 
-// --- Animation helpers -------------------------------------------------------
+
 
 function getKeyframes(position: ToastPosition): Keyframe[] {
   if (position === "top-center") {

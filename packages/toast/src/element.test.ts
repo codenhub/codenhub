@@ -66,9 +66,6 @@ describe("Toast rendering", () => {
     expect(element.className).toContain("coden-toast");
     expect(dismissButton?.className).toBe("coden-toast-dismiss");
     expect(dismissIcon).toBeInstanceOf(SVGElement);
-    // Dimensions are set via inline styles (highest CSS specificity) so no CSS rule can override them.
-    // SVG presentation attributes (width/height HTML attrs) have zero specificity and are
-    // overridden by even the lowest-specificity CSS rule, causing the icon to render at 0×24.
     expect(dismissIcon?.getAttribute("aria-hidden")).toBe("true");
   });
 
@@ -137,23 +134,11 @@ describe("Toast rendering", () => {
     expect(element.className).toContain("toast-appearance-soft-bordered");
   });
 
-  it("should apply flat appearance to root class name", () => {
-    const element = renderToast(makeToast({ message: "Flat appearance", appearance: "flat" }));
-    expect(element.className).toContain("toast-appearance-flat");
-  });
-
-  it("should apply soft appearance to root class name", () => {
-    const element = renderToast(makeToast({ message: "Soft appearance", appearance: "soft" }));
-    expect(element.className).toContain("toast-appearance-soft");
-  });
-
-  it("should apply soft-bordered appearance to root class name", () => {
-    const element = renderToast(makeToast({ message: "Soft bordered appearance", appearance: "soft-bordered" }));
-    expect(element.className).toContain("toast-appearance-soft-bordered");
-  });
-
-  it("should apply left-accent appearance to root class name", () => {
-    const element = renderToast(makeToast({ message: "Left accent appearance", appearance: "left-accent" }));
-    expect(element.className).toContain("toast-appearance-left-accent");
-  });
+  it.each(["flat", "soft", "soft-bordered", "left-accent"] as const)(
+    "should apply %s appearance to root class name",
+    (appearance) => {
+      const element = renderToast(makeToast({ message: `${appearance} appearance`, appearance }));
+      expect(element.className).toContain(`toast-appearance-${appearance}`);
+    },
+  );
 });

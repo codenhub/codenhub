@@ -1,37 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from "./core";
-
-interface MockAnimation {
-  onfinish: (() => void) | null;
-  oncancel: (() => void) | null;
-}
-
-let animations: MockAnimation[] = [];
-
-function flushAnimations(): void {
-  const pendingAnimations = animations;
-  animations = [];
-  pendingAnimations.forEach((animation) => animation.onfinish?.());
-}
+import { flushAnimations, installAnimateMock, installDialogMocks } from "./test-utils";
 
 beforeEach(() => {
   document.body.innerHTML = "";
   document.head.querySelectorAll("style").forEach((element) => element.remove());
-  animations = [];
-
-  HTMLElement.prototype.animate = vi.fn().mockImplementation(() => {
-    const animation: MockAnimation = { onfinish: null, oncancel: null };
-    animations.push(animation);
-    return animation as Animation;
-  });
-
-  HTMLDialogElement.prototype.showModal = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
-    this.setAttribute("open", "");
-  });
-  HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
-    this.removeAttribute("open");
-  });
+  installAnimateMock();
+  installDialogMocks();
 });
 
 afterEach(() => {

@@ -9,11 +9,8 @@ type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
 type InternalToastState = "idle" | "queued" | "visible" | "hiding" | "done";
 
 function convertToPublicState(internal: InternalToastState): ToastState {
-  if (internal === "visible" || internal === "queued") {
+  if (internal === "visible" || internal === "queued" || internal === "hiding") {
     return internal;
-  }
-  if (internal === "hiding") {
-    return "hiding";
   }
   return "hidden";
 }
@@ -63,7 +60,6 @@ export class Toast {
     const { options, config, parent } = params;
     this.parent = parent;
     this.maxVisible = config.maxVisible;
-    this.remainingDuration = config.duration;
     this.options = normalizeToastOptions({
       options,
       preset: (this.constructor as typeof Toast).getPresetOptions(options),

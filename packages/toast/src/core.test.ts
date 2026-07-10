@@ -1,58 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from "./core";
-
-interface MockAnimation {
-  target: HTMLDivElement;
-  keyframes: Keyframe[];
-  options: KeyframeAnimationOptions;
-  onfinish: (() => void) | null;
-  oncancel: (() => void) | null;
-  finished: Promise<void>;
-}
-
-let animations: MockAnimation[] = [];
-
-function flushAnimations(): void {
-  animations.forEach((anim) => {
-    if (anim.onfinish) {
-      anim.onfinish();
-    }
-  });
-}
+import { flushAnimations, installAnimateMock, installDialogMocks, mockBackdropRect, clickBackdrop } from "./test-utils";
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  animations = [];
-
-  HTMLElement.prototype.animate = vi.fn().mockImplementation(function (
-    this: HTMLDivElement,
-    keyframes: Keyframe[],
-    options: KeyframeAnimationOptions,
-  ) {
-    const animation: MockAnimation = {
-      target: this,
-      keyframes,
-      options,
-      onfinish: null,
-      oncancel: null,
-      finished: Promise.resolve(),
-    };
-    animations.push(animation);
-    return animation as unknown as Animation;
-  });
-
-  // jsdom does not implement HTMLDialogElement.showModal / close
-  if (!HTMLDialogElement.prototype.showModal) {
-    HTMLDialogElement.prototype.showModal = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
-      this.setAttribute("open", "");
-    });
-  }
-  if (!HTMLDialogElement.prototype.close) {
-    HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
-      this.removeAttribute("open");
-    });
-  }
+  installAnimateMock();
+  installDialogMocks();
 });
 
 afterEach(() => {
@@ -60,9 +14,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
+
 
 describe("createToaster", () => {
   it("should return independent instances on each call", () => {
@@ -104,9 +56,7 @@ describe("createToaster", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// configure()
-// ---------------------------------------------------------------------------
+
 
 describe("configure", () => {
   it("should update token overrides at runtime", () => {
@@ -146,9 +96,7 @@ describe("configure", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Category managers
-// ---------------------------------------------------------------------------
+
 
 describe("toaster.semantic", () => {
   it("show() renders a toast and returns a handle", () => {
@@ -224,9 +172,7 @@ describe("toaster.custom", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Global clear()
-// ---------------------------------------------------------------------------
+
 
 describe("toaster.clear()", () => {
   it("hides all non-interactive toasts", () => {
@@ -243,9 +189,7 @@ describe("toaster.clear()", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// destroy()
-// ---------------------------------------------------------------------------
+
 
 describe("destroy()", () => {
   it("removes toast containers from DOM", () => {
@@ -282,9 +226,7 @@ describe("destroy()", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Interactive dialogs (toaster.interactive + flat aliases)
-// ---------------------------------------------------------------------------
+
 
 describe("interactive.confirm", () => {
   it("resolves true when confirm button clicked", async () => {
@@ -353,7 +295,9 @@ describe("interactive.alert", () => {
     await expect(handle.result).resolves.toBeUndefined();
     toaster.destroy();
   });
+});
 
+describe("interactive shared behaviors", () => {
   it("should clean up event listeners on dialog reuse via AbortController", async () => {
     const toaster = createToaster();
 
@@ -503,9 +447,7 @@ describe("positioning and margins", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Toast update
-// ---------------------------------------------------------------------------
+
 
 describe("Toast update", () => {
   it("should update message text dynamically", () => {
@@ -646,26 +588,8 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     const dialog = document.body.querySelector("dialog")!;
     expect(dialog.open).toBe(true);
 
-    // Mock getBoundingClientRect
-    dialog.getBoundingClientRect = () => ({
-      left: 100,
-      right: 300,
-      top: 100,
-      bottom: 200,
-      width: 200,
-      height: 100,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
-
-    // Click outside/backdrop (should dismiss)
-    const clickOutside = new MouseEvent("click", {
-      bubbles: true,
-      clientX: 50,
-      clientY: 50,
-    });
-    dialog.dispatchEvent(clickOutside);
+    mockBackdropRect(dialog);
+    clickBackdrop(dialog);
 
     const result = await handle.result;
     expect(result).toBe(false);
@@ -681,26 +605,8 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     const dialog = document.body.querySelector("dialog")!;
     expect(dialog.open).toBe(true);
 
-    // Mock getBoundingClientRect
-    dialog.getBoundingClientRect = () => ({
-      left: 100,
-      right: 300,
-      top: 100,
-      bottom: 200,
-      width: 200,
-      height: 100,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
-
-    // Click outside/backdrop (should dismiss)
-    const clickOutside = new MouseEvent("click", {
-      bubbles: true,
-      clientX: 50,
-      clientY: 50,
-    });
-    dialog.dispatchEvent(clickOutside);
+    mockBackdropRect(dialog);
+    clickBackdrop(dialog);
 
     const result = await handle.result;
     expect(result).toBeNull();
@@ -716,26 +622,8 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     const dialog = document.body.querySelector("dialog")!;
     expect(dialog.open).toBe(true);
 
-    // Mock getBoundingClientRect
-    dialog.getBoundingClientRect = () => ({
-      left: 100,
-      right: 300,
-      top: 100,
-      bottom: 200,
-      width: 200,
-      height: 100,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
-
-    // Click outside/backdrop (should dismiss)
-    const clickOutside = new MouseEvent("click", {
-      bubbles: true,
-      clientX: 50,
-      clientY: 50,
-    });
-    dialog.dispatchEvent(clickOutside);
+    mockBackdropRect(dialog);
+    clickBackdrop(dialog);
 
     await handle.result;
     expect(dialog.open).toBe(false);
@@ -743,69 +631,45 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     toaster.destroy();
   });
 
-  it("should NOT dismiss modal on backdrop click if shouldBackdropDismiss: false is passed", async () => {
+  it("should NOT dismiss confirm modal on backdrop click if shouldBackdropDismiss: false is passed", async () => {
     const toaster = createToaster();
-
-    // Test for confirm
     const handleConfirm = toaster.interactive.confirm("Confirm message", { shouldBackdropDismiss: false });
     const dialogConfirm = document.body.querySelector("dialog")!;
-    dialogConfirm.getBoundingClientRect = () => ({
-      left: 100,
-      right: 300,
-      top: 100,
-      bottom: 200,
-      width: 200,
-      height: 100,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
-    const clickOutside = new MouseEvent("click", { bubbles: true, clientX: 50, clientY: 50 });
-    dialogConfirm.dispatchEvent(clickOutside);
+    mockBackdropRect(dialogConfirm);
+    clickBackdrop(dialogConfirm);
     expect(dialogConfirm.open).toBe(true);
     handleConfirm.dismiss();
     await handleConfirm.settled;
+    toaster.destroy();
+  });
 
-    // Test for prompt
+  it("should NOT dismiss prompt modal on backdrop click if shouldBackdropDismiss: false is passed", async () => {
+    const toaster = createToaster();
     const handlePrompt = toaster.interactive.prompt("Prompt message", { shouldBackdropDismiss: false });
     const dialogPrompt = document.body.querySelector("dialog")!;
-    dialogPrompt.getBoundingClientRect = () => ({
-      left: 100,
-      right: 300,
-      top: 100,
-      bottom: 200,
-      width: 200,
-      height: 100,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
-    dialogPrompt.dispatchEvent(clickOutside);
+    mockBackdropRect(dialogPrompt);
+    clickBackdrop(dialogPrompt);
     expect(dialogPrompt.open).toBe(true);
     handlePrompt.dismiss();
     await handlePrompt.settled;
-
     toaster.destroy();
   });
 
   it("should render title in interactive dialogs when provided", () => {
     const toaster = createToaster();
 
-    // confirm
     const h1 = toaster.interactive.confirm("Message 1", { title: "Title 1" });
     let titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 1");
     h1.dismiss();
 
-    // prompt
     const h2 = toaster.interactive.prompt("Message 2", { title: "Title 2" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 2");
     h2.dismiss();
 
-    // alert
     const h3 = toaster.interactive.alert("Message 3", { title: "Title 3" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();

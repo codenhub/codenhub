@@ -86,7 +86,7 @@ export const TOAST_SHAPE_CLASS = "coden-toast";
  */
 export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
 
-// --- Normalized options used internally by Toast ----------------------------
+
 
 export interface NormalizedToastOptions {
   readonly instanceId: string;
@@ -112,7 +112,7 @@ export interface ToastPresetOptions {
   readonly rootClassName?: string;
 }
 
-// --- Helpers ----------------------------------------------------------------
+
 
 function hasNonEmptyString(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -173,6 +173,7 @@ function sanitizeElement(el: Element): void {
     const attrName = attr.name.toLowerCase();
 
     if (URL_ATTRIBUTES.has(attrName)) {
+      // Strip control characters and unicode spaces to prevent javascript: protocol bypasses
       // eslint-disable-next-line no-control-regex
       const controlRegex = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g;
       const val = attr.value.replace(controlRegex, "").toLowerCase();
@@ -248,7 +249,7 @@ function assertDuration(duration: number | undefined): void {
   }
 }
 
-// --- Public normalizer -------------------------------------------------------
+
 
 export interface RawToastOptions {
   message?: string;
@@ -310,7 +311,7 @@ export function normalizeToastOptions(params: {
   });
 }
 
-// --- Live update helper (patches DOM in place) --------------------------------
+
 
 export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdateOptions): void {
   if (update.message !== undefined) {
