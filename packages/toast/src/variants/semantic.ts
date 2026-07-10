@@ -3,15 +3,27 @@ import type { ResolvedToastConfig } from "../options";
 import { Toast } from "../toast-base";
 import type { SemanticType, ToastIcon, ToastPosition, ToastRole, ToastTokens } from "../types";
 
-interface SemanticRawOptions {
+/**
+ * Configuration options passed when constructing a SemanticToast instance.
+ */
+export interface SemanticRawOptions {
+  /** The semantic category type. Defaults to "success". */
   type?: SemanticType;
+  /** The message text to display. */
   message: string;
+  /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
+  /** Visibility duration in milliseconds. Defaults to toaster configuration. */
   duration?: number;
+  /** Whether to render a close button. Defaults to toaster configuration. */
   isDismissable?: boolean;
+  /** Whether to automatically close after duration. Defaults to toaster configuration. */
   shouldAutoDismiss?: boolean;
+  /** Scoped design token color overrides. */
   tokens?: ToastTokens;
+  /** Extra CSS classes to append. */
   className?: string;
+  /** Accessibility role. Defaults to variant default. */
   role?: ToastRole;
 }
 

@@ -1,8 +1,8 @@
 import { removeInstanceContainers } from "./dom";
-import { createCustomManager, type CustomManager } from "./managers/custom";
+import { createCustomManager, type CustomManager, type CustomContext } from "./managers/custom";
 import { createInteractiveManager, type InteractiveManager } from "./managers/interactive";
-import { createLoadingManager, type LoadingManager } from "./managers/loading";
-import { createSemanticManager, type SemanticManager } from "./managers/semantic";
+import { createLoadingManager, type LoadingManager, type LoadingContext } from "./managers/loading";
+import { createSemanticManager, type SemanticManager, type SemanticContext } from "./managers/semantic";
 import { ModalManager } from "./modal";
 import { DEFAULT_CONFIG } from "./options";
 import type { ResolvedToastConfig } from "./options";
@@ -95,26 +95,33 @@ class ToastManager implements Toaster {
       applyGlobalTokens(config.tokens, this.instanceId);
     }
 
-    const context = {
-      assertAlive: () => this.assertAlive(),
-      getParent: () => this.getParent(),
-      registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
-      config: this.config,
-      resolved: this.resolved,
+    const buildContext = <T extends object>(extra: T) => {
+      const ctx = {
+        assertAlive: () => this.assertAlive(),
+        getParent: () => this.getParent(),
+        registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
+        ...extra,
+      };
+      Object.defineProperty(ctx, "config", {
+        get: () => this.config,
+        enumerable: true,
+        configurable: true,
+      });
+      Object.defineProperty(ctx, "resolved", {
+        get: () => this.resolved,
+        enumerable: true,
+        configurable: true,
+      });
+      return ctx;
     };
 
-    this.semantic = createSemanticManager({
-      ...context,
-      semanticToasts: this.semanticToasts,
-    });
-    this.loading = createLoadingManager({
-      ...context,
-      loadingToasts: this.loadingToasts,
-    });
-    this.custom = createCustomManager({
-      ...context,
-      customToasts: this.customToasts,
-    });
+    this.semantic = createSemanticManager(
+      buildContext({ semanticToasts: this.semanticToasts }) as unknown as SemanticContext,
+    );
+    this.loading = createLoadingManager(
+      buildContext({ loadingToasts: this.loadingToasts }) as unknown as LoadingContext,
+    );
+    this.custom = createCustomManager(buildContext({ customToasts: this.customToasts }) as unknown as CustomContext);
     this.interactive = createInteractiveManager({
       assertAlive: () => this.assertAlive(),
       getModalManager: () => this.getModalManager(),

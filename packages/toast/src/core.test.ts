@@ -58,6 +58,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // ---------------------------------------------------------------------------
@@ -109,6 +110,27 @@ describe("configure", () => {
       .map((el) => el.textContent)
       .join("");
     expect(content).toContain("green");
+    toaster.destroy();
+  });
+
+  it("should propagate configure duration updates to new toasts", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 1000 });
+    toaster.configure({ duration: 5000 });
+
+    const handle = toaster.semantic.success("Config Test");
+    flushAnimations();
+
+    vi.advanceTimersByTime(1500);
+    // If it used the old duration of 1000ms, it would be hidden by now.
+    expect(handle.state).toBe("visible");
+
+    vi.advanceTimersByTime(4000);
+    // At 5500ms total, it should be hidden.
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
     toaster.destroy();
   });
 });
@@ -564,6 +586,96 @@ describe("Interactive Dialog Transition Queue", () => {
     secondOkBtn!.click();
     await handle2.settled;
 
+    toaster.destroy();
+  });
+
+  it("should use dynamic fallback timeout based on transition duration", async () => {
+    const toaster = createToaster();
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+      const style = originalGetComputedStyle(el);
+      if (el.tagName.toLowerCase() === "dialog") {
+        return {
+          ...style,
+          transitionDuration: "0.1s",
+          transitionDelay: "0.05s",
+        } as unknown as CSSStyleDeclaration;
+      }
+      return style;
+    });
+
+    toaster.interactive.alert("First alert");
+    const handle2 = toaster.interactive.alert("Second alert");
+
+    const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
+    okBtn!.click();
+
+    // Fallback: 150ms + 50ms buffer = 200ms. At 50ms, it should still show first alert.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.body.innerHTML).toContain("First alert");
+
+    // At 250ms, the fallback timeout should have fired and loaded the second alert.
+    await new Promise((r) => setTimeout(r, 200));
+    expect(document.body.innerHTML).toContain("Second alert");
+
+    const secondOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
+    secondOkBtn!.click();
+    await handle2.settled;
+
+    toaster.destroy();
+  });
+});
+
+describe("WCAG Accessibility", () => {
+  it("should pause auto-dismiss on hover and resume on leave", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 2000 });
+    const handle = toaster.semantic.success("Hover Test");
+    flushAnimations();
+
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    expect(element).toBeTruthy();
+
+    vi.advanceTimersByTime(1000);
+    expect(handle.state).toBe("visible");
+
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+
+    vi.advanceTimersByTime(2000);
+    expect(handle.state).toBe("visible");
+
+    element.dispatchEvent(new MouseEvent("mouseleave"));
+
+    vi.advanceTimersByTime(2500);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("should pause auto-dismiss on focus and resume on blur", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 2000 });
+    const handle = toaster.semantic.success("Focus Test");
+    flushAnimations();
+
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    expect(element).toBeTruthy();
+
+    element.dispatchEvent(new FocusEvent("focusin"));
+
+    vi.advanceTimersByTime(3000);
+    expect(handle.state).toBe("visible");
+
+    element.dispatchEvent(new FocusEvent("focusout"));
+
+    vi.advanceTimersByTime(2500);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
     toaster.destroy();
   });
 });

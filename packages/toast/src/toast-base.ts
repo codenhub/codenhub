@@ -43,6 +43,8 @@ export class Toast {
   private queuedSlotCancel: (() => void) | null = null;
   private internalState: InternalToastState = "idle";
   private visiblePosition: ToastPosition | null = null;
+  private isHovered = false;
+  private isFocused = false;
   private readonly parent: HTMLElement;
   private readonly maxVisible: number;
 
@@ -171,6 +173,30 @@ export class Toast {
     }
 
     const element = createToastElement(this.options, () => this.hide());
+
+    if (this.options.shouldAutoDismiss) {
+      element.addEventListener("mouseenter", () => {
+        this.isHovered = true;
+        this.clearAutoDismiss();
+      });
+      element.addEventListener("mouseleave", () => {
+        this.isHovered = false;
+        if (!this.isFocused) {
+          this.resumeAutoDismiss();
+        }
+      });
+      element.addEventListener("focusin", () => {
+        this.isFocused = true;
+        this.clearAutoDismiss();
+      });
+      element.addEventListener("focusout", () => {
+        this.isFocused = false;
+        if (!this.isHovered) {
+          this.resumeAutoDismiss();
+        }
+      });
+    }
+
     const container = getOrCreateContainer({
       parent: this.parent,
       position,
@@ -266,7 +292,7 @@ export class Toast {
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
-    if (!this.options.shouldAutoDismiss) {
+    if (!this.options.shouldAutoDismiss || this.isHovered || this.isFocused) {
       return;
     }
     this.dismissTimeoutId = window.setTimeout(() => {
@@ -275,6 +301,13 @@ export class Toast {
       }
       this.hide();
     }, this.options.duration);
+  }
+
+  private resumeAutoDismiss(): void {
+    if (!this.options.shouldAutoDismiss || this.internalState !== "visible" || this.element === null) {
+      return;
+    }
+    this.scheduleAutoDismiss(this.element);
   }
 
   private subscribe(eventName: ToastLifecycleEventName, subscriber: ToastLifecycleSubscriber): () => void {

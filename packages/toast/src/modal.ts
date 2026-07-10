@@ -454,13 +454,11 @@ export class ModalManager {
     }
 
     const style = window.getComputedStyle(dialog);
-    const duration = style.transitionDuration || "0s";
-    const hasTransition = duration.split(",").some((d) => {
-      const val = d.trim();
-      return val !== "0s" && val !== "0ms" && val !== "";
-    });
+    const transitionDuration = style.transitionDuration || "0s";
+    const transitionDelay = style.transitionDelay || "0s";
+    const totalDuration = parseTransitionDuration(transitionDuration, transitionDelay);
 
-    if (!hasTransition) {
+    if (totalDuration <= 0) {
       dialog.close();
       onClosed();
       return;
@@ -480,8 +478,39 @@ export class ModalManager {
 
     dialog.addEventListener("transitionend", finish);
     dialog.addEventListener("transitioncancel", finish);
-    const timeoutId = window.setTimeout(finish, 250);
+    const timeoutId = window.setTimeout(finish, totalDuration + 50);
 
     dialog.close();
   }
+}
+
+function parseTransitionDuration(durationStr: string, delayStr?: string): number {
+  const parse = (str?: string): number[] => {
+    if (!str) {
+      return [0];
+    }
+    return str.split(",").map((d) => {
+      const val = d.trim();
+      if (val.endsWith("ms")) {
+        return parseFloat(val) || 0;
+      }
+      if (val.endsWith("s")) {
+        return (parseFloat(val) || 0) * 1000;
+      }
+      return 0;
+    });
+  };
+
+  const durations = parse(durationStr);
+  const delays = parse(delayStr);
+
+  let maxTotal = 0;
+  const count = Math.max(durations.length, delays.length);
+  for (let i = 0; i < count; i++) {
+    const duration = durations[i % durations.length] || 0;
+    const delay = delays[i % delays.length] || 0;
+    maxTotal = Math.max(maxTotal, duration + delay);
+  }
+
+  return maxTotal;
 }

@@ -96,7 +96,7 @@ await alertHandle.result;
 Primary entrypoint for the package's default public API.
 
 ```ts
-import { createToaster, Toast } from "@codenhub/toast";
+import { createToaster, Toast, SemanticToast, LoadingToast } from "@codenhub/toast";
 ```
 
 #### `createToaster()`
@@ -107,7 +107,15 @@ Creates and returns a new independent `Toaster` instance controller.
 function createToaster(config?: ToasterConfig): Toaster;
 ```
 
+| Parameter | Type            | Description                              |
+| --------- | --------------- | ---------------------------------------- |
+| `config`  | `ToasterConfig` | Optional global configuration overrides. |
+
+Returns `Toaster` instance.
+
 #### `Toaster` Interface
+
+Provides namespaces to dispatch different styles of toasts, clear them, or reconfigure them.
 
 ```ts
 interface Toaster {
@@ -122,35 +130,49 @@ interface Toaster {
 }
 ```
 
+| Method      | Parameters                       | Returns | Description                                     |
+| ----------- | -------------------------------- | ------- | ----------------------------------------------- |
+| `clear`     | None                             | `void`  | Dismisses all active non-interactive toasts.    |
+| `configure` | `config: Partial<ToasterConfig>` | `void`  | Updates configurations dynamically at runtime.  |
+| `destroy`   | None                             | `void`  | Fully cleans up DOM, styles, and active toasts. |
+
 #### `ToastHandle` Interface
+
+Control handle returned when dispatching a toast to allow programmatic control.
 
 ```ts
 interface ToastHandle {
-  /** Programmatically dismisses the toast. Triggers exit animations. */
   dismiss(): void;
-  /** Patches the message text, styles, or classes of a live toast. */
   update(options: ToastUpdateOptions): void;
-  /** Resolves when the toast has completed its exit animation and has been removed from the DOM. */
   readonly settled: Promise<void>;
-  /** Current lifecycle state of the toast ("visible" | "hiding" | "hidden"). */
   readonly state: ToastState;
 }
 ```
 
+| Property/Method | Type                                 | Description                                                                 |
+| --------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| `dismiss()`     | `() => void`                         | Programmatically triggers the exit animation and hides the toast.           |
+| `update()`      | `(opts: ToastUpdateOptions) => void` | Updates message text, styles, or classes of a visible toast in place.       |
+| `settled`       | `Promise<void>`                      | Resolves when the exit animation completes and element is removed from DOM. |
+| `state`         | `ToastState`                         | Current lifecycle state of the toast (`"visible" \| "hiding" \| "hidden"`). |
+
 #### `InteractiveToastHandle<T>` Interface
 
-Extends `ToastHandle`.
+Extends `ToastHandle`. Returned by interactive confirm, prompt, and alert modals.
 
 ```ts
 interface InteractiveToastHandle<T> extends ToastHandle {
-  /** Resolves when the user completes interaction. */
   readonly result: Promise<T>;
 }
 ```
 
+| Property | Type         | Description                                                                                   |
+| -------- | ------------ | --------------------------------------------------------------------------------------------- |
+| `result` | `Promise<T>` | Resolves with user selection: `boolean` (confirm), `string \| null` (prompt), `void` (alert). |
+
 #### `Toast` Class
 
-Represents an individual base toast notification instance. Generally managed internally by the toaster.
+Represents an individual base toast notification instance.
 
 ```ts
 class Toast {
@@ -251,3 +273,5 @@ console.log("Toast cycle fully finished.");
 ## License
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
+
+It includes third-party SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.

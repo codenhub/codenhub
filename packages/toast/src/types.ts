@@ -292,9 +292,13 @@ export interface AlertOptions {
  * Fallback defaults for semantic toasts.
  */
 export interface SemanticDefaults {
+  /** Default screen placement for semantic toasts. */
   position?: ToastPosition;
+  /** Default duration in milliseconds before auto-dismissal. */
   duration?: number;
+  /** Whether semantic toasts show a close button by default. */
   isDismissable?: boolean;
+  /** Whether semantic toasts automatically dismiss after duration. */
   shouldAutoDismiss?: boolean;
 }
 
@@ -302,7 +306,9 @@ export interface SemanticDefaults {
  * Fallback defaults for loading toasts.
  */
 export interface LoadingDefaults {
+  /** Default screen placement for loading toasts. */
   position?: ToastPosition;
+  /** Whether loading toasts show a close button by default. */
   isDismissable?: boolean;
 }
 
@@ -310,9 +316,13 @@ export interface LoadingDefaults {
  * Fallback defaults for custom toasts.
  */
 export interface CustomDefaults {
+  /** Default screen placement for custom toasts. */
   position?: ToastPosition;
+  /** Default duration in milliseconds before auto-dismissal. */
   duration?: number;
+  /** Whether custom toasts show a close button by default. */
   isDismissable?: boolean;
+  /** Whether custom toasts automatically dismiss after duration. */
   shouldAutoDismiss?: boolean;
 }
 
