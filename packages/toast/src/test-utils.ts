@@ -33,17 +33,18 @@ export function installDialogMocks(): void {
 }
 
 export function mockBackdropRect(dialog: HTMLDialogElement): void {
-  dialog.getBoundingClientRect = () => ({
-    left: 100,
-    right: 300,
-    top: 100,
-    bottom: 200,
-    width: 200,
-    height: 100,
-    x: 100,
-    y: 100,
-    toJSON: () => {},
-  } as DOMRect);
+  dialog.getBoundingClientRect = () =>
+    ({
+      left: 100,
+      right: 300,
+      top: 100,
+      bottom: 200,
+      width: 200,
+      height: 100,
+      x: 100,
+      y: 100,
+      toJSON: () => {},
+    }) as DOMRect;
 }
 
 export function clickBackdrop(dialog: HTMLDialogElement): void {

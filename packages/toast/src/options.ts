@@ -86,8 +86,6 @@ export const TOAST_SHAPE_CLASS = "coden-toast";
  */
 export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
 
-
-
 export interface NormalizedToastOptions {
   readonly instanceId: string;
   readonly shouldAutoDismiss: boolean;
@@ -111,8 +109,6 @@ export interface ToastPresetOptions {
   readonly role?: ToastRole;
   readonly rootClassName?: string;
 }
-
-
 
 function hasNonEmptyString(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -249,8 +245,6 @@ function assertDuration(duration: number | undefined): void {
   }
 }
 
-
-
 export interface RawToastOptions {
   message?: string;
   content?: ToastContent;
@@ -310,8 +304,6 @@ export function normalizeToastOptions(params: {
     appearance,
   });
 }
-
-
 
 export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdateOptions): void {
   if (update.message !== undefined) {

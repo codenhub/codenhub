@@ -128,17 +128,18 @@ class ToastManager implements Toaster {
       applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container?.ownerDocument ?? document);
     }
 
-    const manager = this;
+    const getContextConfig = () => this.config;
+    const getContextResolved = () => this.resolved;
     const buildContext = <T extends object>(extra: T): BaseContext & T => {
       return {
         assertAlive: () => this.assertAlive(),
         getParent: () => this.getParent(),
         registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
         get config() {
-          return manager.config;
+          return getContextConfig();
         },
         get resolved() {
-          return manager.resolved;
+          return getContextResolved();
         },
         ...extra,
       };

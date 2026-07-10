@@ -116,8 +116,6 @@ export function createToastElement(
   return container;
 }
 
-
-
 interface ContainerParams {
   parent: HTMLElement;
   position: ToastPosition;
@@ -184,8 +182,6 @@ export function removeInstanceContainers(params: { parent: HTMLElement; instance
     .filter((element) => element.getAttribute("data-toast-instance") === instanceId)
     .forEach((element) => element.remove());
 }
-
-
 
 function getKeyframes(position: ToastPosition): Keyframe[] {
   if (position === "top-center") {

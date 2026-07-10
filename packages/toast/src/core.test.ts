@@ -14,8 +14,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-
-
 describe("createToaster", () => {
   it("should return independent instances on each call", () => {
     const t1 = createToaster();
@@ -56,8 +54,6 @@ describe("createToaster", () => {
   });
 });
 
-
-
 describe("configure", () => {
   it("should update token overrides at runtime", () => {
     const toaster = createToaster({ tokens: { success: "red" } });
@@ -95,8 +91,6 @@ describe("configure", () => {
     toaster.destroy();
   });
 });
-
-
 
 describe("toaster.semantic", () => {
   it("show() renders a toast and returns a handle", () => {
@@ -172,8 +166,6 @@ describe("toaster.custom", () => {
   });
 });
 
-
-
 describe("toaster.clear()", () => {
   it("hides all non-interactive toasts", () => {
     const toaster = createToaster();
@@ -188,8 +180,6 @@ describe("toaster.clear()", () => {
     toaster.destroy();
   });
 });
-
-
 
 describe("destroy()", () => {
   it("removes toast containers from DOM", () => {
@@ -225,8 +215,6 @@ describe("destroy()", () => {
     }).not.toThrow();
   });
 });
-
-
 
 describe("interactive.confirm", () => {
   it("resolves true when confirm button clicked", async () => {
@@ -446,8 +434,6 @@ describe("positioning and margins", () => {
     toaster.destroy();
   });
 });
-
-
 
 describe("Toast update", () => {
   it("should update message text dynamically", () => {
