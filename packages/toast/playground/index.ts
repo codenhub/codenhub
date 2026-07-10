@@ -1,5 +1,5 @@
 import { createToaster } from "@codenhub/toast";
-import type { ToastPosition } from "@codenhub/toast";
+import type { ToastPosition, ToastAppearance } from "@codenhub/toast";
 
 const toaster = createToaster();
 
@@ -19,12 +19,14 @@ if (btnToggleTheme) {
 // --- Shared dispatch options -------------------------------------------------
 function getOptions() {
   const positionSelect = document.getElementById("select-position") as HTMLSelectElement;
+  const appearanceSelect = document.getElementById("select-appearance") as HTMLSelectElement;
   const durationInput = document.getElementById("input-duration") as HTMLInputElement;
   const autoDismissCheck = document.getElementById("check-auto-dismiss") as HTMLInputElement;
   const dismissableCheck = document.getElementById("check-dismissable") as HTMLInputElement;
 
   return {
     position: (positionSelect?.value || "bottom-right") as ToastPosition,
+    appearance: (appearanceSelect?.value || "soft-bordered") as ToastAppearance,
     duration: Number(durationInput?.value) || 4000,
     shouldAutoDismiss: autoDismissCheck ? autoDismissCheck.checked : true,
     isDismissable: dismissableCheck ? dismissableCheck.checked : true,
@@ -99,37 +101,15 @@ document.getElementById("btn-loading-sim")?.addEventListener("click", () => {
 
   setTimeout(() => {
     loader.dismiss();
-    toaster.semantic.success("Data loaded successfully!", { position: opts.position, duration: opts.duration });
+    toaster.semantic.success("Data loaded successfully!", {
+      position: opts.position,
+      duration: opts.duration,
+      appearance: opts.appearance,
+    });
   }, 2000);
 });
 
 document.getElementById("btn-clear-all")?.addEventListener("click", () => {
   toaster.clear();
   activeLoader = null;
-});
-
-// --- Custom token overrides --------------------------------------------------
-document.getElementById("btn-apply-tokens")?.addEventListener("click", () => {
-  const get = (id: string) => (document.getElementById(id) as HTMLInputElement | null)?.value.trim() || undefined;
-
-  toaster.configure({
-    tokens: {
-      success: get("token-success"),
-      destructive: get("token-destructive"),
-      warning: get("token-warning"),
-      info: get("token-info"),
-      surface: get("token-surface"),
-      text: get("token-text"),
-    },
-  });
-});
-
-document.getElementById("btn-reset-tokens")?.addEventListener("click", () => {
-  ["token-success", "token-destructive", "token-warning", "token-info", "token-surface", "token-text"].forEach((id) => {
-    const el = document.getElementById(id) as HTMLInputElement | null;
-    if (el) {
-      el.value = "";
-    }
-  });
-  toaster.configure({ tokens: {} });
 });

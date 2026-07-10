@@ -27,7 +27,7 @@ export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> 
   isDismissable: false,
   shouldAutoDismiss: true,
   maxVisible: 5,
-  appearance: "flat-bordered",
+  appearance: "soft-bordered",
 };
 
 export const DEFAULT_ROLE: ToastRole = "status";
@@ -222,7 +222,7 @@ export function normalizeToastOptions(params: {
 
   assertDuration(options.duration);
 
-  const appearance = options.appearance ?? config.appearance ?? "flat-bordered";
+  const appearance = options.appearance ?? config.appearance ?? "soft-bordered";
 
   return Object.freeze({
     instanceId: config.instanceId,

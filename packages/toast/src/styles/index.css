@@ -91,12 +91,6 @@
 
 /* ── Appearance classes ──────────────────────────────────────────────────── */
 
-.toast-appearance-flat-bordered {
-  border-color: var(--toast-main-color);
-  background-color: var(--toast-subtle-color);
-  color: var(--toast-strong-color);
-}
-
 .toast-appearance-flat {
   border-color: var(--toast-main-color);
   background-color: var(--toast-main-color);
@@ -111,7 +105,7 @@
 }
 
 .toast-appearance-soft-bordered {
-  border-color: color-mix(in srgb, var(--toast-main-color) 42%, var(--color-border, #d1d5db));
+  border-color: var(--toast-main-color);
   background-color: var(--toast-subtle-color);
   color: var(--toast-strong-color);
 }
@@ -193,9 +187,6 @@ dialog[open]::backdrop {
   border: none;
   border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   width: calc(100vw - 2rem);
   max-width: 24rem;
   display: flex;
@@ -307,9 +298,6 @@ dialog[open]::backdrop {
 :where(.dark, [data-theme="dark"]) .toast-dialog-container {
   background-color: var(--toast-color-surface, var(--color-surface, #0f172a));
   color: var(--toast-color-text, var(--color-text, #f8fafc));
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.5),
-    0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
 :where(.dark, [data-theme="dark"]) .toast-dialog-message {

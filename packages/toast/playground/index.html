@@ -36,7 +36,7 @@
         <!-- Toast Configuration Options -->
         <section class="flex flex-col gap-4">
           <h2>1. Dispatch Options</h2>
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="flex flex-col gap-1">
               <label class="text-text-secondary text-xs font-semibold" for="select-position">Position</label>
               <select id="select-position">
@@ -44,6 +44,15 @@
                 <option value="top-left">Top Left</option>
                 <option value="bottom-right" selected>Bottom Right</option>
                 <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="select-appearance">Appearance</label>
+              <select id="select-appearance">
+                <option value="flat">Flat</option>
+                <option value="soft">Soft</option>
+                <option value="soft-bordered" selected>Soft Bordered</option>
+                <option value="left-accent">Left Accent</option>
               </select>
             </div>
             <div class="flex flex-col gap-1">
@@ -97,76 +106,6 @@
                 Clear All Toasts
               </button>
             </div>
-          </div>
-        </section>
-
-        <!-- Real-Time Token Customization -->
-        <section class="flex flex-col gap-4">
-          <h2>3. Global Custom Design Tokens</h2>
-          <p class="text-text-secondary text-xs">
-            Customize the toast color variables live. Leave blank to inherit system defaults.
-          </p>
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-success">Success Accent</label>
-              <input
-                type="text"
-                id="token-success"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#10b981"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-destructive">
-                Destructive Accent
-              </label>
-              <input
-                type="text"
-                id="token-destructive"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#ef4444"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-warning">Warning Accent</label>
-              <input
-                type="text"
-                id="token-warning"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#f59e0b"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-info">Info Accent</label>
-              <input
-                type="text"
-                id="token-info"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#3b82f6"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-surface">Surface Color</label>
-              <input
-                type="text"
-                id="token-surface"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#ffffff"
-              />
-            </div>
-            <div class="flex flex-col gap-1">
-              <label class="text-text-secondary text-xs font-semibold" for="token-text">Text Color</label>
-              <input
-                type="text"
-                id="token-text"
-                class="bg-background border-border rounded border px-2 py-1 font-mono text-sm"
-                placeholder="#1f2937"
-              />
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <button id="btn-reset-tokens" class="btn secondary sm text-xs" style="height: auto">Reset Tokens</button>
-            <button id="btn-apply-tokens" class="btn primary sm text-xs" style="height: auto">Apply Tokens</button>
           </div>
         </section>
       </main>

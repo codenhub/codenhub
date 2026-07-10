@@ -28,7 +28,7 @@ export type ToastState = "visible" | "hiding" | "hidden";
 /**
  * Visual aesthetics configurations for toast notifications.
  */
-export type ToastAppearance = "flat-bordered" | "flat" | "soft" | "soft-bordered" | "left-accent";
+export type ToastAppearance = "flat" | "soft" | "soft-bordered" | "left-accent";
 
 /**
  * Design tokens for overriding colors per toast or globally per instance.

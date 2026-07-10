@@ -117,7 +117,7 @@ describe("Toast rendering", () => {
 
   it("should apply default appearance to root class name", () => {
     const element = renderToast(makeToast({ message: "Default appearance" }));
-    expect(element.className).toContain("toast-appearance-flat-bordered");
+    expect(element.className).toContain("toast-appearance-soft-bordered");
   });
 
   it("should apply flat appearance to root class name", () => {
