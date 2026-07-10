@@ -9,14 +9,25 @@ import type {
   ToastUpdateOptions,
 } from "./types";
 
+/**
+ * Resolved runtime configurations for a Toaster instance.
+ */
 export interface ResolvedToastConfig {
+  /** Unique toaster instance ID for CSS scoping. */
   readonly instanceId: string;
+  /** Viewport position for active stack containers. */
   readonly position: ToastPosition;
+  /** Default visibility duration in milliseconds. */
   readonly duration: number;
+  /** Whether toasts show a close button by default. */
   readonly isDismissable: boolean;
+  /** Whether toasts automatically dismiss after duration. */
   readonly shouldAutoDismiss: boolean;
+  /** Maximum number of active toasts displayed simultaneously. */
   readonly maxVisible: number;
+  /** Viewport margin configurations. */
   readonly margin?: string | { x?: string; y?: string };
+  /** Default visual appearance style. */
   readonly appearance: ToastAppearance;
 }
 
@@ -133,10 +144,9 @@ function sanitizeElement(el: Element): void {
     const attrName = attr.name.toLowerCase();
 
     if (URL_ATTRIBUTES.has(attrName)) {
-      // oxlint-disable-next-line no-control-regex
-      const val = attr.value
-        .replace(/[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, "")
-        .toLowerCase();
+      // eslint-disable-next-line no-control-regex
+      const controlRegex = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u200D\u2028\u2029\u202F\u205F\u3000\uFEFF]/g;
+      const val = attr.value.replace(controlRegex, "").toLowerCase();
 
       const protocolMatch = val.match(/^[a-z0-9+.-]+:/);
       if (protocolMatch) {

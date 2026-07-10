@@ -10,7 +10,8 @@
     "directory": "packages/toast"
   },
   "files": [
-    "dist"
+    "dist",
+    "NOTICE"
   ],
   "type": "module",
   "main": "./dist/index.js",
