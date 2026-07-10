@@ -452,7 +452,36 @@ export class ModalManager {
       onClosed();
       return;
     }
+
+    const style = window.getComputedStyle(dialog);
+    const duration = style.transitionDuration || "0s";
+    const hasTransition = duration.split(",").some((d) => {
+      const val = d.trim();
+      return val !== "0s" && val !== "0ms" && val !== "";
+    });
+
+    if (!hasTransition) {
+      dialog.close();
+      onClosed();
+      return;
+    }
+
+    let hasFinished = false;
+    const finish = (): void => {
+      if (hasFinished) {
+        return;
+      }
+      hasFinished = true;
+      dialog.removeEventListener("transitionend", finish);
+      dialog.removeEventListener("transitioncancel", finish);
+      clearTimeout(timeoutId);
+      onClosed();
+    };
+
+    dialog.addEventListener("transitionend", finish);
+    dialog.addEventListener("transitioncancel", finish);
+    const timeoutId = window.setTimeout(finish, 250);
+
     dialog.close();
-    onClosed();
   }
 }

@@ -60,6 +60,7 @@ export interface NormalizedToastOptions {
   readonly position: ToastPosition;
   readonly role: ToastRole;
   readonly rootClassName: string;
+  readonly className?: string;
   readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
   readonly appearance: ToastAppearance;
@@ -239,11 +240,8 @@ export function normalizeToastOptions(params: {
     message: content === undefined ? (message ?? "") : null,
     position: options.position ?? config.position,
     role: preset?.role ?? options.role ?? DEFAULT_ROLE,
-    rootClassName: joinClassNames(
-      preset?.rootClassName ?? DEFAULT_TOAST_CLASS,
-      `toast-appearance-${appearance}`,
-      options.className,
-    ),
+    rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, `toast-appearance-${appearance}`),
+    className: options.className,
     tokens: options.tokens ?? null,
     margin: options.margin ?? config.margin,
     appearance,

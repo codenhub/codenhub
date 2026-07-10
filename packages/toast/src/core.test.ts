@@ -469,3 +469,101 @@ describe("positioning and margins", () => {
     toaster.destroy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Toast update
+// ---------------------------------------------------------------------------
+
+describe("Toast update", () => {
+  it("should update message text dynamically", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Initial message");
+
+    const element = document.body.querySelector("[role='status']");
+    expect(element?.textContent).toContain("Initial message");
+
+    handle.update({ message: "Updated message" });
+    expect(element?.textContent).toContain("Updated message");
+    expect(element?.textContent).not.toContain("Initial message");
+
+    toaster.destroy();
+  });
+
+  it("should update token overrides dynamically", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Tokens test", {
+      tokens: { success: "red" },
+    });
+
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']");
+    expect(element?.style.getPropertyValue("--toast-color-success")).toBe("red");
+
+    handle.update({ tokens: { success: "blue" } });
+    expect(element?.style.getPropertyValue("--toast-color-success")).toBe("blue");
+
+    toaster.destroy();
+  });
+
+  it("should replace custom class name dynamically without accumulating", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Class test", {
+      className: "class-one",
+    });
+
+    const element = document.body.querySelector("[role='status']");
+    expect(element?.className).toContain("class-one");
+    expect(element?.className).not.toContain("class-two");
+
+    handle.update({ className: "class-two" });
+    expect(element?.className).toContain("class-two");
+    expect(element?.className).not.toContain("class-one");
+
+    toaster.destroy();
+  });
+});
+
+describe("Interactive Dialog Transition Queue", () => {
+  it("should wait for transition to finish before showing the next queued modal", async () => {
+    const toaster = createToaster();
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+      const style = originalGetComputedStyle(el);
+      if (el.tagName.toLowerCase() === "dialog") {
+        return {
+          ...style,
+          transitionDuration: "0.2s",
+        } as unknown as CSSStyleDeclaration;
+      }
+      return style;
+    });
+
+    toaster.interactive.alert("First alert");
+    const handle2 = toaster.interactive.alert("Second alert");
+
+    const dialog = document.body.querySelector("dialog");
+    expect(dialog?.open).toBe(true);
+    expect(document.body.innerHTML).toContain("First alert");
+    expect(document.body.innerHTML).not.toContain("Second alert");
+
+    const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
+    okBtn!.click();
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.body.innerHTML).toContain("First alert");
+    expect(document.body.innerHTML).not.toContain("Second alert");
+
+    dialog!.dispatchEvent(new Event("transitionend"));
+
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(document.body.innerHTML).toContain("Second alert");
+    expect(document.body.innerHTML).not.toContain("First alert");
+
+    const secondOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
+    secondOkBtn!.click();
+    await handle2.settled;
+
+    toaster.destroy();
+  });
+});
