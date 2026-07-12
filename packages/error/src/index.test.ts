@@ -11,6 +11,10 @@ import {
   err,
   ok,
   type Result,
+  type ErrorRegistry,
+  type ErrorRegistryBucket,
+  type ErrorPrefixRegistryBucket,
+  type ErrorPatternRegistryBucket,
 } from "./index";
 import { RAW_ENTRIES_SYMBOL } from "./registry";
 
@@ -142,6 +146,18 @@ describe("createErrorRegistry", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
+      registry.codes.add("invalid_credentials", null as never);
+    }).toThrow(TypeError);
+
+    expect(() => {
+      registry.codes.add("invalid_credentials", { message: "Msg", messageKey: 123 } as never);
+    }).toThrow(TypeError);
+
+    expect(() => {
+      registry.codes.add("invalid_credentials", { message: "Msg", source: 123 } as never);
+    }).toThrow(TypeError);
+
+    expect(() => {
       registry.codes.add("invalid_credentials", { message: "Invalid email or password.", isRetryable: "yes" } as never);
     }).toThrow(TypeError);
   });
@@ -170,9 +186,19 @@ describe("createErrorRegistry", () => {
     const sourceRegistry = createErrorRegistry();
     const targetRegistry = createErrorRegistry();
 
+    sourceRegistry.codes.add("500", {
+      message: "Internal server error.",
+      source: "server",
+    });
     sourceRegistry.names.add("AbortError", {
       message: "Request cancelled.",
       source: "browser",
+    });
+    sourceRegistry.messages.add("Exact message to match", {
+      message: "Matched message",
+    });
+    sourceRegistry.prefixes.add("Upload failed:", {
+      message: "Surface failure.",
     });
     sourceRegistry.patterns.add(/failed to fetch/gi, {
       message: "Network request failed.",
@@ -520,5 +546,269 @@ describe("refactored error features", () => {
     expect(appError.message).toBe("Auth expired, please log in again.");
     expect(appError.messageKey).toBe("error.auth.expired");
     expect(appError.source).toBe("auth");
+  });
+
+  it("should strip global and sticky flags from RegExp patterns to prevent stateful matching", () => {
+    const registry = createErrorRegistry();
+    // Register with global flag
+    registry.patterns.add(/test-error/g, { message: "Test pattern error" });
+
+    // Stored pattern should have g flag stripped
+    const definitions = registry.patterns.values();
+    expect(definitions[0].pattern.flags).not.toContain("g");
+
+    // Multiple calls should consistently match (not alternate due to lastIndex state)
+    const err1 = createAppError(new Error("test-error value"), { registry });
+    const err2 = createAppError(new Error("test-error value"), { registry });
+    const err3 = createAppError(new Error("test-error value"), { registry });
+
+    expect(err1.type).toBe("unexpected");
+    expect(err2.type).toBe("unexpected");
+    expect(err3.type).toBe("unexpected");
+
+    // Delete should also work with global/sticky regex
+    expect(registry.patterns.delete(/test-error/g)).toBe(true);
+    expect(registry.patterns.values().length).toBe(0);
+  });
+
+  it("should prevent advanced mutations on frozen registries via deleteProperty, defineProperty, preventExtensions, setPrototypeOf", () => {
+    const registry = createErrorRegistry();
+    const frozen = freezeRegistry(registry);
+
+    expect(() => {
+      delete (frozen.codes as unknown as Record<string, unknown>).add;
+    }).toThrow(TypeError);
+
+    expect(() => {
+      Object.defineProperty(frozen.codes, "newProp", { value: "val" });
+    }).toThrow(TypeError);
+
+    expect(() => {
+      Object.preventExtensions(frozen.codes);
+    }).toThrow(TypeError);
+
+    expect(() => {
+      Object.setPrototypeOf(frozen.codes, {});
+    }).toThrow(TypeError);
+
+    // Also verify on raw entries proxy
+    const rawCodes = (frozen.codes as unknown as Record<symbol, Record<string, unknown>>)[RAW_ENTRIES_SYMBOL];
+    expect(() => {
+      delete rawCodes.set;
+    }).toThrow(TypeError);
+
+    expect(() => {
+      Object.defineProperty(rawCodes, "newProp", { value: "val" });
+    }).toThrow(TypeError);
+  });
+
+  it("should support custom registry implementation without internal symbols", () => {
+    // Custom registry that only implements the ErrorRegistry interface without [RAW_ENTRIES_SYMBOL]
+    const customRegistry: ErrorRegistry = {
+      codes: {
+        add: () => {},
+        addList: () => {},
+        clear: () => {},
+        delete: () => false,
+        get: (id: string) => (id === "CUSTOM_CODE" ? { message: "Custom code matched" } : undefined),
+        values: () => [].values(),
+      } as unknown as ErrorRegistryBucket,
+      names: {
+        add: () => {},
+        addList: () => {},
+        clear: () => {},
+        delete: () => false,
+        get: (name: string) => (name === "CustomNameError" ? { message: "Custom name matched" } : undefined),
+        values: () => [].values(),
+      } as unknown as ErrorRegistryBucket,
+      messages: {
+        add: () => {},
+        addList: () => {},
+        clear: () => {},
+        delete: () => false,
+        get: (msg: string) => (msg === "custom message" ? { message: "Custom message matched" } : undefined),
+        values: () => [].values(),
+      } as unknown as ErrorRegistryBucket,
+      prefixes: {
+        add: () => {},
+        addList: () => {},
+        clear: () => {},
+        delete: () => false,
+        values: () => [{ prefix: "Custom prefix:", message: "Custom prefix matched" }],
+      } as unknown as ErrorPrefixRegistryBucket,
+      patterns: {
+        add: () => {},
+        addList: () => {},
+        clear: () => {},
+        delete: () => false,
+        values: () => [{ pattern: /custom pattern/i, message: "Custom pattern matched" }],
+      } as unknown as ErrorPatternRegistryBucket,
+      clear: () => {},
+      merge: () => {},
+    };
+
+    expect(createAppError({ code: "CUSTOM_CODE" }, { registry: customRegistry })).toMatchObject({
+      type: "known",
+      message: "Custom code matched",
+    });
+
+    expect(createAppError(new Error("Custom prefix: test"), { registry: customRegistry })).toMatchObject({
+      type: "known",
+      message: "Custom prefix matched",
+    });
+
+    expect(createAppError(new Error("custom pattern match"), { registry: customRegistry })).toMatchObject({
+      type: "unexpected",
+      message: "Custom pattern matched",
+    });
+  });
+
+  it("should traverse and classify nested AppError wrappers of type unexpected or unknown", () => {
+    const registry = createErrorRegistry();
+
+    // Create an unexpected nested AppError
+    registry.patterns.add(/unexpected match/i, { message: "Mapped unexpected" });
+    const nestedUnexpected = createAppError(new Error("unexpected match"), { registry });
+    expect(nestedUnexpected.type).toBe("unexpected");
+
+    // Wrap it in a new error
+    const wrapper = new Error("Outer error", { cause: nestedUnexpected });
+    const resultAppError = createAppError(wrapper, { registry });
+
+    expect(resultAppError.type).toBe("unexpected");
+    expect(resultAppError.message).toBe("Mapped unexpected");
+    expect(resultAppError.originalError).toBe(wrapper);
+
+    // Create an unknown nested AppError wrapper
+    const nestedUnknown = createAppError(new Error("completely unknown error"), { registry });
+    expect(nestedUnknown.type).toBe("unknown");
+
+    const wrapperUnknown = new Error("Outer error", { cause: nestedUnknown });
+    const resultUnknownAppError = createAppError(wrapperUnknown, { registry });
+
+    expect(resultUnknownAppError.type).toBe("unknown");
+    expect(resultUnknownAppError.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
+  });
+
+  it("should match exact message mappings in the messages bucket", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("Exact message to match", { message: "Matched exact message" });
+
+    const appError = createAppError(new Error("Exact message to match"), { registry });
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Matched exact message");
+  });
+
+  it("should throw TypeError when non-RegExp passed to patterns bucket delete", () => {
+    const registry = createErrorRegistry();
+    expect(() => {
+      registry.patterns.delete("not-a-regex" as unknown as RegExp);
+    }).toThrow(TypeError);
+  });
+
+  it("should support prefix bucket addList method", () => {
+    const registry = createErrorRegistry();
+    registry.prefixes.addList([
+      ["First prefix:", { message: "First message" }],
+      ["Second prefix:", { message: "Second message" }],
+    ]);
+
+    expect(createAppError(new Error("First prefix: something"), { registry }).message).toBe("First message");
+    expect(createAppError(new Error("Second prefix: something"), { registry }).message).toBe("Second message");
+  });
+
+  it("should stop unwrapping nested errors when max depth is reached", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("KNOWN_DEEP", { message: "Should not match if too deep" });
+
+    // Depth 0: level0, Depth 1: level1, Depth 2: level2, Depth 3: level3, Depth 4: level4
+    // level4 (depth 4) is too deep because max unwrap depth is 3.
+    const level4 = { code: "KNOWN_DEEP" };
+    const level3 = { cause: level4 };
+    const level2 = { cause: level3 };
+    const level1 = { cause: level2 };
+    const level0 = { cause: level1 };
+
+    const appError = createAppError(level0, { registry });
+    expect(appError.type).toBe("unknown");
+
+    // Depth 3 (within max unwrap depth 3) should match
+    const withinLimit = { cause: { cause: { cause: { code: "KNOWN_DEEP" } } } };
+    const appErrorMatch = createAppError(withinLimit, { registry });
+    expect(appErrorMatch.type).toBe("known");
+  });
+
+  it("should throw TypeError when defineProperty, deleteProperty, defineProperty, or deleteProperty is called on frozen arrays/maps", () => {
+    const registry = createErrorRegistry();
+    const frozen = freezeRegistry(registry);
+
+    // Test normal property assignment (set trap) on bucket proxy
+    expect(() => {
+      (frozen.codes as unknown as Record<string, unknown>).foo = "bar";
+    }).toThrow(TypeError);
+
+    const rawCodes = (frozen.codes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
+    // Call non-mutating method/read on map proxy (covers Reflect.get in freezeMap)
+    expect((rawCodes as unknown as Map<string, unknown>).size).toBe(0);
+    expect((rawCodes as unknown as Map<string, unknown>).get("any_key")).toBeUndefined();
+
+    // Test mutations on map proxy
+    expect(() => {
+      (rawCodes as unknown as Record<string, unknown>).foo = "bar";
+    }).toThrow(TypeError);
+
+    expect(() => {
+      delete (rawCodes as unknown as Record<string, unknown>).foo;
+    }).toThrow(TypeError);
+
+    const rawPatterns = (frozen.patterns as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
+    expect(() => {
+      delete (rawPatterns as unknown as unknown[])[0];
+    }).toThrow(TypeError);
+
+    expect(() => {
+      Object.defineProperty(rawPatterns, "newProp", { value: "val" });
+    }).toThrow(TypeError);
+
+    // Call non-mutating method on array proxy (covers Reflect.get in freezeArray)
+    expect((rawPatterns as unknown as unknown[]).length).toBe(0);
+    expect((rawPatterns as unknown as unknown[]).find(() => true)).toBeUndefined();
+  });
+
+  it("should cover non-record error normalization and custom registry message fallback lookup", () => {
+    const customRegistry: ErrorRegistry = {
+      codes: { get: () => undefined } as unknown as ErrorRegistryBucket,
+      names: { get: () => undefined } as unknown as ErrorRegistryBucket,
+      messages: {
+        get: (msg: string) => (msg === "exact custom message" ? { message: "matched message" } : undefined),
+      } as unknown as ErrorRegistryBucket,
+      prefixes: {
+        values: () => [
+          { prefix: "upload failed", message: "Longer prefix" },
+          { prefix: "upload", message: "Shorter prefix" },
+        ],
+      } as unknown as ErrorPrefixRegistryBucket,
+      patterns: { values: () => [] } as unknown as ErrorPatternRegistryBucket,
+      clear: () => {},
+      merge: () => {},
+    };
+
+    // Test non-record (boolean) normalization
+    const appErrorBoolean = createAppError(true, { registry: customRegistry });
+    expect(appErrorBoolean.type).toBe("unknown");
+
+    // Test non-record wrapped error candidate cause (covers line 109 of normalize.ts)
+    const appErrorNonRecordWrapped = createAppError({ cause: 123 }, { registry: customRegistry });
+    expect(appErrorNonRecordWrapped.type).toBe("unknown");
+
+    // Test custom registry messages fallback lookup
+    const appErrorMessage = createAppError(new Error("exact custom message"), { registry: customRegistry });
+    expect(appErrorMessage.type).toBe("known");
+    expect(appErrorMessage.message).toBe("matched message");
+
+    // Test custom registry prefix fallback lookup (covers false branch of length comparison)
+    const appErrorPrefix = createAppError(new Error("upload failed: something"), { registry: customRegistry });
+    expect(appErrorPrefix.type).toBe("known");
+    expect(appErrorPrefix.message).toBe("Longer prefix");
   });
 });
