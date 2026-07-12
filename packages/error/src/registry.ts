@@ -107,14 +107,14 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
     delete(prefix: string): boolean {
       assertNonEmptyIdentifier(prefix, "prefix");
       const normalized = normalizeErrorIdentifier(prefix);
-      let deleted = false;
+      let isDeleted = false;
       for (let i = entries.length - 1; i >= 0; i--) {
         if (entries[i].prefix === normalized) {
           entries.splice(i, 1);
-          deleted = true;
+          isDeleted = true;
         }
       }
-      return deleted;
+      return isDeleted;
     },
     values(): readonly ErrorPrefixDefinition[] {
       return entries.map((entry) => ({ ...entry }));
@@ -148,14 +148,14 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
       if (!(pattern instanceof RegExp)) {
         throw new TypeError("Error registry pattern must be a RegExp.");
       }
-      let deleted = false;
+      let isDeleted = false;
       for (let i = entries.length - 1; i >= 0; i--) {
         if (entries[i].pattern.source === pattern.source && entries[i].pattern.flags === pattern.flags) {
           entries.splice(i, 1);
-          deleted = true;
+          isDeleted = true;
         }
       }
-      return deleted;
+      return isDeleted;
     },
     values(): readonly ErrorPatternDefinition[] {
       return entries.map((entry) => ({ ...entry, pattern: new RegExp(entry.pattern.source, entry.pattern.flags) }));
@@ -281,7 +281,7 @@ export const freezeRegistry = (registry: ErrorRegistry): ErrorRegistry => {
     });
   };
 
-  return {
+  return Object.freeze({
     codes: freezeBucket(registry.codes),
     names: freezeBucket(registry.names),
     messages: freezeBucket(registry.messages),
@@ -289,5 +289,5 @@ export const freezeRegistry = (registry: ErrorRegistry): ErrorRegistry => {
     patterns: freezeBucket(registry.patterns),
     clear: throwReadOnly,
     merge: throwReadOnly,
-  };
+  });
 };

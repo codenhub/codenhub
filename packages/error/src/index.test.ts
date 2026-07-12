@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("createErrorRegistry", () => {
-  it("creates isolated blank registries", () => {
+  it("should create isolated blank registries", () => {
     const firstRegistry = createErrorRegistry();
     const secondRegistry = createErrorRegistry();
 
@@ -44,7 +44,7 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("creates registries with presets on creation", () => {
+  it("should create registries with presets on creation", () => {
     const firstPreset = createErrorRegistry();
     firstPreset.codes.add("code_one", { message: "Message one" });
     const secondPreset = createErrorRegistry();
@@ -56,7 +56,7 @@ describe("createErrorRegistry", () => {
     expect(mergedRegistry.names.get("NameTwo")).toEqual({ message: "Message two" });
   });
 
-  it("adds multiple mappings from tuple lists", () => {
+  it("should add multiple mappings from tuple lists", () => {
     const registry = createErrorRegistry();
 
     registry.codes.addList([
@@ -77,7 +77,7 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("keeps bucket addList callable when destructured", () => {
+  it("should keep bucket addList callable when destructured", () => {
     const registry = createErrorRegistry();
     const addList = registry.codes.addList;
 
@@ -90,7 +90,7 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("keeps registry merge and clear callable when destructured", () => {
+  it("should keep registry merge and clear callable when destructured", () => {
     const sourceRegistry = createErrorRegistry();
     const targetRegistry = createErrorRegistry();
     const merge = targetRegistry.merge;
@@ -113,7 +113,7 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("rejects empty exact-match identifiers", () => {
+  it("should reject empty exact-match identifiers", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
@@ -121,7 +121,7 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
-  it("rejects prefixes that normalize to empty strings", () => {
+  it("should reject prefixes that normalize to empty strings", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
@@ -129,7 +129,7 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
-  it("rejects feedback without a non-empty message", () => {
+  it("should reject feedback without a non-empty message", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
@@ -137,7 +137,7 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
-  it("rejects invalid optional feedback fields", () => {
+  it("should reject invalid optional feedback fields", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
@@ -145,7 +145,7 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
-  it("rejects non-RegExp patterns", () => {
+  it("should reject non-RegExp patterns", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
@@ -153,7 +153,7 @@ describe("createErrorRegistry", () => {
     }).toThrow(TypeError);
   });
 
-  it("matches exact identifiers after registry normalization", () => {
+  it("should match exact identifiers after registry normalization", () => {
     const registry = createErrorRegistry();
 
     registry.codes.add(" invalid_credentials. ", { message: "Invalid email or password." });
@@ -165,7 +165,7 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("merges mappings from ready or app-owned registries", () => {
+  it("should merge mappings from ready or app-owned registries", () => {
     const sourceRegistry = createErrorRegistry();
     const targetRegistry = createErrorRegistry();
 
@@ -196,7 +196,7 @@ describe("createErrorRegistry", () => {
 });
 
 describe("global registry getter/setter", () => {
-  it("gets and sets global active registry", () => {
+  it("should get and set global active registry", () => {
     const defaultRegistry = getErrorRegistry();
     const customRegistry = createErrorRegistry();
     customRegistry.codes.add("code_one", { message: "Custom message" });
@@ -212,14 +212,14 @@ describe("global registry getter/setter", () => {
     setErrorRegistry(defaultRegistry);
   });
 
-  it("rejects non-object registry in setter", () => {
+  it("should reject non-object registry in setter", () => {
     expect(() => setErrorRegistry(null as never)).toThrow(TypeError);
     expect(() => setErrorRegistry("not-a-registry" as never)).toThrow(TypeError);
   });
 });
 
 describe("createAppError", () => {
-  it("starts from a blank default registry", () => {
+  it("should start from a blank default registry", () => {
     const appError = createAppError({ code: "invalid_credentials", message: "Failed to fetch" });
 
     expect(appError.type).toBe("unknown");
@@ -229,7 +229,7 @@ describe("createAppError", () => {
     expect(appError.isRetryable).toBe(false);
   });
 
-  it("uses active registry by default", () => {
+  it("should use active registry by default", () => {
     getErrorRegistry().codes.add("invalid_credentials", {
       message: "Invalid email or password.",
       source: "auth",
@@ -242,7 +242,7 @@ describe("createAppError", () => {
     });
   });
 
-  it("resolves nested wrapper errors without following cycles forever", () => {
+  it("should resolve nested wrapper errors without following cycles forever", () => {
     const registry = createErrorRegistry();
     const nestedError = { code: "known_code" };
     const originalError: Record<string, unknown> = { message: "Outer wrapper" };
@@ -258,7 +258,7 @@ describe("createAppError", () => {
     expect(appError.originalError).toBe(originalError);
   });
 
-  it("does not throw when unknown error fields have throwing accessors", () => {
+  it("should not throw when unknown error fields have throwing accessors", () => {
     const error = {
       get message(): string {
         throw new Error("Getter failed.");
@@ -274,7 +274,7 @@ describe("createAppError", () => {
     expect(appError.originalError).toBe(error);
   });
 
-  it("normalizes function-based errors", () => {
+  it("should normalize function-based errors", () => {
     const registry = createErrorRegistry();
     registry.codes.add("FUNC_ERROR", { message: "Function failed." });
 
@@ -286,7 +286,7 @@ describe("createAppError", () => {
     expect(appError.originalError).toBe(errorFn);
   });
 
-  it("keeps surface classifications before nested wrapper errors", () => {
+  it("should keep surface classifications before nested wrapper errors", () => {
     const registry = createErrorRegistry();
 
     registry.codes.add("nested_code", { message: "Nested failure." });
@@ -301,7 +301,7 @@ describe("createAppError", () => {
     expect(appError.message).toBe("Surface failure.");
   });
 
-  it("uses the longest matching prefix when prefixes overlap", () => {
+  it("should use the longest matching prefix when prefixes overlap", () => {
     const registry = createErrorRegistry();
 
     registry.prefixes.add("Upload failed", { message: "Upload failed." });
@@ -313,7 +313,7 @@ describe("createAppError", () => {
     expect(appError.message).toBe("Image upload failed.");
   });
 
-  it("returns existing AppError details when wrapping AppError", () => {
+  it("should return existing AppError details when wrapping AppError", () => {
     const registry = createErrorRegistry();
 
     registry.codes.add("known_code", { message: "Known failure.", messageKey: "error.known" });
@@ -329,12 +329,12 @@ describe("createAppError", () => {
 });
 
 describe("isAppError", () => {
-  it("returns true for errors created by createAppError", () => {
+  it("should return true for errors created by createAppError", () => {
     const error = createAppError("Something failed");
     expect(isAppError(error)).toBe(true);
   });
 
-  it("returns false for standard errors or other objects", () => {
+  it("should return false for standard errors or other objects", () => {
     expect(isAppError(new Error("standard"))).toBe(false);
     expect(isAppError({ message: "not an error" })).toBe(false);
     expect(isAppError(null)).toBe(false);
@@ -342,7 +342,7 @@ describe("isAppError", () => {
 });
 
 describe("result helpers", () => {
-  it("creates success and failure results", () => {
+  it("should create success and failure results", () => {
     const registry = createErrorRegistry();
     const success = ok("user-id");
 
@@ -355,7 +355,7 @@ describe("result helpers", () => {
     expect(failure.error.message).toBe("Invalid email or password.");
   });
 
-  it("uses string errors as fallback messages", () => {
+  it("should use string errors as fallback messages", () => {
     const failure = err("Missing user id");
 
     expect(failure.error.type).toBe("unknown");
@@ -364,7 +364,7 @@ describe("result helpers", () => {
 });
 
 describe("refactored error features", () => {
-  it("coerces numeric code to string in normalizeError", () => {
+  it("should coerce numeric code to string in normalizeError", () => {
     const registry = createErrorRegistry();
     registry.codes.add("500", { message: "Internal server error." });
 
@@ -374,14 +374,14 @@ describe("refactored error features", () => {
     expect(appError.message).toBe("Internal server error.");
   });
 
-  it("passes the original error as cause to the native Error constructor", () => {
+  it("should pass the original error as cause to the native Error constructor", () => {
     const original = new Error("Failed");
     const appError = createAppError(original);
 
     expect(appError.cause).toBe(original);
   });
 
-  it("deletes entries from all registry buckets", () => {
+  it("should delete entries from all registry buckets", () => {
     const registry = createErrorRegistry();
 
     // codes bucket delete
@@ -407,7 +407,7 @@ describe("refactored error features", () => {
     expect(registry.patterns.delete(pattern)).toBe(false);
   });
 
-  it("throws TypeError when attempting to mutate a frozen registry", () => {
+  it("should throw TypeError when attempting to mutate a frozen registry", () => {
     const registry = createErrorRegistry();
     const frozen = freezeRegistry(registry);
 
@@ -428,9 +428,13 @@ describe("refactored error features", () => {
 
     expect(() => frozen.clear()).toThrow(TypeError);
     expect(() => frozen.merge(registry)).toThrow(TypeError);
+
+    expect(() => {
+      (frozen as unknown as Record<string, unknown>).codes = registry.codes;
+    }).toThrow(TypeError);
   });
 
-  it("prioritizes known classifications in nested candidates over unexpected pattern matches", () => {
+  it("should prioritize known classifications in nested candidates over unexpected pattern matches", () => {
     const registry = createErrorRegistry();
 
     registry.patterns.add(/network error/i, { message: "Generic network failure." });

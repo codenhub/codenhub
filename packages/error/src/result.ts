@@ -6,12 +6,18 @@ import type { AppError, AppErrorOptions } from "./types";
  *
  * @typeParam T - The type of the value wrapped in the success result.
  */
-export type Ok<T> = { ok: true; value: T };
+export interface Ok<T> {
+  readonly ok: true;
+  readonly value: T;
+}
 
 /**
  * Represents a failed result value wrapping a normalized AppError.
  */
-export type Err = { ok: false; error: AppError };
+export interface Err {
+  readonly ok: false;
+  readonly error: AppError;
+}
 
 /**
  * A Result type representing either a successful outcome (`Ok<T>`) or a failure outcome (`Err`).

@@ -309,7 +309,7 @@ import { browserErrorRegistry, supabaseErrorRegistry } from "@codenhub/error/reg
 
 Ready registries are plain `ErrorRegistry` values intended to be merged into the global registry or another app-owned registry. Importing a preset does not mutate the global registry.
 
-The preset registry objects are mutable like any other `ErrorRegistry`. Treat imported presets as shared read-only inputs and merge them into an app-owned registry before adding app-specific mappings.
+The preset registry objects are frozen and read-only. Merge them into an app-owned registry before adding app-specific mappings.
 
 ### `@codenhub/error/registries/browser`
 
@@ -383,7 +383,7 @@ getErrorRegistry().codes.addList([
 ## Notes
 
 - Registries are opt-in by design. Consumers start from a blank registry to avoid hidden global classifications.
-- Registries, including the global error registry and ready registry presets, are currently mutable. Configure shared registries during app initialization and avoid mutating imported presets at runtime. A future version is expected to provide stronger mutation safeguards.
+- The global error registry is mutable. Ready registry presets are frozen and read-only. Configure registries during app initialization.
 - Preset registries should prefer stable error codes or names over message matching when a library provides them.
 
 ## License

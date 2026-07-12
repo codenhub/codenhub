@@ -1,4 +1,4 @@
-import { createErrorRegistry, freezeRegistry } from "../index";
+import { createErrorRegistry, freezeRegistry } from "../registry";
 
 /**
  * An opt-in, read-only error registry pre-populated with mappings for common Supabase service errors.
