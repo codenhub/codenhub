@@ -1,4 +1,4 @@
-import { DEFAULT_APP_ERROR_MESSAGE, AppError, err, ok, type Result } from "@codenhub/error";
+import { DEFAULT_APP_ERROR_MESSAGE, getErrorRegistry, err, ok, type Result, type AppError } from "@codenhub/error";
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,8 +22,8 @@ interface MockAnimation {
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  AppError.registry.clear();
-  AppError.registry.codes.add("invalid_credentials", {
+  getErrorRegistry().clear();
+  getErrorRegistry().codes.add("invalid_credentials", {
     message: "Invalid email or password.",
   });
   setI18nInstance(new I18n(i18nConfig));
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  AppError.registry.clear();
+  getErrorRegistry().clear();
   vi.restoreAllMocks();
 });
 

@@ -1,9 +1,19 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { AppError, DEFAULT_APP_ERROR_MESSAGE, createErrorRegistry, err, ok, type Result } from "./index";
+import {
+  createAppError,
+  isAppError,
+  DEFAULT_APP_ERROR_MESSAGE,
+  createErrorRegistry,
+  getErrorRegistry,
+  setErrorRegistry,
+  err,
+  ok,
+  type Result,
+} from "./index";
 
 afterEach(() => {
-  AppError.registry.clear();
+  getErrorRegistry().clear();
 });
 
 describe("createErrorRegistry", () => {
@@ -17,14 +27,14 @@ describe("createErrorRegistry", () => {
       source: "auth",
     });
 
-    expect(new AppError({ code: "invalid_credentials" }, { registry: firstRegistry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry: firstRegistry })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
       messageKey: "error.auth.invalidCredentials",
       source: "auth",
       retryable: false,
     });
-    expect(new AppError({ code: "invalid_credentials" }, { registry: secondRegistry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry: secondRegistry })).toMatchObject({
       type: "unknown",
       message: DEFAULT_APP_ERROR_MESSAGE,
       messageKey: null,
@@ -33,23 +43,16 @@ describe("createErrorRegistry", () => {
     });
   });
 
-  it("creates registries through AppError", () => {
-    const registry = AppError.createRegistry();
+  it("creates registries with presets on creation", () => {
+    const firstPreset = createErrorRegistry();
+    firstPreset.codes.add("code_one", { message: "Message one" });
+    const secondPreset = createErrorRegistry();
+    secondPreset.names.add("NameTwo", { message: "Message two" });
 
-    registry.codes.add("invalid_credentials", {
-      message: "Invalid email or password.",
-      source: "auth",
-    });
+    const mergedRegistry = createErrorRegistry([firstPreset, secondPreset]);
 
-    expect(new AppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
-      type: "known",
-      message: "Invalid email or password.",
-      source: "auth",
-    });
-    expect(new AppError({ code: "invalid_credentials" })).toMatchObject({
-      type: "unknown",
-      message: DEFAULT_APP_ERROR_MESSAGE,
-    });
+    expect(mergedRegistry.codes.get("code_one")).toEqual({ message: "Message one" });
+    expect(mergedRegistry.names.get("NameTwo")).toEqual({ message: "Message two" });
   });
 
   it("adds multiple mappings from tuple lists", () => {
@@ -61,12 +64,12 @@ describe("createErrorRegistry", () => {
     ]);
     registry.patterns.addList([[/failed to fetch/i, { message: "Network request failed.", retryable: true }]]);
 
-    expect(new AppError({ code: "email_not_confirmed" }, { registry })).toMatchObject({
+    expect(createAppError({ code: "email_not_confirmed" }, { registry })).toMatchObject({
       type: "known",
       message: "Email address is not confirmed.",
       source: "auth",
     });
-    expect(new AppError(new Error("Failed to fetch"), { registry })).toMatchObject({
+    expect(createAppError(new Error("Failed to fetch"), { registry })).toMatchObject({
       type: "unexpected",
       message: "Network request failed.",
       retryable: true,
@@ -79,7 +82,7 @@ describe("createErrorRegistry", () => {
 
     addList([["invalid_credentials", { message: "Invalid email or password.", source: "auth" }]]);
 
-    expect(new AppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
       source: "auth",
@@ -96,14 +99,14 @@ describe("createErrorRegistry", () => {
 
     merge(sourceRegistry);
 
-    expect(new AppError({ code: "invalid_credentials" }, { registry: targetRegistry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry: targetRegistry })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
     });
 
     clear();
 
-    expect(new AppError({ code: "invalid_credentials" }, { registry: targetRegistry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry: targetRegistry })).toMatchObject({
       type: "unknown",
       message: DEFAULT_APP_ERROR_MESSAGE,
     });
@@ -155,7 +158,7 @@ describe("createErrorRegistry", () => {
     registry.codes.add(" invalid_credentials. ", { message: "Invalid email or password." });
 
     expect(registry.codes.get("invalid_credentials")).toEqual({ message: "Invalid email or password." });
-    expect(new AppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
     });
@@ -178,17 +181,12 @@ describe("createErrorRegistry", () => {
     targetRegistry.merge(sourceRegistry);
     sourceRegistry.clear();
 
-    expect(new AppError(new DOMException("Aborted", "AbortError"), { registry: targetRegistry })).toMatchObject({
+    expect(createAppError(new DOMException("Aborted", "AbortError"), { registry: targetRegistry })).toMatchObject({
       type: "known",
       message: "Request cancelled.",
       source: "browser",
     });
-    expect(new AppError(new Error("failed to fetch"), { registry: targetRegistry })).toMatchObject({
-      type: "unexpected",
-      message: "Network request failed.",
-      retryable: true,
-    });
-    expect(new AppError(new Error("failed to fetch"), { registry: targetRegistry })).toMatchObject({
+    expect(createAppError(new Error("failed to fetch"), { registry: targetRegistry })).toMatchObject({
       type: "unexpected",
       message: "Network request failed.",
       retryable: true,
@@ -196,9 +194,32 @@ describe("createErrorRegistry", () => {
   });
 });
 
-describe("AppError", () => {
+describe("global registry getter/setter", () => {
+  it("gets and sets global active registry", () => {
+    const defaultRegistry = getErrorRegistry();
+    const customRegistry = createErrorRegistry();
+    customRegistry.codes.add("code_one", { message: "Custom message" });
+
+    setErrorRegistry(customRegistry);
+    expect(getErrorRegistry()).toBe(customRegistry);
+
+    expect(createAppError({ code: "code_one" })).toMatchObject({
+      type: "known",
+      message: "Custom message",
+    });
+
+    setErrorRegistry(defaultRegistry);
+  });
+
+  it("rejects non-object registry in setter", () => {
+    expect(() => setErrorRegistry(null as never)).toThrow(TypeError);
+    expect(() => setErrorRegistry("not-a-registry" as never)).toThrow(TypeError);
+  });
+});
+
+describe("createAppError", () => {
   it("starts from a blank default registry", () => {
-    const appError = new AppError({ code: "invalid_credentials", message: "Failed to fetch" });
+    const appError = createAppError({ code: "invalid_credentials", message: "Failed to fetch" });
 
     expect(appError.type).toBe("unknown");
     expect(appError.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
@@ -207,13 +228,13 @@ describe("AppError", () => {
     expect(appError.retryable).toBe(false);
   });
 
-  it("uses AppError.registry as the default registry", () => {
-    AppError.registry.codes.add("invalid_credentials", {
+  it("uses active registry by default", () => {
+    getErrorRegistry().codes.add("invalid_credentials", {
       message: "Invalid email or password.",
       source: "auth",
     });
 
-    expect(new AppError({ code: "invalid_credentials" })).toMatchObject({
+    expect(createAppError({ code: "invalid_credentials" })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
       source: "auth",
@@ -229,7 +250,7 @@ describe("AppError", () => {
 
     registry.codes.add("known_code", { message: "Known failure." });
 
-    const appError = new AppError(originalError, { registry });
+    const appError = createAppError(originalError, { registry });
 
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Known failure.");
@@ -243,9 +264,9 @@ describe("AppError", () => {
       },
     };
 
-    expect(() => new AppError(error)).not.toThrow();
+    expect(() => createAppError(error)).not.toThrow();
 
-    const appError = new AppError(error);
+    const appError = createAppError(error);
 
     expect(appError.type).toBe("unknown");
     expect(appError.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
@@ -258,7 +279,10 @@ describe("AppError", () => {
     registry.codes.add("nested_code", { message: "Nested failure." });
     registry.prefixes.add("Upload failed:", { message: "Surface failure." });
 
-    const appError = new AppError({ cause: { code: "nested_code" }, message: "Upload failed: network" }, { registry });
+    const appError = createAppError(
+      { cause: { code: "nested_code" }, message: "Upload failed: network" },
+      { registry },
+    );
 
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Surface failure.");
@@ -270,7 +294,7 @@ describe("AppError", () => {
     registry.prefixes.add("Upload failed", { message: "Upload failed." });
     registry.prefixes.add("Upload failed: image", { message: "Image upload failed." });
 
-    const appError = new AppError(new Error("Upload failed: image too large"), { registry });
+    const appError = createAppError(new Error("Upload failed: image too large"), { registry });
 
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Image upload failed.");
@@ -281,13 +305,26 @@ describe("AppError", () => {
 
     registry.codes.add("known_code", { message: "Known failure.", messageKey: "error.known" });
 
-    const originalAppError = new AppError({ code: "known_code" }, { registry });
-    const appError = new AppError(originalAppError);
+    const originalAppError = createAppError({ code: "known_code" }, { registry });
+    const appError = createAppError(originalAppError);
 
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Known failure.");
     expect(appError.messageKey).toBe("error.known");
     expect(appError.originalError).toBe(originalAppError.originalError);
+  });
+});
+
+describe("isAppError", () => {
+  it("returns true for errors created by createAppError", () => {
+    const error = createAppError("Something failed");
+    expect(isAppError(error)).toBe(true);
+  });
+
+  it("returns false for standard errors or other objects", () => {
+    expect(isAppError(new Error("standard"))).toBe(false);
+    expect(isAppError({ message: "not an error" })).toBe(false);
+    expect(isAppError(null)).toBe(false);
   });
 });
 

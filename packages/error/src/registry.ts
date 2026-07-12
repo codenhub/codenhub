@@ -136,7 +136,7 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
 };
 
 /** Creates an empty, isolated registry for classifying unknown errors. */
-export const createErrorRegistry = (): ErrorRegistry => {
+export const createErrorRegistry = (presets?: readonly ErrorRegistry[]): ErrorRegistry => {
   const codes = createFeedbackMapBucket();
   const names = createFeedbackMapBucket();
   const messages = createFeedbackMapBucket();
@@ -179,5 +179,30 @@ export const createErrorRegistry = (): ErrorRegistry => {
     },
   };
 
+  if (presets) {
+    for (const preset of presets) {
+      registry.merge(preset);
+    }
+  }
+
   return registry;
+};
+
+let activeRegistry: ErrorRegistry = createErrorRegistry();
+
+/**
+ * Retrieves the active global error registry.
+ */
+export const getErrorRegistry = (): ErrorRegistry => {
+  return activeRegistry;
+};
+
+/**
+ * Sets the active global error registry.
+ */
+export const setErrorRegistry = (registry: ErrorRegistry): void => {
+  if (typeof registry !== "object" || registry === null) {
+    throw new TypeError("Error registry must be an object.");
+  }
+  activeRegistry = registry;
 };

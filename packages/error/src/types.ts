@@ -1,8 +1,22 @@
+/** Predictable normalized error shape. */
+export interface AppError extends Error {
+  /** Classification assigned after registry lookup and fallback handling. */
+  readonly type: AppErrorType;
+  /** Optional localization key from matched registry feedback. */
+  readonly messageKey: string | null;
+  /** Optional source label from matched registry feedback. */
+  readonly source: AppErrorSource;
+  /** Original value passed to the factory, or the original value from a wrapped error. */
+  readonly originalError: unknown;
+  /** Whether retrying the failed operation is likely to help. */
+  readonly retryable: boolean;
+}
+
 /** Options that control how unknown errors are normalized. */
 export interface AppErrorOptions {
   /** Message used when the error cannot be matched by the selected registry. */
   fallbackMessage?: string;
-  /** Registry used for classification. Defaults to the app-level `AppError.registry`. */
+  /** Registry used for classification. Defaults to the active registry from `getErrorRegistry()`. */
   registry?: ErrorRegistry;
 }
 

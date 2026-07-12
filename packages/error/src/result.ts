@@ -1,5 +1,5 @@
-import { AppError } from "./app-error";
-import type { AppErrorOptions } from "./types";
+import { createAppError } from "./create-app-error";
+import type { AppError, AppErrorOptions } from "./types";
 
 /** Successful result value returned by `ok()`. */
 export type Ok<T> = { ok: true; value: T };
@@ -16,5 +16,5 @@ export const ok = <T>(value: T): Ok<T> => ({ ok: true, value });
 /** Normalizes an unknown error value and wraps it in a failed result. */
 export const err = (error: unknown, options: AppErrorOptions = {}): Err => ({
   ok: false,
-  error: new AppError(error, typeof error === "string" ? { fallbackMessage: error, ...options } : options),
+  error: createAppError(error, typeof error === "string" ? { fallbackMessage: error, ...options } : options),
 });
