@@ -43,8 +43,8 @@ const assertFeedback = (feedback: ErrorFeedback): void => {
     throw new TypeError("Error registry feedback.source must be a string when provided.");
   }
 
-  if (feedback.retryable !== undefined && typeof feedback.retryable !== "boolean") {
-    throw new TypeError("Error registry feedback.retryable must be a boolean when provided.");
+  if (feedback.isRetryable !== undefined && typeof feedback.isRetryable !== "boolean") {
+    throw new TypeError("Error registry feedback.isRetryable must be a boolean when provided.");
   }
 };
 
@@ -68,6 +68,9 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
     },
     clear(): void {
       entries.clear();
+    },
+    delete(identifier: string): boolean {
+      return entries.delete(normalizeErrorIdentifier(identifier));
     },
     get(identifier: string): ErrorFeedback | undefined {
       const feedback = entries.get(normalizeErrorIdentifier(identifier));
@@ -101,6 +104,18 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
     clear(): void {
       entries.length = 0;
     },
+    delete(prefix: string): boolean {
+      assertNonEmptyIdentifier(prefix, "prefix");
+      const normalized = normalizeErrorIdentifier(prefix);
+      let deleted = false;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].prefix === normalized) {
+          entries.splice(i, 1);
+          deleted = true;
+        }
+      }
+      return deleted;
+    },
     values(): readonly ErrorPrefixDefinition[] {
       return entries.map((entry) => ({ ...entry }));
     },
@@ -128,6 +143,19 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
     },
     clear(): void {
       entries.length = 0;
+    },
+    delete(pattern: RegExp): boolean {
+      if (!(pattern instanceof RegExp)) {
+        throw new TypeError("Error registry pattern must be a RegExp.");
+      }
+      let deleted = false;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].pattern.source === pattern.source && entries[i].pattern.flags === pattern.flags) {
+          entries.splice(i, 1);
+          deleted = true;
+        }
+      }
+      return deleted;
     },
     values(): readonly ErrorPatternDefinition[] {
       return entries.map((entry) => ({ ...entry, pattern: new RegExp(entry.pattern.source, entry.pattern.flags) }));
@@ -222,4 +250,44 @@ export const setErrorRegistry = (registry: ErrorRegistry): void => {
     throw new TypeError("Error registry must be an object.");
   }
   activeRegistry = registry;
+};
+
+/**
+ * Wraps an ErrorRegistry in a read-only Proxy to prevent any future mutations.
+ *
+ * All mutating methods (such as `add`, `addList`, `clear`, `delete`, and `merge`)
+ * will throw a TypeError if called on a frozen registry.
+ *
+ * @param registry - The ErrorRegistry instance to freeze.
+ * @returns A read-only ErrorRegistry instance.
+ */
+export const freezeRegistry = (registry: ErrorRegistry): ErrorRegistry => {
+  const throwReadOnly = () => {
+    throw new TypeError("Cannot modify a read-only error registry.");
+  };
+
+  const freezeBucket = <T extends object>(bucket: T): T => {
+    return new Proxy(bucket, {
+      get(target, prop, receiver) {
+        if (prop === "add" || prop === "addList" || prop === "clear" || prop === "delete") {
+          return throwReadOnly;
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+      set() {
+        throwReadOnly();
+        return false;
+      },
+    });
+  };
+
+  return {
+    codes: freezeBucket(registry.codes),
+    names: freezeBucket(registry.names),
+    messages: freezeBucket(registry.messages),
+    prefixes: freezeBucket(registry.prefixes),
+    patterns: freezeBucket(registry.patterns),
+    clear: throwReadOnly,
+    merge: throwReadOnly,
+  };
 };

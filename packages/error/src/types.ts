@@ -32,7 +32,7 @@ export interface AppError extends Error {
   /**
    * Indicates whether retrying the operation that failed with this error is likely to succeed.
    */
-  readonly retryable: boolean;
+  readonly isRetryable: boolean;
 }
 
 /**
@@ -90,7 +90,7 @@ export interface ErrorFeedback {
   /**
    * Indicates if the operation can be safely retried.
    */
-  retryable?: boolean;
+  isRetryable?: boolean;
 }
 
 /**
@@ -128,6 +128,15 @@ export interface ErrorRegistryBucket {
    * @returns The matched feedback mapping, or `undefined` if not found.
    */
   get(identifier: string): ErrorFeedback | undefined;
+
+  /**
+   * Removes error feedback mapped to the specified identifier.
+   * Trims whitespace and strips trailing punctuation from the identifier before deleting.
+   *
+   * @param identifier - The exact identifier to delete.
+   * @returns True if an element in the bucket existed and has been removed, or false if the element does not exist.
+   */
+  delete(identifier: string): boolean;
 
   /**
    * Returns an iterator yielding defensive copies of all mappings stored in the bucket.
@@ -185,6 +194,15 @@ export interface ErrorPrefixRegistryBucket {
   clear(): void;
 
   /**
+   * Removes prefix-based feedback definition for the specified prefix.
+   * Strips trailing punctuation from the prefix before deletion.
+   *
+   * @param prefix - The message prefix to delete.
+   * @returns True if the prefix definition existed and has been removed; otherwise, false.
+   */
+  delete(prefix: string): boolean;
+
+  /**
    * Returns defensive copies of all prefix definitions registered in this bucket.
    *
    * @returns Readonly list of prefix definitions.
@@ -217,6 +235,14 @@ export interface ErrorPatternRegistryBucket {
    * Clears all registered patterns from this bucket.
    */
   clear(): void;
+
+  /**
+   * Removes a RegExp pattern and its feedback mapping.
+   *
+   * @param pattern - The regular expression to remove.
+   * @returns True if the pattern existed and has been removed; otherwise, false.
+   */
+  delete(pattern: RegExp): boolean;
 
   /**
    * Returns defensive copies of all pattern definitions registered in this bucket.

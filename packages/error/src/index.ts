@@ -1,5 +1,5 @@
 export { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
-export { createErrorRegistry, getErrorRegistry, setErrorRegistry } from "./registry";
+export { createErrorRegistry, getErrorRegistry, setErrorRegistry, freezeRegistry } from "./registry";
 export { err, ok, type Err, type Ok, type Result } from "./result";
 export type {
   AppError,

@@ -1,16 +1,16 @@
-import { createErrorRegistry } from "../index";
+import { createErrorRegistry, freezeRegistry } from "../index";
 
 /**
- * An opt-in, mutable error registry pre-populated with mappings for common browser and Web API errors.
+ * An opt-in, read-only error registry pre-populated with mappings for common browser and Web API errors.
  *
  * Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError`, `QuotaExceededError`)
  * and pattern mappings for network fetch failures (e.g., DNS errors, connection refusal).
  *
  * Importing this registry preset does not access or require browser/DOM globals.
  */
-export const browserErrorRegistry = createErrorRegistry();
+const registry = createErrorRegistry();
 
-browserErrorRegistry.names.addList([
+registry.names.addList([
   [
     "AbortError",
     {
@@ -57,7 +57,7 @@ browserErrorRegistry.names.addList([
       message: "The operation timed out.",
       messageKey: "error.browser.timeout",
       source: "browser",
-      retryable: true,
+      isRetryable: true,
     },
   ],
   [
@@ -82,19 +82,19 @@ browserErrorRegistry.names.addList([
       message: "A network error occurred.",
       messageKey: "error.browser.network",
       source: "browser.network",
-      retryable: true,
+      isRetryable: true,
     },
   ],
 ]);
 
-browserErrorRegistry.patterns.addList([
+registry.patterns.addList([
   [
     /failed to fetch|networkerror|load failed/i,
     {
       message: "Network request failed.",
       messageKey: "error.browser.network",
       source: "browser.network",
-      retryable: true,
+      isRetryable: true,
     },
   ],
   [
@@ -103,7 +103,9 @@ browserErrorRegistry.patterns.addList([
       message: "Could not connect to the server.",
       messageKey: "error.browser.connectionRefused",
       source: "browser.network",
-      retryable: true,
+      isRetryable: true,
     },
   ],
 ]);
+
+export const browserErrorRegistry = freezeRegistry(registry);

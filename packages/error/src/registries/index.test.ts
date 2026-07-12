@@ -18,13 +18,13 @@ describe("ready registries", () => {
       type: "known",
       messageKey: "error.browser.abort",
       source: "browser",
-      retryable: false,
+      isRetryable: false,
     });
     expect(createAppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
       type: "known",
       messageKey: "error.supabase.auth.invalidCredentials",
       source: "supabase.auth",
-      retryable: false,
+      isRetryable: false,
     });
   });
 });

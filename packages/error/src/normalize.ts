@@ -12,7 +12,7 @@ export interface ErrorClassification {
   message: string;
   messageKey: string | null;
   source: string | null;
-  retryable: boolean;
+  isRetryable: boolean;
 }
 
 const ERROR_UNWRAP_MAX_DEPTH = 3;
@@ -40,7 +40,7 @@ const toKnownClassification = (feedback: ErrorFeedback): ErrorClassification => 
   message: feedback.message,
   messageKey: feedback.messageKey ?? null,
   source: feedback.source ?? null,
-  retryable: feedback.retryable ?? false,
+  isRetryable: feedback.isRetryable ?? false,
 });
 
 const toUnexpectedClassification = (feedback: ErrorFeedback): ErrorClassification => ({
@@ -48,7 +48,7 @@ const toUnexpectedClassification = (feedback: ErrorFeedback): ErrorClassificatio
   message: feedback.message,
   messageKey: feedback.messageKey ?? null,
   source: feedback.source ?? null,
-  retryable: feedback.retryable ?? false,
+  isRetryable: feedback.isRetryable ?? false,
 });
 
 const normalizeError = (error: unknown): NormalizedError => {
@@ -60,8 +60,11 @@ const normalizeError = (error: unknown): NormalizedError => {
     return { code: null, message: null, name: null };
   }
 
+  const rawCode = getRecordField(error, "code");
+  const code = typeof rawCode === "string" ? rawCode : typeof rawCode === "number" ? String(rawCode) : null;
+
   return {
-    code: getStringField(error, "code"),
+    code,
     message: getStringField(error, "message"),
     name: getStringField(error, "name"),
   };
@@ -183,13 +186,15 @@ const resolveHeuristicUnexpectedError = (
   return toUnexpectedClassification(definition);
 };
 
-export const classifyErrorCandidate = (registry: ErrorRegistry, error: unknown): ErrorClassification | null => {
+export const classifyErrorCandidateKnown = (registry: ErrorRegistry, error: unknown): ErrorClassification | null => {
   const normalizedError = normalizeError(error);
-  const knownError = resolveDeterministicKnownError(registry, normalizedError);
+  return resolveDeterministicKnownError(registry, normalizedError);
+};
 
-  if (knownError !== null) {
-    return knownError;
-  }
-
+export const classifyErrorCandidateUnexpected = (
+  registry: ErrorRegistry,
+  error: unknown,
+): ErrorClassification | null => {
+  const normalizedError = normalizeError(error);
   return resolveHeuristicUnexpectedError(registry, normalizedError);
 };

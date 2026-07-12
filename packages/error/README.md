@@ -116,7 +116,7 @@ interface AppError extends Error {
   readonly messageKey: string | null;
   readonly source: string | null;
   readonly originalError: unknown;
-  readonly retryable: boolean;
+  readonly isRetryable: boolean;
 }
 ```
 
@@ -145,6 +145,14 @@ function createErrorRegistry(presets?: readonly ErrorRegistry[]): ErrorRegistry;
 ```
 
 Use isolated registries for tests, request scopes, tenant-specific mappings, or integrations where mappings should not use the active global registry.
+
+#### `freezeRegistry()`
+
+Wraps an ErrorRegistry in a read-only Proxy to prevent future mutations.
+
+```ts
+function freezeRegistry(registry: ErrorRegistry): ErrorRegistry;
+```
 
 #### `DEFAULT_APP_ERROR_MESSAGE`
 
@@ -181,6 +189,7 @@ interface ErrorRegistryBucket {
   add(identifier: string, feedback: ErrorFeedback): void;
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
   clear(): void;
+  delete(identifier: string): boolean;
   get(identifier: string): ErrorFeedback | undefined;
   values(): IterableIterator<[string, ErrorFeedback]>;
 }
@@ -189,6 +198,7 @@ interface ErrorPrefixRegistryBucket {
   add(prefix: string, feedback: ErrorFeedback): void;
   addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
   clear(): void;
+  delete(prefix: string): boolean;
   values(): readonly ErrorPrefixDefinition[];
 }
 
@@ -196,13 +206,14 @@ interface ErrorPatternRegistryBucket {
   add(pattern: RegExp, feedback: ErrorFeedback): void;
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
   clear(): void;
+  delete(pattern: RegExp): boolean;
   values(): readonly ErrorPatternDefinition[];
 }
 ```
 
 `values()` returns defensive copies. Pattern buckets clone `RegExp` values so global or sticky regex state does not leak across classifications.
 
-`add()` and `addList()` validate entries immediately and throw `TypeError` for invalid input. Exact and prefix identifiers must be non-empty strings after trimming whitespace and trailing sentence punctuation. Exact identifiers are stored and looked up in that normalized form. Feedback must be an object with a non-empty `message`; optional `messageKey` and `source` values must be strings, and optional `retryable` must be a boolean. Pattern buckets only accept `RegExp` patterns.
+`add()` and `addList()` validate entries immediately and throw `TypeError` for invalid input. Exact and prefix identifiers must be non-empty strings after trimming whitespace and trailing sentence punctuation. Exact identifiers are stored and looked up in that normalized form. Feedback must be an object with a non-empty `message`; optional `messageKey` and `source` values must be strings, and optional `isRetryable` must be a boolean. Pattern buckets only accept `RegExp` patterns.
 
 #### `ErrorFeedback`
 
@@ -213,11 +224,11 @@ interface ErrorFeedback {
   message: string;
   messageKey?: string;
   source?: string;
-  retryable?: boolean;
+  isRetryable?: boolean;
 }
 ```
 
-`message` should be safe to show to users. `messageKey`, `source`, and `retryable` are optional metadata copied onto matched `AppError` instances.
+`message` should be safe to show to users. `messageKey`, `source`, and `isRetryable` are optional metadata copied onto matched `AppError` instances.
 
 #### `ErrorPrefixDefinition` and `ErrorPatternDefinition`
 

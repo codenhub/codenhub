@@ -1,7 +1,7 @@
-import { createErrorRegistry } from "../index";
+import { createErrorRegistry, freezeRegistry } from "../index";
 
 /**
- * An opt-in, mutable error registry pre-populated with mappings for common Supabase service errors.
+ * An opt-in, read-only error registry pre-populated with mappings for common Supabase service errors.
  *
  * Includes code mappings for Supabase Auth (e.g., rate limits, invalid credentials) and PostgreSQL
  * database errors (e.g., foreign key violations, unique constraint violations), as well as name
@@ -9,9 +9,9 @@ import { createErrorRegistry } from "../index";
  *
  * Importing this preset does not establish any network connection to Supabase services or require client dependencies.
  */
-export const supabaseErrorRegistry = createErrorRegistry();
+const registry = createErrorRegistry();
 
-supabaseErrorRegistry.codes.addList([
+registry.codes.addList([
   [
     "invalid_credentials",
     {
@@ -58,7 +58,7 @@ supabaseErrorRegistry.codes.addList([
       message: "Failed to send SMS message.",
       messageKey: "error.supabase.auth.smsSendFailed",
       source: "supabase.auth",
-      retryable: true,
+      isRetryable: true,
     },
   ],
   [
@@ -139,19 +139,19 @@ supabaseErrorRegistry.codes.addList([
       message: "Database query timed out or was cancelled.",
       messageKey: "error.supabase.database.timeout",
       source: "supabase.database",
-      retryable: true,
+      isRetryable: true,
     },
   ],
 ]);
 
-supabaseErrorRegistry.names.addList([
+registry.names.addList([
   [
     "FunctionsHttpError",
     {
       message: "Edge Function request failed.",
       messageKey: "error.supabase.functions.http",
       source: "supabase.functions",
-      retryable: true,
+      isRetryable: true,
     },
   ],
   [
@@ -160,7 +160,7 @@ supabaseErrorRegistry.names.addList([
       message: "Edge Function relay failed.",
       messageKey: "error.supabase.functions.relay",
       source: "supabase.functions",
-      retryable: true,
+      isRetryable: true,
     },
   ],
   [
@@ -169,7 +169,9 @@ supabaseErrorRegistry.names.addList([
       message: "Failed to fetch Edge Function.",
       messageKey: "error.supabase.functions.fetch",
       source: "supabase.functions",
-      retryable: true,
+      isRetryable: true,
     },
   ],
 ]);
+
+export const supabaseErrorRegistry = freezeRegistry(registry);

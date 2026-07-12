@@ -7,6 +7,7 @@ import {
   createErrorRegistry,
   getErrorRegistry,
   setErrorRegistry,
+  freezeRegistry,
   err,
   ok,
   type Result,
@@ -32,14 +33,14 @@ describe("createErrorRegistry", () => {
       message: "Invalid email or password.",
       messageKey: "error.auth.invalidCredentials",
       source: "auth",
-      retryable: false,
+      isRetryable: false,
     });
     expect(createAppError({ code: "invalid_credentials" }, { registry: secondRegistry })).toMatchObject({
       type: "unknown",
       message: DEFAULT_APP_ERROR_MESSAGE,
       messageKey: null,
       source: null,
-      retryable: false,
+      isRetryable: false,
     });
   });
 
@@ -62,7 +63,7 @@ describe("createErrorRegistry", () => {
       ["invalid_credentials", { message: "Invalid email or password.", source: "auth" }],
       ["email_not_confirmed", { message: "Email address is not confirmed.", source: "auth" }],
     ]);
-    registry.patterns.addList([[/failed to fetch/i, { message: "Network request failed.", retryable: true }]]);
+    registry.patterns.addList([[/failed to fetch/i, { message: "Network request failed.", isRetryable: true }]]);
 
     expect(createAppError({ code: "email_not_confirmed" }, { registry })).toMatchObject({
       type: "known",
@@ -72,7 +73,7 @@ describe("createErrorRegistry", () => {
     expect(createAppError(new Error("Failed to fetch"), { registry })).toMatchObject({
       type: "unexpected",
       message: "Network request failed.",
-      retryable: true,
+      isRetryable: true,
     });
   });
 
@@ -140,7 +141,7 @@ describe("createErrorRegistry", () => {
     const registry = createErrorRegistry();
 
     expect(() => {
-      registry.codes.add("invalid_credentials", { message: "Invalid email or password.", retryable: "yes" } as never);
+      registry.codes.add("invalid_credentials", { message: "Invalid email or password.", isRetryable: "yes" } as never);
     }).toThrow(TypeError);
   });
 
@@ -175,7 +176,7 @@ describe("createErrorRegistry", () => {
     sourceRegistry.patterns.add(/failed to fetch/gi, {
       message: "Network request failed.",
       source: "browser",
-      retryable: true,
+      isRetryable: true,
     });
 
     targetRegistry.merge(sourceRegistry);
@@ -189,7 +190,7 @@ describe("createErrorRegistry", () => {
     expect(createAppError(new Error("failed to fetch"), { registry: targetRegistry })).toMatchObject({
       type: "unexpected",
       message: "Network request failed.",
-      retryable: true,
+      isRetryable: true,
     });
   });
 });
@@ -225,7 +226,7 @@ describe("createAppError", () => {
     expect(appError.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
     expect(appError.messageKey).toBe(null);
     expect(appError.source).toBe(null);
-    expect(appError.retryable).toBe(false);
+    expect(appError.isRetryable).toBe(false);
   });
 
   it("uses active registry by default", () => {
@@ -359,5 +360,91 @@ describe("result helpers", () => {
 
     expect(failure.error.type).toBe("unknown");
     expect(failure.error.message).toBe("Missing user id");
+  });
+});
+
+describe("refactored error features", () => {
+  it("coerces numeric code to string in normalizeError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("500", { message: "Internal server error." });
+
+    const appError = createAppError({ code: 500 }, { registry });
+
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Internal server error.");
+  });
+
+  it("passes the original error as cause to the native Error constructor", () => {
+    const original = new Error("Failed");
+    const appError = createAppError(original);
+
+    expect(appError.cause).toBe(original);
+  });
+
+  it("deletes entries from all registry buckets", () => {
+    const registry = createErrorRegistry();
+
+    // codes bucket delete
+    registry.codes.add("code1", { message: "Message 1" });
+    expect(registry.codes.get("code1")).toBeDefined();
+    expect(registry.codes.delete("code1")).toBe(true);
+    expect(registry.codes.get("code1")).toBeUndefined();
+    expect(registry.codes.delete("code1")).toBe(false);
+
+    // prefixes bucket delete
+    registry.prefixes.add("Upload failed", { message: "Failed upload" });
+    expect(registry.prefixes.values().length).toBe(1);
+    expect(registry.prefixes.delete("Upload failed")).toBe(true);
+    expect(registry.prefixes.values().length).toBe(0);
+    expect(registry.prefixes.delete("Upload failed")).toBe(false);
+
+    // patterns bucket delete
+    const pattern = /network/i;
+    registry.patterns.add(pattern, { message: "Network error" });
+    expect(registry.patterns.values().length).toBe(1);
+    expect(registry.patterns.delete(pattern)).toBe(true);
+    expect(registry.patterns.values().length).toBe(0);
+    expect(registry.patterns.delete(pattern)).toBe(false);
+  });
+
+  it("throws TypeError when attempting to mutate a frozen registry", () => {
+    const registry = createErrorRegistry();
+    const frozen = freezeRegistry(registry);
+
+    expect(() => frozen.codes.add("code", { message: "err" })).toThrow(TypeError);
+    expect(() => frozen.codes.addList([["code", { message: "err" }]])).toThrow(TypeError);
+    expect(() => frozen.codes.clear()).toThrow(TypeError);
+    expect(() => frozen.codes.delete("code")).toThrow(TypeError);
+
+    expect(() => frozen.prefixes.add("prefix", { message: "err" })).toThrow(TypeError);
+    expect(() => frozen.prefixes.addList([["prefix", { message: "err" }]])).toThrow(TypeError);
+    expect(() => frozen.prefixes.clear()).toThrow(TypeError);
+    expect(() => frozen.prefixes.delete("prefix")).toThrow(TypeError);
+
+    expect(() => frozen.patterns.add(/p/, { message: "err" })).toThrow(TypeError);
+    expect(() => frozen.patterns.addList([[/p/, { message: "err" }]])).toThrow(TypeError);
+    expect(() => frozen.patterns.clear()).toThrow(TypeError);
+    expect(() => frozen.patterns.delete(/p/)).toThrow(TypeError);
+
+    expect(() => frozen.clear()).toThrow(TypeError);
+    expect(() => frozen.merge(registry)).toThrow(TypeError);
+  });
+
+  it("prioritizes known classifications in nested candidates over unexpected pattern matches", () => {
+    const registry = createErrorRegistry();
+
+    registry.patterns.add(/network error/i, { message: "Generic network failure." });
+    registry.codes.add("AUTH_EXPIRED", { message: "Auth expired, please log in again." });
+
+    // Outer error has message matching pattern (which is unexpected / heuristic)
+    // Inner error (cause) has code matching codes (which is known / deterministic)
+    const nestedError = { code: "AUTH_EXPIRED" };
+    const outerError = new Error("Generic network error occurred", { cause: nestedError });
+
+    const appError = createAppError(outerError, { registry });
+
+    // Should prioritize the known/deterministic AUTH_EXPIRED match over the generic unexpected regex match
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Auth expired, please log in again.");
   });
 });

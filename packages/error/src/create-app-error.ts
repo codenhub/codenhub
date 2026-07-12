@@ -1,4 +1,4 @@
-import { classifyErrorCandidate, getErrorCandidates } from "./normalize";
+import { classifyErrorCandidateKnown, classifyErrorCandidateUnexpected, getErrorCandidates } from "./normalize";
 import { getErrorRegistry } from "./registry";
 import type { AppError, AppErrorOptions, AppErrorSource, AppErrorType } from "./types";
 
@@ -8,7 +8,7 @@ interface AppErrorResolution {
   messageKey: string | null;
   source: AppErrorSource;
   originalError: unknown;
-  retryable: boolean;
+  isRetryable: boolean;
 }
 
 /** Default message used when no registry entry or fallback message can describe an error. */
@@ -22,17 +22,17 @@ class AppErrorImpl extends Error implements AppError {
   readonly messageKey: string | null;
   readonly source: AppErrorSource;
   readonly originalError: unknown;
-  readonly retryable: boolean;
+  readonly isRetryable: boolean;
 
   constructor(resolved: AppErrorResolution) {
-    super(resolved.message);
+    super(resolved.message, { cause: resolved.originalError });
     Object.setPrototypeOf(this, new.target.prototype);
     this.name = "AppError";
     this.type = resolved.type;
     this.messageKey = resolved.messageKey;
     this.source = resolved.source;
     this.originalError = resolved.originalError;
-    this.retryable = resolved.retryable;
+    this.isRetryable = resolved.isRetryable;
   }
 }
 
@@ -56,7 +56,7 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   const registry = options.registry ?? getErrorRegistry();
 
   for (const errorCandidate of errorCandidates) {
-    const classification = classifyErrorCandidate(registry, errorCandidate);
+    const classification = classifyErrorCandidateKnown(registry, errorCandidate);
 
     if (classification !== null) {
       return new AppErrorImpl({
@@ -65,7 +65,22 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
         messageKey: classification.messageKey,
         source: classification.source,
         originalError: error,
-        retryable: classification.retryable,
+        isRetryable: classification.isRetryable,
+      });
+    }
+  }
+
+  for (const errorCandidate of errorCandidates) {
+    const classification = classifyErrorCandidateUnexpected(registry, errorCandidate);
+
+    if (classification !== null) {
+      return new AppErrorImpl({
+        type: classification.type,
+        message: classification.message,
+        messageKey: classification.messageKey,
+        source: classification.source,
+        originalError: error,
+        isRetryable: classification.isRetryable,
       });
     }
   }
@@ -76,7 +91,7 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
     messageKey: null,
     source: null,
     originalError: error,
-    retryable: false,
+    isRetryable: false,
   });
 }
 
