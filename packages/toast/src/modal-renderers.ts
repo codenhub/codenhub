@@ -51,7 +51,7 @@ export function createPromptRenderer(
     input.addEventListener(
       "keydown",
       (event) => {
-        if (event.key === "Enter" && !event.isComposing && event.keyCode !== 229) {
+        if (event.key === "Enter" && !event.isComposing) {
           close(input.value);
         }
       },

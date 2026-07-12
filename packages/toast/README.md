@@ -141,10 +141,10 @@ interface ToastHandle {
   update(options: ToastUpdateOptions): void;
   readonly settled: Promise<void>;
   readonly state: ToastState;
-  onShow(subscriber: (toast: unknown) => void): () => void;
-  onShown(subscriber: (toast: unknown) => void): () => void;
-  onHide(subscriber: (toast: unknown) => void): () => void;
-  onHidden(subscriber: (toast: unknown) => void): () => void;
+  onShow(subscriber: ToastLifecycleSubscriber): () => void;
+  onShown(subscriber: ToastLifecycleSubscriber): () => void;
+  onHide(subscriber: ToastLifecycleSubscriber): () => void;
+  onHidden(subscriber: ToastLifecycleSubscriber): () => void;
 }
 
 interface InteractiveToastHandle<T> {
@@ -210,8 +210,8 @@ The remaining exported aliases are:
 - `ToastPosition`: `"top-left" | "top-right" | "bottom-right" |
 "bottom-left" | "top-center" | "bottom-center" | "center"`.
 - `ToastRole`: `"alert" | "status"`.
-- `ToastLifecycleSubscriber`: lifecycle callback receiving the internal toast
-  value as `unknown`.
+- `ToastLifecycleSubscriber`: lifecycle callback receiving the public handle
+  as `ToastHandle`.
 - `ToastAppearance`: `"flat" | "soft" | "soft-bordered" | "left-accent"`.
 - `SemanticType`: `"success" | "error" | "warning" | "info"`.
 - `ToastContent`: `string | Node | (() => string | Node)`.
