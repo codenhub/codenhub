@@ -10,6 +10,9 @@ import type {
 
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
 
+/** @internal */
+export const RAW_ENTRIES_SYMBOL = Symbol.for("@codenhub/error/rawEntries");
+
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
  *
@@ -61,6 +64,7 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
   };
 
   return {
+    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void {
       for (const [identifier, feedback] of errorEntries) {
@@ -83,7 +87,7 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
         cloneFeedback(feedback),
       ]).values();
     },
-  };
+  } as unknown as ErrorRegistryBucket;
 };
 
 const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
@@ -96,6 +100,7 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   };
 
   return {
+    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void {
       for (const [prefix, feedback] of errorEntries) {
@@ -118,7 +123,7 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
         }),
       );
     },
-  };
+  } as unknown as ErrorPrefixRegistryBucket;
 };
 
 const createPatternBucket = (): ErrorPatternRegistryBucket => {
@@ -149,6 +154,7 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
   };
 
   return {
+    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void {
       for (const [pattern, feedback] of errorEntries) {
@@ -174,7 +180,7 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
     values(): readonly ErrorPatternDefinition[] {
       return entries.map((entry) => ({ ...entry, pattern: new RegExp(entry.pattern.source, entry.pattern.flags) }));
     },
-  };
+  } as unknown as ErrorPatternRegistryBucket;
 };
 
 /**

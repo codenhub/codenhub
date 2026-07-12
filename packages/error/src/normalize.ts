@@ -1,5 +1,11 @@
-import { normalizeErrorIdentifier } from "./registry";
-import type { AppErrorType, ErrorFeedback, ErrorRegistry } from "./types";
+import { normalizeErrorIdentifier, RAW_ENTRIES_SYMBOL } from "./registry";
+import type {
+  AppErrorType,
+  ErrorFeedback,
+  ErrorPatternDefinition,
+  ErrorPrefixDefinition,
+  ErrorRegistry,
+} from "./types";
 
 interface NormalizedError {
   code: string | null;
@@ -116,24 +122,38 @@ export const getErrorCandidates = (error: unknown): unknown[] => {
 };
 
 const getKnownMessageFeedback = (registry: ErrorRegistry, message: string): ErrorClassification | null => {
-  const normalizedMessage = normalizeErrorIdentifier(message);
+  const feedback = registry.messages.get(message);
+  if (feedback !== undefined) {
+    return toKnownClassification(feedback);
+  }
 
-  for (const [registeredMessage, feedback] of registry.messages.values()) {
-    if (normalizeErrorIdentifier(registeredMessage) === normalizedMessage) {
-      return toKnownClassification(feedback);
+  const normalizedMessage = normalizeErrorIdentifier(message);
+  let longestPrefixDefinition: ErrorPrefixDefinition | null = null;
+
+  const rawPrefixes = (registry.prefixes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
+  if (rawPrefixes instanceof Map) {
+    for (const [prefix, prefixFeedback] of rawPrefixes.entries()) {
+      if (normalizedMessage.startsWith(prefix)) {
+        if (longestPrefixDefinition === null || prefix.length > longestPrefixDefinition.prefix.length) {
+          longestPrefixDefinition = { ...prefixFeedback, prefix };
+        }
+      }
+    }
+  } else {
+    for (const definition of registry.prefixes.values()) {
+      if (normalizedMessage.startsWith(definition.prefix)) {
+        if (longestPrefixDefinition === null || definition.prefix.length > longestPrefixDefinition.prefix.length) {
+          longestPrefixDefinition = definition;
+        }
+      }
     }
   }
 
-  const prefixDefinition = registry.prefixes
-    .values()
-    .filter((definition) => normalizedMessage.startsWith(definition.prefix))
-    .sort((firstDefinition, secondDefinition) => secondDefinition.prefix.length - firstDefinition.prefix.length)[0];
-
-  if (prefixDefinition === undefined) {
+  if (longestPrefixDefinition === null) {
     return null;
   }
 
-  return toKnownClassification(prefixDefinition);
+  return toKnownClassification(longestPrefixDefinition);
 };
 
 const resolveDeterministicKnownError = (
@@ -175,15 +195,24 @@ const resolveHeuristicUnexpectedError = (
     return null;
   }
 
-  const definition = registry.patterns.values().find((currentDefinition) => {
-    return currentDefinition.pattern.test(message);
-  });
+  const rawPatterns = (registry.patterns as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
+  let matchedDefinition: ErrorPatternDefinition | undefined;
 
-  if (definition === undefined) {
+  if (Array.isArray(rawPatterns)) {
+    matchedDefinition = rawPatterns.find((currentDefinition) => {
+      return currentDefinition.pattern.test(message);
+    });
+  } else {
+    matchedDefinition = registry.patterns.values().find((currentDefinition) => {
+      return currentDefinition.pattern.test(message);
+    });
+  }
+
+  if (matchedDefinition === undefined) {
     return null;
   }
 
-  return toUnexpectedClassification(definition);
+  return toUnexpectedClassification(matchedDefinition);
 };
 
 export const classifyErrorCandidateKnown = (registry: ErrorRegistry, error: unknown): ErrorClassification | null => {
