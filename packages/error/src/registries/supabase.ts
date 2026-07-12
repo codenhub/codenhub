@@ -1,14 +1,5 @@
 import { createErrorRegistry, freezeRegistry } from "../registry";
 
-/**
- * An opt-in, read-only error registry pre-populated with mappings for common Supabase service errors.
- *
- * Includes code mappings for Supabase Auth (e.g., rate limits, invalid credentials) and PostgreSQL
- * database errors (e.g., foreign key violations, unique constraint violations), as well as name
- * mappings for edge function execution issues.
- *
- * Importing this preset does not establish any network connection to Supabase services or require client dependencies.
- */
 const registry = createErrorRegistry();
 
 registry.codes.addList([
@@ -174,4 +165,13 @@ registry.names.addList([
   ],
 ]);
 
+/**
+ * An opt-in, read-only error registry pre-populated with mappings for common Supabase service errors.
+ *
+ * Includes code mappings for Supabase Auth (e.g., rate limits, invalid credentials) and PostgreSQL
+ * database errors (e.g., foreign key violations, unique constraint violations), as well as name
+ * mappings for edge function execution issues.
+ *
+ * Importing this preset does not establish any network connection to Supabase services or require client dependencies.
+ */
 export const supabaseErrorRegistry = freezeRegistry(registry);

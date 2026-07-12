@@ -1,13 +1,13 @@
 import { normalizeErrorIdentifier } from "./registry";
 import type { AppErrorType, ErrorFeedback, ErrorRegistry } from "./types";
 
-export interface NormalizedError {
+interface NormalizedError {
   code: string | null;
   message: string | null;
   name: string | null;
 }
 
-export interface ErrorClassification {
+interface ErrorClassification {
   type: Exclude<AppErrorType, "unknown">;
   message: string;
   messageKey: string | null;
@@ -176,7 +176,7 @@ const resolveHeuristicUnexpectedError = (
   }
 
   const definition = registry.patterns.values().find((currentDefinition) => {
-    return new RegExp(currentDefinition.pattern.source, currentDefinition.pattern.flags).test(message);
+    return currentDefinition.pattern.test(message);
   });
 
   if (definition === undefined) {

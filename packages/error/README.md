@@ -388,4 +388,4 @@ getErrorRegistry().codes.addList([
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the [Apache-2.0](LICENSE) license.

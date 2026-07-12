@@ -13,6 +13,7 @@ const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
  *
+ * @internal
  * @param identifier - The raw error identifier string.
  * @returns The normalized error identifier string.
  */
@@ -86,12 +87,12 @@ const createFeedbackMapBucket = (): ErrorRegistryBucket => {
 };
 
 const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
-  const entries: ErrorPrefixDefinition[] = [];
+  const entries = new Map<string, ErrorFeedback>();
   const add = (prefix: string, feedback: ErrorFeedback): void => {
     assertNonEmptyIdentifier(prefix, "prefix");
     assertFeedback(feedback);
 
-    entries.push({ ...cloneFeedback(feedback), prefix: normalizeErrorIdentifier(prefix) });
+    entries.set(normalizeErrorIdentifier(prefix), cloneFeedback(feedback));
   };
 
   return {
@@ -102,22 +103,20 @@ const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
       }
     },
     clear(): void {
-      entries.length = 0;
+      entries.clear();
     },
     delete(prefix: string): boolean {
       assertNonEmptyIdentifier(prefix, "prefix");
-      const normalized = normalizeErrorIdentifier(prefix);
-      let isDeleted = false;
-      for (let i = entries.length - 1; i >= 0; i--) {
-        if (entries[i].prefix === normalized) {
-          entries.splice(i, 1);
-          isDeleted = true;
-        }
-      }
-      return isDeleted;
+      return entries.delete(normalizeErrorIdentifier(prefix));
     },
     values(): readonly ErrorPrefixDefinition[] {
-      return entries.map((entry) => ({ ...entry }));
+      return Array.from(
+        entries.entries(),
+        ([prefix, feedback]): ErrorPrefixDefinition => ({
+          ...cloneFeedback(feedback),
+          prefix,
+        }),
+      );
     },
   };
 };
@@ -131,7 +130,22 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
 
     assertFeedback(feedback);
 
-    entries.push({ ...cloneFeedback(feedback), pattern: new RegExp(pattern.source, pattern.flags) });
+    const source = pattern.source;
+    const flags = pattern.flags;
+    const existingIndex = entries.findIndex(
+      (entry) => entry.pattern.source === source && entry.pattern.flags === flags,
+    );
+
+    const definition: ErrorPatternDefinition = {
+      ...cloneFeedback(feedback),
+      pattern: new RegExp(source, flags),
+    };
+
+    if (existingIndex !== -1) {
+      entries[existingIndex] = definition;
+    } else {
+      entries.push(definition);
+    }
   };
 
   return {

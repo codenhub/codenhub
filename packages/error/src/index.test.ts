@@ -451,4 +451,30 @@ describe("refactored error features", () => {
     expect(appError.type).toBe("known");
     expect(appError.message).toBe("Auth expired, please log in again.");
   });
+
+  it("should replace duplicate prefixes in prefix bucket on add", () => {
+    const registry = createErrorRegistry();
+    registry.prefixes.add("Upload failed:", { message: "First message" });
+    registry.prefixes.add("Upload failed:", { message: "Replaced message" });
+
+    const values = registry.prefixes.values();
+    expect(values.length).toBe(1);
+    expect(values[0]).toMatchObject({
+      prefix: "Upload failed:",
+      message: "Replaced message",
+    });
+  });
+
+  it("should replace duplicate patterns in pattern bucket on add", () => {
+    const registry = createErrorRegistry();
+    registry.patterns.add(/network error/i, { message: "First message" });
+    registry.patterns.add(/network error/i, { message: "Replaced message" });
+
+    const values = registry.patterns.values();
+    expect(values.length).toBe(1);
+    expect(values[0]).toMatchObject({
+      pattern: /network error/i,
+      message: "Replaced message",
+    });
+  });
 });
