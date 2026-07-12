@@ -52,7 +52,7 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   }
 
   const fallbackMessage = options.fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE;
-  const errorCandidates = getErrorCandidates(error);
+  const errorCandidates = getErrorCandidates(error, options.maxDepth);
   const registry = options.registry ?? getErrorRegistry();
 
   for (const errorCandidate of errorCandidates) {
@@ -146,6 +146,9 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
  */
 export function isAppError(value: unknown): value is AppError {
   return (
-    value instanceof Error && APP_ERROR_BRAND in value && (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
+    typeof value === "object" &&
+    value !== null &&
+    APP_ERROR_BRAND in value &&
+    (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
   );
 }

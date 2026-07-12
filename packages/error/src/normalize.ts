@@ -22,7 +22,7 @@ interface ErrorClassification {
 }
 
 const ERROR_UNWRAP_MAX_DEPTH = 3;
-const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error"] as const;
+const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error", "err", "inner", "innerError"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return (typeof value === "object" || typeof value === "function") && value !== null;
@@ -86,7 +86,7 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
   );
 };
 
-export const getErrorCandidates = (error: unknown): unknown[] => {
+export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
   const candidates: unknown[] = [];
   const visitedObjects = new Set<object>();
 
@@ -101,7 +101,7 @@ export const getErrorCandidates = (error: unknown): unknown[] => {
 
     candidates.push(candidate.value);
 
-    if (candidate.depth >= ERROR_UNWRAP_MAX_DEPTH) {
+    if (candidate.depth >= maxDepth) {
       continue;
     }
 
@@ -147,19 +147,20 @@ const getKnownMessageFeedback = (registry: ErrorRegistry, message: string): Erro
 
   const rawPrefixes = (registry.prefixes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
   if (rawPrefixes instanceof Map) {
-    for (const [prefix, prefixFeedback] of rawPrefixes.entries()) {
+    const sortedPrefixes = Array.from(rawPrefixes.keys()).sort((a, b) => b.length - a.length);
+    for (const prefix of sortedPrefixes) {
       if (normalizedMessage.startsWith(prefix)) {
-        if (longestPrefixDefinition === null || prefix.length > longestPrefixDefinition.prefix.length) {
-          longestPrefixDefinition = { ...prefixFeedback, prefix };
-        }
+        const prefixFeedback = rawPrefixes.get(prefix)!;
+        longestPrefixDefinition = { ...prefixFeedback, prefix };
+        break;
       }
     }
   } else {
-    for (const definition of registry.prefixes.values()) {
+    const sortedDefinitions = [...registry.prefixes.values()].sort((a, b) => b.prefix.length - a.prefix.length);
+    for (const definition of sortedDefinitions) {
       if (normalizedMessage.startsWith(definition.prefix)) {
-        if (longestPrefixDefinition === null || definition.prefix.length > longestPrefixDefinition.prefix.length) {
-          longestPrefixDefinition = definition;
-        }
+        longestPrefixDefinition = definition;
+        break;
       }
     }
   }

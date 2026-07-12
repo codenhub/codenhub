@@ -50,6 +50,12 @@ export interface AppErrorOptions {
    * Defaults to the global registry retrieved by `getErrorRegistry()`.
    */
   registry?: ErrorRegistry;
+
+  /**
+   * The maximum depth to unwrap nested error wrappers (e.g. cause, originalError).
+   * Defaults to 3.
+   */
+  maxDepth?: number;
 }
 
 /**

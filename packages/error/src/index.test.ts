@@ -10,6 +10,10 @@ import {
   freezeRegistry,
   err,
   ok,
+  unwrap,
+  map,
+  match,
+  type Err,
   type Result,
   type ErrorRegistry,
   type ErrorRegistryBucket,
@@ -810,5 +814,75 @@ describe("refactored error features", () => {
     const appErrorPrefix = createAppError(new Error("upload failed: something"), { registry: customRegistry });
     expect(appErrorPrefix.type).toBe("known");
     expect(appErrorPrefix.message).toBe("Longer prefix");
+  });
+});
+
+describe("applied fixes and helpers", () => {
+  it("should match isAppError on mock realm objects with the brand", () => {
+    const mockAppError = {
+      [Symbol.for("@codenhub/error/AppError")]: true,
+    };
+    expect(isAppError(mockAppError)).toBe(true);
+  });
+
+  it("should allow configuring custom maxDepth for unwrapping nested errors", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("DEEP_CODE", { message: "Deep failure" });
+
+    const level2 = { code: "DEEP_CODE" };
+    const level1 = { cause: level2 };
+    const level0 = { cause: level1 };
+
+    expect(createAppError(level0, { registry }).type).toBe("known");
+    expect(createAppError(level0, { registry, maxDepth: 1 }).type).toBe("unknown");
+  });
+
+  it("should follow extra wrapper fields like err, inner, innerError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("ERR_CODE", { message: "Nested err failure" });
+
+    expect(createAppError({ err: { code: "ERR_CODE" } }, { registry }).message).toBe("Nested err failure");
+    expect(createAppError({ inner: { code: "ERR_CODE" } }, { registry }).message).toBe("Nested err failure");
+    expect(createAppError({ innerError: { code: "ERR_CODE" } }, { registry }).message).toBe("Nested err failure");
+  });
+
+  it("should sort prefixes by length descending and match longest first", () => {
+    const registry = createErrorRegistry();
+    registry.prefixes.add("Upload", { message: "Short match" });
+    registry.prefixes.add("Upload failed", { message: "Long match" });
+
+    expect(createAppError("Upload failed completely", { registry }).message).toBe("Long match");
+  });
+
+  it("should unwrap ok results and throw on err results", () => {
+    expect(unwrap(ok("value"))).toBe("value");
+    expect(() => unwrap(err("error message"))).toThrow(Error);
+  });
+
+  it("should map ok results and pass through err results", () => {
+    const okRes = ok(10);
+    const mappedOk = map(okRes, (val) => val * 2);
+    expect(unwrap(mappedOk)).toBe(20);
+
+    const errRes = err("failed");
+    const mappedErr = map(errRes, (val: number) => val * 2);
+    expect(mappedErr.ok).toBe(false);
+    expect((mappedErr as Err).error.message).toBe("failed");
+  });
+
+  it("should match on results executing the correct callbacks", () => {
+    const okRes = ok("success");
+    const matchedOk = match(okRes, {
+      onOk: (val) => `OK: ${val}`,
+      onErr: (error) => `ERR: ${error.message}`,
+    });
+    expect(matchedOk).toBe("OK: success");
+
+    const errRes = err("failed");
+    const matchedErr = match(errRes, {
+      onOk: (val) => `OK: ${val}`,
+      onErr: (error) => `ERR: ${error.message}`,
+    });
+    expect(matchedErr).toBe("ERR: failed");
   });
 });
