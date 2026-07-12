@@ -135,7 +135,14 @@ const createPatternBucket = (): ErrorPatternRegistryBucket => {
   };
 };
 
-/** Creates an empty, isolated registry for classifying unknown errors. */
+/**
+ * Creates an empty, isolated error registry.
+ *
+ * Optionally merges a list of preset registries into the newly created registry.
+ *
+ * @param presets - Optional list of existing registries to merge during creation.
+ * @returns A new, mutable ErrorRegistry instance.
+ */
 export const createErrorRegistry = (presets?: readonly ErrorRegistry[]): ErrorRegistry => {
   const codes = createFeedbackMapBucket();
   const names = createFeedbackMapBucket();
@@ -192,6 +199,10 @@ let activeRegistry: ErrorRegistry = createErrorRegistry();
 
 /**
  * Retrieves the active global error registry.
+ *
+ * This registry is used as the default classification source for `createAppError`.
+ *
+ * @returns The current active ErrorRegistry.
  */
 export const getErrorRegistry = (): ErrorRegistry => {
   return activeRegistry;
@@ -199,6 +210,12 @@ export const getErrorRegistry = (): ErrorRegistry => {
 
 /**
  * Sets the active global error registry.
+ *
+ * Allows consumers to replace the default registry at application initialization.
+ * Throws a TypeError if the provided value is null or not an object.
+ *
+ * @param registry - The ErrorRegistry instance to set as active.
+ * @throws TypeError - If the parameter is not a valid ErrorRegistry.
  */
 export const setErrorRegistry = (registry: ErrorRegistry): void => {
   if (typeof registry !== "object" || registry === null) {

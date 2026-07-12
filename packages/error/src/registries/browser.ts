@@ -1,8 +1,12 @@
 import { createErrorRegistry } from "../index";
 
 /**
- * Opt-in mutable registry preset for common browser and Web API errors.
- * Importing this preset does not require browser globals.
+ * An opt-in, mutable error registry pre-populated with mappings for common browser and Web API errors.
+ *
+ * Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError`, `QuotaExceededError`)
+ * and pattern mappings for network fetch failures (e.g., DNS errors, connection refusal).
+ *
+ * Importing this registry preset does not access or require browser/DOM globals.
  */
 export const browserErrorRegistry = createErrorRegistry();
 

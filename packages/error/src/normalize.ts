@@ -19,7 +19,7 @@ const ERROR_UNWRAP_MAX_DEPTH = 3;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error"] as const;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === "object" && value !== null;
+  return (typeof value === "object" || typeof value === "function") && value !== null;
 };
 
 const getRecordField = (source: Record<string, unknown>, key: string): unknown => {

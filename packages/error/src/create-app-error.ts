@@ -37,8 +37,14 @@ class AppErrorImpl extends Error implements AppError {
 }
 
 /**
- * Normalizes an unknown error value into a predictable AppError.
- * If the value is already an AppError, it is returned directly.
+ * Normalizes an unknown error value into a predictable, structured AppError shape.
+ *
+ * This function processes the error value by unrolling nested wrappers (e.g., `cause` or `originalError`)
+ * up to a fixed depth to locate a registered classification.
+ *
+ * @param error - The raw error value to normalize (e.g., Error instances, plain objects, or strings).
+ * @param options - Configuration options controlling fallback message and registry source.
+ * @returns A normalized AppError instance. If the input is already a normalized AppError, it is returned as-is.
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
   if (isAppError(error)) {
@@ -75,14 +81,15 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
 }
 
 /**
- * Type guard to check if a value is a normalized AppError.
+ * Type guard to determine if an unknown value is a normalized AppError instance.
+ *
+ * Checks the value's prototype chain and verifies the unique internal AppError brand symbol.
+ *
+ * @param value - The value to inspect.
+ * @returns True if the value is a normalized AppError; otherwise, false.
  */
 export function isAppError(value: unknown): value is AppError {
   return (
-    value instanceof Error &&
-    typeof value === "object" &&
-    value !== null &&
-    APP_ERROR_BRAND in value &&
-    (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
+    value instanceof Error && APP_ERROR_BRAND in value && (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
   );
 }

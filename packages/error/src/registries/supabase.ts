@@ -1,8 +1,13 @@
 import { createErrorRegistry } from "../index";
 
 /**
- * Opt-in mutable registry preset for common Supabase Auth, database, and function errors.
- * Importing this preset does not contact Supabase services.
+ * An opt-in, mutable error registry pre-populated with mappings for common Supabase service errors.
+ *
+ * Includes code mappings for Supabase Auth (e.g., rate limits, invalid credentials) and PostgreSQL
+ * database errors (e.g., foreign key violations, unique constraint violations), as well as name
+ * mappings for edge function execution issues.
+ *
+ * Importing this preset does not establish any network connection to Supabase services or require client dependencies.
  */
 export const supabaseErrorRegistry = createErrorRegistry();
 

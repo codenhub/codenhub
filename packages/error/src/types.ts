@@ -1,107 +1,270 @@
-/** Predictable normalized error shape. */
+/**
+ * A predictable, structured error shape representing a normalized application error.
+ *
+ * Implements the standard JavaScript `Error` interface and adds classification,
+ * localization support, and original error wrapping.
+ */
 export interface AppError extends Error {
-  /** Classification assigned after registry lookup and fallback handling. */
+  /**
+   * The classification of this error, denoting whether it was explicitly mapped
+   * as a known error, matched heuristically as unexpected, or completely unknown.
+   */
   readonly type: AppErrorType;
-  /** Optional localization key from matched registry feedback. */
+
+  /**
+   * An optional localization key from matched registry feedback,
+   * suitable for displaying translated messages to consumers.
+   */
   readonly messageKey: string | null;
-  /** Optional source label from matched registry feedback. */
+
+  /**
+   * The optional source namespace, module, or package (e.g., `auth`, `supabase.database`)
+   * that originally produced the error.
+   */
   readonly source: AppErrorSource;
-  /** Original value passed to the factory, or the original value from a wrapped error. */
+
+  /**
+   * The original error value passed to the factory, or the original error retrieved
+   * from nested wrapper structures (such as `cause`, `originalError`, or `error` properties).
+   */
   readonly originalError: unknown;
-  /** Whether retrying the failed operation is likely to help. */
+
+  /**
+   * Indicates whether retrying the operation that failed with this error is likely to succeed.
+   */
   readonly retryable: boolean;
 }
 
-/** Options that control how unknown errors are normalized. */
+/**
+ * Options configuration for controlling how raw error values are normalized into `AppError` instances.
+ */
 export interface AppErrorOptions {
-  /** Message used when the error cannot be matched by the selected registry. */
+  /**
+   * The fallback error message to use when the error cannot be matched in the registry.
+   * Defaults to `DEFAULT_APP_ERROR_MESSAGE`.
+   */
   fallbackMessage?: string;
-  /** Registry used for classification. Defaults to the active registry from `getErrorRegistry()`. */
+
+  /**
+   * The specific error registry to query for classifications.
+   * Defaults to the global registry retrieved by `getErrorRegistry()`.
+   */
   registry?: ErrorRegistry;
 }
 
-/** Classification assigned to a normalized application error. */
+/**
+ * The classification level of a normalized application error.
+ *
+ * - `"known"`: Matched explicitly in the registry (by code, name, exact message, or prefix).
+ * - `"unexpected"`: Matched heuristically via regex patterns in the registry.
+ * - `"unknown"`: Could not be resolved/classified by the active registry.
+ */
 export type AppErrorType = "known" | "unexpected" | "unknown";
 
-/** Optional source label for the system, package, or integration that produced an error. */
+/**
+ * The namespace or subsystem label (e.g., `browser`, `supabase.auth`) representing
+ * where the error originated.
+ */
 export type AppErrorSource = string | null;
 
-/** Consumer-facing feedback returned when a registry entry matches an error. */
+/**
+ * The structured feedback returned when a registry matches an error.
+ * Defines the safe user-facing message and metadata to attach to the `AppError`.
+ */
 export interface ErrorFeedback {
-  /** Safe user-facing message for the matched error. */
+  /**
+   * A safe, user-facing error message description.
+   */
   message: string;
-  /** Optional localization key for the message. */
+
+  /**
+   * An optional localization/translation key corresponding to the message.
+   */
   messageKey?: string;
-  /** Optional source label, such as `auth`, `browser.network`, or `supabase.database`. */
+
+  /**
+   * An optional namespace or source label (e.g. `supabase.auth`).
+   */
   source?: string;
-  /** Whether retrying the failed operation is likely to help. Defaults to `false`. */
+
+  /**
+   * Indicates if the operation can be safely retried.
+   */
   retryable?: boolean;
 }
 
-/** Registry bucket for exact string identifiers such as error codes, names, or messages. */
+/**
+ * A registry bucket for storing and retrieving deterministic string-based error mappings
+ * (such as error codes, error names, or exact messages).
+ */
 export interface ErrorRegistryBucket {
-  /** Adds or replaces feedback for one normalized non-empty identifier, throwing `TypeError` for invalid input. */
+  /**
+   * Adds or replaces error feedback for a given identifier.
+   * Trims whitespace and strips trailing punctuation from the identifier before storing.
+   *
+   * @param identifier - The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
+   * @param feedback - The feedback metadata to attach to this identifier.
+   * @throws TypeError - If the identifier is empty or feedback is invalid.
+   */
   add(identifier: string, feedback: ErrorFeedback): void;
-  /** Adds or replaces feedback for multiple normalized identifiers, throwing `TypeError` when any entry is invalid. */
+
+  /**
+   * Adds or replaces multiple feedback entries from a list of tuple definitions.
+   *
+   * @param entries - List of tuples containing [identifier, feedback].
+   * @throws TypeError - If any identifier or feedback in the list is invalid.
+   */
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
-  /** Removes all entries from this bucket. */
+
+  /**
+   * Clears all mapped entries from this registry bucket.
+   */
   clear(): void;
-  /** Returns a defensive copy of feedback for a normalized identifier when present. */
+
+  /**
+   * Retrieves a defensive copy of the feedback mapping for the specified identifier.
+   *
+   * @param identifier - The exact error identifier to lookup.
+   * @returns The matched feedback mapping, or `undefined` if not found.
+   */
   get(identifier: string): ErrorFeedback | undefined;
-  /** Returns defensive copies of all bucket entries. */
+
+  /**
+   * Returns an iterator yielding defensive copies of all mappings stored in the bucket.
+   *
+   * @returns An iterator of [identifier, feedback] entries.
+   */
   values(): IterableIterator<[string, ErrorFeedback]>;
 }
 
-/** Stored prefix mapping returned by prefix registry bucket inspection. */
+/**
+ * Represents a registered message prefix definition and its feedback mapping.
+ */
 export interface ErrorPrefixDefinition extends ErrorFeedback {
-  /** Message prefix that is matched after trimming trailing sentence punctuation. */
+  /**
+   * The message prefix matched after trimming trailing sentence punctuation.
+   */
   prefix: string;
 }
 
-/** Stored pattern mapping returned by pattern registry bucket inspection. */
+/**
+ * Represents a registered regex pattern definition and its feedback mapping.
+ */
 export interface ErrorPatternDefinition extends ErrorFeedback {
-  /** Regular expression used for heuristic message matching. */
+  /**
+   * The RegExp instance used to evaluate heuristic error matches.
+   */
   pattern: RegExp;
 }
 
-/** Registry bucket for known errors matched by longest normalized message prefix. */
+/**
+ * A registry bucket for storing and matching error classifications based on message prefixes.
+ */
 export interface ErrorPrefixRegistryBucket {
-  /** Adds prefix feedback after normalization, throwing `TypeError` for empty prefixes or invalid feedback. */
+  /**
+   * Adds or replaces feedback for a given message prefix.
+   * Strips trailing punctuation from the prefix before registration.
+   *
+   * @param prefix - The message prefix to register (e.g., `"Upload failed:"`).
+   * @param feedback - The feedback metadata to assign when matching this prefix.
+   * @throws TypeError - If the prefix is empty or feedback is invalid.
+   */
   add(prefix: string, feedback: ErrorFeedback): void;
-  /** Adds multiple prefix feedback entries, throwing `TypeError` when any entry is invalid. */
+
+  /**
+   * Adds or replaces multiple prefix feedback definitions from a list of tuples.
+   *
+   * @param entries - List of tuples containing [prefix, feedback].
+   * @throws TypeError - If any entry is invalid.
+   */
   addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
-  /** Removes all prefix entries. */
+
+  /**
+   * Clears all registered prefix definitions from this bucket.
+   */
   clear(): void;
-  /** Returns defensive copies of all prefix definitions. */
+
+  /**
+   * Returns defensive copies of all prefix definitions registered in this bucket.
+   *
+   * @returns Readonly list of prefix definitions.
+   */
   values(): readonly ErrorPrefixDefinition[];
 }
 
-/** Registry bucket for unexpected errors matched heuristically by message pattern. */
+/**
+ * A registry bucket for storing and matching error classifications heuristically using RegExp patterns.
+ */
 export interface ErrorPatternRegistryBucket {
-  /** Adds pattern feedback, throwing `TypeError` for non-`RegExp` patterns or invalid feedback. */
+  /**
+   * Adds or replaces a RegExp pattern and its feedback mapping.
+   *
+   * @param pattern - The regular expression to evaluate against error messages.
+   * @param feedback - The feedback metadata to attach on pattern match.
+   * @throws TypeError - If the pattern is not a RegExp or feedback is invalid.
+   */
   add(pattern: RegExp, feedback: ErrorFeedback): void;
-  /** Adds multiple pattern feedback entries, throwing `TypeError` when any entry is invalid. */
+
+  /**
+   * Adds or replaces multiple RegExp pattern definitions from a list of tuples.
+   *
+   * @param entries - List of tuples containing [pattern, feedback].
+   * @throws TypeError - If any entry is invalid.
+   */
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
-  /** Removes all pattern entries. */
+
+  /**
+   * Clears all registered patterns from this bucket.
+   */
   clear(): void;
-  /** Returns defensive copies of all pattern definitions. */
+
+  /**
+   * Returns defensive copies of all pattern definitions registered in this bucket.
+   * Clones patterns to avoid sharing sticky regex execution state.
+   *
+   * @returns Readonly list of pattern definitions.
+   */
   values(): readonly ErrorPatternDefinition[];
 }
 
-/** Mutable collection of exact and heuristic mappings used to classify unknown errors. */
+/**
+ * A mutable collection of exact and heuristic error buckets used to classify unknown errors.
+ */
 export interface ErrorRegistry {
-  /** Exact error-code mappings, usually from APIs or databases. */
+  /**
+   * Mappings for exact error codes, typically returned by database systems or APIs.
+   */
   codes: ErrorRegistryBucket;
-  /** Exact error-name mappings, usually from `Error.name` or `DOMException.name`. */
+
+  /**
+   * Mappings for exact error names, typically found on native `Error.name` or `DOMException.name` properties.
+   */
   names: ErrorRegistryBucket;
-  /** Exact error-message mappings after light punctuation normalization. */
+
+  /**
+   * Mappings for exact error messages (matched after trimming whitespace and trailing punctuation).
+   */
   messages: ErrorRegistryBucket;
-  /** Known-error mappings by normalized message prefix. */
+
+  /**
+   * Mappings for matching errors by message prefixes (e.g., longest prefix match wins).
+   */
   prefixes: ErrorPrefixRegistryBucket;
-  /** Heuristic mappings by message pattern, classified as `unexpected`. */
+
+  /**
+   * Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"unexpected"`.
+   */
   patterns: ErrorPatternRegistryBucket;
-  /** Removes all mappings from every bucket. */
+
+  /**
+   * Clears all mappings from every bucket in this registry.
+   */
   clear(): void;
-  /** Copies all mappings from another registry into this registry. */
+
+  /**
+   * Merges all mappings from the source registry into this registry, overwriting matching identifiers.
+   *
+   * @param registry - The source ErrorRegistry to merge.
+   */
   merge(registry: ErrorRegistry): void;
 }

@@ -10,12 +10,12 @@ pnpm add @codenhub/error
 
 ## Usage
 
-Configure the app-level `AppError.registry` during initialization, then normalize thrown or returned unknown values into a predictable error shape.
+Configure the app-level global registry retrieved by `getErrorRegistry()` during initialization, then normalize thrown or returned unknown values into a predictable error shape using `createAppError()`.
 
 ```ts
-import { AppError, err, ok, type Result } from "@codenhub/error";
+import { createAppError, getErrorRegistry, err, ok, type Result } from "@codenhub/error";
 
-AppError.registry.codes.add("invalid_credentials", {
+getErrorRegistry().codes.add("invalid_credentials", {
   message: "Invalid email or password.",
   messageKey: "error.auth.invalidCredentials",
   source: "auth",
@@ -29,7 +29,7 @@ const signIn = async (): Promise<Result<string>> => {
   }
 };
 
-const appError = new AppError({ code: "invalid_credentials" });
+const appError = createAppError({ code: "invalid_credentials" });
 
 console.log(appError.message, appError.messageKey);
 ```
@@ -37,12 +37,12 @@ console.log(appError.message, appError.messageKey);
 Ready registries are opt-in. Merge them into an app-owned registry when the app wants those classifications.
 
 ```ts
-import { AppError } from "@codenhub/error";
+import { getErrorRegistry } from "@codenhub/error";
 import { browserErrorRegistry } from "@codenhub/error/registries/browser";
 import { supabaseErrorRegistry } from "@codenhub/error/registries/supabase";
 
-AppError.registry.merge(browserErrorRegistry);
-AppError.registry.merge(supabaseErrorRegistry);
+getErrorRegistry().merge(browserErrorRegistry);
+getErrorRegistry().merge(supabaseErrorRegistry);
 ```
 
 ## Reference
@@ -53,11 +53,15 @@ Primary entrypoint for app-owned registries, error normalization, and result hel
 
 ```ts
 import {
-  AppError,
+  createAppError,
+  isAppError,
   DEFAULT_APP_ERROR_MESSAGE,
   createErrorRegistry,
+  getErrorRegistry,
+  setErrorRegistry,
   err,
   ok,
+  type AppError,
   type AppErrorOptions,
   type AppErrorSource,
   type AppErrorType,
@@ -83,15 +87,64 @@ Supported import paths:
 | `@codenhub/error/registries/browser`  | Browser and Web API error mappings.                     |
 | `@codenhub/error/registries/supabase` | Supabase error mappings.                                |
 
-#### `createErrorRegistry()`
+#### `createAppError()`
 
-Creates an empty isolated registry. This is also available as `AppError.createRegistry()`.
+Normalizes an unknown value into a predictable `AppError` object. By default, it classifies errors with the active global error registry.
 
 ```ts
-function createErrorRegistry(): ErrorRegistry;
+function createAppError(error: unknown, options?: AppErrorOptions): AppError;
 ```
 
-Use isolated registries for tests, request scopes, tenant-specific mappings, or integrations where mappings should not use the app-level `AppError.registry`.
+If no registry mapping matches, it uses `DEFAULT_APP_ERROR_MESSAGE` or `fallbackMessage` and classifies the value as `"unknown"`.
+
+#### `isAppError()`
+
+Type guard to check if a value is a normalized `AppError`.
+
+```ts
+function isAppError(value: unknown): value is AppError;
+```
+
+#### `AppError` Interface
+
+Predictable normalized error shape extending the native `Error` class.
+
+```ts
+interface AppError extends Error {
+  readonly type: "known" | "unexpected" | "unknown";
+  readonly message: string;
+  readonly messageKey: string | null;
+  readonly source: string | null;
+  readonly originalError: unknown;
+  readonly retryable: boolean;
+}
+```
+
+#### `getErrorRegistry()`
+
+Retrieves the active global error registry.
+
+```ts
+function getErrorRegistry(): ErrorRegistry;
+```
+
+#### `setErrorRegistry()`
+
+Sets the active global error registry.
+
+```ts
+function setErrorRegistry(registry: ErrorRegistry): void;
+```
+
+#### `createErrorRegistry()`
+
+Creates an empty isolated registry.
+
+```ts
+function createErrorRegistry(presets?: readonly ErrorRegistry[]): ErrorRegistry;
+```
+
+Use isolated registries for tests, request scopes, tenant-specific mappings, or integrations where mappings should not use the active global registry.
 
 #### `DEFAULT_APP_ERROR_MESSAGE`
 
@@ -103,7 +156,7 @@ const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
 #### `ErrorRegistry`
 
-Stores deterministic and heuristic mappings used by `AppError`.
+Stores deterministic and heuristic mappings used by `createAppError`.
 
 ```ts
 interface ErrorRegistry {
@@ -119,7 +172,7 @@ interface ErrorRegistry {
 
 Code, name, exact message, and prefix matches are deterministic known errors. When multiple prefixes match the same message, the longest normalized prefix wins. Pattern matches are heuristic and should be treated as unexpected errors with better user-facing feedback.
 
-`AppError.registry` is mutable and starts empty. `createErrorRegistry()` creates another empty registry with the same bucket API.
+The global error registry is mutable and starts empty. `createErrorRegistry()` creates another empty registry with the same bucket API.
 
 Registry buckets support adding one mapping at a time or a tuple list:
 
@@ -182,29 +235,6 @@ interface ErrorPatternDefinition extends ErrorFeedback {
 
 Most consumers only need these when inspecting, copying, or testing registry contents.
 
-#### `AppError`
-
-Normalizes an unknown value into a predictable error object. By default, it classifies errors with `AppError.registry`.
-
-```ts
-class AppError extends Error {
-  static readonly registry: ErrorRegistry;
-
-  static createRegistry(): ErrorRegistry;
-
-  readonly type: "known" | "unexpected" | "unknown";
-  readonly message: string;
-  readonly messageKey: string | null;
-  readonly source: string | null;
-  readonly originalError: unknown;
-  readonly retryable: boolean;
-
-  constructor(error: unknown, options?: AppErrorOptions);
-}
-```
-
-`AppError` does not throw during construction. If no registry mapping matches, it uses `DEFAULT_APP_ERROR_MESSAGE` or `fallbackMessage` and classifies the value as `"unknown"`.
-
 #### `AppErrorType` and `AppErrorSource`
 
 Reusable property types for consumers that store or pass around normalized error metadata.
@@ -223,10 +253,10 @@ interface AppErrorOptions {
 }
 ```
 
-| Option            | Type            | Default                     | Description                                   |
-| ----------------- | --------------- | --------------------------- | --------------------------------------------- |
-| `fallbackMessage` | `string`        | `DEFAULT_APP_ERROR_MESSAGE` | Message used when no mapping matches.         |
-| `registry`        | `ErrorRegistry` | `AppError.registry`         | Registry used to classify the provided error. |
+| Option            | Type            | Default           | Description                                   |
+| ----------------- | --------------- | ----------------- | --------------------------------------------- |
+| `fallbackMessage` | `string`        | `DEFAULT_APP_...` | Message used when no mapping matches.         |
+| `registry`        | `ErrorRegistry` | Global registry   | Registry used to classify the provided error. |
 
 #### `ok()`
 
@@ -266,7 +296,7 @@ Index entrypoint for ready registry presets.
 import { browserErrorRegistry, supabaseErrorRegistry } from "@codenhub/error/registries";
 ```
 
-Ready registries are plain `ErrorRegistry` values intended to be merged into `AppError.registry` or another app-owned registry. Importing a preset does not mutate `AppError.registry`.
+Ready registries are plain `ErrorRegistry` values intended to be merged into the global registry or another app-owned registry. Importing a preset does not mutate the global registry.
 
 The preset registry objects are mutable like any other `ErrorRegistry`. Treat imported presets as shared read-only inputs and merge them into an app-owned registry before adding app-specific mappings.
 
@@ -314,19 +344,19 @@ const result = err(new DOMException("Aborted", "AbortError"), { registry: errors
 ### Merge Presets
 
 ```ts
-import { AppError } from "@codenhub/error";
+import { getErrorRegistry } from "@codenhub/error";
 import { browserErrorRegistry, supabaseErrorRegistry } from "@codenhub/error/registries";
 
-AppError.registry.merge(browserErrorRegistry);
-AppError.registry.merge(supabaseErrorRegistry);
+getErrorRegistry().merge(browserErrorRegistry);
+getErrorRegistry().merge(supabaseErrorRegistry);
 ```
 
 ### Add Multiple Mappings
 
 ```ts
-import { AppError } from "@codenhub/error";
+import { getErrorRegistry } from "@codenhub/error";
 
-AppError.registry.codes.addList([
+getErrorRegistry().codes.addList([
   ["invalid_credentials", { message: "Invalid email or password.", source: "auth" }],
   ["email_not_confirmed", { message: "Email address is not confirmed.", source: "auth" }],
 ]);
@@ -342,7 +372,7 @@ AppError.registry.codes.addList([
 ## Notes
 
 - Registries are opt-in by design. Consumers start from a blank registry to avoid hidden global classifications.
-- Registries, including `AppError.registry` and ready registry presets, are currently mutable. Configure shared registries during app initialization and avoid mutating imported presets at runtime. A future version is expected to provide stronger mutation safeguards.
+- Registries, including the global error registry and ready registry presets, are currently mutable. Configure shared registries during app initialization and avoid mutating imported presets at runtime. A future version is expected to provide stronger mutation safeguards.
 - Preset registries should prefer stable error codes or names over message matching when a library provides them.
 
 ## License

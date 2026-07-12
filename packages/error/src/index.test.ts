@@ -273,6 +273,18 @@ describe("createAppError", () => {
     expect(appError.originalError).toBe(error);
   });
 
+  it("normalizes function-based errors", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("FUNC_ERROR", { message: "Function failed." });
+
+    const errorFn = Object.assign(() => {}, { code: "FUNC_ERROR" });
+    const appError = createAppError(errorFn, { registry });
+
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Function failed.");
+    expect(appError.originalError).toBe(errorFn);
+  });
+
   it("keeps surface classifications before nested wrapper errors", () => {
     const registry = createErrorRegistry();
 
