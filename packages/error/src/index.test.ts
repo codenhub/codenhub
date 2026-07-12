@@ -498,4 +498,27 @@ describe("refactored error features", () => {
       message: "Replaced message",
     });
   });
+
+  it("should preserve nested AppError resolved classification details during candidate evaluation", () => {
+    const registry = createErrorRegistry();
+
+    registry.patterns.add(/network error/i, { message: "Generic network failure." });
+    registry.codes.add("AUTH_EXPIRED", {
+      message: "Auth expired, please log in again.",
+      messageKey: "error.auth.expired",
+      source: "auth",
+    });
+
+    // Inner is already a normalized known AppError
+    const nestedAppError = createAppError({ code: "AUTH_EXPIRED" }, { registry });
+    // Outer is a generic Error wrapping it
+    const outerError = new Error("Generic network error occurred", { cause: nestedAppError });
+
+    const appError = createAppError(outerError, { registry });
+
+    expect(appError.type).toBe("known");
+    expect(appError.message).toBe("Auth expired, please log in again.");
+    expect(appError.messageKey).toBe("error.auth.expired");
+    expect(appError.source).toBe("auth");
+  });
 });

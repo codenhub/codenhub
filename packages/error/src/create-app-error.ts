@@ -56,6 +56,20 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   const registry = options.registry ?? getErrorRegistry();
 
   for (const errorCandidate of errorCandidates) {
+    if (isAppError(errorCandidate)) {
+      if (errorCandidate.type === "known") {
+        return new AppErrorImpl({
+          type: "known",
+          message: errorCandidate.message,
+          messageKey: errorCandidate.messageKey,
+          source: errorCandidate.source,
+          originalError: error,
+          isRetryable: errorCandidate.isRetryable,
+        });
+      }
+      continue;
+    }
+
     const classification = classifyErrorCandidateKnown(registry, errorCandidate);
 
     if (classification !== null) {
@@ -71,6 +85,20 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   }
 
   for (const errorCandidate of errorCandidates) {
+    if (isAppError(errorCandidate)) {
+      if (errorCandidate.type === "unexpected") {
+        return new AppErrorImpl({
+          type: "unexpected",
+          message: errorCandidate.message,
+          messageKey: errorCandidate.messageKey,
+          source: errorCandidate.source,
+          originalError: error,
+          isRetryable: errorCandidate.isRetryable,
+        });
+      }
+      continue;
+    }
+
     const classification = classifyErrorCandidateUnexpected(registry, errorCandidate);
 
     if (classification !== null) {
@@ -81,6 +109,19 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
         source: classification.source,
         originalError: error,
         isRetryable: classification.isRetryable,
+      });
+    }
+  }
+
+  for (const errorCandidate of errorCandidates) {
+    if (isAppError(errorCandidate)) {
+      return new AppErrorImpl({
+        type: errorCandidate.type,
+        message: errorCandidate.message,
+        messageKey: errorCandidate.messageKey,
+        source: errorCandidate.source,
+        originalError: error,
+        isRetryable: errorCandidate.isRetryable,
       });
     }
   }
