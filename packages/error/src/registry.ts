@@ -272,6 +272,38 @@ export const setErrorRegistry = (registry: ErrorRegistry): void => {
   activeRegistry = registry;
 };
 
+const freezeMap = <K, V>(map: Map<K, V>): Map<K, V> => {
+  return new Proxy(map, {
+    get(target, prop) {
+      if (prop === "set" || prop === "delete" || prop === "clear") {
+        return () => {
+          throw new TypeError("Cannot modify a read-only error registry.");
+        };
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+};
+
+const freezeArray = <T>(arr: T[]): T[] => {
+  return new Proxy(arr, {
+    get(target, prop) {
+      const mutatingMethods = ["push", "pop", "shift", "unshift", "splice", "reverse", "sort", "fill", "copyWithin"];
+      if (typeof prop === "string" && mutatingMethods.includes(prop)) {
+        return () => {
+          throw new TypeError("Cannot modify a read-only error registry.");
+        };
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+    set() {
+      throw new TypeError("Cannot modify a read-only error registry.");
+    },
+  });
+};
+
 /**
  * Wraps an ErrorRegistry in a read-only Proxy to prevent any future mutations.
  *
@@ -291,6 +323,15 @@ export const freezeRegistry = (registry: ErrorRegistry): ErrorRegistry => {
       get(target, prop, receiver) {
         if (prop === "add" || prop === "addList" || prop === "clear" || prop === "delete") {
           return throwReadOnly;
+        }
+        if (prop === RAW_ENTRIES_SYMBOL) {
+          const raw = Reflect.get(target, prop);
+          if (raw instanceof Map) {
+            return freezeMap(raw) as unknown as typeof raw;
+          }
+          if (Array.isArray(raw)) {
+            return freezeArray(raw) as unknown as typeof raw;
+          }
         }
         return Reflect.get(target, prop, receiver);
       },

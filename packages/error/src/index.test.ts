@@ -12,6 +12,7 @@ import {
   ok,
   type Result,
 } from "./index";
+import { RAW_ENTRIES_SYMBOL } from "./registry";
 
 afterEach(() => {
   getErrorRegistry().clear();
@@ -431,6 +432,26 @@ describe("refactored error features", () => {
 
     expect(() => {
       (frozen as unknown as Record<string, unknown>).codes = registry.codes;
+    }).toThrow(TypeError);
+
+    // Verify RAW_ENTRIES_SYMBOL map/array is read-only
+    const rawCodes = (frozen.codes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL] as Map<unknown, unknown>;
+    expect(() => rawCodes.set("code", { message: "err" })).toThrow(TypeError);
+    expect(() => rawCodes.delete("code")).toThrow(TypeError);
+    expect(() => rawCodes.clear()).toThrow(TypeError);
+
+    const rawPrefixes = (frozen.prefixes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL] as Map<
+      unknown,
+      unknown
+    >;
+    expect(() => rawPrefixes.set("prefix", { message: "err" })).toThrow(TypeError);
+    expect(() => rawPrefixes.delete("prefix")).toThrow(TypeError);
+    expect(() => rawPrefixes.clear()).toThrow(TypeError);
+
+    const rawPatterns = (frozen.patterns as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL] as unknown[];
+    expect(() => rawPatterns.push({ pattern: /p/, message: "err" })).toThrow(TypeError);
+    expect(() => {
+      rawPatterns[0] = { pattern: /p/, message: "err" };
     }).toThrow(TypeError);
   });
 

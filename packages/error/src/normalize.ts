@@ -122,12 +122,27 @@ export const getErrorCandidates = (error: unknown): unknown[] => {
 };
 
 const getKnownMessageFeedback = (registry: ErrorRegistry, message: string): ErrorClassification | null => {
-  const feedback = registry.messages.get(message);
-  if (feedback !== undefined) {
-    return toKnownClassification(feedback);
+  const normalizedMessage = normalizeErrorIdentifier(message);
+
+  const rawMessages = (registry.messages as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
+  let feedback: ErrorClassification | undefined;
+
+  if (rawMessages instanceof Map) {
+    const rawFeedback = rawMessages.get(normalizedMessage);
+    if (rawFeedback !== undefined) {
+      feedback = toKnownClassification(rawFeedback);
+    }
+  } else {
+    const publicFeedback = registry.messages.get(normalizedMessage);
+    if (publicFeedback !== undefined) {
+      feedback = toKnownClassification(publicFeedback);
+    }
   }
 
-  const normalizedMessage = normalizeErrorIdentifier(message);
+  if (feedback !== undefined) {
+    return feedback;
+  }
+
   let longestPrefixDefinition: ErrorPrefixDefinition | null = null;
 
   const rawPrefixes = (registry.prefixes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
