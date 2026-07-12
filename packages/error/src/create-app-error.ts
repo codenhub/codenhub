@@ -36,11 +36,26 @@ class AppErrorImpl extends Error implements AppError {
   }
 }
 
+const resolveFromAppError = (appError: AppError, originalError: unknown): AppErrorResolution => ({
+  type: appError.type,
+  message: appError.message,
+  messageKey: appError.messageKey,
+  source: appError.source,
+  originalError,
+  isRetryable: appError.isRetryable,
+});
+
 /**
  * Normalizes an unknown error value into a predictable, structured AppError shape.
  *
  * This function processes the error value by unrolling nested wrappers (e.g., `cause` or `originalError`)
  * up to a fixed depth to locate a registered classification.
+ *
+ * Classifications are resolved in priority order across all candidates:
+ * 1. Known AppError or deterministic registry match (code, name, message, prefix).
+ * 2. Unexpected AppError or heuristic registry match (pattern).
+ * 3. Any remaining AppError candidate.
+ * 4. Fallback unknown error.
  *
  * @param error - The raw error value to normalize (e.g., Error instances, plain objects, or strings).
  * @param options - Configuration options controlling fallback message and registry source.
@@ -55,85 +70,54 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   const errorCandidates = getErrorCandidates(error, options.maxDepth);
   const registry = options.registry ?? getErrorRegistry();
 
-  for (const errorCandidate of errorCandidates) {
-    if (isAppError(errorCandidate)) {
-      if (errorCandidate.type === "known") {
-        return new AppErrorImpl({
-          type: "known",
-          message: errorCandidate.message,
-          messageKey: errorCandidate.messageKey,
-          source: errorCandidate.source,
-          originalError: error,
-          isRetryable: errorCandidate.isRetryable,
-        });
+  // Single pass over candidates resolving by priority tier:
+  // known > unexpected > appError fallback (any type).
+  // All tiers are collected before returning so that a "known" match deep in the
+  // chain wins over an "unexpected" match at the surface.
+  let knownResult: AppErrorResolution | null = null;
+  let unexpectedResult: AppErrorResolution | null = null;
+  let appErrorFallback: AppErrorResolution | null = null;
+
+  for (const candidate of errorCandidates) {
+    if (isAppError(candidate)) {
+      if (candidate.type === "known" && knownResult === null) {
+        knownResult = resolveFromAppError(candidate, error);
+      } else if (candidate.type === "unexpected" && unexpectedResult === null) {
+        unexpectedResult = resolveFromAppError(candidate, error);
+      } else if (appErrorFallback === null) {
+        appErrorFallback = resolveFromAppError(candidate, error);
       }
       continue;
     }
 
-    const classification = classifyErrorCandidateKnown(registry, errorCandidate);
-
-    if (classification !== null) {
-      return new AppErrorImpl({
-        type: classification.type,
-        message: classification.message,
-        messageKey: classification.messageKey,
-        source: classification.source,
-        originalError: error,
-        isRetryable: classification.isRetryable,
-      });
-    }
-  }
-
-  for (const errorCandidate of errorCandidates) {
-    if (isAppError(errorCandidate)) {
-      if (errorCandidate.type === "unexpected") {
-        return new AppErrorImpl({
-          type: "unexpected",
-          message: errorCandidate.message,
-          messageKey: errorCandidate.messageKey,
-          source: errorCandidate.source,
-          originalError: error,
-          isRetryable: errorCandidate.isRetryable,
-        });
+    if (knownResult === null) {
+      const classification = classifyErrorCandidateKnown(registry, candidate);
+      if (classification !== null) {
+        knownResult = { ...classification, originalError: error };
+        continue;
       }
-      continue;
     }
 
-    const classification = classifyErrorCandidateUnexpected(registry, errorCandidate);
-
-    if (classification !== null) {
-      return new AppErrorImpl({
-        type: classification.type,
-        message: classification.message,
-        messageKey: classification.messageKey,
-        source: classification.source,
-        originalError: error,
-        isRetryable: classification.isRetryable,
-      });
+    if (unexpectedResult === null) {
+      const classification = classifyErrorCandidateUnexpected(registry, candidate);
+      if (classification !== null) {
+        unexpectedResult = { ...classification, originalError: error };
+      }
     }
   }
 
-  for (const errorCandidate of errorCandidates) {
-    if (isAppError(errorCandidate)) {
-      return new AppErrorImpl({
-        type: errorCandidate.type,
-        message: errorCandidate.message,
-        messageKey: errorCandidate.messageKey,
-        source: errorCandidate.source,
+  return new AppErrorImpl(
+    knownResult ??
+      unexpectedResult ??
+      appErrorFallback ?? {
+        type: "unknown",
+        message: fallbackMessage,
+        messageKey: null,
+        source: null,
         originalError: error,
-        isRetryable: errorCandidate.isRetryable,
-      });
-    }
-  }
-
-  return new AppErrorImpl({
-    type: "unknown",
-    message: fallbackMessage,
-    messageKey: null,
-    source: null,
-    originalError: error,
-    isRetryable: false,
-  });
+        isRetryable: false,
+      },
+  );
 }
 
 /**

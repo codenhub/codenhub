@@ -9,9 +9,6 @@ import type {
 
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
 
-/** @internal */
-export const RAW_ENTRIES_SYMBOL = Symbol.for("@codenhub/error/rawEntries");
-
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
  *
@@ -23,12 +20,24 @@ export const normalizeErrorIdentifier = (identifier: string): string => {
   return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "");
 };
 
+/**
+ * Asserts that an identifier normalizes to a non-empty string.
+ *
+ * @throws TypeError - If the identifier is empty after normalization.
+ * @internal
+ */
 export const assertNonEmptyIdentifier = (identifier: string, label: string): void => {
   if (typeof identifier !== "string" || normalizeErrorIdentifier(identifier).length === 0) {
     throw new TypeError(`Error registry ${label} must be a non-empty string.`);
   }
 };
 
+/**
+ * Validates that a feedback object has the required shape and field types.
+ *
+ * @throws TypeError - If feedback is missing or has invalid field types.
+ * @internal
+ */
 export const assertFeedback = (feedback: ErrorFeedback): void => {
   if (typeof feedback !== "object" || feedback === null) {
     throw new TypeError("Error registry feedback must be an object.");
@@ -51,8 +60,14 @@ export const assertFeedback = (feedback: ErrorFeedback): void => {
   }
 };
 
+/** @internal */
 export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => ({ ...feedback });
 
+/**
+ * Creates a feedback map bucket for exact identifier matching (codes, names, messages).
+ *
+ * @internal
+ */
 export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
   const entries = new Map<string, ErrorFeedback>();
   const add = (identifier: string, feedback: ErrorFeedback): void => {
@@ -63,7 +78,6 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
   };
 
   return {
-    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void {
       for (const [identifier, feedback] of errorEntries) {
@@ -86,9 +100,14 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
         cloneFeedback(feedback),
       ]).values();
     },
-  } as unknown as ErrorRegistryBucket;
+  };
 };
 
+/**
+ * Creates a prefix bucket for longest-prefix message matching.
+ *
+ * @internal
+ */
 export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   const entries = new Map<string, ErrorFeedback>();
   const add = (prefix: string, feedback: ErrorFeedback): void => {
@@ -99,7 +118,6 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   };
 
   return {
-    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void {
       for (const [prefix, feedback] of errorEntries) {
@@ -122,9 +140,15 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
         }),
       );
     },
-  } as unknown as ErrorPrefixRegistryBucket;
+  };
 };
 
+/**
+ * Creates a pattern bucket for heuristic regex-based error matching.
+ * Strips `g`/`y` flags from stored patterns to prevent stateful `lastIndex` drift.
+ *
+ * @internal
+ */
 export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   const entries: ErrorPatternDefinition[] = [];
   const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
@@ -153,7 +177,6 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   };
 
   return {
-    [RAW_ENTRIES_SYMBOL]: entries,
     add,
     addList(errorEntries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void {
       for (const [pattern, feedback] of errorEntries) {
@@ -180,5 +203,5 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     values(): readonly ErrorPatternDefinition[] {
       return entries.map((entry) => ({ ...entry, pattern: new RegExp(entry.pattern.source, entry.pattern.flags) }));
     },
-  } as unknown as ErrorPatternRegistryBucket;
+  };
 };

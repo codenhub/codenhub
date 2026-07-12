@@ -13,4 +13,5 @@ export type {
   ErrorPrefixRegistryBucket,
   ErrorRegistry,
   ErrorRegistryBucket,
+  ReadonlyErrorRegistry,
 } from "./types";

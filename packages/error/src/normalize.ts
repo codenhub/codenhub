@@ -1,10 +1,11 @@
-import { normalizeErrorIdentifier, RAW_ENTRIES_SYMBOL } from "./registry";
+import { normalizeErrorIdentifier } from "./bucket";
 import type {
   AppErrorType,
   ErrorFeedback,
   ErrorPatternDefinition,
   ErrorPrefixDefinition,
   ErrorRegistry,
+  ReadonlyErrorRegistry,
 } from "./types";
 
 interface NormalizedError {
@@ -121,59 +122,33 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
   return candidates;
 };
 
-const getKnownMessageFeedback = (registry: ErrorRegistry, message: string): ErrorClassification | null => {
+const getKnownMessageFeedback = (
+  registry: ErrorRegistry | ReadonlyErrorRegistry,
+  message: string,
+): ErrorClassification | null => {
   const normalizedMessage = normalizeErrorIdentifier(message);
 
-  const rawMessages = (registry.messages as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
-  let feedback: ErrorClassification | undefined;
-
-  if (rawMessages instanceof Map) {
-    const rawFeedback = rawMessages.get(normalizedMessage);
-    if (rawFeedback !== undefined) {
-      feedback = toKnownClassification(rawFeedback);
-    }
-  } else {
-    const publicFeedback = registry.messages.get(normalizedMessage);
-    if (publicFeedback !== undefined) {
-      feedback = toKnownClassification(publicFeedback);
-    }
+  const exactFeedback = registry.messages.get(normalizedMessage);
+  if (exactFeedback !== undefined) {
+    return toKnownClassification(exactFeedback);
   }
 
-  if (feedback !== undefined) {
-    return feedback;
-  }
+  // Longest-prefix match: sort descending by prefix length so the most specific prefix wins.
+  const sortedPrefixes = ([...registry.prefixes.values()] as ErrorPrefixDefinition[]).sort(
+    (a, b) => b.prefix.length - a.prefix.length,
+  );
 
-  let longestPrefixDefinition: ErrorPrefixDefinition | null = null;
-
-  const rawPrefixes = (registry.prefixes as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
-  if (rawPrefixes instanceof Map) {
-    const sortedPrefixes = Array.from(rawPrefixes.keys()).sort((a, b) => b.length - a.length);
-    for (const prefix of sortedPrefixes) {
-      if (normalizedMessage.startsWith(prefix)) {
-        const prefixFeedback = rawPrefixes.get(prefix)!;
-        longestPrefixDefinition = { ...prefixFeedback, prefix };
-        break;
-      }
-    }
-  } else {
-    const sortedDefinitions = [...registry.prefixes.values()].sort((a, b) => b.prefix.length - a.prefix.length);
-    for (const definition of sortedDefinitions) {
-      if (normalizedMessage.startsWith(definition.prefix)) {
-        longestPrefixDefinition = definition;
-        break;
-      }
+  for (const definition of sortedPrefixes) {
+    if (normalizedMessage.startsWith(definition.prefix)) {
+      return toKnownClassification(definition);
     }
   }
 
-  if (longestPrefixDefinition === null) {
-    return null;
-  }
-
-  return toKnownClassification(longestPrefixDefinition);
+  return null;
 };
 
 const resolveDeterministicKnownError = (
-  registry: ErrorRegistry,
+  registry: ErrorRegistry | ReadonlyErrorRegistry,
   { code, message, name }: NormalizedError,
 ): ErrorClassification | null => {
   if (code !== null) {
@@ -204,25 +179,16 @@ const resolveDeterministicKnownError = (
 };
 
 const resolveHeuristicUnexpectedError = (
-  registry: ErrorRegistry,
+  registry: ErrorRegistry | ReadonlyErrorRegistry,
   { message }: NormalizedError,
 ): ErrorClassification | null => {
   if (message === null) {
     return null;
   }
 
-  const rawPatterns = (registry.patterns as unknown as Record<symbol, unknown>)[RAW_ENTRIES_SYMBOL];
-  let matchedDefinition: ErrorPatternDefinition | undefined;
-
-  if (Array.isArray(rawPatterns)) {
-    matchedDefinition = rawPatterns.find((currentDefinition) => {
-      return currentDefinition.pattern.test(message);
-    });
-  } else {
-    matchedDefinition = registry.patterns.values().find((currentDefinition) => {
-      return currentDefinition.pattern.test(message);
-    });
-  }
+  const matchedDefinition = (registry.patterns.values() as ErrorPatternDefinition[]).find((definition) =>
+    definition.pattern.test(message),
+  );
 
   if (matchedDefinition === undefined) {
     return null;
@@ -231,13 +197,16 @@ const resolveHeuristicUnexpectedError = (
   return toUnexpectedClassification(matchedDefinition);
 };
 
-export const classifyErrorCandidateKnown = (registry: ErrorRegistry, error: unknown): ErrorClassification | null => {
+export const classifyErrorCandidateKnown = (
+  registry: ErrorRegistry | ReadonlyErrorRegistry,
+  error: unknown,
+): ErrorClassification | null => {
   const normalizedError = normalizeError(error);
   return resolveDeterministicKnownError(registry, normalizedError);
 };
 
 export const classifyErrorCandidateUnexpected = (
-  registry: ErrorRegistry,
+  registry: ErrorRegistry | ReadonlyErrorRegistry,
   error: unknown,
 ): ErrorClassification | null => {
   const normalizedError = normalizeError(error);

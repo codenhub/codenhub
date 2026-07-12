@@ -59,6 +59,7 @@ import {
   createErrorRegistry,
   getErrorRegistry,
   setErrorRegistry,
+  freezeRegistry,
   err,
   ok,
   type AppError,
@@ -74,6 +75,7 @@ import {
   type ErrorRegistry,
   type ErrorRegistryBucket,
   type Ok,
+  type ReadonlyErrorRegistry,
   type Result,
 } from "@codenhub/error";
 ```
@@ -151,7 +153,7 @@ Use isolated registries for tests, request scopes, tenant-specific mappings, or 
 Wraps an ErrorRegistry in a read-only Proxy to prevent future mutations.
 
 ```ts
-function freezeRegistry(registry: ErrorRegistry): ErrorRegistry;
+function freezeRegistry(registry: ErrorRegistry): ReadonlyErrorRegistry;
 ```
 
 #### `DEFAULT_APP_ERROR_MESSAGE`
@@ -174,7 +176,21 @@ interface ErrorRegistry {
   prefixes: ErrorPrefixRegistryBucket;
   patterns: ErrorPatternRegistryBucket;
   clear(): void;
-  merge(registry: ErrorRegistry): void;
+  merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
+}
+```
+
+#### `ReadonlyErrorRegistry`
+
+Read-only view of a registry returned by `freezeRegistry`. Exposes only the read-facing surface of each bucket. Pass it directly to `createErrorRegistry` presets or `merge`.
+
+```ts
+interface ReadonlyErrorRegistry {
+  readonly codes: Pick<ErrorRegistryBucket, "get" | "values">;
+  readonly names: Pick<ErrorRegistryBucket, "get" | "values">;
+  readonly messages: Pick<ErrorRegistryBucket, "get" | "values">;
+  readonly prefixes: Pick<ErrorPrefixRegistryBucket, "values">;
+  readonly patterns: Pick<ErrorPatternRegistryBucket, "values">;
 }
 ```
 
@@ -261,13 +277,15 @@ type AppErrorSource = string | null;
 interface AppErrorOptions {
   fallbackMessage?: string;
   registry?: ErrorRegistry;
+  maxDepth?: number;
 }
 ```
 
-| Option            | Type            | Default           | Description                                   |
-| ----------------- | --------------- | ----------------- | --------------------------------------------- |
-| `fallbackMessage` | `string`        | `DEFAULT_APP_...` | Message used when no mapping matches.         |
-| `registry`        | `ErrorRegistry` | Global registry   | Registry used to classify the provided error. |
+| Option            | Type            | Default           | Description                                                                           |
+| ----------------- | --------------- | ----------------- | ------------------------------------------------------------------------------------- |
+| `fallbackMessage` | `string`        | `DEFAULT_APP_...` | Message used when no mapping matches.                                                 |
+| `registry`        | `ErrorRegistry` | Global registry   | Registry used to classify the provided error.                                         |
+| `maxDepth`        | `number`        | `3`               | Maximum depth when unwrapping nested error wrappers (`cause`, `originalError`, etc.). |
 
 #### `ok()`
 

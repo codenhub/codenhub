@@ -296,7 +296,27 @@ export interface ErrorRegistry {
   /**
    * Merges all mappings from the source registry into this registry, overwriting matching identifiers.
    *
-   * @param registry - The source ErrorRegistry to merge.
+   * @param registry - The source registry to merge. Accepts both mutable and read-only registries.
    */
-  merge(registry: ErrorRegistry): void;
+  merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
+}
+
+/**
+ * A read-only view of an error registry returned by `freezeRegistry`.
+ *
+ * Exposes only the read-facing surface of each bucket. Mutation methods (`add`, `addList`,
+ * `clear`, `delete`) are not part of this type. Suitable as a preset source passed to
+ * `createErrorRegistry` or `merge`.
+ */
+export interface ReadonlyErrorRegistry {
+  /** Read-only view of code mappings. */
+  readonly codes: Pick<ErrorRegistryBucket, "get" | "values">;
+  /** Read-only view of name mappings. */
+  readonly names: Pick<ErrorRegistryBucket, "get" | "values">;
+  /** Read-only view of message mappings. */
+  readonly messages: Pick<ErrorRegistryBucket, "get" | "values">;
+  /** Read-only view of prefix definitions. */
+  readonly prefixes: Pick<ErrorPrefixRegistryBucket, "values">;
+  /** Read-only view of pattern definitions. */
+  readonly patterns: Pick<ErrorPatternRegistryBucket, "values">;
 }
