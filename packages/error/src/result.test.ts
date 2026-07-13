@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createErrorRegistry, err, map, match, ok, unwrap, type Err, type Result } from "./index";
+import { andThen, createErrorRegistry, err, map, match, ok, unwrap, unwrapOr, type Err, type Result } from "./index";
 
 describe("ok", () => {
   it("should create a successful result wrapping the provided value", () => {
@@ -11,6 +11,11 @@ describe("ok", () => {
   it("should preserve reference identity for object values", () => {
     const obj = { id: 1 };
     expect(ok(obj).value).toBe(obj);
+  });
+
+  it("should support zero arguments to return Ok<void>", () => {
+    const result = ok();
+    expect(result).toEqual({ ok: true, value: undefined } satisfies Result<void>);
   });
 });
 
@@ -79,5 +84,42 @@ describe("match", () => {
         onErr: (error) => `ERR: ${error.message}`,
       }),
     ).toBe("ERR: failed");
+  });
+});
+
+describe("andThen", () => {
+  it("should transform the value of a successful result using a mapper that returns a Result", () => {
+    const result = ok(10);
+    const mapped = andThen(result, (val) => ok(val * 2));
+    expect(unwrap(mapped)).toBe(20);
+  });
+
+  it("should return the Err result from the mapper function on success", () => {
+    const result = ok(10);
+    const mapped = andThen(result, () => err("nested failure"));
+    expect(mapped.ok).toBe(false);
+    expect((mapped as Err).error.message).toBe("nested failure");
+  });
+
+  it("should forward a failed result without calling the mapper", () => {
+    const result = err("failed");
+    let called = false;
+    const mapped = andThen(result, (val: number) => {
+      called = true;
+      return ok(val * 2);
+    });
+    expect(called).toBe(false);
+    expect(mapped.ok).toBe(false);
+    expect((mapped as Err).error.message).toBe("failed");
+  });
+});
+
+describe("unwrapOr", () => {
+  it("should return the value from a successful result", () => {
+    expect(unwrapOr(ok("success"), "fallback")).toBe("success");
+  });
+
+  it("should return the fallback value from a failed result", () => {
+    expect(unwrapOr(err("failed"), "fallback")).toBe("fallback");
   });
 });

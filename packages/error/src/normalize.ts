@@ -126,8 +126,8 @@ const getKnownMessageFeedback = (
     return toKnownClassification(exactFeedback);
   }
 
-  // Longest-prefix match: sort descending by prefix length so the most specific prefix wins.
-  const sortedPrefixes = [...registry.prefixes.values()].sort((a, b) => b.prefix.length - a.prefix.length);
+  // Longest-prefix match: prefixes are pre-sorted descending by prefix length in the bucket.
+  const sortedPrefixes = registry.prefixes.values();
 
   for (const definition of sortedPrefixes) {
     if (normalizedMessage.startsWith(definition.prefix)) {

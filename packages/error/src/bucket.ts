@@ -110,11 +110,31 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
  */
 export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   const entries = new Map<string, ErrorFeedback>();
+  let sortedCache: ErrorPrefixDefinition[] | null = null;
+
+  const rebuildCache = (): void => {
+    sortedCache = Array.from(
+      entries.entries(),
+      ([prefix, feedback]): ErrorPrefixDefinition => ({
+        ...cloneFeedback(feedback),
+        prefix,
+      }),
+    ).sort((a, b) => b.prefix.length - a.prefix.length);
+  };
+
+  const getSortedCache = (): readonly ErrorPrefixDefinition[] => {
+    if (sortedCache === null) {
+      rebuildCache();
+    }
+    return sortedCache!;
+  };
+
   const add = (prefix: string, feedback: ErrorFeedback): void => {
     assertNonEmptyIdentifier(prefix, "prefix");
     assertFeedback(feedback);
 
     entries.set(normalizeErrorIdentifier(prefix), cloneFeedback(feedback));
+    sortedCache = null;
   };
 
   return {
@@ -126,19 +146,18 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
     },
     clear(): void {
       entries.clear();
+      sortedCache = [];
     },
     delete(prefix: string): boolean {
       assertNonEmptyIdentifier(prefix, "prefix");
-      return entries.delete(normalizeErrorIdentifier(prefix));
+      const deleted = entries.delete(normalizeErrorIdentifier(prefix));
+      if (deleted) {
+        sortedCache = null;
+      }
+      return deleted;
     },
     values(): readonly ErrorPrefixDefinition[] {
-      return Array.from(
-        entries.entries(),
-        ([prefix, feedback]): ErrorPrefixDefinition => ({
-          ...cloneFeedback(feedback),
-          prefix,
-        }),
-      );
+      return getSortedCache();
     },
   };
 };

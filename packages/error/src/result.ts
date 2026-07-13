@@ -29,12 +29,17 @@ export type Result<T> = Ok<T> | Err;
 
 /**
  * Creates a successful Result instance wrapping the provided value.
+ * If no value is provided, returns an Ok<void> result.
  *
  * @typeParam T - The type of the value.
- * @param value - The success value to wrap.
+ * @param value - The optional success value to wrap.
  * @returns An Ok result object.
  */
-export const ok = <T>(value: T): Ok<T> => ({ ok: true, value });
+export function ok(): Ok<void>;
+export function ok<T>(value: T): Ok<T>;
+export function ok<T>(value?: T): Ok<T> {
+  return { ok: true, value: value as T };
+}
 
 /**
  * Creates a failed Result instance wrapping a normalized AppError.
@@ -101,4 +106,36 @@ export const match = <T, U>(
     return callbacks.onOk(result.value);
   }
   return callbacks.onErr(result.error);
+};
+
+/**
+ * Maps the success value of a Result using the provided mapper function that returns another Result.
+ * Prevents nested Result structures like `Result<Result<U>>`.
+ *
+ * @typeParam T - The type of the original success value.
+ * @typeParam U - The type of the mapped success value.
+ * @param result - The Result instance to process.
+ * @param mapper - The function to map the success value to a new Result.
+ * @returns A new Result instance from the mapper or the original Err.
+ */
+export const andThen = <T, U>(result: Result<T>, mapper: (value: T) => Result<U>): Result<U> => {
+  if (!result.ok) {
+    return result;
+  }
+  return mapper(result.value);
+};
+
+/**
+ * Unwraps a Result, returning the value if successful, or the provided fallback value if failed.
+ *
+ * @typeParam T - The type of the value.
+ * @param result - The Result instance to unwrap.
+ * @param fallback - The value to return if the result is an Err.
+ * @returns The success value or the fallback value.
+ */
+export const unwrapOr = <T>(result: Result<T>, fallback: T): T => {
+  if (!result.ok) {
+    return fallback;
+  }
+  return result.value;
 };
