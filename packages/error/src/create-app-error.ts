@@ -83,8 +83,9 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
 
   for (const candidate of errorCandidates) {
     if (isAppError(candidate)) {
-      if (candidate.type === "known" && knownResult === null) {
+      if (candidate.type === "known") {
         knownResult = resolveFromAppError(candidate, error);
+        break;
       } else if (candidate.type === "unexpected" && unexpectedResult === null) {
         unexpectedResult = resolveFromAppError(candidate, error);
       } else if (appErrorFallback === null) {
@@ -93,12 +94,10 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
       continue;
     }
 
-    if (knownResult === null) {
-      const classification = classifyErrorCandidateKnown(registry, candidate);
-      if (classification !== null) {
-        knownResult = { ...classification, originalError: error };
-        continue;
-      }
+    const classification = classifyErrorCandidateKnown(registry, candidate);
+    if (classification !== null) {
+      knownResult = { ...classification, originalError: error };
+      break;
     }
 
     if (unexpectedResult === null) {

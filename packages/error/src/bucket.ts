@@ -95,11 +95,10 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
       const feedback = entries.get(normalizeErrorIdentifier(identifier));
       return feedback === undefined ? undefined : cloneFeedback(feedback);
     },
-    values(): IterableIterator<[string, ErrorFeedback]> {
-      return Array.from(entries.entries(), ([identifier, feedback]): [string, ErrorFeedback] => [
-        identifier,
-        cloneFeedback(feedback),
-      ]).values();
+    *values(): IterableIterator<[string, ErrorFeedback]> {
+      for (const [identifier, feedback] of entries) {
+        yield [identifier, cloneFeedback(feedback)];
+      }
     },
   };
 };

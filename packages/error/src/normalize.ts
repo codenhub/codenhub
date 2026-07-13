@@ -80,8 +80,10 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
   );
 };
 
-export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
-  const candidates: unknown[] = [];
+export function* getErrorCandidates(
+  error: unknown,
+  maxDepth = ERROR_UNWRAP_MAX_DEPTH,
+): Generator<unknown, void, unknown> {
   const visitedObjects = new Set<object>();
 
   if (isRecord(error)) {
@@ -93,7 +95,7 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
   for (let index = 0; index < pendingCandidates.length; index += 1) {
     const candidate = pendingCandidates[index];
 
-    candidates.push(candidate.value);
+    yield candidate.value;
 
     if (candidate.depth >= maxDepth) {
       continue;
@@ -111,9 +113,7 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
       pendingCandidates.push({ depth: candidate.depth + 1, value: wrappedErrorCandidate });
     }
   }
-
-  return candidates;
-};
+}
 
 const getKnownMessageFeedback = (
   registry: ErrorRegistry | ReadonlyErrorRegistry,
