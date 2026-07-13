@@ -23,6 +23,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   #storageListenerCleanup: (() => void) | null = null;
   #isInitialized = false;
   #resolvedClasses: Map<string, string | null> | null = null;
+  #resolvedClassesList: string[] | null = null;
 
   #getResolvedClasses(): Map<string, string | null> {
     if (this.#resolvedClasses === null) {
@@ -32,6 +33,14 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       }
     }
     return this.#resolvedClasses;
+  }
+
+  #getResolvedClassesList(): string[] {
+    if (this.#resolvedClassesList === null) {
+      const resolved = this.#getResolvedClasses();
+      this.#resolvedClassesList = Array.from(resolved.values()).filter((c): c is string => c !== null);
+    }
+    return this.#resolvedClassesList;
   }
 
   #handleSystemChange = (event: MediaQueryListEvent): void => {
@@ -88,18 +97,26 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
 
   get(): ThemeDefinition<TSchema> {
     const baseTheme = this.#getTheme(this.#activeName);
-    const computedTokens = readComputedTokens({
-      theme: baseTheme,
-      options: this.#options,
-      activeTokens: this.#activeTokens,
-    });
+    const options = this.#options;
+    const activeTokens = this.#activeTokens;
+    let cachedTokens: Partial<Record<keyof TSchema, string>> | null = null;
 
     return {
       ...baseTheme,
-      tokens: {
-        ...computedTokens,
-        ...baseTheme.tokens,
-        ...this.#activeTokens,
+      get tokens() {
+        if (cachedTokens === null) {
+          const computedTokens = readComputedTokens({
+            theme: baseTheme,
+            options,
+            activeTokens,
+          });
+          cachedTokens = {
+            ...computedTokens,
+            ...baseTheme.tokens,
+            ...activeTokens,
+          };
+        }
+        return cachedTokens;
       },
     };
   }
@@ -155,6 +172,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     this.#activeTokens = {};
     this.#activeName = this.#options.defaultTheme;
     this.#resolvedClasses = null;
+    this.#resolvedClassesList = null;
     this.#isInitialized = false;
   }
 
@@ -182,7 +200,7 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
       theme,
       options: this.#options,
       activeTokens: this.#activeTokens,
-      resolvedClasses: Array.from(resolved.values()).filter((c): c is string => c !== null),
+      resolvedClasses: this.#getResolvedClassesList(),
       nextClass: resolved.get(theme.name) ?? null,
     });
 
