@@ -2,13 +2,6 @@
 
 Small zero-dependency theme preference helper for browser apps. It applies a theme name to the document, updates `document.documentElement.style.colorScheme`, and supports managing dynamic CSS tokens.
 
-## Features
-
-- **Factory API**: Instantiate with `createTheme()`.
-- **Dynamic CSS Tokens**: Define a `tokenSchema` at initialization for type-safe, dynamic inline CSS custom property styling.
-- **Zero Dependencies**: Tiny footprint and pure TypeScript.
-- **Flexible Styling**: Works with standard CSS variables, class toggles, or Tailwind CSS.
-
 ## Installation
 
 ```sh
