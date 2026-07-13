@@ -53,9 +53,16 @@ export const registerSystemListener = (handler: (event: MediaQueryListEvent) => 
     }
   })();
 
+  let useLegacy = false;
+
   if (mql) {
     try {
-      mql.addEventListener("change", handler);
+      if (typeof mql.addEventListener === "function") {
+        mql.addEventListener("change", handler);
+      } else if (typeof (mql as unknown as Record<string, unknown>).addListener === "function") {
+        useLegacy = true;
+        (mql as unknown as { addListener: (cb: typeof handler) => void }).addListener(handler);
+      }
     } catch {
       // Ignore system listener registration errors
     }
@@ -66,7 +73,11 @@ export const registerSystemListener = (handler: (event: MediaQueryListEvent) => 
       return;
     }
     try {
-      mql.removeEventListener("change", handler);
+      if (useLegacy && typeof (mql as unknown as Record<string, unknown>).removeListener === "function") {
+        (mql as unknown as { removeListener: (cb: typeof handler) => void }).removeListener(handler);
+      } else if (typeof mql.removeEventListener === "function") {
+        mql.removeEventListener("change", handler);
+      }
     } catch {
       // Ignore removal errors
     }

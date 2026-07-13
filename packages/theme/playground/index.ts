@@ -19,6 +19,8 @@ const defaultTokenSchema: Record<string, string> = {
   background: "--color-background",
   surface: "--color-surface",
   text: "--color-text",
+  textSecondary: "--color-text-secondary",
+  textStrong: "--color-text-strong",
   success: "--color-success",
   warning: "--color-warning",
   destructive: "--color-destructive",
@@ -34,6 +36,8 @@ const defaultThemes: CustomThemeDefinition[] = [
       background: "#f9fafb",
       surface: "#f3f4f6",
       text: "#111827",
+      textSecondary: "#4b5563",
+      textStrong: "#171717",
       success: "#059669",
       warning: "#d97706",
       destructive: "#b91c1c",
@@ -48,6 +52,8 @@ const defaultThemes: CustomThemeDefinition[] = [
       background: "#111827",
       surface: "#1f2937",
       text: "#f3f4f6",
+      textSecondary: "#9ca3af",
+      textStrong: "#f9fafb",
       success: "#10b981",
       warning: "#f59e0b",
       destructive: "#ef4444",
@@ -62,6 +68,8 @@ const defaultThemes: CustomThemeDefinition[] = [
       background: "#ecfdf5",
       surface: "#d1fae5",
       text: "#064e3b",
+      textSecondary: "#047857",
+      textStrong: "#022c22",
       success: "#10b981",
       warning: "#f59e0b",
       destructive: "#ef4444",
@@ -76,6 +84,8 @@ const defaultThemes: CustomThemeDefinition[] = [
       background: "#1c1917",
       surface: "#292524",
       text: "#fafaf9",
+      textSecondary: "#fb7185",
+      textStrong: "#fff1f2",
       success: "#10b981",
       warning: "#f59e0b",
       destructive: "#ef4444",
@@ -100,6 +110,27 @@ const initStorage = (): void => {
     const storedThemes = localStorage.getItem(STORAGE_THEMES_KEY);
     if (storedThemes) {
       themes = JSON.parse(storedThemes) as CustomThemeDefinition[];
+    }
+
+    // Migration: ensure new text tokens are present
+    if (!tokenSchema.textSecondary || !tokenSchema.textStrong) {
+      tokenSchema.textSecondary = defaultTokenSchema.textSecondary;
+      tokenSchema.textStrong = defaultTokenSchema.textStrong;
+      themes = themes.map((t) => {
+        const defaultMatch = defaultThemes.find((dt) => dt.name === t.name);
+        if (defaultMatch) {
+          return {
+            ...t,
+            tokens: {
+              ...t.tokens,
+              textSecondary: defaultMatch.tokens.textSecondary,
+              textStrong: defaultMatch.tokens.textStrong,
+            },
+          };
+        }
+        return t;
+      });
+      saveStorage();
     }
   } catch (err) {
     console.error("Failed to read schema/themes from storage", err);
@@ -170,11 +201,11 @@ const updateStateDisplay = (): void => {
   themeItems.forEach((item) => {
     const name = item.getAttribute("data-theme-item");
     if (name === active.name) {
-      item.classList.add("border-primary", "ring-1", "ring-primary");
-      item.classList.remove("border-border");
+      item.classList.add("bg-surface", "ring-1", "ring-primary");
+      item.classList.remove("bg-background");
     } else {
-      item.classList.remove("border-primary", "ring-1", "ring-primary");
-      item.classList.add("border-border");
+      item.classList.remove("bg-surface", "ring-1", "ring-primary");
+      item.classList.add("bg-background");
     }
   });
 };
@@ -189,13 +220,15 @@ const renderTokenSchema = (): void => {
 
   Object.entries(tokenSchema).forEach(([key, value]) => {
     const div = document.createElement("div");
-    div.className = "flex items-center justify-between p-2 bg-background border border-border rounded-lg text-xs";
+    div.className = "flex items-center justify-between p-2 bg-background rounded-md text-xs";
     div.innerHTML = `
       <div class="flex flex-col">
         <span class="font-semibold text-text-strong">${key}</span>
         <code class="text-[10px] text-text-secondary">${value}</code>
       </div>
-      <button class="btn destructive text-[10px] px-1.5 py-0.5 rounded shadow-sm" style="height: auto;" data-delete-schema="${key}">Delete</button>
+      <button class="btn destructive sm flex items-center justify-center p-1.5" style="height: auto;" data-delete-schema="${key}">
+        <i class="ic-trash-2 size-3.5"></i>
+      </button>
     `;
     container.appendChild(div);
   });
@@ -212,7 +245,7 @@ const renderThemesList = (): void => {
   themes.forEach((theme, index) => {
     const div = document.createElement("div");
     div.className =
-      "p-3 border border-border bg-background rounded-lg flex flex-col gap-2 cursor-pointer hover:border-text transition-colors";
+      "p-3 bg-background rounded-md flex flex-col gap-2 cursor-pointer hover:bg-surface/50 transition-colors";
     div.setAttribute("data-theme-item", theme.name);
 
     // Header
@@ -224,8 +257,12 @@ const renderThemesList = (): void => {
         <span class="text-[10px] px-1.5 py-0.5 rounded ${theme.colorScheme === "dark" ? "bg-neutral-800 text-neutral-200" : "bg-neutral-200 text-neutral-800"}">${theme.colorScheme}</span>
       </div>
       <div class="flex gap-1" data-actions>
-        <button class="btn secondary text-[10px] px-1.5 py-0.5" style="height: auto;" data-edit-theme="${index}">Edit</button>
-        <button class="btn destructive text-[10px] px-1.5 py-0.5" style="height: auto;" data-delete-theme="${index}">Delete</button>
+        <button class="btn secondary sm flex items-center justify-center p-1.5" style="height: auto;" data-edit-theme="${index}">
+          <i class="ic-pencil size-3.5"></i>
+        </button>
+        <button class="btn destructive sm flex items-center justify-center p-1.5" style="height: auto;" data-delete-theme="${index}">
+          <i class="ic-trash-2 size-3.5"></i>
+        </button>
       </div>
     `;
 
@@ -271,7 +308,7 @@ const renderThemeEditorValues = (): void => {
     div.className = "grid grid-cols-3 gap-2 items-center text-xs";
     div.innerHTML = `
       <label class="text-text-secondary truncate">${key}</label>
-      <input type="text" data-token-key="${key}" class="col-span-2 px-2 py-1 bg-surface border border-border rounded w-full" placeholder="#ffffff or rgb(...)" />
+      <input type="text" data-token-key="${key}" class="col-span-2 w-full" placeholder="#ffffff or rgb(...)" />
     `;
     container.appendChild(div);
   });
@@ -317,7 +354,8 @@ const setupForms = (): void => {
   // Schema token deletion
   document.getElementById("token-schema-list")?.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const key = target.getAttribute("data-delete-schema");
+    const btn = target.closest("[data-delete-schema]");
+    const key = btn?.getAttribute("data-delete-schema");
     if (key) {
       delete tokenSchema[key];
       // Also delete from all themes
@@ -406,8 +444,10 @@ const setupForms = (): void => {
   // Themes list click actions (Edit/Delete)
   document.getElementById("themes-list")?.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
-    const editIndexStr = target.getAttribute("data-edit-theme");
-    const deleteIndexStr = target.getAttribute("data-delete-theme");
+    const editBtn = target.closest("[data-edit-theme]");
+    const deleteBtn = target.closest("[data-delete-theme]");
+    const editIndexStr = editBtn?.getAttribute("data-edit-theme");
+    const deleteIndexStr = deleteBtn?.getAttribute("data-delete-theme");
 
     if (editIndexStr) {
       const index = parseInt(editIndexStr, 10);

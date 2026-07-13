@@ -422,6 +422,9 @@ importers:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles
+      '@codenhub/vite-plugin-icons':
+        specifier: workspace:*
+        version: link:../plugins/vite/icons
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
