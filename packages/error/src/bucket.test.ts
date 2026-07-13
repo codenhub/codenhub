@@ -87,6 +87,11 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(() => registry.codes.add("code1", { message: "Msg", source: 123 } as never)).toThrow(TypeError);
     expect(() => registry.codes.add("code1", { message: "Msg", isRetryable: "yes" } as never)).toThrow(TypeError);
   });
+
+  it("should reject an empty or whitespace-only identifier on delete", () => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.delete("   ")).toThrow(TypeError);
+  });
 });
 
 describe("prefix bucket", () => {

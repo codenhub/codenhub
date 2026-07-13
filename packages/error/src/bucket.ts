@@ -88,6 +88,7 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
       entries.clear();
     },
     delete(identifier: string): boolean {
+      assertNonEmptyIdentifier(identifier, "identifier");
       return entries.delete(normalizeErrorIdentifier(identifier));
     },
     get(identifier: string): ErrorFeedback | undefined {

@@ -317,6 +317,36 @@ Represents success or failure without exceptions.
 type Result<T> = { ok: true; value: T } | { ok: false; error: AppError };
 ```
 
+#### `unwrap()`
+
+Unwraps a `Result`, returning the value if successful, or throwing the normalized `AppError` if failed.
+
+```ts
+function unwrap<T>(result: Result<T>): T;
+```
+
+#### `map()`
+
+Maps the success value of a `Result` using the provided mapper function.
+
+```ts
+function map<T, U>(result: Result<T>, mapper: (value: T) => U): Result<U>;
+```
+
+#### `match()`
+
+Pattern matches on a `Result`, executing the corresponding callback based on the outcome.
+
+```ts
+function match<T, U>(
+  result: Result<T>,
+  callbacks: {
+    readonly onOk: (value: T) => U;
+    readonly onErr: (error: AppError) => U;
+  },
+): U;
+```
+
 ### `@codenhub/error/registries`
 
 Index entrypoint for ready registry presets.
