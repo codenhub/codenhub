@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@reference "tailwindcss";
 @import "./theme.css";
 
 @utility text-display {

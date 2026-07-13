@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import "tailwindcss/theme.css";
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
