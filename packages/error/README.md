@@ -143,7 +143,7 @@ function setErrorRegistry(registry: ErrorRegistry): void;
 Creates an empty isolated registry.
 
 ```ts
-function createErrorRegistry(presets?: readonly ErrorRegistry[]): ErrorRegistry;
+function createErrorRegistry(presets?: readonly (ErrorRegistry | ReadonlyErrorRegistry)[]): ErrorRegistry;
 ```
 
 Use isolated registries for tests, request scopes, tenant-specific mappings, or integrations where mappings should not use the active global registry.
