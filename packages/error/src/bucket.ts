@@ -170,6 +170,8 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
  */
 export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   const entries: ErrorPatternDefinition[] = [];
+  let cachedValues: ErrorPatternDefinition[] | null = null;
+
   const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
     if (!(pattern instanceof RegExp)) {
       throw new TypeError("Error registry pattern must be a RegExp.");
@@ -193,6 +195,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     } else {
       entries.push(definition);
     }
+    cachedValues = null;
   };
 
   return {
@@ -204,6 +207,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     },
     clear(): void {
       entries.length = 0;
+      cachedValues = [];
     },
     delete(pattern: RegExp): boolean {
       if (!(pattern instanceof RegExp)) {
@@ -217,10 +221,19 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
           isDeleted = true;
         }
       }
+      if (isDeleted) {
+        cachedValues = null;
+      }
       return isDeleted;
     },
     values(): readonly ErrorPatternDefinition[] {
-      return entries.map((entry) => ({ ...entry, pattern: new RegExp(entry.pattern.source, entry.pattern.flags) }));
+      if (cachedValues === null) {
+        cachedValues = entries.map((entry) => ({
+          ...entry,
+          pattern: new RegExp(entry.pattern.source, entry.pattern.flags),
+        }));
+      }
+      return cachedValues;
     },
   };
 };

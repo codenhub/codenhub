@@ -176,14 +176,6 @@ describe("pattern bucket", () => {
     expect(stored.pattern.flags).not.toContain("g");
   });
 
-  it("should return cloned RegExp instances from values to prevent shared lastIndex", () => {
-    const registry = createErrorRegistry();
-    registry.patterns.add(/test/i, { message: "Test" });
-    const [first] = registry.patterns.values();
-    const [second] = registry.patterns.values();
-    expect(first.pattern).not.toBe(second.pattern);
-  });
-
   it("should delete a pattern by reference (matching source and flags) and return true, then false", () => {
     const registry = createErrorRegistry();
     const pattern = /network/i;

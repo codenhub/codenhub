@@ -252,7 +252,7 @@ export interface ErrorPatternRegistryBucket {
 
   /**
    * Returns defensive copies of all pattern definitions registered in this bucket.
-   * Clones patterns to avoid sharing sticky regex execution state.
+   * RegExp instances are stateless since global and sticky flags are stripped on registration.
    *
    * @returns Readonly list of pattern definitions.
    */
