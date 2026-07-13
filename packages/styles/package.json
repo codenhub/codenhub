@@ -43,14 +43,16 @@
     "access": "public"
   },
   "scripts": {
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm build && pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
-    "build": "pnpm build:styles",
+    "build": "pnpm clean && pnpm build:styles",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run",
     "test": "pnpm typecheck && pnpm build && pnpm test:visual",
+    "test:coverage": "echo 'No coverage for CSS'",
     "test:visual": "playwright test",
     "test:watch": "playwright test --ui",
     "typecheck": "tsc --project tsconfig.json --noEmit"

@@ -50,7 +50,7 @@
 }
 
 @utility loader {
-  @apply ai bg-text inline-block size-8 [&.lg]:size-10 [&.sm]:size-6;
+  @apply ai bg-current inline-block size-8 [&.lg]:size-10 [&.sm]:size-6;
 
   content: "";
 }

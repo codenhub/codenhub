@@ -3,6 +3,7 @@
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
+@source not "../playground";
 
 @theme {
   --font-default: "Segoe UI", system-ui, sans-serif;
@@ -143,7 +144,9 @@
   --color-info-strong: var(--color-indigo-800);
 }
 
-.dark {
+.dark,
+.theme-dark,
+[data-theme="dark"] {
   color-scheme: dark;
 
   --color-primary: var(--color-neutral-50);

@@ -8,11 +8,6 @@ export default defineConfig({
   reporter: [["list"], ["./tests/exit-reporter.ts"]],
   webServer: [
     {
-      command: "pnpm --filter=@codenhub/styles-dev dev",
-      url: "http://localhost:5183",
-      reuseExistingServer: !process.env.CI,
-    },
-    {
       command: "pnpm --filter=@codenhub/styles-debug dev",
       url: "http://localhost:5184",
       reuseExistingServer: !process.env.CI,

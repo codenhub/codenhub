@@ -3,6 +3,7 @@
 @source not "../../tests";
 @source not "../../dev";
 @source not "../../debug";
+@source not "../../playground";
 @import "../theme.css";
 @import "../typography.css";
 @import "./button.css";
