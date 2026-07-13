@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@source not "../dist";
+@source not "../tests";
+@source not "../dev";
+@source not "../debug";
 
 @theme {
   --font-default: "Segoe UI", system-ui, sans-serif;

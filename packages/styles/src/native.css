@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@source not "../dist";
+@source not "../tests";
+@source not "../dev";
+@source not "../debug";
 @import "./theme.css";
 @import "./typography.css";
 @import "./components/index.css";
