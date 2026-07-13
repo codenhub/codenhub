@@ -68,7 +68,7 @@ Generated output MUST NOT be treated as source of truth. Source, docs, and tests
 
 ## Development workflow
 
-Packages that need package-local real-usage scenarios SHOULD follow `docs/specs/package-development.md` for the optional `playground`, `dev`, and `debug` workflow.
+Packages that need package-local real-usage scenarios SHOULD follow `docs/specs/packages-development.md` for the optional `playground`, `dev`, and `debug` workflow.
 
 This workflow is not required for every package. Missing it is non-compliant only when the package directly suffers from not having it and adding it would immediately remove recurring development or debugging pain.
 

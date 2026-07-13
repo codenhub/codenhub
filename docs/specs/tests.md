@@ -15,7 +15,7 @@ This document outlines the testing strategy, architecture, and standards for thi
 
 Tests in this repository are divided into three distinct categories based on their scope and isolation level.
 
-Manual package usage scenarios are outside this categorization. Use the optional `playground`, `dev`, and `debug` workflow from `docs/specs/package-development.md` for real usage scenarios that are meant for development or pre-ship debugging rather than automated test execution.
+Manual package usage scenarios are outside this categorization. Use the optional `playground`, `dev`, and `debug` workflow from `docs/specs/packages-development.md` for real usage scenarios that are meant for development or pre-ship debugging rather than automated test execution.
 
 ### 1. Unit Tests
 
