@@ -1,85 +1,67 @@
 import { createErrorRegistry, freezeRegistry } from "../registry";
+import type { ErrorFeedback } from "../types";
 
-const registry = createErrorRegistry();
+/**
+ * Raw name mapping definitions for common browser and Web API errors.
+ *
+ * Provides fallback messages, translation keys, and source labels for typical browser DOMExceptions.
+ */
+export const browserErrorNames: Record<string, ErrorFeedback> = {
+  AbortError: {
+    message: "Request cancelled.",
+    messageKey: "error.browser.abort",
+    source: "browser",
+  },
+  QuotaExceededError: {
+    message: "Browser storage quota exceeded.",
+    messageKey: "error.browser.storageQuotaExceeded",
+    source: "browser.storage",
+  },
+  NotAllowedError: {
+    message: "Permission was denied.",
+    messageKey: "error.browser.permissionDenied",
+    source: "browser.permissions",
+  },
+  NotFoundError: {
+    message: "The requested resource could not be found.",
+    messageKey: "error.browser.notFound",
+    source: "browser",
+  },
+  SecurityError: {
+    message: "The operation is insecure.",
+    messageKey: "error.browser.security",
+    source: "browser",
+  },
+  TimeoutError: {
+    message: "The operation timed out.",
+    messageKey: "error.browser.timeout",
+    source: "browser",
+    isRetryable: true,
+  },
+  NotSupportedError: {
+    message: "The operation is not supported.",
+    messageKey: "error.browser.notSupported",
+    source: "browser",
+  },
+  InvalidStateError: {
+    message: "The operation is invalid in the current state.",
+    messageKey: "error.browser.invalidState",
+    source: "browser",
+  },
+  NetworkError: {
+    message: "A network error occurred.",
+    messageKey: "error.browser.network",
+    source: "browser.network",
+    isRetryable: true,
+  },
+};
 
-registry.names.addList([
-  [
-    "AbortError",
-    {
-      message: "Request cancelled.",
-      messageKey: "error.browser.abort",
-      source: "browser",
-    },
-  ],
-  [
-    "QuotaExceededError",
-    {
-      message: "Browser storage quota exceeded.",
-      messageKey: "error.browser.storageQuotaExceeded",
-      source: "browser.storage",
-    },
-  ],
-  [
-    "NotAllowedError",
-    {
-      message: "Permission was denied.",
-      messageKey: "error.browser.permissionDenied",
-      source: "browser.permissions",
-    },
-  ],
-  [
-    "NotFoundError",
-    {
-      message: "The requested resource could not be found.",
-      messageKey: "error.browser.notFound",
-      source: "browser",
-    },
-  ],
-  [
-    "SecurityError",
-    {
-      message: "The operation is insecure.",
-      messageKey: "error.browser.security",
-      source: "browser",
-    },
-  ],
-  [
-    "TimeoutError",
-    {
-      message: "The operation timed out.",
-      messageKey: "error.browser.timeout",
-      source: "browser",
-      isRetryable: true,
-    },
-  ],
-  [
-    "NotSupportedError",
-    {
-      message: "The operation is not supported.",
-      messageKey: "error.browser.notSupported",
-      source: "browser",
-    },
-  ],
-  [
-    "InvalidStateError",
-    {
-      message: "The operation is invalid in the current state.",
-      messageKey: "error.browser.invalidState",
-      source: "browser",
-    },
-  ],
-  [
-    "NetworkError",
-    {
-      message: "A network error occurred.",
-      messageKey: "error.browser.network",
-      source: "browser.network",
-      isRetryable: true,
-    },
-  ],
-]);
-
-registry.patterns.addList([
+/**
+ * Raw heuristic pattern mappings for common browser and Web API errors.
+ *
+ * Defines regex patterns to identify fetch failures, DNS issues, and network connection refusal.
+ */
+export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
     /failed to fetch|networkerror|load failed/i,
     {
@@ -98,7 +80,12 @@ registry.patterns.addList([
       isRetryable: true,
     },
   ],
-]);
+];
+
+const registry = createErrorRegistry();
+
+registry.names.addList(Object.entries(browserErrorNames));
+registry.patterns.addList(browserErrorPatterns);
 
 /**
  * An opt-in, read-only error registry pre-populated with mappings for common browser and Web API errors.

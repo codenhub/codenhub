@@ -373,4 +373,19 @@ describe("createAppError — appErrorFallback nested unknown AppError resolution
     expect(result.message).toBe("My custom unknown message");
     expect(result.originalError).toBe(wrapper);
   });
+
+  it("should cover fallback branch when multiple nested unknown AppErrors exist", () => {
+    const registry = createErrorRegistry();
+    const unknown1 = createAppError("First unknown", { registry });
+    const unknown2 = createAppError("Second unknown", { registry });
+    const outer = { cause: unknown1, originalError: unknown2 };
+    const result = createAppError(outer, { registry });
+    expect(result.type).toBe("unknown");
+  });
+
+  it("should cover non-record wrapped error candidate branch", () => {
+    const registry = createErrorRegistry();
+    const result = createAppError({ cause: "primitive cause string" }, { registry });
+    expect(result.type).toBe("unknown");
+  });
 });
