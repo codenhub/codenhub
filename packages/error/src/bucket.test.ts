@@ -216,4 +216,11 @@ describe("pattern bucket", () => {
     const registry = createErrorRegistry();
     expect(() => registry.patterns.delete("not-a-regex" as unknown as RegExp)).toThrow(TypeError);
   });
+
+  it("should return false when deleting a pattern that is not in the registry but others exist", () => {
+    const registry = createErrorRegistry();
+    registry.patterns.add(/first/i, { message: "First" });
+    expect(registry.patterns.delete(/second/i)).toBe(false);
+    expect(registry.patterns.values()).toHaveLength(1);
+  });
 });

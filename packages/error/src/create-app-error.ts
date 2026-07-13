@@ -62,12 +62,15 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
  * @returns A normalized AppError instance. If the input is already a normalized AppError, it is returned as-is.
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
-  if (isAppError(error)) {
+  const hasCustomOptions =
+    options.fallbackMessage !== undefined || options.registry !== undefined || options.maxDepth !== undefined;
+
+  if (isAppError(error) && !hasCustomOptions) {
     return error;
   }
 
   const fallbackMessage = options.fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE;
-  const errorCandidates = getErrorCandidates(error, options.maxDepth);
+  const errorCandidates = getErrorCandidates(isAppError(error) ? error.originalError : error, options.maxDepth);
   const registry = options.registry ?? getErrorRegistry();
 
   // Single pass over candidates resolving by priority tier:
@@ -130,8 +133,8 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
  */
 export function isAppError(value: unknown): value is AppError {
   return (
-    typeof value === "object" &&
     value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
     APP_ERROR_BRAND in value &&
     (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
   );

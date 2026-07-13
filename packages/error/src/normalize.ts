@@ -1,12 +1,5 @@
 import { normalizeErrorIdentifier } from "./bucket";
-import type {
-  AppErrorType,
-  ErrorFeedback,
-  ErrorPatternDefinition,
-  ErrorPrefixDefinition,
-  ErrorRegistry,
-  ReadonlyErrorRegistry,
-} from "./types";
+import type { AppErrorType, ErrorFeedback, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 interface NormalizedError {
   code: string | null;
@@ -134,9 +127,7 @@ const getKnownMessageFeedback = (
   }
 
   // Longest-prefix match: sort descending by prefix length so the most specific prefix wins.
-  const sortedPrefixes = ([...registry.prefixes.values()] as ErrorPrefixDefinition[]).sort(
-    (a, b) => b.prefix.length - a.prefix.length,
-  );
+  const sortedPrefixes = [...registry.prefixes.values()].sort((a, b) => b.prefix.length - a.prefix.length);
 
   for (const definition of sortedPrefixes) {
     if (normalizedMessage.startsWith(definition.prefix)) {
@@ -186,9 +177,7 @@ const resolveHeuristicUnexpectedError = (
     return null;
   }
 
-  const matchedDefinition = (registry.patterns.values() as ErrorPatternDefinition[]).find((definition) =>
-    definition.pattern.test(message),
-  );
+  const matchedDefinition = registry.patterns.values().find((definition) => definition.pattern.test(message));
 
   if (matchedDefinition === undefined) {
     return null;

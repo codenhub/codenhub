@@ -311,4 +311,66 @@ describe("isAppError", () => {
     expect(isAppError(undefined)).toBe(false);
     expect(isAppError("string")).toBe(false);
   });
+
+  it("should return true for a function value that implements the AppError brand", () => {
+    const fnError = Object.assign(() => {}, {
+      [Symbol.for("@codenhub/error/AppError")]: true,
+    });
+    expect(isAppError(fnError)).toBe(true);
+  });
+});
+
+describe("createAppError — re-normalization with options", () => {
+  it("should re-normalize an existing AppError using the new registry and options", () => {
+    const registry1 = createErrorRegistry();
+    registry1.codes.add("code1", { message: "First Registry Match", source: "reg1" });
+
+    const registry2 = createErrorRegistry();
+    registry2.codes.add("code1", { message: "Second Registry Match", source: "reg2" });
+
+    const appError1 = createAppError({ code: "code1" }, { registry: registry1 });
+    expect(appError1.message).toBe("First Registry Match");
+
+    const appError2 = createAppError(appError1, { registry: registry2 });
+    expect(appError2.message).toBe("Second Registry Match");
+    expect(appError2.source).toBe("reg2");
+    expect(appError2.originalError).toBe(appError1);
+  });
+
+  it("should use the new fallback message if re-normalization fails to match", () => {
+    const registry = createErrorRegistry();
+    const appError1 = createAppError({ code: "unregistered" });
+    expect(appError1.message).toBe("An unexpected error occurred.");
+
+    const appError2 = createAppError(appError1, { fallbackMessage: "New custom fallback", registry });
+    expect(appError2.message).toBe("New custom fallback");
+    expect(appError2.originalError).toBe(appError1);
+  });
+
+  it("should handle primitive non-record and non-string errors", () => {
+    const registry = createErrorRegistry();
+    const appError = createAppError(123, { registry });
+    expect(appError.type).toBe("unknown");
+    expect(appError.message).toBe("An unexpected error occurred.");
+    expect(appError.originalError).toBe(123);
+  });
+});
+
+describe("createAppError — appErrorFallback nested unknown AppError resolution", () => {
+  it("should resolve using nested unknown AppError properties if no other match exists", () => {
+    const registry = createErrorRegistry();
+    const nestedUnknownAppError = createAppError(new Error("original error"), {
+      fallbackMessage: "My custom unknown message",
+      registry,
+    });
+    expect(nestedUnknownAppError.type).toBe("unknown");
+    expect(nestedUnknownAppError.message).toBe("My custom unknown message");
+
+    const wrapper = { cause: nestedUnknownAppError };
+    const result = createAppError(wrapper, { registry });
+
+    expect(result.type).toBe("unknown");
+    expect(result.message).toBe("My custom unknown message");
+    expect(result.originalError).toBe(wrapper);
+  });
 });
