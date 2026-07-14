@@ -61,7 +61,7 @@ const skills = getSkills("./skills");
 
 for (const skill of skills) {
   console.log(`Found: ${skill.name} — ${skill.description}`);
-  copyRecursiveSync(skill.path, `./output/${skill.id}`);
+  copyRecursiveSync({ src: skill.path, dest: `./output/${skill.id}` });
 }
 ```
 
@@ -72,7 +72,13 @@ for (const skill of skills) {
 Core utilities for reading and copying skills.
 
 ```ts
-import { parseFrontmatter, getSkills, copyRecursiveSync, type Skill, type CopyOptions } from "@codenhub/skills";
+import {
+  parseFrontmatter,
+  getSkills,
+  copyRecursiveSync,
+  type Skill,
+  type CopyRecursiveOptions,
+} from "@codenhub/skills";
 ```
 
 #### parseFrontmatter
@@ -93,8 +99,8 @@ Reads all valid skills from a directory. A subdirectory is treated as a skill wh
 
 Recursively copies a file or directory to a destination path. Supports an exclusion list filtered by base name.
 
-- **Signature**: `copyRecursiveSync(src: string, dest: string, options?: CopyOptions): void`
-- **Errors**: Throws `Error` when `src` does not exist.
+- **Signature**: `copyRecursiveSync(options: CopyRecursiveOptions): void`
+- **Errors**: Throws `Error` when source path does not exist, or target is a subdirectory of source.
 
 #### Skill
 
@@ -109,12 +115,16 @@ interface Skill {
 }
 ```
 
-#### CopyOptions
+#### CopyRecursiveOptions
 
 Options accepted by `copyRecursiveSync`.
 
 ```ts
-interface CopyOptions {
+interface CopyRecursiveOptions {
+  /** Absolute path to the source file or directory. */
+  src: string;
+  /** Absolute path to the copy destination. */
+  dest: string;
   /**
    * Base names to exclude at every depth of the copy tree.
    * Path segments are not supported — only base names.
@@ -142,7 +152,9 @@ skills.forEach((skill) => {
 import { copyRecursiveSync } from "@codenhub/skills";
 
 // Copy skill but skip any directory named "agents" at any depth.
-copyRecursiveSync("./skills/brainstorming", "./output/brainstorming", {
+copyRecursiveSync({
+  src: "./skills/brainstorming",
+  dest: "./output/brainstorming",
   ignoreList: ["agents"],
 });
 ```

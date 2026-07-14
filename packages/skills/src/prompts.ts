@@ -34,7 +34,7 @@ export class CancelledError extends Error {
 export interface Choice {
   name: string;
   value: string;
-  checked: boolean;
+  isChecked: boolean;
   description?: string;
 }
 
@@ -45,7 +45,7 @@ export interface SelectChoice {
 }
 
 export interface ConfirmOptions {
-  defaultValue: boolean;
+  isDefaultValue: boolean;
   canGoBack?: boolean;
 }
 
@@ -130,7 +130,7 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
   const { choices, canGoBack = false } = options;
 
   if (!process.stdin.isTTY) {
-    return Promise.resolve(choices.filter((c) => c.checked).map((c) => c.value));
+    return Promise.resolve(choices.filter((c) => c.isChecked).map((c) => c.value));
   }
 
   if (choices.length === 0) {
@@ -150,7 +150,7 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
     for (const [index, choice] of choices.entries()) {
       const isCurrent = index === cursor;
       const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
-      const checkbox = choice.checked ? `${ANSI.GREEN}[◼]${ANSI.RESET}` : "[ ]";
+      const checkbox = choice.isChecked ? `${ANSI.GREEN}[◼]${ANSI.RESET}` : "[ ]";
       const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
       const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
       stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${checkbox} ${name}${desc}\n`);
@@ -175,7 +175,7 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
           render();
           break;
         case "space":
-          choices[cursor].checked = !choices[cursor].checked;
+          choices[cursor].isChecked = !choices[cursor].isChecked;
           render();
           break;
         case "left":
@@ -187,7 +187,7 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
           break;
         case "return": {
           cleanup();
-          const selectedValues = choices.filter((c) => c.checked).map((c) => c.value);
+          const selectedValues = choices.filter((c) => c.isChecked).map((c) => c.value);
           process.stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection confirmed.\n`);
           resolve(selectedValues);
           break;
@@ -205,12 +205,12 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
  * prompting.
  */
 export async function promptConfirm(message: string, options: ConfirmOptions): Promise<boolean | BackSignal> {
-  const { defaultValue, canGoBack = false } = options;
+  const { isDefaultValue, canGoBack = false } = options;
   const choices: SelectChoice[] = [
     { name: "Yes", value: "yes" },
     { name: "No", value: "no" },
   ];
-  const initialCursor = defaultValue ? 0 : 1;
+  const initialCursor = isDefaultValue ? 0 : 1;
   const selected = await promptSelect(message, { choices, initialCursor, canGoBack });
   if (selected === BACK) {
     return BACK;

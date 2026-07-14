@@ -125,7 +125,7 @@ async function main() {
         summarize: () => (state.shouldInstallAll ? "Yes" : "No"),
         run: async (canGoBack) => {
           const selected = await promptConfirm("Do you want to install all available skills?", {
-            defaultValue: state.shouldInstallAll,
+            isDefaultValue: state.shouldInstallAll,
             canGoBack,
           });
           if (selected === BACK) {
@@ -143,7 +143,7 @@ async function main() {
           const skillChoices: Choice[] = skills.map((s) => ({
             name: s.name,
             value: s.id,
-            checked: state.selectedSkills.includes(s.id),
+            isChecked: state.selectedSkills.includes(s.id),
             description: s.description,
           }));
           const selected = await promptCheckbox("Which skills do you want to install?", {
@@ -180,13 +180,14 @@ async function main() {
 
           const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => {
             const destBaseDir = filteredHarnessMapping[name];
-            const pathExists = destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
-            const defaultChecked = !!pathExists;
+            const isPathExisting =
+              destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
+            const isDefaultChecked = !!isPathExisting;
 
             return {
               name,
               value: name,
-              checked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : defaultChecked,
+              isChecked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : isDefaultChecked,
               description: destBaseDir,
             };
           });
@@ -212,7 +213,7 @@ async function main() {
         run: async (canGoBack) => {
           const selected = await promptConfirm(
             "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
-            { defaultValue: state.shouldCleanupFirst, canGoBack },
+            { isDefaultValue: state.shouldCleanupFirst, canGoBack },
           );
           if (selected === BACK) {
             return BACK;
@@ -250,19 +251,19 @@ async function main() {
       console.log(`${ANSI.BOLD}${ANSI.CYAN}=========================================${ANSI.RESET}\n`);
     }
 
-    function drawSummary(currentIdx: number, activeStepsList: Step[]) {
+    function drawSummary(currentIdx: number, activeSteps: Step[]) {
       for (let i = 0; i < currentIdx; i++) {
-        const step = activeStepsList[i];
+        const step = activeSteps[i];
         console.log(`${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${step.title}:${ANSI.RESET} ${step.summarize()}`);
       }
       if (currentIdx > 0) {
         console.log(""); // Empty line after summaries
       }
 
-      if (currentIdx < activeStepsList.length) {
-        const step = activeStepsList[currentIdx];
+      if (currentIdx < activeSteps.length) {
+        const step = activeSteps[currentIdx];
         console.log(
-          `${ANSI.BOLD}${ANSI.BLUE}[Step ${currentIdx + 1}/${activeStepsList.length}] ${step.title}${ANSI.RESET}\n`,
+          `${ANSI.BOLD}${ANSI.BLUE}[Step ${currentIdx + 1}/${activeSteps.length}] ${step.title}${ANSI.RESET}\n`,
         );
       }
     }
@@ -300,7 +301,7 @@ async function main() {
       }
       if (err instanceof CancelledError) {
         console.log(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}`);
-        process.exit(0);
+        process.exit(130);
       }
       throw err;
     }
@@ -311,34 +312,34 @@ async function main() {
     drawSummary(activeSteps.length, activeSteps);
   } else {
     // Non-interactive mode (arguments parsed or stdin is not TTY)
-    let scopeArg: string | undefined;
-    let cleanupArg: boolean | undefined;
-    let harnessesArg: string[] | undefined;
-    let allHarnessesArg = false;
-    let skillsArg: string[] | undefined;
-    let allSkillsArg = false;
+    let scopeOption: string | undefined;
+    let shouldCleanup: boolean | undefined;
+    let harnessOptions: string[] | undefined;
+    let shouldInstallAllHarnesses = false;
+    let skillOptions: string[] | undefined;
+    let shouldInstallAllSkills = false;
 
     for (const arg of args) {
       if (arg === "--global") {
-        scopeArg = "global";
+        scopeOption = "global";
       } else if (arg === "--local") {
-        scopeArg = "local";
+        scopeOption = "local";
       } else if (arg === "--both") {
-        scopeArg = "both";
+        scopeOption = "both";
       } else if (arg === "--cleanup") {
-        cleanupArg = true;
+        shouldCleanup = true;
       } else if (arg === "--all-harnesses") {
-        allHarnessesArg = true;
+        shouldInstallAllHarnesses = true;
       } else if (arg === "--all-skills") {
-        allSkillsArg = true;
+        shouldInstallAllSkills = true;
       } else if (arg.startsWith("--harnesses=")) {
-        harnessesArg = arg
+        harnessOptions = arg
           .slice("--harnesses=".length)
           .split(",")
           .map((s) => s.trim())
           .filter(Boolean);
       } else if (arg.startsWith("--skills=")) {
-        skillsArg = arg
+        skillOptions = arg
           .slice("--skills=".length)
           .split(",")
           .map((s) => s.trim())
@@ -352,17 +353,17 @@ async function main() {
       }
     }
 
-    state.scope = scopeArg ?? "local";
-    state.shouldCleanupFirst = cleanupArg ?? false;
+    state.scope = scopeOption ?? "local";
+    state.shouldCleanupFirst = shouldCleanup ?? false;
 
     // Resolve skills
-    if (allSkillsArg || (!skillsArg && !hasArgs)) {
+    if (shouldInstallAllSkills || (!skillOptions && !hasArgs)) {
       state.shouldInstallAll = true;
       state.selectedSkills = skills.map((s) => s.id);
-    } else if (skillsArg) {
+    } else if (skillOptions) {
       state.shouldInstallAll = false;
       state.selectedSkills = [];
-      for (const id of skillsArg) {
+      for (const id of skillOptions) {
         if (skills.some((s) => s.id === id)) {
           state.selectedSkills.push(id);
         } else {
@@ -389,12 +390,12 @@ async function main() {
       }
     }
 
-    if (allHarnessesArg) {
+    if (shouldInstallAllHarnesses) {
       state.selectedHarnesses = Object.keys(filteredHarnessMapping);
-    } else if (harnessesArg) {
+    } else if (harnessOptions) {
       state.selectedHarnesses = [];
       const keys = Object.keys(filteredHarnessMapping);
-      for (const inputName of harnessesArg) {
+      for (const inputName of harnessOptions) {
         const matchedKey = keys.find((k) => k.toLowerCase() === inputName.toLowerCase());
         if (matchedKey) {
           state.selectedHarnesses.push(matchedKey);
@@ -411,8 +412,8 @@ async function main() {
       const detectedHarnesses: string[] = [];
       for (const name of Object.keys(filteredHarnessMapping)) {
         const destBaseDir = filteredHarnessMapping[name];
-        const pathExists = destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
-        if (pathExists) {
+        const isPathExisting = destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
+        if (isPathExisting) {
           detectedHarnesses.push(name);
         }
       }

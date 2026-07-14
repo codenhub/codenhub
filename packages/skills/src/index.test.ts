@@ -150,4 +150,25 @@ describe("copyRecursiveSync", () => {
     expect(() => copyRecursiveSync({ src: srcDir, dest: destDir })).toThrow("subdirectory of itself");
     expect(() => copyRecursiveSync({ src: srcDir, dest: srcDir })).toThrow("subdirectory of itself");
   });
+
+  it("should throw if copying directory containing symlink pointing outside the source directory", () => {
+    const srcDir = path.join(tempDir, "src-symlink");
+    const destDir = path.join(tempDir, "dest-symlink");
+    fs.mkdirSync(srcDir, { recursive: true });
+
+    // Create an external directory to point to.
+    const externalDir = path.join(tempDir, "external-dir");
+    fs.mkdirSync(externalDir, { recursive: true });
+    fs.writeFileSync(path.join(externalDir, "sensitive.txt"), "sensitive data");
+
+    // Create a symlink (junction on Windows, dir on Unix) inside srcDir pointing to the external dir.
+    const symlinkPath = path.join(srcDir, "malicious-symlink");
+    try {
+      fs.symlinkSync(externalDir, symlinkPath, "junction");
+    } catch {
+      fs.symlinkSync(externalDir, symlinkPath, "dir");
+    }
+
+    expect(() => copyRecursiveSync({ src: srcDir, dest: destDir })).toThrow("Directory traversal detected");
+  });
 });

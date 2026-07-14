@@ -3,22 +3,22 @@ import { describe, it, expect, vi } from "vitest";
 import { BACK, promptConfirm, promptSelect, promptCheckbox } from "./prompts.js";
 
 describe("promptConfirm", () => {
-  it("should return true when defaultValue is true and stdin is not a TTY", async () => {
+  it("should return true when isDefaultValue is true and stdin is not a TTY", async () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
     try {
-      const result = await promptConfirm("Test message", { defaultValue: true });
+      const result = await promptConfirm("Test message", { isDefaultValue: true });
       expect(result).toBe(true);
     } finally {
       process.stdin.isTTY = origIsTTY;
     }
   });
 
-  it("should return false when defaultValue is false and stdin is not a TTY", async () => {
+  it("should return false when isDefaultValue is false and stdin is not a TTY", async () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
     try {
-      const result = await promptConfirm("Test message", { defaultValue: false });
+      const result = await promptConfirm("Test message", { isDefaultValue: false });
       expect(result).toBe(false);
     } finally {
       process.stdin.isTTY = origIsTTY;
@@ -82,9 +82,9 @@ describe("promptCheckbox", () => {
     process.stdin.isTTY = false as never;
     try {
       const choices = [
-        { name: "A", value: "a", checked: true },
-        { name: "B", value: "b", checked: false },
-        { name: "C", value: "c", checked: true },
+        { name: "A", value: "a", isChecked: true },
+        { name: "B", value: "b", isChecked: false },
+        { name: "C", value: "c", isChecked: true },
       ];
       const result = await promptCheckbox("Pick some", { choices });
       expect(result).toEqual(["a", "c"]);

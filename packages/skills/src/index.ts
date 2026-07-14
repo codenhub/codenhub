@@ -77,6 +77,32 @@ export function parseFrontmatter(content: string): Record<string, string> {
  * @returns Array of {@link Skill} objects. Returns an empty array when
  *   `srcDir` does not exist.
  */
+/**
+ * Internal helper to read the beginning of a file.
+ */
+function readFileHeader(filePath: string, bytesCount = 4096): string {
+  const buffer = Buffer.alloc(bytesCount);
+  const fd = fs.openSync(filePath, "r");
+  try {
+    const bytesRead = fs.readSync(fd, buffer, 0, bytesCount, 0);
+    return buffer.toString("utf8", 0, bytesRead);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+/**
+ * Reads all valid skills from `srcDir`.
+ *
+ * A subdirectory is treated as a skill when it contains a `SKILL.md`
+ * file. Name and description are read from the file's YAML
+ * frontmatter.
+ *
+ * @param srcDir - Absolute path to the directory containing skill
+ *   subdirectories.
+ * @returns Array of {@link Skill} objects. Returns an empty array when
+ *   `srcDir` does not exist.
+ */
 export function getSkills(srcDir: string): Skill[] {
   if (!fs.existsSync(srcDir)) {
     return [];
@@ -90,7 +116,7 @@ export function getSkills(srcDir: string): Skill[] {
       const itemPath = path.join(srcDir, entry.name);
       const skillMdPath = path.join(itemPath, "SKILL.md");
       if (fs.existsSync(skillMdPath)) {
-        const content = fs.readFileSync(skillMdPath, "utf8");
+        const content = readFileHeader(skillMdPath);
         const meta = parseFrontmatter(content);
         skills.push({
           id: entry.name,
@@ -117,7 +143,8 @@ export function getSkills(srcDir: string): Skill[] {
  * depth, regardless of where it appears in the tree.
  *
  * @param options - Copy configuration options.
- * @throws {Error} When source does not exist, or target is a subdirectory of source.
+ * @throws {Error} When source does not exist, target is a subdirectory of source,
+ *   or directory traversal is detected.
  */
 export function copyRecursiveSync(options: CopyRecursiveOptions): void {
   const { src, dest, ignoreList = [] } = options;
@@ -140,7 +167,12 @@ export function copyRecursiveSync(options: CopyRecursiveOptions): void {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    copyDirHelper({ srcDir: src, destDir: dest, ignoreList });
+    copyDirectoryInternal({
+      srcDir: src,
+      destDir: dest,
+      resolvedSrc,
+      ignoreList,
+    });
   } else {
     const destDir = path.dirname(dest);
     if (!fs.existsSync(destDir)) {
@@ -153,13 +185,14 @@ export function copyRecursiveSync(options: CopyRecursiveOptions): void {
 /**
  * Internal helper to copy directory contents without redundant checks.
  */
-function copyDirHelper(options: {
+function copyDirectoryInternal(options: {
   srcDir: string;
   destDir: string;
+  resolvedSrc: string;
   ignoreList: string[];
   visited?: Set<string>;
 }): void {
-  const { srcDir, destDir, ignoreList, visited = new Set<string>() } = options;
+  const { srcDir, destDir, resolvedSrc, ignoreList, visited = new Set<string>() } = options;
 
   const realSrcDir = fs.realpathSync(srcDir);
   if (visited.has(realSrcDir)) {
@@ -175,12 +208,29 @@ function copyDirHelper(options: {
     const srcChild = path.join(srcDir, entry.name);
     const destChild = path.join(destDir, entry.name);
 
+    if (entry.isSymbolicLink()) {
+      const realChild = fs.realpathSync(srcChild);
+      const relativeToSrc = path.relative(resolvedSrc, realChild);
+      const isOutside = relativeToSrc.startsWith("..") || path.isAbsolute(relativeToSrc);
+      if (isOutside) {
+        throw new Error(
+          `Directory traversal detected: "${srcChild}" resolves to "${realChild}" which is outside "${resolvedSrc}"`,
+        );
+      }
+    }
+
     const stats = fs.statSync(srcChild);
     if (stats.isDirectory()) {
       if (!fs.existsSync(destChild)) {
         fs.mkdirSync(destChild);
       }
-      copyDirHelper({ srcDir: srcChild, destDir: destChild, ignoreList, visited });
+      copyDirectoryInternal({
+        srcDir: srcChild,
+        destDir: destChild,
+        resolvedSrc,
+        ignoreList,
+        visited,
+      });
     } else {
       fs.copyFileSync(srcChild, destChild);
     }
