@@ -25,6 +25,7 @@
   },
   "scripts": {
     "build": "tsdown src/cli.ts --format esm --clean --no-fixed-extension",
+    "cli": "pnpm build && node dist/cli.js",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/skills version dist-tags time --json && npm dist-tag ls @codenhub/skills && npm access get status @codenhub/skills",
     "status:pack": "npm pack --dry-run",
