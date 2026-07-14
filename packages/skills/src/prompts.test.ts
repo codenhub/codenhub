@@ -46,6 +46,24 @@ describe("promptSelect", () => {
     expect(() => promptSelect("Test", { choices: [] })).toThrow("selectPrompt: choices must not be empty");
   });
 
+  it("should clamp initialCursor if it is out of bounds when stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const choices = [
+        { name: "Choice A", value: "a" },
+        { name: "Choice B", value: "b" },
+      ];
+      const resultTooLarge = await promptSelect("Test select", { choices, initialCursor: 10 });
+      expect(resultTooLarge).toBe("b");
+
+      const resultNegative = await promptSelect("Test select", { choices, initialCursor: -5 });
+      expect(resultNegative).toBe("a");
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
+  });
+
   it("should resolve BACK on backspace when canGoBack is true", async () => {
     const origIsTTY = process.stdin.isTTY;
     // setRawMode doesn't exist on non-TTY stdin in test environments.

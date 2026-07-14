@@ -124,25 +124,41 @@ async function main() {
       } else if (arg === "--all-skills") {
         shouldInstallAllSkills = true;
       } else if (arg.startsWith("--harnesses=")) {
+        const rawList = arg.slice("--harnesses=".length).trim();
+        if (rawList === "") {
+          console.error(`${ANSI.RED}Error: --harnesses requires a non-empty list of harnesses.${ANSI.RESET}`);
+          process.exit(1);
+        }
         harnessOptions = Array.from(
           new Set(
-            arg
-              .slice("--harnesses=".length)
+            rawList
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
           ),
         );
+        if (harnessOptions.length === 0) {
+          console.error(`${ANSI.RED}Error: --harnesses requires a non-empty list of harnesses.${ANSI.RESET}`);
+          process.exit(1);
+        }
       } else if (arg.startsWith("--skills=")) {
+        const rawList = arg.slice("--skills=".length).trim();
+        if (rawList === "") {
+          console.error(`${ANSI.RED}Error: --skills requires a non-empty list of skill IDs.${ANSI.RESET}`);
+          process.exit(1);
+        }
         skillOptions = Array.from(
           new Set(
-            arg
-              .slice("--skills=".length)
+            rawList
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
           ),
         );
+        if (skillOptions.length === 0) {
+          console.error(`${ANSI.RED}Error: --skills requires a non-empty list of skill IDs.${ANSI.RESET}`);
+          process.exit(1);
+        }
       } else {
         console.error(`${ANSI.RED}Unknown argument: ${arg}${ANSI.RESET}`);
         console.error(
@@ -246,6 +262,8 @@ async function main() {
 
   console.log(`${ANSI.BOLD}Installing skills...${ANSI.RESET}\n`);
 
+  let hasFailures = false;
+
   for (const harness of state.selectedHarnesses) {
     const destBaseDir = HARNESS_MAPPING[harness];
     if (!destBaseDir) {
@@ -269,10 +287,16 @@ async function main() {
         });
         console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Copied: ${skill.name}`);
       } catch (err: unknown) {
+        hasFailures = true;
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed copying ${skill.name}: ${msg}`);
       }
     }
+  }
+
+  if (hasFailures) {
+    console.error(`\n${ANSI.RED}${ANSI.BOLD}✘ Some skills failed to install. Check the output above.${ANSI.RESET}\n`);
+    process.exit(1);
   }
 
   console.log(`\n${ANSI.GREEN}${ANSI.BOLD}✔ All selected skills successfully installed/updated!${ANSI.RESET}\n`);

@@ -258,11 +258,13 @@ export function promptSelect(message: string, options: SelectOptions): Promise<s
     throw new Error("selectPrompt: choices must not be empty");
   }
 
+  const validatedCursor = Math.max(0, Math.min(initialCursor, choices.length - 1));
+
   if (!process.stdin.isTTY) {
-    return Promise.resolve(choices[initialCursor]?.value ?? choices[0].value);
+    return Promise.resolve(choices[validatedCursor].value);
   }
 
-  let cursor = initialCursor;
+  let cursor = validatedCursor;
 
   function render(isFirst = false) {
     const { stdout } = process;
