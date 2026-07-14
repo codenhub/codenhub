@@ -13,6 +13,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/error`: Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
 - `packages/router`: Small browser router with DOM page helpers for TypeScript apps.
+- `packages/skills`: Curated collection of AI agent skills with a built-in installer.
 - `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
 - `packages/styles`: CSS-only design tokens, base styles, and composable UI helper classes.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.

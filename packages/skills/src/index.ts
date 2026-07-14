@@ -58,7 +58,8 @@ const ANSI = {
  * Parses frontmatter metadata from markdown content.
  */
 export function parseFrontmatter(content: string): Record<string, string> {
-  const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
+  const normalized = content.replace(/^\uFEFF/, "");
+  const match = normalized.match(/^---\r?\n([\s\S]+?)\r?\n---/);
   const metadata: Record<string, string> = {};
   if (!match) {
     return metadata;
@@ -111,12 +112,17 @@ export function getSkills(srcDir: string): Skill[] {
   return skills;
 }
 
+export interface CopyOptions {
+  ignoreList?: string[];
+}
+
 /**
  * Recursively copies files and directories, ignoring specified file/folder names.
  */
-export function copyRecursiveSync(src: string, dest: string, ignoreList: string[] = []): void {
-  const exists = fs.existsSync(src);
-  if (!exists) {
+export function copyRecursiveSync(src: string, dest: string, options: CopyOptions = {}): void {
+  const { ignoreList = [] } = options;
+  const doesExist = fs.existsSync(src);
+  if (!doesExist) {
     throw new Error(`Source path "${src}" does not exist`);
   }
   const stats = fs.statSync(src);
@@ -130,7 +136,7 @@ export function copyRecursiveSync(src: string, dest: string, ignoreList: string[
       if (ignoreList.includes(childItemName)) {
         return;
       }
-      copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName), ignoreList);
+      copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName), options);
     });
   } else {
     const destDir = path.dirname(dest);
@@ -147,7 +153,7 @@ export function copyRecursiveSync(src: string, dest: string, ignoreList: string[
 export function checkboxPrompt(message: string, options: CheckboxOptions): Promise<string[] | "__BACK__"> {
   const { choices, canGoBack = false } = options;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const stdout = process.stdout;
     if (!process.stdin.isTTY) {
       resolve(choices.filter((c) => c.checked).map((c) => c.value));
@@ -186,8 +192,8 @@ export function checkboxPrompt(message: string, options: CheckboxOptions): Promi
     function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
       if (key && key.ctrl && key.name === "c") {
         cleanup();
-        stdout.write(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}\n`);
-        process.exit(0);
+        reject(new Error("Cancelled"));
+        return;
       }
 
       if (!key) {
@@ -270,7 +276,7 @@ export async function confirmPrompt(message: string, options: ConfirmOptions): P
 export function selectPrompt(message: string, options: SelectOptions): Promise<string> {
   const { choices, initialCursor = 0, canGoBack = false } = options;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const stdout = process.stdout;
     if (!process.stdin.isTTY) {
       resolve(choices[initialCursor]?.value ?? choices[0].value);
@@ -308,8 +314,8 @@ export function selectPrompt(message: string, options: SelectOptions): Promise<s
     function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
       if (key && key.ctrl && key.name === "c") {
         cleanup();
-        stdout.write(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}\n`);
-        process.exit(0);
+        reject(new Error("Cancelled"));
+        return;
       }
 
       if (!key) {

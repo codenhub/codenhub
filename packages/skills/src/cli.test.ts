@@ -101,7 +101,7 @@ describe("Skills Helper functions", () => {
       fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "content 2");
       fs.writeFileSync(path.join(srcDir, "ignored-dir", "file3.txt"), "content 3");
 
-      copyRecursiveSync(srcDir, destDir, ["ignored-dir"]);
+      copyRecursiveSync(srcDir, destDir, { ignoreList: ["ignored-dir"] });
 
       expect(fs.existsSync(path.join(destDir, "file1.txt"))).toBe(true);
       expect(fs.existsSync(path.join(destDir, "subdir", "file2.txt"))).toBe(true);

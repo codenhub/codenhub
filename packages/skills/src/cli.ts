@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -212,7 +213,7 @@ async function main() {
   }
 
   function clearScreen() {
-    process.stdout.write("\x1Bc");
+    process.stdout.write("\x1b[2J\x1b[H");
   }
 
   function drawHeader() {
@@ -259,27 +260,35 @@ async function main() {
   let activeSteps = getActiveSteps();
   let currentIdx = 0;
 
-  while (currentIdx < activeSteps.length) {
-    clearScreen();
-    drawHeader();
-    drawSummary(currentIdx, activeSteps);
+  try {
+    while (currentIdx < activeSteps.length) {
+      clearScreen();
+      drawHeader();
+      drawSummary(currentIdx, activeSteps);
 
-    const step = activeSteps[currentIdx];
-    const canGoBack = currentIdx > 0;
+      const step = activeSteps[currentIdx];
+      const canGoBack = currentIdx > 0;
 
-    // eslint-disable-next-line no-await-in-loop
-    /* oxlint-disable no-await-in-loop */
-    const success = await step.run(canGoBack);
+      // eslint-disable-next-line no-await-in-loop
+      /* oxlint-disable no-await-in-loop */
+      const isSuccess = await step.run(canGoBack);
 
-    const nextActiveSteps = getActiveSteps();
-    if (success === "__BACK__") {
-      const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
-      currentIdx = newIdx - 1;
-    } else {
-      const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
-      currentIdx = newIdx + 1;
+      const nextActiveSteps = getActiveSteps();
+      if (isSuccess === "__BACK__") {
+        const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
+        currentIdx = newIdx - 1;
+      } else {
+        const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
+        currentIdx = newIdx + 1;
+      }
+      activeSteps = nextActiveSteps;
     }
-    activeSteps = nextActiveSteps;
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "Cancelled") {
+      console.log(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}`);
+      process.exit(0);
+    }
+    throw err;
   }
 
   // Clear one last time and show final completed summary
@@ -324,7 +333,7 @@ async function main() {
 
       const destSkillDir = path.join(destBaseDir, skillId);
       try {
-        copyRecursiveSync(skill.path, destSkillDir, isCodex ? [] : [EXCLUDE_FOLDER_AGENTS]);
+        copyRecursiveSync(skill.path, destSkillDir, { ignoreList: isCodex ? [] : [EXCLUDE_FOLDER_AGENTS] });
         console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Copied: ${skill.name}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

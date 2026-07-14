@@ -70,40 +70,40 @@ import {
 
 ### Programmatic Functions
 
-#### [parseFrontmatter](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L48)
+#### [parseFrontmatter](./src/index.ts#L60)
 
 Parses YAML frontmatter blocks bounded by `---` from a markdown file string. Automatically strips surrounding single and double quotes from parsed values.
 
 - **Signature**: `parseFrontmatter(content: string): Record<string, string>`
 - **Returns**: Key-value mapping of metadata attributes.
 
-#### [getSkills](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L70)
+#### [getSkills](./src/index.ts#L85)
 
 Reads and gathers all valid skills defined within a target directory. A subdirectory is treated as a valid skill if it contains a `SKILL.md` file.
 
 - **Signature**: `getSkills(srcDir: string): Skill[]`
-- **Returns**: Array of [Skill](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L5) objects.
+- **Returns**: Array of [Skill](./src/index.ts#L5) objects.
 
-#### [copyRecursiveSync](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L102)
+#### [copyRecursiveSync](./src/index.ts#L122)
 
-Recursively copies files and directories. Supports an exclusion filter list.
+Recursively copies files and directories. Supports an exclusion filter list options object.
 
-- **Signature**: `copyRecursiveSync(src: string, dest: string, ignoreList?: string[]): void`
+- **Signature**: `copyRecursiveSync(src: string, dest: string, options?: CopyOptions): void`
 - **Errors**: Throws if `src` path does not exist.
 
-#### [confirmPrompt](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L225)
+#### [confirmPrompt](./src/index.ts#L254)
 
 Prompts user with a yes/no option in TTY terminal environments.
 
 - **Signature**: `confirmPrompt(message: string, options: ConfirmOptions): Promise<boolean | "__BACK__">`
 
-#### [selectPrompt](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L249)
+#### [selectPrompt](./src/index.ts#L275)
 
 Prompts user with a single selection menu in TTY terminal environments.
 
 - **Signature**: `selectPrompt(message: string, options: SelectOptions): Promise<string>`
 
-#### [checkboxPrompt](file:///c:/Users/gustavo/projects/codenhub/packages/skills/src/index.ts#L127)
+#### [checkboxPrompt](./src/index.ts#L152)
 
 Prompts user with a multi-selection checkbox menu in TTY terminal environments.
 
