@@ -92,7 +92,12 @@ function runPrompt<T>(opts: PromptRunOptions<T>): Promise<T> {
       if (!key) {
         return;
       }
-      opts.onKey(key, resolve, reject, cleanup);
+      try {
+        opts.onKey(key, resolve, reject, cleanup);
+      } catch (err) {
+        cleanup();
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
     }
 
     process.stdout.write(ANSI.HIDE_CURSOR);
@@ -106,7 +111,12 @@ function runPrompt<T>(opts: PromptRunOptions<T>): Promise<T> {
     readline.emitKeypressEvents(process.stdin);
     process.stdin.on("keypress", onKeypress);
 
-    opts.initialRender();
+    try {
+      opts.initialRender();
+    } catch (err) {
+      cleanup();
+      reject(err instanceof Error ? err : new Error(String(err)));
+    }
   });
 }
 

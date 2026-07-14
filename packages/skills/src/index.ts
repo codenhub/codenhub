@@ -18,7 +18,11 @@ export interface Skill {
 /**
  * Options for {@link copyRecursiveSync}.
  */
-export interface CopyOptions {
+export interface CopyRecursiveOptions {
+  /** Absolute path to the source file or directory. */
+  src: string;
+  /** Absolute path to the copy destination. */
+  dest: string;
   /**
    * Base names of files or directories to exclude at every depth of
    * the copy. Only base names are matched — path segments are not
@@ -102,33 +106,41 @@ export function getSkills(srcDir: string): Skill[] {
 }
 
 /**
- * Recursively copies `src` to `dest`.
+ * Recursively copies a file or directory.
  *
- * When `src` is a directory, its contents are copied into `dest`,
- * creating `dest` and any missing parent directories as needed. When
- * `src` is a file, it is copied directly to `dest`.
+ * When the source is a directory, its contents are copied into destination,
+ * creating destination and any missing parent directories as needed. When
+ * the source is a file, it is copied directly to destination.
  *
  * The `ignoreList` option filters by **base name only** — not by
  * path. Passing `"agents"` skips every entry named `agents` at any
  * depth, regardless of where it appears in the tree.
  *
- * @param src - Absolute path to the source file or directory.
- * @param dest - Absolute path to the copy destination.
- * @param options - Optional copy configuration.
- * @throws {Error} When `src` does not exist.
+ * @param options - Copy configuration options.
+ * @throws {Error} When source does not exist, or target is a subdirectory of source.
  */
-export function copyRecursiveSync(src: string, dest: string, options: CopyOptions = {}): void {
-  const { ignoreList = [] } = options;
+export function copyRecursiveSync(options: CopyRecursiveOptions): void {
+  const { src, dest, ignoreList = [] } = options;
   if (!fs.existsSync(src)) {
     throw new Error(`Source path "${src}" does not exist`);
   }
+
+  // Guard against self-copying recursion
+  const resolvedSrc = path.resolve(src);
+  const resolvedDest = path.resolve(dest);
+  const relative = path.relative(resolvedSrc, resolvedDest);
+  const isSubdir = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  if (isSubdir) {
+    throw new Error(`Cannot copy source "${src}" to a subdirectory of itself "${dest}"`);
+  }
+
   const stats = fs.statSync(src);
 
   if (stats.isDirectory()) {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    copyDirHelper(src, dest, ignoreList);
+    copyDirHelper({ srcDir: src, destDir: dest, ignoreList });
   } else {
     const destDir = path.dirname(dest);
     if (!fs.existsSync(destDir)) {
@@ -141,7 +153,20 @@ export function copyRecursiveSync(src: string, dest: string, options: CopyOption
 /**
  * Internal helper to copy directory contents without redundant checks.
  */
-function copyDirHelper(srcDir: string, destDir: string, ignoreList: string[]): void {
+function copyDirHelper(options: {
+  srcDir: string;
+  destDir: string;
+  ignoreList: string[];
+  visited?: Set<string>;
+}): void {
+  const { srcDir, destDir, ignoreList, visited = new Set<string>() } = options;
+
+  const realSrcDir = fs.realpathSync(srcDir);
+  if (visited.has(realSrcDir)) {
+    return;
+  }
+  visited.add(realSrcDir);
+
   const entries = fs.readdirSync(srcDir, { withFileTypes: true });
   for (const entry of entries) {
     if (ignoreList.includes(entry.name)) {
@@ -149,11 +174,13 @@ function copyDirHelper(srcDir: string, destDir: string, ignoreList: string[]): v
     }
     const srcChild = path.join(srcDir, entry.name);
     const destChild = path.join(destDir, entry.name);
-    if (entry.isDirectory()) {
+
+    const stats = fs.statSync(srcChild);
+    if (stats.isDirectory()) {
       if (!fs.existsSync(destChild)) {
         fs.mkdirSync(destChild);
       }
-      copyDirHelper(srcChild, destChild, ignoreList);
+      copyDirHelper({ srcDir: srcChild, destDir: destChild, ignoreList, visited });
     } else {
       fs.copyFileSync(srcChild, destChild);
     }

@@ -93,7 +93,7 @@ describe("copyRecursiveSync", () => {
     fs.writeFileSync(path.join(srcDir, "file1.txt"), "content 1");
     fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "content 2");
 
-    copyRecursiveSync(srcDir, destDir);
+    copyRecursiveSync({ src: srcDir, dest: destDir });
 
     expect(fs.existsSync(path.join(destDir, "file1.txt"))).toBe(true);
     expect(fs.readFileSync(path.join(destDir, "file1.txt"), "utf8")).toBe("content 1");
@@ -113,7 +113,7 @@ describe("copyRecursiveSync", () => {
     fs.writeFileSync(path.join(destDir, "file1.txt"), "old content 1");
     fs.writeFileSync(path.join(destDir, "subdir", "file2.txt"), "old content 2");
 
-    copyRecursiveSync(srcDir, destDir);
+    copyRecursiveSync({ src: srcDir, dest: destDir });
 
     expect(fs.readFileSync(path.join(destDir, "file1.txt"), "utf8")).toBe("new content 1");
     expect(fs.readFileSync(path.join(destDir, "subdir", "file2.txt"), "utf8")).toBe("new content 2");
@@ -129,7 +129,7 @@ describe("copyRecursiveSync", () => {
     fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "content 2");
     fs.writeFileSync(path.join(srcDir, "ignored-dir", "file3.txt"), "content 3");
 
-    copyRecursiveSync(srcDir, destDir, { ignoreList: ["ignored-dir"] });
+    copyRecursiveSync({ src: srcDir, dest: destDir, ignoreList: ["ignored-dir"] });
 
     expect(fs.existsSync(path.join(destDir, "file1.txt"))).toBe(true);
     expect(fs.existsSync(path.join(destDir, "subdir", "file2.txt"))).toBe(true);
@@ -140,6 +140,14 @@ describe("copyRecursiveSync", () => {
   it("should throw if source path does not exist", () => {
     const nonExistentSrc = path.join(tempDir, "non-existent");
     const destDir = path.join(tempDir, "dest-error");
-    expect(() => copyRecursiveSync(nonExistentSrc, destDir)).toThrow("does not exist");
+    expect(() => copyRecursiveSync({ src: nonExistentSrc, dest: destDir })).toThrow("does not exist");
+  });
+
+  it("should throw if attempting to copy directory to itself or its subdirectory", () => {
+    const srcDir = path.join(tempDir, "src-recursion");
+    fs.mkdirSync(srcDir, { recursive: true });
+    const destDir = path.join(srcDir, "subdir");
+    expect(() => copyRecursiveSync({ src: srcDir, dest: destDir })).toThrow("subdirectory of itself");
+    expect(() => copyRecursiveSync({ src: srcDir, dest: srcDir })).toThrow("subdirectory of itself");
   });
 });
