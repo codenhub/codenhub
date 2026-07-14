@@ -16,7 +16,7 @@ The package includes the following custom AI agent skills:
 - **caveman-commit**: Generate clean, terse Conventional Commit messages.
 - **caveman-review**: Provide ultra-compressed, actionable one-line code review findings.
 
-## How to Install
+## Installation
 
 Run the interactive installer using `pnpm` or `npx` to copy the skills into your desired global or workspace directories:
 

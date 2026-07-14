@@ -35,4 +35,4 @@ All skills have been reviewed and confirmed as adapted from one of three upstrea
 - [x] Record the upstream license and verify redistribution is allowed.
 - [x] Add required copyright and license text to `../NOTICE`.
 - [x] Add `skills/<skill-name>/NOTICE` when attribution should travel with the installed skill folder.
-- [ ] Verify per-skill installer copies `NOTICE` files alongside `SKILL.md` when installing a skill.
+- [x] Verify per-skill installer copies `NOTICE` files alongside `SKILL.md` when installing a skill.

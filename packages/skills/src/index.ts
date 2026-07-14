@@ -66,20 +66,6 @@ export function parseFrontmatter(content: string): Record<string, string> {
 }
 
 /**
- * Internal helper to read the beginning of a file.
- */
-function readFileHeader(filePath: string, bytesCount = 4096): string {
-  const buffer = Buffer.alloc(bytesCount);
-  const fd = fs.openSync(filePath, "r");
-  try {
-    const bytesRead = fs.readSync(fd, buffer, 0, bytesCount, 0);
-    return buffer.toString("utf8", 0, bytesRead);
-  } finally {
-    fs.closeSync(fd);
-  }
-}
-
-/**
  * Reads all valid skills from `srcDir`.
  *
  * A subdirectory is treated as a skill when it contains a `SKILL.md`
@@ -105,7 +91,7 @@ export function getSkills(srcDir: string): Skill[] {
       const itemPath = path.join(srcDir, entry.name);
       const skillMdPath = path.join(itemPath, "SKILL.md");
       if (fs.existsSync(skillMdPath)) {
-        const content = readFileHeader(skillMdPath);
+        const content = fs.readFileSync(skillMdPath, "utf8");
         const meta = parseFrontmatter(content);
         skills.push({
           id: entry.name,
@@ -142,7 +128,7 @@ export function copyRecursiveSync(options: CopyRecursiveOptions): void {
   }
 
   // Guard against self-copying recursion
-  const resolvedSrc = path.resolve(src);
+  const resolvedSrc = fs.realpathSync(src);
   const resolvedDest = path.resolve(dest);
   const relative = path.relative(resolvedSrc, resolvedDest);
   const isSubdir = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
