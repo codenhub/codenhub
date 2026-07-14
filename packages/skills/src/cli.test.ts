@@ -113,6 +113,17 @@ describe("Skills Helper functions", () => {
         process.stdin.isTTY = origIsTTY;
       }
     });
+
+    it("should call selectPrompt with default index based on defaultValue", async () => {
+      const origIsTTY = process.stdin.isTTY;
+      process.stdin.isTTY = false;
+      try {
+        expect(await confirmPrompt("Test message", true)).toBe(true);
+        expect(await confirmPrompt("Test message", false)).toBe(false);
+      } finally {
+        process.stdin.isTTY = origIsTTY;
+      }
+    });
   });
 
   describe("selectPrompt", () => {
@@ -128,6 +139,37 @@ describe("Skills Helper functions", () => {
         expect(result).toBe("a");
       } finally {
         process.stdin.isTTY = origIsTTY;
+      }
+    });
+
+    it("should return __BACK__ on backspace when canGoBack is true", async () => {
+      const origIsTTY = process.stdin.isTTY;
+      process.stdin.isTTY = true;
+      const origSetRawMode = process.stdin.setRawMode;
+      const origPause = process.stdin.pause;
+      const origResume = process.stdin.resume;
+      const origWrite = process.stdout.write;
+
+      process.stdin.setRawMode = () => process.stdin;
+      process.stdin.pause = () => process.stdin;
+      process.stdin.resume = () => process.stdin;
+      process.stdout.write = () => true;
+
+      try {
+        const choices = [
+          { name: "Choice A", value: "a" },
+          { name: "Choice B", value: "b" },
+        ];
+        const promise = selectPrompt("Test select", choices, 0, true);
+        process.stdin.emit("keypress", undefined, { name: "backspace" });
+        const result = await promise;
+        expect(result).toBe("__BACK__");
+      } finally {
+        process.stdin.isTTY = origIsTTY;
+        process.stdin.setRawMode = origSetRawMode;
+        process.stdin.pause = origPause;
+        process.stdin.resume = origResume;
+        process.stdout.write = origWrite;
       }
     });
   });
