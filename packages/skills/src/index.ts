@@ -57,8 +57,14 @@ export function parseFrontmatter(content: string): Record<string, string> {
     if (colonIndex !== -1) {
       const key = line.slice(0, colonIndex).trim();
       const rawValue = line.slice(colonIndex + 1).trim();
-      // Strip matching surrounding quotes when present.
-      const value = rawValue.replace(/^(['"])([\s\S]*)\1$/, "$2");
+      // Strip matching surrounding quotes when present, or strip trailing comments.
+      let value = rawValue;
+      const quoteMatch = rawValue.match(/^(['"])([\s\S]*?)\1/);
+      if (quoteMatch) {
+        value = quoteMatch[2];
+      } else {
+        value = rawValue.split("#")[0].trim();
+      }
       metadata[key] = value;
     }
   }

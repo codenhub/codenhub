@@ -1,70 +1,25 @@
 #!/usr/bin/env node
 import * as fs from "fs";
-import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-import { getSkills, copyRecursiveSync } from "./index.js";
 import {
-  ANSI,
-  BACK,
-  CancelledError,
-  promptCheckbox,
-  promptConfirm,
-  promptSelect,
-  type BackSignal,
-  type Choice,
-  type SelectChoice,
-} from "./prompts.js";
+  CODEX_IDENTIFIER,
+  EXCLUDE_FOLDER_AGENTS,
+  HARNESS_MAPPING,
+  PromptExitError,
+  clearScreen,
+  drawHeader,
+  drawSummary,
+  type State,
+} from "./cli-helpers.js";
+import { createWizardSteps, getActiveSteps } from "./cli-steps.js";
+import { getSkills, copyRecursiveSync } from "./index.js";
+import { ANSI, BACK, CancelledError } from "./prompts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Find skills directory relative to build output.
 const SKILLS_SRC_DIR = path.resolve(__dirname, "../skills");
-
-const HOME = os.homedir();
-
-const HARNESS_MAPPING: Record<string, string> = {
-  "Antigravity Global": path.join(HOME, ".gemini/config/skills"),
-  "Antigravity Workspace": path.resolve("./.agents/skills"),
-  "OpenCode Global": path.join(HOME, ".config/opencode/skills"),
-  "OpenCode Workspace": path.resolve("./.opencode/skills"),
-  "Claude Global": path.join(HOME, ".claude/skills"),
-  "Claude Workspace": path.resolve("./.claude/skills"),
-  "Codex Global": path.join(HOME, ".codex/skills"),
-  "Codex Workspace": path.resolve("./.codex/skills"),
-};
-
-const CODEX_IDENTIFIER = "Codex";
-const EXCLUDE_FOLDER_AGENTS = "agents";
-
-/**
- * Thrown when the user makes a selection that has no valid items,
- * indicating the wizard should exit cleanly instead of continuing.
- */
-class PromptExitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "PromptExitError";
-  }
-}
-
-interface State {
-  scope: string;
-  shouldInstallAll: boolean;
-  selectedSkills: string[];
-  selectedHarnesses: string[];
-  shouldCleanupFirst: boolean;
-}
-
-interface Step {
-  id: string;
-  title: string;
-  /** Returns the human-readable summary for the completed-steps header. */
-  summarize: () => string;
-  run: (canGoBack: boolean) => Promise<boolean | BackSignal>;
-}
 
 async function main() {
   const skills = getSkills(SKILLS_SRC_DIR);
@@ -73,7 +28,6 @@ async function main() {
     process.exit(1);
   }
 
-  // Parse arguments
   const args = process.argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) {
     console.log(
@@ -91,6 +45,7 @@ async function main() {
     );
     process.exit(0);
   }
+
   const hasArgs = args.length > 0;
   const isInteractive = process.stdin.isTTY && !hasArgs;
 
@@ -103,188 +58,8 @@ async function main() {
   };
 
   if (isInteractive) {
-    const steps: Step[] = [
-      {
-        id: "scope",
-        title: "Select Scope",
-        summarize: () => {
-          if (state.scope === "global") {
-            return "Globally (user home directory)";
-          }
-          if (state.scope === "both") {
-            return "Both";
-          }
-          return "Locally (project workspace)";
-        },
-        run: async (canGoBack) => {
-          const scopeChoices: SelectChoice[] = [
-            { name: "Locally (project workspace)", value: "local" },
-            { name: "Globally (user home directory)", value: "global" },
-            { name: "Both", value: "both" },
-          ];
-          const defaultIndex = scopeChoices.findIndex((c) => c.value === state.scope);
-          const selected = await promptSelect("Where do you want to install the skills?", {
-            choices: scopeChoices,
-            initialCursor: defaultIndex !== -1 ? defaultIndex : 0,
-            canGoBack,
-          });
-          if (selected === BACK) {
-            return BACK;
-          }
-          state.scope = selected;
-          return true;
-        },
-      },
-      {
-        id: "shouldInstallAll",
-        title: "All Skills Option",
-        summarize: () => (state.shouldInstallAll ? "Yes" : "No"),
-        run: async (canGoBack) => {
-          const selected = await promptConfirm("Do you want to install all available skills?", {
-            isDefaultValue: state.shouldInstallAll,
-            canGoBack,
-          });
-          if (selected === BACK) {
-            return BACK;
-          }
-          state.shouldInstallAll = selected;
-          return true;
-        },
-      },
-      {
-        id: "selectSkills",
-        title: "Select Individual Skills",
-        summarize: () => state.selectedSkills.join(", "),
-        run: async (canGoBack) => {
-          const skillChoices: Choice[] = skills.map((s) => ({
-            name: s.name,
-            value: s.id,
-            isChecked: state.selectedSkills.includes(s.id),
-            description: s.description,
-          }));
-          const selected = await promptCheckbox("Which skills do you want to install?", {
-            choices: skillChoices,
-            canGoBack,
-          });
-          if (selected === BACK) {
-            return BACK;
-          }
-          if (selected.length === 0) {
-            throw new PromptExitError("No skills selected. Exiting.");
-          }
-          state.selectedSkills = selected;
-          return true;
-        },
-      },
-      {
-        id: "harnesses",
-        title: "Select Harnesses",
-        summarize: () => state.selectedHarnesses.join(", "),
-        run: async (canGoBack) => {
-          const filteredHarnessMapping: Record<string, string> = {};
-          for (const name of Object.keys(HARNESS_MAPPING)) {
-            const isGlobal = name.includes("Global");
-            const isWorkspace = name.includes("Workspace");
-            if (
-              state.scope === "both" ||
-              (state.scope === "global" && isGlobal) ||
-              (state.scope === "local" && isWorkspace)
-            ) {
-              filteredHarnessMapping[name] = HARNESS_MAPPING[name];
-            }
-          }
-
-          const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => {
-            const destBaseDir = filteredHarnessMapping[name];
-            const isPathExisting =
-              destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
-            const isDefaultChecked = !!isPathExisting;
-
-            return {
-              name,
-              value: name,
-              isChecked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : isDefaultChecked,
-              description: destBaseDir,
-            };
-          });
-
-          const selected = await promptCheckbox("Which harnesses do you want to install to?", {
-            choices: harnessChoices,
-            canGoBack,
-          });
-          if (selected === BACK) {
-            return BACK;
-          }
-          if (selected.length === 0) {
-            throw new PromptExitError("No harnesses selected. Exiting.");
-          }
-          state.selectedHarnesses = selected;
-          return true;
-        },
-      },
-      {
-        id: "cleanup",
-        title: "Clean Up Option",
-        summarize: () => (state.shouldCleanupFirst ? "Yes" : "No"),
-        run: async (canGoBack) => {
-          const selected = await promptConfirm(
-            "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
-            { isDefaultValue: state.shouldCleanupFirst, canGoBack },
-          );
-          if (selected === BACK) {
-            return BACK;
-          }
-          state.shouldCleanupFirst = selected;
-          return true;
-        },
-      },
-    ];
-
-    function getStepById(id: string): Step {
-      const step = steps.find((s) => s.id === id);
-      if (!step) {
-        throw new Error(`Step "${id}" not found`);
-      }
-      return step;
-    }
-
-    function getActiveSteps(): Step[] {
-      const active: Step[] = [getStepById("scope"), getStepById("shouldInstallAll")];
-      if (!state.shouldInstallAll) {
-        active.push(getStepById("selectSkills"));
-      }
-      active.push(getStepById("harnesses"), getStepById("cleanup"));
-      return active;
-    }
-
-    function clearScreen() {
-      process.stdout.write("\x1b[2J\x1b[H");
-    }
-
-    function drawHeader() {
-      console.log(`${ANSI.BOLD}${ANSI.CYAN}=========================================${ANSI.RESET}`);
-      console.log(`${ANSI.BOLD}${ANSI.CYAN}    Codenhub AI Agent Skills Installer${ANSI.RESET}`);
-      console.log(`${ANSI.BOLD}${ANSI.CYAN}=========================================${ANSI.RESET}\n`);
-    }
-
-    function drawSummary(currentIdx: number, activeSteps: Step[]) {
-      for (let i = 0; i < currentIdx; i++) {
-        const step = activeSteps[i];
-        console.log(`${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${step.title}:${ANSI.RESET} ${step.summarize()}`);
-      }
-      if (currentIdx > 0) {
-        console.log(""); // Empty line after summaries
-      }
-
-      if (currentIdx < activeSteps.length) {
-        const step = activeSteps[currentIdx];
-        console.log(
-          `${ANSI.BOLD}${ANSI.BLUE}[Step ${currentIdx + 1}/${activeSteps.length}] ${step.title}${ANSI.RESET}\n`,
-        );
-      }
-    }
-
-    let activeSteps = getActiveSteps();
+    const steps = createWizardSteps(state, skills);
+    let activeSteps = getActiveSteps(state, steps);
     let currentIdx = 0;
 
     try {
@@ -299,7 +74,7 @@ async function main() {
 
         const isSuccess = await step.run(canGoBack);
 
-        const nextActiveSteps = getActiveSteps();
+        const nextActiveSteps = getActiveSteps(state, steps);
         if (isSuccess === BACK) {
           const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
           currentIdx = newIdx - 1;
@@ -322,7 +97,6 @@ async function main() {
       throw err;
     }
 
-    // Clear one last time and show the final completed summary.
     clearScreen();
     drawHeader();
     drawSummary(activeSteps.length, activeSteps);
@@ -424,7 +198,6 @@ async function main() {
         }
       }
     } else {
-      // Default: auto-detect existing harnesses in selected scope.
       const detectedHarnesses: string[] = [];
       for (const name of Object.keys(filteredHarnessMapping)) {
         const destBaseDir = filteredHarnessMapping[name];

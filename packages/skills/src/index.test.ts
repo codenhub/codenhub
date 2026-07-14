@@ -30,6 +30,24 @@ describe("parseFrontmatter", () => {
     const meta = parseFrontmatter(content);
     expect(meta).toEqual({});
   });
+
+  it("should strip trailing comments from unquoted values", () => {
+    const content = `---\nname: test-skill # this is name\ndescription: A test skill # this is description\n---\nSome markdown here`;
+    const meta = parseFrontmatter(content);
+    expect(meta).toEqual({
+      name: "test-skill",
+      description: "A test skill",
+    });
+  });
+
+  it("should not strip hash characters inside quotes", () => {
+    const content = `---\nname: "test #1 skill" # comment\ndescription: 'A test #2 skill'\n---\nSome markdown here`;
+    const meta = parseFrontmatter(content);
+    expect(meta).toEqual({
+      name: "test #1 skill",
+      description: "A test #2 skill",
+    });
+  });
 });
 
 describe("getSkills", () => {
