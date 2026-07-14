@@ -1,0 +1,6 @@
+frontend-design
+Adapted from: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design
+Original copyright: Anthropic, Inc.
+Original license: Apache-2.0
+License text: https://github.com/anthropics/claude-plugins-official/blob/main/plugins/frontend-design/LICENSE
+Changes: Adapted skill instructions and prompts for the @codenhub/skills package format and conventions.

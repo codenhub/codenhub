@@ -1,0 +1,6 @@
+caveman-review
+Adapted from: https://github.com/JuliusBrussee/caveman
+Original copyright: Copyright (c) 2026 Julius Brussee
+Original license: MIT
+License text: https://github.com/JuliusBrussee/caveman/blob/main/LICENSE
+Changes: Adapted skill instructions and prompts for the @codenhub/skills package format and conventions.
