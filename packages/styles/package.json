@@ -17,9 +17,21 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./dist/index.css",
-    "./theme": "./dist/theme.css",
-    "./components": "./dist/components.css",
+    ".": {
+      "style": "./dist/index.css",
+      "import": "./dist/index.css",
+      "default": "./dist/index.css"
+    },
+    "./theme": {
+      "style": "./dist/theme.css",
+      "import": "./dist/theme.css",
+      "default": "./dist/theme.css"
+    },
+    "./components": {
+      "style": "./dist/components.css",
+      "import": "./dist/components.css",
+      "default": "./dist/components.css"
+    },
     "./tw": "./src/index.css",
     "./tw/theme": "./src/theme.css",
     "./tw/components": "./src/components/index.css",

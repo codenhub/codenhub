@@ -14,7 +14,7 @@ export default defineConfig({
     {
       name: "watch-tailwind-cli",
       configureServer(server) {
-        const child = spawn(
+        const childIndex = spawn(
           "pnpm",
           ["exec", "tailwindcss", "-i", "./src/index.css", "-o", "./dist/index.css", "--watch"],
           {
@@ -23,13 +23,27 @@ export default defineConfig({
             stdio: "inherit",
           },
         );
-        child.unref();
+        childIndex.unref();
+
+        const childNative = spawn(
+          "pnpm",
+          ["exec", "tailwindcss", "-i", "./src/native.css", "-o", "./dist/native.css", "--watch"],
+          {
+            cwd: resolve(__dirname, ".."),
+            shell: true,
+            stdio: "inherit",
+          },
+        );
+        childNative.unref();
 
         server.httpServer?.on("close", () => {
-          if (process.platform === "win32" && child.pid) {
-            spawn("taskkill", ["/pid", child.pid.toString(), "/f", "/t"], { stdio: "ignore" });
-          } else {
-            child.kill();
+          const children = [childIndex, childNative];
+          for (const child of children) {
+            if (process.platform === "win32" && child.pid) {
+              spawn("taskkill", ["/pid", child.pid.toString(), "/f", "/t"], { stdio: "ignore" });
+            } else {
+              child.kill();
+            }
           }
         });
       },
