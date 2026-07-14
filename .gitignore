@@ -19,9 +19,11 @@ test-results
 **/tests/**/output.css
 
 # AI agents
+.agents
 .antigravity
 .claude
 .codex
 .cursor
 .gemini
+.opencode
 docs/plans

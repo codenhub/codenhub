@@ -149,8 +149,6 @@ sessions to get started quickly.
 ````
 `````
 
-```
-
 ### Phase 5: Apply Updates
 
 After user approval, apply changes using the host environment's editing
@@ -213,4 +211,3 @@ When presenting recommendations, remind users:
   uncertain instead of stating it as fact.
 - If the file is already high quality, say so explicitly and avoid editing for
   the sake of editing.
-```
