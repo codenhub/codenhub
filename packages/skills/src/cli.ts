@@ -4,20 +4,23 @@ import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
+import { getSkills, copyRecursiveSync } from "./index.js";
 import {
-  getSkills,
-  copyRecursiveSync,
+  ANSI,
+  BACK,
+  CancelledError,
   checkboxPrompt,
   confirmPrompt,
   selectPrompt,
+  type BackSignal,
   type Choice,
   type SelectChoice,
-} from "./index.js";
+} from "./prompts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Find skills directory relative to build output
+// Find skills directory relative to build output.
 const skillsSrcDir = path.resolve(__dirname, "../skills");
 
 const home = os.homedir();
@@ -33,18 +36,19 @@ const HARNESS_MAPPING: Record<string, string> = {
   "Codex Workspace": path.resolve("./.codex/skills"),
 };
 
-const ANSI = {
-  RESET: "\x1b[0m",
-  BOLD: "\x1b[1m",
-  CYAN: "\x1b[36m",
-  GREEN: "\x1b[32m",
-  RED: "\x1b[31m",
-  BLUE: "\x1b[34m",
-  YELLOW: "\x1b[33m",
-};
-
 const CODEX_IDENTIFIER = "Codex";
 const EXCLUDE_FOLDER_AGENTS = "agents";
+
+/**
+ * Thrown when the user makes a selection that has no valid items,
+ * indicating the wizard should exit cleanly instead of continuing.
+ */
+class PromptExitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PromptExitError";
+  }
+}
 
 interface State {
   scope: string;
@@ -57,7 +61,9 @@ interface State {
 interface Step {
   id: string;
   title: string;
-  run: (canGoBack: boolean) => Promise<boolean | "__BACK__">;
+  /** Returns the human-readable summary for the completed-steps header. */
+  summarize: () => string;
+  run: (canGoBack: boolean) => Promise<boolean | BackSignal>;
 }
 
 async function main() {
@@ -79,7 +85,16 @@ async function main() {
     {
       id: "scope",
       title: "Select Scope",
-      run: async (canGoBack: boolean) => {
+      summarize: () => {
+        if (state.scope === "global") {
+          return "Globally (user home directory)";
+        }
+        if (state.scope === "both") {
+          return "Both";
+        }
+        return "Locally (project workspace)";
+      },
+      run: async (canGoBack) => {
         const scopeChoices: SelectChoice[] = [
           { name: "Locally (project workspace)", value: "local" },
           { name: "Globally (user home directory)", value: "global" },
@@ -91,8 +106,8 @@ async function main() {
           initialCursor: defaultIndex !== -1 ? defaultIndex : 0,
           canGoBack,
         });
-        if (selected === "__BACK__") {
-          return "__BACK__";
+        if (selected === BACK) {
+          return BACK;
         }
         state.scope = selected;
         return true;
@@ -101,13 +116,14 @@ async function main() {
     {
       id: "shouldInstallAll",
       title: "All Skills Option",
-      run: async (canGoBack: boolean) => {
+      summarize: () => (state.shouldInstallAll ? "Yes" : "No"),
+      run: async (canGoBack) => {
         const selected = await confirmPrompt("Do you want to install all available skills?", {
           defaultValue: state.shouldInstallAll,
           canGoBack,
         });
-        if (selected === "__BACK__") {
-          return "__BACK__";
+        if (selected === BACK) {
+          return BACK;
         }
         state.shouldInstallAll = selected;
         return true;
@@ -116,7 +132,8 @@ async function main() {
     {
       id: "selectSkills",
       title: "Select Individual Skills",
-      run: async (canGoBack: boolean) => {
+      summarize: () => state.selectedSkills.join(", "),
+      run: async (canGoBack) => {
         const skillChoices: Choice[] = skills.map((s) => ({
           name: s.name,
           value: s.id,
@@ -127,12 +144,11 @@ async function main() {
           choices: skillChoices,
           canGoBack,
         });
-        if (selected === "__BACK__") {
-          return "__BACK__";
+        if (selected === BACK) {
+          return BACK;
         }
         if (selected.length === 0) {
-          console.log(`\n${ANSI.YELLOW}No skills selected. Exiting.${ANSI.RESET}`);
-          process.exit(0);
+          throw new PromptExitError("No skills selected. Exiting.");
         }
         state.selectedSkills = selected;
         return true;
@@ -141,40 +157,37 @@ async function main() {
     {
       id: "harnesses",
       title: "Select Harnesses",
-      run: async (canGoBack: boolean) => {
+      summarize: () => state.selectedHarnesses.join(", "),
+      run: async (canGoBack) => {
         const filteredHarnessMapping: Record<string, string> = {};
         for (const name of Object.keys(HARNESS_MAPPING)) {
           const isGlobal = name.includes("Global");
           const isWorkspace = name.includes("Workspace");
-          if (state.scope === "both") {
-            filteredHarnessMapping[name] = HARNESS_MAPPING[name];
-          } else if (state.scope === "global" && isGlobal) {
-            filteredHarnessMapping[name] = HARNESS_MAPPING[name];
-          } else if (state.scope === "local" && isWorkspace) {
+          if (
+            state.scope === "both" ||
+            (state.scope === "global" && isGlobal) ||
+            (state.scope === "local" && isWorkspace)
+          ) {
             filteredHarnessMapping[name] = HARNESS_MAPPING[name];
           }
         }
 
-        const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => {
-          const isChecked = state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : true;
-          return {
-            name,
-            value: name,
-            checked: isChecked,
-            description: filteredHarnessMapping[name],
-          };
-        });
+        const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => ({
+          name,
+          value: name,
+          checked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : true,
+          description: filteredHarnessMapping[name],
+        }));
 
         const selected = await checkboxPrompt("Which harnesses do you want to install to?", {
           choices: harnessChoices,
           canGoBack,
         });
-        if (selected === "__BACK__") {
-          return "__BACK__";
+        if (selected === BACK) {
+          return BACK;
         }
         if (selected.length === 0) {
-          console.log(`\n${ANSI.YELLOW}No harnesses selected. Exiting.${ANSI.RESET}`);
-          process.exit(0);
+          throw new PromptExitError("No harnesses selected. Exiting.");
         }
         state.selectedHarnesses = selected;
         return true;
@@ -183,16 +196,14 @@ async function main() {
     {
       id: "cleanup",
       title: "Clean Up Option",
-      run: async (canGoBack: boolean) => {
+      summarize: () => (state.shouldCleanupFirst ? "Yes" : "No"),
+      run: async (canGoBack) => {
         const selected = await confirmPrompt(
           "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
-          {
-            defaultValue: state.shouldCleanupFirst,
-            canGoBack,
-          },
+          { defaultValue: state.shouldCleanupFirst, canGoBack },
         );
-        if (selected === "__BACK__") {
-          return "__BACK__";
+        if (selected === BACK) {
+          return BACK;
         }
         state.shouldCleanupFirst = selected;
         return true;
@@ -200,15 +211,20 @@ async function main() {
     },
   ];
 
-  function getActiveSteps(): Step[] {
-    const active: Step[] = [];
-    active.push(steps[0]); // scope
-    active.push(steps[1]); // shouldInstallAll
-    if (!state.shouldInstallAll) {
-      active.push(steps[2]); // selectSkills
+  function stepById(id: string): Step {
+    const step = steps.find((s) => s.id === id);
+    if (!step) {
+      throw new Error(`Step "${id}" not found`);
     }
-    active.push(steps[3]); // harnesses
-    active.push(steps[4]); // cleanup
+    return step;
+  }
+
+  function getActiveSteps(): Step[] {
+    const active: Step[] = [stepById("scope"), stepById("shouldInstallAll")];
+    if (!state.shouldInstallAll) {
+      active.push(stepById("selectSkills"));
+    }
+    active.push(stepById("harnesses"), stepById("cleanup"));
     return active;
   }
 
@@ -225,25 +241,7 @@ async function main() {
   function drawSummary(currentIdx: number, activeStepsList: Step[]) {
     for (let i = 0; i < currentIdx; i++) {
       const step = activeStepsList[i];
-      let summaryText = "";
-      if (step.id === "scope") {
-        const scopeName =
-          state.scope === "local"
-            ? "Locally (project workspace)"
-            : state.scope === "global"
-              ? "Globally (user home directory)"
-              : "Both";
-        summaryText = scopeName;
-      } else if (step.id === "shouldInstallAll") {
-        summaryText = state.shouldInstallAll ? "Yes" : "No";
-      } else if (step.id === "selectSkills") {
-        summaryText = state.selectedSkills.join(", ");
-      } else if (step.id === "harnesses") {
-        summaryText = state.selectedHarnesses.join(", ");
-      } else if (step.id === "cleanup") {
-        summaryText = state.shouldCleanupFirst ? "Yes" : "No";
-      }
-      console.log(`${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${step.title}:${ANSI.RESET} ${summaryText}`);
+      console.log(`${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${step.title}:${ANSI.RESET} ${step.summarize()}`);
     }
     if (currentIdx > 0) {
       console.log(""); // Empty line after summaries
@@ -261,6 +259,7 @@ async function main() {
   let currentIdx = 0;
 
   try {
+    /* oxlint-disable no-await-in-loop */
     while (currentIdx < activeSteps.length) {
       clearScreen();
       drawHeader();
@@ -269,12 +268,10 @@ async function main() {
       const step = activeSteps[currentIdx];
       const canGoBack = currentIdx > 0;
 
-      // eslint-disable-next-line no-await-in-loop
-      /* oxlint-disable no-await-in-loop */
       const isSuccess = await step.run(canGoBack);
 
       const nextActiveSteps = getActiveSteps();
-      if (isSuccess === "__BACK__") {
+      if (isSuccess === BACK) {
         const newIdx = nextActiveSteps.findIndex((s) => s.id === step.id);
         currentIdx = newIdx - 1;
       } else {
@@ -283,15 +280,20 @@ async function main() {
       }
       activeSteps = nextActiveSteps;
     }
+    /* oxlint-enable no-await-in-loop */
   } catch (err: unknown) {
-    if (err instanceof Error && err.message === "Cancelled") {
+    if (err instanceof PromptExitError) {
+      console.log(`\n${ANSI.YELLOW}${err.message}${ANSI.RESET}`);
+      process.exit(0);
+    }
+    if (err instanceof CancelledError) {
       console.log(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}`);
       process.exit(0);
     }
     throw err;
   }
 
-  // Clear one last time and show final completed summary
+  // Clear one last time and show the final completed summary.
   clearScreen();
   drawHeader();
   drawSummary(activeSteps.length, activeSteps);
@@ -333,7 +335,9 @@ async function main() {
 
       const destSkillDir = path.join(destBaseDir, skillId);
       try {
-        copyRecursiveSync(skill.path, destSkillDir, { ignoreList: isCodex ? [] : [EXCLUDE_FOLDER_AGENTS] });
+        copyRecursiveSync(skill.path, destSkillDir, {
+          ignoreList: isCodex ? [] : [EXCLUDE_FOLDER_AGENTS],
+        });
         console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Copied: ${skill.name}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -346,8 +350,7 @@ async function main() {
 }
 
 if (typeof process !== "undefined" && !process.env.VITEST) {
-  // eslint-disable-next-line promise/prefer-await-to-then
-  /* oxlint-disable promise/prefer-await-to-then */
+  /* oxlint-disable-next-line promise/prefer-await-to-then */
   main().catch((err) => {
     console.error(`${ANSI.RED}Unhandled exception:${ANSI.RESET}`, err);
     process.exit(1);

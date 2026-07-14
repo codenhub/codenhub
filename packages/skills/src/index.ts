@@ -1,61 +1,43 @@
 import * as fs from "fs";
 import * as path from "path";
-import readline from "readline";
 
+/**
+ * Represents a skill read from a skill directory.
+ */
 export interface Skill {
+  /** Unique identifier derived from the skill directory name. */
   id: string;
+  /** Display name from `SKILL.md` frontmatter; falls back to `id`. */
   name: string;
+  /** Short description from `SKILL.md` frontmatter. */
   description: string;
+  /** Absolute path to the skill directory. */
   path: string;
 }
 
-export interface Choice {
-  name: string;
-  value: string;
-  checked: boolean;
-  description?: string;
+/**
+ * Options for {@link copyRecursiveSync}.
+ */
+export interface CopyOptions {
+  /**
+   * Base names of files or directories to exclude at every depth of
+   * the copy. Only base names are matched — path segments are not
+   * supported. For example, `["agents"]` skips every entry named
+   * `agents` at any level of the directory tree.
+   */
+  ignoreList?: string[];
 }
-
-export interface SelectChoice {
-  name: string;
-  value: string;
-  description?: string;
-}
-
-export interface ConfirmOptions {
-  defaultValue: boolean;
-  canGoBack?: boolean;
-}
-
-export interface SelectOptions {
-  choices: SelectChoice[];
-  initialCursor?: number;
-  canGoBack?: boolean;
-}
-
-export interface CheckboxOptions {
-  choices: Choice[];
-  canGoBack?: boolean;
-}
-
-const ANSI = {
-  HIDE_CURSOR: "\x1b[?25l",
-  SHOW_CURSOR: "\x1b[?25h",
-  CLEAR_LINE: "\x1b[2K",
-  CURSOR_UP: (n: number) => `\x1b[${n}A`,
-  RESET: "\x1b[0m",
-  BOLD: "\x1b[1m",
-  DIM: "\x1b[2m",
-  CYAN: "\x1b[36m",
-  GREEN: "\x1b[32m",
-  RED: "\x1b[31m",
-  BLUE: "\x1b[34m",
-  YELLOW: "\x1b[33m",
-  WHITE: "\x1b[37m",
-};
 
 /**
- * Parses frontmatter metadata from markdown content.
+ * Parses YAML frontmatter from a markdown string.
+ *
+ * Recognises blocks bounded by `---` at the start of the content.
+ * Strips a leading BOM if present. Removes surrounding single or
+ * double quotes from parsed values.
+ *
+ * @param content - Raw markdown file content.
+ * @returns Key-value map of frontmatter fields. Returns an empty
+ *   object when no frontmatter block is found.
  */
 export function parseFrontmatter(content: string): Record<string, string> {
   const normalized = content.replace(/^\uFEFF/, "");
@@ -71,7 +53,7 @@ export function parseFrontmatter(content: string): Record<string, string> {
     if (colonIndex !== -1) {
       const key = line.slice(0, colonIndex).trim();
       const rawValue = line.slice(colonIndex + 1).trim();
-      // Remove matching surrounding quotes if present
+      // Strip matching surrounding quotes when present.
       const value = rawValue.replace(/^(['"])([\s\S]*)\1$/, "$2");
       metadata[key] = value;
     }
@@ -80,7 +62,16 @@ export function parseFrontmatter(content: string): Record<string, string> {
 }
 
 /**
- * Lists all valid skills inside the source directory.
+ * Reads all valid skills from `srcDir`.
+ *
+ * A subdirectory is treated as a skill when it contains a `SKILL.md`
+ * file. Name and description are read from the file's YAML
+ * frontmatter.
+ *
+ * @param srcDir - Absolute path to the directory containing skill
+ *   subdirectories.
+ * @returns Array of {@link Skill} objects. Returns an empty array when
+ *   `srcDir` does not exist.
  */
 export function getSkills(srcDir: string): Skill[] {
   if (!fs.existsSync(srcDir)) {
@@ -112,32 +103,39 @@ export function getSkills(srcDir: string): Skill[] {
   return skills;
 }
 
-export interface CopyOptions {
-  ignoreList?: string[];
-}
-
 /**
- * Recursively copies files and directories, ignoring specified file/folder names.
+ * Recursively copies `src` to `dest`.
+ *
+ * When `src` is a directory, its contents are copied into `dest`,
+ * creating `dest` and any missing parent directories as needed. When
+ * `src` is a file, it is copied directly to `dest`.
+ *
+ * The `ignoreList` option filters by **base name only** — not by
+ * path. Passing `"agents"` skips every entry named `agents` at any
+ * depth, regardless of where it appears in the tree.
+ *
+ * @param src - Absolute path to the source file or directory.
+ * @param dest - Absolute path to the copy destination.
+ * @param options - Optional copy configuration.
+ * @throws {Error} When `src` does not exist.
  */
 export function copyRecursiveSync(src: string, dest: string, options: CopyOptions = {}): void {
   const { ignoreList = [] } = options;
-  const doesExist = fs.existsSync(src);
-  if (!doesExist) {
+  if (!fs.existsSync(src)) {
     throw new Error(`Source path "${src}" does not exist`);
   }
   const stats = fs.statSync(src);
-  const isDirectory = stats.isDirectory();
 
-  if (isDirectory) {
+  if (stats.isDirectory()) {
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    fs.readdirSync(src).forEach((childItemName) => {
+    for (const childItemName of fs.readdirSync(src)) {
       if (ignoreList.includes(childItemName)) {
-        return;
+        continue;
       }
       copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName), options);
-    });
+    }
   } else {
     const destDir = path.dirname(dest);
     if (!fs.existsSync(destDir)) {
@@ -145,224 +143,4 @@ export function copyRecursiveSync(src: string, dest: string, options: CopyOption
     }
     fs.copyFileSync(src, dest);
   }
-}
-
-/**
- * Prompt user with a checkbox select list.
- */
-export function checkboxPrompt(message: string, options: CheckboxOptions): Promise<string[] | "__BACK__"> {
-  const { choices, canGoBack = false } = options;
-
-  return new Promise((resolve, reject) => {
-    const stdout = process.stdout;
-    if (!process.stdin.isTTY) {
-      resolve(choices.filter((c) => c.checked).map((c) => c.value));
-      return;
-    }
-    let cursor = 0;
-
-    stdout.write(ANSI.HIDE_CURSOR);
-
-    function render(isFirst = false) {
-      if (!isFirst) {
-        const linesToMove = choices.length + 2;
-        stdout.write(ANSI.CURSOR_UP(linesToMove));
-      }
-
-      stdout.write(`${ANSI.BOLD}${ANSI.CYAN}? ${ANSI.WHITE}${message}${ANSI.RESET}\n`);
-
-      choices.forEach((choice, index) => {
-        const isCurrent = index === cursor;
-        const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
-        const checkbox = choice.checked ? `${ANSI.GREEN}[◼]${ANSI.RESET}` : "[ ]";
-        const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
-        const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
-
-        stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${checkbox} ${name}${desc}\n`);
-      });
-
-      const backInstruction = canGoBack ? ", Backspace/Left to go back" : "";
-      stdout.write(
-        `${ANSI.CLEAR_LINE}${ANSI.DIM}(Use arrows to navigate, Space to toggle, Enter to confirm${backInstruction}, Ctrl+C to exit)${ANSI.RESET}\n`,
-      );
-    }
-
-    render(true);
-
-    function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
-      if (key && key.ctrl && key.name === "c") {
-        cleanup();
-        reject(new Error("Cancelled"));
-        return;
-      }
-
-      if (!key) {
-        return;
-      }
-
-      switch (key.name) {
-        case "up":
-          cursor = (cursor - 1 + choices.length) % choices.length;
-          render();
-          break;
-        case "down":
-          cursor = (cursor + 1) % choices.length;
-          render();
-          break;
-        case "space":
-          choices[cursor].checked = !choices[cursor].checked;
-          render();
-          break;
-        case "left":
-        case "backspace":
-          if (canGoBack) {
-            cleanup();
-            resolve("__BACK__");
-          }
-          break;
-        case "return":
-          cleanup();
-          const selectedValues = choices.filter((c) => c.checked).map((c) => c.value);
-          stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection confirmed.\n`);
-          resolve(selectedValues);
-          break;
-      }
-    }
-
-    function cleanup() {
-      process.stdin.removeListener("keypress", onKeypress);
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(false);
-      }
-      process.stdin.pause();
-      stdout.write(ANSI.SHOW_CURSOR);
-    }
-
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-
-    readline.emitKeypressEvents(process.stdin);
-    process.stdin.on("keypress", onKeypress);
-  });
-}
-
-/**
- * Prompt user with a yes/no confirmation.
- */
-export async function confirmPrompt(message: string, options: ConfirmOptions): Promise<boolean | "__BACK__"> {
-  const { defaultValue, canGoBack = false } = options;
-  const choices: SelectChoice[] = [
-    { name: "Yes", value: "yes" },
-    { name: "No", value: "no" },
-  ];
-  const initialCursor = defaultValue ? 0 : 1;
-  const selected = await selectPrompt(message, {
-    choices,
-    initialCursor,
-    canGoBack,
-  });
-  if (selected === "__BACK__") {
-    return "__BACK__";
-  }
-  return selected === "yes";
-}
-
-/**
- * Prompt user with a single selection list.
- */
-export function selectPrompt(message: string, options: SelectOptions): Promise<string> {
-  const { choices, initialCursor = 0, canGoBack = false } = options;
-
-  return new Promise((resolve, reject) => {
-    const stdout = process.stdout;
-    if (!process.stdin.isTTY) {
-      resolve(choices[initialCursor]?.value ?? choices[0].value);
-      return;
-    }
-    let cursor = initialCursor;
-
-    stdout.write(ANSI.HIDE_CURSOR);
-
-    function render(isFirst = false) {
-      if (!isFirst) {
-        const linesToMove = choices.length + 2;
-        stdout.write(ANSI.CURSOR_UP(linesToMove));
-      }
-
-      stdout.write(`${ANSI.BOLD}${ANSI.CYAN}? ${ANSI.WHITE}${message}${ANSI.RESET}\n`);
-
-      choices.forEach((choice, index) => {
-        const isCurrent = index === cursor;
-        const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
-        const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
-        const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
-
-        stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${name}${desc}\n`);
-      });
-
-      const backInstruction = canGoBack ? ", Backspace/Left to go back" : "";
-      stdout.write(
-        `${ANSI.CLEAR_LINE}${ANSI.DIM}(Use arrows to navigate${backInstruction}, Enter to confirm, Ctrl+C to exit)${ANSI.RESET}\n`,
-      );
-    }
-
-    render(true);
-
-    function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
-      if (key && key.ctrl && key.name === "c") {
-        cleanup();
-        reject(new Error("Cancelled"));
-        return;
-      }
-
-      if (!key) {
-        return;
-      }
-
-      switch (key.name) {
-        case "up":
-          cursor = (cursor - 1 + choices.length) % choices.length;
-          render();
-          break;
-        case "down":
-          cursor = (cursor + 1) % choices.length;
-          render();
-          break;
-        case "left":
-        case "backspace":
-          if (canGoBack) {
-            cleanup();
-            resolve("__BACK__");
-          }
-          break;
-        case "return":
-          cleanup();
-          const selectedValue = choices[cursor].value;
-          stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection: ${choices[cursor].name}\n`);
-          resolve(selectedValue);
-          break;
-      }
-    }
-
-    function cleanup() {
-      process.stdin.removeListener("keypress", onKeypress);
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(false);
-      }
-      process.stdin.pause();
-      stdout.write(ANSI.SHOW_CURSOR);
-    }
-
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-
-    readline.emitKeypressEvents(process.stdin);
-    process.stdin.on("keypress", onKeypress);
-  });
 }

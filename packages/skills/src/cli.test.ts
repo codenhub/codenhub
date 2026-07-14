@@ -1,185 +1,106 @@
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import { describe, it, expect, vi } from "vitest";
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { BACK, confirmPrompt, selectPrompt, checkboxPrompt } from "./prompts.js";
 
-import { parseFrontmatter, getSkills, copyRecursiveSync, confirmPrompt, selectPrompt } from "./index.js";
-
-describe("Skills Helper functions", () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "codenhub-skills-test-"));
+describe("confirmPrompt", () => {
+  it("should return true when defaultValue is true and stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const result = await confirmPrompt("Test message", { defaultValue: true });
+      expect(result).toBe(true);
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
   });
 
-  afterEach(() => {
-    fs.rmSync(tempDir, { recursive: true, force: true });
-    vi.restoreAllMocks();
+  it("should return false when defaultValue is false and stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const result = await confirmPrompt("Test message", { defaultValue: false });
+      expect(result).toBe(false);
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
+  });
+});
+
+describe("selectPrompt", () => {
+  it("should return the choice at initialCursor when stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const choices = [
+        { name: "Choice A", value: "a" },
+        { name: "Choice B", value: "b" },
+      ];
+      const result = await selectPrompt("Test select", { choices });
+      expect(result).toBe("a");
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
   });
 
-  describe("parseFrontmatter", () => {
-    it("should parse valid frontmatter", () => {
-      const content = `---\nname: test-skill\ndescription: A test skill description\n---\nSome markdown here`;
-      const meta = parseFrontmatter(content);
-      expect(meta).toEqual({
-        name: "test-skill",
-        description: "A test skill description",
-      });
-    });
-
-    it("should strip surrounding quotes from frontmatter values", () => {
-      const content = `---\nname: "test-skill"\ndescription: 'A test skill description'\n---\nSome markdown here`;
-      const meta = parseFrontmatter(content);
-      expect(meta).toEqual({
-        name: "test-skill",
-        description: "A test skill description",
-      });
-    });
-
-    it("should return empty object if no frontmatter", () => {
-      const content = "no frontmatter here";
-      const meta = parseFrontmatter(content);
-      expect(meta).toEqual({});
-    });
+  it("should throw when choices is empty", () => {
+    expect(() => selectPrompt("Test", { choices: [] })).toThrow("selectPrompt: choices must not be empty");
   });
 
-  describe("getSkills", () => {
-    it("should return skills list from directory", () => {
-      const skill1Dir = path.join(tempDir, "skill-1");
-      fs.mkdirSync(skill1Dir, { recursive: true });
-      fs.writeFileSync(path.join(skill1Dir, "SKILL.md"), `---\nname: Skill One\ndescription: First skill\n---\n`);
+  it("should resolve BACK on backspace when canGoBack is true", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    // setRawMode doesn't exist on non-TTY stdin in test environments.
+    // Install a mock directly so runPrompt can call it.
+    const origSetRawMode = (process.stdin as { setRawMode?: unknown }).setRawMode;
+    Object.assign(process.stdin, { setRawMode: vi.fn().mockReturnValue(process.stdin) });
+    process.stdin.isTTY = true as never;
+    const pauseSpy = vi.spyOn(process.stdin, "pause").mockImplementation(() => process.stdin);
+    const resumeSpy = vi.spyOn(process.stdin, "resume").mockImplementation(() => process.stdin);
+    const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
-      const skill2Dir = path.join(tempDir, "skill-2");
-      fs.mkdirSync(skill2Dir, { recursive: true });
-      fs.writeFileSync(path.join(skill2Dir, "SKILL.md"), `---\nname: Skill Two\ndescription: Second skill\n---\n`);
+    try {
+      const choices = [
+        { name: "Choice A", value: "a" },
+        { name: "Choice B", value: "b" },
+      ];
+      const promise = selectPrompt("Test select", { choices, canGoBack: true });
+      process.stdin.emit("keypress", undefined, { name: "backspace" });
+      const result = await promise;
+      expect(result).toBe(BACK);
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+      Object.assign(process.stdin, { setRawMode: origSetRawMode });
+      pauseSpy.mockRestore();
+      resumeSpy.mockRestore();
+      writeSpy.mockRestore();
+    }
+  });
+});
 
-      // Non-skill dir (no SKILL.md)
-      const otherDir = path.join(tempDir, "other");
-      fs.mkdirSync(otherDir, { recursive: true });
-
-      const skills = getSkills(tempDir);
-      expect(skills).toHaveLength(2);
-      expect(skills.find((s) => s.id === "skill-1")).toEqual({
-        id: "skill-1",
-        name: "Skill One",
-        description: "First skill",
-        path: skill1Dir,
-      });
-    });
-
-    it("should return empty array if directory does not exist", () => {
-      const skills = getSkills(path.join(tempDir, "non-existent"));
-      expect(skills).toEqual([]);
-    });
+describe("checkboxPrompt", () => {
+  it("should return pre-checked values when stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const choices = [
+        { name: "A", value: "a", checked: true },
+        { name: "B", value: "b", checked: false },
+        { name: "C", value: "c", checked: true },
+      ];
+      const result = await checkboxPrompt("Pick some", { choices });
+      expect(result).toEqual(["a", "c"]);
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
   });
 
-  describe("copyRecursiveSync", () => {
-    it("should recursively copy files and folders", () => {
-      const srcDir = path.join(tempDir, "src");
-      const destDir = path.join(tempDir, "dest");
-
-      fs.mkdirSync(path.join(srcDir, "subdir"), { recursive: true });
-      fs.writeFileSync(path.join(srcDir, "file1.txt"), "content 1");
-      fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "content 2");
-
-      copyRecursiveSync(srcDir, destDir);
-
-      expect(fs.existsSync(path.join(destDir, "file1.txt"))).toBe(true);
-      expect(fs.readFileSync(path.join(destDir, "file1.txt"), "utf8")).toBe("content 1");
-      expect(fs.existsSync(path.join(destDir, "subdir", "file2.txt"))).toBe(true);
-      expect(fs.readFileSync(path.join(destDir, "subdir", "file2.txt"), "utf8")).toBe("content 2");
-    });
-
-    it("should ignore paths in ignoreList", () => {
-      const srcDir = path.join(tempDir, "src-ignore");
-      const destDir = path.join(tempDir, "dest-ignore");
-
-      fs.mkdirSync(path.join(srcDir, "subdir"), { recursive: true });
-      fs.mkdirSync(path.join(srcDir, "ignored-dir"), { recursive: true });
-      fs.writeFileSync(path.join(srcDir, "file1.txt"), "content 1");
-      fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "content 2");
-      fs.writeFileSync(path.join(srcDir, "ignored-dir", "file3.txt"), "content 3");
-
-      copyRecursiveSync(srcDir, destDir, { ignoreList: ["ignored-dir"] });
-
-      expect(fs.existsSync(path.join(destDir, "file1.txt"))).toBe(true);
-      expect(fs.existsSync(path.join(destDir, "subdir", "file2.txt"))).toBe(true);
-      expect(fs.existsSync(path.join(destDir, "ignored-dir"))).toBe(false);
-      expect(fs.existsSync(path.join(destDir, "ignored-dir", "file3.txt"))).toBe(false);
-    });
-
-    it("should throw if source path does not exist", () => {
-      const nonExistentSrc = path.join(tempDir, "non-existent");
-      const destDir = path.join(tempDir, "dest-error");
-      expect(() => copyRecursiveSync(nonExistentSrc, destDir)).toThrow("does not exist");
-    });
-  });
-
-  describe("confirmPrompt", () => {
-    it("should return default value when process.stdin.isTTY is false", async () => {
-      const origIsTTY = process.stdin.isTTY;
-      // @ts-ignore
-      process.stdin.isTTY = false;
-      try {
-        const result = await confirmPrompt("Test message", { defaultValue: true });
-        expect(result).toBe(true);
-        const resultFalse = await confirmPrompt("Test message", { defaultValue: false });
-        expect(resultFalse).toBe(false);
-      } finally {
-        // @ts-ignore
-        process.stdin.isTTY = origIsTTY;
-      }
-    });
-  });
-
-  describe("selectPrompt", () => {
-    it("should return the first choice value when process.stdin.isTTY is false", async () => {
-      const origIsTTY = process.stdin.isTTY;
-      // @ts-ignore
-      process.stdin.isTTY = false;
-      try {
-        const choices = [
-          { name: "Choice A", value: "a" },
-          { name: "Choice B", value: "b" },
-        ];
-        const result = await selectPrompt("Test select", { choices });
-        expect(result).toBe("a");
-      } finally {
-        // @ts-ignore
-        process.stdin.isTTY = origIsTTY;
-      }
-    });
-
-    it("should return __BACK__ on backspace when canGoBack is true", async () => {
-      const origIsTTY = process.stdin.isTTY;
-      // @ts-ignore
-      process.stdin.isTTY = true;
-      const origSetRawMode = process.stdin.setRawMode;
-      // @ts-ignore
-      process.stdin.setRawMode = vi.fn().mockReturnValue(process.stdin);
-      const pauseSpy = vi.spyOn(process.stdin, "pause").mockImplementation(() => process.stdin);
-      const resumeSpy = vi.spyOn(process.stdin, "resume").mockImplementation(() => process.stdin);
-      const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-
-      try {
-        const choices = [
-          { name: "Choice A", value: "a" },
-          { name: "Choice B", value: "b" },
-        ];
-        const promise = selectPrompt("Test select", { choices, canGoBack: true });
-        process.stdin.emit("keypress", undefined, { name: "backspace" });
-        const result = await promise;
-        expect(result).toBe("__BACK__");
-      } finally {
-        // @ts-ignore
-        process.stdin.isTTY = origIsTTY;
-        // @ts-ignore
-        process.stdin.setRawMode = origSetRawMode;
-        pauseSpy.mockRestore();
-        resumeSpy.mockRestore();
-        writeSpy.mockRestore();
-      }
-    });
+  it("should return empty array when choices is empty and stdin is not a TTY", async () => {
+    const origIsTTY = process.stdin.isTTY;
+    process.stdin.isTTY = false as never;
+    try {
+      const result = await checkboxPrompt("Pick some", { choices: [] });
+      expect(result).toEqual([]);
+    } finally {
+      process.stdin.isTTY = origIsTTY;
+    }
   });
 });

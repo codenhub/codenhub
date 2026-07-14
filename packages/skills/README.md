@@ -1,6 +1,6 @@
 # @codenhub/skills
 
-A curated collection of AI agent skills with a built-in installer to configure them across global and local agent harnesses. It also exports programmatic APIs to parse frontmatter, read available skills, recursively copy files, and prompt users in TTY environments.
+A curated collection of AI agent skills with a built-in installer to configure them across global and local agent harnesses. It also exports a programmatic API to parse skill frontmatter, read available skills, and recursively copy files.
 
 ## Included Skills
 
@@ -50,68 +50,88 @@ The installer supports copying custom instructions to both Global and Workspace 
 | **Codex**       | Global    | `~/.codex/skills`           |
 | **Codex**       | Workspace | `./.codex/skills`           |
 
+## Usage
+
+The package exports a programmatic API for reading and copying skill directories. The common use case is building a custom skill installer or tooling that discovers and distributes skills.
+
+```ts
+import { getSkills, copyRecursiveSync } from "@codenhub/skills";
+
+const skills = getSkills("./skills");
+
+for (const skill of skills) {
+  console.log(`Found: ${skill.name} — ${skill.description}`);
+  copyRecursiveSync(skill.path, `./output/${skill.id}`);
+}
+```
+
 ## Reference
 
-The programmatic API is exported from the package root:
+### `@codenhub/skills`
+
+Core utilities for reading and copying skills.
 
 ```ts
 import {
   parseFrontmatter,
   getSkills,
   copyRecursiveSync,
-  confirmPrompt,
-  selectPrompt,
-  checkboxPrompt,
   type Skill,
-  type Choice,
-  type SelectChoice,
+  type CopyOptions,
 } from "@codenhub/skills";
 ```
 
-### Programmatic Functions
+#### parseFrontmatter
 
-#### [parseFrontmatter](./src/index.ts#L60)
-
-Parses YAML frontmatter blocks bounded by `---` from a markdown file string. Automatically strips surrounding single and double quotes from parsed values.
+Parses YAML frontmatter blocks bounded by `---` from a markdown string. Strips a leading BOM and surrounding single or double quotes from values.
 
 - **Signature**: `parseFrontmatter(content: string): Record<string, string>`
-- **Returns**: Key-value mapping of metadata attributes.
+- **Returns**: Key-value map of frontmatter fields. Returns `{}` when no frontmatter is found.
 
-#### [getSkills](./src/index.ts#L85)
+#### getSkills
 
-Reads and gathers all valid skills defined within a target directory. A subdirectory is treated as a valid skill if it contains a `SKILL.md` file.
+Reads all valid skills from a directory. A subdirectory is treated as a skill when it contains a `SKILL.md` file.
 
 - **Signature**: `getSkills(srcDir: string): Skill[]`
-- **Returns**: Array of [Skill](./src/index.ts#L5) objects.
+- **Returns**: Array of [`Skill`](#skill) objects. Returns `[]` when `srcDir` does not exist.
 
-#### [copyRecursiveSync](./src/index.ts#L122)
+#### copyRecursiveSync
 
-Recursively copies files and directories. Supports an exclusion filter list options object.
+Recursively copies a file or directory to a destination path. Supports an exclusion list filtered by base name.
 
 - **Signature**: `copyRecursiveSync(src: string, dest: string, options?: CopyOptions): void`
-- **Errors**: Throws if `src` path does not exist.
+- **Errors**: Throws `Error` when `src` does not exist.
 
-#### [confirmPrompt](./src/index.ts#L254)
+#### Skill
 
-Prompts user with a yes/no option in TTY terminal environments.
+Shape of a skill object returned by `getSkills`.
 
-- **Signature**: `confirmPrompt(message: string, options: ConfirmOptions): Promise<boolean | "__BACK__">`
+```ts
+interface Skill {
+  id: string;          // Directory name
+  name: string;        // From SKILL.md frontmatter; falls back to id
+  description: string; // From SKILL.md frontmatter
+  path: string;        // Absolute path to the skill directory
+}
+```
 
-#### [selectPrompt](./src/index.ts#L275)
+#### CopyOptions
 
-Prompts user with a single selection menu in TTY terminal environments.
+Options accepted by `copyRecursiveSync`.
 
-- **Signature**: `selectPrompt(message: string, options: SelectOptions): Promise<string>`
-
-#### [checkboxPrompt](./src/index.ts#L152)
-
-Prompts user with a multi-selection checkbox menu in TTY terminal environments.
-
-- **Signature**: `checkboxPrompt(message: string, options: CheckboxOptions): Promise<string[] | "__BACK__">`
+```ts
+interface CopyOptions {
+  /**
+   * Base names to exclude at every depth of the copy tree.
+   * Path segments are not supported — only base names.
+   */
+  ignoreList?: string[];
+}
+```
 
 ## Examples
 
-### Read Skills metadata from a directory
+### Read skill metadata from a directory
 
 ```ts
 import { getSkills } from "@codenhub/skills";
@@ -122,23 +142,32 @@ skills.forEach((skill) => {
 });
 ```
 
-### Prompt for a Yes/No option
+### Copy a skill while excluding a subfolder
 
 ```ts
-import { confirmPrompt } from "@codenhub/skills";
+import { copyRecursiveSync } from "@codenhub/skills";
 
-const installAll = await confirmPrompt("Install all skills?", {
-  defaultValue: true,
-  canGoBack: false,
+// Copy skill but skip any directory named "agents" at any depth.
+copyRecursiveSync("./skills/brainstorming", "./output/brainstorming", {
+  ignoreList: ["agents"],
 });
+```
 
-console.log("Response:", installAll);
+### Parse frontmatter from a SKILL.md file
+
+```ts
+import * as fs from "fs";
+import { parseFrontmatter } from "@codenhub/skills";
+
+const content = fs.readFileSync("./skills/brainstorming/SKILL.md", "utf8");
+const meta = parseFrontmatter(content);
+console.log(meta.name, meta.description);
 ```
 
 ## Requirements
 
 - **Runtime**: Node.js v18.0.0 or higher.
-- **TTY**: Interactive prompts require a TTY-enabled stdout/stdin connection. Non-interactive environments fallback safely.
+- **TTY**: The built-in installer uses interactive prompts that require a TTY-enabled stdin/stdout connection. Non-interactive environments fall back safely to installing all skills without prompting.
 
 ## Notes
 
