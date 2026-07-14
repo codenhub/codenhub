@@ -43,6 +43,11 @@ export type ComponentInstance<Props extends ComponentProperties, Methods> = HTML
      * Schedules a batched re-render of the component in the next microtask.
      */
     requestUpdate(): void;
+    /**
+     * The ElementInternals object for native form participation.
+     * Available if `formAssociated` was set to true in the component config.
+     */
+    readonly internals: ElementInternals;
   };
 
 /**
@@ -109,6 +114,12 @@ export interface ComponentConfig<
   Events extends ComponentEvents = Record<string, never>,
 > {
   /**
+   * Whether to make the custom element form-associated, allowing it to
+   * participate in native HTML forms (form submission, validation, etc.).
+   * Defaults to `false`.
+   */
+  formAssociated?: boolean;
+  /**
    * Map of property names to constructor types for type casting and reactivity.
    * Property changes trigger a batched re-render.
    */
@@ -171,7 +182,10 @@ export interface ComponentDefinition<
   /** The registered custom element tag name. */
   tagName: string;
   /** The underlying `HTMLElement` subclass. Pass to `customElements.define`. */
-  elementClass: { new (): ComponentInstance<Props, Methods> };
+  elementClass: {
+    new (): ComponentInstance<Props, Methods>;
+    readonly formAssociated?: boolean;
+  };
   /**
    * Creates a new element instance and optionally sets initial properties.
    * The element must be appended to the DOM to trigger `onMount`.

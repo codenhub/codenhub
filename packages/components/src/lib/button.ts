@@ -1,5 +1,5 @@
 import { defineComponent } from "../core/component/factory.js";
-import { html, unsafeHTML } from "../core/html.js";
+import { html } from "../core/html.js";
 
 /**
  * A ready-to-use Button custom element.
@@ -16,7 +16,7 @@ export const ChButton = defineComponent("ch-button", {
   },
   render() {
     const variantClass = this.variant || "primary";
-    const disabledAttr = this.disabled ? unsafeHTML("disabled") : "";
+    const disabledAttr = this.disabled ? "disabled" : "";
     return html`
       <button class="btn ${variantClass}" ${disabledAttr}>${this.label}</button>
     `;

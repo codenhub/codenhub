@@ -63,11 +63,15 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@codenhub/styles": "workspace:*",
     "astro": ">=4.0.0",
     "react": ">=18.0.0",
     "svelte": ">=4.0.0"
   },
   "peerDependenciesMeta": {
+    "@codenhub/styles": {
+      "optional": true
+    },
     "react": {
       "optional": true
     },

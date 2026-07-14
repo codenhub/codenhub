@@ -114,6 +114,9 @@ importers:
 
   packages/components:
     dependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../styles
       astro:
         specifier: '>=4.0.0'
         version: 7.0.7(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)(@types/node@26.1.0)(jiti@2.7.0)

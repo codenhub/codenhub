@@ -27,4 +27,3 @@ To transition `@codenhub/components` from a native Web Component core wrapper in
 ## References
 
 - [Package lifecycle specification](../../../docs/specs/packages-lifecycle.md)
-- [Design proposal](../../../brain/26ef8e83-c3b4-453c-9bbb-6967b5c25e88/design_proposal.md)

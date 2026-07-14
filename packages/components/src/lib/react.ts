@@ -16,6 +16,8 @@ export function createReactWrapper<Props extends ComponentProperties, Methods, E
   const ReactComponent = forwardRef<HTMLElement, Record<string, unknown>>((props, ref) => {
     const elementRef = useRef<HTMLElement | null>(null);
     const handlersRef = useRef<Record<string, EventListener>>({});
+    const prevPropsRef = useRef<Record<string, unknown>>({});
+    const lastElementRef = useRef<HTMLElement | null>(null);
 
     useImperativeHandle(ref, () => elementRef.current as HTMLElement);
 
@@ -38,13 +40,23 @@ export function createReactWrapper<Props extends ComponentProperties, Methods, E
         return;
       }
 
+      const isNewElement = element !== lastElementRef.current;
+      if (isNewElement) {
+        lastElementRef.current = element;
+        prevPropsRef.current = {};
+      }
+
       if (properties) {
         for (const propName of Object.keys(properties)) {
           const value = propName in props ? props[propName] : undefined;
-          (element as unknown as Record<string, unknown>)[propName] = value;
+          const prevValue = prevPropsRef.current[propName];
+          if (isNewElement || !Object.is(value, prevValue)) {
+            (element as unknown as Record<string, unknown>)[propName] = value;
+            prevPropsRef.current[propName] = value;
+          }
         }
       }
-    }, [props]);
+    });
 
     // Bind event listeners once on mount
     useEffect(() => {
@@ -97,4 +109,13 @@ export function createReactWrapper<Props extends ComponentProperties, Methods, E
   return ReactComponent;
 }
 
+/**
+ * A React component wrapper for the native `<ch-button>` custom element.
+ * Supports reactive properties, events, and ref forwarding.
+ *
+ * @example
+ * ```tsx
+ * <ChButton label="Submit" variant="primary" onClick={() => console.log("Clicked")} />
+ * ```
+ */
 export const ChButton = createReactWrapper(ChButtonDefinition);

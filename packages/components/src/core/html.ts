@@ -21,20 +21,17 @@ export class TemplateResult {
   }
 }
 
-/**
- * Escapes special HTML characters to prevent XSS.
- */
-const ESCAPE_REGEX = /[&<>"']/;
+const ESCAPE_MAP: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+const ESCAPE_REGEX = /[&<>"']/g;
 
 function escapeHTML(str: string): string {
-  return ESCAPE_REGEX.test(str)
-    ? str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;")
-    : str;
+  return str.replace(ESCAPE_REGEX, (match) => ESCAPE_MAP[match]);
 }
 
 /**

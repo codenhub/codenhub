@@ -82,6 +82,9 @@ function castObject(value: unknown): unknown {
   return parsed;
 }
 
+const NATIVE_CONSTRUCTORS_REGEX =
+  /^(?:Date|RegExp|Map|Set|URL|URLSearchParams|WeakMap|WeakSet|ArrayBuffer|SharedArrayBuffer|DataView|Float32Array|Float64Array|Int8Array|Int16Array|Int32Array|Uint8Array|Uint8ClampedArray|Uint16Array|Uint32Array|BigInt64Array|BigUint64Array)$/;
+
 /**
  * Casts a value using a custom constructor or converter function.
  * If the value is already an instance of the type, it passes through unchanged.
@@ -97,9 +100,7 @@ function castCustomConstructor(value: unknown, type: PropertyConstructor): unkno
   const isClassOrNative =
     typeStr.startsWith("class") ||
     (descriptor !== undefined && !descriptor.writable) ||
-    /^(?:Date|RegExp|Map|Set|URL|URLSearchParams|WeakMap|WeakSet|ArrayBuffer|SharedArrayBuffer|DataView|Float32Array|Float64Array|Int8Array|Int16Array|Int32Array|Uint8Array|Uint8ClampedArray|Uint16Array|Uint32Array|BigInt64Array|BigUint64Array)$/.test(
-      type.name,
-    );
+    NATIVE_CONSTRUCTORS_REGEX.test(type.name);
   try {
     if (isClassOrNative) {
       return new (type as new (...args: unknown[]) => unknown)(value);

@@ -109,6 +109,7 @@ export function defineComponent<
     compiledStyleSheet.replaceSync(config.styles);
   }
 
+  const isFormAssociated = config.formAssociated === true;
   const attributeToPropertyMap = new Map<string, string>();
   for (const propName of Object.keys(properties)) {
     if (RESERVED_NAMES.has(propName)) {
@@ -116,6 +117,11 @@ export function defineComponent<
     }
     if (propName.startsWith("_")) {
       throw new Error(`Component "${tagName}": property "${propName}" cannot start with an underscore.`);
+    }
+    if (typeof HTMLElement !== "undefined" && HTMLElement.prototype && propName in HTMLElement.prototype) {
+      throw new Error(
+        `Component "${tagName}": property "${propName}" conflicts with native HTMLElement prototype property.`,
+      );
     }
 
     const checkAndSetAttribute = (attrName: string) => {
@@ -148,11 +154,13 @@ export function defineComponent<
   }
 
   class CustomElement extends BaseElement {
+    static formAssociated = isFormAssociated;
     private _isRenderScheduled = false;
     private _isMounted = false;
     private _isRendering = false;
     private _hasMutatedDuringRender = false;
     private _contentWrapper: HTMLElement | null = null;
+    private _internals: ElementInternals | null = null;
     _propertyValues: Record<string, unknown> = {};
 
     static get observedAttributes(): string[] {
@@ -163,6 +171,10 @@ export function defineComponent<
       super();
       // Dummy read to satisfy compiler unused-property check since it is read via CustomElementInternal cast
       void this._isRendering;
+
+      if (isFormAssociated && typeof this.attachInternals === "function") {
+        this._internals = this.attachInternals();
+      }
 
       // Initialize default values defined in property config descriptors
       for (const [propName, propEntry] of Object.entries(properties)) {
@@ -209,6 +221,16 @@ export function defineComponent<
         shadow.appendChild(contentWrapper);
         this._contentWrapper = contentWrapper;
       }
+    }
+
+    get internals(): ElementInternals {
+      if (!this._internals) {
+        if (!isFormAssociated) {
+          throw new Error(`Component "${tagName}" is not form-associated. Set formAssociated: true in config.`);
+        }
+        throw new Error("ElementInternals is not supported in this environment.");
+      }
+      return this._internals;
     }
 
     requestUpdate(): void {

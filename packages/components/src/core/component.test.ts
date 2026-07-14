@@ -17,10 +17,10 @@ describe("defineComponent", () => {
   it("shouldReturnDefinitionWithoutRegisteringElement", () => {
     const tag = generateUniqueTag("def-test");
     const component = defineComponent(tag, {
-      properties: { title: String },
+      properties: { heading: String },
       render() {
         return html`
-          <h1>${this.title}</h1>
+          <h1>${this.heading}</h1>
         `;
       },
     });
@@ -1474,5 +1474,34 @@ describe("defineComponent - additional validations and features", () => {
     const hasAdoptedSheets = adoptedSheets !== undefined && adoptedSheets.length > 0;
     const hasStyleTag = el.shadowRoot!.querySelector("style") !== null;
     expect(hasAdoptedSheets || hasStyleTag).toBe(true);
+  });
+
+  it("shouldThrowErrorWhenPropertyShadowsNativeHTMLElementProperty", () => {
+    const tag = generateUniqueTag("shadow-native");
+    expect(() => {
+      defineComponent(tag, {
+        properties: {
+          id: String,
+        },
+        render() {
+          return "<p></p>";
+        },
+      });
+    }).toThrow(`Component "${tag}": property "id" conflicts with native HTMLElement prototype property.`);
+  });
+
+  it("shouldSupportNativeFormParticipation", () => {
+    const tag = generateUniqueTag("form-association");
+    const component = defineComponent(tag, {
+      formAssociated: true,
+      render() {
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create();
+    expect(component.elementClass.formAssociated).toBe(true);
+    expect(el.internals).toBeDefined();
   });
 });
