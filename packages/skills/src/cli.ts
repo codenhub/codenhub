@@ -75,6 +75,22 @@ async function main() {
 
   // Parse arguments
   const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(
+      `Usage: codenhub-skills [options]\n\n` +
+        `Options:\n` +
+        `  --local           Install skills to project workspace (default)\n` +
+        `  --global          Install skills to user home directory\n` +
+        `  --both            Install skills to both local and global harnesses\n` +
+        `  --cleanup         Clean up target directories before installing\n` +
+        `  --skills=<list>   Comma-separated list of skill IDs to install\n` +
+        `  --all-skills      Install all available skills\n` +
+        `  --harnesses=<list> Comma-separated list of harnesses to install to\n` +
+        `  --all-harnesses   Install to all valid harnesses for the selected scope\n` +
+        `  --help, -h        Display this help message`,
+    );
+    process.exit(0);
+  }
   const hasArgs = args.length > 0;
   const isInteractive = process.stdin.isTTY && !hasArgs;
 
@@ -407,8 +423,8 @@ async function main() {
           process.exit(1);
         }
       }
-    } else if (!hasArgs) {
-      // Default: install locally only to existent folders, else fail.
+    } else {
+      // Default: auto-detect existing harnesses in selected scope.
       const detectedHarnesses: string[] = [];
       for (const name of Object.keys(filteredHarnessMapping)) {
         const destBaseDir = filteredHarnessMapping[name];
@@ -419,16 +435,11 @@ async function main() {
       }
       if (detectedHarnesses.length === 0) {
         console.error(
-          `${ANSI.RED}Error: No harnesses detected on the system and no arguments were provided to force installation. Exiting.${ANSI.RESET}`,
+          `${ANSI.RED}Error: No harnesses detected on the system for scope "${state.scope}". Use --all-harnesses or specify harnesses manually.${ANSI.RESET}`,
         );
         process.exit(1);
       }
       state.selectedHarnesses = detectedHarnesses;
-    } else {
-      console.error(
-        `${ANSI.RED}Error: No harnesses specified. Use --all-harnesses or --harnesses=<list>.${ANSI.RESET}`,
-      );
-      process.exit(1);
     }
   }
 

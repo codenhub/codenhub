@@ -41,7 +41,7 @@ export interface CopyRecursiveOptions {
  *
  * @param content - Raw markdown file content.
  * @returns Key-value map of frontmatter fields. Returns an empty
- *   object when no frontmatter block is found.
+ *   object when no frontmatter block is found or if parsing fails.
  */
 export function parseFrontmatter(content: string): Record<string, string> {
   const normalized = content.replace(/^\uFEFF/, "");
@@ -65,18 +65,6 @@ export function parseFrontmatter(content: string): Record<string, string> {
   return metadata;
 }
 
-/**
- * Reads all valid skills from `srcDir`.
- *
- * A subdirectory is treated as a skill when it contains a `SKILL.md`
- * file. Name and description are read from the file's YAML
- * frontmatter.
- *
- * @param srcDir - Absolute path to the directory containing skill
- *   subdirectories.
- * @returns Array of {@link Skill} objects. Returns an empty array when
- *   `srcDir` does not exist.
- */
 /**
  * Internal helper to read the beginning of a file.
  */
@@ -102,6 +90,7 @@ function readFileHeader(filePath: string, bytesCount = 4096): string {
  *   subdirectories.
  * @returns Array of {@link Skill} objects. Returns an empty array when
  *   `srcDir` does not exist.
+ * @throws {Error} If filesystem operations fail (e.g., permission issues).
  */
 export function getSkills(srcDir: string): Skill[] {
   if (!fs.existsSync(srcDir)) {
@@ -211,7 +200,11 @@ function copyDirectoryInternal(options: {
     if (entry.isSymbolicLink()) {
       const realChild = fs.realpathSync(srcChild);
       const relativeToSrc = path.relative(resolvedSrc, realChild);
-      const isOutside = relativeToSrc.startsWith("..") || path.isAbsolute(relativeToSrc);
+      const isOutside =
+        relativeToSrc === ".." ||
+        relativeToSrc.startsWith("../") ||
+        relativeToSrc.startsWith("..\\") ||
+        path.isAbsolute(relativeToSrc);
       if (isOutside) {
         throw new Error(
           `Directory traversal detected: "${srcChild}" resolves to "${realChild}" which is outside "${resolvedSrc}"`,

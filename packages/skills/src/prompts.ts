@@ -125,6 +125,11 @@ function runPrompt<T>(opts: PromptRunOptions<T>): Promise<T> {
  *
  * In non-TTY environments returns the pre-checked values immediately
  * without prompting.
+ *
+ * @param message - The prompt message/question to display.
+ * @param options - Checkbox options including choices and go-back capability.
+ * @returns Array of selected choice values, or {@link BACK} signal if the user goes back.
+ * @throws {CancelledError} When user cancels the prompt via Ctrl+C.
  */
 export function promptCheckbox(message: string, options: CheckboxOptions): Promise<string[] | BackSignal> {
   const { choices, canGoBack = false } = options;
@@ -188,7 +193,15 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
         case "return": {
           cleanup();
           const selectedValues = choices.filter((c) => c.isChecked).map((c) => c.value);
-          process.stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection confirmed.\n`);
+          const selectedNames = choices.filter((c) => c.isChecked).map((c) => c.name);
+          process.stdout.write(ANSI.CURSOR_UP(choices.length + 2));
+          process.stdout.write(
+            `${ANSI.CLEAR_LINE}${ANSI.BOLD}${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${message}${ANSI.RESET} ${ANSI.CYAN}(${selectedNames.join(", ")})${ANSI.RESET}\n`,
+          );
+          for (let i = 0; i < choices.length + 1; i++) {
+            process.stdout.write(`${ANSI.CLEAR_LINE}\n`);
+          }
+          process.stdout.write(ANSI.CURSOR_UP(choices.length + 1));
           resolve(selectedValues);
           break;
         }
@@ -198,11 +211,16 @@ export function promptCheckbox(message: string, options: CheckboxOptions): Promi
 }
 
 /**
- * Yes/No confirmation prompt. Delegates to `selectPrompt` with two
+ * Yes/No confirmation prompt. Delegates to {@link promptSelect} with two
  * fixed choices.
  *
  * In non-TTY environments returns `defaultValue` immediately without
  * prompting.
+ *
+ * @param message - The prompt message/question to display.
+ * @param options - Confirmation options including default value and go-back capability.
+ * @returns Boolean representing confirmation state, or {@link BACK} signal if the user goes back.
+ * @throws {CancelledError} When user cancels the prompt via Ctrl+C.
  */
 export async function promptConfirm(message: string, options: ConfirmOptions): Promise<boolean | BackSignal> {
   const { isDefaultValue, canGoBack = false } = options;
@@ -224,7 +242,11 @@ export async function promptConfirm(message: string, options: ConfirmOptions): P
  * In non-TTY environments returns the choice at `initialCursor`
  * immediately without prompting.
  *
+ * @param message - The prompt message/question to display.
+ * @param options - Selection options including choices, initial cursor, and go-back capability.
+ * @returns Selected choice value, or {@link BACK} signal if the user goes back.
  * @throws {Error} When `choices` is empty.
+ * @throws {CancelledError} When user cancels the prompt via Ctrl+C.
  */
 export function promptSelect(message: string, options: SelectOptions): Promise<string | BackSignal> {
   const { choices, initialCursor = 0, canGoBack = false } = options;
@@ -282,9 +304,16 @@ export function promptSelect(message: string, options: SelectOptions): Promise<s
           break;
         case "return": {
           cleanup();
-          const selectedValue = choices[cursor].value;
-          process.stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection: ${choices[cursor].name}\n`);
-          resolve(selectedValue);
+          const selectedChoice = choices[cursor];
+          process.stdout.write(ANSI.CURSOR_UP(choices.length + 2));
+          process.stdout.write(
+            `${ANSI.CLEAR_LINE}${ANSI.BOLD}${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${message}${ANSI.RESET} ${ANSI.CYAN}${selectedChoice.name}${ANSI.RESET}\n`,
+          );
+          for (let i = 0; i < choices.length + 1; i++) {
+            process.stdout.write(`${ANSI.CLEAR_LINE}\n`);
+          }
+          process.stdout.write(ANSI.CURSOR_UP(choices.length + 1));
+          resolve(selectedChoice.value);
           break;
         }
       }

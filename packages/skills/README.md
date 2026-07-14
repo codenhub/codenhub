@@ -133,6 +133,22 @@ interface CopyRecursiveOptions {
 }
 ```
 
+### CLI
+
+The package includes a binary installer CLI `codenhub-skills`.
+
+#### Arguments
+
+- `--local`: Install skills to project workspace target directories (default).
+- `--global`: Install skills to user home target directories.
+- `--both`: Install skills to both global and local directories.
+- `--cleanup`: Clean up target directories before copying.
+- `--skills=<list>`: Comma-separated list of specific skill IDs to install.
+- `--all-skills`: Force-install all available skills.
+- `--harnesses=<list>`: Comma-separated list of harnesses to install to.
+- `--all-harnesses`: Force-install to all harnesses valid for the selected scope.
+- `--help`, `-h`: Display the usage help message.
+
 ## Examples
 
 ### Read skill metadata from a directory
