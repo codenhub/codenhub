@@ -2,9 +2,9 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-import { parseFrontmatter, getSkills, copyRecursiveSync, confirmPrompt, selectPrompt } from "./cli.js";
+import { parseFrontmatter, getSkills, copyRecursiveSync, confirmPrompt, selectPrompt } from "./index.js";
 
 describe("Skills Helper functions", () => {
   let tempDir: string;
@@ -15,11 +15,21 @@ describe("Skills Helper functions", () => {
 
   afterEach(() => {
     fs.rmSync(tempDir, { recursive: true, force: true });
+    vi.restoreAllMocks();
   });
 
   describe("parseFrontmatter", () => {
     it("should parse valid frontmatter", () => {
       const content = `---\nname: test-skill\ndescription: A test skill description\n---\nSome markdown here`;
+      const meta = parseFrontmatter(content);
+      expect(meta).toEqual({
+        name: "test-skill",
+        description: "A test skill description",
+      });
+    });
+
+    it("should strip surrounding quotes from frontmatter values", () => {
+      const content = `---\nname: "test-skill"\ndescription: 'A test skill description'\n---\nSome markdown here`;
       const meta = parseFrontmatter(content);
       expect(meta).toEqual({
         name: "test-skill",
@@ -98,29 +108,26 @@ describe("Skills Helper functions", () => {
       expect(fs.existsSync(path.join(destDir, "ignored-dir"))).toBe(false);
       expect(fs.existsSync(path.join(destDir, "ignored-dir", "file3.txt"))).toBe(false);
     });
+
+    it("should throw if source path does not exist", () => {
+      const nonExistentSrc = path.join(tempDir, "non-existent");
+      const destDir = path.join(tempDir, "dest-error");
+      expect(() => copyRecursiveSync(nonExistentSrc, destDir)).toThrow("does not exist");
+    });
   });
 
   describe("confirmPrompt", () => {
     it("should return default value when process.stdin.isTTY is false", async () => {
       const origIsTTY = process.stdin.isTTY;
+      // @ts-ignore
       process.stdin.isTTY = false;
       try {
-        const result = await confirmPrompt("Test message", true);
+        const result = await confirmPrompt("Test message", { defaultValue: true });
         expect(result).toBe(true);
-        const resultFalse = await confirmPrompt("Test message", false);
+        const resultFalse = await confirmPrompt("Test message", { defaultValue: false });
         expect(resultFalse).toBe(false);
       } finally {
-        process.stdin.isTTY = origIsTTY;
-      }
-    });
-
-    it("should call selectPrompt with default index based on defaultValue", async () => {
-      const origIsTTY = process.stdin.isTTY;
-      process.stdin.isTTY = false;
-      try {
-        expect(await confirmPrompt("Test message", true)).toBe(true);
-        expect(await confirmPrompt("Test message", false)).toBe(false);
-      } finally {
+        // @ts-ignore
         process.stdin.isTTY = origIsTTY;
       }
     });
@@ -129,47 +136,49 @@ describe("Skills Helper functions", () => {
   describe("selectPrompt", () => {
     it("should return the first choice value when process.stdin.isTTY is false", async () => {
       const origIsTTY = process.stdin.isTTY;
+      // @ts-ignore
       process.stdin.isTTY = false;
       try {
         const choices = [
           { name: "Choice A", value: "a" },
           { name: "Choice B", value: "b" },
         ];
-        const result = await selectPrompt("Test select", choices);
+        const result = await selectPrompt("Test select", { choices });
         expect(result).toBe("a");
       } finally {
+        // @ts-ignore
         process.stdin.isTTY = origIsTTY;
       }
     });
 
     it("should return __BACK__ on backspace when canGoBack is true", async () => {
       const origIsTTY = process.stdin.isTTY;
+      // @ts-ignore
       process.stdin.isTTY = true;
       const origSetRawMode = process.stdin.setRawMode;
-      const origPause = process.stdin.pause;
-      const origResume = process.stdin.resume;
-      const origWrite = process.stdout.write;
-
-      process.stdin.setRawMode = () => process.stdin;
-      process.stdin.pause = () => process.stdin;
-      process.stdin.resume = () => process.stdin;
-      process.stdout.write = () => true;
+      // @ts-ignore
+      process.stdin.setRawMode = vi.fn().mockReturnValue(process.stdin);
+      const pauseSpy = vi.spyOn(process.stdin, "pause").mockImplementation(() => process.stdin);
+      const resumeSpy = vi.spyOn(process.stdin, "resume").mockImplementation(() => process.stdin);
+      const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
 
       try {
         const choices = [
           { name: "Choice A", value: "a" },
           { name: "Choice B", value: "b" },
         ];
-        const promise = selectPrompt("Test select", choices, 0, true);
+        const promise = selectPrompt("Test select", { choices, canGoBack: true });
         process.stdin.emit("keypress", undefined, { name: "backspace" });
         const result = await promise;
         expect(result).toBe("__BACK__");
       } finally {
+        // @ts-ignore
         process.stdin.isTTY = origIsTTY;
+        // @ts-ignore
         process.stdin.setRawMode = origSetRawMode;
-        process.stdin.pause = origPause;
-        process.stdin.resume = origResume;
-        process.stdout.write = origWrite;
+        pauseSpy.mockRestore();
+        resumeSpy.mockRestore();
+        writeSpy.mockRestore();
       }
     });
   });

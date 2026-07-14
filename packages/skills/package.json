@@ -15,21 +15,31 @@
   },
   "files": [
     "dist",
-    "src",
+    "skills",
     "NOTICE",
     "docs/provenance.md"
   ],
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/cli.ts --format esm --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts src/cli.ts --format esm --clean --no-fixed-extension --dts",
     "cli": "pnpm build && node dist/cli.js",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/skills version dist-tags time --json && npm dist-tag ls @codenhub/skills && npm access get status @codenhub/skills",
     "status:pack": "npm pack --dry-run",
     "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

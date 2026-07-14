@@ -1,102 +1,23 @@
 import * as fs from "fs";
-import { createRequire } from "module";
 import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
 
-const require = createRequire(import.meta.url);
-
-interface Skill {
-  id: string;
-  name: string;
-  description: string;
-  path: string;
-}
-
-export function parseFrontmatter(content: string): Record<string, string> {
-  const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---/);
-  const metadata: Record<string, string> = {};
-  if (!match) {
-    return metadata;
-  }
-
-  const lines = match[1].split(/\r?\n/);
-  for (const line of lines) {
-    const colonIndex = line.indexOf(":");
-    if (colonIndex !== -1) {
-      const key = line.slice(0, colonIndex).trim();
-      const value = line.slice(colonIndex + 1).trim();
-      metadata[key] = value;
-    }
-  }
-  return metadata;
-}
-
-export function getSkills(srcDir: string): Skill[] {
-  if (!fs.existsSync(srcDir)) {
-    return [];
-  }
-
-  const items = fs.readdirSync(srcDir);
-  const skills: Skill[] = [];
-
-  for (const item of items) {
-    const itemPath = path.join(srcDir, item);
-    const stat = fs.statSync(itemPath);
-
-    if (stat.isDirectory()) {
-      const skillMdPath = path.join(itemPath, "SKILL.md");
-      if (fs.existsSync(skillMdPath)) {
-        const content = fs.readFileSync(skillMdPath, "utf8");
-        const meta = parseFrontmatter(content);
-        skills.push({
-          id: item,
-          name: meta.name || item,
-          description: meta.description || "",
-          path: itemPath,
-        });
-      }
-    }
-  }
-
-  return skills;
-}
-
-export function copyRecursiveSync(src: string, dest: string, ignoreList: string[] = []): void {
-  const exists = fs.existsSync(src);
-  const stats = exists && fs.statSync(src);
-  const isDirectory = exists && stats && stats.isDirectory();
-
-  if (isDirectory) {
-    if (!fs.existsSync(dest)) {
-      fs.mkdirSync(dest, { recursive: true });
-    }
-    fs.readdirSync(src).forEach((childItemName) => {
-      if (ignoreList.includes(childItemName)) {
-        return;
-      }
-      copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName), ignoreList);
-    });
-  } else {
-    const destDir = path.dirname(dest);
-    if (!fs.existsSync(destDir)) {
-      fs.mkdirSync(destDir, { recursive: true });
-    }
-    fs.copyFileSync(src, dest);
-  }
-}
+import {
+  getSkills,
+  copyRecursiveSync,
+  checkboxPrompt,
+  confirmPrompt,
+  selectPrompt,
+  type Choice,
+  type SelectChoice,
+} from "./index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Find skills source directory
-let skillsSrcDir = path.resolve(__dirname, "../src");
-if (
-  !fs.existsSync(skillsSrcDir) ||
-  !fs.readdirSync(skillsSrcDir).some((f) => fs.statSync(path.join(skillsSrcDir, f)).isDirectory())
-) {
-  skillsSrcDir = __dirname;
-}
+// Find skills directory relative to build output
+const skillsSrcDir = path.resolve(__dirname, "../skills");
 
 const home = os.homedir();
 
@@ -112,258 +33,30 @@ const HARNESS_MAPPING: Record<string, string> = {
 };
 
 const ANSI = {
-  HIDE_CURSOR: "\x1b[?25l",
-  SHOW_CURSOR: "\x1b[?25h",
-  CLEAR_LINE: "\x1b[2K",
-  CURSOR_UP: (n: number) => `\x1b[${n}A`,
   RESET: "\x1b[0m",
   BOLD: "\x1b[1m",
-  DIM: "\x1b[2m",
   CYAN: "\x1b[36m",
   GREEN: "\x1b[32m",
   RED: "\x1b[31m",
   BLUE: "\x1b[34m",
   YELLOW: "\x1b[33m",
-  WHITE: "\x1b[37m",
 };
 
-const CONSTANTS = {
-  CODEX_IDENTIFIER: "Codex",
-  EXCLUDE_FOLDER_AGENTS: "agents",
-};
+const CODEX_IDENTIFIER = "Codex";
+const EXCLUDE_FOLDER_AGENTS = "agents";
 
-interface Choice {
-  name: string;
-  value: string;
-  checked: boolean;
-  description?: string;
+interface State {
+  scope: string;
+  shouldInstallAll: boolean;
+  selectedSkills: string[];
+  selectedHarnesses: string[];
+  shouldCleanupFirst: boolean;
 }
 
-function checkboxPrompt(message: string, choices: Choice[], canGoBack = false): Promise<string[] | "__BACK__"> {
-  return new Promise((resolve) => {
-    const stdout = process.stdout;
-    if (!process.stdin.isTTY) {
-      resolve(choices.filter((c) => c.checked).map((c) => c.value));
-      return;
-    }
-    let cursor = 0;
-
-    // Hide terminal cursor
-    stdout.write(ANSI.HIDE_CURSOR);
-
-    function render(first = false) {
-      if (!first) {
-        // Move cursor up to overwrite previous render
-        const linesToMove = choices.length + 2;
-        stdout.write(ANSI.CURSOR_UP(linesToMove));
-      }
-
-      // Title/Message
-      stdout.write(`${ANSI.BOLD}${ANSI.CYAN}? ${ANSI.WHITE}${message}${ANSI.RESET}\n`);
-
-      // Choices
-      choices.forEach((choice, index) => {
-        const isCurrent = index === cursor;
-        const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
-        const checkbox = choice.checked ? `${ANSI.GREEN}[◼]${ANSI.RESET}` : "[ ]";
-        const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
-        const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
-
-        stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${checkbox} ${name}${desc}\n`);
-      });
-
-      // Instructions
-      const backInstruction = canGoBack ? ", Backspace/Left to go back" : "";
-      stdout.write(
-        `${ANSI.CLEAR_LINE}${ANSI.DIM}(Use arrows to navigate, Space to toggle, Enter to confirm${backInstruction}, Ctrl+C to exit)${ANSI.RESET}\n`,
-      );
-    }
-
-    render(true);
-
-    function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
-      if (key && key.ctrl && key.name === "c") {
-        cleanup();
-        stdout.write(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}\n`);
-        process.exit(0);
-      }
-
-      if (!key) {
-        return;
-      }
-
-      switch (key.name) {
-        case "up":
-          cursor = (cursor - 1 + choices.length) % choices.length;
-          render();
-          break;
-        case "down":
-          cursor = (cursor + 1) % choices.length;
-          render();
-          break;
-        case "space":
-          choices[cursor].checked = !choices[cursor].checked;
-          render();
-          break;
-        case "left":
-        case "backspace":
-          if (canGoBack) {
-            cleanup();
-            resolve("__BACK__");
-          }
-          break;
-        case "return":
-          cleanup();
-          const selectedValues = choices.filter((c) => c.checked).map((c) => c.value);
-          stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection confirmed.\n`);
-          resolve(selectedValues);
-          break;
-      }
-    }
-
-    function cleanup() {
-      process.stdin.removeListener("keypress", onKeypress);
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(false);
-      }
-      process.stdin.pause();
-      stdout.write(ANSI.SHOW_CURSOR); // Show cursor
-    }
-
-    // Setup keypress listener
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-
-    const readline = require("readline");
-    readline.emitKeypressEvents(process.stdin);
-
-    process.stdin.on("keypress", onKeypress);
-  });
-}
-
-export interface SelectChoice {
-  name: string;
-  value: string;
-  description?: string;
-}
-
-export async function confirmPrompt(
-  message: string,
-  defaultValue: boolean,
-  canGoBack = false,
-): Promise<boolean | "__BACK__"> {
-  const choices: SelectChoice[] = [
-    { name: "Yes", value: "yes" },
-    { name: "No", value: "no" },
-  ];
-  const initialCursor = defaultValue ? 0 : 1;
-  const selected = await selectPrompt(message, choices, initialCursor, canGoBack);
-  if (selected === "__BACK__") {
-    return "__BACK__";
-  }
-  return selected === "yes";
-}
-
-export function selectPrompt(
-  message: string,
-  choices: SelectChoice[],
-  initialCursor = 0,
-  canGoBack = false,
-): Promise<string> {
-  return new Promise((resolve) => {
-    const stdout = process.stdout;
-    if (!process.stdin.isTTY) {
-      resolve(choices[initialCursor]?.value ?? choices[0].value);
-      return;
-    }
-    let cursor = initialCursor;
-
-    stdout.write(ANSI.HIDE_CURSOR);
-
-    function render(first = false) {
-      if (!first) {
-        const linesToMove = choices.length + 2;
-        stdout.write(ANSI.CURSOR_UP(linesToMove));
-      }
-
-      stdout.write(`${ANSI.BOLD}${ANSI.CYAN}? ${ANSI.WHITE}${message}${ANSI.RESET}\n`);
-
-      choices.forEach((choice, index) => {
-        const isCurrent = index === cursor;
-        const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
-        const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
-        const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
-
-        stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${name}${desc}\n`);
-      });
-
-      const backInstruction = canGoBack ? ", Backspace/Left to go back" : "";
-      stdout.write(
-        `${ANSI.CLEAR_LINE}${ANSI.DIM}(Use arrows to navigate${backInstruction}, Enter to confirm, Ctrl+C to exit)${ANSI.RESET}\n`,
-      );
-    }
-
-    render(true);
-
-    function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
-      if (key && key.ctrl && key.name === "c") {
-        cleanup();
-        stdout.write(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}\n`);
-        process.exit(0);
-      }
-
-      if (!key) {
-        return;
-      }
-
-      switch (key.name) {
-        case "up":
-          cursor = (cursor - 1 + choices.length) % choices.length;
-          render();
-          break;
-        case "down":
-          cursor = (cursor + 1) % choices.length;
-          render();
-          break;
-        case "left":
-        case "backspace":
-          if (canGoBack) {
-            cleanup();
-            resolve("__BACK__");
-          }
-          break;
-        case "return":
-          cleanup();
-          const selectedValue = choices[cursor].value;
-          stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection: ${choices[cursor].name}\n`);
-          resolve(selectedValue);
-          break;
-      }
-    }
-
-    function cleanup() {
-      process.stdin.removeListener("keypress", onKeypress);
-      if (process.stdin.isTTY) {
-        process.stdin.setRawMode(false);
-      }
-      process.stdin.pause();
-      stdout.write(ANSI.SHOW_CURSOR);
-    }
-
-    if (process.stdin.isTTY) {
-      process.stdin.setRawMode(true);
-    }
-    process.stdin.resume();
-    process.stdin.setEncoding("utf8");
-
-    const readline = require("readline");
-    readline.emitKeypressEvents(process.stdin);
-
-    process.stdin.on("keypress", onKeypress);
-  });
+interface Step {
+  id: string;
+  title: string;
+  run: (canGoBack: boolean) => Promise<boolean | "__BACK__">;
 }
 
 async function main() {
@@ -373,15 +66,15 @@ async function main() {
     process.exit(1);
   }
 
-  const state = {
+  const state: State = {
     scope: "local",
-    installAll: true,
+    shouldInstallAll: true,
     selectedSkills: skills.map((s) => s.id),
-    selectedHarnesses: [] as string[],
-    cleanupFirst: false,
+    selectedHarnesses: [],
+    shouldCleanupFirst: false,
   };
 
-  const steps = [
+  const steps: Step[] = [
     {
       id: "scope",
       title: "Select Scope",
@@ -392,12 +85,11 @@ async function main() {
           { name: "Both", value: "both" },
         ];
         const defaultIndex = scopeChoices.findIndex((c) => c.value === state.scope);
-        const selected = await selectPrompt(
-          "Where do you want to install the skills?",
-          scopeChoices,
-          defaultIndex !== -1 ? defaultIndex : 0,
+        const selected = await selectPrompt("Where do you want to install the skills?", {
+          choices: scopeChoices,
+          initialCursor: defaultIndex !== -1 ? defaultIndex : 0,
           canGoBack,
-        );
+        });
         if (selected === "__BACK__") {
           return "__BACK__";
         }
@@ -406,18 +98,17 @@ async function main() {
       },
     },
     {
-      id: "installAll",
+      id: "shouldInstallAll",
       title: "All Skills Option",
       run: async (canGoBack: boolean) => {
-        const selected = await confirmPrompt(
-          "Do you want to install all available skills?",
-          state.installAll,
+        const selected = await confirmPrompt("Do you want to install all available skills?", {
+          defaultValue: state.shouldInstallAll,
           canGoBack,
-        );
+        });
         if (selected === "__BACK__") {
           return "__BACK__";
         }
-        state.installAll = selected;
+        state.shouldInstallAll = selected;
         return true;
       },
     },
@@ -431,7 +122,10 @@ async function main() {
           checked: state.selectedSkills.includes(s.id),
           description: s.description,
         }));
-        const selected = await checkboxPrompt("Which skills do you want to install?", skillChoices, canGoBack);
+        const selected = await checkboxPrompt("Which skills do you want to install?", {
+          choices: skillChoices,
+          canGoBack,
+        });
         if (selected === "__BACK__") {
           return "__BACK__";
         }
@@ -470,7 +164,10 @@ async function main() {
           };
         });
 
-        const selected = await checkboxPrompt("Which harnesses do you want to install to?", harnessChoices, canGoBack);
+        const selected = await checkboxPrompt("Which harnesses do you want to install to?", {
+          choices: harnessChoices,
+          canGoBack,
+        });
         if (selected === "__BACK__") {
           return "__BACK__";
         }
@@ -488,23 +185,25 @@ async function main() {
       run: async (canGoBack: boolean) => {
         const selected = await confirmPrompt(
           "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
-          state.cleanupFirst,
-          canGoBack,
+          {
+            defaultValue: state.shouldCleanupFirst,
+            canGoBack,
+          },
         );
         if (selected === "__BACK__") {
           return "__BACK__";
         }
-        state.cleanupFirst = selected;
+        state.shouldCleanupFirst = selected;
         return true;
       },
     },
   ];
 
-  function getActiveSteps() {
-    const active = [];
+  function getActiveSteps(): Step[] {
+    const active: Step[] = [];
     active.push(steps[0]); // scope
-    active.push(steps[1]); // installAll
-    if (!state.installAll) {
+    active.push(steps[1]); // shouldInstallAll
+    if (!state.shouldInstallAll) {
       active.push(steps[2]); // selectSkills
     }
     active.push(steps[3]); // harnesses
@@ -522,7 +221,7 @@ async function main() {
     console.log(`${ANSI.BOLD}${ANSI.CYAN}=========================================${ANSI.RESET}\n`);
   }
 
-  function drawSummary(currentIdx: number, activeStepsList: typeof steps) {
+  function drawSummary(currentIdx: number, activeStepsList: Step[]) {
     for (let i = 0; i < currentIdx; i++) {
       const step = activeStepsList[i];
       let summaryText = "";
@@ -534,14 +233,14 @@ async function main() {
               ? "Globally (user home directory)"
               : "Both";
         summaryText = scopeName;
-      } else if (step.id === "installAll") {
-        summaryText = state.installAll ? "Yes" : "No";
+      } else if (step.id === "shouldInstallAll") {
+        summaryText = state.shouldInstallAll ? "Yes" : "No";
       } else if (step.id === "selectSkills") {
         summaryText = state.selectedSkills.join(", ");
       } else if (step.id === "harnesses") {
         summaryText = state.selectedHarnesses.join(", ");
       } else if (step.id === "cleanup") {
-        summaryText = state.cleanupFirst ? "Yes" : "No";
+        summaryText = state.shouldCleanupFirst ? "Yes" : "No";
       }
       console.log(`${ANSI.GREEN}✔${ANSI.RESET} ${ANSI.BOLD}${step.title}:${ANSI.RESET} ${summaryText}`);
     }
@@ -588,9 +287,9 @@ async function main() {
   drawHeader();
   drawSummary(activeSteps.length, activeSteps);
 
-  const skillsToInstall = state.installAll ? skills.map((s) => s.id) : state.selectedSkills;
+  const skillsToInstall = state.shouldInstallAll ? skills.map((s) => s.id) : state.selectedSkills;
 
-  if (state.cleanupFirst) {
+  if (state.shouldCleanupFirst) {
     console.log(`${ANSI.YELLOW}Cleaning up target directories...${ANSI.RESET}`);
     for (const harness of state.selectedHarnesses) {
       const destBaseDir = HARNESS_MAPPING[harness];
@@ -614,7 +313,7 @@ async function main() {
     if (!destBaseDir) {
       continue;
     }
-    const isCodex = harness.includes(CONSTANTS.CODEX_IDENTIFIER);
+    const isCodex = harness.includes(CODEX_IDENTIFIER);
     console.log(`${ANSI.BLUE}→ Installing to ${harness}...${ANSI.RESET}`);
 
     for (const skillId of skillsToInstall) {
@@ -625,7 +324,7 @@ async function main() {
 
       const destSkillDir = path.join(destBaseDir, skillId);
       try {
-        copyRecursiveSync(skill.path, destSkillDir, isCodex ? [] : [CONSTANTS.EXCLUDE_FOLDER_AGENTS]);
+        copyRecursiveSync(skill.path, destSkillDir, isCodex ? [] : [EXCLUDE_FOLDER_AGENTS]);
         console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Copied: ${skill.name}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
