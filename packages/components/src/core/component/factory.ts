@@ -2,6 +2,7 @@ import { TemplateResult } from "../html.js";
 import type {
   ComponentConfig,
   ComponentDefinition,
+  ComponentEvents,
   ComponentInstance,
   ComponentProperties,
   PropertyConstructor,
@@ -65,10 +66,11 @@ interface CustomElementInternal {
  * });
  * ```
  */
-export function defineComponent<Props extends ComponentProperties, Methods>(
-  tagName: string,
-  config: ComponentConfig<Props, Methods>,
-): ComponentDefinition<Props, Methods> {
+export function defineComponent<
+  Props extends ComponentProperties,
+  Methods,
+  Events extends ComponentEvents = Record<string, never>,
+>(tagName: string, config: ComponentConfig<Props, Methods, Events>): ComponentDefinition<Props, Methods, Events> {
   if (!VALID_TAG_NAME_REGEX.test(tagName)) {
     throw new Error(
       `Invalid custom element tag name: "${tagName}". ` +
@@ -87,11 +89,18 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
   const methods = (config.methods ?? {}) as Methods;
   const shouldUseShadow = config.hasShadow === true;
 
-  if (config.styles !== undefined && !shouldUseShadow) {
-    console.warn(
-      `Component "${tagName}" declared styles but "hasShadow" is not enabled. ` +
-        "Styles are only injected when hasShadow is true.",
-    );
+  if (config.styles !== undefined) {
+    if (!shouldUseShadow) {
+      if (typeof document !== "undefined") {
+        const styleId = `codenhub-styles-${tagName}`;
+        if (!document.getElementById(styleId)) {
+          const styleEl = document.createElement("style");
+          styleEl.id = styleId;
+          styleEl.textContent = config.styles;
+          document.head.appendChild(styleEl);
+        }
+      }
+    }
   }
 
   let compiledStyleSheet: CSSStyleSheet | null = null;
@@ -280,7 +289,7 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
         }
       }
 
-      const rawHTML = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
+      const rawHtml = htmlContent instanceof TemplateResult ? htmlContent.value : String(htmlContent);
 
       if (shouldUseShadow && HAS_SHADOW_SUPPORT) {
         const contentWrapper = this._contentWrapper;
@@ -290,9 +299,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
               "Render aborted to prevent style node clobbering.",
           );
         }
-        contentWrapper.innerHTML = rawHTML;
+        contentWrapper.innerHTML = rawHtml;
       } else {
-        this.innerHTML = rawHTML;
+        this.innerHTML = rawHtml;
       }
 
       config.onUpdate?.call(this as unknown as ComponentInstance<Props, Methods>);
@@ -336,7 +345,9 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
 
   return {
     tagName,
-    elementClass: CustomElement as unknown as ComponentDefinition<Props, Methods>["elementClass"],
+    elementClass: CustomElement as unknown as ComponentDefinition<Props, Methods, Events>["elementClass"],
+    properties,
+    events: config.events,
     create(props) {
       const element = new CustomElement();
       if (props !== undefined) {

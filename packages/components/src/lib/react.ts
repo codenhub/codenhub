@@ -1,0 +1,100 @@
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+
+import type { ComponentDefinition, ComponentEvents, ComponentProperties, ComponentProps } from "../core/types.js";
+import { ChButton as ChButtonDefinition } from "./button.js";
+
+/**
+ * Creates a React component wrapper around a custom element definition.
+ */
+export function createReactWrapper<Props extends ComponentProperties, Methods, Events extends ComponentEvents>(
+  definition: ComponentDefinition<Props, Methods, Events>,
+): React.ForwardRefExoticComponent<
+  React.RefAttributes<HTMLElement> & Partial<ComponentProps<Props>> & Record<string, unknown>
+> {
+  const { tagName, properties, events } = definition;
+
+  const ReactComponent = forwardRef<HTMLElement, Record<string, unknown>>((props, ref) => {
+    const elementRef = useRef<HTMLElement | null>(null);
+    const handlersRef = useRef<Record<string, EventListener>>({});
+
+    useImperativeHandle(ref, () => elementRef.current as HTMLElement);
+
+    // Update handler references on every render
+    handlersRef.current = {};
+    if (events) {
+      for (const eventName of Object.keys(events)) {
+        const propKey = Object.keys(props).find((key) => key.toLowerCase() === `on${eventName.toLowerCase()}`);
+        const handler = propKey ? props[propKey] : undefined;
+        if (typeof handler === "function") {
+          handlersRef.current[eventName] = handler as EventListener;
+        }
+      }
+    }
+
+    // Sync properties when props change
+    useEffect(() => {
+      const element = elementRef.current;
+      if (!element) {
+        return;
+      }
+
+      if (properties) {
+        for (const propName of Object.keys(properties)) {
+          const value = propName in props ? props[propName] : undefined;
+          (element as unknown as Record<string, unknown>)[propName] = value;
+        }
+      }
+    }, [props]);
+
+    // Bind event listeners once on mount
+    useEffect(() => {
+      const element = elementRef.current;
+      if (!element) {
+        return;
+      }
+
+      const activeListeners: Array<[string, EventListener]> = [];
+      if (events) {
+        for (const eventName of Object.keys(events)) {
+          const listener = (event: Event) => {
+            const handler = handlersRef.current[eventName];
+            if (handler) {
+              handler(event);
+            }
+          };
+          element.addEventListener(eventName, listener);
+          activeListeners.push([eventName, listener]);
+        }
+      }
+
+      return () => {
+        for (const [eventName, listener] of activeListeners) {
+          element.removeEventListener(eventName, listener);
+        }
+      };
+    }, []);
+
+    // Construct properties to pass to React.createElement
+    const elementProps: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(props)) {
+      const isProperty = properties && key in properties;
+      const isEvent = events && key.toLowerCase().startsWith("on") && key.slice(2).toLowerCase() in events;
+
+      if (!isProperty && !isEvent) {
+        if (key === "className") {
+          elementProps.class = value;
+        } else {
+          elementProps[key] = value;
+        }
+      }
+    }
+
+    return React.createElement(tagName, { ...elementProps, ref: elementRef });
+  });
+
+  ReactComponent.displayName = `ReactComponent(${tagName})`;
+
+  return ReactComponent;
+}
+
+export const ChButton = createReactWrapper(ChButtonDefinition);

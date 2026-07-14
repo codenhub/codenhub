@@ -66,6 +66,25 @@ export interface PropertyConfig<T extends PropertyConstructor = PropertyConstruc
 export type ComponentProperties = Record<string, PropertyConstructor | PropertyConfig<PropertyConstructor>>;
 
 /**
+ * Supported constructor types for event detail payload types.
+ */
+export type EventDetailConstructor = PropertyConstructor;
+
+/**
+ * Configuration for an individual custom event declaration.
+ */
+export interface EventConfig<T extends EventDetailConstructor = EventDetailConstructor> {
+  /** The constructor/converter type of the event's detail payload. */
+  detailType: T;
+}
+
+/**
+ * A map of event names to their payload constructors or configuration descriptors.
+ * Used to declare custom events dispatched by the component.
+ */
+export type ComponentEvents = Record<string, EventDetailConstructor | EventConfig<EventDetailConstructor>>;
+
+/**
  * Resolves a `ComponentProperties` map to a concrete props object type,
  * where each key maps to its resolved `PropertyType`.
  */
@@ -82,13 +101,23 @@ export type ComponentProps<Props extends ComponentProperties> = {
  *
  * @typeParam Props - Property declarations map.
  * @typeParam Methods - Custom method definitions bound to the element instance.
+ * @typeParam Events - Custom event declarations map.
  */
-export interface ComponentConfig<Props extends ComponentProperties, Methods> {
+export interface ComponentConfig<
+  Props extends ComponentProperties,
+  Methods,
+  Events extends ComponentEvents = Record<string, never>,
+> {
   /**
    * Map of property names to constructor types for type casting and reactivity.
    * Property changes trigger a batched re-render.
    */
   properties?: Props;
+  /**
+   * Map of event names to event detail constructors or configs.
+   * Helps framework wrappers bind type-safe event handlers.
+   */
+  events?: Events;
   /**
    * Whether to attach a Shadow DOM to the element.
    * Defaults to `false`, allowing global stylesheets to reach the element.
@@ -132,8 +161,13 @@ export interface ComponentConfig<Props extends ComponentProperties, Methods> {
  *
  * @typeParam Props - Property declarations map.
  * @typeParam Methods - Custom method definitions.
+ * @typeParam Events - Custom event declarations map.
  */
-export interface ComponentDefinition<Props extends ComponentProperties, Methods> {
+export interface ComponentDefinition<
+  Props extends ComponentProperties,
+  Methods,
+  Events extends ComponentEvents = Record<string, never>,
+> {
   /** The registered custom element tag name. */
   tagName: string;
   /** The underlying `HTMLElement` subclass. Pass to `customElements.define`. */
@@ -143,4 +177,8 @@ export interface ComponentDefinition<Props extends ComponentProperties, Methods>
    * The element must be appended to the DOM to trigger `onMount`.
    */
   create: (props?: Partial<ComponentProps<Props>>) => ComponentInstance<Props, Methods>;
+  /** Property configuration declarations. */
+  properties: Props;
+  /** Custom event declarations. */
+  events?: Events;
 }

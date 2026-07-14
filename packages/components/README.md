@@ -69,9 +69,13 @@ document.body.appendChild(card);
 
 Supported import paths:
 
-| Path                   | Description                           |
-| ---------------------- | ------------------------------------- |
-| `@codenhub/components` | Core component factory and utilities. |
+| Path                              | Description                                                           |
+| --------------------------------- | --------------------------------------------------------------------- |
+| `@codenhub/components`            | Core component factory and utilities.                                 |
+| `@codenhub/components/lib`        | Ready-to-use native Web Components library.                           |
+| `@codenhub/components/lib/react`  | React runtime wrappers for the library components.                    |
+| `@codenhub/components/lib/svelte` | Svelte runtime wrappers/exports (with client-side auto-registration). |
+| `@codenhub/components/lib/astro`  | Astro runtime wrappers/exports (with client-side auto-registration).  |
 
 ### `@codenhub/components`
 
@@ -203,13 +207,14 @@ const list = html`
 
 ---
 
-### `ComponentConfig<Props, Methods>`
+### `ComponentConfig<Props, Methods, Events>`
 
 | Property     | Type                                                    | Default  | Description                                                                                                                         |
 | ------------ | ------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `properties` | `Record<string, PropertyConstructor \| PropertyConfig>` | `{}`     | Reactive property declarations with type constructors or property descriptor objects.                                               |
-| `hasShadow`  | `boolean`                                               | `false`  | Attach Shadow DOM. Enables `styles` and scoped CSS.                                                                                 |
-| `styles`     | `string`                                                | —        | CSS injected into Shadow DOM. Only used when `hasShadow` is `true`.                                                                 |
+| `events`     | `Record<string, PropertyConstructor \| EventConfig>`    | `{}`     | Custom events dispatched by the component. Enables type-safe framework wrappers.                                                    |
+| `hasShadow`  | `boolean`                                               | `false`  | Attach Shadow DOM. Enables scoped styles.                                                                                           |
+| `styles`     | `string`                                                | —        | CSS injected into Shadow DOM (when `hasShadow` is `true`) or appended to the document `<head>` once (when `hasShadow` is `false`).  |
 | `render`     | `(this: Instance) => string \| TemplateResult`          | required | Returns HTML string or TemplateResult representing the component's current state.                                                   |
 | `onMount`    | `(this: Instance) => void`                              | —        | Called once after the initial render when the element is first inserted into the document. DOM is already populated when this runs. |
 | `onUnmount`  | `(this: Instance) => void`                              | —        | Called after removal from the document.                                                                                             |
@@ -308,6 +313,49 @@ const Badge = defineComponent("ui-badge", {
 
 registerComponents([Badge]);
 document.body.appendChild(Badge.create({ label: "New", color: "#3b82f6" }));
+```
+
+### Custom Events and React Wrapper
+
+You can declare custom events in `events` and wrap the component using the React runtime wrapper.
+
+```ts
+import { defineComponent, html } from "@codenhub/components";
+import { createReactWrapper } from "@codenhub/components/lib/react";
+
+// 1. Define component with reactive properties and events
+export const ToggleButton = defineComponent("toggle-btn", {
+  properties: {
+    active: { type: Boolean, default: false },
+  },
+  events: {
+    toggle: CustomEvent,
+  },
+  render() {
+    return html`
+      <button class="btn ${this.active ? "active" : ""}">${this.active ? "ON" : "OFF"}</button>
+    `;
+  },
+  onMount() {
+    this.addEventListener("click", () => {
+      this.active = !this.active;
+      this.dispatchEvent(new CustomEvent("toggle", { detail: this.active }));
+    });
+  },
+});
+
+// 2. Wrap for React usage
+export const ReactToggleButton = createReactWrapper(ToggleButton);
+```
+
+Then use it in a React component:
+
+```tsx
+import { ReactToggleButton } from "./toggle-button";
+
+function App() {
+  return <ReactToggleButton active={true} onToggle={(e: any) => console.log("Toggled:", e.detail)} />;
+}
 ```
 
 ### Setting properties from HTML attributes

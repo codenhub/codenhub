@@ -20,13 +20,29 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./lib": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    },
+    "./lib/react": {
+      "types": "./dist/lib/react.d.ts",
+      "import": "./dist/lib/react.js"
+    },
+    "./lib/svelte": {
+      "types": "./dist/lib/svelte.d.ts",
+      "import": "./dist/lib/svelte.js"
+    },
+    "./lib/astro": {
+      "types": "./dist/lib/astro.d.ts",
+      "import": "./dist/lib/astro.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts src/lib/index.ts src/lib/react.ts src/lib/svelte.ts src/lib/astro.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/components version dist-tags time --json && npm dist-tag ls @codenhub/components && npm access get status @codenhub/components",
     "status:pack": "npm pack --dry-run",
@@ -36,10 +52,30 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "astro": ">=4.0.0",
+    "react": ">=18.0.0",
+    "svelte": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "astro": {
+      "optional": true
+    }
   }
 }

@@ -39,19 +39,17 @@ describe("defineComponent", () => {
     }).toThrow('Invalid custom element tag name: "nohyphen".');
   });
 
-  it("shouldWarnWhenStylesDefinedWithoutHasShadow", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const tag = generateUniqueTag("styles-warn");
+  it("shouldInjectStylesIntoHeadWhenStylesDefinedWithoutHasShadow", () => {
+    const tag = generateUniqueTag("styles-no-shadow");
     defineComponent(tag, {
-      styles: "p { color: red; }",
+      styles: "p { color: purple; }",
       render() {
         return "<p></p>";
       },
     });
-    expect(warnSpy).toHaveBeenCalledWith(
-      `Component "${tag}" declared styles but "hasShadow" is not enabled. Styles are only injected when hasShadow is true.`,
-    );
-    warnSpy.mockRestore();
+    const styleEl = document.getElementById(`codenhub-styles-${tag}`);
+    expect(styleEl).not.toBeNull();
+    expect(styleEl?.textContent).toBe("p { color: purple; }");
   });
 
   it("shouldExposeCreateFactory", () => {
