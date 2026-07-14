@@ -78,21 +78,19 @@ export function getSkills(srcDir: string): Skill[] {
     return [];
   }
 
-  const items = fs.readdirSync(srcDir);
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
   const skills: Skill[] = [];
 
-  for (const item of items) {
-    const itemPath = path.join(srcDir, item);
-    const stat = fs.statSync(itemPath);
-
-    if (stat.isDirectory()) {
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const itemPath = path.join(srcDir, entry.name);
       const skillMdPath = path.join(itemPath, "SKILL.md");
       if (fs.existsSync(skillMdPath)) {
         const content = fs.readFileSync(skillMdPath, "utf8");
         const meta = parseFrontmatter(content);
         skills.push({
-          id: item,
-          name: meta.name || item,
+          id: entry.name,
+          name: meta.name || entry.name,
           description: meta.description || "",
           path: itemPath,
         });
@@ -130,17 +128,34 @@ export function copyRecursiveSync(src: string, dest: string, options: CopyOption
     if (!fs.existsSync(dest)) {
       fs.mkdirSync(dest, { recursive: true });
     }
-    for (const childItemName of fs.readdirSync(src)) {
-      if (ignoreList.includes(childItemName)) {
-        continue;
-      }
-      copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName), options);
-    }
+    copyDirHelper(src, dest, ignoreList);
   } else {
     const destDir = path.dirname(dest);
     if (!fs.existsSync(destDir)) {
       fs.mkdirSync(destDir, { recursive: true });
     }
     fs.copyFileSync(src, dest);
+  }
+}
+
+/**
+ * Internal helper to copy directory contents without redundant checks.
+ */
+function copyDirHelper(srcDir: string, destDir: string, ignoreList: string[]): void {
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (ignoreList.includes(entry.name)) {
+      continue;
+    }
+    const srcChild = path.join(srcDir, entry.name);
+    const destChild = path.join(destDir, entry.name);
+    if (entry.isDirectory()) {
+      if (!fs.existsSync(destChild)) {
+        fs.mkdirSync(destChild);
+      }
+      copyDirHelper(srcChild, destChild, ignoreList);
+    } else {
+      fs.copyFileSync(srcChild, destChild);
+    }
   }
 }

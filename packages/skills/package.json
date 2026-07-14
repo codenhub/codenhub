@@ -10,9 +10,6 @@
     "url": "git+https://github.com/codenhub/codenhub.git",
     "directory": "packages/skills"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "bin": {
     "codenhub-skills": "./dist/cli.js"
   },
@@ -50,5 +47,8 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

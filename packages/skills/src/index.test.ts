@@ -101,6 +101,24 @@ describe("copyRecursiveSync", () => {
     expect(fs.readFileSync(path.join(destDir, "subdir", "file2.txt"), "utf8")).toBe("content 2");
   });
 
+  it("should overwrite existing files and merge folders without EEXIST errors", () => {
+    const srcDir = path.join(tempDir, "src");
+    const destDir = path.join(tempDir, "dest");
+
+    fs.mkdirSync(path.join(srcDir, "subdir"), { recursive: true });
+    fs.writeFileSync(path.join(srcDir, "file1.txt"), "new content 1");
+    fs.writeFileSync(path.join(srcDir, "subdir", "file2.txt"), "new content 2");
+
+    fs.mkdirSync(path.join(destDir, "subdir"), { recursive: true });
+    fs.writeFileSync(path.join(destDir, "file1.txt"), "old content 1");
+    fs.writeFileSync(path.join(destDir, "subdir", "file2.txt"), "old content 2");
+
+    copyRecursiveSync(srcDir, destDir);
+
+    expect(fs.readFileSync(path.join(destDir, "file1.txt"), "utf8")).toBe("new content 1");
+    expect(fs.readFileSync(path.join(destDir, "subdir", "file2.txt"), "utf8")).toBe("new content 2");
+  });
+
   it("should ignore paths in ignoreList", () => {
     const srcDir = path.join(tempDir, "src-ignore");
     const destDir = path.join(tempDir, "dest-ignore");

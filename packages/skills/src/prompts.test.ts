@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 
-import { BACK, confirmPrompt, selectPrompt, checkboxPrompt } from "./prompts.js";
+import { BACK, promptConfirm, promptSelect, promptCheckbox } from "./prompts.js";
 
-describe("confirmPrompt", () => {
+describe("promptConfirm", () => {
   it("should return true when defaultValue is true and stdin is not a TTY", async () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
     try {
-      const result = await confirmPrompt("Test message", { defaultValue: true });
+      const result = await promptConfirm("Test message", { defaultValue: true });
       expect(result).toBe(true);
     } finally {
       process.stdin.isTTY = origIsTTY;
@@ -18,7 +18,7 @@ describe("confirmPrompt", () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
     try {
-      const result = await confirmPrompt("Test message", { defaultValue: false });
+      const result = await promptConfirm("Test message", { defaultValue: false });
       expect(result).toBe(false);
     } finally {
       process.stdin.isTTY = origIsTTY;
@@ -26,7 +26,7 @@ describe("confirmPrompt", () => {
   });
 });
 
-describe("selectPrompt", () => {
+describe("promptSelect", () => {
   it("should return the choice at initialCursor when stdin is not a TTY", async () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
@@ -35,7 +35,7 @@ describe("selectPrompt", () => {
         { name: "Choice A", value: "a" },
         { name: "Choice B", value: "b" },
       ];
-      const result = await selectPrompt("Test select", { choices });
+      const result = await promptSelect("Test select", { choices });
       expect(result).toBe("a");
     } finally {
       process.stdin.isTTY = origIsTTY;
@@ -43,7 +43,7 @@ describe("selectPrompt", () => {
   });
 
   it("should throw when choices is empty", () => {
-    expect(() => selectPrompt("Test", { choices: [] })).toThrow("selectPrompt: choices must not be empty");
+    expect(() => promptSelect("Test", { choices: [] })).toThrow("selectPrompt: choices must not be empty");
   });
 
   it("should resolve BACK on backspace when canGoBack is true", async () => {
@@ -62,7 +62,7 @@ describe("selectPrompt", () => {
         { name: "Choice A", value: "a" },
         { name: "Choice B", value: "b" },
       ];
-      const promise = selectPrompt("Test select", { choices, canGoBack: true });
+      const promise = promptSelect("Test select", { choices, canGoBack: true });
       process.stdin.emit("keypress", undefined, { name: "backspace" });
       const result = await promise;
       expect(result).toBe(BACK);
@@ -76,7 +76,7 @@ describe("selectPrompt", () => {
   });
 });
 
-describe("checkboxPrompt", () => {
+describe("promptCheckbox", () => {
   it("should return pre-checked values when stdin is not a TTY", async () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
@@ -86,7 +86,7 @@ describe("checkboxPrompt", () => {
         { name: "B", value: "b", checked: false },
         { name: "C", value: "c", checked: true },
       ];
-      const result = await checkboxPrompt("Pick some", { choices });
+      const result = await promptCheckbox("Pick some", { choices });
       expect(result).toEqual(["a", "c"]);
     } finally {
       process.stdin.isTTY = origIsTTY;
@@ -97,7 +97,7 @@ describe("checkboxPrompt", () => {
     const origIsTTY = process.stdin.isTTY;
     process.stdin.isTTY = false as never;
     try {
-      const result = await checkboxPrompt("Pick some", { choices: [] });
+      const result = await promptCheckbox("Pick some", { choices: [] });
       expect(result).toEqual([]);
     } finally {
       process.stdin.isTTY = origIsTTY;

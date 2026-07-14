@@ -116,7 +116,7 @@ function runPrompt<T>(opts: PromptRunOptions<T>): Promise<T> {
  * In non-TTY environments returns the pre-checked values immediately
  * without prompting.
  */
-export function checkboxPrompt(message: string, options: CheckboxOptions): Promise<string[] | BackSignal> {
+export function promptCheckbox(message: string, options: CheckboxOptions): Promise<string[] | BackSignal> {
   const { choices, canGoBack = false } = options;
 
   if (!process.stdin.isTTY) {
@@ -194,14 +194,14 @@ export function checkboxPrompt(message: string, options: CheckboxOptions): Promi
  * In non-TTY environments returns `defaultValue` immediately without
  * prompting.
  */
-export async function confirmPrompt(message: string, options: ConfirmOptions): Promise<boolean | BackSignal> {
+export async function promptConfirm(message: string, options: ConfirmOptions): Promise<boolean | BackSignal> {
   const { defaultValue, canGoBack = false } = options;
   const choices: SelectChoice[] = [
     { name: "Yes", value: "yes" },
     { name: "No", value: "no" },
   ];
   const initialCursor = defaultValue ? 0 : 1;
-  const selected = await selectPrompt(message, { choices, initialCursor, canGoBack });
+  const selected = await promptSelect(message, { choices, initialCursor, canGoBack });
   if (selected === BACK) {
     return BACK;
   }
@@ -216,7 +216,7 @@ export async function confirmPrompt(message: string, options: ConfirmOptions): P
  *
  * @throws {Error} When `choices` is empty.
  */
-export function selectPrompt(message: string, options: SelectOptions): Promise<string | BackSignal> {
+export function promptSelect(message: string, options: SelectOptions): Promise<string | BackSignal> {
   const { choices, initialCursor = 0, canGoBack = false } = options;
 
   if (choices.length === 0) {

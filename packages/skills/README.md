@@ -72,13 +72,7 @@ for (const skill of skills) {
 Core utilities for reading and copying skills.
 
 ```ts
-import {
-  parseFrontmatter,
-  getSkills,
-  copyRecursiveSync,
-  type Skill,
-  type CopyOptions,
-} from "@codenhub/skills";
+import { parseFrontmatter, getSkills, copyRecursiveSync, type Skill, type CopyOptions } from "@codenhub/skills";
 ```
 
 #### parseFrontmatter
@@ -108,10 +102,10 @@ Shape of a skill object returned by `getSkills`.
 
 ```ts
 interface Skill {
-  id: string;          // Directory name
-  name: string;        // From SKILL.md frontmatter; falls back to id
+  id: string; // Directory name
+  name: string; // From SKILL.md frontmatter; falls back to id
   description: string; // From SKILL.md frontmatter
-  path: string;        // Absolute path to the skill directory
+  path: string; // Absolute path to the skill directory
 }
 ```
 
@@ -176,3 +170,5 @@ console.log(meta.name, meta.description);
 ## License
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
+
+It includes adapted third-party skills from upstream sources (Anthropic, Jesse Vincent, and Julius Brussee). See the [NOTICE](NOTICE) file for details.

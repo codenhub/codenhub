@@ -9,9 +9,9 @@ import {
   ANSI,
   BACK,
   CancelledError,
-  checkboxPrompt,
-  confirmPrompt,
-  selectPrompt,
+  promptCheckbox,
+  promptConfirm,
+  promptSelect,
   type BackSignal,
   type Choice,
   type SelectChoice,
@@ -21,18 +21,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Find skills directory relative to build output.
-const skillsSrcDir = path.resolve(__dirname, "../skills");
+const SKILLS_SRC_DIR = path.resolve(__dirname, "../skills");
 
-const home = os.homedir();
+const HOME = os.homedir();
 
 const HARNESS_MAPPING: Record<string, string> = {
-  "Antigravity Global": path.join(home, ".gemini/config/skills"),
+  "Antigravity Global": path.join(HOME, ".gemini/config/skills"),
   "Antigravity Workspace": path.resolve("./.agents/skills"),
-  "OpenCode Global": path.join(home, ".config/opencode/skills"),
+  "OpenCode Global": path.join(HOME, ".config/opencode/skills"),
   "OpenCode Workspace": path.resolve("./.opencode/skills"),
-  "Claude Global": path.join(home, ".claude/skills"),
+  "Claude Global": path.join(HOME, ".claude/skills"),
   "Claude Workspace": path.resolve("./.claude/skills"),
-  "Codex Global": path.join(home, ".codex/skills"),
+  "Codex Global": path.join(HOME, ".codex/skills"),
   "Codex Workspace": path.resolve("./.codex/skills"),
 };
 
@@ -67,7 +67,7 @@ interface Step {
 }
 
 async function main() {
-  const skills = getSkills(skillsSrcDir);
+  const skills = getSkills(SKILLS_SRC_DIR);
   if (skills.length === 0) {
     console.error(`${ANSI.RED}Error: No skills found in source directory.${ANSI.RESET}`);
     process.exit(1);
@@ -101,7 +101,7 @@ async function main() {
           { name: "Both", value: "both" },
         ];
         const defaultIndex = scopeChoices.findIndex((c) => c.value === state.scope);
-        const selected = await selectPrompt("Where do you want to install the skills?", {
+        const selected = await promptSelect("Where do you want to install the skills?", {
           choices: scopeChoices,
           initialCursor: defaultIndex !== -1 ? defaultIndex : 0,
           canGoBack,
@@ -118,7 +118,7 @@ async function main() {
       title: "All Skills Option",
       summarize: () => (state.shouldInstallAll ? "Yes" : "No"),
       run: async (canGoBack) => {
-        const selected = await confirmPrompt("Do you want to install all available skills?", {
+        const selected = await promptConfirm("Do you want to install all available skills?", {
           defaultValue: state.shouldInstallAll,
           canGoBack,
         });
@@ -140,7 +140,7 @@ async function main() {
           checked: state.selectedSkills.includes(s.id),
           description: s.description,
         }));
-        const selected = await checkboxPrompt("Which skills do you want to install?", {
+        const selected = await promptCheckbox("Which skills do you want to install?", {
           choices: skillChoices,
           canGoBack,
         });
@@ -172,14 +172,20 @@ async function main() {
           }
         }
 
-        const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => ({
-          name,
-          value: name,
-          checked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : true,
-          description: filteredHarnessMapping[name],
-        }));
+        const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => {
+          const destBaseDir = filteredHarnessMapping[name];
+          const pathExists = destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
+          const defaultChecked = !!pathExists;
 
-        const selected = await checkboxPrompt("Which harnesses do you want to install to?", {
+          return {
+            name,
+            value: name,
+            checked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : defaultChecked,
+            description: destBaseDir,
+          };
+        });
+
+        const selected = await promptCheckbox("Which harnesses do you want to install to?", {
           choices: harnessChoices,
           canGoBack,
         });
@@ -198,7 +204,7 @@ async function main() {
       title: "Clean Up Option",
       summarize: () => (state.shouldCleanupFirst ? "Yes" : "No"),
       run: async (canGoBack) => {
-        const selected = await confirmPrompt(
+        const selected = await promptConfirm(
           "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
           { defaultValue: state.shouldCleanupFirst, canGoBack },
         );
@@ -211,7 +217,7 @@ async function main() {
     },
   ];
 
-  function stepById(id: string): Step {
+  function getStepById(id: string): Step {
     const step = steps.find((s) => s.id === id);
     if (!step) {
       throw new Error(`Step "${id}" not found`);
@@ -220,11 +226,11 @@ async function main() {
   }
 
   function getActiveSteps(): Step[] {
-    const active: Step[] = [stepById("scope"), stepById("shouldInstallAll")];
+    const active: Step[] = [getStepById("scope"), getStepById("shouldInstallAll")];
     if (!state.shouldInstallAll) {
-      active.push(stepById("selectSkills"));
+      active.push(getStepById("selectSkills"));
     }
-    active.push(stepById("harnesses"), stepById("cleanup"));
+    active.push(getStepById("harnesses"), getStepById("cleanup"));
     return active;
   }
 
