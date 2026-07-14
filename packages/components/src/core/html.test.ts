@@ -242,4 +242,16 @@ describe("css", () => {
     `;
     expect(result).toContain("color: blue");
   });
+
+  it("shouldThrowTypeErrorForTemplateResultInterpolation", () => {
+    expect(() => {
+      void css`
+        .card {
+          content: ${html`
+            <p>test</p>
+          `};
+        }
+      `;
+    }).toThrow("Invalid CSS interpolation: TemplateResult is not allowed in css helper.");
+  });
 });

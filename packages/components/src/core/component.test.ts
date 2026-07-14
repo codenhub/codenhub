@@ -1136,6 +1136,54 @@ describe("defineComponent - additional validations and features", () => {
     errSpy.mockRestore();
   });
 
+  it("shouldCallReportErrorDuringAsyncRenderIfAvailable", async () => {
+    const tag = generateUniqueTag("async-reporterr");
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const reportErrorSpy = vi.fn();
+    vi.stubGlobal("reportError", reportErrorSpy);
+    let shouldThrow = false;
+
+    const component = defineComponent(tag, {
+      properties: { val: Number },
+      render() {
+        if (shouldThrow) {
+          throw new Error("Render failed");
+        }
+        return "<p></p>";
+      },
+    });
+    registerComponent(component);
+
+    const el = component.create({ val: 1 });
+    document.body.appendChild(el);
+
+    shouldThrow = true;
+
+    // Intercept the private _renderAsync to capture the promise
+    const instance = el as unknown as { _renderAsync: () => Promise<void> };
+    const originalRenderAsync = instance._renderAsync;
+    let renderPromise: Promise<void> | null = null;
+    instance._renderAsync = function () {
+      renderPromise = originalRenderAsync.call(this);
+      return renderPromise;
+    };
+
+    // Trigger an async render by mutating property
+    castToProps<{ val: number }>(el).val = 2;
+
+    // Wait for the promise to resolve (since error is reported and caught)
+    await renderPromise;
+
+    expect(reportErrorSpy).toHaveBeenCalledWith(expect.any(Error));
+    expect(errSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unhandled error during async render of component"),
+      expect.any(Error),
+    );
+
+    errSpy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
   it("shouldCastPreExistingPropertyOnUpgrade", () => {
     const tag = generateUniqueTag("pre-prop");
     const el = document.createElement(tag);

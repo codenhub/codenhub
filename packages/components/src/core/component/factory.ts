@@ -249,7 +249,11 @@ export function defineComponent<Props extends ComponentProperties, Methods>(
             this._render();
           } catch (err) {
             console.error(`Unhandled error during async render of component "${tagName}":`, err);
-            throw err;
+            if (typeof reportError === "function") {
+              reportError(err);
+            } else {
+              throw err;
+            }
           }
         }
       }

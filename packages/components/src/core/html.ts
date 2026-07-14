@@ -24,13 +24,17 @@ export class TemplateResult {
 /**
  * Escapes special HTML characters to prevent XSS.
  */
+const ESCAPE_REGEX = /[&<>"']/;
+
 function escapeHTML(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return ESCAPE_REGEX.test(str)
+    ? str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+    : str;
 }
 
 /**
@@ -113,6 +117,9 @@ export function css(strings: TemplateStringsArray, ...values: unknown[]): string
     let serialized = "";
     if (val !== undefined && val !== null) {
       if (typeof val === "object") {
+        if (val instanceof TemplateResult) {
+          throw new TypeError("Invalid CSS interpolation: TemplateResult is not allowed in css helper.");
+        }
         if (Array.isArray(val)) {
           throw new TypeError("Invalid CSS interpolation: arrays are not allowed in css helper.");
         }

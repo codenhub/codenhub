@@ -49,29 +49,29 @@ export type ComponentInstance<Props extends ComponentProperties, Methods> = HTML
  * Configuration for an individual component property.
  * Declares the property constructor type and an optional default value.
  */
-export interface PropertyConfig {
+export interface PropertyConfig<T extends PropertyConstructor = PropertyConstructor> {
   /** The constructor/converter type of the property. */
-  type: PropertyConstructor;
+  type: T;
   /**
    * The default value or a factory function returning the default value.
    * Note: factory functions are evaluated on connection to generate clean instances.
    */
-  default?: unknown;
+  default?: PropertyType<T> | (() => PropertyType<T>);
 }
 
 /**
  * A map of property names to their constructor types or configuration descriptors.
  * Used to declare reactive properties on a component.
  */
-export type ComponentProperties = Record<string, PropertyConstructor | PropertyConfig>;
+export type ComponentProperties = Record<string, PropertyConstructor | PropertyConfig<PropertyConstructor>>;
 
 /**
  * Resolves a `ComponentProperties` map to a concrete props object type,
  * where each key maps to its resolved `PropertyType`.
  */
 export type ComponentProps<Props extends ComponentProperties> = {
-  [K in keyof Props]: Props[K] extends PropertyConfig
-    ? PropertyType<Props[K]["type"]>
+  [K in keyof Props]: Props[K] extends PropertyConfig<infer T>
+    ? PropertyType<T>
     : Props[K] extends PropertyConstructor
       ? PropertyType<Props[K]>
       : unknown;
