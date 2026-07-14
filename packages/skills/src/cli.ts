@@ -8,6 +8,7 @@ import {
   EXCLUDE_FOLDER_AGENTS,
   HARNESS_MAPPING,
   PromptExitError,
+  EXIT_CODE_CANCELLED,
   clearScreen,
   drawHeader,
   drawSummary,
@@ -36,7 +37,7 @@ async function main() {
         `  --local           Install skills to project workspace (default)\n` +
         `  --global          Install skills to user home directory\n` +
         `  --both            Install skills to both local and global harnesses\n` +
-        `  --cleanup         Clean up target directories before installing\n` +
+        `  --cleanup         Clean up target directories before installing (deletes ALL existing files/folders inside them)\n` +
         `  --skills=<list>   Comma-separated list of skill IDs to install\n` +
         `  --all-skills      Install all available skills\n` +
         `  --harnesses=<list> Comma-separated list of harnesses to install to\n` +
@@ -92,7 +93,7 @@ async function main() {
       }
       if (err instanceof CancelledError) {
         console.log(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}`);
-        process.exit(130);
+        process.exit(EXIT_CODE_CANCELLED);
       }
       throw err;
     }
@@ -123,17 +124,25 @@ async function main() {
       } else if (arg === "--all-skills") {
         shouldInstallAllSkills = true;
       } else if (arg.startsWith("--harnesses=")) {
-        harnessOptions = arg
-          .slice("--harnesses=".length)
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
+        harnessOptions = Array.from(
+          new Set(
+            arg
+              .slice("--harnesses=".length)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        );
       } else if (arg.startsWith("--skills=")) {
-        skillOptions = arg
-          .slice("--skills=".length)
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
+        skillOptions = Array.from(
+          new Set(
+            arg
+              .slice("--skills=".length)
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        );
       } else {
         console.error(`${ANSI.RED}Unknown argument: ${arg}${ANSI.RESET}`);
         console.error(

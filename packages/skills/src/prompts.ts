@@ -60,7 +60,10 @@ export interface CheckboxOptions {
   canGoBack?: boolean;
 }
 
-type KeyInfo = { ctrl?: boolean; name?: string };
+interface KeyInfo {
+  ctrl?: boolean;
+  name?: string;
+}
 
 interface PromptRunOptions<T> {
   initialRender: () => void;

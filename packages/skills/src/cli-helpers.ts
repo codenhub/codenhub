@@ -18,6 +18,7 @@ export const HARNESS_MAPPING: Record<string, string> = {
 
 export const CODEX_IDENTIFIER = "Codex";
 export const EXCLUDE_FOLDER_AGENTS = "agents";
+export const EXIT_CODE_CANCELLED = 130;
 
 /**
  * Thrown when the user makes a selection that has no valid items,

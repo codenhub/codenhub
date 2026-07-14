@@ -142,7 +142,7 @@ The package includes a binary installer CLI `codenhub-skills`.
 - `--local`: Install skills to project workspace target directories (default).
 - `--global`: Install skills to user home target directories.
 - `--both`: Install skills to both global and local directories.
-- `--cleanup`: Clean up target directories before copying.
+- `--cleanup`: Clean up target directories before copying (deletes ALL existing files/folders inside the target directories).
 - `--skills=<list>`: Comma-separated list of specific skill IDs to install.
 - `--all-skills`: Force-install all available skills.
 - `--harnesses=<list>`: Comma-separated list of harnesses to install to.

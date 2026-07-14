@@ -10,7 +10,7 @@ Define the required preparation steps before publishing the `@codenhub/skills` p
 
 ## Current Focus
 
-- **Skills Review & Polish**: Conduct a thorough review of all custom AI agent skills under `src/` to ensure high quality and correct styling.
+- **Skills Review & Polish**: Conduct a thorough review of all custom AI agent skills under `skills/` to ensure high quality and correct styling.
 - **Licensing & Copyright Notices**: Identify third-party or open-source skills, and add their respective license files or attribution notices to prevent licensing compliance issues.
 
 ## Planned
