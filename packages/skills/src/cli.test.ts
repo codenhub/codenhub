@@ -4,7 +4,7 @@ import * as path from "path";
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
-import { parseFrontmatter, getSkills, copyRecursiveSync } from "./cli.js";
+import { parseFrontmatter, getSkills, copyRecursiveSync, confirmPrompt, selectPrompt } from "./cli.js";
 
 describe("Skills Helper functions", () => {
   let tempDir: string;
@@ -97,6 +97,38 @@ describe("Skills Helper functions", () => {
       expect(fs.existsSync(path.join(destDir, "subdir", "file2.txt"))).toBe(true);
       expect(fs.existsSync(path.join(destDir, "ignored-dir"))).toBe(false);
       expect(fs.existsSync(path.join(destDir, "ignored-dir", "file3.txt"))).toBe(false);
+    });
+  });
+
+  describe("confirmPrompt", () => {
+    it("should return default value when process.stdin.isTTY is false", async () => {
+      const origIsTTY = process.stdin.isTTY;
+      process.stdin.isTTY = false;
+      try {
+        const result = await confirmPrompt("Test message", true);
+        expect(result).toBe(true);
+        const resultFalse = await confirmPrompt("Test message", false);
+        expect(resultFalse).toBe(false);
+      } finally {
+        process.stdin.isTTY = origIsTTY;
+      }
+    });
+  });
+
+  describe("selectPrompt", () => {
+    it("should return the first choice value when process.stdin.isTTY is false", async () => {
+      const origIsTTY = process.stdin.isTTY;
+      process.stdin.isTTY = false;
+      try {
+        const choices = [
+          { name: "Choice A", value: "a" },
+          { name: "Choice B", value: "b" },
+        ];
+        const result = await selectPrompt("Test select", choices);
+        expect(result).toBe("a");
+      } finally {
+        process.stdin.isTTY = origIsTTY;
+      }
     });
   });
 });

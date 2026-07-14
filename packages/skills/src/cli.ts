@@ -1,7 +1,10 @@
 import * as fs from "fs";
+import { createRequire } from "module";
 import * as os from "os";
 import * as path from "path";
 import { fileURLToPath } from "url";
+
+const require = createRequire(import.meta.url);
 
 interface Skill {
   id: string;
@@ -233,9 +236,111 @@ function checkboxPrompt(message: string, choices: Choice[]): Promise<string[]> {
   });
 }
 
-// Helper to use require safely in ESM
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+export interface SelectChoice {
+  name: string;
+  value: string;
+  description?: string;
+}
+
+export async function confirmPrompt(message: string, defaultValue: boolean): Promise<boolean> {
+  const choices: SelectChoice[] = defaultValue
+    ? [
+        { name: "Yes", value: "yes" },
+        { name: "No", value: "no" },
+      ]
+    : [
+        { name: "No", value: "no" },
+        { name: "Yes", value: "yes" },
+      ];
+  const selected = await selectPrompt(message, choices);
+  return selected === "yes";
+}
+
+export function selectPrompt(message: string, choices: SelectChoice[]): Promise<string> {
+  return new Promise((resolve) => {
+    const stdout = process.stdout;
+    if (!process.stdin.isTTY) {
+      resolve(choices[0].value);
+      return;
+    }
+    let cursor = 0;
+
+    stdout.write(ANSI.HIDE_CURSOR);
+
+    function render(first = false) {
+      if (!first) {
+        const linesToMove = choices.length + 2;
+        stdout.write(ANSI.CURSOR_UP(linesToMove));
+      }
+
+      stdout.write(`${ANSI.BOLD}${ANSI.CYAN}? ${ANSI.WHITE}${message}${ANSI.RESET}\n`);
+
+      choices.forEach((choice, index) => {
+        const isCurrent = index === cursor;
+        const pointer = isCurrent ? `${ANSI.CYAN}❯${ANSI.RESET}` : " ";
+        const name = isCurrent ? `${ANSI.CYAN}${ANSI.BOLD}${choice.name}${ANSI.RESET}` : choice.name;
+        const desc = choice.description ? ` ${ANSI.DIM}(${choice.description})${ANSI.RESET}` : "";
+
+        stdout.write(`${ANSI.CLEAR_LINE}${pointer} ${name}${desc}\n`);
+      });
+
+      stdout.write(
+        `${ANSI.CLEAR_LINE}${ANSI.DIM}(Use arrows to navigate, Enter to confirm, Ctrl+C to exit)${ANSI.RESET}\n`,
+      );
+    }
+
+    render(true);
+
+    function onKeypress(_str: string | undefined, key: { ctrl?: boolean; name?: string } | undefined) {
+      if (key && key.ctrl && key.name === "c") {
+        cleanup();
+        stdout.write(`\n${ANSI.RED}Installation cancelled.${ANSI.RESET}\n`);
+        process.exit(0);
+      }
+
+      if (!key) {
+        return;
+      }
+
+      switch (key.name) {
+        case "up":
+          cursor = (cursor - 1 + choices.length) % choices.length;
+          render();
+          break;
+        case "down":
+          cursor = (cursor + 1) % choices.length;
+          render();
+          break;
+        case "return":
+          cleanup();
+          const selectedValue = choices[cursor].value;
+          stdout.write(`${ANSI.CLEAR_LINE}\r${ANSI.GREEN}✔${ANSI.RESET} Selection: ${choices[cursor].name}\n`);
+          resolve(selectedValue);
+          break;
+      }
+    }
+
+    function cleanup() {
+      process.stdin.removeListener("keypress", onKeypress);
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(false);
+      }
+      process.stdin.pause();
+      stdout.write(ANSI.SHOW_CURSOR);
+    }
+
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+    }
+    process.stdin.resume();
+    process.stdin.setEncoding("utf8");
+
+    const readline = require("readline");
+    readline.emitKeypressEvents(process.stdin);
+
+    process.stdin.on("keypress", onKeypress);
+  });
+}
 
 async function main() {
   console.log(`\n${ANSI.BOLD}${ANSI.CYAN}=========================================${ANSI.RESET}`);
@@ -248,26 +353,56 @@ async function main() {
     process.exit(1);
   }
 
-  // 1. Prompt for skills selection
-  const skillChoices: Choice[] = skills.map((s) => ({
-    name: s.name,
-    value: s.id,
-    checked: true,
-    description: s.description,
-  }));
+  // 1. Select install scope (locally, globally, or both)
+  const scopeChoices: SelectChoice[] = [
+    { name: "Locally (project workspace)", value: "local" },
+    { name: "Globally (user home directory)", value: "global" },
+    { name: "Both", value: "both" },
+  ];
+  const selectedScope = await selectPrompt("Where do you want to install the skills?", scopeChoices);
 
-  const selectedSkills = await checkboxPrompt("Which skills do you want to install?", skillChoices);
-  if (selectedSkills.length === 0) {
-    console.log(`\n${ANSI.YELLOW}No skills selected. Exiting.${ANSI.RESET}`);
-    process.exit(0);
+  // 2. Select skills
+  const skillNames = skills.map((s) => `"${s.name}"`).join(", ");
+  console.log(`\n${ANSI.DIM}${skills.length} skills available: ${skillNames}${ANSI.RESET}\n`);
+
+  let selectedSkills: string[] = [];
+  const installAll = await confirmPrompt("Do you want to install all available skills?", true);
+
+  if (installAll) {
+    selectedSkills = skills.map((s) => s.id);
+  } else {
+    const skillChoices: Choice[] = skills.map((s) => ({
+      name: s.name,
+      value: s.id,
+      checked: true,
+      description: s.description,
+    }));
+    selectedSkills = await checkboxPrompt("Which skills do you want to install?", skillChoices);
+    if (selectedSkills.length === 0) {
+      console.log(`\n${ANSI.YELLOW}No skills selected. Exiting.${ANSI.RESET}`);
+      process.exit(0);
+    }
   }
 
-  // 2. Prompt for harnesses selection
-  const harnessChoices: Choice[] = Object.keys(HARNESS_MAPPING).map((name) => ({
+  // 3. Filter and select harnesses
+  const filteredHarnessMapping: Record<string, string> = {};
+  for (const name of Object.keys(HARNESS_MAPPING)) {
+    const isGlobal = name.includes("Global");
+    const isWorkspace = name.includes("Workspace");
+    if (selectedScope === "both") {
+      filteredHarnessMapping[name] = HARNESS_MAPPING[name];
+    } else if (selectedScope === "global" && isGlobal) {
+      filteredHarnessMapping[name] = HARNESS_MAPPING[name];
+    } else if (selectedScope === "local" && isWorkspace) {
+      filteredHarnessMapping[name] = HARNESS_MAPPING[name];
+    }
+  }
+
+  const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => ({
     name,
     value: name,
     checked: true,
-    description: HARNESS_MAPPING[name],
+    description: filteredHarnessMapping[name],
   }));
 
   const selectedHarnesses = await checkboxPrompt("Which harnesses do you want to install to?", harnessChoices);
@@ -276,10 +411,32 @@ async function main() {
     process.exit(0);
   }
 
+  // 4. Prompt for cleanup
+  const cleanupFirst = await confirmPrompt(
+    "Do you want to clean up target directories before installing (deleting all existing files/folders inside them)?",
+    false,
+  );
+
+  if (cleanupFirst) {
+    console.log(`\n${ANSI.YELLOW}Cleaning up target directories...${ANSI.RESET}`);
+    for (const harness of selectedHarnesses) {
+      const destBaseDir = filteredHarnessMapping[harness];
+      if (fs.existsSync(destBaseDir)) {
+        try {
+          fs.rmSync(destBaseDir, { recursive: true, force: true });
+          console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Cleaned: ${destBaseDir}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed cleaning ${destBaseDir}: ${msg}`);
+        }
+      }
+    }
+  }
+
   console.log(`\n${ANSI.BOLD}Installing skills...${ANSI.RESET}\n`);
 
   for (const harness of selectedHarnesses) {
-    const destBaseDir = HARNESS_MAPPING[harness];
+    const destBaseDir = filteredHarnessMapping[harness];
     const isCodex = harness.includes(CONSTANTS.CODEX_IDENTIFIER);
     console.log(`${ANSI.BLUE}→ Installing to ${harness}...${ANSI.RESET}`);
 
