@@ -63,7 +63,8 @@ export function parseFrontmatter(content: string): Record<string, string> {
       if (quoteMatch) {
         value = quoteMatch[2];
       } else {
-        value = rawValue.split("#")[0].trim();
+        const commentIndex = rawValue.search(/\s#/);
+        value = commentIndex !== -1 ? rawValue.slice(0, commentIndex).trim() : rawValue;
       }
       metadata[key] = value;
     }
@@ -135,7 +136,24 @@ export function copyRecursiveSync(options: CopyRecursiveOptions): void {
 
   // Guard against self-copying recursion
   const resolvedSrc = fs.realpathSync(src);
-  const resolvedDest = path.resolve(dest);
+  let resolvedDest = path.resolve(dest);
+  try {
+    resolvedDest = fs.realpathSync(dest);
+  } catch {
+    let parent = path.dirname(dest);
+    const relativeSegments: string[] = [path.basename(dest)];
+    while (parent && parent !== path.dirname(parent)) {
+      try {
+        const realParent = fs.realpathSync(parent);
+        resolvedDest = path.join(realParent, ...relativeSegments.reverse());
+        break;
+      } catch {
+        relativeSegments.push(path.basename(parent));
+        parent = path.dirname(parent);
+      }
+    }
+  }
+
   const relative = path.relative(resolvedSrc, resolvedDest);
   const isSubdir = relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
   if (isSubdir) {

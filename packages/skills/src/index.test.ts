@@ -48,6 +48,15 @@ describe("parseFrontmatter", () => {
       description: "A test #2 skill",
     });
   });
+
+  it("should not strip hash characters without preceding whitespace in unquoted values", () => {
+    const content = `---\nname: test#1skill\ndescription: https://github.com/obra/superpowers#readme\n---\n`;
+    const meta = parseFrontmatter(content);
+    expect(meta).toEqual({
+      name: "test#1skill",
+      description: "https://github.com/obra/superpowers#readme",
+    });
+  });
 });
 
 describe("getSkills", () => {
@@ -188,5 +197,23 @@ describe("copyRecursiveSync", () => {
     }
 
     expect(() => copyRecursiveSync({ src: srcDir, dest: destDir })).toThrow("Directory traversal detected");
+  });
+
+  it("should throw if destination containing symlinks resolves to a subdirectory of source", () => {
+    const srcDir = path.join(tempDir, "src-recursion-symlink");
+    const subDir = path.join(srcDir, "sub");
+    fs.mkdirSync(subDir, { recursive: true });
+
+    const symlinkDir = path.join(tempDir, "symlink-dir");
+    fs.mkdirSync(symlinkDir, { recursive: true });
+    const symlinkPath = path.join(symlinkDir, "link-to-sub");
+
+    try {
+      fs.symlinkSync(subDir, symlinkPath, "junction");
+    } catch {
+      fs.symlinkSync(subDir, symlinkPath, "dir");
+    }
+
+    expect(() => copyRecursiveSync({ src: srcDir, dest: symlinkPath })).toThrow("subdirectory of itself");
   });
 });
