@@ -1,7 +1,9 @@
-# Testing specification
+---
+status: APPROVED
+last_updated: 2026-07-15
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-07-01
+# Testing specification
 
 This document outlines the testing strategy, architecture, and standards for this repository. It defines test categories, tooling, configuration requirements, and code coverage targets.
 

@@ -46,7 +46,10 @@ Use package-filtered commands when a full workspace check is unnecessary, but fu
 - Update docs in the same change when behavior, public APIs, package exports, conventions, or lifecycle rules change.
 - Follow `docs/code-guidelines.md` for code style, architecture, TypeScript, testing, and source documentation requirements.
 - Follow `docs/docs-guidelines.md` when creating, updating, interpreting, or making exceptions to durable documentation.
-- Keep package README files aligned with `package.json` `exports`.
+- Follow `docs/specs/packages-documentation.md` for package consumer and
+  maintainer documentation.
+- Keep package README files and public docs aligned with `package.json`
+  `exports`.
 - Do not add dependencies unless simple in-house code is worse.
 - Do not commit secrets, build artifacts, or unrelated changes.
 
@@ -55,7 +58,10 @@ Use package-filtered commands when a full workspace check is unnecessary, but fu
 For `private: false` packages under `packages/*`:
 
 - Follow `docs/specs/packages-lifecycle.md`.
+- Follow `docs/specs/packages-documentation.md`.
 - Keep `README.md` compliant with `docs/specs/packages-readme.md`.
-- Document breaking changes in README and relevant `docs/` files.
+- Document breaking changes in README, public docs, and LLM files.
 - Keep public exports explicit and documented.
-- Add or update JSDoc/TSDoc for every public symbol exposed through package `exports`; source docs and README reference material must describe the same consumer-facing behavior.
+- Add or update JSDoc/TSDoc for every public symbol exposed through package
+  `exports`; source docs and public package docs must describe the same
+  consumer-facing behavior.

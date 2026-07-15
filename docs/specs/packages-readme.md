@@ -1,10 +1,14 @@
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: README files for workspace packages.
+---
+
 # Package README spec
 
-**Status:** APPROVED
-**Last updated:** 2026-06-22
-**Scope:** README files for workspace packages.
-
-This document defines the expected structure and content for package README files.
+This document defines the predictable structure and concise content expected in
+package README files. Full package documentation follows
+`docs/specs/packages-documentation.md`.
 
 ## Compliance
 
@@ -14,138 +18,96 @@ Private packages and apps MAY follow this spec when it improves maintainability,
 
 ## Purpose
 
-A package README is the public package usage contract for default behavior, the main use case, and the common happy path. It should explain what the package is expected to provide, how consumers should use it, what it exports for common consumer usage, and what constraints users must know before depending on it.
+A package README is the small human entrypoint for evaluating and starting with
+the package. It owns package purpose, installation, the main happy path, links to
+full documentation, and critical constraints consumers must see before adopting
+the package.
 
-A package README SHOULD be useful as the first package design document: enough natural language to describe the intended public shape and basic behavior, followed by examples and reference material that code can implement and grow from. Code examples should demonstrate the documented behavior, not replace all explanation.
-
-The README owns public consumer behavior, default usage, supported imports, constraints, and stability notes. Package-level `docs/` files own deeper design rationale, advanced workflows, lifecycle rules, internal architecture, and extended examples. When full documentation would make the README noisy or difficult to scan, deeper guides SHOULD live in package-level `docs/` files and the README SHOULD link to them.
-
-The README SHOULD document public behavior, not internal implementation details.
+The README MUST stay concise. Complete API reference, advanced workflows,
+extended examples, troubleshooting, and migrations belong in published
+package-level `docs/`. Maintainer rationale and workflows belong in
+`docs/internal/`.
 
 ## Required structure
 
-Public package README files MUST follow this structure unless a section is explicitly omitted under the omission rules.
+Public package README files MUST follow this order unless a section is omitted
+under the omission rules:
 
 1. Title: package name exactly as published, such as `# @codenhub/theme`.
-2. Description: short description of what the package does + important details users need to know.
-3. Installation: package manager commands or package name, when the package is installed directly.
-4. Usage: default and main consumer scenarios, including at least one minimal working example for the main use case.
-5. Reference: catalog of documented public exports users are expected to call, instantiate, import, configure, or style against.
-6. Examples: common workflows and real-world scenarios beyond the minimal usage path.
-7. Requirements: browser, Node, SSR, framework, peer dependency, CSS, storage, DOM, or build-tool requirements.
-8. Notes: flexible final section for limitations, non-goals, caveats, stability notes, or other package-specific considerations that do not fit earlier sections.
-9. License: primary package license, along with any necessary third-party attributions, licenses, and notices for bundled or derived third-party assets (such as Lucide icons).
+2. Description: short purpose, intended consumers, and essential behavior.
+3. Installation: package manager commands or package name when consumers install
+   it directly.
+4. Usage: one minimal working example for the main use case.
+5. Documentation: links to published guides and complete reference material.
+6. Requirements: runtime, framework, peer dependency, CSS, SSR, storage, DOM, or
+   build-tool requirements when applicable.
+7. Notes: critical limitations, stability, compatibility, failure behavior, or
+   non-goals when applicable.
+8. License: package license and required third-party notices when applicable.
 
-Headings should use these names when practical. Small wording changes are allowed when they improve clarity for the package, but the section purpose MUST stay recognizable. Optional sections MAY appear wherever they make the README easiest to understand, as long as the required information remains present, accurate, and easy to scan.
+Use these heading names when practical. Small wording changes are allowed when
+they improve clarity, but section purpose MUST remain recognizable.
 
-## Reference
+## Documentation links
 
-The Reference section MUST document the primary public entrypoint listed in `package.json` `exports`, plus any subpath entrypoints that are part of default or common consumer usage. For each covered entrypoint, document the consumer-facing symbols available from it, such as functions, classes, types, structures, CSS files, plugins, config objects, assets, or other public package surfaces.
+The Documentation section MUST link to the package's public `docs/` content and
+make complete API reference easy to find. Link directly to useful documents
+rather than only to a directory when repository rendering would make navigation
+unclear.
 
-The Reference section SHOULD describe what each public surface is for, when to use it, and the default behavior it guarantees. It is intentionally a catalog of the default and common public surfaces; Usage and Examples are responsible for showing behavior, workflows, and main scenarios. Signatures alone are not sufficient documentation, and the README does not need to be exhaustive when deeper package-level `docs/` would be clearer.
-
-Document only public behavior. Do not document private files, implementation details, or exports that consumers should not use.
-
-For small packages, one flat list of documented symbols is usually enough. For complex packages, the Reference section SHOULD be grouped by public entrypoint or surface area so consumers can find the right import path first, then the symbols under it. Prefer this structure when it improves scanability:
-
-1. Entrypoint or surface heading, such as `@codenhub/package`, `@codenhub/package/plugin`, CSS, tokens, events, or CLI.
-2. Short entrypoint purpose and when consumers should use it.
-3. Import example for the entrypoint.
-4. Public symbols or files available from that entrypoint.
-5. Link to deeper package-level `docs/` when the entrypoint has advanced workflows, edge cases, or many options.
-
-If a package has many public entrypoints or advanced APIs, the README SHOULD cover the default and most common entrypoints, then link to package-level `docs/` files for full details. The README should stay useful as a reference, not become exhaustive documentation when a separate guide would be clearer.
-
-For each applicable item, include:
-
-- Name and kind: function, class, type, interface, constant, event, CSS file, plugin, config object, or asset.
-- Import path.
-- Signature or shape, when applicable.
-- Parameters, properties, or fields users need to provide or read.
-- Return value, emitted value, generated output, or side effect.
-- Error or failure behavior for any public API where failure is observable.
-- A short example when the item is not obvious from quick start.
+The README MAY include a small API or entrypoint overview when it helps readers
+choose the right starting path. It MUST NOT contain an exhaustive symbol catalog
+or duplicate full reference material.
 
 ## Omission rules
 
-README files SHOULD stay concise, but they MUST NOT omit default behavior, the main use case, common consumer usage, or important observable failure behavior to save space.
-
-A section, API category, example group, or template surface MAY be omitted when it does not apply to the README-level public usage contract. Package authors SHOULD keep only what consumers need to install, use, evaluate, and safely depend on the package:
+README files MUST NOT omit package purpose, the main use case, documentation
+links, or critical constraints to save space. Optional sections MAY be omitted
+when they do not apply:
 
 - Omit `Installation` only when the package is never installed directly by consumers.
-- Omit extra package-manager commands when the package name is enough and the repository does not require one package manager in public docs.
-- Omit functions when the package has no public functions.
-- Omit classes when the package has no public classes.
-- Omit methods when the package has no public methods.
-- Omit events when the package emits, listens to, or documents no public events.
-- Omit types or interfaces when the package exposes no public consumer-facing types.
-- Omit `CSS`, `assets`, or `plugin` entrypoints when the package exposes none, or when they are advanced surfaces documented in package-level `docs/` instead of the README.
-- Omit `additional examples` when there is only one meaningful workflow.
-- Omit `License` section details only if the package does not bundle or derive from third-party code/assets, uses the repository's standard license (Apache-2.0), and the repository root license is sufficient without additional package-level notices. Public packages incorporating third-party assets (such as Lucide icons under the ISC license) MUST NOT omit this section and MUST document those dependencies alongside a corresponding package-level `NOTICE` file.
+- Omit extra package-manager commands when the package name is sufficient.
+- Omit `Requirements` when no requirements exist beyond normal installation.
+- Omit `Notes` when no critical caveat belongs there.
+- Omit detailed `License` text only when the repository license is sufficient and
+  the package contains no third-party code or assets requiring attribution.
 
-Very small packages MAY have fewer headings and less template structure only when all applicable required information remains present and easy to scan.
+Public packages containing third-party code or assets MUST document required
+attributions and include a corresponding package-level `NOTICE` file.
 
-Large packages MAY move deep guides to package-level `docs/`, but README MUST still cover the public usage contract for default behavior, the main use case, and common consumer usage, then link to those guides.
-
-README files MUST NOT contradict APPROVED or IMPLEMENTED package-level `docs/` source-of-truth documents. When both describe the same public behavior, they MUST use the same terms, defaults, constraints, and observable failure behavior. When public behavior changes, update the README and relevant package-level `docs/` files together when both are affected.
+Very small packages MAY combine sections when all required information stays
+present, accurate, and easy to scan.
 
 ## Template
 
-Use [packages-readme-template.md](packages-readme-template.md) as the starting point for public package README files. Remove only sections that are allowed by the omission rules.
+Use [packages-readme-template.md](packages-readme-template.md) as the starting
+point. Remove only sections allowed by the omission rules.
 
 ## Package type requirements
 
-Utility packages MUST document:
+Package-specific requirements that affect first use MUST appear in the README;
+full detail belongs in public docs. Examples include:
 
-- Main exports and subpath imports that are part of default or common consumer usage.
-- Input boundary expectations, especially for `unknown`, validation, coercion, and parsing.
-
-Browser packages MUST document:
-
-- Browser APIs used, such as `window`, `document`, `localStorage`, events, or media queries.
-- SSR behavior when browser APIs are unavailable.
-- Cleanup or lifecycle APIs when listeners, subscriptions, timers, or DOM mutations are used.
-
-UI or CSS packages MUST document:
-
-- Required CSS imports.
-- Theme, token, class, attribute, or customization model.
-- Accessibility responsibilities that belong to the package versus the consumer.
-- Framework requirements, if any.
-
-Build-tool or plugin packages MUST document:
-
-- Minimal config example.
-- Plugin order requirements.
-- Peer dependencies and supported version ranges.
-- Generated files, transformed files, or build output behavior.
-
-Type-only packages MUST document:
-
-- Public type or interface entrypoints.
-- Runtime behavior, if none, as explicitly none.
-- Expected import style, such as regular imports or `import type`.
-
-Asset or token packages MUST document:
-
-- Public assets, token files, or generated structures consumers are expected to import.
-- Naming, stability, and customization expectations.
-- Build-tool, bundler, or runtime requirements for consuming the assets.
+- Input validation or coercion boundaries for utility packages.
+- Browser API, SSR, and cleanup behavior for browser packages.
+- CSS imports, customization, framework, and accessibility responsibilities for
+  UI or CSS packages.
+- Plugin order, peer dependencies, and generated output for build-tool packages.
+- Type-only import style and absence of runtime behavior.
+- Asset naming, stability, and bundler requirements.
 
 ## Optional sections
 
-Use these sections when they add value:
+README files MAY add concise sections when they materially help first use:
 
-- Recipes.
-- Troubleshooting.
-- Migration notes.
-- FAQ.
+- API overview.
 - Changelog link.
 - Related packages.
 
 ### Features or support status
 
-Packages MAY include a feature, support, or stability table when consumers need a quick view of what is ready, risky, in progress, or not available yet. This table is optional, but recommended for packages with mixed maturity across public surfaces, integrations, adapters, generated output, or styling hooks.
+Packages MAY include a small feature, support, or stability table when consumers
+need a quick view of mixed maturity across public surfaces.
 
 Use clear status labels:
 
@@ -165,30 +127,40 @@ Example table:
 | React adapter     | WIP          | Missing SSR coverage.                                |
 | CLI generator     | Planned      | Not available yet; tracked in approved package docs. |
 
-Packages with deprecated, experimental, unstable, or partially stable public surfaces SHOULD state that status near the relevant README section when consumers need it to make safe adoption decisions. This is recommended when the package has behavior, APIs, generated output, styling hooks, or support levels that are not fully stable.
-
-A status table MAY be used when a package has multiple public surfaces with different stability or lifecycle states. This is recommended when prose would make it hard to quickly see what is stable, experimental, deprecated, planned, or intentionally unsupported. Planned surfaces SHOULD appear only when approved package docs cover them and they help consumers understand current adoption, migration, or integration decisions; they MUST NOT be used as general roadmap promises.
+Deprecated, experimental, unstable, or partially stable public surfaces SHOULD
+state that status where consumers will see it before adoption. Planned surfaces
+SHOULD appear only when internal approved docs cover them and they affect a
+current adoption or migration decision; do not use README tables for general
+roadmap promises.
 
 ## Content rules
 
-README content MUST be accurate for the published public API.
+README content MUST be accurate for the current published public API and match
+the package's public docs and source JSDoc/TSDoc.
 
 README content MUST NOT include:
 
-- Undocumented exports or examples that require private internals.
+- Examples that require private internals.
 - Stale TODOs, roadmap promises, or speculative features.
 - Marketing copy that does not help usage.
-- Long implementation explanations better kept in code or package-level `docs/`.
+- Full API catalogs or long explanations better kept in public `docs/`.
 - Secrets, private URLs, credentials, or environment-specific local paths.
 
-Examples MUST be small, copyable, and realistic. Prefer complete snippets over fragments when missing context would confuse users.
+Examples MUST be small, copyable, and realistic. Prefer complete snippets when
+missing context would confuse users.
 
 If an example omits setup for brevity, the omission MUST be obvious or stated.
 
-Observable failure behavior SHOULD be stated near the relevant usage or reference material when it affects how consumers call, configure, recover from, or depend on the package.
+Critical observable failure behavior SHOULD appear near README usage when it
+changes safe first use. Full failure behavior belongs in public reference docs.
 
-## Exceptions
+## Package states
 
 Deprecated packages MUST state they are deprecated near the top and point to the replacement when one exists.
 
 Experimental packages MUST state what is unstable: API shape, behavior, build output, or support level.
+
+## Exceptions
+
+Exceptions to this spec MUST follow `docs/docs-guidelines.md` and be recorded in
+`docs/specs/packages-exceptions.md`.

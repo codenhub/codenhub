@@ -1,8 +1,10 @@
-# Roadmap spec
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: Optional repo-level and package-level roadmap files.
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-06-10
-**Scope:** Optional repo-level and package-level roadmap files.
+# Roadmap spec
 
 This document defines how optional `roadmap.md` files may be used to track durable direction, feature plans, and planning context.
 
@@ -16,9 +18,13 @@ When a roadmap exists, it SHOULD follow this spec unless a different structure i
 
 Repo-level roadmap files MAY live at `docs/roadmap.md`.
 
-Package-level roadmap files MAY live at `packages/<package-name>/docs/roadmap.md`.
+Package-level roadmap files MAY live at
+`packages/<package-name>/docs/internal/roadmap.md`.
 
-Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific roadmap details belong in that package's `docs/` directory.
+Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific
+roadmap details belong in that package's `docs/internal/` directory. Public docs
+MAY mention planned work only under the consumer-relevance rules in
+`docs/specs/packages-documentation.md`.
 
 ## Purpose
 
@@ -31,11 +37,13 @@ A roadmap is not a short-lived task list, scratchpad, or replacement for issue t
 Roadmap files SHOULD use this structure when practical:
 
 ```md
-# Roadmap
+---
+status: DRAFT
+last_updated: YYYY-MM-DD
+scope: <repo/package/area this roadmap covers>
+---
 
-**Status:** DRAFT
-**Last updated:** YYYY-MM-DD
-**Scope:** <repo/package/area this roadmap covers>
+# Roadmap
 
 ## Purpose
 

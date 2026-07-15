@@ -1,8 +1,10 @@
-# Package errors spec
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: Packages under `packages/*` that expose errors to consumers.
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-07-12
-**Scope:** Packages under `packages/*` that expose errors to consumers.
+# Package errors spec
 
 This document defines how packages in this repository should design and expose their error handling so that consumers using `@codenhub/error` get consistent, predictable, and interoperable errors across packages.
 
@@ -170,6 +172,7 @@ export const myPackageErrors = {
 
 ## Exceptions
 
-Exceptions MUST follow `docs/docs-guidelines.md`.
+Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in
+`docs/specs/packages-exceptions.md`.
 
 A valid exception MUST name the package, the skipped rule, and why the package remains safe to publish.

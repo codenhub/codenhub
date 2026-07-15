@@ -1,7 +1,9 @@
-# Coding guidelines
+---
+status: APPROVED
+last_updated: 2026-07-15
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-06-28
+# Coding guidelines
 
 This document outlines patterns, conventions and guidelines to follow when working on this codebase.
 
@@ -89,7 +91,10 @@ For comprehensive details on test categorization (Unit, Integration, E2E), confi
 - Comments explain WHY, not WHAT or HOW.
 - Remove and avoid redundant comments, decorations and outdated docs.
 - Public package APIs MUST have JSDoc/TSDoc in source, even when the README also documents them.
-- Package READMEs MUST follow `docs/specs/packages-readme.md` when the package is public.
+- Public package documentation MUST follow
+  `docs/specs/packages-documentation.md`.
+- Package READMEs MUST follow `docs/specs/packages-readme.md` when the package is
+  public.
 
 For `private: false` packages under `packages/*`, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
 
@@ -97,7 +102,9 @@ Public API JSDoc/TSDoc MUST describe consumer-facing purpose, important inputs o
 
 Internal exports used only to compose package entrypoints SHOULD stay unexported from public entrypoints. If an internal export is necessary, mark it with `@internal` and keep it out of package README examples.
 
-When changing package `exports`, public symbols, public behavior, or observable failure behavior, update source JSDoc/TSDoc and the package README/reference material in the same change.
+When changing package `exports`, public symbols, public behavior, or observable
+failure behavior, update source JSDoc/TSDoc and affected README, public docs, and
+LLM documentation in the same change.
 
 Oxlint validates JSDoc structure and tag quality where supported, but current Oxlint rules do not fully detect missing docs for package public exports. Code authors and reviewers MUST enforce public API JSDoc/TSDoc coverage during implementation and review until a dedicated lint rule or custom plugin exists.
 

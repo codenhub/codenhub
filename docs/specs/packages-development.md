@@ -1,8 +1,10 @@
-# Package development spec
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: Optional package-local manual development and consumer-debug workflows under `packages/*`.
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-07-01
-**Scope:** Optional package-local manual development and consumer-debug workflows under `packages/*`.
+# Package development spec
 
 This document defines the preferred workflow for fast package development and pre-ship confidence when automated tests alone do not make real usage easy enough to exercise.
 

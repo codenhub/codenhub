@@ -1,8 +1,10 @@
-# Package lifecycle spec
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: Workspace packages under `packages/*`.
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-07-01
-**Scope:** Workspace packages under `packages/*`.
+# Package lifecycle spec
 
 This document defines how packages are structured, built, tested, exported, and prepared for publishing.
 
@@ -20,7 +22,8 @@ Public package `package.json` files MUST include:
 - `private`: `false`.
 - `version`: package version.
 - `type`: `module`.
-- `files`: only publishable output, normally `dist`.
+- `files`: only publishable output and consumer documentation, normally `dist`,
+  public `docs/`, `llms.txt`, and `llms-full.txt`.
 - `main`: ESM entrypoint for compatibility with older tooling.
 - `module`: ESM entrypoint.
 - `types`: TypeScript declaration entrypoint.
@@ -76,7 +79,10 @@ This workflow is not required for every package. Missing it is non-compliant onl
 
 Public packages MUST use explicit `exports`.
 
-Every supported import path MUST be listed in `exports`. Import paths that are part of default or common consumer usage MUST be documented in the package README. Advanced or uncommon import paths MAY be documented in package-level `docs/` files when README coverage would make the README noisy or harder to scan.
+Every supported import path MUST be listed in `exports`. Default consumer usage
+MUST be introduced in the package README, and every import path MUST be covered
+by published package docs according to
+`docs/specs/packages-documentation.md`.
 
 Packages MUST NOT rely on consumers importing private files from `dist` or `src`.
 
@@ -109,7 +115,8 @@ Before publishing a public package, run:
 
 After publishing a public package, run package `status:npm` to confirm the registry version, dist tags, and package access status. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
 
-Published packages MUST NOT include secrets, local paths, test fixtures that are not useful to consumers, or build artifacts outside `files`.
+Published packages MUST NOT include secrets, local paths, internal docs, test
+fixtures that are not useful to consumers, or build artifacts outside `files`.
 
 Packages SHOULD publish only files needed by consumers.
 
@@ -125,16 +132,22 @@ Breaking changes MUST update the package README and any relevant `docs/` files i
 
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
-## README relationship
+## Documentation relationship
 
 Package README files MUST follow `docs/specs/packages-readme.md`.
 
-README exports and examples MUST match `package.json` `exports` for the public import paths they document.
+Package documentation MUST follow `docs/specs/packages-documentation.md`.
 
-When `exports` changes, README import examples and API/reference sections MUST be reviewed in the same change.
+README examples and public reference docs MUST match `package.json` `exports`.
+When `exports` changes, source JSDoc/TSDoc, README content, public docs, and LLM
+files MUST be reviewed in the same change.
+
+Package pack checks MUST confirm that the README, public `docs/`, `llms.txt`, and
+`llms-full.txt` are included and `docs/internal/` is excluded.
 
 ## Exceptions
 
-Exceptions MUST follow `docs/docs-guidelines.md`.
+Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in
+`docs/specs/packages-exceptions.md`.
 
 A valid lifecycle exception MUST name the package, the skipped rule, and why the package remains safe to build, test, or publish.
