@@ -1,12 +1,14 @@
+@import "./theme.css";
 @reference "tailwindcss";
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
 @source not "../playground";
-@import "./theme.css";
 @import "./typography.css";
+@import "./utilities/index.css";
 @import "./components/index.css";
+@import "./reset.css";
 
 @layer base {
   /* Headings */
@@ -37,6 +39,39 @@
     @apply text-body;
   }
 
+  /* Content */
+  table {
+    @apply table;
+  }
+
+  kbd {
+    @apply kbd;
+  }
+
+  blockquote {
+    @apply quote;
+  }
+
+  q {
+    @apply quote-inline;
+  }
+
+  code {
+    @apply code;
+  }
+
+  pre {
+    @apply pre;
+  }
+
+  pre code {
+    @apply bg-transparent p-0;
+  }
+
+  hr {
+    @apply divider;
+  }
+
   /* Form controls */
   input[type="text"],
   input[type="email"],
@@ -51,14 +86,26 @@
   input[type="week"],
   input[type="time"] {
     @apply ipt;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
   }
 
   textarea {
     @apply textarea;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
   }
 
   select {
     @apply select;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
   }
 
   input[type="checkbox"] {
@@ -75,5 +122,11 @@
   input[type="submit"],
   input[type="reset"] {
     @apply btn;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-text);
+    background-color: var(--color-text);
+    color: var(--color-text-contrast);
   }
 }

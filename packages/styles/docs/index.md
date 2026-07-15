@@ -1,36 +1,18 @@
 # @codenhub/styles Overview
 
-**Status:** IMPLEMENTED
-**Last updated:** 2026-06-18
-**Scope:** `@codenhub/styles` package.
-
 `@codenhub/styles` is a CSS-only styling foundation for Codenhub interfaces. It provides tokens, base styles, typography utilities, layout helpers, component helper classes, and Tailwind CSS v4 source entrypoints.
 
 The package has no JavaScript runtime. It does not create DOM nodes, attach event listeners, manage focus, validate forms, dismiss toasts, or provide framework components.
 
 ## Public Entrypoints
 
-| Path                             | Contents                                                                      |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| `@codenhub/styles`               | Full compiled stylesheet: theme, base styles, components, typography.         |
-| `@codenhub/styles/theme`         | Compiled theme tokens and dark-mode variables.                                |
-| `@codenhub/styles/components`    | Compiled theme tokens plus component classes.                                 |
-| `@codenhub/styles/native`        | Compiled opt-in styling for native HTML elements (headings, inputs, buttons). |
-| `@codenhub/styles/tw`            | Tailwind v4 source for theme, base styles, components, and utilities.         |
-| `@codenhub/styles/tw/theme`      | Tailwind v4 source for theme tokens and custom dark variant.                  |
-| `@codenhub/styles/tw/components` | Tailwind v4 source for theme tokens and component classes.                    |
-| `@codenhub/styles/tw/surface`    | Tailwind v4 source for surface styles and empty-state utility.                |
-| `@codenhub/styles/tw/button`     | Tailwind v4 source for composable button utilities.                           |
-| `@codenhub/styles/tw/form`       | Tailwind v4 source for form, inputs, checkbox, and switch utilities.          |
-| `@codenhub/styles/tw/feedback`   | Tailwind v4 source for alert, badge, skeleton, and progress.                  |
-| `@codenhub/styles/tw/loader`     | Tailwind v4 source for loader and activity indicator utilities.               |
-| `@codenhub/styles/tw/tooltip`    | Tailwind v4 source for tooltip utility.                                       |
-| `@codenhub/styles/tw/reset`      | Tailwind v4 source for core resets (scrollbar, body, selection).              |
-| `@codenhub/styles/tw/native`     | Tailwind v4 source for opt-in classless styling of native HTML elements.      |
-| `@codenhub/styles/tw/typography` | Tailwind v4 source for typography helper classes.                             |
-| `@codenhub/styles/tw/utilities`  | Tailwind v4 source for layout primitives and contrast utilities.              |
+- Compiled CSS: `@codenhub/styles`, `/theme`, `/components`, and `/native`.
+- Full Tailwind CSS v4 source: `@codenhub/styles/tw` and `/tw/native`.
+- Focused Tailwind source: `/tw/theme`, `/tw/components`, `/tw/surface`, `/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/loader`, `/tw/tooltip`, `/tw/reset`, `/tw/typography`, and `/tw/utilities`.
 
 `components` entrypoints include theme tokens because component classes depend on those variables.
+
+The native entrypoint also includes the reset. It maps headings, form controls, buttons, `table`, `kbd`, `blockquote`, `q`, `code`, `pre`, and `hr` to package helper styles.
 
 ## Class Model
 
@@ -73,5 +55,3 @@ Aesthetic profile classes such as `.glassmorphism` or `.brutalism` are not part 
 | [Tokens](./tokens.md)               | Theme and foundation variable contracts.                  |
 | [Classes](./classes.md)             | Public helper class behavior and composition rules.       |
 | [Accessibility](./accessibility.md) | CSS accessibility hooks and responsibilities outside CSS. |
-| [Tests](./tests.md)                 | Build and browser validation strategy.                    |
-| [Roadmap](./roadmap.md)             | Draft direction and durable planning context.             |

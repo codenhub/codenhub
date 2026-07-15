@@ -1,0 +1,11 @@
+.component-option {
+  cursor: pointer;
+}
+
+.component-alert-group {
+  margin-top: 1rem;
+}
+
+.component-alert-group.spacious {
+  margin-top: 2rem;
+}

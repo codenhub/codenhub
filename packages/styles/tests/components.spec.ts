@@ -1,105 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-const VANILLA_PREVIEW_URL = "http://localhost:5184/?env=vanilla";
-const TAILWIND_BUILD_URL = "http://localhost:5184/?env=build";
+import { BUTTON_INTENT_TOKENS, getContrastRatio, type ButtonIntentToken } from "./test-utils";
 
-interface LinearColor {
-  blue: number;
-  green: number;
-  red: number;
-}
+const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
 
-interface ButtonIntentToken {
-  className: string;
-  tokenName: string;
-}
-
-const BUTTON_INTENT_TOKENS = [
-  { className: "primary", tokenName: "primary" },
-  { className: "secondary", tokenName: "accent" },
-  { className: "success", tokenName: "success" },
-  { className: "warning", tokenName: "warning" },
-  { className: "destructive", tokenName: "destructive" },
-  { className: "info", tokenName: "info" },
-] as const satisfies readonly ButtonIntentToken[];
-
-const parseColor = (color: string): LinearColor => {
-  const rgbMatch = color.match(/rgba?\(([^)]+)\)/);
-
-  if (rgbMatch) {
-    const [red = 0, green = 0, blue = 0] = rgbMatch[1]
-      .split(/[,\s/]+/)
-      .filter(Boolean)
-      .slice(0, 3)
-      .map(Number);
-
-    return {
-      blue: toLinearRgbChannel(blue / 255),
-      green: toLinearRgbChannel(green / 255),
-      red: toLinearRgbChannel(red / 255),
-    };
-  }
-
-  const oklchMatch = color.match(/oklch\(([^)]+)\)/);
-
-  if (oklchMatch) {
-    const [lightness = 0, chroma = 0, hue = 0] = oklchMatch[1]
-      .split(/[,\s/]+/)
-      .filter(Boolean)
-      .slice(0, 3)
-      .map(Number);
-
-    return oklchToLinearRgb({ chroma, hue, lightness });
-  }
-
-  throw new Error(`Unsupported color format: ${color}`);
-};
-
-const toLinearRgbChannel = (channel: number) =>
-  channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-
-const oklchToLinearRgb = ({
-  chroma,
-  hue,
-  lightness,
-}: {
-  chroma: number;
-  hue: number;
-  lightness: number;
-}): LinearColor => {
-  const hueRadians = (hue * Math.PI) / 180;
-  const a = chroma * Math.cos(hueRadians);
-  const b = chroma * Math.sin(hueRadians);
-  const long = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-  const medium = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-  const short = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
-
-  return {
-    blue: clampLinearRgb(-0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short),
-    green: clampLinearRgb(-1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short),
-    red: clampLinearRgb(4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short),
-  };
-};
-
-const clampLinearRgb = (channel: number) => Math.min(1, Math.max(0, channel));
-
-const getRelativeLuminance = ({ blue, green, red }: LinearColor) => 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-
-const getContrastRatio = (foreground: string, background: string) => {
-  const foregroundLuminance = getRelativeLuminance(parseColor(foreground));
-  const backgroundLuminance = getRelativeLuminance(parseColor(background));
-  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
-  const darker = Math.min(foregroundLuminance, backgroundLuminance);
-
-  return (lighter + 0.05) / (darker + 0.05);
-};
-
-test.describe("compiled CSS preview", () => {
+test.describe("components", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     await expect(page.getByTestId("preview-root")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Typography" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Components" })).toBeVisible();
 
     const primaryButtonStyles = await page.getByTestId("primary-button").evaluate((element) => {
       const styles = getComputedStyle(element);
@@ -116,72 +26,8 @@ test.describe("compiled CSS preview", () => {
     expect(primaryButtonStyles.borderRadius).not.toBe("0px");
   });
 
-  test("exposes foundation tokens", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
-
-    const tokenValues = await page.evaluate(() => {
-      const styles = getComputedStyle(document.documentElement);
-
-      return {
-        containerMax: styles.getPropertyValue("--container-max").trim(),
-        controlHeight: styles.getPropertyValue("--control-height").trim(),
-        focusRing: styles.getPropertyValue("--focus-ring").trim(),
-        motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
-        motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
-        radiusControl: styles.getPropertyValue("--radius-control").trim(),
-        elevationLow: styles.getPropertyValue("--elevation-low").trim(),
-      };
-    });
-
-    expect(tokenValues.containerMax).not.toBe("");
-    expect(tokenValues.controlHeight).not.toBe("");
-    expect(tokenValues.focusRing).not.toBe("");
-    expect(tokenValues.motionDurationFast).not.toBe("");
-    expect(tokenValues.motionDurationNormal).not.toBe("");
-    expect(tokenValues.radiusControl).not.toBe("");
-    expect(tokenValues.elevationLow).not.toBe("");
-  });
-
-  test("exposes semantic hover color tokens", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
-
-    const tokenValues = await page.evaluate(() => {
-      const styles = getComputedStyle(document.documentElement);
-
-      return {
-        destructiveHover: styles.getPropertyValue("--color-destructive-hover").trim(),
-        infoHover: styles.getPropertyValue("--color-info-hover").trim(),
-        successHover: styles.getPropertyValue("--color-success-hover").trim(),
-        warningHover: styles.getPropertyValue("--color-warning-hover").trim(),
-      };
-    });
-
-    expect(tokenValues.destructiveHover).not.toBe("");
-    expect(tokenValues.infoHover).not.toBe("");
-    expect(tokenValues.successHover).not.toBe("");
-    expect(tokenValues.warningHover).not.toBe("");
-  });
-
-  test("does not expose legacy root tokens", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
-
-    const tokenValues = await page.evaluate(() => {
-      const styles = getComputedStyle(document.documentElement);
-
-      return {
-        motionDuration: styles.getPropertyValue("--motion-duration").trim(),
-        shadowOverlay: styles.getPropertyValue("--shadow-overlay").trim(),
-        shadowSurface: styles.getPropertyValue("--shadow-surface").trim(),
-      };
-    });
-
-    expect(tokenValues.motionDuration).toBe("");
-    expect(tokenValues.shadowOverlay).toBe("");
-    expect(tokenValues.shadowSurface).toBe("");
-  });
-
   test("keeps filled semantic button text readable", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const buttonColors = await page.evaluate(() =>
       [
@@ -205,7 +51,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("composes button intent classes with presentation classes", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const styles = await page.evaluate(() => {
       const successButton = document.querySelector('[data-testid="success-button"]');
@@ -309,7 +155,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses intent tone slots for button presentation classes", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const buttonPresentationStyles = await page.evaluate((intents) => {
       const resolveTokenColor = ({ host, tokenName }: { host: Element; tokenName: string }) => {
@@ -400,7 +246,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses contrast text on filled outline hover", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const successContrast = await page.evaluate(() => {
       const probe = document.createElement("span");
@@ -421,7 +267,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("styles layout, form, and feedback helper classes", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const styles = await page.evaluate(() => {
       const layoutSection = document.querySelector('[data-testid="layout-section"]');
@@ -502,7 +348,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     // Flat info alert
     const flatInfoStyles = await page.getByTestId("flat-info-alert").evaluate((element) => {
@@ -546,7 +392,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders flat and soft badge variants with correct styles", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     // Flat badge: background = intent color, border = intent color (non-transparent)
     const flatBadgeStyles = await page.getByTestId("badge-flat-info").evaluate((element) => {
@@ -624,7 +470,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const tooltipStyles = await page.getByTestId("fallback-tooltip").evaluate((element) => {
       const styles = getComputedStyle(element, "::after");
@@ -642,7 +488,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("applies intent classes to checkbox, switch, and progress bar", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const intentStyles = await page.evaluate(() => {
       const resolveToken = (tokenName: string) => {
@@ -719,7 +565,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const checkbox = page.getByTestId("checkbox-test");
     const checkboxChecked = page.getByTestId("checkbox-checked-test");
@@ -778,7 +624,7 @@ test.describe("compiled CSS preview", () => {
   });
 
   test("uses default neutral text tokens when no semantic intent is specified", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const values = await page.evaluate(() => {
       const resolveToken = (tokenName: string) => {
@@ -827,25 +673,8 @@ test.describe("compiled CSS preview", () => {
     expect(values.progressBg).toBe(values.tokenText);
   });
 
-  test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
-    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See build");
-    await page.goto(TAILWIND_BUILD_URL);
-    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
-  });
-
-  test("switches between preview environments from the environment toggle", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
-    await page.getByTestId("environment-toggle").click();
-    await expect(page).toHaveURL(/env=build/);
-    await expect(page.locator("html")).toHaveAttribute("data-env", "build");
-    await page.getByTestId("environment-toggle").click();
-    await expect(page).toHaveURL(/env=vanilla/);
-    await expect(page.locator("html")).toHaveAttribute("data-env", "vanilla");
-  });
-
   test("renders active progress bar with skeleton animation on pseudo-element", async ({ page }) => {
-    await page.goto(VANILLA_PREVIEW_URL);
+    await page.goto(COMPONENTS_URL);
 
     const activeProgressStyles = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="progress-bar-active"]');
@@ -863,13 +692,5 @@ test.describe("compiled CSS preview", () => {
     expect(activeProgressStyles.animationName).toContain("anim-skeleton");
     expect(activeProgressStyles.display).toBe("block");
     expect(activeProgressStyles.backgroundImage).toContain("linear-gradient");
-  });
-});
-
-test.describe("Tailwind source build", () => {
-  test("loads source build correctly and applies classes", async ({ page }) => {
-    await page.goto(TAILWIND_BUILD_URL);
-    await expect(page.getByTestId("preview-root")).toBeVisible();
-    await expect(page.getByTestId("primary-button")).toBeVisible();
   });
 });

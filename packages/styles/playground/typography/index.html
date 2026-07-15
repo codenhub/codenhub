@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Typography | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="section" data-testid="preview-root">
+      <div class="section-content view vertical loose">
+        <header class="stack tight">
+          <p class="text-label">Content utilities</p>
+          <h1 class="text-title-lg">Typography</h1>
+        </header>
+
+        <section class="stack">
+          <h2 class="text-title">Type scale</h2>
+          <p class="text-display">Display</p>
+          <p class="text-title-lg">Large title</p>
+          <p class="text-title">Title</p>
+          <p class="text-title-sm">Small title</p>
+          <p class="text-label-lg">Large label</p>
+          <p class="text-label">Label</p>
+          <p class="text-body">
+            Body text with
+            <code class="code">inlineCode()</code>
+            .
+          </p>
+          <pre class="pre">const packageName = "@codenhub/styles";</pre>
+          <p>
+            Open search with
+            <kbd class="kbd" data-testid="keyboard">Ctrl</kbd>
+            +
+            <kbd class="kbd">K</kbd>
+            .
+          </p>
+        </section>
+
+        <section class="stack">
+          <h2 class="text-title">Quotations</h2>
+          <blockquote class="quote" data-testid="quote">
+            Small primitives should make simple interfaces faster to build.
+            <cite>Codenhub styles</cite>
+          </blockquote>
+          <p>
+            Use
+            <q class="quote-inline" data-testid="quote-inline">native semantics first</q>
+            where possible.
+          </p>
+        </section>
+
+        <section class="stack">
+          <h2 class="text-title">Quiet table</h2>
+          <div class="table-wrap">
+            <table class="table" data-testid="table">
+              <caption data-testid="table-caption">Package adoption</caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-testid="table-heading">Package</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Styles</th>
+                  <td data-testid="table-cell">Ready</td>
+                </tr>
+                <tr>
+                  <th scope="row">Theme</th>
+                  <td>Planned</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Total</th>
+                  <td>2</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

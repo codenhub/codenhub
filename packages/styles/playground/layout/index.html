@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Layout | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main data-testid="preview-root">
+      <section class="section">
+        <div class="section-content view vertical loose" data-testid="section-content">
+          <header class="stack tight">
+            <p class="text-label">Layout utilities</p>
+            <h1 class="text-title-lg">Layout</h1>
+          </header>
+
+          <section class="stack">
+            <h2 class="text-title">Views</h2>
+            <div class="view vertical demo-frame" data-testid="view-vertical">
+              <span class="badge">One</span>
+              <span class="badge">Two</span>
+            </div>
+            <div class="view horizontal demo-frame" data-testid="view-horizontal">
+              <span class="badge">One</span>
+              <span class="badge">Two</span>
+              <span class="badge">Three</span>
+            </div>
+          </section>
+
+          <hr class="divider" data-testid="divider-horizontal" />
+
+          <section class="stack">
+            <h2 class="text-title">Grid and dividers</h2>
+            <div class="auto-grid">
+              <div class="surface">Adaptive column</div>
+              <div class="surface">Adaptive column</div>
+              <div class="surface">Adaptive column</div>
+            </div>
+            <div class="view horizontal demo-frame">
+              <span>Before</span>
+              <span class="divider vertical" data-testid="divider-vertical"></span>
+              <span>After</span>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

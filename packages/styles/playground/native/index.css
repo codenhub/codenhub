@@ -1,0 +1,55 @@
+.native-header,
+.native-stack,
+.native-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.native-header {
+  gap: 0.5rem;
+}
+
+.native-stack {
+  gap: 1rem;
+}
+
+.native-stack a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.native-form {
+  max-width: 25rem;
+  gap: 1.5rem;
+}
+
+.native-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.native-choices,
+.native-actions,
+.native-choice {
+  display: flex;
+  align-items: center;
+}
+
+.native-choices,
+.native-actions {
+  flex-wrap: wrap;
+}
+
+.native-choices {
+  gap: 1.5rem;
+}
+
+.native-actions {
+  gap: 1rem;
+}
+
+.native-choice {
+  gap: 0.5rem;
+  cursor: pointer;
+}

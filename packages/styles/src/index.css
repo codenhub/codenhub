@@ -7,6 +7,6 @@
 
 @import "./theme.css";
 @import "./typography.css";
-@import "./utilities.css";
+@import "./utilities/index.css";
 @import "./components/index.css";
 @import "./reset.css";

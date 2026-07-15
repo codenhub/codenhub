@@ -1,0 +1,10 @@
+.demo-frame {
+  min-height: 4rem;
+  padding: 1rem;
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.demo-frame .divider.vertical {
+  min-height: 2rem;
+}

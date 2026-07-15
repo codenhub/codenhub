@@ -63,8 +63,7 @@
   --container-wide: 90rem;
   --layout-gutter: clamp(1rem, 4vw, 2rem);
   --layout-section-block: clamp(4rem, 9vw, 7rem);
-  --layout-stack-gap: 1rem;
-  --layout-cluster-gap: 0.75rem;
+  --layout-gap: 1rem;
   --layout-grid-min: 16rem;
 
   --radius-small: 0.25rem;

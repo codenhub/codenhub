@@ -1,0 +1,70 @@
+@reference "tailwindcss";
+
+@utility table-wrap {
+  @apply w-full overflow-x-auto;
+}
+
+@utility table {
+  @apply text-body w-full border-separate text-left;
+
+  border: var(--border-width) solid var(--color-border);
+  border-spacing: 0;
+  border-radius: var(--radius-control);
+  overflow: hidden;
+
+  & caption {
+    @apply text-label text-text-secondary pb-2 text-left;
+  }
+
+  & thead,
+  & tfoot {
+    @apply bg-surface;
+  }
+
+  & th,
+  & td {
+    @apply border-border border-b px-4 py-3 align-top;
+  }
+
+  & th {
+    @apply text-label font-semibold;
+  }
+
+  & tbody tr {
+    transition: background-color var(--motion-duration-fast) var(--motion-ease);
+  }
+
+  & tbody tr:hover {
+    @apply bg-foreground;
+  }
+
+  & tbody tr:last-child > * {
+    @apply border-b-0;
+  }
+}
+
+@utility kbd {
+  @apply border-border bg-surface inline-flex items-center rounded-(--radius-small) border px-1.5 py-0.5 font-mono text-xs font-medium;
+
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+@utility quote {
+  @apply border-border text-text-secondary my-0 border-l-4 pl-4 italic;
+
+  & cite {
+    @apply text-body text-text-secondary mt-2 block not-italic;
+  }
+}
+
+@utility quote-inline {
+  @apply text-text-secondary italic;
+}
+
+@utility code {
+  @apply bg-surface rounded-(--radius-small) px-1.25 py-0.75 font-mono;
+}
+
+@utility pre {
+  @apply bg-surface overflow-x-auto rounded-(--radius-control) px-2.5 py-1.5 font-mono;
+}

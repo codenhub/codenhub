@@ -1,0 +1,95 @@
+@reference "tailwindcss";
+
+@utility view {
+  @apply flex gap-(--layout-gap);
+
+  &.vertical {
+    @apply flex-col;
+  }
+
+  &.horizontal {
+    @apply flex-row flex-wrap items-center;
+  }
+
+  &.tight {
+    --layout-gap: 0.5rem;
+  }
+
+  &.loose {
+    --layout-gap: 1.5rem;
+  }
+}
+
+@utility stack {
+  @apply flex flex-col gap-(--layout-gap);
+
+  &.tight {
+    --layout-gap: 0.5rem;
+  }
+
+  &.loose {
+    --layout-gap: 1.5rem;
+  }
+}
+
+@utility cluster {
+  @apply flex flex-wrap items-center gap-(--layout-gap);
+
+  &.between {
+    @apply justify-between;
+  }
+
+  &.tight {
+    --layout-gap: 0.5rem;
+  }
+
+  &.loose {
+    --layout-gap: 1.5rem;
+  }
+}
+
+@utility auto-grid {
+  @apply grid gap-(--layout-gap);
+
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--layout-grid-min), 100%), 1fr));
+
+  &.tight {
+    --layout-gap: 0.5rem;
+  }
+
+  &.loose {
+    --layout-gap: 1.5rem;
+  }
+}
+
+@utility section {
+  @apply px-(--layout-gutter) py-(--layout-section-block);
+}
+
+@utility section-content {
+  @apply mx-auto w-full max-w-(--container-max);
+
+  &.narrow {
+    max-width: var(--container-narrow);
+  }
+
+  &.wide {
+    max-width: var(--container-wide);
+  }
+}
+
+@utility divider {
+  @apply border-border m-0 w-full border-0 border-t;
+
+  &.vertical {
+    @apply h-auto w-0 self-stretch border-t-0 border-l;
+  }
+}
+
+@utility selection-contrast {
+  &::selection,
+  & *::selection {
+    background: var(--color-primary-contrast);
+    color: var(--color-primary);
+  }
+}

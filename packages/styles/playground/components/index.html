@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Components | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="sect bg-background text-text font-default" data-testid="preview-root">
+      <section class="sect-inn">
+        <header class="stack tight">
+          <p class="text-label">UI fixtures</p>
+          <h1 class="text-title-lg">Components</h1>
+        </header>
+      </section>
+
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Buttons</h2>
+        <div class="cluster">
+          <button class="btn" data-testid="neutral-button">Neutral</button>
+          <button class="btn primary" data-testid="primary-button">Primary</button>
+          <button class="btn secondary" data-testid="secondary-button">Secondary</button>
+          <button class="btn out">Outline</button>
+          <button class="btn fill out">Outline fill</button>
+          <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
+          <button class="btn secondary loading dots-wave" disabled data-testid="loading-button-dots">
+            Loading Dots
+          </button>
+          <button class="btn success loading bars-wave" disabled data-testid="loading-button-bars">Loading Bars</button>
+          <button class="btn success" data-testid="success-button">Success</button>
+          <button class="btn success out fill" data-testid="success-outline-button">Success outline</button>
+          <button class="btn success soft" data-testid="success-soft-button">Success soft</button>
+          <button class="btn secondary ghost" data-testid="secondary-ghost-button">Secondary ghost</button>
+          <button class="btn success ghost" data-testid="success-ghost-button">Success ghost</button>
+          <button class="btn primary pill" data-testid="primary-pill-button">Primary pill</button>
+          <button class="btn icon pill destructive" aria-label="Create">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+          <button class="btn icon primary" aria-label="Create">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+          </button>
+          <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
+          <button class="btn destructive">Destructive</button>
+          <button class="btn error" data-testid="error-button">Error alias</button>
+          <button class="btn warning">Warning</button>
+          <button class="btn info">Info</button>
+        </div>
+      </section>
+
+      <section class="sect-inn" data-testid="layout-section">
+        <h2 class="text-title-lg">Layout</h2>
+        <div class="cluster" data-testid="cluster-layout">
+          <span class="badge" data-testid="badge-neutral">Neutral</span>
+          <span class="badge primary" data-testid="badge-primary">Primary</span>
+          <span class="badge secondary" data-testid="badge-secondary">Secondary</span>
+          <span class="badge success">Live</span>
+          <span class="badge warning">Queued</span>
+        </div>
+        <div class="cluster" data-testid="badge-flat-cluster">
+          <span class="badge flat" data-testid="badge-flat-info">Info flat</span>
+          <span class="badge primary flat" data-testid="badge-flat-primary">Primary flat</span>
+          <span class="badge secondary flat" data-testid="badge-flat-secondary">Secondary flat</span>
+          <span class="badge success flat" data-testid="badge-flat-success">Success flat</span>
+          <span class="badge warning flat" data-testid="badge-flat-warning">Warning flat</span>
+          <span class="badge error flat" data-testid="badge-flat-error">Error flat</span>
+        </div>
+        <div class="cluster" data-testid="badge-soft-cluster">
+          <span class="badge soft" data-testid="badge-soft-info">Info soft</span>
+          <span class="badge primary soft" data-testid="badge-soft-primary">Primary soft</span>
+          <span class="badge secondary soft" data-testid="badge-soft-secondary">Secondary soft</span>
+          <span class="badge success soft" data-testid="badge-soft-success">Success soft</span>
+          <span class="badge warning soft" data-testid="badge-soft-warning">Warning soft</span>
+          <span class="badge error soft" data-testid="badge-soft-error">Error soft</span>
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Tooltips</h2>
+        <div class="cluster">
+          <span class="tooltip tooltip-icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
+          <span class="tooltip tooltip-icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
+          <span class="tooltip tooltip-icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
+          <span class="tooltip tooltip-icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
+          <span class="tooltip tooltip-icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2 class="text-title-lg">Loaders</h2>
+        <div class="cluster">
+          <div class="loader sm" data-testid="loader-sm"></div>
+          <div class="loader" data-testid="loader-default"></div>
+          <div class="loader lg" data-testid="loader-lg"></div>
+          <div class="loader lg dots-wave" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-fade" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-queue" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-rotate" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-grow" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-grow-alternate" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dot-bounce" data-testid="loader-dots-wave"></div>
+          <div class="loader lg bars-wave" data-testid="loader-bars-wave"></div>
+          <div class="loader lg pulse-ring" data-testid="loader-pulse-ring"></div>
+        </div>
+      </section>
+
+      <section class="sect-inn narrow">
+        <h2 class="text-title-lg">Forms and feedback</h2>
+        <label class="field">
+          <span class="label">Email</span>
+          <input class="ipt" placeholder="you@example.com" />
+          <span class="hint">Use a work email.</span>
+        </label>
+        <label class="field">
+          <span class="label">Broken email</span>
+          <input class="ipt" value="bad" aria-invalid="true" data-testid="invalid-input" />
+          <span class="error">Enter a valid email.</span>
+          <button class="btn error" type="button" data-testid="field-error-button">Fix error</button>
+        </label>
+        <textarea class="textarea" placeholder="Message"></textarea>
+        <select class="select" aria-label="Status">
+          <option>Ready</option>
+        </select>
+        <div class="cluster">
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox" data-testid="checkbox-test" />
+            <span class="text-body font-medium">Accept terms</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox" checked data-testid="checkbox-checked-test" />
+            <span class="text-body font-medium">Checked</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox" disabled data-testid="checkbox-disabled" />
+            <span class="text-body font-medium">Disabled</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox primary" checked data-testid="checkbox-primary" />
+            <span class="text-body font-medium">Primary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox secondary" checked data-testid="checkbox-secondary" />
+            <span class="text-body font-medium">Secondary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox success" checked data-testid="checkbox-success" />
+            <span class="text-body font-medium">Success</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox warning" checked data-testid="checkbox-warning" />
+            <span class="text-body font-medium">Warning</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox destructive" checked data-testid="checkbox-destructive" />
+            <span class="text-body font-medium">Destructive</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="checkbox info" checked data-testid="checkbox-info" />
+            <span class="text-body font-medium">Info</span>
+          </label>
+        </div>
+        <div class="cluster">
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch" data-testid="switch-test" />
+            <span class="text-body font-medium">Enable notifications</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch" checked data-testid="switch-checked-test" />
+            <span class="text-body font-medium">Checked</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch" disabled data-testid="switch-disabled" />
+            <span class="text-body font-medium">Disabled</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch primary" checked data-testid="switch-primary" />
+            <span class="text-body font-medium">Primary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch secondary" checked data-testid="switch-secondary" />
+            <span class="text-body font-medium">Secondary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch success" checked data-testid="switch-success" />
+            <span class="text-body font-medium">Success</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch warning" checked data-testid="switch-warning" />
+            <span class="text-body font-medium">Warning</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch destructive" checked data-testid="switch-destructive" />
+            <span class="text-body font-medium">Destructive</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="checkbox" class="switch info" checked data-testid="switch-info" />
+            <span class="text-body font-medium">Info</span>
+          </label>
+        </div>
+        <div class="cluster">
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo" class="radio" checked data-testid="radio-test" />
+            <span class="text-body font-medium">Radio 1</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo" class="radio" data-testid="radio-unchecked-test" />
+            <span class="text-body font-medium">Radio 2</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input
+              type="radio"
+              name="radio-disabled-demo"
+              class="radio"
+              disabled
+              checked
+              data-testid="radio-disabled"
+            />
+            <span class="text-body font-medium">Disabled</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-p" class="radio primary" checked data-testid="radio-primary" />
+            <span class="text-body font-medium">Primary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-s" class="radio secondary" checked data-testid="radio-secondary" />
+            <span class="text-body font-medium">Secondary</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-su" class="radio success" checked data-testid="radio-success" />
+            <span class="text-body font-medium">Success</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-w" class="radio warning" checked data-testid="radio-warning" />
+            <span class="text-body font-medium">Warning</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-d" class="radio destructive" checked data-testid="radio-destructive" />
+            <span class="text-body font-medium">Destructive</span>
+          </label>
+          <label class="cluster tight component-option">
+            <input type="radio" name="radio-demo-i" class="radio info" checked data-testid="radio-info" />
+            <span class="text-body font-medium">Info</span>
+          </label>
+        </div>
+
+        <div class="stack component-alert-group spacious">
+          <h3 class="text-title-sm">Default Alerts</h3>
+          <div class="alert" role="status" data-testid="neutral-alert">Neutral.</div>
+          <div class="alert success" role="status" data-testid="default-success-alert">Saved.</div>
+          <div class="alert success icon" role="status" data-testid="default-success-alert-icon">Saved.</div>
+          <div class="alert primary icon" role="status" data-testid="default-primary-alert">Primary alert.</div>
+          <div class="alert secondary icon" role="status" data-testid="default-secondary-alert">Secondary alert.</div>
+          <div class="alert info icon" role="status" data-testid="default-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert warning icon" role="status" data-testid="default-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon" role="status" data-testid="default-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div class="stack component-alert-group spacious">
+          <h3 class="text-title-sm">Flat Alerts</h3>
+          <div class="alert primary icon flat" role="status" data-testid="flat-primary-alert">Primary flat alert.</div>
+          <div class="alert secondary icon flat" role="status" data-testid="flat-secondary-alert">
+            Secondary flat alert.
+          </div>
+          <div class="alert info icon flat" role="status" data-testid="flat-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert success icon flat" role="status" data-testid="flat-success-alert">
+            Success! Your changes have been saved.
+          </div>
+          <div class="alert warning icon flat" role="status" data-testid="flat-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon flat" role="status" data-testid="flat-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div class="stack component-alert-group">
+          <h3 class="text-title-sm">Soft Alerts</h3>
+          <div class="alert primary icon soft" role="status" data-testid="soft-primary-alert">Primary soft alert.</div>
+          <div class="alert secondary icon soft" role="status" data-testid="soft-secondary-alert">
+            Secondary soft alert.
+          </div>
+          <div class="alert info icon soft" role="status" data-testid="soft-info-alert">
+            This is an informational message. Check documentation for more details.
+          </div>
+          <div class="alert success icon soft" role="status" data-testid="soft-success-alert">
+            Success! Your changes have been saved.
+          </div>
+          <div class="alert warning icon soft" role="status" data-testid="soft-warning-alert">
+            Warning! Please review your input before proceeding.
+          </div>
+          <div class="alert error icon soft" role="status" data-testid="soft-error-alert">
+            Error! Something went wrong. Please try again.
+          </div>
+        </div>
+
+        <div class="stack component-alert-group">
+          <h3 class="text-title-sm">Left Accent Alerts</h3>
+          <div class="alert primary icon left-accent" role="status" data-testid="left-accent-primary-alert">
+            Primary left-accent.
+          </div>
+          <div class="alert secondary icon left-accent" role="status" data-testid="left-accent-secondary-alert">
+            Secondary left-accent.
+          </div>
+          <div class="alert info icon left-accent" role="status" data-testid="left-accent-info-alert">
+            A new version is available. Update now for the latest features.
+          </div>
+          <div class="alert success icon left-accent" role="status" data-testid="left-accent-success-alert">
+            Payment received. Your invoice is ready to download.
+          </div>
+          <div class="alert warning icon left-accent" role="status" data-testid="left-accent-warning-alert">
+            Disk space is running low. Free up some storage.
+          </div>
+          <div class="alert error icon left-accent" role="status" data-testid="left-accent-error-alert">
+            Authentication failed. Invalid credentials provided.
+          </div>
+        </div>
+        <div class="skeleton" aria-hidden="true" data-testid="skeleton-block"></div>
+        <div class="progress" aria-label="Progress" data-testid="progress-bar" style="--progress-value: 64%"></div>
+        <div
+          class="progress active"
+          aria-label="Active progress"
+          data-testid="progress-bar-active"
+          style="--progress-value: 64%"
+        ></div>
+        <div
+          class="progress primary"
+          aria-label="Primary progress"
+          data-testid="progress-bar-primary"
+          style="--progress-value: 50%"
+        ></div>
+        <div
+          class="progress secondary"
+          aria-label="Secondary progress"
+          data-testid="progress-bar-secondary"
+          style="--progress-value: 80%"
+        ></div>
+        <div
+          class="progress success"
+          aria-label="Success progress"
+          data-testid="progress-bar-success"
+          style="--progress-value: 40%"
+        ></div>
+        <div
+          class="progress success active"
+          aria-label="Active success progress"
+          data-testid="progress-bar-success-active"
+          style="--progress-value: 40%"
+        ></div>
+        <div
+          class="progress warning"
+          aria-label="Warning progress"
+          data-testid="progress-bar-warning"
+          style="--progress-value: 75%"
+        ></div>
+        <div
+          class="progress destructive"
+          aria-label="Destructive progress"
+          data-testid="progress-bar-destructive"
+          style="--progress-value: 90%"
+        ></div>
+        <div
+          class="progress info"
+          aria-label="Info progress"
+          data-testid="progress-bar-info"
+          style="--progress-value: 30%"
+        ></div>
+      </section>
+    </main>
+  </body>
+</html>

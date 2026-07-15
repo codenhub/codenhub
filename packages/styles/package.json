@@ -13,7 +13,14 @@
   "files": [
     "dist",
     "src",
-    "NOTICE"
+    "NOTICE",
+    "README.md",
+    "docs/index.md",
+    "docs/tokens.md",
+    "docs/classes.md",
+    "docs/accessibility.md",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "exports": {
@@ -44,7 +51,7 @@
     "./tw/reset": "./src/reset.css",
     "./tw/native": "./src/native.css",
     "./tw/typography": "./src/typography.css",
-    "./tw/utilities": "./src/utilities.css",
+    "./tw/utilities": "./src/utilities/index.css",
     "./native": {
       "style": "./dist/native.css",
       "import": "./dist/native.css",

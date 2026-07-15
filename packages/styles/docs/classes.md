@@ -1,23 +1,54 @@
 # @codenhub/styles Classes
 
-**Status:** IMPLEMENTED
-**Last updated:** 2026-06-18
-**Scope:** Public helper classes for `@codenhub/styles`.
-
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
 
 ## Layout
 
-`.stack`, `.cluster`, and `.auto-grid` are `@utility` classes. They are available in both the full stylesheet and the Tailwind source entrypoints, and participate in Tailwind's JIT pipeline.
+Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.
 
-| Class              | Purpose                                                        |
-| ------------------ | -------------------------------------------------------------- |
-| `.stack`           | Vertical flex stack using `--layout-stack-gap`.                |
-| `.stack.tight`     | Smaller stack gap.                                             |
-| `.stack.loose`     | Larger stack gap.                                              |
-| `.cluster`         | Wrapping horizontal flex cluster using `--layout-cluster-gap`. |
-| `.cluster.between` | Cluster with `space-between` alignment.                        |
-| `.auto-grid`       | Responsive auto-fit grid using `--layout-grid-min`.            |
+- `.view` is a flex container; `.vertical` and `.horizontal` set its direction, and horizontal views wrap with centered cross-axis alignment.
+- `.stack` is a vertical flex stack.
+- `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
+- `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
+- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
+- `.section` adds responsive block padding and an inline gutter.
+- `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
+- `.divider` is horizontal; `.vertical` makes it self-stretch vertically.
+
+The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
+
+## Content
+
+| Class           | Purpose                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                     |
+| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows. |
+| `.kbd`          | Inline keyboard-input styling.                                              |
+| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    |
+| `.quote-inline` | Inline quotation styling.                                                   |
+| `.code`         | Inline code formatting.                                                     |
+| `.pre`          | Scrollable block code formatting with larger padding.                       |
+
+Use `.table-wrap` around `.table` when table width may exceed its container:
+
+```html
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>styles</td>
+        <td>Ready</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
 
 ## Surfaces
 
@@ -216,5 +247,3 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 | `.text-label`         | Default label text.                                          |
 | `.text-body`          | Default body copy.                                           |
 | `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
-| `.code`               | Inline code formatting.                                      |
-| `.pre`                | Block code formatting with larger padding.                   |

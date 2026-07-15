@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-entry="native">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@codenhub/styles native playground</title>
+    <script src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="sect bg-background text-text font-default" data-testid="native-root">
+      <section class="sect-inn">
+        <header class="native-header">
+          <p>Package defaults</p>
+          <h1>Native elements</h1>
+        </header>
+      </section>
+
+      <section class="sect-inn">
+        <h2>Typography and links</h2>
+        <div class="native-stack">
+          <h1>Heading 1 (h1)</h1>
+          <h2>Heading 2 (h2)</h2>
+          <h3>Heading 3 (h3)</h3>
+          <h4>Heading 4 (h4)</h4>
+          <h5>Heading 5 (h5)</h5>
+          <h6>Heading 6 (h6)</h6>
+          <p>
+            This is a native paragraph (p) showing default typography. It can contain
+            <span>spans</span>
+            and
+            <a href="#">native links (a)</a>
+            .
+          </p>
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2>Native Form Controls</h2>
+        <div class="native-form">
+          <div>
+            <label class="native-label">Text Input</label>
+            <input type="text" placeholder="Type something..." />
+          </div>
+
+          <div>
+            <label class="native-label">Email Input</label>
+            <input type="email" placeholder="email@example.com" />
+          </div>
+
+          <div>
+            <label class="native-label">Password Input</label>
+            <input type="password" placeholder="Password" />
+          </div>
+
+          <div>
+            <label class="native-label">URL Input</label>
+            <input type="url" placeholder="https://example.com" />
+          </div>
+
+          <div>
+            <label class="native-label">Tel Input</label>
+            <input type="tel" placeholder="+1 (555) 000-0000" />
+          </div>
+
+          <div>
+            <label class="native-label">Number Input</label>
+            <input type="number" placeholder="42" />
+          </div>
+
+          <div>
+            <label class="native-label">Search Input</label>
+            <input type="search" placeholder="Search..." />
+          </div>
+
+          <div>
+            <label class="native-label">Date Input</label>
+            <input type="date" />
+          </div>
+
+          <div>
+            <label class="native-label">Datetime-Local Input</label>
+            <input type="datetime-local" />
+          </div>
+
+          <div>
+            <label class="native-label">Month Input</label>
+            <input type="month" />
+          </div>
+
+          <div>
+            <label class="native-label">Week Input</label>
+            <input type="week" />
+          </div>
+
+          <div>
+            <label class="native-label">Time Input</label>
+            <input type="time" />
+          </div>
+
+          <div>
+            <label class="native-label">Select Dropdown</label>
+            <select>
+              <option value="">Choose an option...</option>
+              <option value="1">Option 1</option>
+              <option value="2">Option 2</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="native-label">Textarea</label>
+            <textarea rows="4" placeholder="Enter message..."></textarea>
+          </div>
+
+          <div class="native-choices">
+            <label class="native-choice">
+              <input type="checkbox" checked />
+              <span>Checkbox</span>
+            </label>
+
+            <label class="native-choice">
+              <input type="radio" name="radio-group" value="1" checked />
+              <span>Radio 1</span>
+            </label>
+            <label class="native-choice">
+              <input type="radio" name="radio-group" value="2" />
+              <span>Radio 2</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2>Native Buttons</h2>
+        <div class="native-actions">
+          <button>button element</button>
+          <input type="button" value="input[type='button']" />
+          <input type="submit" value="input[type='submit']" />
+          <input type="reset" value="input[type='reset']" />
+        </div>
+      </section>
+
+      <section class="sect-inn">
+        <h2>Native Content</h2>
+        <p>
+          Press
+          <kbd>Ctrl</kbd>
+          +
+          <kbd>K</kbd>
+          to search.
+        </p>
+        <blockquote>
+          Native elements should provide a useful baseline.
+          <cite>Codenhub styles</cite>
+        </blockquote>
+        <p>
+          This includes
+          <q>short inline quotations</q>
+          in regular copy.
+        </p>
+        <pre><code data-testid="native-pre-code">const mode = "native";</code></pre>
+        <hr />
+        <div class="table-wrap">
+          <table>
+            <caption>Package adoption</caption>
+            <thead>
+              <tr>
+                <th scope="col">Package</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Styles</th>
+                <td>Ready</td>
+              </tr>
+              <tr>
+                <th scope="row">Theme</th>
+                <td>Planned</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td>2</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

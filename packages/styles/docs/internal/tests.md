@@ -1,8 +1,10 @@
-# Styles Test Strategy
+---
+status: APPROVED
+last_updated: 2026-07-15
+scope: `@codenhub/styles` package test strategy.
+---
 
-**Status:** APPROVED
-**Last updated:** 2026-07-02
-**Scope:** `@codenhub/styles` package test strategy.
+# Styles test strategy
 
 ## Goal
 
@@ -19,26 +21,32 @@ Keep tests package-local and focused on visual confidence.
 packages/styles/
   playground/
     index.html
-    index.css
+    shared/
+    components/
+    layout/
+    native/
+    typography/
   dev/
     package.json
     vite.config.ts
-    entry.css
   debug/
     package.json
     vite.config.ts
-    entry.css
   tests/
-    styles.spec.ts
+    components.spec.ts
+    environment.spec.ts
+    layout.spec.ts
+    native.spec.ts
+    playground.spec.ts
+    theme.spec.ts
+    typography.spec.ts
     exit-reporter.ts
+    test-utils.ts
 ```
 
 ## `playground/`
 
-Shared manual and automated preview page. Contains:
-
-- `index.html`: The HTML fixture showing all components and styles.
-- `index.css`: Playground-only layout scaffolding.
+Shared manual and automated preview routes. The root index links to focused component, layout, native, and typography pages; common playground assets live under `shared/`.
 
 ## `dev/`
 
@@ -52,9 +60,10 @@ Starts on http://localhost:5184.
 
 ## `tests/`
 
-Automated cross-browser testing for visual and computed-style confidence. Runs via Playwright against the local `dev` and `debug` Vite servers.
+Automated cross-browser testing for visual and computed-style confidence. Playwright runs against the `debug` Vite server, which exposes both compiled and Tailwind-source playground environments.
 
-- `styles.spec.ts`: Playwright test file executing visual and layout assertions.
+- Focused specs execute component, environment, layout, native, route, theme, and typography assertions.
+- `test-utils.ts`: Shared Playwright test setup and helpers.
 - `exit-reporter.ts`: Custom Playwright reporter to work around Windows process hang.
 
 ## Scripts
@@ -65,7 +74,7 @@ Default package checks:
 {
   "test": "pnpm typecheck && pnpm build && pnpm test:visual",
   "test:visual": "playwright test",
-  "dev": "pnpm --filter=@codenhub/styles-dev dev",
+  "dev": "pnpm build && pnpm --filter=@codenhub/styles-dev dev",
   "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev"
 }
 ```

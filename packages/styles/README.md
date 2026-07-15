@@ -65,88 +65,20 @@ Apps own adding/removing `.dark`. This package only defines styles that respond 
 
 ### Import Paths
 
-| Path                             | Kind                | Contents                                                                       |
-| -------------------------------- | ------------------- | ------------------------------------------------------------------------------ |
-| `@codenhub/styles`               | Compiled CSS        | Full stylesheet: theme, base styles, components, typography.                   |
-| `@codenhub/styles/theme`         | Compiled CSS        | Theme tokens, light/dark variables, Tailwind theme output.                     |
-| `@codenhub/styles/components`    | Compiled CSS        | Theme tokens plus component classes.                                           |
-| `@codenhub/styles/native`        | Compiled CSS        | Opt-in classless styling for native HTML elements (headings, inputs, buttons). |
-| `@codenhub/styles/tw`            | Tailwind source CSS | Full Tailwind v4 source: theme, base styles, components, utilities.            |
-| `@codenhub/styles/tw/theme`      | Tailwind source CSS | Theme tokens, light/dark variables, custom dark variant.                       |
-| `@codenhub/styles/tw/components` | Tailwind source CSS | Theme tokens plus component classes.                                           |
-| `@codenhub/styles/tw/surface`    | Tailwind source CSS | Surface styles and empty-state utility.                                        |
-| `@codenhub/styles/tw/button`     | Tailwind source CSS | Composable button utilities.                                                   |
-| `@codenhub/styles/tw/form`       | Tailwind source CSS | Form, input, textarea, select, checkbox, switch utilities.                     |
-| `@codenhub/styles/tw/feedback`   | Tailwind source CSS | Alert, badge, skeleton, progress utilities.                                    |
-| `@codenhub/styles/tw/loader`     | Tailwind source CSS | Loader and activity indicator utilities.                                       |
-| `@codenhub/styles/tw/tooltip`    | Tailwind source CSS | Tooltip utility.                                                               |
-| `@codenhub/styles/tw/reset`      | Tailwind source CSS | Core resets: scrollbar, selection, body structure.                             |
-| `@codenhub/styles/tw/native`     | Tailwind source CSS | Opt-in classless styling for native HTML elements (headings, inputs, buttons). |
-| `@codenhub/styles/tw/typography` | Tailwind source CSS | Typography helper classes.                                                     |
-| `@codenhub/styles/tw/utilities`  | Tailwind source CSS | Layout primitives and contrast utilities.                                      |
+Compiled CSS: `@codenhub/styles`, `/theme`, `/components`, and `/native`.
+
+Tailwind CSS v4 source: `/tw`, `/tw/theme`, `/tw/components`, `/tw/surface`, `/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/loader`, `/tw/tooltip`, `/tw/reset`, `/tw/native`, `/tw/typography`, and `/tw/utilities`.
+
+The root entrypoints provide the full stylesheet. `/native` adds classless styling for common native elements. Other subpaths provide the named theme, component, reset, typography, or combined utility surface.
 
 ### Detailed Docs
 
 Detailed package reference ships with the package under `docs/`:
 
-| Document                                 | Purpose                                                               |
-| ---------------------------------------- | --------------------------------------------------------------------- |
-| [Overview](./docs/index.md)              | Package model, entrypoints, and class model.                          |
-| [Tokens](./docs/tokens.md)               | Color and foundation token contracts.                                 |
-| [Classes](./docs/classes.md)             | Layout, surface, action, form, feedback, loader, and tooltip helpers. |
-| [Accessibility](./docs/accessibility.md) | CSS accessibility hooks and non-goals.                                |
-| [Tests](./docs/tests.md)                 | Build and browser validation strategy.                                |
-
-### Loader Utilities (`@codenhub/styles/tw/loader`)
-
-Activity indicator classes. Compose with `.loader` (standalone element) or use `.ai` as a low-level mask base on any element.
-
-| Class                  | Animation                                     |
-| ---------------------- | --------------------------------------------- |
-| `.ai`                  | Base mask utility. Default: circular spinner. |
-| `.loader`              | Standalone inline loader. Composes `.ai`.     |
-| `.dots-wave`           | Three dots bouncing in a wave.                |
-| `.dots-fade`           | Three dots fading in and out.                 |
-| `.dots-queue`          | Dot queuing from left to right.               |
-| `.dots-rotate`         | Side dots rotating around a center dot.       |
-| `.dots-grow`           | Three dots growing and shrinking.             |
-| `.dots-grow-alternate` | Outer dots small, center dot pulses.          |
-| `.dot-bounce`          | Single dot bouncing with squash effect.       |
-| `.bars-wave`           | Three vertical bars scaling in a wave.        |
-| `.pulse-ring`          | Two concentric rings pulsing outward.         |
-
-Size variants `.sm` and `.lg` work on `.loader`. Always add `aria-hidden="true"` or a visible label.
-
-```html
-<span class="loader" aria-hidden="true"></span>
-<span class="loader dots-wave" aria-hidden="true"></span>
-<span class="loader bars-wave lg" aria-hidden="true"></span>
-```
-
-## Examples
-
-### Composed Buttons
-
-Intent classes set color meaning. Presentation classes set visual treatment and consume active intent tone slots.
-
-```html
-<button class="btn primary">Primary</button>
-<button class="btn success out">Success outline</button>
-<button class="btn destructive ghost">Ghost danger</button>
-<button class="btn secondary loading" disabled>Saving</button>
-```
-
-### Forms And Feedback
-
-```html
-<label class="field">
-  <span class="label">Email</span>
-  <input class="ipt" type="email" aria-describedby="email-hint" />
-  <span class="hint" id="email-hint">Use a work email.</span>
-</label>
-
-<div class="alert success" role="status">Saved successfully.</div>
-```
+- [Overview](./docs/index.md): Package model, entrypoints, and class model.
+- [Tokens](./docs/tokens.md): Color and foundation token contracts.
+- [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
+- [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements
 
@@ -161,6 +93,10 @@ Intent classes set color meaning. Presentation classes set visual treatment and 
 ## Notes
 
 This package publishes CSS as its public runtime surface. It does not expose JavaScript or TypeScript entrypoints.
+
+`--layout-gap` is the shared gap token for `.view`, `.stack`, `.cluster`, and `.auto-grid`. It replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
+
+The native entrypoint includes the package reset and maps `table`, `kbd`, `blockquote`, `q`, `code`, `pre`, and `hr` to their corresponding helper styles in addition to headings and form controls.
 
 Lifecycle exception: `@codenhub/styles` intentionally omits `main`, `module`, and `types` from `package.json` because it is a CSS-only package with no JavaScript API. Every supported consumer import path is listed explicitly in `exports`, build output is generated into `dist`, and package checks validate the CSS build contract.
 

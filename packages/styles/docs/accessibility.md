@@ -1,9 +1,5 @@
 # @codenhub/styles Accessibility
 
-**Status:** IMPLEMENTED
-**Last updated:** 2026-06-12
-**Scope:** CSS accessibility behavior and non-goals for `@codenhub/styles`.
-
 This package provides CSS hooks for accessible states. It does not provide semantic HTML, ARIA attributes, keyboard behavior, focus management, validation, announcement timing, or JavaScript behavior.
 
 ## Provided By CSS

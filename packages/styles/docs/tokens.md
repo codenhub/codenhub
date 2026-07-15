@@ -1,9 +1,5 @@
 # @codenhub/styles Tokens
 
-**Status:** IMPLEMENTED
-**Last updated:** 2026-06-18
-**Scope:** Public CSS variable contract for `@codenhub/styles`.
-
 Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
 
 ```html
@@ -72,8 +68,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--container-wide`          | Wide content width.                                                          |
 | `--layout-gutter`           | Responsive inline page padding.                                              |
 | `--layout-section-block`    | Responsive section vertical padding.                                         |
-| `--layout-stack-gap`        | Default vertical stack gap.                                                  |
-| `--layout-cluster-gap`      | Default horizontal/wrapped cluster gap.                                      |
+| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.              |
 | `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
 | `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
 | `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
@@ -100,3 +95,5 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
 
 Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
+
+`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.

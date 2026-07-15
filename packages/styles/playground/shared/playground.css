@@ -1,0 +1,110 @@
+/* Preview-only scaffolding; not part of @codenhub/styles. */
+
+.playground-nav {
+  position: sticky;
+  z-index: var(--z-popover);
+  top: 0;
+  padding: 0.75rem var(--layout-gutter);
+  border-bottom: var(--border-width) solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.playground-nav-content {
+  display: flex;
+  width: 100%;
+  max-width: var(--container-max);
+  gap: 1rem;
+  overflow-x: auto;
+  margin-inline: auto;
+}
+
+.playground-nav a {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.playground-nav a:hover {
+  color: var(--color-text);
+}
+
+.playground-lead {
+  max-width: 42rem;
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+}
+
+.playground-route-grid {
+  --layout-grid-min: 14rem;
+}
+
+.playground-route {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-surface);
+  background: var(--color-foreground);
+  color: inherit;
+  text-decoration: none;
+}
+
+.playground-controls {
+  position: fixed;
+  z-index: var(--z-popover);
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.playground-control {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.playground-control svg {
+  width: 100%;
+  height: 100%;
+}
+
+.sect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  padding: var(--layout-section-block) var(--layout-gutter);
+}
+
+.sect-inn {
+  display: flex;
+  width: 100%;
+  max-width: var(--container-max);
+  flex-direction: column;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  margin-inline: auto;
+}
+
+.sect-inn.narrow {
+  max-width: var(--container-narrow);
+}
+
+@media (width < 40rem) {
+  .sect {
+    align-items: stretch;
+  }
+}
