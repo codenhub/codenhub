@@ -154,6 +154,16 @@ test.describe("components", () => {
     expect(ghostHoverBackground).not.toBe("rgba(0, 0, 0, 0)");
   });
 
+  test("hides nested elements inside loading buttons", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+    const childOpacity = await page.evaluate(() => {
+      const child = document.querySelector('[data-testid="loading-nested-text"]');
+      if (!child) throw new Error("Nested text fixture not found");
+      return getComputedStyle(child).opacity;
+    });
+    expect(childOpacity).toBe("0");
+  });
+
   test("uses intent tone slots for button presentation classes", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
 
@@ -603,8 +613,8 @@ test.describe("components", () => {
     });
 
     expect(switchStyles.appearance).toBe("none");
-    expect(switchStyles.width).toBe("36px");
-    expect(switchStyles.height).toBe("18px");
+    expect(switchStyles.width).toBe("40px");
+    expect(switchStyles.height).toBe("20px");
     expect(switchStyles.cursor).toBe("pointer");
 
     const checkboxDisabled = page.getByTestId("checkbox-disabled");
@@ -692,5 +702,26 @@ test.describe("components", () => {
     expect(activeProgressStyles.animationName).toContain("anim-skeleton");
     expect(activeProgressStyles.display).toBe("block");
     expect(activeProgressStyles.backgroundImage).toContain("linear-gradient");
+  });
+
+  test("renders indeterminate progress bar with sliding animation", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const indeterminateProgressStyles = await page.evaluate(() => {
+      const el = document.querySelector('[data-testid="progress-bar-indeterminate"]');
+      if (!el) {
+        throw new Error("Missing indeterminate progress bar fixture");
+      }
+      const afterStyles = getComputedStyle(el, "::after");
+      return {
+        animationName: afterStyles.animationName,
+        display: afterStyles.display,
+        width: afterStyles.width,
+      };
+    });
+
+    expect(indeterminateProgressStyles.animationName).toContain("anim-progress-indeterminate");
+    expect(indeterminateProgressStyles.display).toBe("block");
+    expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 });

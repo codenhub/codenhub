@@ -11,6 +11,20 @@
   }
 }
 
+@keyframes anim-progress-indeterminate {
+  0% {
+    left: -33%;
+    width: 33%;
+  }
+  50% {
+    width: 40%;
+  }
+  100% {
+    left: 100%;
+    width: 33%;
+  }
+}
+
 @utility alert {
   --feedback-color: var(--color-text);
   --feedback-contrast: var(--color-text-contrast);
@@ -225,5 +239,11 @@
   &.info {
     --progress-color: var(--color-info);
     --progress-surface: color-mix(in srgb, var(--color-info-subtle) 60%, transparent);
+  }
+
+  &.indeterminate::after {
+    width: 33%;
+    animation: anim-progress-indeterminate 1.5s infinite ease-in-out;
+    transform-origin: left;
   }
 }

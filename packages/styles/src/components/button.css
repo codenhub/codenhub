@@ -146,6 +146,10 @@
        CSS spinner (::after pseudo-element) is the only visible element while loading. */
     @apply pointer-events-none text-transparent! transition-[opacity,transform];
 
+    & > * {
+      opacity: 0 !important;
+    }
+
     &::after {
       @apply absolute block size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--button-spinner);
 

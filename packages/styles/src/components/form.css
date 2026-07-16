@@ -242,11 +242,11 @@
   --control-color: var(--color-text);
   --control-contrast: var(--color-text-contrast);
 
-  @apply relative h-4.5 w-9 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  @apply relative h-5 w-10 cursor-pointer appearance-none rounded-full bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
   border: var(--border-width) solid transparent;
 
   &::after {
-    @apply absolute size-3.5 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply absolute size-4 rounded-full bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     content: "";
     top: 1px;
@@ -271,7 +271,7 @@
     background-color: var(--control-color);
 
     &::after {
-      @apply translate-x-4.5;
+      @apply translate-x-5;
 
       background-color: var(--control-contrast);
     }

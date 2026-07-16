@@ -26,6 +26,9 @@
           <button class="btn out">Outline</button>
           <button class="btn fill out">Outline fill</button>
           <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
+          <button class="btn primary loading" disabled data-testid="loading-button-nested">
+            <span data-testid="loading-nested-text">Invisible Label</span>
+          </button>
           <button class="btn secondary loading dots-wave" disabled data-testid="loading-button-dots">
             Loading Dots
           </button>
@@ -393,6 +396,11 @@
           aria-label="Info progress"
           data-testid="progress-bar-info"
           style="--progress-value: 30%"
+        ></div>
+        <div
+          class="progress indeterminate"
+          aria-label="Indeterminate progress"
+          data-testid="progress-bar-indeterminate"
         ></div>
       </section>
     </main>
