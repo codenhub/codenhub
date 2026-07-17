@@ -1,0 +1,39 @@
+---
+import { siteConfig } from "../site-config";
+import "../styles/global.css";
+
+interface Props {
+  description?: string;
+  title?: string;
+}
+
+const { description = siteConfig.description, title } = Astro.props;
+const pageTitle = title === undefined ? siteConfig.title : `${title} | ${siteConfig.title}`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width" name="viewport" />
+    <meta content={description} name="description" />
+    <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a aria-label={`${siteConfig.title} home`} class="brand" href="/">
+        <span aria-hidden="true" class="brand-mark">C/</span>
+        <span>{siteConfig.title}</span>
+      </a>
+      <nav aria-label="Site">
+        {
+          siteConfig.headerLinks.map((link) => (
+            <a class="header-link" href={link.href}>{link.label}</a>
+          ))
+        }
+      </nav>
+    </header>
+    <slot />
+  </body>
+</html>

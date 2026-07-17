@@ -1,0 +1,310 @@
+@import "@codenhub/styles/tw";
+@source "../**/*.{astro,ts}";
+
+:root {
+  --docs-header-height: 4rem;
+  --docs-rail-width: 17rem;
+  --docs-toc-width: 13rem;
+}
+
+html {
+  scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
+}
+
+body {
+  background-image: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--color-border) 38%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: clamp(3.5rem, 8vw, 7rem) 100%;
+}
+
+.site-header {
+  @apply border-border bg-background/92 sticky top-0 z-30 flex h-(--docs-header-height) items-center justify-between border-b px-(--layout-gutter) backdrop-blur-md;
+}
+
+.brand {
+  @apply text-label flex items-center gap-3 no-underline;
+}
+
+.brand-mark {
+  @apply bg-primary text-primary-contrast grid size-8 place-items-center font-mono text-xs font-bold;
+}
+
+.header-link {
+  @apply text-text-secondary hover:text-text transition-colors;
+}
+
+.catalog-page {
+  @apply mx-auto w-full max-w-(--container-wide) px-(--layout-gutter) py-12 md:py-20;
+}
+
+.catalog-intro {
+  @apply border-border grid min-h-72 content-end border-b pb-10 md:min-h-96 md:grid-cols-[1fr_1fr] md:items-end md:gap-12;
+}
+
+.catalog-intro h1 {
+  @apply text-title-lg mt-4 max-w-3xl md:col-span-2;
+}
+
+.catalog-intro > p:last-child {
+  @apply text-text-secondary mt-6 max-w-xl text-base leading-7 md:col-start-2;
+}
+
+.catalog-kicker,
+.nav-eyebrow {
+  @apply text-text-secondary font-mono text-xs font-semibold tracking-[0.16em] uppercase;
+}
+
+.catalog-section {
+  @apply py-12 md:py-16;
+}
+
+.catalog-heading {
+  @apply mb-8 flex items-end justify-between gap-6;
+}
+
+.catalog-heading h2 {
+  @apply text-title;
+}
+
+.catalog-heading > span {
+  @apply text-text-secondary hidden font-mono text-xs sm:block;
+}
+
+.package-grid {
+  @apply grid border-t md:grid-cols-2 xl:grid-cols-3;
+}
+
+.package-card {
+  @apply border-border bg-background/70 hover:bg-foreground flex min-h-64 flex-col border-r border-b p-6 no-underline transition-colors;
+}
+
+.package-card-topline {
+  @apply text-text-secondary mb-10 flex items-center justify-between font-mono text-xs;
+}
+
+.package-card h3 {
+  @apply text-title-sm break-words;
+}
+
+.package-card p {
+  @apply text-text-secondary mt-3 leading-6;
+}
+
+.package-card-action {
+  @apply text-label mt-auto flex items-center justify-between pt-8;
+}
+
+.package-card-action span {
+  @apply transition-transform;
+}
+
+.package-card:hover .package-card-action span {
+  @apply translate-x-1;
+}
+
+.status-badge {
+  @apply inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-1 font-mono text-[0.65rem] tracking-wider uppercase;
+}
+
+.status-dot {
+  @apply size-1.5 rounded-full bg-current;
+}
+
+.status-experimental {
+  @apply border-warning text-warning-strong bg-warning-subtle;
+}
+
+.status-deprecated {
+  @apply border-destructive text-destructive-strong bg-destructive-subtle;
+}
+
+.docs-shell {
+  @apply mx-auto grid w-full max-w-(--container-wide) grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)];
+  min-height: calc(100dvh - var(--docs-header-height));
+}
+
+.left-rail,
+.toc-rail {
+  @apply sticky top-(--docs-header-height) h-[calc(100dvh-var(--docs-header-height))] overflow-y-auto py-8;
+}
+
+.left-rail {
+  @apply border-border border-r pr-6;
+}
+
+.toc-rail {
+  @apply border-border border-l pl-6;
+}
+
+.package-navigation {
+  @apply flex flex-col gap-2;
+}
+
+.package-list,
+.document-list,
+.toc-rail ol {
+  @apply m-0 list-none p-0;
+}
+
+.package-link {
+  @apply text-text-secondary hover:text-text flex items-start justify-between gap-3 py-2 no-underline transition-colors;
+}
+
+.package-link.current {
+  @apply text-text font-semibold;
+}
+
+.package-state {
+  @apply bg-warning mt-1 size-1.5 shrink-0 overflow-hidden rounded-full text-transparent;
+}
+
+.document-list a,
+.toc-rail a {
+  @apply text-text-secondary hover:text-text block py-1.5 no-underline transition-colors;
+}
+
+.document-list a[aria-current="page"] {
+  @apply border-primary text-text -ml-px border-l-2 pl-3;
+}
+
+.nav-rule {
+  @apply border-border my-5 border-t;
+}
+
+.document-column {
+  @apply bg-background/85 min-w-0 px-8 py-10 md:px-10 xl:px-14;
+}
+
+.document-context {
+  @apply border-border mb-10 flex items-center justify-between gap-4 border-b pb-5;
+}
+
+.document-context > a {
+  @apply text-text-secondary font-mono text-xs no-underline;
+}
+
+.toc-rail ol {
+  @apply mt-3;
+}
+
+.toc-rail li.nested a {
+  @apply pl-3;
+}
+
+.markdown-content {
+  @apply mx-auto max-w-3xl;
+}
+
+.markdown-content h1 {
+  @apply text-title-lg mb-8 break-words;
+}
+
+.markdown-content h2 {
+  @apply text-title border-border mt-14 scroll-mt-24 border-t pt-8;
+}
+
+.markdown-content h3 {
+  @apply text-title-sm mt-10 scroll-mt-24;
+}
+
+.markdown-content h4 {
+  @apply text-label-lg mt-8;
+}
+
+.markdown-content p,
+.markdown-content li {
+  @apply text-text-secondary text-[0.95rem] leading-7;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content pre,
+.markdown-content table,
+.markdown-content blockquote {
+  @apply my-5;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  @apply space-y-2 pl-6;
+}
+
+.markdown-content ul {
+  list-style-type: square;
+}
+
+.markdown-content ol {
+  @apply list-decimal;
+}
+
+.markdown-content a {
+  @apply text-text decoration-border-hover hover:decoration-primary font-medium underline underline-offset-4;
+}
+
+.markdown-content :not(pre) > code {
+  @apply code text-text text-[0.88em];
+}
+
+.markdown-content pre {
+  @apply border-border overflow-x-auto rounded-(--radius-control) border p-5 text-sm leading-6 shadow-(--elevation-low);
+}
+
+.markdown-content blockquote {
+  @apply quote border-warning bg-warning-subtle/35 py-3 pr-4;
+}
+
+.markdown-content table {
+  @apply block table overflow-x-auto;
+}
+
+.markdown-content hr {
+  @apply divider my-10;
+}
+
+.mobile-navigation {
+  @apply border-border bg-background hidden border-b;
+}
+
+.mobile-navigation summary {
+  @apply text-label cursor-pointer px-(--layout-gutter) py-4;
+}
+
+.mobile-navigation-panel {
+  @apply border-border max-h-[70dvh] overflow-y-auto border-t px-(--layout-gutter) py-5;
+}
+
+@media (max-width: 74rem) {
+  .docs-shell {
+    @apply grid-cols-[var(--docs-rail-width)_minmax(0,1fr)];
+  }
+
+  .toc-rail {
+    @apply hidden;
+  }
+}
+
+@media (max-width: 48rem) {
+  .mobile-navigation {
+    @apply block;
+  }
+
+  .docs-shell {
+    @apply block;
+  }
+
+  .left-rail {
+    @apply hidden;
+  }
+
+  .document-column {
+    @apply px-(--layout-gutter) py-8;
+  }
+
+  .catalog-heading {
+    @apply items-start;
+  }
+}

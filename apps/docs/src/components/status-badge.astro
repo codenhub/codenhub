@@ -1,0 +1,18 @@
+---
+import type { PackageStatus } from "../lib/catalog-core";
+
+interface Props {
+  status: PackageStatus;
+}
+
+const { status } = Astro.props;
+---
+
+{
+  status !== "active" && (
+    <span class:list={["status-badge", `status-${status}`]}>
+      <span aria-hidden="true" class="status-dot"></span>
+      {status}
+    </span>
+  )
+}

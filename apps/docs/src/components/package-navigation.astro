@@ -1,0 +1,48 @@
+---
+import type { PublicPackage } from "../lib/catalog";
+
+interface Props {
+  currentPackage?: PublicPackage;
+  currentRoute?: string;
+  packages: PublicPackage[];
+}
+
+const { currentPackage, currentRoute, packages } = Astro.props;
+---
+
+<nav aria-label="Packages" class="package-navigation">
+  <p class="nav-eyebrow">Packages</p>
+  <ul class="package-list">
+    {
+      packages.map((packageEntry) => (
+        <li>
+          <a
+            class:list={{ "package-link": true, current: packageEntry.slug === currentPackage?.slug }}
+            href={`/${packageEntry.slug}/`}
+          >
+            <span>{packageEntry.label}</span>
+            {packageEntry.status !== "active" && <span class="package-state">{packageEntry.status}</span>}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  {
+    currentPackage && (
+      <>
+        <div class="nav-rule" />
+        <p class="nav-eyebrow">In this package</p>
+        <ul class="document-list">
+          {currentPackage.documents.map((document) => (
+            <li>
+              <a aria-current={document.route === currentRoute ? "page" : undefined} href={document.route}>
+                {document.routePath === "" ? "Overview" : document.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+</nav>

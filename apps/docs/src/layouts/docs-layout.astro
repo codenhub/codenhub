@@ -1,0 +1,57 @@
+---
+import PackageNavigation from "../components/package-navigation.astro";
+import StatusBadge from "../components/status-badge.astro";
+import type { PublicDocument, PublicPackage } from "../lib/catalog";
+import BaseLayout from "./base-layout.astro";
+
+interface Props {
+  currentPackage: PublicPackage;
+  document: PublicDocument;
+  packages: PublicPackage[];
+}
+
+const { currentPackage, document, packages } = Astro.props;
+const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
+---
+
+<BaseLayout description={document.description ?? currentPackage.description} title={document.title}>
+  <details class="mobile-navigation">
+    <summary>Browse documentation</summary>
+    <div class="mobile-navigation-panel">
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} packages={packages} />
+    </div>
+  </details>
+
+  <div class="docs-shell">
+    <aside class="left-rail">
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} packages={packages} />
+    </aside>
+
+    <main class="document-column">
+      <div class="document-context">
+        <a href={`/${currentPackage.slug}/`}>{currentPackage.label}</a>
+        <StatusBadge status={currentPackage.status} />
+      </div>
+      <article class="markdown-content">
+        <slot />
+      </article>
+    </main>
+
+    <aside class="toc-rail">
+      {
+        tocHeadings.length > 0 && (
+          <nav aria-label="On this page">
+            <p class="nav-eyebrow">On this page</p>
+            <ol>
+              {tocHeadings.map((heading) => (
+                <li class:list={{ nested: heading.depth === 3 }}>
+                  <a href={`#${heading.slug}`}>{heading.text}</a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+    </aside>
+  </div>
+</BaseLayout>

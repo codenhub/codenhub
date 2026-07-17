@@ -1,0 +1,38 @@
+---
+import StatusBadge from "../components/status-badge.astro";
+import { packages } from "../lib/catalog";
+import BaseLayout from "../layouts/base-layout.astro";
+import { siteConfig } from "../site-config";
+---
+
+<BaseLayout>
+  <main class="catalog-page">
+    <section class="catalog-intro">
+      <p class="catalog-kicker">Package reference / {packages.length.toString().padStart(2, "0")}</p>
+      <h1>{siteConfig.title}</h1>
+      <p>{siteConfig.description}</p>
+    </section>
+
+    <section aria-labelledby="package-catalog-title" class="catalog-section">
+      <div class="catalog-heading">
+        <h2 id="package-catalog-title">Package catalog</h2>
+        <span>Choose a package to begin</span>
+      </div>
+      <div class="package-grid">
+        {
+          packages.map((packageEntry, index) => (
+            <a class="package-card" href={`/${packageEntry.slug}/`}>
+              <div class="package-card-topline">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <StatusBadge status={packageEntry.status} />
+              </div>
+              <h3>{packageEntry.label}</h3>
+              <p>{packageEntry.description ?? "Package documentation and reference."}</p>
+              <span class="package-card-action">Read documentation <span aria-hidden="true">-&gt;</span></span>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+</BaseLayout>

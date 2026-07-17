@@ -1,0 +1,24 @@
+---
+import { packages, type PublicDocument, type PublicPackage } from "../lib/catalog";
+import DocsLayout from "../layouts/docs-layout.astro";
+
+interface Props {
+  currentPackage: PublicPackage;
+  document: PublicDocument;
+}
+
+export function getStaticPaths() {
+  return packages.flatMap((packageEntry) =>
+    packageEntry.documents.map((document) => ({
+      params: { path: document.route.slice(1, -1) },
+      props: { currentPackage: packageEntry, document },
+    })),
+  );
+}
+
+const { currentPackage, document } = Astro.props;
+---
+
+<DocsLayout currentPackage={currentPackage} document={document} packages={packages}>
+  <Fragment set:html={document.html} />
+</DocsLayout>
