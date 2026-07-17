@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 scope: README files for workspace packages.
 ---
 
@@ -50,10 +50,10 @@ they improve clarity, but section purpose MUST remain recognizable.
 
 ## Documentation links
 
-The Documentation section MUST link to the package's public `docs/` content and
-make complete API reference easy to find. Link directly to useful documents
-rather than only to a directory when repository rendering would make navigation
-unclear.
+The Documentation section MUST link to `docs/index.md`, the canonical entrypoint
+to the package's complete public documentation, and make complete API reference
+easy to find. It MAY also link directly to especially useful documents when that
+helps consumers reach common tasks.
 
 The README MAY include a small API or entrypoint overview when it helps readers
 choose the right starting path. It MUST NOT contain an exhaustive symbol catalog
@@ -156,9 +156,13 @@ changes safe first use. Full failure behavior belongs in public reference docs.
 
 ## Package states
 
-Deprecated packages MUST state they are deprecated near the top and point to the replacement when one exists.
+Deprecated packages MUST state they are deprecated near the top and point to the
+replacement when one exists. The notice MUST agree with `codenhub.docs.status`
+and the notice in `docs/index.md`.
 
-Experimental packages MUST state what is unstable: API shape, behavior, build output, or support level.
+Experimental packages MUST state what is unstable: API shape, behavior, build
+output, or support level. The notice MUST agree with `codenhub.docs.status` and
+the notice in `docs/index.md`.
 
 ## Exceptions
 

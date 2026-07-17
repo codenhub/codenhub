@@ -38,15 +38,18 @@ behavior here when it changes safe first use.
 
 ## Documentation
 
+- [Documentation overview](docs/index.md): Complete package documentation and
+  navigation.
 - [Getting started](docs/getting-started.md): Package setup and core workflow.
 - [Reference](docs/reference.md): Public entrypoints and complete API coverage.
 - [Examples](docs/examples.md): Additional consumer workflows.
 - [Troubleshooting](docs/troubleshooting.md): Common failures and recovery.
 
-Keep only links that exist. Link directly to useful documents rather than only
-to the `docs/` directory. A small API or entrypoint overview MAY appear here when
-it helps readers choose a starting path, but do not copy full reference content
-into the README.
+Keep only links that exist, but always retain the required documentation
+overview. Link directly to especially useful documents when that improves
+navigation. A small API or entrypoint overview MAY appear here when it helps
+readers choose a starting path, but do not copy full reference content into the
+README.
 
 ## Requirements
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -99,6 +99,12 @@ Do not use root `docs/` for temporary notes, TODO lists, or information better
 expressed in code comments. Do not use it for package-specific documentation;
 packages own their documentation under `packages/<package-name>/` according to
 `docs/specs/packages-documentation.md`.
+
+Repository documentation is not consumer documentation by default. Catalogs,
+generated collections, and other publishing tools MUST include root documents
+only through an explicit selection rule; they MUST NOT treat all of root `docs/`
+as a public content source. Repository governance metadata also MUST NOT be
+interpreted as package stability or consumer support metadata.
 
 Plans and similar temporary documents MAY live in `docs/plans/`. This directory
 is git-ignored and should stay that way because these files are short-lived

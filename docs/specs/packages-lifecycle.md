@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 scope: Workspace packages under `packages/*`.
 ---
 
@@ -30,6 +30,9 @@ Public package `package.json` files MUST include:
 - `exports`: explicit public exports.
 - `scripts`: package lifecycle scripts.
 - `publishConfig.access`: `public`.
+- `codenhub.docs`: public documentation eligibility, status, and optional
+  presentation metadata as defined by
+  `docs/specs/packages-documentation.md`.
 
 Public package metadata SHOULD include `description`, `license`, and repository links when package publishing is ready.
 
@@ -137,6 +140,11 @@ Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 Package README files MUST follow `docs/specs/packages-readme.md`.
 
 Package documentation MUST follow `docs/specs/packages-documentation.md`.
+
+Private packages intended to expose public documentation MUST opt in through
+`codenhub.docs` and follow the same documentation spec. Publication status and
+documentation eligibility are separate concerns: a package does not need to be
+published to provide public documentation.
 
 README examples and public reference docs MUST match `package.json` `exports`.
 When `exports` changes, source JSDoc/TSDoc, README content, public docs, and LLM
