@@ -6,7 +6,9 @@ import { createWindowHandle } from "./window-control.js";
 /**
  * Creates a new OS window with the given configuration.
  *
- * @throws If a window with the same label already exists.
+ * @throws If Tauri rejects creation, event registration fails, or creation does
+ * not complete within five seconds. A duplicate label is one possible reason
+ * Tauri can reject creation.
  */
 export async function createWindow(config: WindowConfig): Promise<WindowHandle> {
   const { label, title, size, position, decorations, resizable, alwaysOnTop, visible } = config;

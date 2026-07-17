@@ -11,6 +11,7 @@ const LINK_TAG_END_RE = /\/?\s*>$/;
 export interface DeferCssPluginOptions {
   /**
    * Content Security Policy nonce to inject into preload load helper script.
+   * The trusted build-time value is interpolated without escaping.
    */
   nonce?: string;
 }
@@ -34,7 +35,9 @@ export interface DeferCssPluginOptions {
  * - When `options.nonce` is provided, appends an inline `<script nonce="...">` block to wire up transition event handlers dynamically to avoid CSP violations.
  *
  * **Failure/Fallback Behavior:**
- * - Returns unmodified HTML if the input has no `</head>` tag or no stylesheets to defer.
+ * - Returns unmodified HTML when there are no matching stylesheet links.
+ * - Without `</head>`, matching links are still converted but fallback markup
+ *   and the optional helper script cannot be injected.
  *
  * @example
  * ```ts

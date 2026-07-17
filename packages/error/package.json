@@ -10,7 +10,10 @@
     "directory": "packages/error"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "sideEffects": false,
@@ -53,5 +56,10 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

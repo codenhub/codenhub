@@ -1,0 +1,327 @@
+<!-- Source: README.md -->
+
+# @codenhub/components
+
+Native Web Component primitives, a small ready-to-use component library, and
+focused React, Svelte, and Astro integration entrypoints.
+
+> **Experimental:** The component factory API, adapters, and ready-to-use
+> component contracts may change while framework support is stabilized.
+
+## Installation
+
+```sh
+pnpm add @codenhub/components
+```
+
+Install the optional peer for any framework adapter you import. Install
+`@codenhub/styles` when using the library component's default visual treatment.
+
+## Usage
+
+```ts
+import { defineComponent, html, registerComponents } from "@codenhub/components";
+
+const UserCard = defineComponent("user-card", {
+  properties: { name: String },
+  render() {
+    return html`
+      <p>Hello, ${this.name}</p>
+    `;
+  },
+});
+
+registerComponents([UserCard]);
+document.body.append(UserCard.create({ name: "Ada" }));
+```
+
+Dynamic values in `html` are escaped. Use `unsafeHTML` only with trusted or
+sanitized content.
+
+## Documentation
+
+- [Documentation overview](./docs/index.md): Complete public documentation and
+  all supported import paths.
+- [Core API](./docs/core-api.md): Component definitions, templates, lifecycle,
+  types, and failure behavior.
+- [Component library](./docs/component-library.md): Native `ChButton` contract.
+- [Framework adapters](./docs/framework-adapters.md): React, Svelte, and Astro
+  integration behavior.
+
+## Requirements
+
+- A browser with Custom Elements v1 for component instances. Registration is a
+  no-op when `customElements` is unavailable.
+- React 18+, Svelte 4+, or Astro 4+ only for the corresponding optional
+  integration entrypoint.
+- ESM-compatible tooling.
+
+## Notes
+
+Rendering replaces component content with `innerHTML`; reactive updates can
+discard child state, focus, selection, and listeners. See the core API docs for
+lifecycle and security constraints.
+
+## License
+
+Licensed under Apache-2.0.
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/components
+
+`@codenhub/components` provides a native Web Component factory, escaped HTML
+templates, component registration, one ready-to-use Light DOM component, and
+separate framework integration entrypoints. It is useful when an application
+wants reusable Custom Elements directly or needs a small bridge from those
+elements into React, Svelte, or Astro.
+
+> **Experimental:** The component factory API, adapters, and ready-to-use
+> component contracts may change while framework support is stabilized.
+
+## Start with a component definition
+
+Define a custom element, register it once, and then create or render instances:
+
+```ts
+import { defineComponent, html, registerComponents } from "@codenhub/components";
+
+const UserCard = defineComponent("user-card", {
+  properties: { name: String },
+  render() {
+    return html`
+      <p>Hello, ${this.name}</p>
+    `;
+  },
+});
+
+registerComponents([UserCard]);
+document.body.append(UserCard.create({ name: "Ada" }));
+```
+
+Dynamic values in `html` templates are escaped. Use `unsafeHTML` only with
+trusted or sanitized content.
+
+## Choose where to go next
+
+- [Core API](./core-api.md) covers definitions, templates, registration,
+  lifecycle timing, rendering behavior, types, and errors.
+- [Component library](./component-library.md) covers the ready-to-use native
+  `ChButton` definition and its styling expectations.
+- [Framework adapters](./framework-adapters.md) explains the distinct React,
+  Svelte, and Astro entrypoints and their client-loading behavior.
+
+Actual component rendering requires browser Custom Elements support. The core
+module can be imported in non-browser environments, and registration becomes a
+no-op when `customElements` is unavailable. Framework support and server/client
+loading behavior remain experimental.
+
+The library button uses Light DOM and expects `@codenhub/styles` for its default
+appearance. The core factory itself does not require that stylesheet.
+
+Rendering replaces component content with `innerHTML`. Reactive updates can
+therefore discard child state, focus, selection, and listeners; review the
+[core lifecycle constraints](./core-api.md#component-definitions) before using
+the factory for stateful content.
+
+<!-- Source: docs/component-library.md -->
+
+# @codenhub/components Component Library
+
+`@codenhub/components/lib` exports `ChButton`, a native component definition for
+the `<ch-button>` custom element. Importing this entrypoint does not register it.
+
+```ts
+import { registerComponents } from "@codenhub/components";
+import { ChButton } from "@codenhub/components/lib";
+import "@codenhub/styles";
+
+registerComponents([ChButton]);
+document.body.append(ChButton.create({ label: "Save", variant: "primary" }));
+```
+
+The definition renders a native `<button>` in Light DOM.
+
+| Property   | Default     | Behavior                                                                                                                                                 |
+| ---------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`    | `""`        | Escaped visible button label.                                                                                                                            |
+| `variant`  | `"primary"` | CSS class passed to the inner button; known style variants include `primary`, `secondary`, `destructive`, and `ghost`. Values are not runtime-validated. |
+| `disabled` | `false`     | Adds the native `disabled` attribute to the inner button.                                                                                                |
+
+The definition declares a `click` event for adapter metadata. Native clicks
+from the inner button bubble through the custom element; the component does not
+dispatch a separate custom click event.
+
+`@codenhub/styles` is an optional package peer because the core factory can be
+used without it. Import it when consumers expect the library button's `.btn`
+and variant classes to have the default Codenhub appearance.
+
+<!-- Source: docs/core-api.md -->
+
+# @codenhub/components Core API
+
+Import the core surface from `@codenhub/components`.
+
+## Component definitions
+
+`defineComponent(tagName, config)` returns a `ComponentDefinition` containing
+the generated `elementClass`, declarations, tag name, and a `create(props?)`
+factory. It does not register the custom element. Call
+`registerComponents(definitions)` to register definitions in the browser's
+global registry; existing tag names are skipped, and registration is a no-op
+when `customElements` is unavailable.
+
+Tag names must start with a lowercase letter, contain a hyphen, use valid custom
+element characters, and not be reserved. `defineComponent` also rejects a
+non-function renderer and property or method names that collide with reserved,
+native, or duplicate names.
+
+```ts
+import { defineComponent, html, registerComponents } from "@codenhub/components";
+
+const Counter = defineComponent("demo-counter", {
+  properties: { count: { type: Number, default: 0 } },
+  methods: {
+    increment() {
+      this.count = (this.count ?? 0) + 1;
+    },
+  },
+  render() {
+    return html`
+      <button>Count: ${this.count}</button>
+    `;
+  },
+  onUpdate() {
+    this.querySelector("button")?.addEventListener("click", this.increment);
+  },
+});
+
+registerComponents([Counter]);
+```
+
+### Configuration
+
+`ComponentConfig` supports:
+
+| Property         | Behavior                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `properties`     | Reactive declarations using a constructor or `PropertyConfig`; changes batch a render into the next microtask. |
+| `events`         | Event metadata consumed by framework wrappers; it does not dispatch events.                                    |
+| `formAssociated` | Enables native form association and the instance `internals` property when the browser supports it.            |
+| `hasShadow`      | Attaches an open Shadow Root when supported. Defaults to Light DOM.                                            |
+| `styles`         | Adds styles to the Shadow Root, or once to `document.head` for Light DOM.                                      |
+| `render`         | Required function returning a string or `TemplateResult`.                                                      |
+| `onUpdate`       | Runs after every render, before `onMount` on first connection.                                                 |
+| `onMount`        | Runs after the initial render when connected.                                                                  |
+| `onUnmount`      | Runs after disconnection; consumers clean up external resources here.                                          |
+| `methods`        | Methods bound to the component instance.                                                                       |
+
+Rendering replaces Light DOM `innerHTML`, or the dedicated Shadow DOM content
+wrapper, on every update. Child nodes, listeners, focus, selection, and
+uncontrolled form state may therefore be lost. `requestUpdate()` schedules the
+same batched update used by reactive property setters.
+
+The `internals` getter throws when the component is not form-associated or the
+environment cannot provide `ElementInternals`. Rendering throws if consumer
+code removes the package-owned Shadow DOM content wrapper. Invalid JSON strings
+assigned to `Object` or `Array` properties also throw.
+
+## Property conversion
+
+`PropertyConstructor` accepts `String`, `Number`, `Boolean`, `Object`, `Array`,
+custom classes, or converter functions. `PropertyType<T>` resolves the value
+type. `PropertyConfig<T>` adds a default value or per-instance default factory.
+`ComponentProperties` is the declaration map, and `ComponentProps<Props>` is
+its resolved props shape.
+
+- Boolean attributes follow presence rules; `"false"` and attribute removal
+  become `false`.
+- Empty or whitespace-only number attributes become `NaN`.
+- Object and array strings use `JSON.parse` and throw on invalid input.
+- `undefined` remains `undefined`.
+
+## Templates
+
+`html` returns a `TemplateResult` and escapes interpolated values. Nested
+`TemplateResult` values compose as trusted markup. Arrays are serialized
+recursively, plain objects use `JSON.stringify`, and nullish values render as an
+empty string.
+
+`unsafeHTML(value)` returns a trusted `TemplateResult` without escaping. Only
+pass trusted or sanitized content because untrusted input creates an XSS risk.
+
+`css` returns a CSS string and accepts primitive or custom-stringifiable
+interpolations. It throws `TypeError` for arrays, `TemplateResult`, and plain
+objects without a custom `toString` method.
+
+## Public types
+
+| Type                  | Purpose                                                                       |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `ComponentConfig`     | Factory configuration and lifecycle hooks.                                    |
+| `ComponentDefinition` | Generated element class, factory, declarations, and tag name.                 |
+| `ComponentInstance`   | `HTMLElement` plus reactive props, methods, `requestUpdate`, and `internals`. |
+| `ComponentProperties` | Property declaration map.                                                     |
+| `ComponentProps`      | Resolved values for a property declaration map.                               |
+| `PropertyConfig`      | Property constructor plus optional default.                                   |
+| `PropertyConstructor` | Supported built-in or custom converter constructor.                           |
+| `PropertyType`        | Type-level conversion from a constructor to its value.                        |
+
+<!-- Source: docs/framework-adapters.md -->
+
+# @codenhub/components Framework Adapters
+
+The framework entrypoints intentionally expose different shapes. All are
+experimental and require the corresponding optional peer dependency.
+
+## React
+
+`@codenhub/components/lib/react` exports `createReactWrapper(definition)` and a
+React `ChButton` wrapper. The wrapper synchronizes declared properties after
+render, maps declared events to case-insensitive `on<Event>` props, maps
+`className` to `class`, forwards an `HTMLElement` ref, and removes event
+listeners on unmount.
+
+React wrappers do not register custom elements. Register the native definition
+once before rendering its wrapper:
+
+```tsx
+import { registerComponents } from "@codenhub/components";
+import { ChButton as ChButtonDefinition } from "@codenhub/components/lib";
+import { ChButton } from "@codenhub/components/lib/react";
+
+registerComponents([ChButtonDefinition]);
+
+export function SaveButton() {
+  return <ChButton label="Save" variant="primary" onClick={() => console.log("saved")} />;
+}
+```
+
+The React entrypoint requires React 18 or newer and actual rendering is
+client-side because it depends on Custom Elements.
+
+## Svelte
+
+`@codenhub/components/lib/svelte` exports the native `ChButton` definition, not
+a compiled Svelte component. Importing the module in a browser automatically
+registers `<ch-button>`. In a server environment, registration is skipped; the
+module must also load in the browser before the element can upgrade.
+
+```svelte
+<script lang="ts">
+  import "@codenhub/components/lib/svelte";
+</script>
+
+<ch-button label="Save" variant="primary"></ch-button>
+```
+
+The entrypoint requires Svelte 4 or newer when used in a Svelte application.
+
+## Astro
+
+`@codenhub/components/lib/astro` also exports the native `ChButton` definition,
+not an Astro component. Browser import automatically registers `<ch-button>`;
+server import does not. Ensure the module is delivered and executed on the
+client before relying on reactive custom-element behavior.
+
+The entrypoint requires Astro 4 or newer when used in an Astro application.

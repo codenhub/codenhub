@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-15
+last_updated: 2026-07-16
 scope: Approved exceptions for workspace packages under `packages/*`.
 ---
 
@@ -9,24 +9,6 @@ scope: Approved exceptions for workspace packages under `packages/*`.
 This document is the central register for package-specific exceptions to
 repository guidelines and package specs. New exceptions MUST follow the
 exception rules in `docs/docs-guidelines.md`.
-
-## `@codenhub/tauri-plugin-webview` and `@codenhub/tauri-plugin-window`: draft phase
-
-- **Rules bypassed:** `docs/specs/packages-lifecycle.md` (full JSDoc coverage,
-  complete lifecycle scripts enforced in CI, and `prepublishOnly` checks) and
-  `docs/specs/packages-readme.md` (required README structure and section
-  completeness).
-- **Where it applies:** `packages/plugins/tauri/webview/` and
-  `packages/plugins/tauri/window/`.
-- **Why acceptable:** Both packages are in active early development. APIs are
-  unstable and will change. Each README carries a prominent `Draft` notice so
-  consumers know the package is not ready for production. Enforcing full
-  lifecycle compliance before the API stabilizes would create churn with no
-  consumer benefit.
-- **Temporary or permanent:** Temporary. This exception MUST be removed and both
-  packages brought into full compliance, including complete JSDoc, README
-  sections, and lifecycle scripts, before the draft notice is removed and either
-  package is published.
 
 ## `@codenhub/tauri-plugin-webview`: Rust-specific conventions
 

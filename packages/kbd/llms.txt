@@ -1,0 +1,13 @@
+# @codenhub/kbd
+
+> Experimental page-wide and target-scoped keyboard shortcut registration for
+> browser applications.
+
+Matching uses exact modifiers. Registration owns DOM listeners, so unregister
+bindings or clear their `Keyboard` instance during teardown.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Purpose, status, and starting points.
+- [API, matching, and lifecycle](docs/reference.md): Complete exports, options,
+  errors, SSR, cleanup, and accessibility.

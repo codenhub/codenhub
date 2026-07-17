@@ -1,4 +1,4 @@
-/** @public */
+/** Window states reported by {@link WindowHandle.getState}. */
 export const WindowState = {
   NORMAL: "normal",
   MINIMIZED: "minimized",
@@ -6,7 +6,7 @@ export const WindowState = {
   FULLSCREEN: "fullscreen",
 } as const;
 
-/** @public */
+/** A value reported by {@link WindowHandle.getState}. */
 export type WindowState = (typeof WindowState)[keyof typeof WindowState];
 
 /**
@@ -51,7 +51,9 @@ export interface WindowConfig {
 
 /**
  * Live handle to an OS window. Obtain via {@link createWindow}, {@link getWindow},
- * or {@link getCurrentWindow}. All methods are async and communicate over Tauri IPC.
+ * or {@link getCurrentWindowHandle}. All methods are async and communicate over
+ * Tauri IPC. They reject when the caller lacks the required Tauri capability or
+ * when the native window operation fails.
  */
 export interface WindowHandle {
   /** The unique label that identifies this window in the Tauri runtime. */

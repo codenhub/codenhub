@@ -1,0 +1,19 @@
+# @codenhub/skills
+
+> Experimental AI agent skill assets, a multi-harness installer, and synchronous Node.js utilities for discovering and copying skill directories.
+
+Requires Node.js 18 or newer. Treat `skills/**` Markdown as shipped agent
+instructions rather than package-documentation pages. Review cleanup and path
+constraints before writing to harness destinations.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Canonical package documentation entrypoint.
+- [Programmatic API](docs/api.md): Public exports, skill discovery, copying, and parser limits.
+- [CLI installer](docs/cli.md): Modes, options, destinations, harness behavior, and destructive cleanup.
+- [Skill format and catalog](docs/skills.md): Supported skill structure and bundled inventory.
+- [Security and failure behavior](docs/security-and-failures.md): Path constraints, partial writes, and exit behavior.
+
+## Optional
+
+- [Skill provenance](docs/provenance.md): Third-party origins, licenses, and notices for shipped assets.

@@ -7,7 +7,8 @@ if (typeof customElements !== "undefined") {
 }
 
 /**
- * A Svelte-compatible export for the native `<ch-button>` custom element.
- * Automatically registers the custom element on mount in the browser.
+ * Native `<ch-button>` definition for Svelte applications.
+ * Importing this module automatically registers the element when
+ * `customElements` is available; server imports do not register it.
  */
 export { ChButtonDefinition as ChButton };

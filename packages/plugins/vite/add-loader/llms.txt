@@ -1,0 +1,11 @@
+# @codenhub/vite-plugin-add-loader
+
+> Experimental Vite plugin that injects and later removes a full-screen loader in each transformed HTML entry.
+
+Use the sole package entrypoint. The transform runs in development and builds with post ordering and emits inline CSS and JavaScript; review CSP and accessibility constraints before adoption.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, requirements, and navigation.
+- [Integration and API](docs/integration.md): Registration, plugin order, defaults, and every public export.
+- [Generated output and constraints](docs/output-and-constraints.md): Emitted markup, runtime behavior, CSP, accessibility, and failures.

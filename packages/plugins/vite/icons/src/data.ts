@@ -1,6 +1,6 @@
-/** Extended icon definition with SVG markup and optional lookup aliases. */
+/** Extended, trusted icon definition with SVG markup and optional lookup aliases. */
 export interface IconOptions {
-  /** Raw inline SVG string rendered in place of the icon marker element. */
+  /** Raw inline SVG inserted verbatim without sanitization. */
   markup: string;
   /** Additional names that resolve to this icon, in addition to the primary key. */
   alternativeNames?: readonly string[];
@@ -8,7 +8,8 @@ export interface IconOptions {
 
 /**
  * An icon entry in the registry. Either a raw inline SVG string
- * or an {@link IconOptions} object with markup and optional aliases.
+ * or an {@link IconOptions} object with markup and optional aliases. Markup
+ * must come from a trusted source because it is not sanitized.
  */
 export type IconDefinition = string | IconOptions;
 

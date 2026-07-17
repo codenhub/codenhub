@@ -1,0 +1,13 @@
+# @codenhub/theme
+
+> Experimental browser theme preference, persistence, DOM, cross-tab, event,
+> and token manager with SSR-safe fallbacks.
+
+Call `init()` in the browser, keep pre-paint logic aligned with configuration,
+and call `destroy()` to release media-query/storage listeners and subscribers.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Purpose, status, and starting points.
+- [API, persistence, DOM, and SSR behavior](docs/reference.md): Complete exports,
+  configuration, tokens, listeners, failures, pre-paint behavior, and cleanup.

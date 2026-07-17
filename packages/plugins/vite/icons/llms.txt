@@ -1,0 +1,11 @@
+# @codenhub/vite-plugin-icons
+
+> Experimental Vite plugin that replaces static `ic-` marker elements with built-in or trusted custom inline SVG.
+
+Use the sole package entrypoint. Pre transforms run in development and builds for HTML and JavaScript-family modules. Custom SVG is unsanitized; consumers own accessibility semantics and must preserve the Lucide NOTICE.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, requirements, and navigation.
+- [Integration and API](docs/integration.md): Registration, plugin order, marker syntax, configuration, and every public export.
+- [Generated SVG and constraints](docs/output-and-constraints.md): Output, security, accessibility, failures, and Lucide attribution.

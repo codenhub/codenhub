@@ -1,6 +1,9 @@
 # @codenhub/vite-plugin-icons
 
-Vite plugin that replaces `<i class="ic-<name>">` marker elements with inline SVG at build time, in both HTML and JS/TS/JSX/TSX files.
+Vite plugin that replaces `<i class="ic-<name>">` marker elements with inline SVG during Vite HTML and JS/TS/JSX/TSX transforms.
+
+> [!WARNING]
+> Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
 
 ## Installation
 
@@ -9,8 +12,6 @@ pnpm add -D @codenhub/vite-plugin-icons
 ```
 
 ## Usage
-
-Register the plugin in your `vite.config.ts` configuration:
 
 ```ts
 import { defineConfig } from "vite";
@@ -21,119 +22,40 @@ export default defineConfig({
 });
 ```
 
-Write marker elements in your HTML template or scripts:
+```html
+<i class="ic-success size-4" aria-hidden="true"></i>
+```
+
+The plugin replaces the marker during Vite development and builds, preserves non-icon classes and other attributes, and removes the resolved `ic-` class:
 
 ```html
-<i class="ic-success size-4 text-green-500"></i>
+<svg class="size-4" aria-hidden="true" viewBox="0 0 24 24" ...>...</svg>
 ```
 
-Which transforms into the inlined SVG at build time:
-
-```html
-<svg class="size-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" ...>...</svg>
-```
-
-### With Custom Icons
-
-You can override or extend the built-in icon registry:
+Custom SVG can extend or override the built-in registry, but it must be trusted:
 
 ```ts
-import { iconsPlugin } from "@codenhub/vite-plugin-icons";
-
-export default {
-  plugins: [
-    iconsPlugin({
-      icons: {
-        star: `<svg viewBox="0 0 24 24"><path d="M12 2l3 7h7z"/></svg>`,
-        close: {
-          markup: `<svg viewBox="0 0 24 24">...</svg>`,
-          alternativeNames: ["dismiss", "x"],
-        },
-      },
-    }),
-  ],
-};
+iconsPlugin({
+  icons: {
+    brand: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16" /></svg>`,
+  },
+});
 ```
 
-> [!NOTE]
-> Custom icon SVG markup can include root `class` or `className` attributes. The plugin automatically merges them with the classes provided on the icon marker element.
+## Documentation
 
-## Limitations
-
-### JSX/TSX Dynamic Expressions
-
-Only static string literal class attributes are supported for replacement. For example:
-
-```tsx
-// Supported
-const el = <i className="ic-success text-green-500" />;
-```
-
-Dynamic class binding syntax (curly braces) is **not** matched and will be ignored:
-
-```tsx
-// Unsupported
-const el = <i className={"ic-success"} />;
-const el = <i className={`ic-success ${active ? "active" : ""}`} />;
-```
-
-## Reference
-
-### `@codenhub/vite-plugin-icons`
-
-Exported from the package.
-
-#### `iconsPlugin()`
-
-Creates the Vite plugin.
-
-```ts
-function iconsPlugin(options?: IconsPluginOptions): Plugin;
-```
-
-##### `IconsPluginOptions`
-
-```ts
-interface IconsPluginOptions {
-  /**
-   * If true, clears the built-in icon registry.
-   * Only custom icons supplied in the `icons` option will be registered.
-   */
-  shouldClear?: boolean;
-  /**
-   * Additional icons merged on top of the built-in registry.
-   * When a name exists in both, the consumer entry takes precedence.
-   */
-  icons?: Record<string, IconDefinition>;
-}
-```
-
-##### `IconDefinition`
-
-```ts
-type IconDefinition = string | IconOptions;
-```
-
-##### `IconOptions`
-
-```ts
-interface IconOptions {
-  /** Raw inline SVG string rendered in place of the icon marker element. */
-  markup: string;
-  /** Additional names that resolve to this icon, in addition to the primary key. */
-  alternativeNames?: readonly string[];
-}
-```
+- [Documentation overview](docs/index.md)
+- [Integration and API](docs/integration.md)
+- [Generated SVG and constraints](docs/output-and-constraints.md)
 
 ## Requirements
 
-- **Plugin Order:** Can be registered anywhere in the Vite `plugins` array. The plugin automatically runs with `enforce: "pre"` so the icon replacement occurs before standard framework compilers/transformers.
-- **Failure Behavior:** If an icon tag uses an unknown icon name not present in the registry, it is left unmodified in the output. If the input code contains no matching icon tags or doesn't match the prefix `ic-`, the plugin returns `null` from the transform hook to let Vite skip the file.
-- Vite version `^8.0.16` or compatible.
-- Node.js environment supporting ESM.
+- Vite `^8.0.16` and an ESM-capable Node.js environment.
+- Static `class` or `className` string attributes; expression-bound JSX classes are not matched.
+- Register anywhere in `plugins`; the plugin enforces pre-order transforms.
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license.
+Licensed under Apache-2.0.
 
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](./NOTICE) file for details.
+The built-in SVGs are derived from [Lucide](https://lucide.dev) under the ISC License. Redistributions must preserve the [NOTICE](NOTICE), which contains the Lucide copyright and license text.

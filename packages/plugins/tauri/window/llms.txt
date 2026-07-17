@@ -1,0 +1,16 @@
+# @codenhub/tauri-plugin-window
+
+> Experimental Tauri v2 frontend package for controlling native window state,
+> chrome, geometry, visibility, and lifecycle through core Tauri commands.
+
+Use this package only from bundled frontend code in a Tauri WebView. Grant only
+the required core permissions and verify native behavior on every target.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, status, artifacts, and routes
+  to complete documentation.
+- [API and runtime reference](docs/reference.md): All exports, lifecycle,
+  platform constraints, and failures.
+- [Tauri setup and security](docs/setup.md): Permissions, IPC, and trust
+  boundaries.

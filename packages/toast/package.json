@@ -12,7 +12,10 @@
   },
   "files": [
     "dist",
-    "NOTICE"
+    "NOTICE",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -61,6 +64,11 @@
   "peerDependenciesMeta": {
     "@codenhub/styles": {
       "optional": true
+    }
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
     }
   }
 }

@@ -1,0 +1,229 @@
+<!-- Generated from README.md, docs/index.md, docs/reference.md, and docs/setup.md in that order. -->
+
+<!-- Source: README.md -->
+
+# @codenhub/tauri-plugin-window
+
+> **Experimental:** The API, required permissions, and platform support may
+> change before a stable release. Validate native behavior against every Tauri
+> target you ship.
+
+Controls Tauri v2 OS window state, chrome, placement, visibility, and lifecycle
+from bundled frontend code.
+
+## Installation
+
+```sh
+pnpm add @codenhub/tauri-plugin-window @tauri-apps/api
+```
+
+## Usage
+
+Grant the Tauri capability permissions listed in the
+[setup guide](docs/setup.md), then obtain or create a window handle.
+
+```ts
+import { getCurrentWindowHandle } from "@codenhub/tauri-plugin-window";
+
+const windowHandle = getCurrentWindowHandle();
+await windowHandle.setTitle("CodenHub");
+await windowHandle.toggleMaximize();
+```
+
+Calls reject when permissions are missing or Tauri cannot perform the native
+operation.
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Tauri setup, permissions, and security](docs/setup.md)
+- [API, lifecycle, platforms, and failures](docs/reference.md)
+
+## Requirements
+
+- Tauri v2 and a consumer-installed `@tauri-apps/api` matching the package's
+  declared peer dependency.
+- Bundled frontend code running in a Tauri WebView, not a normal browser.
+- Tauri v2 capabilities for every operation the application uses.
+
+## Notes
+
+This package does not navigate or manage webview content. Use
+`@codenhub/tauri-plugin-webview` for that purpose. Native window behavior varies
+by platform and window manager.
+
+## License
+
+Apache-2.0.
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/tauri-plugin-window
+
+> **Experimental:** The frontend API, permission set, and platform support
+> remain unstable. Test native behavior on each target before production
+> adoption.
+
+`@codenhub/tauri-plugin-window` wraps Tauri v2 OS window APIs with typed handles.
+Use it when bundled frontend code needs to create or find windows and control
+state, native chrome, geometry, visibility, or lifecycle.
+
+## Start With Capabilities
+
+Follow [Tauri setup, permissions, and security](setup.md) to install the package
+and grant each bundled caller only the core window permissions it needs. No Rust
+module or Cargo plugin registration is required, but calls reject when required
+capabilities are missing.
+
+Once capabilities are in place, use the [API and runtime reference](reference.md)
+to choose creation and lookup functions, work with `WindowHandle`, and
+understand state precedence, close versus destroy, failures, and platform
+behavior.
+
+The package runs in a Tauri v2 WebView, not a normal browser, SSR process, or
+Node.js runtime. Window behavior varies by platform and window manager, so test
+every operation you ship. Grant window-control capabilities only to trusted
+bundled webviews because they can create, obscure, reposition, or destroy native
+windows.
+
+For webview content, navigation, and reload, use
+`@codenhub/tauri-plugin-webview` instead.
+
+<!-- Source: docs/reference.md -->
+
+# API and Runtime Reference
+
+All symbols are exported from `@codenhub/tauri-plugin-window`.
+
+## Creation and Lookup
+
+### `createWindow(config)`
+
+Creates a Tauri `Window`, waits for `tauri://created`, and returns a
+`Promise<WindowHandle>`. It rejects when event registration or Tauri creation
+fails, including a label conflict, or when creation does not complete within
+five seconds. The package does not perform a separate duplicate-label precheck.
+
+### `getWindow(label)`
+
+Resolves to the matching handle or `undefined`. Enumeration can reject when IPC
+or permissions fail.
+
+### `getCurrentWindowHandle()`
+
+Synchronously wraps the OS window containing the current WebView.
+
+### `listWindows()`
+
+Resolves to handles for all windows visible to Tauri. Enumeration can reject
+when IPC or permissions fail.
+
+## State and Configuration
+
+`WindowState` is both a value object and a type. Its values are `NORMAL`,
+`MINIMIZED`, `MAXIMIZED`, and `FULLSCREEN`, represented by lowercase strings.
+`getState()` queries all three native flags and prioritizes fullscreen, then
+maximized, then minimized when a platform reports overlapping states.
+
+`WindowConfig` requires a `label`. Tauri labels accept ASCII alphanumeric
+characters plus `-`, `/`, `:`, and `_`. It optionally accepts `title`, logical
+pixel `size` and `position`, and the `decorations`, `resizable`, `alwaysOnTop`,
+and `visible` booleans. Omitted options use Tauri defaults. `WindowSize` contains
+numeric `width` and `height`; `WindowPosition` contains numeric `x` and `y`. The
+package does not validate ranges, screen bounds, or finite values.
+
+## `WindowHandle`
+
+Every handle exposes its readonly `label` and these asynchronous methods:
+
+| Method                                             | Effect                                                  |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| `getState()`                                       | Returns the normalized `WindowState`.                   |
+| `minimize()`                                       | Minimizes the window.                                   |
+| `maximize()` / `unmaximize()` / `toggleMaximize()` | Changes maximized state.                                |
+| `fullscreen(enable)`                               | Enters or exits fullscreen.                             |
+| `setTitle(title)`                                  | Sets native title text.                                 |
+| `setDecorations(enabled)`                          | Shows or hides native chrome.                           |
+| `setResizable(enabled)`                            | Changes user resizing.                                  |
+| `setAlwaysOnTop(enabled)`                          | Changes always-on-top state.                            |
+| `setSize(size)` / `setPosition(position)`          | Changes logical geometry.                               |
+| `setVisible(visible)`                              | Calls Tauri show or hide.                               |
+| `close()`                                          | Requests close and emits Tauri's close-requested event. |
+| `destroy()`                                        | Forces immediate destruction without close-requested.   |
+
+Methods reject with Tauri's IPC/native failure when a capability is missing, a
+handle is stale, or the platform cannot perform the operation.
+
+## Lifecycle
+
+Handles are lightweight wrappers. The caller does not dispose one separately.
+`close()` can leave a window open when another Tauri listener prevents the
+close; `destroy()` bypasses that request event. After destruction, existing
+handles are stale and later operations can reject. `setVisible(false)` only
+hides the window. Lookups and lists are snapshots, not subscriptions.
+
+## Platforms
+
+The package has no platform detection or compatibility shim. It delegates to
+Tauri v2 and the native window manager. Decorations, always-on-top, fullscreen,
+minimize/maximize, positioning, and exact logical-to-physical geometry can vary
+or be unavailable by desktop environment or mobile target. The package does not
+declare a tested desktop or mobile support matrix; verify every used operation
+on every target the application supports.
+
+<!-- Source: docs/setup.md -->
+
+# Tauri Setup and Security
+
+## Install
+
+```sh
+pnpm add @codenhub/tauri-plugin-window @tauri-apps/api
+```
+
+The package is ESM and must run in a Tauri v2 WebView. Browser-only, SSR, and
+Node.js execution are not supported runtime contexts. No Rust module or Tauri
+plugin registration is required.
+
+## Grant Core Permissions
+
+Assign a capability to each bundled caller and grant permissions for the methods
+it uses. The complete public surface uses:
+
+```json
+{
+  "permissions": [
+    "core:window:default",
+    "core:window:allow-close",
+    "core:window:allow-create",
+    "core:window:allow-destroy",
+    "core:window:allow-hide",
+    "core:window:allow-maximize",
+    "core:window:allow-minimize",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-decorations",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-position",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-size",
+    "core:window:allow-set-title",
+    "core:window:allow-show",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-unmaximize"
+  ]
+}
+```
+
+`core:window:default` supplies window enumeration and the three state queries
+used by `getState()`. The created and error events used during creation are local
+to Tauri's `Window` object and do not need a core event permission. Remove
+permissions for operations the caller does not use. Confirm identifiers against
+the generated capability schema for the exact Tauri version in the consumer app.
+
+## Trust Boundaries
+
+Window capabilities can create, obscure, reposition, or destroy native windows.
+Grant them only to trusted bundled webviews and scope capabilities by
+window/webview label. Tauri merges permissions when a caller matches multiple
+capabilities. This package does not add authorization, constrain target labels,
+or sanitize numeric geometry values.

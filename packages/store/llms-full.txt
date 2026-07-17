@@ -1,0 +1,272 @@
+<!-- Source: README.md -->
+
+# @codenhub/store
+
+Typed object stores with synchronous and asynchronous drivers for browsers,
+Node.js, and Cloudflare Workers.
+
+> **Experimental:** Store APIs, driver contracts, and persistence behavior may
+> change before a stable release.
+
+## Installation
+
+```sh
+pnpm add @codenhub/store
+```
+
+## Usage
+
+`createStore()` uses browser `localStorage` by default and falls back to the
+initial state when storage is empty or unavailable.
+
+```ts
+import { createStore } from "@codenhub/store";
+
+const preferences = createStore({
+  storageKey: "app:preferences",
+  initialState: { theme: "light" as "light" | "dark" },
+  onError: (error) => console.warn(error.code, error.cause),
+});
+
+preferences.patch({ theme: "dark" });
+```
+
+Recoverable driver, parsing, and validation failures use the initial state or
+return `false` and are reported through `onError` when provided.
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Core stores](docs/core-stores.md)
+- [Storage drivers](docs/storage-drivers.md)
+
+## Requirements
+
+- `structuredClone` is required.
+- The default driver requires browser `localStorage`; other runtimes must choose
+  an appropriate driver.
+- Stored values must be structured-cloneable and driver-compatible.
+
+## Notes
+
+- Store instances do not synchronize browser tabs.
+- Do not share one driver instance between stores with different keys.
+- Avoid unencrypted credentials or sensitive personal data in storage.
+
+## License
+
+Licensed under Apache-2.0.
+
+---
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/store
+
+`@codenhub/store` provides typed object stores over pluggable synchronous and
+asynchronous persistence drivers. Use it when application state needs one store
+API across browser storage, in-memory workflows, Node.js JSON files, or
+Cloudflare storage.
+
+> **Experimental:** Store APIs, driver contracts, and persistence behavior may
+> change before a stable release.
+
+## Start with a browser store
+
+`createStore()` uses browser `localStorage` by default:
+
+```ts
+import { createStore } from "@codenhub/store";
+
+const preferences = createStore({
+  storageKey: "app:preferences",
+  initialState: { theme: "light" as "light" | "dark" },
+  onError: (error) => console.warn(error.code, error.cause),
+});
+
+preferences.patch({ theme: "dark" });
+```
+
+Stores snapshot `initialState`, clone returned state, and convert recoverable
+storage failures into fallback values plus optional `onError` events. A generic
+state type does not validate persisted data at runtime; provide `validate` when
+stored values are not already trusted.
+
+## Choose where to go next
+
+- [Core stores](core-stores.md) covers sync and async creation, methods,
+  runtime validation, concurrency, defaults, and failure behavior.
+- [Storage drivers](storage-drivers.md) helps choose and configure memory,
+  browser, Node.js, Cloudflare KV, or Durable Object persistence.
+
+`structuredClone` is required. Node.js drivers require `node:fs`; Cloudflare
+drivers require compatible bindings. The default browser driver does not make
+SSR storage persistent when `localStorage` is unavailable.
+
+Store instances do not synchronize browser tabs. Drivers are stateful and
+should not be shared between stores that use different keys. Store only values
+that are structured-cloneable and compatible with the selected driver, and do
+not place unencrypted credentials or sensitive personal data in storage.
+
+---
+
+<!-- Source: docs/core-stores.md -->
+
+# Core Stores
+
+## Synchronous Stores
+
+`createStore<TSchema>(options)` creates a `Store<TSchema>`. `TSchema` must be an
+object type. The initial state is cloned immediately; unavailable
+`structuredClone` or uncloneable values throw during creation.
+
+```ts
+import { createStore, memoryDriver } from "@codenhub/store";
+
+interface Settings {
+  theme: "light" | "dark";
+  nickname?: string;
+}
+
+const settings = createStore<Settings>({
+  storageKey: "settings",
+  initialState: { theme: "light" },
+  driver: memoryDriver(),
+});
+```
+
+`CreateStoreOptions` requires `storageKey` and `initialState`. `driver` defaults
+to `localStorageDriver`. `validate(raw)` can reject stored data at runtime, and
+`onError(event)` receives recoverable failures.
+
+`Store<TSchema>` methods are:
+
+| Method                | Observable behavior                                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `get()`               | Reads and returns a deep clone; falls back to initial state for missing, failed, or invalid data.                       |
+| `set(state)`          | Replaces persisted state and returns whether the driver wrote it.                                                       |
+| `patch(partial)`      | Shallow-merges with the current state, attempts a write, and returns a clone of the merged value even if writing fails. |
+| `getItem(key)`        | Reads the full state and returns one property.                                                                          |
+| `setItem(key, value)` | Updates one property, attempts a write, and returns the resulting clone even if writing fails.                          |
+| `removeItem(key)`     | Removes a key and behaves like `setItem`; `RemovableStoreKey<TSchema>` permits only optional schema keys.               |
+| `clear()`             | Asks the driver to remove persisted state; the next read falls back to initial state if removal succeeded.              |
+
+Sync stores do not lock operations or synchronize browser tabs.
+
+## Asynchronous Stores
+
+`createAsyncStore<TSchema>(options)` creates an `AsyncStore<TSchema>`. Its
+`CreateAsyncStoreOptions` requires an `AsyncStorageDriver`; there is no default
+async driver. It otherwise supports the same `storageKey`, `initialState`,
+`validate`, and `onError` semantics.
+
+All `AsyncStore` methods return promises. Each store instance serializes reads
+and writes through an internal queue, including read-modify-write methods. This
+prevents races within one instance but does not coordinate separate instances
+or external writers.
+
+## Validation And Errors
+
+`validate` receives the raw driver value. A `false` result reports
+`storage-validation-failed` and returns initial state. Without `validate`, data
+is trusted as `TSchema` after cloning; the generic type does not perform runtime
+validation.
+
+`StoreErrorEvent` contains a stable `code`, diagnostic `message`, `storageKey`,
+and optional original `cause`. Codes are:
+
+- `storage-read-failed`
+- `storage-write-failed`
+- `storage-clear-failed`
+- `storage-parse-failed`
+- `storage-validation-failed`
+
+Read, parse, and validation failures return initial state. Write failures return
+`false`; read-modify-write methods still return their computed state. Clear
+failures resolve or return normally. Errors are silent when `onError` is absent.
+Exceptions thrown by `onError`, `validate`, cloning, or driver key binding are
+not caught as recoverable storage failures.
+
+`StorageDriver<TSchema>` defines synchronous `get`, `set`, and optional `clear`;
+`AsyncStorageDriver<TSchema>` defines promise-based equivalents. `SET_STORAGE_KEY`
+is an exported symbol used by built-in drivers for one-time key binding. Custom
+drivers may implement this symbol, but application code normally should not call
+it. A driver that has been bound to a different key may throw during store
+creation.
+
+---
+
+<!-- Source: docs/storage-drivers.md -->
+
+# Storage Drivers
+
+Drivers are stateful and should not be shared between stores using different
+keys. JSON-based drivers require serializable values; every store also requires
+values that `structuredClone` can copy.
+
+## Core Drivers
+
+`localStorageDriver<TSchema>(storageKey?, onError?)` reads and writes JSON in
+browser `localStorage`. `createStore` creates and binds this driver when no
+driver is supplied. If `localStorage` is absent or inaccessible, reads return
+`null`, writes return `false`, and clears return normally without an error event.
+Per-key access and JSON parsing failures throw from the driver and report to the
+driver callback; when used by a store, they become the store fallback behavior.
+
+`memoryDriver<TSchema>()` and `asyncMemoryDriver<TSchema>()` keep one cloned
+value in process memory and return `null` before a value is set or after clear.
+They are useful for tests and non-persistent workflows. Cloning can still throw
+for unsupported values.
+
+## Node.js JSON Files
+
+Import `nodeJsonFileDriver` and `nodeAsyncJsonFileDriver` from
+`@codenhub/store/node`. Both accept `NodeJsonFileDriverOptions` with `filePath`.
+
+```ts
+import { createAsyncStore } from "@codenhub/store";
+import { nodeAsyncJsonFileDriver } from "@codenhub/store/node";
+
+const config = createAsyncStore({
+  storageKey: "config",
+  initialState: { port: 3000 },
+  driver: nodeAsyncJsonFileDriver({ filePath: "./data/config.json" }),
+});
+```
+
+Missing files and empty files read as no value. Writes create parent
+directories and serialize indented JSON. Clear removes the file and ignores a
+missing file. Invalid JSON and other filesystem errors throw or reject from the
+driver and become recoverable when called through a store.
+
+## Cloudflare Workers
+
+Import from `@codenhub/store/cf`:
+
+- `cloudflareKvDriver<TSchema>(options)` uses a `CloudflareKvNamespace` with
+  promise-based `get`, `put`, and `delete`. It serializes JSON; malformed stored
+  JSON rejects during reads.
+- `cloudflareDoDriver<TSchema>(options)` uses
+  `CloudflareDurableObjectStorage` with promise-based `get`, `put`, and `delete`.
+  It stores values natively without JSON serialization.
+
+`CloudflareKvDriverOptions` requires `kvNamespace` and optionally accepts
+`storageKey`. `CloudflareDoDriverOptions` requires `storage` and optionally
+accepts `storageKey`. The store binds its `storageKey`; supplying a different key
+in driver options causes store creation to throw.
+
+```ts
+import { createAsyncStore } from "@codenhub/store";
+import { cloudflareKvDriver, type CloudflareKvNamespace } from "@codenhub/store/cf";
+
+declare const SETTINGS: CloudflareKvNamespace;
+
+const settings = createAsyncStore({
+  storageKey: "tenant:settings",
+  initialState: { enabled: false },
+  driver: cloudflareKvDriver({ kvNamespace: SETTINGS }),
+});
+```
+
+Binding operation failures reject from the driver and are converted to store
+error events and fallback behavior by `createAsyncStore`.

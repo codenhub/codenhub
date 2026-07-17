@@ -1,0 +1,18 @@
+# @codenhub/error
+
+> Typed error normalization, result helpers, and opt-in browser and Supabase
+> registry presets. The package is experimental, and its default registry is
+> empty.
+
+Register application mappings explicitly. Deterministic registry matches become
+known errors, regex matches become unexpected errors, and unmatched values use
+the configured fallback message.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, entrypoints, and
+  navigation.
+- [Error normalization and registries](docs/error-normalization.md): AppError,
+  matching, registry APIs, presets, defaults, and failures.
+- [Result helpers](docs/results.md): Result types, combinators, and throwing
+  behavior.

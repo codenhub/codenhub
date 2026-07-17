@@ -1,0 +1,17 @@
+# @codenhub/store
+
+> Typed synchronous and asynchronous object stores for browser, Node.js, and
+> Cloudflare persistence. The package and its driver contracts are experimental.
+
+Stores clone state and recover from storage failures through initial-state
+fallbacks and optional error events. Choose a driver appropriate to the runtime;
+only the synchronous browser store has a default driver.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, entrypoints, and
+  navigation.
+- [Core stores](docs/core-stores.md): Store methods, validation, concurrency,
+  defaults, and failures.
+- [Storage drivers](docs/storage-drivers.md): Browser, memory, Node.js, and
+  Cloudflare driver behavior.

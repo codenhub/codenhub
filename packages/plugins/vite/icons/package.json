@@ -10,7 +10,12 @@
     "directory": "packages/plugins/vite/icons"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "!docs/internal",
+    "llms.txt",
+    "llms-full.txt",
+    "NOTICE"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -43,5 +48,10 @@
   },
   "peerDependencies": {
     "vite": "^8.0.16"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

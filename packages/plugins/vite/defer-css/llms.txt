@@ -1,0 +1,11 @@
+# @codenhub/vite-plugin-defer-css
+
+> Experimental Vite plugin that changes static stylesheet links into preloads and restores them in the browser.
+
+Use the sole package entrypoint. The HTML transform runs in development and builds with post ordering. Review CSP and unstyled-content risks; missing `</head>` produces transformed links without fallback injection.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, requirements, and navigation.
+- [Integration and API](docs/integration.md): Registration, plugin order, matching, and every public export.
+- [Transformed output and constraints](docs/output-and-constraints.md): Emitted HTML, CSP, rendering impact, and failures.

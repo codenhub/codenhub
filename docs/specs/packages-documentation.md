@@ -122,15 +122,31 @@ per-symbol behavior as required by `docs/code-guidelines.md`.
 Every package covered by this spec MUST provide `docs/index.md`. It MUST:
 
 - Use the package name as its H1.
-- Summarize the package's purpose and supported scope.
+- Welcome and orient readers with a clear description of what the package does
+  and when it is useful.
+- Give readers a reasonable first step, such as a small quick start, a core
+  concept, or a direct link to the setup they need.
 - Direct consumers to the main starting points and every top-level
-  documentation area.
+  documentation area with enough context to choose where to go next.
 - Surface critical compatibility, stability, and deprecation information.
 
-The index is the canonical entrypoint to complete package documentation. The
-README remains a separate concise entrypoint for evaluation and first use; it
-MUST link to the documentation index but SHOULD NOT duplicate its complete
-navigation or detail.
+The index is the canonical human-facing entrypoint to complete package
+documentation. It SHOULD help a new reader understand the package and reach a
+first useful result before presenting exhaustive API detail. When useful, it
+SHOULD explain the package's purpose, suitable use cases, meaningful design
+choices, or tradeoffs without promotional claims.
+
+These are outcomes, not required headings or a fixed template. A small package
+MAY use a concise index that primarily routes readers when more introductory
+content would add noise. A package with unusual setup MAY direct readers to a
+focused guide instead of embedding a quick start. Detailed export inventories
+and reference tables SHOULD live in focused documents unless choosing between
+those surfaces is necessary to begin.
+
+The README remains a separate concise entrypoint for evaluation and first use;
+it MUST link to the documentation index but SHOULD NOT duplicate its complete
+navigation or detail. Some overlap is expected so that `docs/index.md` remains
+useful when read directly without first reading the README.
 
 Organize public docs around consumer tasks, concepts, domains, or entrypoints.
 Use guides, examples, reference material, troubleshooting, migrations,

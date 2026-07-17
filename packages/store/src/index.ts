@@ -30,9 +30,11 @@ export interface StoreErrorEvent {
 export type RemovableStoreKey<TSchema extends object> = OptionalKeys<TSchema>;
 
 /**
- * Internal Symbol used to inject the storage key dynamically into driver instances.
+ * Symbol for the optional driver hook that binds a store's storage key.
  *
- * @internal
+ * Custom drivers may implement this hook when they need the key supplied to
+ * `createStore` or `createAsyncStore`. The store calls it during creation;
+ * implementations should reject attempts to bind one driver to different keys.
  */
 export const SET_STORAGE_KEY = Symbol.for("store:set_storage_key");
 
@@ -51,7 +53,7 @@ export interface StorageDriver<TSchema extends object> {
   set(value: TSchema): boolean;
   /** Removes the stored value. */
   clear?(): void;
-  /** @internal */
+  /** Optional hook called during store creation to bind the driver's storage key. */
   [SET_STORAGE_KEY]?(key: string): void;
 }
 
@@ -494,7 +496,7 @@ export interface AsyncStorageDriver<TSchema extends object> {
   set(value: TSchema): Promise<boolean>;
   /** Removes the stored value. */
   clear?(): Promise<void>;
-  /** @internal */
+  /** Optional hook called during store creation to bind the driver's storage key. */
   [SET_STORAGE_KEY]?(key: string): void;
 }
 

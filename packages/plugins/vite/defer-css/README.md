@@ -1,6 +1,9 @@
 # @codenhub/vite-plugin-defer-css
 
-Vite plugin that converts `<link rel="stylesheet">` tags in HTML entry points to non-render-blocking preloads, then swaps them back to stylesheets once loaded. A `<noscript>` fallback is inserted for browsers with JavaScript disabled.
+Vite plugin that converts stylesheet links in HTML entries to preloads and restores `rel="stylesheet"` after loading. It also emits a `noscript` fallback when `</head>` is available.
+
+> [!WARNING]
+> Experimental: the matching rules, generated HTML/JavaScript, and loading behavior may change before a stable release.
 
 ## Installation
 
@@ -10,10 +13,7 @@ pnpm add -D @codenhub/vite-plugin-defer-css
 
 ## Usage
 
-Register the plugin in your Vite configuration. The plugin operates at build time and adds no runtime dependencies to consumer bundles.
-
 ```ts
-// vite.config.ts
 import { defineConfig } from "vite";
 import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
 
@@ -22,75 +22,25 @@ export default defineConfig({
 });
 ```
 
-The plugin transforms stylesheet link tags of the form `<link rel="stylesheet" href="...">` into:
+By default, generated preload links use inline `onload`. Pass a trusted build-time `nonce` to use one nonced helper script instead. If loading fails, deferred CSS may remain unapplied.
 
-```html
-<link rel="preload" href="..." as="style" onload="this.onload=null;this.rel='stylesheet'" />
-```
+## Documentation
 
-And appends a `<noscript>` block containing the original `<link rel="stylesheet">` tags just before `</head>`:
-
-```html
-<noscript>
-  <link rel="stylesheet" href="..." />
-</noscript>
-```
-
-## Reference
-
-### `@codenhub/vite-plugin-defer-css`
-
-Primary entrypoint for the plugin.
-
-```ts
-import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
-```
-
-#### `deferCssPlugin()`
-
-Creates a Vite plugin instance that defers stylesheets in the final HTML output.
-
-```ts
-function deferCssPlugin(options?: DeferCssPluginOptions): Plugin;
-```
-
-Runs with `enforce: "post"` so it acts on the final HTML output after all other transforms. Does not affect CSS imported through JavaScript modules.
-
-Returns a Vite `Plugin` object.
-
-##### `DeferCssPluginOptions`
-
-```ts
-interface DeferCssPluginOptions {
-  /** Content Security Policy nonce to inject into preload load helper script. */
-  nonce?: string;
-}
-```
-
-## Content Security Policy (CSP)
-
-By default, this plugin uses inline `onload` attributes to swap `<link rel="preload">` back to `rel="stylesheet"`. If your application enforces a strict CSP that blocks inline event handlers, you must provide a `nonce` value to `deferCssPlugin`:
-
-```ts
-deferCssPlugin({
-  nonce: "your-csp-nonce-value",
-});
-```
-
-This configuration disables inline `onload` event attributes and instead appends an inline `<script nonce="your-csp-nonce-value">` block to dynamically wire up the stylesheet swap.
+- [Documentation overview](docs/index.md)
+- [Integration and API](docs/integration.md)
+- [Transformed output and constraints](docs/output-and-constraints.md)
 
 ## Requirements
 
-- **Plugin Order:** Can be registered anywhere in the Vite `plugins` array. The plugin automatically runs with `enforce: "post"` so its stylesheet deferrals execute on the final HTML output.
-- **Failure Behavior:** If the input HTML does not contain a `</head>` tag or does not contain any matching stylesheet links, the plugin returns the HTML unmodified.
-- Vite `^8.0.0` is required as a peer dependency.
-- TypeScript consumers should use `moduleResolution: "bundler"` or a resolver that supports package `exports`.
+- Vite `^8.0.0`.
+- JavaScript is required for the deferred path; the fallback serves users with JavaScript disabled.
+- Register anywhere in `plugins`; the plugin enforces post-order HTML transformation.
 
 ## Notes
 
-- The plugin operates at build time only and adds no runtime dependencies to consumer bundles.
-- It transforms all `<link rel="stylesheet">` tags found in HTML entry points processed by Vite.
+- The transform runs during Vite development and production builds, but does not affect CSS imported through JavaScript modules.
+- Deferring critical CSS can cause unstyled content and layout shifts. Validate CSP and rendering behavior in the deployed application.
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license.
+Licensed under Apache-2.0.

@@ -1,0 +1,164 @@
+<!-- Source: README.md -->
+
+# @codenhub/router
+
+Small browser router for app-owned rendering, history navigation, matching, and
+subscriptions.
+
+> [!WARNING]
+> This package is experimental. Its API, routing behavior, and support level may
+> change before a stable release.
+
+## Installation
+
+```sh
+pnpm add @codenhub/router
+```
+
+## Usage
+
+```ts
+import { createRouter } from "@codenhub/router";
+
+const router = createRouter({ basePath: "/app" })
+  .on("/", () => renderHome())
+  .on("/users/:id", ({ params }) => renderUser(params["id"]));
+
+router.start();
+router.navigate("/users/42");
+
+// Remove history/link listeners and subscriptions on teardown.
+router.destroy();
+```
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [API, paths, and browser lifecycle](docs/reference.md)
+
+## Requirements
+
+- History integration requires `window`, `location`, `history`, and `popstate`.
+- `match()`, `href()`, and non-history `navigate()` behavior are SSR-safe.
+- The package provides no rendering, data loading, CSS, or framework adapter.
+
+## Notes
+
+Consumers own route-change focus, titles, announcements, authentication, and
+sanitization of URL-derived values. Invalid paths throw synchronously.
+
+## License
+
+Licensed under Apache-2.0.
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/router
+
+`@codenhub/router` provides app-local path registration and matching, browser
+history navigation, optional annotated-link interception, and subscriptions.
+Applications retain rendering and page lifecycle ownership.
+
+It fits small browser applications that want routing primitives while keeping
+rendering, data loading, and framework integration in application code.
+
+> [!WARNING]
+> This package is experimental. Its API, routing behavior, and support level may
+> change before a stable release.
+
+## Quick Start
+
+```ts
+import { createRouter } from "@codenhub/router";
+
+const router = createRouter({ basePath: "/app" })
+  .on("/", () => renderHome())
+  .on("/users/:id", ({ params }) => renderUser(params["id"]));
+
+router.start();
+```
+
+Call `destroy()` when the router owner is torn down. History integration needs
+browser APIs, while matching and non-history navigation remain usable during
+SSR. The application is responsible for treating URL values as untrusted and
+for updating focus, titles, and route announcements after navigation.
+
+## Continue
+
+- [API, paths, and browser lifecycle](reference.md): Complete exports, matching,
+  link interception, history behavior, SSR, failures, URL safety, cleanup, and
+  accessibility responsibilities.
+
+<!-- Source: docs/reference.md -->
+
+# @codenhub/router API, Paths, and Browser Lifecycle
+
+## Create and Register
+
+`createRouter(options?): Router` accepts `CreateRouterOptions`:
+
+- `basePath`: app-local prefix removed before matching and restored by history
+  navigation and `href()`. Default is empty.
+- `shouldInterceptLinks`: intercept eligible clicks on anchors carrying
+  `data-router-link`. Default is `false`.
+
+Invalid base paths throw. `Router.on(path, handler)` registers a route and
+returns the router; first match in registration order wins. Paths support exact
+static segments and named `:params`, not wildcards, optional segments, ranking,
+or nested route trees. Invalid paths, duplicate structural patterns, duplicate
+or dangerous parameter names, query/hash content, backslashes, and dot segments
+throw. `notFound(handler)` replaces the fallback handler.
+
+## Match and Navigate
+
+- `match(to)` validates and matches without history, handlers, or subscribers.
+- `href(to)` validates and adds `basePath` for native anchors.
+- `navigate(to, options?)` uses `pushState`, or `replaceState` when
+  `NavigateOptions.shouldReplace` is true, passing optional `state`. It then
+  handles the route and notifies subscribers.
+- `start()` attaches one `popstate` listener, optionally one document click
+  listener, and handles the current location. Repeated calls do not duplicate
+  listeners.
+
+Navigation requested synchronously from a handler or subscriber is queued and
+the nested call returns `null`. Handler, fallback, and subscriber errors are not
+caught; they clear queued navigation and propagate. History is restored when a
+handled navigation throws. `start()` throws if called during active navigation.
+
+`RouterMatch` contains registered `path`, app-local `pathname`, decoded
+`RouteParams`, `URLSearchParams`, and `hash`. Malformed encoded parameters do not
+match. `RouterMiss` contains pathname, search params, and hash.
+
+## Links and Subscriptions
+
+Link interception applies only to normal same-window clicks on eligible
+`data-router-link` anchors; native modified clicks, downloads, external targets,
+and other ineligible navigation retain browser behavior. Prefer `router.href()`
+for href values so copy, new-tab, and non-JavaScript behavior remain useful.
+
+`subscribe(listener: RouterListener)` returns an unsubscribe function.
+Listeners receive `RouterMatch | null` after handled navigation.
+
+## SSR and Cleanup
+
+Without `window`, `start()` returns `null`, `navigate()` matches without writing
+history, and matching remains available. URL and `URLSearchParams` support are
+still required. `destroy()` removes router-owned history and click listeners and
+clears subscribers; repeated calls are allowed. Route registrations remain on
+the router and it can be started again.
+
+## Security and Accessibility
+
+Route parameters, paths, query values, and hashes are untrusted URL input.
+Sanitize them for HTML, CSS, scripts, requests, storage, and logs. `RouteParams`
+has a null prototype; use `Object.hasOwn()` for presence checks.
+
+The router does not manage page titles, focus, landmarks, scroll restoration,
+or route announcements. Applications must provide those behaviors after
+navigation and preserve useful native links.
+
+## Public Exports
+
+The root exports `createRouter`, plus `CreateRouterOptions`, `NavigateOptions`,
+`NotFoundHandler`, `RouteHandler`, `RouteParams`, `Router`, `RouterListener`,
+`RouterMatch`, and `RouterMiss` types.

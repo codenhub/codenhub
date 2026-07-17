@@ -65,7 +65,7 @@ export interface AddLoaderPluginOptions {
   backgroundColor?: string;
   /**
    * Spinner color.
-   * Defaults to `currentColor` falling back to `var(--color-primary, #0a0a0a)`.
+   * Defaults to `var(--color-primary, #0a0a0a)`.
    */
   color?: string;
   /**
@@ -90,7 +90,6 @@ export interface AddLoaderPluginOptions {
  * The injected element uses `id="page-loader"` and reads the following CSS
  * custom properties for theming, falling back to neutral values when unset:
  * - `--color-background` (default `#fafafa`)
- * - `--color-border` (default `#d4d4d4`)
  * - `--color-primary` (default `#0a0a0a`)
  *
  * @param options Configuration options for the add loader plugin.

@@ -1,0 +1,16 @@
+# @codenhub/components
+
+> Experimental native Web Component primitives, a small component library, and focused React, Svelte, and Astro integration entrypoints.
+
+Dynamic values in `html` are escaped; `unsafeHTML` requires trusted or sanitized
+input. Rendering replaces component content. Framework subpaths are not
+uniform: React exports wrappers without registration, while Svelte and Astro
+export native definitions with browser-only auto-registration.
+
+## Documentation
+
+- [Documentation](./docs/index.md): Primary entrypoint for complete public documentation and all import paths.
+- [Core API](./docs/core-api.md): Factory, templates, registration, lifecycle, public types, and errors.
+- [Component library](./docs/component-library.md): Native `ChButton` behavior and styling requirement.
+- [Framework adapters](./docs/framework-adapters.md): React, Svelte, and Astro integration contracts.
+- [README](./README.md): Installation, first use, requirements, and stability notes.

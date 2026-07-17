@@ -10,7 +10,13 @@
     "directory": "packages/components"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs/index.md",
+    "docs/core-api.md",
+    "docs/component-library.md",
+    "docs/framework-adapters.md",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -80,6 +86,11 @@
     },
     "astro": {
       "optional": true
+    }
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
     }
   }
 }

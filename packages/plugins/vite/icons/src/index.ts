@@ -17,6 +17,7 @@ export interface IconsPluginOptions {
    * When a name exists in both, the consumer entry takes precedence.
    * Each value is either a raw SVG string or an {@link IconDefinition} object
    * that also declares optional lookup aliases via `alternativeNames`.
+   * Markup is inserted verbatim without sanitization and must be trusted.
    */
   icons?: Record<string, IconDefinition>;
 }

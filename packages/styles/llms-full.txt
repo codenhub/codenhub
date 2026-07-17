@@ -1,8 +1,11 @@
+<!-- Source: README.md -->
+
 # @codenhub/styles
 
-Shared Codenhub CSS package with compiled styles, design tokens, theme support, component helper classes, layout helpers, typography utilities, and Tailwind CSS v4 source entrypoints.
+CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 
-This package is CSS-only. It does not ship JavaScript behavior, DOM helpers, React components, or TypeScript APIs.
+> **Experimental:** Public tokens, class names, and import-path composition may
+> change while the styling system is stabilized.
 
 ## Installation
 
@@ -10,19 +13,10 @@ This package is CSS-only. It does not ship JavaScript behavior, DOM helpers, Rea
 pnpm add @codenhub/styles
 ```
 
-Install Tailwind CSS only when importing Tailwind source entrypoints:
-
-```sh
-pnpm add @codenhub/styles tailwindcss
-```
-
-`tailwindcss` is an optional peer dependency. Compiled CSS imports do not require Tailwind in consumer apps.
-
 ## Usage
 
-### Compiled CSS
-
-Use compiled CSS when the app does not process this package through Tailwind.
+Import the compiled stylesheet for the complete token, reset, utility, and
+component-class surface:
 
 ```css
 @import "@codenhub/styles";
@@ -36,9 +30,7 @@ Use compiled CSS when the app does not process this package through Tailwind.
 </main>
 ```
 
-### Tailwind Source CSS
-
-Use Tailwind source CSS when the app already builds Tailwind CSS v4 and needs Codenhub tokens/classes available during that build.
+Apps using Tailwind CSS v4 can instead process the source entrypoint:
 
 ```css
 @import "tailwindcss";
@@ -46,8 +38,6 @@ Use Tailwind source CSS when the app already builds Tailwind CSS v4 and needs Co
 
 @source "./src";
 ```
-
-### Theme Classes
 
 Apply `.dark` to any ancestor to switch token values for that subtree.
 
@@ -59,74 +49,71 @@ Apply `.dark` to any ancestor to switch token values for that subtree.
 </html>
 ```
 
-Apps own adding/removing `.dark`. This package only defines styles that respond to it.
+Apps own adding and removing `.dark`; the package only responds to the class.
 
-## Reference
+## Documentation
 
-### Import Paths
-
-Compiled CSS: `@codenhub/styles`, `/theme`, `/components`, and `/native`.
-
-Tailwind CSS v4 source: `/tw`, `/tw/theme`, `/tw/components`, `/tw/surface`, `/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/loader`, `/tw/tooltip`, `/tw/reset`, `/tw/native`, `/tw/typography`, and `/tw/utilities`.
-
-The root entrypoints provide the full stylesheet. `/native` adds classless styling for common native elements. Other subpaths provide the named theme, component, reset, typography, or combined utility surface.
-
-### Detailed Docs
-
-Detailed package reference ships with the package under `docs/`:
-
-- [Overview](./docs/index.md): Package model, entrypoints, and class model.
+- [Documentation overview](./docs/index.md): Complete public documentation and
+  all supported import paths.
 - [Tokens](./docs/tokens.md): Color and foundation token contracts.
 - [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements
 
-| Requirement     | Details                                                                                    |
-| --------------- | ------------------------------------------------------------------------------------------ |
-| CSS imports     | Consumer tooling must support package CSS imports.                                         |
-| Tailwind CSS    | Required only for `@codenhub/styles/tw` entrypoints. Version 4 or newer.                   |
-| Browser runtime | Styles target browsers. There is no JavaScript runtime behavior.                           |
-| Dark mode       | Consumers apply or remove `.dark`; package CSS reacts to that class.                       |
-| Accessibility   | Styles do not provide semantic HTML, labels, ARIA, keyboard behavior, or focus management. |
+| Requirement   | Details                                                                         |
+| ------------- | ------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                              |
+| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.               |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management. |
 
 ## Notes
 
-This package publishes CSS as its public runtime surface. It does not expose JavaScript or TypeScript entrypoints.
-
-`--layout-gap` is the shared gap token for `.view`, `.stack`, `.cluster`, and `.auto-grid`. It replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
-
-The native entrypoint includes the package reset and maps `table`, `kbd`, `blockquote`, `q`, `code`, `pre`, and `hr` to their corresponding helper styles in addition to headings and form controls.
-
-Lifecycle exception: `@codenhub/styles` intentionally omits `main`, `module`, and `types` from `package.json` because it is a CSS-only package with no JavaScript API. Every supported consumer import path is listed explicitly in `exports`, build output is generated into `dist`, and package checks validate the CSS build contract.
-
-The package intentionally does not expose private files outside the documented import paths. If exports change, this README and the related `docs/` documents must be updated in the same change.
+This package has no JavaScript behavior. `--layout-gap` replaces the removed
+`--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases
+are provided.
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license.
+Licensed under Apache-2.0.
 
 It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
 
 <!-- Source: docs/index.md -->
 
-# @codenhub/styles Overview
+# @codenhub/styles
 
-`@codenhub/styles` is a CSS-only styling foundation for Codenhub interfaces. It provides tokens, base styles, typography utilities, layout helpers, component helper classes, and Tailwind CSS v4 source entrypoints.
+`@codenhub/styles` is a CSS-only foundation for building Codenhub interfaces.
+Use it when an application needs shared design tokens, base styles, typography
+and layout utilities, or composable classes for common UI elements.
 
-The package has no JavaScript runtime. It does not create DOM nodes, attach event listeners, manage focus, validate forms, dismiss toasts, or provide framework components.
+> **Experimental:** Public tokens, class names, and import-path composition may
+> change while the styling system is stabilized.
 
-## Public Entrypoints
+## Start with the full stylesheet
 
-- Compiled CSS: `@codenhub/styles`, `/theme`, `/components`, and `/native`.
-- Full Tailwind CSS v4 source: `@codenhub/styles/tw` and `/tw/native`.
-- Focused Tailwind source: `/tw/theme`, `/tw/components`, `/tw/surface`, `/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/loader`, `/tw/tooltip`, `/tw/reset`, `/tw/typography`, and `/tw/utilities`.
+For most applications, import the compiled package and compose the helper
+classes in markup:
 
-`components` entrypoints include theme tokens because component classes depend on those variables.
+```css
+@import "@codenhub/styles";
+```
 
-The native entrypoint also includes the reset. It maps headings, form controls, buttons, `table`, `kbd`, `blockquote`, `q`, `code`, `pre`, and `hr` to package helper styles.
+```html
+<main class="stack">
+  <p class="text-label">Status</p>
+  <h1 class="text-title">Ready to publish</h1>
+  <button class="btn primary">Continue</button>
+</main>
+```
 
-## Class Model
+Applications using Tailwind CSS v4 can process `@codenhub/styles/tw` instead.
+Focused compiled and Tailwind source entrypoints are available when an
+application needs only tokens, components, reset, typography, utilities, or a
+specific component domain. The [class reference](./classes.md) lists those
+supported imports and their composition rules.
+
+## How composition works
 
 Helper classes are designed as small composable CSS contracts:
 
@@ -134,141 +121,80 @@ Helper classes are designed as small composable CSS contracts:
 - Presentation classes define treatment, such as `.out`, `.ghost`, `.soft`, `.sm`, `.lg`, and `.icon`.
 - State classes or attributes define current state, such as `.loading`, `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, `[aria-invalid="true"]`, and `[data-state="open"]`.
 
-Button example:
-
-```html
-<button class="btn success out">Success outline</button>
-<button class="btn destructive ghost">Danger ghost</button>
-<button class="btn primary loading" disabled>Saving</button>
-```
-
 `out`, `ghost`, and `soft` are presentation choices. They consume active intent tone slots instead of carrying a fixed color intent; for example, `.btn.success.soft` uses success subtle and strong tones.
 
-## Token Model
+Component classes use public foundation tokens for shape, motion, focus,
+surface, and state behavior. Internal scoped variables may help compose
+variants, but they are not the public customization contract. Aesthetic profile
+classes such as `.glassmorphism` or `.brutalism` are not part of the current
+version.
 
-Component classes use public foundation tokens for shape, motion, focus, surface, and state behavior. Internal scoped variables may exist to compose class variants, but they are not the public customization contract.
+## Choose where to go next
 
-Example future-ready profile shape:
+- [Tokens](./tokens.md) explains theme values, dark mode, and the public
+  customization contract.
+- [Classes](./classes.md) covers supported imports, helper classes, component
+  states, and composition rules.
+- [Accessibility](./accessibility.md) separates the hooks supplied by CSS from
+  the semantics and behavior an application must provide.
 
-```css
-.custom-profile {
-  --radius-surface: 1.25rem;
-  --elevation-low: 0 24px 60px rgb(0 0 0 / 0.18);
-  --motion-duration-normal: 240ms;
-}
-```
+The package has no JavaScript runtime. It does not create DOM nodes, attach
+event listeners, manage focus, validate forms, dismiss toasts, or provide
+framework components. Component entrypoints include theme tokens because their
+classes depend on those variables. Native entrypoints also include the reset
+and classless mappings for common native elements.
 
-Aesthetic profile classes such as `.glassmorphism` or `.brutalism` are not part of the current version. The token foundation that makes them possible is available now.
+<!-- Source: docs/accessibility.md -->
 
-## Documentation Map
+# @codenhub/styles Accessibility
 
-| Document                            | Purpose                                                   |
-| ----------------------------------- | --------------------------------------------------------- |
-| [Tokens](./docs/tokens.md)               | Theme and foundation variable contracts.                  |
-| [Classes](./docs/classes.md)             | Public helper class behavior and composition rules.       |
-| [Accessibility](./docs/accessibility.md) | CSS accessibility hooks and responsibilities outside CSS. |
+This package provides CSS hooks for accessible states. It does not provide semantic HTML, ARIA attributes, keyboard behavior, focus management, validation, announcement timing, or JavaScript behavior.
 
-<!-- Source: docs/tokens.md -->
+## Provided By CSS
 
-# @codenhub/styles Tokens
+| Feature            | Behavior                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
+| Form control focus | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
+| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
+| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
+| Current page       | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
+| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
+| Reduced motion     | `prefers-reduced-motion: reduce` globally shortens animations and transitions from the full stylesheet.                   |
+| Forced colors      | `forced-colors: active` preserves visible borders on key helpers.                                                         |
 
-Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
+## Required Outside CSS
+
+Use semantic HTML and behavior appropriate for the component.
+
+| UI                | Required outside CSS                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
+| Tooltips          | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
+
+## State Attribute Guidance
+
+Prefer native attributes first:
 
 ```html
-<section class="dark">
-  <article class="card">Dark token subtree</article>
-</section>
+<button class="btn primary" disabled>Saving</button>
+<input class="ipt" aria-invalid="true" aria-describedby="email-error" />
 ```
 
-## Color Tokens
+Use ARIA or data attributes when native attributes are not available for the element or library:
 
-| Token                          | Purpose                                                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `--color-primary`              | Primary action/content color.                                                                                 |
-| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                    |
-| `--color-primary-hover`        | Primary hover state.                                                                                          |
-| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                            |
-| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.           |
-| `--color-accent`               | Secondary/accent surface.                                                                                     |
-| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                     |
-| `--color-accent-hover`         | Accent hover state.                                                                                           |
-| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                             |
-| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.            |
-| `--color-border`               | Default border color.                                                                                         |
-| `--color-border-hover`         | Interactive border color.                                                                                     |
-| `--color-background`           | Page and default raised surface background.                                                                   |
-| `--color-foreground`           | Subtle raised foreground surface.                                                                             |
-| `--color-surface`              | Nested or muted surface.                                                                                      |
-| `--color-text`                 | Primary text color.                                                                                           |
-| `--color-text-secondary`       | Secondary text color.                                                                                         |
-| `--color-text-contrast`        | Text/icon color on text filled surface.                                                                       |
-| `--color-text-hover`           | Text hover state.                                                                                             |
-| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
-| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
-| `--color-success`              | Success state color.                                                                                          |
-| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 3:1 UI component contrast against `--color-success`.         |
-| `--color-success-hover`        | Success hover tone.                                                                                           |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                      |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                                     |
-| `--color-warning`              | Warning state color.                                                                                          |
-| `--color-warning-contrast`     | Text/icon color on warning filled surface. Meets 3:1 UI component contrast against `--color-warning`.         |
-| `--color-warning-hover`        | Warning hover tone.                                                                                           |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                      |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                     |
-| `--color-destructive`          | Destructive/error state color.                                                                                |
-| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 3:1 UI component contrast against `--color-destructive`. |
-| `--color-destructive-hover`    | Destructive hover tone.                                                                                       |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                  |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                 |
-| `--color-info`                 | Informational state color.                                                                                    |
-| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 3:1 UI component contrast against `--color-info`.               |
-| `--color-info-hover`           | Info hover tone.                                                                                              |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                         |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                        |
+```html
+<a class="btn secondary" aria-disabled="true">Unavailable</a>
+<button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+```
 
-> **Intent token contract**: color intent tokens own meaning and tone variants. Components map an intent palette into scoped component slots, and presentation classes decide which slots to consume. Theme changes belong in token values such as `.dark`, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
-
-## Foundation Tokens
-
-Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
-
-| Token                       | Purpose                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| `--font-default`            | Default app font family.                                                     |
-| `--container-narrow`        | Narrow content width.                                                        |
-| `--container-max`           | Default content width.                                                       |
-| `--container-wide`          | Wide content width.                                                          |
-| `--layout-gutter`           | Responsive inline page padding.                                              |
-| `--layout-section-block`    | Responsive section vertical padding.                                         |
-| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.              |
-| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
-| `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
-| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
-| `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
-| `--control-height`          | Default minimum height for controls.                                         |
-| `--border-width`            | Default border width.                                                        |
-| `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
-| `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
-| `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
-| `--focus-ring`              | Focus-visible ring color.                                                    |
-| `--focus-ring-offset`       | Focus-visible outline offset.                                                |
-| `--focus-ring-width`        | Focus-visible outline/ring width.                                            |
-| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).                |
-| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                           |
-| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).             |
-| `--motion-ease`             | Default easing curve.                                                        |
-| `--z-popover`               | Popover/tooltip z-index.                                                     |
-| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
-| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
-| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
-
-## Component Internals
-
-Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
-
-Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
-
-`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.
+`aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
 
 <!-- Source: docs/classes.md -->
 
@@ -522,54 +448,104 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 | `.text-body`          | Default body copy.                                           |
 | `.selection-contrast` | Inverts `::selection` colors to primary-contrast background. |
 
-<!-- Source: docs/accessibility.md -->
+<!-- Source: docs/tokens.md -->
 
-# @codenhub/styles Accessibility
+# @codenhub/styles Tokens
 
-This package provides CSS hooks for accessible states. It does not provide semantic HTML, ARIA attributes, keyboard behavior, focus management, validation, announcement timing, or JavaScript behavior.
-
-## Provided By CSS
-
-| Feature            | Behavior                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
-| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
-| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
-| Current page       | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
-| Reduced motion     | `prefers-reduced-motion: reduce` globally shortens animations and transitions from the full stylesheet.                   |
-| Forced colors      | `forced-colors: active` preserves visible borders on key helpers.                                                         |
-
-## Required Outside CSS
-
-Use semantic HTML and behavior appropriate for the component.
-
-| UI                | Required outside CSS                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
-
-## State Attribute Guidance
-
-Prefer native attributes first:
+Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
 
 ```html
-<button class="btn primary" disabled>Saving</button>
-<input class="ipt" aria-invalid="true" aria-describedby="email-error" />
+<section class="dark">
+  <article class="card">Dark token subtree</article>
+</section>
 ```
 
-Use ARIA or data attributes when native attributes are not available for the element or library:
+## Color Tokens
 
-```html
-<a class="btn secondary" aria-disabled="true">Unavailable</a>
-<button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
-```
+| Token                          | Purpose                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `--color-primary`              | Primary action/content color.                                                                                 |
+| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                    |
+| `--color-primary-hover`        | Primary hover state.                                                                                          |
+| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                            |
+| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.           |
+| `--color-accent`               | Secondary/accent surface.                                                                                     |
+| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                     |
+| `--color-accent-hover`         | Accent hover state.                                                                                           |
+| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                             |
+| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.            |
+| `--color-border`               | Default border color.                                                                                         |
+| `--color-border-hover`         | Interactive border color.                                                                                     |
+| `--color-background`           | Page and default raised surface background.                                                                   |
+| `--color-foreground`           | Subtle raised foreground surface.                                                                             |
+| `--color-surface`              | Nested or muted surface.                                                                                      |
+| `--color-text`                 | Primary text color.                                                                                           |
+| `--color-text-secondary`       | Secondary text color.                                                                                         |
+| `--color-text-contrast`        | Text/icon color on text filled surface.                                                                       |
+| `--color-text-hover`           | Text hover state.                                                                                             |
+| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
+| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
+| `--color-success`              | Success state color.                                                                                          |
+| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 3:1 UI component contrast against `--color-success`.         |
+| `--color-success-hover`        | Success hover tone.                                                                                           |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                      |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                                     |
+| `--color-warning`              | Warning state color.                                                                                          |
+| `--color-warning-contrast`     | Text/icon color on warning filled surface. Meets 3:1 UI component contrast against `--color-warning`.         |
+| `--color-warning-hover`        | Warning hover tone.                                                                                           |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                      |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                     |
+| `--color-destructive`          | Destructive/error state color.                                                                                |
+| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 3:1 UI component contrast against `--color-destructive`. |
+| `--color-destructive-hover`    | Destructive hover tone.                                                                                       |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                  |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                 |
+| `--color-info`                 | Informational state color.                                                                                    |
+| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 3:1 UI component contrast against `--color-info`.               |
+| `--color-info-hover`           | Info hover tone.                                                                                              |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                         |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                        |
 
-`aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
+> **Intent token contract**: color intent tokens own meaning and tone variants. Components map an intent palette into scoped component slots, and presentation classes decide which slots to consume. Theme changes belong in token values such as `.dark`, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
+
+## Foundation Tokens
+
+Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
+
+| Token                       | Purpose                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `--font-default`            | Default app font family.                                                     |
+| `--container-narrow`        | Narrow content width.                                                        |
+| `--container-max`           | Default content width.                                                       |
+| `--container-wide`          | Wide content width.                                                          |
+| `--layout-gutter`           | Responsive inline page padding.                                              |
+| `--layout-section-block`    | Responsive section vertical padding.                                         |
+| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.              |
+| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
+| `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
+| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
+| `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
+| `--control-height`          | Default minimum height for controls.                                         |
+| `--border-width`            | Default border width.                                                        |
+| `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
+| `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
+| `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
+| `--focus-ring`              | Focus-visible ring color.                                                    |
+| `--focus-ring-offset`       | Focus-visible outline offset.                                                |
+| `--focus-ring-width`        | Focus-visible outline/ring width.                                            |
+| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).                |
+| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                           |
+| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).             |
+| `--motion-ease`             | Default easing curve.                                                        |
+| `--z-popover`               | Popover/tooltip z-index.                                                     |
+| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
+| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
+| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
+
+## Component Internals
+
+Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
+
+Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
+
+`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.

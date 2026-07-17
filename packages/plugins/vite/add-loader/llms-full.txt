@@ -1,0 +1,163 @@
+<!-- Sources: README.md, docs/index.md, docs/integration.md, docs/output-and-constraints.md -->
+
+# @codenhub/vite-plugin-add-loader
+
+Vite plugin that injects a full-screen loading overlay into each transformed HTML entry. It removes the overlay after `window.load` or a timeout.
+
+> [!WARNING]
+> Experimental: the plugin API, injected HTML/CSS/JavaScript, and browser support may change before a stable release.
+
+## Installation
+
+```sh
+pnpm add -D @codenhub/vite-plugin-add-loader
+```
+
+## Usage
+
+```ts
+import { defineConfig } from "vite";
+import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
+
+export default defineConfig({
+  plugins: [addLoaderPlugin()],
+});
+```
+
+The defaults use `var(--color-background, #fafafa)` and `var(--color-primary, #0a0a0a)`. HTML without both `</head>` and an opening `<body>` is returned unchanged.
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Integration and API](docs/integration.md)
+- [Generated output and constraints](docs/output-and-constraints.md)
+
+## Requirements
+
+- Vite `^8.0.0`.
+- Browser HTML with JavaScript enabled for timed removal; a `noscript` rule hides the overlay otherwise.
+- Register anywhere in `plugins`; the plugin enforces post-order HTML transformation.
+
+## Notes
+
+- The transform runs during Vite development and production builds and injects inline CSS and JavaScript.
+- Review the CSP, reduced-motion, and `page-loader` ID constraints before adoption.
+
+## License
+
+Licensed under Apache-2.0.
+
+---
+
+# @codenhub/vite-plugin-add-loader
+
+`@codenhub/vite-plugin-add-loader` places a full-screen loading overlay in every
+HTML entry processed by Vite, then removes it after `window.load` or a timeout.
+It is useful when the initial document and its assets need a simple loading
+treatment. It does not track route changes or application data requests.
+
+> [!WARNING]
+> Experimental: the plugin API, injected HTML/CSS/JavaScript, and browser support may change before a stable release.
+
+Register it in your Vite configuration:
+
+```ts
+import { defineConfig } from "vite";
+import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
+
+export default defineConfig({
+  plugins: [addLoaderPlugin()],
+});
+```
+
+The transform injects inline styles and JavaScript. Before adopting it, check
+that your Content Security Policy permits the output and decide how your app
+will support reduced motion. The generated overlay uses the fixed
+`page-loader` ID.
+
+## Continue
+
+- [Configure and integrate the plugin](integration.md) for colors, timeout,
+  nonce handling, plugin order, and the public API.
+- [Understand the generated output and constraints](output-and-constraints.md)
+  for CSP, accessibility, markup requirements, and failure behavior.
+
+Vite `^8.0.0` is supported. HTML without both `</head>` and an opening `<body>`
+is left unchanged.
+
+---
+
+# Add-loader integration and API
+
+## Register the plugin
+
+```ts
+import { defineConfig } from "vite";
+import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
+
+export default defineConfig({
+  plugins: [
+    addLoaderPlugin({
+      backgroundColor: "var(--app-background, #fff)",
+      color: "var(--app-accent, #2563eb)",
+      timeout: 8_000,
+    }),
+  ],
+});
+```
+
+The plugin declares both `enforce: "post"` and a post-order `transformIndexHtml` hook. It can appear anywhere in `plugins`; its HTML mutation runs after normal-order HTML hooks. Another post-order plugin can still affect relative ordering, so inspect output when plugins target the same `<head>` or `<body>` boundary.
+
+The hook runs for HTML served by Vite during development and for every HTML entry transformed during a production build. It does not transform JavaScript modules.
+
+## Public exports
+
+### `addLoaderPlugin(options?)`
+
+Creates the Vite plugin. It injects the overlay into each eligible HTML entry and returns the input unchanged when it cannot find both a closing `</head>` and an opening `<body>` outside protected literal blocks.
+
+### `AddLoaderPluginOptions`
+
+| Property          | Type     | Default                            | Effect                                                |
+| ----------------- | -------- | ---------------------------------- | ----------------------------------------------------- |
+| `backgroundColor` | `string` | `var(--color-background, #fafafa)` | CSS background value for the overlay.                 |
+| `color`           | `string` | `var(--color-primary, #0a0a0a)`    | CSS color inherited by the spinner.                   |
+| `nonce`           | `string` | none                               | Adds a nonce attribute to injected script/style tags. |
+| `timeout`         | `number` | `5000`                             | Milliseconds before fallback overlay removal begins.  |
+
+Option values come from trusted build configuration and are interpolated into generated HTML, CSS, or JavaScript without escaping or runtime validation. Use a finite, non-negative timeout and do not pass request data or other untrusted values.
+
+---
+
+# Add-loader generated output and constraints
+
+## Generated output
+
+For eligible HTML, the plugin inserts:
+
+- A `<style>` immediately before `</head>`.
+- `<div id="page-loader" role="status" aria-label="Loading">` with an animated inline SVG immediately after the opening `<body>`.
+- A `noscript` style that hides the overlay.
+- An inline script that waits for `window.load`, or the configured timeout, adds `hidden`, and removes the overlay after its opacity transition or a 500 ms fallback.
+
+The overlay is fixed to the viewport with `z-index: 9999`. Existing HTML comments and `pre`, `script`, `style`, and `noscript` blocks are restored without searching them for insertion boundaries. Multi-page builds receive one overlay per transformed HTML entry. The generated browser code adds no package runtime dependency.
+
+## CSP and security
+
+Without `nonce`, the generated inline styles and script require a CSP that permits them. With `nonce`, the plugin adds the exact value to the outer generated styles and script, including the `noscript` style. The spinner SVG also contains an inner `<style>` without a nonce, so a strict style policy can still block its animation. Test the emitted document against the deployed policy; this option does not configure CSP headers.
+
+The nonce, CSS values, and timeout are trusted build inputs and are not escaped or validated. Never derive them from untrusted data. The fixed `page-loader` ID can collide with application markup or CSS.
+
+## Accessibility
+
+The overlay exposes a status named `Loading`, but it does not mark the underlying application as busy or manage focus. Confirm that the overlay does not hide critical content indefinitely and add application-level busy semantics when needed. Its SVG animation has no generated `prefers-reduced-motion` override; applications supporting reduced motion must override the spinner animation in their own CSS or choose another loading treatment.
+
+When JavaScript is disabled, the generated `noscript` style hides the loader so it cannot permanently cover the page.
+
+## Failure behavior
+
+- Missing `</head>` or opening `<body>`: returns the original HTML unchanged.
+- Missing `#page-loader` at runtime: the generated script exits without throwing.
+- Missing `window.load`: the timeout starts removal; `timeout: 0` schedules it immediately.
+- Missing transition completion: a 500 ms fallback removes the element.
+- Blocked inline code: CSP may leave an unstyled, non-animated, or persistent overlay depending on what is blocked.

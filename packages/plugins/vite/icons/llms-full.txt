@@ -1,0 +1,204 @@
+<!-- Sources: README.md, docs/index.md, docs/integration.md, docs/output-and-constraints.md -->
+
+# @codenhub/vite-plugin-icons
+
+Vite plugin that replaces `<i class="ic-<name>">` marker elements with inline SVG during Vite HTML and JS/TS/JSX/TSX transforms.
+
+> [!WARNING]
+> Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
+
+## Installation
+
+```sh
+pnpm add -D @codenhub/vite-plugin-icons
+```
+
+## Usage
+
+```ts
+import { defineConfig } from "vite";
+import { iconsPlugin } from "@codenhub/vite-plugin-icons";
+
+export default defineConfig({
+  plugins: [iconsPlugin()],
+});
+```
+
+```html
+<i class="ic-success size-4" aria-hidden="true"></i>
+```
+
+The plugin replaces the marker during Vite development and builds, preserves non-icon classes and other attributes, and removes the resolved `ic-` class:
+
+```html
+<svg class="size-4" aria-hidden="true" viewBox="0 0 24 24" ...>...</svg>
+```
+
+Custom SVG can extend or override the built-in registry, but it must be trusted:
+
+```ts
+iconsPlugin({
+  icons: {
+    brand: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16" /></svg>`,
+  },
+});
+```
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Integration and API](docs/integration.md)
+- [Generated SVG and constraints](docs/output-and-constraints.md)
+
+## Requirements
+
+- Vite `^8.0.16` and an ESM-capable Node.js environment.
+- Static `class` or `className` string attributes; expression-bound JSX classes are not matched.
+- Register anywhere in `plugins`; the plugin enforces pre-order transforms.
+
+## License
+
+Licensed under Apache-2.0.
+
+The built-in SVGs are derived from [Lucide](https://lucide.dev) under the ISC License. Redistributions must preserve the [NOTICE](NOTICE), which contains the Lucide copyright and license text.
+
+---
+
+# @codenhub/vite-plugin-icons
+
+`@codenhub/vite-plugin-icons` replaces static icon markers with inline SVG while
+Vite transforms HTML, JavaScript, TypeScript, JSX, and TSX. It is useful when
+templates should stay compact while icons are resolved at development and build
+time. The package includes a Lucide-derived registry and accepts trusted custom
+SVG.
+
+> [!WARNING]
+> Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
+
+Register `iconsPlugin()` in Vite, then use an empty marker with a static class:
+
+```html
+<i class="ic-success size-4" aria-hidden="true"></i>
+```
+
+The known `ic-success` marker becomes an `<svg>`. Other classes and attributes
+move to its root, while unknown icons remain unchanged. Dynamic JSX class
+expressions are not matched.
+
+Custom SVG is inserted without sanitization, so configure only controlled
+markup. The plugin also leaves accessible naming to the application: hide
+decorative icons and name meaningful icons or their controls.
+
+## Continue
+
+- [Set up markers and icon definitions](integration.md) for Vite registration,
+  supported syntax, custom registries, plugin order, and the public API.
+- [Understand generated SVG and constraints](output-and-constraints.md) for
+  attribute merging, security, accessibility, failures, and Lucide attribution.
+
+Vite `^8.0.16` and an ESM-capable Node.js environment are supported.
+
+---
+
+# Icons integration and API
+
+## Register the plugin
+
+```ts
+import { defineConfig } from "vite";
+import { iconsPlugin } from "@codenhub/vite-plugin-icons";
+
+export default defineConfig({
+  plugins: [iconsPlugin()],
+});
+```
+
+The plugin declares `enforce: "pre"` for module transforms and a pre-order `transformIndexHtml` hook so markers are replaced before normal framework and HTML transforms. It can appear anywhere in `plugins`; inspect ordering if another pre plugin generates or consumes the same markers.
+
+Use an empty marker with a static quoted class:
+
+```tsx
+const SaveLabel = () => (
+  <span>
+    <i className="ic-save size-4" aria-hidden="true" /> Save
+  </span>
+);
+```
+
+HTML accepts `class`; JS, TS, JSX, and TSX accept static `class` or `className`. Expression-bound classes such as `className={iconClass}` and template expressions are not matched. HTML comments, `pre`, and `noscript` blocks are protected, while marker text inside HTML `script` and `style` blocks can be transformed.
+
+## Public exports
+
+### `iconsPlugin(options?)`
+
+Creates the Vite plugin. During development and production builds it transforms HTML entries plus `.js`, `.ts`, `.jsx`, and `.tsx` module IDs, including IDs with query strings. Unknown icons remain unchanged.
+
+### `IconsPluginOptions`
+
+| Property      | Type                             | Default | Effect                                                       |
+| ------------- | -------------------------------- | ------- | ------------------------------------------------------------ |
+| `shouldClear` | `boolean`                        | `false` | Excludes all built-in icons when `true`.                     |
+| `icons`       | `Record<string, IconDefinition>` | `{}`    | Adds custom names and aliases; custom entries win conflicts. |
+
+Primary names and `alternativeNames` share one lookup registry. A later custom entry or alias can replace an earlier built-in or custom mapping.
+
+### `IconDefinition`
+
+`string | IconOptions`. A string is raw inline SVG markup. The plugin does not parse, validate, or sanitize it.
+
+### `IconOptions`
+
+| Property           | Type                | Required | Effect                                            |
+| ------------------ | ------------------- | -------- | ------------------------------------------------- |
+| `markup`           | `string`            | yes      | Raw SVG markup inserted in place of a marker.     |
+| `alternativeNames` | `readonly string[]` | no       | Additional marker names resolving to this markup. |
+
+Custom markup is trusted build input. Keep it as a complete `<svg>...</svg>` string from a controlled source.
+
+---
+
+# Icons generated SVG and constraints
+
+## Generated output
+
+For a known icon, this marker:
+
+```html
+<i id="status-icon" class="ic-success size-4 text-green" aria-hidden="true"></i>
+```
+
+becomes a Lucide-derived `<svg>` whose root receives `id`, `aria-hidden`, and the non-icon classes. The resolved `ic-success` class and the `<i>` closing tag are removed. If custom SVG already has a root `class` or `className`, marker classes are appended to it; otherwise the marker's attribute spelling is used. Other marker attributes pass through to the SVG root.
+
+In JavaScript string literals, generated quote and template characters are escaped for the detected enclosing quote. Module transforms return no source map. Built-in SVG names and exact markup are experimental rather than a stable asset manifest.
+
+## Development and builds
+
+The same pre transforms run in Vite development and production builds. HTML entries are always scanned. Module files are scanned only for `.js`, `.ts`, `.jsx`, or `.tsx` IDs that contain `ic-`; unsupported extensions return no transform result. JavaScript comments are ignored by module matching, and unchanged modules return no transform result.
+
+## Security and CSP
+
+Custom `markup` is inserted verbatim and is not sanitized. Treat it as executable document input: event attributes, links, styles, foreign content, or other active markup can survive into application output and may interact with CSP. Use only controlled SVG sources and sanitize before configuration when provenance is not trusted. CSP is defense in depth, not a substitute for sanitization.
+
+Built-in SVGs contain presentation attributes but no generated scripts. The plugin does not add CSP nonces or configure response headers.
+
+## Accessibility
+
+The plugin does not decide whether an icon is decorative or meaningful and built-in SVGs do not add a name automatically.
+
+- Decorative icon: put `aria-hidden="true"` on the marker; it passes to the SVG.
+- Meaningful icon: provide an accessible name and suitable semantics, for example `role="img" aria-label="Success"`, or supply trusted custom SVG containing a correctly associated `<title>`.
+- Icon-only control: label the control itself; do not rely on the icon shape as its name.
+
+Verify custom root attributes after class merging and preserve visible focus indicators when icons appear in controls.
+
+## Failure behavior
+
+- Unknown name, malformed marker, or dynamic class expression: leaves the marker unchanged when it does not match supported syntax. Use empty markers; a non-empty body may remain after the opening marker is replaced.
+- Multiple `ic-` classes: uses the first class whose name resolves; unresolved `ic-` classes remain as ordinary classes.
+- No `ic-` text, unsupported module extension, or no changed module marker: returns no module transform result.
+- HTML comments, `pre`, and `noscript`: remain unchanged. HTML `script` and `style` content is not protected or string-escaped by the HTML hook, so inspect output when marker text appears there.
+- Invalid custom SVG: no custom validation error is raised; malformed output can be emitted.
+
+## Attribution
+
+The built-in SVG assets are derived from [Lucide](https://lucide.dev) and licensed under the ISC License. Preserve the package [NOTICE](../NOTICE) in redistributed copies; it contains the Lucide Contributors copyright and required permission and warranty text. The plugin package itself is Apache-2.0 licensed.

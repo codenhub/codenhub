@@ -1,6 +1,9 @@
 # @codenhub/vite-plugin-add-loader
 
-Vite plugin that injects a full-screen page-loader overlay into every HTML entry point. The loader fades out and removes itself after the window `load` event fires, so users see a spinner instead of a blank page during initial asset load.
+Vite plugin that injects a full-screen loading overlay into each transformed HTML entry. It removes the overlay after `window.load` or a timeout.
+
+> [!WARNING]
+> Experimental: the plugin API, injected HTML/CSS/JavaScript, and browser support may change before a stable release.
 
 ## Installation
 
@@ -10,10 +13,7 @@ pnpm add -D @codenhub/vite-plugin-add-loader
 
 ## Usage
 
-Register the plugin in your Vite configuration. The plugin operates at build time and adds no runtime dependencies to consumer bundles.
-
 ```ts
-// vite.config.ts
 import { defineConfig } from "vite";
 import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
 
@@ -22,59 +22,25 @@ export default defineConfig({
 });
 ```
 
-The loader element uses `id="page-loader"` and reads CSS custom properties for theming, falling back to neutral values when unset:
+The defaults use `var(--color-background, #fafafa)` and `var(--color-primary, #0a0a0a)`. HTML without both `</head>` and an opening `<body>` is returned unchanged.
 
-| Property             | Fallback  | Description                       |
-| -------------------- | --------- | --------------------------------- |
-| `--color-background` | `#fafafa` | Loader overlay background color.  |
-| `--color-border`     | `#d4d4d4` | Spinner border track color.       |
-| `--color-primary`    | `#0a0a0a` | Spinner rotating indicator color. |
+## Documentation
 
-## Reference
-
-### `@codenhub/vite-plugin-add-loader`
-
-Primary entrypoint for the plugin.
-
-```ts
-import { addLoaderPlugin } from "@codenhub/vite-plugin-add-loader";
-```
-
-#### `addLoaderPlugin()`
-
-Creates a Vite plugin instance that injects a loader overlay into the final HTML output.
-
-```ts
-function addLoaderPlugin(options?: AddLoaderPluginOptions): Plugin;
-```
-
-##### `AddLoaderPluginOptions`
-
-```ts
-interface AddLoaderPluginOptions {
-  /** Background color for the page-loader overlay. Defaults to `var(--color-background, #fafafa)`. */
-  backgroundColor?: string;
-  /** Spinner color. Defaults to `currentColor` (falling back to `var(--color-primary, #0a0a0a)`). */
-  color?: string;
-  /** Content Security Policy nonce to inject into style and script tags. */
-  nonce?: string;
-  /** Maximum load duration in milliseconds before forcing the loader to fade out. Defaults to `5000` (5 seconds). */
-  timeout?: number;
-}
-```
+- [Documentation overview](docs/index.md)
+- [Integration and API](docs/integration.md)
+- [Generated output and constraints](docs/output-and-constraints.md)
 
 ## Requirements
 
-- **Plugin Order:** Can be registered anywhere in the Vite `plugins` array. The plugin automatically runs with `enforce: "post"` so its HTML transforms execute on the final HTML output.
-- **Failure Behavior:** If the input HTML does not contain both `</head>` and `<body>` tags, the plugin returns the HTML unmodified.
-- Vite `^8.0.0` is required as a peer dependency.
-- TypeScript consumers should use `moduleResolution: "bundler"` or a resolver that supports package `exports`.
+- Vite `^8.0.0`.
+- Browser HTML with JavaScript enabled for timed removal; a `noscript` rule hides the overlay otherwise.
+- Register anywhere in `plugins`; the plugin enforces post-order HTML transformation.
 
 ## Notes
 
-- The plugin operates at build time only and adds no runtime dependencies to consumer bundles.
-- It injects into every HTML entry point processed by Vite. Projects with multiple HTML entry points will receive the loader in each.
+- The transform runs during Vite development and production builds and injects inline CSS and JavaScript.
+- Review the CSP, reduced-motion, and `page-loader` ID constraints before adoption.
 
 ## License
 
-This project is licensed under the [Apache-2.0](LICENSE) license.
+Licensed under Apache-2.0.

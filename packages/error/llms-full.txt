@@ -1,0 +1,270 @@
+<!-- Source: README.md -->
+
+# @codenhub/error
+
+Typed error normalization, result helpers, and opt-in registry presets for
+TypeScript applications.
+
+> **Experimental:** Error classification rules, preset contents, and the public
+> API may change before a stable release.
+
+## Installation
+
+```sh
+pnpm add @codenhub/error
+```
+
+## Usage
+
+The default global registry starts empty. Register application mappings during
+initialization, then normalize unknown values into `AppError` instances.
+
+```ts
+import { createAppError, getErrorRegistry } from "@codenhub/error";
+
+getErrorRegistry().codes.add("invalid_credentials", {
+  message: "Invalid email or password.",
+  source: "auth",
+});
+
+const error = createAppError({ code: "invalid_credentials" });
+console.log(error.type, error.message);
+```
+
+Unmatched values become `type: "unknown"` and use
+`"An unexpected error occurred."` unless `fallbackMessage` is provided.
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Error normalization and registries](docs/error-normalization.md)
+- [Result helpers](docs/results.md)
+
+## Requirements
+
+- ESM-aware package resolution.
+- Browser, Node.js, SSR, worker, and edge runtimes are supported.
+- No runtime dependencies.
+
+## Notes
+
+- Registry presets are opt-in and do not mutate the global registry on import.
+- Configure the mutable global registry during application initialization.
+
+## License
+
+Licensed under Apache-2.0.
+
+---
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/error
+
+`@codenhub/error` normalizes unknown failures into a typed `AppError`, provides
+result-style control flow, and supplies opt-in browser and Supabase mappings.
+It is useful at application boundaries where thrown or rejected values need a
+consistent shape before they reach logging, UI, or recovery logic.
+
+> **Experimental:** Error classification rules, preset contents, and the public
+> API may change before a stable release.
+
+## Start by defining known errors
+
+The global registry starts empty. Configure it during application
+initialization, then normalize unknown values wherever they enter the
+application:
+
+```ts
+import { createAppError, getErrorRegistry } from "@codenhub/error";
+
+getErrorRegistry().codes.add("invalid_credentials", {
+  message: "Invalid email or password.",
+  source: "auth",
+});
+
+const error = createAppError({ code: "invalid_credentials" });
+```
+
+Applications decide which errors are known by registering mappings or merging
+presets. Browser and Supabase presets are opt-in, and importing one does not
+mutate the global registry.
+
+## Choose where to go next
+
+- [Error normalization and registries](error-normalization.md) explains
+  classification, registry configuration, presets, matching priority,
+  defaults, and failure behavior.
+- [Result helpers](results.md) covers `Result` construction, transformation,
+  matching, and unwrapping for code that prefers explicit success and failure
+  values.
+
+The core API has no runtime dependencies and supports browsers, Node.js, SSR,
+workers, and edge runtimes. Browser preset imports do not access DOM globals;
+Supabase preset imports do not contact services or require Supabase packages.
+
+---
+
+<!-- Source: docs/error-normalization.md -->
+
+# Error Normalization And Registries
+
+## Normalize Unknown Values
+
+`createAppError(error, options?)` returns an `AppError`. It traverses the input
+and wrapper fields `cause`, `originalError`, `error`, `err`, `inner`, and
+`innerError` to find classifications.
+
+```ts
+import { createAppError } from "@codenhub/error";
+
+const error = createAppError(new Error("Request failed"), {
+  fallbackMessage: "Please try again.",
+  maxDepth: 2,
+});
+```
+
+`AppErrorOptions` supports:
+
+| Option            | Default                     | Behavior                         |
+| ----------------- | --------------------------- | -------------------------------- |
+| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.  |
+| `registry`        | `getErrorRegistry()`        | Classification source.           |
+| `maxDepth`        | `3`                         | Maximum wrapper traversal depth. |
+
+`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
+`isAppError(value)` identifies branded errors created by this package. Passing
+an `AppError` to `createAppError` returns the same object when no custom options
+are supplied; custom options cause it to be normalized again.
+
+An `AppError` implements `Error` and exposes:
+
+- `type: AppErrorType`, where deterministic matches are `"known"`, pattern
+  matches are `"unexpected"`, and unmatched values are `"unknown"`.
+- `message`, plus nullable `messageKey` and `source: AppErrorSource` metadata.
+- `originalError`, preserving the original top-level input.
+- `isRetryable`, which defaults to `false` unless matched feedback sets it.
+
+Normalization does not throw for ordinary unknown input. Accessors on hostile
+objects are ignored when they throw. Registry configuration errors and invalid
+`maxDepth` values are not normalized or validated specially.
+
+## Configure A Registry
+
+`getErrorRegistry()` returns the active mutable global `ErrorRegistry`.
+`setErrorRegistry(registry)` replaces it and throws `TypeError` when passed
+`null` or a non-object. `createErrorRegistry(presets?)` creates an isolated,
+empty registry and merges optional presets in order.
+
+```ts
+import { createAppError, createErrorRegistry } from "@codenhub/error";
+
+const registry = createErrorRegistry();
+registry.codes.add("E_RATE_LIMIT", {
+  message: "Try again later.",
+  messageKey: "errors.rateLimit",
+  source: "api",
+  isRetryable: true,
+});
+
+const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
+```
+
+`ErrorFeedback` requires a non-empty `message` and optionally accepts
+`messageKey`, `source`, and `isRetryable`.
+
+An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
+`prefixes` and regex `patterns`. It also provides `clear()` and `merge()`.
+Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
+`values`. Prefix and pattern buckets omit `get`; their `values()` methods return
+`ErrorPrefixDefinition` and `ErrorPatternDefinition` values. All returned
+feedback is defensively copied.
+
+Identifiers are trimmed and trailing `.`, `!`, and `?` are removed. Empty
+identifiers, invalid feedback fields, and non-`RegExp` patterns throw
+`TypeError`. Duplicate exact identifiers, prefixes, or equivalent regexes are
+replaced. Global and sticky flags are removed from registered regexes.
+
+Classification priority is:
+
+1. Existing known `AppError` or code, name, exact-message, or prefix match.
+2. Existing unexpected `AppError` or regex pattern match.
+3. Any remaining `AppError`.
+4. An unknown error using the fallback message.
+
+The longest matching normalized prefix wins. Pattern insertion order determines
+the first heuristic match. `AppErrorType`, `AppErrorSource`,
+`ErrorRegistryBucket`, `ErrorPrefixRegistryBucket`,
+`ErrorPatternRegistryBucket`, `ErrorPrefixDefinition`, and
+`ErrorPatternDefinition` are exported for consumers typing registry workflows.
+
+## Read-Only Presets
+
+`freezeRegistry(registry)` returns a `ReadonlyErrorRegistry`. Its read methods
+remain available, but runtime attempts to mutate a proxied bucket throw
+`TypeError`. Use frozen registries as presets passed to `createErrorRegistry`
+or `merge`.
+
+```ts
+import { getErrorRegistry } from "@codenhub/error";
+import { browserErrorRegistry } from "@codenhub/error/registries/browser";
+
+getErrorRegistry().merge(browserErrorRegistry);
+```
+
+Public preset exports are:
+
+| Entrypoint                            | Exports                                                                                                                                  |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/error/registries`          | `browserErrorRegistry`, `browserErrorNames`, `browserErrorPatterns`, `supabaseErrorRegistry`, `supabaseErrorCodes`, `supabaseErrorNames` |
+| `@codenhub/error/registries/browser`  | `browserErrorRegistry`, `browserErrorNames`, `browserErrorPatterns`                                                                      |
+| `@codenhub/error/registries/supabase` | `supabaseErrorRegistry`, `supabaseErrorCodes`, `supabaseErrorNames`                                                                      |
+
+The raw name/code records and browser pattern tuples are mutable exports; the
+prebuilt registry values are read-only. Browser mappings cover common
+`DOMException` names and network-message patterns. Supabase mappings cover
+selected Auth and PostgreSQL codes plus Edge Function error names. Preset
+coverage is not exhaustive, and message patterns are heuristic.
+
+---
+
+<!-- Source: docs/results.md -->
+
+# Result Helpers
+
+`Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`;
+`Err` contains `{ ok: false, error: AppError }`.
+
+```ts
+import { err, ok, type Result } from "@codenhub/error";
+
+const loadName = (value: string | null): Result<string> => (value === null ? err("Name is missing") : ok(value));
+```
+
+`ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
+options?)` delegates to `createAppError`; when `error` is a string, that string
+becomes the fallback message unless `options.fallbackMessage` overrides it.
+
+The remaining helpers operate only on the success branch unless stated:
+
+| Helper                       | Behavior                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `map(result, mapper)`        | Maps an `Ok` value and returns an existing `Err` unchanged. Mapper exceptions propagate.                                             |
+| `andThen(result, mapper)`    | Runs a mapper returning another `Result`, avoiding nested results. Existing `Err` values are unchanged; mapper exceptions propagate. |
+| `match(result, callbacks)`   | Calls exactly one of `onOk(value)` or `onErr(error)` and returns its value. Callback exceptions propagate.                           |
+| `unwrap(result)`             | Returns an `Ok` value or throws the `AppError` held by `Err`.                                                                        |
+| `unwrapOr(result, fallback)` | Returns an `Ok` value or the supplied fallback without throwing.                                                                     |
+
+```ts
+import { andThen, map, match, ok } from "@codenhub/error";
+
+const result = andThen(ok("42"), (text) => ok(Number(text)));
+const doubled = map(result, (value) => value * 2);
+const output = match(doubled, {
+  onOk: String,
+  onErr: (error) => error.message,
+});
+```
+
+These helpers do not catch callback errors. Use `err()` explicitly when thrown
+values should be converted into normalized failures.

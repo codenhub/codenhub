@@ -1,0 +1,15 @@
+# @codenhub/toast
+
+> Experimental instance-based browser toasts and native dialogs with required
+> CSS, isolated DOM/queues/tokens, and explicit lifecycle handles.
+
+Import `@codenhub/toast/styles`, dispatch only in a browser, treat custom nodes
+as trusted content, and call `destroy()` to release all owned resources.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Purpose, status, and starting points.
+- [API, CSS, and lifecycle reference](docs/reference.md): Complete entrypoints,
+  exports, dispatchers, handles, SSR, failures, and cleanup.
+- [Accessibility and custom content](docs/accessibility-and-content.md): Roles,
+  native dialogs, focus, reduced motion, sanitizer behavior, and trust boundary.

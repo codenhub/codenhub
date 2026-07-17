@@ -1,0 +1,13 @@
+# @codenhub/i18n
+
+> Experimental browser translation management with locale loading, persistence,
+> events, and optional DOM synchronization.
+
+Await `init()` before translation, avoid global instances in concurrent SSR,
+and call `disconnect()` when DOM observation is no longer owned.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Purpose, status, and starting points.
+- [API and browser behavior](docs/reference.md): Complete exports, DOM, SSR,
+  persistence, failures, events, and cleanup.

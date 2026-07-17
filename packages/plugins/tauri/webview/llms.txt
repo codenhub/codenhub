@@ -1,0 +1,17 @@
+# @codenhub/tauri-plugin-webview
+
+> Experimental Tauri v2 frontend package for creating and controlling
+> `WebviewWindow` instances. Navigation and reload require the shipped companion
+> Rust commands; all operations require appropriate Tauri capabilities.
+
+Use this package only from bundled frontend code in a Tauri WebView. Treat URLs
+as security-sensitive and verify behavior on every target platform.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, status, artifacts, and routes
+  to complete documentation.
+- [API and runtime reference](docs/reference.md): All exports, lifecycle,
+  platform constraints, and failures.
+- [Tauri setup and security](docs/setup.md): Rust registration, permissions,
+  IPC, and trust boundaries.

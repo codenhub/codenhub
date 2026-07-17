@@ -1,0 +1,18 @@
+# @codenhub/validation
+
+> Zero-dependency validation and primitive coercion helpers that return typed
+> results instead of throwing for ordinary invalid input. The package is
+> experimental.
+
+Use `val` for type-specific constraints, `coerce` for primitive conversion, and
+`custom` to normalize consumer-defined validators. Original input is excluded
+from failures unless explicitly requested.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Scope, stability, entrypoint, and
+  navigation.
+- [Results and coercion](docs/results-and-coercion.md): Error model, result
+  helpers, custom validators, and coercion constraints.
+- [Validator reference](docs/validators.md): All validator methods, defaults,
+  and failure codes.

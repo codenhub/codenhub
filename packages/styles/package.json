@@ -90,5 +90,10 @@
     "tailwindcss": {
       "optional": true
     }
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

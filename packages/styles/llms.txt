@@ -2,12 +2,15 @@
 
 > CSS-only Codenhub design tokens, reset, typography, layout and content utilities, component classes, native-element styling, and Tailwind CSS v4 source entrypoints.
 
-Use compiled entrypoints for ready-to-import CSS or `/tw` entrypoints in a Tailwind CSS v4 build. The package has no JavaScript behavior. `--layout-gap` is the only shared layout gap token; removed stack and cluster gap tokens have no compatibility aliases.
+This package is experimental: public tokens, class names, and import-path
+composition may change. Use compiled entrypoints for ready-to-import CSS or
+`/tw` entrypoints in a Tailwind CSS v4 build. The package has no JavaScript
+behavior.
 
 ## Documentation
 
-- [README](./README.md): Installation, entrypoints, first use, requirements, and migration notes.
-- [Overview](./docs/index.md): Package model, supported entrypoints, and class composition.
+- [Documentation](./docs/index.md): Primary entrypoint for the complete public documentation.
+- [README](./README.md): Installation, first use, requirements, and stability notes.
 - [Tokens](./docs/tokens.md): Public CSS custom-property contract.
 - [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
 - [Accessibility](./docs/accessibility.md): CSS accessibility behavior and consumer responsibilities.

@@ -10,7 +10,11 @@
     "directory": "packages/plugins/tauri/webview"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs/*.md",
+    "llms.txt",
+    "llms-full.txt",
+    "rust/webview_commands.rs"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -42,5 +46,10 @@
   },
   "peerDependencies": {
     "@tauri-apps/api": "^2.0.0"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

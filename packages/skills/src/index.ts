@@ -9,9 +9,9 @@ export interface Skill {
   id: string;
   /** Display name from `SKILL.md` frontmatter; falls back to `id`. */
   name: string;
-  /** Short description from `SKILL.md` frontmatter. */
+  /** Short description from `SKILL.md` frontmatter; empty when omitted. */
   description: string;
-  /** Absolute path to the skill directory. */
+  /** Skill directory path formed from the `srcDir` passed to {@link getSkills}. */
   path: string;
 }
 
@@ -19,9 +19,9 @@ export interface Skill {
  * Options for {@link copyRecursiveSync}.
  */
 export interface CopyRecursiveOptions {
-  /** Absolute path to the source file or directory. */
+  /** Path to the source file or directory. */
   src: string;
-  /** Absolute path to the copy destination. */
+  /** Path to the copy destination. */
   dest: string;
   /**
    * Base names of files or directories to exclude at every depth of
@@ -33,7 +33,7 @@ export interface CopyRecursiveOptions {
 }
 
 /**
- * Parses YAML frontmatter from a markdown string.
+ * Parses flat, string-valued frontmatter from a Markdown string.
  *
  * Recognises blocks bounded by `---` at the start of the content.
  * Strips a leading BOM if present. Removes surrounding single or
@@ -41,7 +41,7 @@ export interface CopyRecursiveOptions {
  *
  * @param content - Raw markdown file content.
  * @returns Key-value map of frontmatter fields. Returns an empty
- *   object when no frontmatter block is found or if parsing fails.
+ *   object when no frontmatter block is found.
  */
 export function parseFrontmatter(content: string): Record<string, string> {
   const normalized = content.replace(/^\uFEFF/, "");
@@ -79,8 +79,7 @@ export function parseFrontmatter(content: string): Record<string, string> {
  * file. Name and description are read from the file's YAML
  * frontmatter.
  *
- * @param srcDir - Absolute path to the directory containing skill
- *   subdirectories.
+ * @param srcDir - Path to the directory containing skill subdirectories.
  * @returns Array of {@link Skill} objects. Returns an empty array when
  *   `srcDir` does not exist.
  * @throws {Error} If filesystem operations fail (e.g., permission issues).
@@ -125,8 +124,9 @@ export function getSkills(srcDir: string): Skill[] {
  * depth, regardless of where it appears in the tree.
  *
  * @param options - Copy configuration options.
- * @throws {Error} When source does not exist, target is a subdirectory of source,
- *   or directory traversal is detected.
+ * @throws {Error} When the source does not exist, the destination resolves inside
+ *   the source, a source symlink resolves outside the source tree, or another
+ *   filesystem operation fails.
  */
 export function copyRecursiveSync(options: CopyRecursiveOptions): void {
   const { src, dest, ignoreList = [] } = options;

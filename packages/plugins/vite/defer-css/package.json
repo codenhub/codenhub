@@ -10,7 +10,11 @@
     "directory": "packages/plugins/vite/defer-css"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "!docs/internal",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -43,5 +47,10 @@
   },
   "peerDependencies": {
     "vite": "^8.0.0"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

@@ -2,8 +2,12 @@ import { defineComponent } from "../core/component/factory.js";
 import { html } from "../core/html.js";
 
 /**
- * A ready-to-use Button custom element.
- * Inherits global styles from `@codenhub/styles`.
+ * Native `<ch-button>` component definition for registration or programmatic
+ * creation.
+ *
+ * The Light DOM button accepts `label`, `variant`, and `disabled` properties.
+ * Import `@codenhub/styles` to provide the default `.btn` and variant styling.
+ * This definition is not registered automatically.
  */
 export const ChButton = defineComponent("ch-button", {
   properties: {

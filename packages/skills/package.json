@@ -16,6 +16,9 @@
   "files": [
     "dist",
     "skills",
+    "docs/*.md",
+    "llms.txt",
+    "llms-full.txt",
     "NOTICE"
   ],
   "type": "module",
@@ -50,5 +53,10 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }

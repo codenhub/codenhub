@@ -1,0 +1,13 @@
+# @codenhub/router
+
+> Experimental browser router for app-owned rendering, path matching, history,
+> annotated-link interception, and subscriptions.
+
+Treat route values as untrusted input, preserve native links with `href()`, and
+call `destroy()` to release browser listeners and subscribers.
+
+## Documentation
+
+- [Documentation overview](docs/index.md): Purpose, status, and starting points.
+- [API, paths, and browser lifecycle](docs/reference.md): Complete exports,
+  matching, history, SSR, errors, safety, accessibility, and cleanup.

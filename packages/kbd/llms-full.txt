@@ -1,0 +1,170 @@
+<!-- Source: README.md -->
+
+# @codenhub/kbd
+
+Page-wide and target-scoped keyboard shortcut registration for browser apps.
+
+> [!WARNING]
+> This package is experimental. Its API, matching behavior, and support level
+> may change before a stable release.
+
+## Installation
+
+```sh
+pnpm add @codenhub/kbd
+```
+
+## Usage
+
+```ts
+import { KEYS, keyboard } from "@codenhub/kbd";
+
+const registration = keyboard.register(
+  KEYS.escape,
+  (event) => {
+    event.preventDefault();
+    closeDialog();
+  },
+  { ignoreInput: false },
+);
+
+// Remove the DOM listener when this owner is torn down.
+registration.unregister();
+```
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [API, matching, and lifecycle](docs/reference.md)
+
+## Requirements
+
+- Registration uses DOM `EventTarget`, `KeyboardEvent`, and `document` by
+  default. Pass a target to scope a binding.
+- During SSR, registration without a target returns an inactive no-op handle.
+- Call `unregister()` for individual bindings or `clear()` for an instance.
+
+## Notes
+
+Shortcut accessibility remains the consumer's responsibility: preserve native
+keyboard behavior, provide discoverable alternatives, and avoid capturing text
+input unless intentional.
+
+## License
+
+Licensed under Apache-2.0.
+
+<!-- Source: docs/index.md -->
+
+# @codenhub/kbd
+
+`@codenhub/kbd` registers exact keyboard bindings against the document or an
+explicit event target while sharing one DOM listener per target and event type.
+
+Use it for application shortcuts that need explicit modifier matching, scoped
+targets, and lifecycle control without tying shortcut handling to a framework.
+
+> [!WARNING]
+> This package is experimental. Its API, matching behavior, and support level
+> may change before a stable release.
+
+## Quick Start
+
+```ts
+import { KEYS, keyboard } from "@codenhub/kbd";
+
+const registration = keyboard.register(KEYS.escape, () => closeDialog(), {
+  ignoreInput: false,
+});
+
+registration.unregister();
+```
+
+The shared `keyboard` suits page-level shortcuts. Construct `Keyboard` when a
+feature needs isolated enable, disable, and cleanup ownership. Always unregister
+bindings when their owner is removed; registration without an explicit target
+is an inactive no-op during SSR.
+
+Shortcuts should preserve native keyboard behavior and have discoverable
+click or touch alternatives.
+
+## Continue
+
+- [API, matching, and lifecycle](reference.md): Complete exports, options, errors,
+  exact matching, SSR, input handling, listener ownership, cleanup, and
+  accessibility responsibilities.
+
+<!-- Source: docs/reference.md -->
+
+# @codenhub/kbd API, Matching, and Lifecycle
+
+## Register Bindings
+
+`keyboard` is a shared page-level `Keyboard` instance. `new Keyboard(options?)`
+creates isolated state. `KeyboardOptions.onError` receives handler failures and
+registration diagnostics; `isMac` overrides `cmdOrCtrl` platform resolution.
+
+`register(binding, handler, options?)` returns `KeyboardRegistration`:
+
+- `active` reports whether the target resolved and registration succeeded.
+- `disable()` and `enable()` pause only that binding.
+- `unregister()` permanently removes it and removes the scope's DOM listener
+  when it was the last binding.
+
+`Keyboard.disable()` and `enable()` pause or resume the whole instance.
+`Keyboard.clear()` removes every binding and listener while preserving the
+instance enabled state. `setErrorHandler(handler)` replaces the error reporter.
+
+## Bindings and Matching
+
+`KeyboardBinding` is a `KeyboardKey` or `KeyboardShortcut`. A shortcut has a
+`key` and `ModifierKey[]`; modifiers are `ctrl`, `alt`, `shift`, `meta`, and
+`cmdOrCtrl`. Matching is exact: unlisted modifiers prevent a match. Shifted
+symbols are handled as their emitted character. Single-character keys are
+case-insensitive; named keys use browser-standard values.
+
+`KEYS` maps supported control, navigation, media, letter, digit, function, and
+symbol names to browser key values. `KeyboardKey` is the union of those values.
+Runtime JavaScript can register an unknown string, but `onError` receives a
+warning and browser matching is not guaranteed.
+
+## Subscription Options
+
+`KeyboardSubscriptionOptions` contains:
+
+- `target`: listener target, default `document`.
+- `event`: `KeyboardEventName`, either `keydown` (default) or `keyup`.
+- `ignoreInput`: ignores input, textarea, select, and contenteditable sources by
+  default unless Ctrl, Alt, or Meta is held. Shadow DOM sources use
+  `composedPath()` when available.
+- `stopPropagation`: after a matching handler, calls
+  `stopImmediatePropagation()` and stops this scope's iteration, even if the
+  handler throws.
+
+`KeyboardHandler` receives the original `KeyboardEvent`; consumers call
+`preventDefault()` themselves when needed.
+
+## Errors, SSR, and Cleanup
+
+Invalid binding/handler values and a missing default target return an inactive
+no-op registration and report through `onError` when configured. Handler errors
+are caught and reported rather than rethrown. During SSR, registration without
+an explicit target follows the same inactive path.
+
+Always call `unregister()` when a binding owner is removed, or `clear()` when an
+instance owner is removed. The shared singleton otherwise retains page-level
+listeners and registrations.
+
+## Accessibility
+
+The package only dispatches shortcuts. Consumers must preserve browser and
+assistive-technology conventions, avoid overriding expected keys, expose a
+click/touch alternative, describe shortcuts where useful, and intentionally
+choose whether shortcuts run while users edit text.
+
+## Public Exports
+
+The root exports `KEYS`, `Keyboard`, and `keyboard`, plus `KeyboardKey`,
+`KeyboardBinding`, `KeyboardEventName`, `KeyboardHandler`, `KeyboardOptions`,
+`KeyboardRegistration`, `KeyboardShortcut`, `KeyboardSubscriptionOptions`, and
+`ModifierKey` types.

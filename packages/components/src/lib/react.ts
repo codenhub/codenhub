@@ -5,6 +5,13 @@ import { ChButton as ChButtonDefinition } from "./button.js";
 
 /**
  * Creates a React component wrapper around a custom element definition.
+ *
+ * Declared properties are assigned to the element, declared events map to
+ * case-insensitive `on<Event>` props, and the forwarded ref exposes the host
+ * `HTMLElement`. The custom element must be registered separately.
+ *
+ * @param definition - Native component definition to wrap.
+ * @returns A React component that renders the definition's custom element.
  */
 export function createReactWrapper<Props extends ComponentProperties, Methods, Events extends ComponentEvents>(
   definition: ComponentDefinition<Props, Methods, Events>,
@@ -112,6 +119,7 @@ export function createReactWrapper<Props extends ComponentProperties, Methods, E
 /**
  * A React component wrapper for the native `<ch-button>` custom element.
  * Supports reactive properties, events, and ref forwarding.
+ * Register the native definition from `@codenhub/components/lib` before use.
  *
  * @example
  * ```tsx

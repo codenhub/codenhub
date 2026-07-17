@@ -11,7 +11,10 @@
     "directory": "packages/theme"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -48,5 +51,10 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "codenhub": {
+    "docs": {
+      "status": "experimental"
+    }
   }
 }
