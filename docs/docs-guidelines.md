@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -32,8 +32,9 @@ scope: Area governed by this document.
 ```
 
 Templates that would copy repository governance metadata into consumer-facing
-output are exempt. For example, `docs/specs/packages-readme-template.md` MUST
-remain metadata-free.
+output are exempt. `docs/specs/packages-readme-template.md` and
+`docs/specs/packages-index-template.md` MUST remain free of repository
+governance metadata.
 
 Allowed statuses:
 
@@ -97,7 +98,7 @@ Use root `docs/` for durable repository knowledge:
 
 Do not use root `docs/` for temporary notes, TODO lists, or information better
 expressed in code comments. Do not use it for package-specific documentation;
-packages own their documentation under `packages/<package-name>/` according to
+each workspace package owns its package-local documentation according to
 `docs/specs/packages-documentation.md`.
 
 Repository documentation is not consumer documentation by default. Catalogs,

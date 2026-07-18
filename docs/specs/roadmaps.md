@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-07-18
 scope: Optional repo-level and package-level roadmap files.
 ---
 
@@ -18,8 +18,7 @@ When a roadmap exists, it SHOULD follow this spec unless a different structure i
 
 Repo-level roadmap files MAY live at `docs/roadmap.md`.
 
-Package-level roadmap files MAY live at
-`packages/<package-name>/docs/internal/roadmap.md`.
+Package-level roadmap files MAY live at `<package-root>/docs/internal/roadmap.md`.
 
 Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific
 roadmap details belong in that package's `docs/internal/` directory. Public docs

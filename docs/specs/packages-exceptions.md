@@ -1,7 +1,7 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-16
-scope: Approved exceptions for workspace packages under `packages/*`.
+last_updated: 2026-07-18
+scope: Approved exceptions for workspace packages.
 ---
 
 # Package exceptions

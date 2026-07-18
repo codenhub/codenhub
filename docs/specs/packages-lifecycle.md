@@ -1,7 +1,7 @@
 ---
 status: APPROVED
-last_updated: 2026-07-16
-scope: Workspace packages under `packages/*`.
+last_updated: 2026-07-18
+scope: Public workspace packages.
 ---
 
 # Package lifecycle spec
@@ -10,7 +10,8 @@ This document defines how packages are structured, built, tested, exported, and 
 
 ## Compliance
 
-Every `private: false` package under `packages/*` MUST follow this spec.
+Every `private: false` workspace package MUST follow this spec. A package's
+location within the workspace does not change these requirements.
 
 Private packages and apps MAY follow this spec when useful. They are not required to comply unless another document says so.
 

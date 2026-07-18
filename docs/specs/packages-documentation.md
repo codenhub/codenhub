@@ -1,7 +1,7 @@
 ---
 status: APPROVED
-last_updated: 2026-07-16
-scope: Documentation for workspace packages under `packages/*`.
+last_updated: 2026-07-18
+scope: Documentation for public workspace packages.
 ---
 
 # Package documentation spec
@@ -12,11 +12,12 @@ allowing each package to organize documentation around its own domain.
 
 ## Compliance
 
-Every `private: false` package under `packages/*` MUST follow this spec and MUST
-declare its public documentation metadata as defined below. Private packages
-MAY opt in to this spec by declaring the same metadata. Private packages and
-apps without public documentation metadata are not required to comply unless
-another document says so.
+Every `private: false` workspace package MUST follow this spec and MUST declare
+its public documentation metadata as defined below. A package's location within
+the workspace does not change these requirements. Private packages MAY opt in
+to this spec by declaring the same metadata. Private packages and apps without
+public documentation metadata are not required to comply unless another
+document says so.
 
 Public packages MUST contain:
 
@@ -43,9 +44,9 @@ in the package's `package.json` under `codenhub.docs`:
 {
   "codenhub": {
     "docs": {
+      "label": "Example Package",
       "status": "active",
       "slug": "example-package",
-      "label": "Example Package",
       "description": "Utilities for building example workflows.",
       "order": 10
     }
@@ -56,22 +57,29 @@ in the package's `package.json` under `codenhub.docs`:
 The presence of `codenhub.docs` declares that the package has public
 documentation intended for discovery and publication. Its fields are:
 
+- `label`: REQUIRED human-readable package label used by documentation tools.
 - `status`: REQUIRED documentation status. Allowed values are `active`,
   `experimental`, and `deprecated`.
 - `slug`: OPTIONAL stable kebab-case identifier. It defaults to the unscoped
   package name, such as `styles` for `@codenhub/styles`.
-- `label`: OPTIONAL human-readable package label. It defaults to the package
-  `name`.
-- `description`: OPTIONAL short catalog description. It defaults to the package
+- `description`: OPTIONAL catalog description. It defaults to the package
   `description`.
 - `order`: OPTIONAL non-negative integer used for relative ordering. Lower
   values appear first; tools MUST use a deterministic fallback when it is
   absent.
 
-Explicit `slug`, `label`, and `description` values SHOULD be used only when the
-package metadata fallback is inadequate. Slugs MUST be unique among packages
-that declare public documentation metadata. Package consumers and documentation
-tools MAY ignore presentation fields they do not need.
+Slugs MUST be unique among packages that declare public documentation metadata.
+A malformed `codenhub.docs` object or field is invalid. Tools MUST NOT use
+package metadata fallbacks to hide missing required fields or malformed public
+documentation metadata.
+
+Package catalogs use `codenhub.docs.label` and use
+`codenhub.docs.description` when present. A valid metadata object without a
+documentation description falls back to the package `description`. When
+cataloging a package without public documentation metadata, catalogs MAY fall
+back to the package `name` and `description`. These fallbacks do not make a
+non-compliant public package compliant with this spec. Package consumers and
+documentation tools MAY ignore presentation fields they do not need.
 
 Documentation status has these meanings:
 
@@ -119,34 +127,22 @@ per-symbol behavior as required by `docs/code-guidelines.md`.
 
 ## Public documentation
 
-Every package covered by this spec MUST provide `docs/index.md`. It MUST:
+Every package covered by this spec MUST provide `docs/index.md`. It is the
+canonical human-facing entrypoint to complete package documentation and MUST be
+the first package page shown by publishing tools. It follows the same content,
+frontmatter, and H1 rules as every other public Markdown document; it has no
+special heading or required content structure.
 
-- Use the package name as its H1.
-- Welcome and orient readers with a clear description of what the package does
-  and when it is useful.
-- Give readers a reasonable first step, such as a small quick start, a core
-  concept, or a direct link to the setup they need.
-- Direct consumers to the main starting points and every top-level
-  documentation area with enough context to choose where to go next.
-- Surface critical compatibility, stability, and deprecation information.
-
-The index is the canonical human-facing entrypoint to complete package
-documentation. It SHOULD help a new reader understand the package and reach a
-first useful result before presenting exhaustive API detail. When useful, it
-SHOULD explain the package's purpose, suitable use cases, meaningful design
-choices, or tradeoffs without promotional claims.
-
-These are outcomes, not required headings or a fixed template. A small package
-MAY use a concise index that primarily routes readers when more introductory
-content would add noise. A package with unusual setup MAY direct readers to a
-focused guide instead of embedding a quick start. Detailed export inventories
-and reference tables SHOULD live in focused documents unless choosing between
-those surfaces is necessary to begin.
+Use [packages-index-template.md](packages-index-template.md) as an advisory
+starting point. Its content blocks are recommendations, not requirements.
+Authors MAY omit, combine, rename, reorder, or replace them when another
+structure better serves the package. Such changes do not require a documented
+exception as long as the package documentation remains accurate, complete, and
+discoverable.
 
 The README remains a separate concise entrypoint for evaluation and first use;
 it MUST link to the documentation index but SHOULD NOT duplicate its complete
-navigation or detail. Some overlap is expected so that `docs/index.md` remains
-useful when read directly without first reading the README.
+navigation or detail. README and index content MAY overlap when useful.
 
 Organize public docs around consumer tasks, concepts, domains, or entrypoints.
 Use guides, examples, reference material, troubleshooting, migrations,
@@ -185,6 +181,8 @@ Public documentation paths MUST be deterministic and portable:
 
 - Markdown file and directory names MUST use kebab-case.
 - An `index.md` represents its containing documentation area.
+- Publishing tools MUST place the package-root `docs/index.md` before every
+  other package page.
 - Other Markdown files represent a document named after their relative path.
 - Package-relative Markdown links MUST be used for package-owned documents and
   assets.
@@ -208,23 +206,28 @@ Public docs MUST:
   machine paths.
 - Avoid linking to `docs/internal/`.
 
-Public package docs MUST NOT use repository governance frontmatter. They MAY use
-portable presentation frontmatter containing:
+Every public package `docs/**/*.md` file outside `docs/internal/` MUST start
+with portable presentation frontmatter. Its schema is closed and contains only:
 
-- `title`: Page title; defaults to the document's H1.
-- `description`: Short page summary.
-- `order`: Non-negative integer for ordering sibling documents.
+- `title`: REQUIRED non-empty page label used for navigation and sidebar labels
+  and the page-specific browser title.
+- `description`: OPTIONAL non-empty page summary for metadata, previews, or
+  search.
 
-Presentation frontmatter is optional and MUST NOT become necessary to understand
-the document outside a publishing tool. After optional frontmatter, every public
-document MUST begin with exactly one consumer-facing H1. Tools MUST use a
-deterministic fallback order when `order` is absent.
+Unknown fields, including repository governance fields, are invalid. Every
+public document MUST contain exactly one H1, but its text is unrestricted and
+independent from the frontmatter title. Frontmatter controls presentation
+metadata; Markdown controls article markup. Publishing tools MUST render the
+Markdown body as authored and MUST NOT inject titles, descriptions, package
+identifiers, status notices, or other metadata into the article body. Site
+chrome outside the article body MAY present package metadata, navigation,
+breadcrumbs, or status.
 
 Deprecated packages MUST state their status near the top of `README.md` and
-`docs/index.md` and point to a replacement when one exists. Experimental
-packages MUST identify what remains unstable in both entrypoints. Supporting
-tools MAY use `codenhub.docs.status` to present the same package-wide status
-without requiring every public document to repeat it.
+point to a replacement when one exists. Experimental packages MUST identify
+what remains unstable in `README.md`. Supporting tools MAY use
+`codenhub.docs.status` to present the same package-wide status in site chrome
+without requiring public documents to repeat it.
 
 ## Internal documentation
 
@@ -306,11 +309,12 @@ Documentation checks SHOULD validate, without requiring a particular renderer:
 
 - Required documentation surfaces and `docs/index.md` exist.
 - Public document links and local asset references resolve.
-- Public documents contain a title according to this spec.
+- Public documents use only the allowed frontmatter fields and contain a valid
+  title and exactly one H1 according to this spec.
 - Relative paths produce unique document identifiers.
+- Package-root `docs/index.md` is placed before every other package page.
 - `docs/internal/` is excluded from published and generated consumer material.
-- Package documentation status matches notices in the README and documentation
-  index.
+- Package documentation status matches notices in the README.
 - Generated `llms-full.txt` content matches its canonical inputs.
 
 ## Exceptions

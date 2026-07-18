@@ -55,7 +55,7 @@ Use package-filtered commands when a full workspace check is unnecessary, but fu
 
 ## Public packages
 
-For `private: false` packages under `packages/*`:
+For `private: false` workspace packages:
 
 - Follow `docs/specs/packages-lifecycle.md`.
 - Follow `docs/specs/packages-documentation.md`.

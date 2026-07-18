@@ -69,7 +69,7 @@ pnpm test
 
 This repository is docs-first: durable decisions live in `docs/` and code should
 follow approved documentation. Package-specific documentation lives with each
-package under `packages/<package-name>/`.
+workspace package.
 
 Read these before changing package behavior, public APIs, or project conventions:
 
@@ -83,6 +83,6 @@ Read these before changing package behavior, public APIs, or project conventions
 - `docs/specs/packages-readme.md`: README requirements for public packages.
 - `docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
 
-Every `private: false` package under `packages/*` MUST follow
+Every `private: false` workspace package MUST follow
 `docs/specs/packages-lifecycle.md`, `docs/specs/packages-documentation.md`, and
 `docs/specs/packages-readme.md`.

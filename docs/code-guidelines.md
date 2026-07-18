@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-07-18
 ---
 
 # Coding guidelines
@@ -96,7 +96,11 @@ For comprehensive details on test categorization (Unit, Integration, E2E), confi
 - Package READMEs MUST follow `docs/specs/packages-readme.md` when the package is
   public.
 
-For `private: false` packages under `packages/*`, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
+For `private: false` workspace packages, every symbol exposed through
+`package.json` `exports` is public API. Public API includes exported functions,
+classes, methods, interfaces, type aliases, constants, config objects, plugin
+factories, CSS/token surfaces represented in TypeScript, and other
+consumer-facing values.
 
 Public API JSDoc/TSDoc MUST describe consumer-facing purpose, important inputs or properties, return values or side effects, and observable error or failure behavior. It MUST NOT restate the type signature in prose or document private implementation details.
 

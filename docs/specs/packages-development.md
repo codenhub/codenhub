@@ -1,7 +1,7 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
-scope: Optional package-local manual development and consumer-debug workflows under `packages/*`.
+last_updated: 2026-07-18
+scope: Optional workspace package development and consumer-debug workflows.
 ---
 
 # Package development spec
@@ -73,6 +73,7 @@ Repository workspace globs include package-local `dev` and `debug` environments 
 ```text
 packages/*/{dev,debug}/package.json
 packages/*/{dev,debug}/*/package.json
+packages/plugins/**
 ```
 
 `playground` is intentionally not matched as a workspace package.

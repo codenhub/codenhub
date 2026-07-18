@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-16
+last_updated: 2026-07-18
 scope: README files for workspace packages.
 ---
 
@@ -12,7 +12,9 @@ package README files. Full package documentation follows
 
 ## Compliance
 
-Every `private: false` package under `packages/*` MUST have a `README.md` that follows this spec.
+Every `private: false` workspace package MUST have a `README.md` that follows
+this spec. A package's location within the workspace does not change these
+requirements.
 
 Private packages and apps MAY follow this spec when it improves maintainability, onboarding, or usage clarity. They are not required to comply unless another document says so.
 
@@ -157,12 +159,11 @@ changes safe first use. Full failure behavior belongs in public reference docs.
 ## Package states
 
 Deprecated packages MUST state they are deprecated near the top and point to the
-replacement when one exists. The notice MUST agree with `codenhub.docs.status`
-and the notice in `docs/index.md`.
+replacement when one exists. The notice MUST agree with
+`codenhub.docs.status`.
 
 Experimental packages MUST state what is unstable: API shape, behavior, build
-output, or support level. The notice MUST agree with `codenhub.docs.status` and
-the notice in `docs/index.md`.
+output, or support level. The notice MUST agree with `codenhub.docs.status`.
 
 ## Exceptions
 

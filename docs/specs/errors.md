@@ -1,7 +1,7 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
-scope: Packages under `packages/*` that expose errors to consumers.
+last_updated: 2026-07-18
+scope: Workspace packages that expose errors to consumers.
 ---
 
 # Package errors spec
