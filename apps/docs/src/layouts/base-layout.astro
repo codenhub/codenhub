@@ -91,6 +91,8 @@ const isHome = Astro.url.pathname === "/";
     </header>
     <slot />
     <script>
+      import { createCodeCopyController, findCodeCopyStatus } from "../lib/markdown/code-copy";
+
       const storageKey = "codenhub-docs-theme";
       const themeToggle = document.querySelector("[data-theme-toggle]");
 
@@ -119,6 +121,32 @@ const isHome = Astro.url.pathname === "/";
 
         updateThemeToggle();
       });
+
+      const copyController = createCodeCopyController();
+
+      if (document.documentElement.dataset.codeCopyReady !== "true") {
+        document.documentElement.dataset.codeCopyReady = "true";
+        document.addEventListener("click", async (event) => {
+          const target = event.target;
+          const copyButton =
+            target instanceof Element ? target.closest<HTMLButtonElement>("[data-code-copy]") : null;
+          if (copyButton === null) {
+            return;
+          }
+
+          const code = copyButton.closest(".code-block")?.querySelector("code")?.textContent;
+          if (code === undefined) {
+            return;
+          }
+
+          const status = findCodeCopyStatus(copyButton);
+          if (status === null) {
+            return;
+          }
+
+          await copyController.copy({ button: copyButton, clipboard: navigator.clipboard, code, status });
+        });
+      }
     </script>
   </body>
 </html>

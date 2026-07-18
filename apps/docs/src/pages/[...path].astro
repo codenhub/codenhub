@@ -19,6 +19,6 @@ export function getStaticPaths() {
 const { currentPackage, document } = Astro.props;
 ---
 
-<DocsLayout currentPackage={currentPackage} document={document} packages={packages}>
+<DocsLayout currentPackage={currentPackage} document={document}>
   <Fragment set:html={document.html} />
 </DocsLayout>

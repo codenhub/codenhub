@@ -2,47 +2,24 @@
 import type { PublicPackage } from "../lib/catalog";
 
 interface Props {
-  currentPackage?: PublicPackage;
+  currentPackage: PublicPackage;
   currentRoute?: string;
-  packages: PublicPackage[];
 }
 
-const { currentPackage, currentRoute, packages } = Astro.props;
+const { currentPackage, currentRoute } = Astro.props;
 ---
 
-<nav aria-label="Packages" class="package-navigation stack tight">
-  <p class="nav-eyebrow">Packages</p>
-  <ul class="package-list">
+<nav aria-label={`${currentPackage.label} documentation`}>
+  <p class="rail-title">{currentPackage.label}</p>
+  <ul class="document-list">
     {
-      packages.map((packageEntry) => (
+      currentPackage.documents.map((document) => (
         <li>
-          <a
-            class:list={{ "package-link": true, current: packageEntry.slug === currentPackage?.slug }}
-            href={`/${packageEntry.slug}/`}
-          >
-            <span>{packageEntry.label}</span>
-            {packageEntry.status !== "active" && <span class="package-state">{packageEntry.status}</span>}
+          <a aria-current={document.route === currentRoute ? "page" : undefined} href={document.route}>
+            {document.routePath === "" ? "Overview" : document.title}
           </a>
         </li>
       ))
     }
   </ul>
-
-  {
-    currentPackage && (
-      <>
-        <hr class="divider nav-rule" />
-        <p class="nav-eyebrow">In this package</p>
-        <ul class="document-list">
-          {currentPackage.documents.map((document) => (
-            <li>
-              <a aria-current={document.route === currentRoute ? "page" : undefined} href={document.route}>
-                {document.routePath === "" ? "Overview" : document.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </>
-    )
-  }
 </nav>

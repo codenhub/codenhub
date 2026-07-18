@@ -1,6 +1,7 @@
 @import "@codenhub/styles/tw";
 @import "./catalog.css";
 @import "./landing.css";
+@import "./markdown.css";
 @source "../**/*.{astro,ts}";
 
 :root {
@@ -89,19 +90,22 @@ html {
   @apply block;
 }
 
-.catalog-kicker,
-.nav-eyebrow {
+.catalog-kicker {
   @apply text-text-secondary font-mono text-xs font-semibold tracking-[0.16em] uppercase;
+}
+
+.rail-title {
+  @apply text-label text-text mb-3 font-bold;
 }
 
 .docs-shell {
   @apply grid grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
-  min-height: calc(100dvh - var(--docs-header-height));
+  height: calc(100dvh - var(--docs-header-height));
 }
 
 .left-rail,
 .toc-rail {
-  @apply sticky top-(--docs-header-height) h-[calc(100dvh-var(--docs-header-height))] overflow-y-auto py-8;
+  @apply h-full overflow-y-auto py-8;
 }
 
 .left-rail {
@@ -112,22 +116,9 @@ html {
   @apply border-border border-l pl-6;
 }
 
-.package-list,
 .document-list,
 .toc-rail ol {
   @apply m-0 list-none p-0;
-}
-
-.package-link {
-  @apply text-text-secondary hover:bg-foreground hover:text-text -mx-2 flex items-start justify-between gap-3 rounded-(--radius-small) px-2 py-2 no-underline transition-colors;
-}
-
-.package-link.current {
-  @apply bg-foreground text-text font-semibold;
-}
-
-.package-state {
-  @apply bg-warning mt-1 size-1.5 shrink-0 overflow-hidden rounded-full text-transparent;
 }
 
 .document-list a,
@@ -139,20 +130,8 @@ html {
   @apply border-primary text-text -ml-px border-l-2 pl-3;
 }
 
-.nav-rule {
-  @apply my-5;
-}
-
 .document-column {
-  @apply min-w-0 px-8 py-10 md:px-10 xl:px-14;
-}
-
-.document-context {
-  @apply border-border mb-10 flex items-center justify-between gap-4 border-b pb-5;
-}
-
-.document-context > a {
-  @apply text-text-secondary hover:text-text font-mono text-xs no-underline transition-colors;
+  @apply h-full min-w-0 overflow-y-auto px-8 py-10 md:px-10 xl:px-14;
 }
 
 .toc-rail ol {
@@ -263,6 +242,7 @@ html {
 
   .docs-shell {
     @apply block px-0;
+    height: auto;
   }
 
   .left-rail {
@@ -270,7 +250,7 @@ html {
   }
 
   .document-column {
-    @apply px-(--layout-gutter) py-8;
+    @apply h-auto overflow-visible px-(--layout-gutter) py-8;
   }
 
   .brand-logo {

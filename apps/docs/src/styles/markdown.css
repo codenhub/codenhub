@@ -1,0 +1,140 @@
+.markdown-content ul ul {
+  list-style-type: circle;
+}
+
+.markdown-content ul ul ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol ol {
+  list-style-type: lower-alpha;
+}
+
+.markdown-content ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+  @apply my-2 pl-5;
+}
+
+.markdown-content .contains-task-list {
+  @apply list-none pl-1;
+}
+
+.markdown-content .task-list-item {
+  @apply relative pl-7;
+}
+
+.markdown-content .task-list-item > input[type="checkbox"] {
+  @apply checkbox absolute top-1.5 left-0 m-0;
+}
+
+.markdown-content .markdown-alert {
+  @apply my-6 block;
+}
+
+.markdown-content .markdown-alert.important {
+  --feedback-color: var(--color-primary);
+  --feedback-contrast: var(--color-primary-contrast);
+}
+
+.markdown-content .markdown-alert-title {
+  @apply text-label mb-2 flex items-center gap-2 text-(--feedback-color);
+}
+
+.markdown-content .markdown-alert-title + p {
+  @apply mt-0;
+}
+
+.markdown-content .markdown-alert > :last-child {
+  @apply mb-0;
+}
+
+.markdown-content .markdown-alert p,
+.markdown-content .markdown-alert li {
+  color: color-mix(in srgb, var(--feedback-color) 82%, var(--color-text));
+}
+
+.markdown-alert-icon {
+  @apply size-5 shrink-0 fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.markdown-content h2,
+.markdown-content h3 {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.markdown-content .heading-anchor {
+  @apply text-text-secondary hover:text-text inline-grid size-7 place-items-center rounded-(--radius-control) no-underline opacity-0 transition-[color,opacity];
+}
+
+.markdown-content h2:hover .heading-anchor,
+.markdown-content h3:hover .heading-anchor,
+.markdown-content .heading-anchor:focus-visible {
+  @apply opacity-100;
+}
+
+.heading-anchor-icon {
+  @apply size-4;
+}
+
+.external-link-icon {
+  @apply ml-1 inline-block align-[-0.125em];
+  user-select: none;
+}
+
+.external-link-icon svg {
+  @apply size-3.5;
+}
+
+.markdown-content .code-block {
+  @apply border-border my-5 overflow-hidden rounded-(--radius-surface) border shadow-(--elevation-low);
+}
+
+.code-block-header {
+  @apply flex min-h-11 items-center justify-between gap-4 bg-neutral-900 px-4 font-mono text-xs text-neutral-300;
+}
+
+.markdown-content .code-block pre {
+  @apply m-0 rounded-none border-0 shadow-none;
+}
+
+.code-copy-button {
+  @apply grid size-8 shrink-0 cursor-pointer place-items-center rounded-(--radius-control) border-0 bg-transparent text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-50;
+}
+
+.code-copy-button svg {
+  @apply size-4 fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.code-copy-button .copied-icon {
+  @apply hidden;
+}
+
+.code-copy-button[data-copy-state="copied"] {
+  @apply text-emerald-400;
+}
+
+.code-copy-button[data-copy-state="copied"] .copy-icon {
+  @apply hidden;
+}
+
+.code-copy-button[data-copy-state="copied"] .copied-icon {
+  @apply block;
+}
+
+.code-copy-button[data-copy-state="failed"] {
+  @apply text-rose-400;
+}
+
+@media (hover: none) {
+  .markdown-content .heading-anchor {
+    @apply opacity-100;
+  }
+}

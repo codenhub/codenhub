@@ -1,16 +1,14 @@
 ---
 import PackageNavigation from "../components/package-navigation.astro";
-import StatusBadge from "../components/status-badge.astro";
 import type { PublicDocument, PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
   currentPackage: PublicPackage;
   document: PublicDocument;
-  packages: PublicPackage[];
 }
 
-const { currentPackage, document, packages } = Astro.props;
+const { currentPackage, document } = Astro.props;
 const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
 ---
 
@@ -18,20 +16,16 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
   <details class="mobile-navigation">
     <summary>Browse documentation</summary>
     <div class="mobile-navigation-panel">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} packages={packages} />
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} />
     </div>
   </details>
 
   <div class="docs-shell section-content wide">
     <aside class="left-rail">
-      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} packages={packages} />
+      <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} />
     </aside>
 
     <main class="document-column">
-      <div class="document-context">
-        <a href={`/${currentPackage.slug}/`}>{currentPackage.label}</a>
-        <StatusBadge status={currentPackage.status} />
-      </div>
       <article class="markdown-content">
         <slot />
       </article>
@@ -41,7 +35,7 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
       {
         tocHeadings.length > 0 && (
           <nav aria-label="On this page">
-            <p class="nav-eyebrow">On this page</p>
+            <p class="rail-title">On this page</p>
             <ol>
               {tocHeadings.map((heading) => (
                 <li class:list={{ nested: heading.depth === 3 }}>
