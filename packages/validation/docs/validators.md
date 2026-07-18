@@ -1,3 +1,7 @@
+---
+title: Validators
+---
+
 # Validator Reference
 
 The `val` object exposes `string`, `number`, `object`, and `array` factories.

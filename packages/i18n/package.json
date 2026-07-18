@@ -52,6 +52,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Internationalization",
       "status": "experimental"
     }
   }

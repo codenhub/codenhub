@@ -51,6 +51,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Vite Icons",
       "status": "experimental"
     }
   }

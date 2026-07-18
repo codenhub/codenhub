@@ -1,4 +1,8 @@
-# @codenhub/i18n API and Browser Behavior
+---
+title: Reference
+---
+
+# API and browser behavior
 
 ## Configuration and Setup
 

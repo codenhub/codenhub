@@ -1,3 +1,7 @@
+---
+title: Error Normalization
+---
+
 # Error Normalization And Registries
 
 ## Normalize Unknown Values

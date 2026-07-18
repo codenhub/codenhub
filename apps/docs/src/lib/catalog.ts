@@ -1,14 +1,13 @@
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
-import { siteConfig } from "../site-config";
 import {
   buildPackageDefinitions,
   buildPublicPackageSummaries,
-  excludePublicPackages,
   type PackageStatus,
   type PublicPackageSummary,
 } from "./catalog-core";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
+import { assertSingleH1, comparePublicDocumentPaths, parsePublicDocumentFrontmatter } from "./public-document-policy";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
@@ -16,7 +15,6 @@ export interface PublicDocument {
   description?: string;
   headings: MarkdownHeading[];
   html: string;
-  order?: number;
   relativePath: string;
   route: string;
   routePath: string;
@@ -40,32 +38,6 @@ const documentModules = import.meta.glob<PublicDocumentModule>([
   "!../../../../packages/**/docs/internal/**",
 ]);
 
-function readOptionalFrontmatterText(
-  frontmatter: Record<string, unknown>,
-  field: "description" | "title",
-  sourcePath: string,
-): string | undefined {
-  const value = frontmatter[field];
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string" || value.trim() === "") {
-    throw new Error(`Invalid ${field} frontmatter in ${sourcePath}: expected a non-empty string.`);
-  }
-  return value;
-}
-
-function readDocumentOrder(frontmatter: Record<string, unknown>, sourcePath: string): number | undefined {
-  const value = frontmatter.order;
-  if (value === undefined) {
-    return undefined;
-  }
-  if (!Number.isInteger(value) || (value as number) < 0) {
-    throw new Error(`Invalid order frontmatter in ${sourcePath}: expected a non-negative integer.`);
-  }
-  return value as number;
-}
-
 async function loadCatalog(): Promise<PublicPackage[]> {
   return Promise.all(
     packageDefinitions.map(async (packageDefinition) => {
@@ -78,37 +50,25 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
           const documentModule = await loadDocument();
           const headings = documentModule.getHeadings();
-          const frontmatter = documentModule.frontmatter;
-          const title =
-            readOptionalFrontmatterText(frontmatter, "title", definition.sourcePath) ??
-            headings.find(({ depth }) => depth === 1)?.text;
-
-          if (title === undefined) {
-            throw new Error(`Missing H1 or title frontmatter in ${definition.sourcePath}.`);
-          }
+          const frontmatter = parsePublicDocumentFrontmatter(documentModule.frontmatter, definition.sourcePath);
+          assertSingleH1(headings, definition.sourcePath);
 
           return {
-            description: readOptionalFrontmatterText(frontmatter, "description", definition.sourcePath),
+            description: frontmatter.description,
             headings,
             html: rewritePackageMarkdownLinks(await documentModule.compiledContent(), {
               packageSlug: packageDefinition.slug,
               sourceRelativePath: definition.relativePath,
             }),
-            order: readDocumentOrder(frontmatter, definition.sourcePath),
             relativePath: definition.relativePath,
             route: `/${packageDefinition.slug}/${definition.routePath}`.replace(/\/$/, "") + "/",
             routePath: definition.routePath,
-            title,
+            title: frontmatter.title,
           };
         }),
       );
 
-      documents.sort(
-        (left, right) =>
-          (left.routePath === "" ? -1 : 0) - (right.routePath === "" ? -1 : 0) ||
-          (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
-          left.relativePath.localeCompare(right.relativePath),
-      );
+      documents.sort((left, right) => comparePublicDocumentPaths(left.relativePath, right.relativePath));
 
       return {
         description: packageDefinition.description,
@@ -124,7 +84,4 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
 
 export const packages = await loadCatalog();
-export const publicPackages: PublicPackageSummary[] = excludePublicPackages(
-  buildPublicPackageSummaries(manifestModules, packageDefinitions),
-  siteConfig.excludedPackageNames,
-);
+export const publicPackages: PublicPackageSummary[] = buildPublicPackageSummaries(manifestModules, packageDefinitions);

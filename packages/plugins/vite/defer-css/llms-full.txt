@@ -49,43 +49,76 @@ Licensed under Apache-2.0.
 
 ---
 
-# @codenhub/vite-plugin-defer-css
+# Defer HTML-linked stylesheets
 
 `@codenhub/vite-plugin-defer-css` changes stylesheet links in Vite HTML entries
-into preloads, then restores `rel="stylesheet"` after each file loads. It is
-useful when you have measured that deferring HTML-linked CSS is appropriate. It
-does not process CSS imported from JavaScript modules.
+into preloads, then restores `rel="stylesheet"` after each file loads. Use it
+only after measuring that deferred, HTML-linked CSS is appropriate. CSS imported
+from JavaScript modules is not processed.
 
-> [!WARNING]
-> Experimental: the matching rules, generated HTML/JavaScript, and loading behavior may change before a stable release.
+## Setup
 
-The plugin turns this:
+### Installation
 
-```html
-<link rel="stylesheet" href="/assets/app.css" />
+```sh
+pnpm add -D @codenhub/vite-plugin-defer-css
 ```
 
-into a preload that becomes a stylesheet after loading, with a `noscript`
-fallback when `</head>` is available. Register it with
-`plugins: [deferCssPlugin()]` in your Vite configuration.
+### Quick start
 
-Do not defer CSS required for readable content, focus visibility, or stable
-layout without testing the result. The default output uses an inline `onload`
-handler; strict CSP deployments should review nonce mode and its requirements.
+```ts
+import { defineConfig } from "vite";
+import { deferCssPlugin } from "@codenhub/vite-plugin-defer-css";
 
-## Continue
+export default defineConfig({
+  plugins: [deferCssPlugin()],
+});
+```
 
-- [Configure and integrate the plugin](integration.md) for registration,
-  matching rules, nonce mode, plugin order, and the public API.
-- [Inspect transformed output and constraints](output-and-constraints.md) for
-  exact markup, CSP behavior, rendering and accessibility risks, and failures.
+The plugin turns a stylesheet link into a preload that becomes a stylesheet
+after loading. When `</head>` is available, it also emits a `noscript` fallback.
 
-Vite `^8.0.0` is supported. The transform runs in development and production
-builds.
+### Configuration
+
+The default output uses an inline `onload` handler. For a strict CSP that blocks
+event attributes, pass a trusted build-time nonce to generate one nonced helper
+script instead:
+
+```ts
+deferCssPlugin({ nonce: "build-provided-nonce" });
+```
+
+The application must send a matching CSP header. The plugin does not generate
+per-request nonces, and the configured value is inserted without escaping.
+
+## Requirements
+
+- Vite `^8.0.0`.
+- JavaScript for the deferred path. The fallback handles disabled JavaScript,
+  not scripts that are blocked or fail.
+- A closing `</head>` for the `noscript` fallback and nonce helper. Without it,
+  links are still converted; in nonce mode they have no generated restoration
+  mechanism.
+- Testing for unstyled content, layout shifts, focus visibility, hidden labels,
+  and other essential accessibility behavior before deferring critical CSS.
+- The plugin may appear anywhere in `plugins`; it enforces post-order HTML
+  transformation. Inspect ordering when another post plugin rewrites stylesheet
+  links.
+
+The transform runs in Vite development and production builds. If a stylesheet
+fails to load or generated inline code is blocked, deferred styles may never
+apply.
+
+## Next steps
+
+- [Integration and API](integration.md): Review matching rules, nonce mode,
+  plugin order, and public exports.
+- [Transformed output and constraints](output-and-constraints.md): Inspect exact
+  markup, CSP behavior, rendering and accessibility risks, and failures.
 
 ---
 
-# Defer-CSS integration and API
+# Integration and API
 
 ## Register the plugin
 
@@ -118,7 +151,7 @@ The nonce is a trusted build-time value interpolated into generated HTML without
 
 ---
 
-# Defer-CSS transformed output and constraints
+# Transformed output and constraints
 
 ## Transformed output
 

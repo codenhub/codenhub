@@ -1,4 +1,8 @@
-# @codenhub/theme
+---
+title: Overview
+---
+
+# Manage Browser Themes
 
 `@codenhub/theme` resolves stored and system theme preferences, applies theme
 state to the document root, synchronizes browser tabs, exposes change events,
@@ -8,11 +12,15 @@ It fits browser applications that need one owner for theme preference and DOM
 synchronization while keeping selectors, visual design, and CSS in application
 code.
 
-> [!WARNING]
-> This package is experimental. Its API, DOM behavior, and support level may
-> change before a stable release.
+## Setup
 
-## Quick Start
+### Installation
+
+```sh
+pnpm add @codenhub/theme
+```
+
+### Quick start
 
 ```ts
 import { createTheme } from "@codenhub/theme";
@@ -22,12 +30,22 @@ theme.set("dark");
 ```
 
 Call `destroy()` when the manager's owner is removed. The package persists an
-explicit preference, follows system preference when appropriate, and skips
-unavailable browser work during SSR. It does not provide theme CSS or prevent a
-flash before initialization; applications that need pre-paint consistency must
-apply matching theme logic before rendering.
+explicit preference and follows system preference when appropriate.
 
-## Continue
+## Requirements
+
+- Browser integration uses `document.documentElement`, `localStorage`,
+  `matchMedia`, `storage` events, and `CustomEvent`.
+- SSR is supported by skipping unavailable browser work and using the configured
+  default theme.
+- Consumers provide CSS selectors, variables, visual tokens, and any pre-paint
+  script needed to prevent a theme flash.
+
+The package cannot produce server HTML attributes or prevent a flash before
+initialization. Applications that need pre-paint consistency must apply matching
+theme logic before rendering.
+
+## Next steps
 
 - [API, persistence, DOM, and SSR behavior](reference.md): Complete exports,
   configuration, tokens, browser synchronization, validation, pre-paint

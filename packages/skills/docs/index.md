@@ -1,56 +1,74 @@
-# @codenhub/skills
+---
+title: Overview
+---
 
-`@codenhub/skills` brings together a collection of AI agent skills, a CLI that
-installs them into supported harnesses, and Node.js utilities for working with
-skill directories. Use the part that fits your task: install the bundled skills,
-integrate skill discovery and copying into your own tooling, or inspect what the
-package ships and how those assets are structured.
+# Install and manage agent skills
 
-> **Experimental:** The CLI workflow, harness support, install destinations, and
-> bundled skill content may change as agent skill conventions evolve. Review
-> destination and cleanup behavior before automating installation.
+`@codenhub/skills` provides a curated collection of AI agent skills, a CLI that
+installs them into supported harnesses, and Node.js utilities for discovering
+and copying skill directories.
 
-## Try An Install
+## Setup
 
-If you want to install the bundled skills, a reasonable first step is to run the
-interactive installer from the workspace where you want to use them:
+### Installation
+
+Run the installer without adding it to a project:
 
 ```sh
 pnpm dlx @codenhub/skills@latest
 ```
 
-The npm equivalent is `npx @codenhub/skills@latest`. The installer requires
-Node.js 18.0.0 or newer. With no arguments in a TTY, it lets you choose the
-scope, skills, harnesses, and whether to clean existing destinations. See the
-[CLI installer](cli.md) before scripting an install or choosing destinations
-explicitly.
+The npm equivalent is `npx @codenhub/skills@latest`.
 
-The CLI is only one way into the package. Choose the path that matches what you
-are trying to do:
+### Quick start
 
-- [Programmatic API](api.md) covers the synchronous parser, discovery, and
-  recursive copy utilities exported from `@codenhub/skills` for custom Node.js
-  workflows.
-- [Skill format and catalog](skills.md) explains the supported `SKILL.md` shape
-  and lists the bundled skills when you need to evaluate or author compatible
-  assets.
-- [CLI installer](cli.md) is the complete reference for interactive and
-  automated installation, scopes, options, and harness-specific behavior.
+Run the command from the workspace where the skills should be installed. With no
+arguments in a TTY, the wizard lets you choose scope, skills, harnesses, and
+cleanup behavior.
 
-The `skills/` tree is shipped product content rather than package
-documentation. Its `SKILL.md` files and supporting assets are instructions
-consumed by agent harnesses; the focused package docs explain how those assets
-are discovered, copied, and installed without duplicating their contents.
+For automation, provide explicit options. This installs two skills into every
+supported workspace harness without prompting:
 
-## Before Changing Files
+```sh
+pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,test-driven-development
+```
+
+Review the [CLI installer](cli.md) before choosing destinations or automating
+cleanup.
+
+### Configuration
+
+Use `--local`, `--global`, or `--both` to select scope. Select skills with
+`--skills` or `--all-skills`, and destinations with `--harnesses` or
+`--all-harnesses`. Without arguments outside a TTY, the CLI installs all skills
+to detected harnesses in the local scope and fails if none are detected.
+
+## Requirements
+
+- Node.js 18.0.0 or newer.
+- Filesystem permission to read source skills and modify every selected
+  destination.
+- A TTY for the interactive wizard. Explicit CLI options support automation.
+
+## Filesystem safety
 
 Installation and copying write directly to local filesystem trees and are not
-transactional. In particular, `--cleanup` removes an entire selected harness
-skills directory, including content not managed by this package. Read
-[security and failure behavior](security-and-failures.md) for path and symlink
-constraints, partial-write behavior, cleanup risks, and CLI exit semantics.
+transactional. Existing files are merged and overwritten by default. The
+`--cleanup` option first removes each selected harness's entire skills directory,
+including content not managed by this package. Cleanup failures do not by
+themselves produce a nonzero exit code.
 
-Bundled skills include adapted third-party material. The
-[skill provenance](provenance.md) page records origins, licenses, and the path
-from package-level notices to the per-skill `NOTICE` files copied with each
-asset.
+Read [Security and failure behavior](security-and-failures.md) for path and
+symlink constraints, partial-write behavior, cleanup risks, and CLI exit
+semantics before copying untrusted trees or automating installation.
+
+## Next steps
+
+- [CLI installer](cli.md): Review interactive and automated modes, options,
+  destinations, harness behavior, and destructive cleanup.
+- [Programmatic API](api.md): Use synchronous parsing, discovery, and recursive
+  copy utilities in custom Node.js workflows.
+- [Skill format and catalog](skills.md): Evaluate or author compatible
+  `SKILL.md` assets and inspect the bundled inventory.
+- [Skill provenance](provenance.md): Review origins, licenses, package notices,
+  and the per-skill `NOTICE` files copied during installation.

@@ -1,3 +1,7 @@
+---
+title: Core Stores
+---
+
 # Core Stores
 
 ## Synchronous Stores

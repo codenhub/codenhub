@@ -59,6 +59,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Error",
       "status": "experimental"
     }
   }

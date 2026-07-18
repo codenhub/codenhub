@@ -1,4 +1,8 @@
-# @codenhub/kbd API, Matching, and Lifecycle
+---
+title: Reference
+---
+
+# Keyboard API, matching, and lifecycle
 
 ## Register Bindings
 

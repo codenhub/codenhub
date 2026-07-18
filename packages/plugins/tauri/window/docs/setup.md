@@ -1,4 +1,8 @@
-# Tauri Setup and Security
+---
+title: Setup
+---
+
+# Setup and security
 
 ## Install
 

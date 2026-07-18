@@ -47,6 +47,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Validation",
       "status": "experimental"
     }
   }

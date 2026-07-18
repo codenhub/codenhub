@@ -1,11 +1,11 @@
 # @codenhub/tauri-plugin-window
 
+Controls Tauri v2 OS window state, chrome, placement, visibility, and lifecycle
+from bundled frontend code.
+
 > **Experimental:** The API, required permissions, and platform support may
 > change before a stable release. Validate native behavior against every Tauri
 > target you ship.
-
-Controls Tauri v2 OS window state, chrome, placement, visibility, and lifecycle
-from bundled frontend code.
 
 ## Installation
 

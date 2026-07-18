@@ -1,3 +1,7 @@
+---
+title: CLI
+---
+
 # CLI Installer
 
 The `codenhub-skills` executable copies bundled skill directories into supported

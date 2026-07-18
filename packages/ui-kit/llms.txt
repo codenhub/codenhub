@@ -1,0 +1,18 @@
+# @codenhub/ui-kit
+
+> Browser UI utilities for feedback, internationalization, light/dark themes, toasts, and a full global style/reset system.
+
+These docs describe repository version `0.1.0`, which is not published yet. The npm `latest` tag is incompatible version `0.0.1`; external consumers should not use an unversioned npm install until `0.1.0` is published.
+
+The root and `/scripts` entrypoints are equivalent. Toast display is browser-only, string `content` is trusted HTML, `message` is plain text, and built-in `ic-*` markers require compatible build-time SVG processing or render without visible icons. The `/styles` entrypoint has global reset effects.
+
+## Documentation
+
+- [Overview](docs/index.md): Entry points, setup, runtime boundaries, and navigation.
+- [Reference](docs/reference.md): Complete public export, option, default, and failure reference.
+- [Feedback](docs/feedback.md): Result registration, translation, logging, toast defaults, and singleton subscriptions.
+- [Internationalization](docs/internationalization.md): Locale resolution, fetching, persistence, DOM translation, events, and cleanup.
+- [Themes](docs/themes.md): Light/dark singleton state, persistence, DOM effects, lifetime, and SSR behavior.
+- [Toasts](docs/toasts.md): Rendering, variants, trusted content, lifecycle, stacking, and accessibility.
+- [Styles and icons](docs/styles-and-icons.md): Full global CSS/reset impact and icon-marker processing.
+- [Migration from 0.0.1](docs/migrating-from-0.0.1.md): Breaking changes from the version previously published to npm.

@@ -1,9 +1,21 @@
 {
   "name": "@codenhub/ui-kit",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
+  "description": "Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "docs/index.md",
+    "docs/feedback.md",
+    "docs/internationalization.md",
+    "docs/migrating-from-0.0.1.md",
+    "docs/reference.md",
+    "docs/styles-and-icons.md",
+    "docs/themes.md",
+    "docs/toasts.md",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -28,6 +40,8 @@
     "build:scripts": "tsdown src/index.ts src/scripts/index.ts --format esm --dts --clean --no-fixed-extension",
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/ui-kit version dist-tags time --json && npm dist-tag ls @codenhub/ui-kit && npm access get status @codenhub/ui-kit",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -45,5 +59,12 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "codenhub": {
+    "docs": {
+      "label": "UI Kit",
+      "status": "experimental",
+      "description": "Experimental browser UI utilities and global styles for Codenhub interfaces."
+    }
   }
 }

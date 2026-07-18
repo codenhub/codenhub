@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  buildPackageDefinitions,
-  buildPublicPackageSummaries,
-  excludePublicPackages,
-  parsePackageMetadata,
-} from "./catalog-core";
+import { buildPackageDefinitions, buildPublicPackageSummaries, parsePackageMetadata } from "./catalog-core";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
 function createManifest(slug?: string) {
@@ -14,6 +9,7 @@ function createManifest(slug?: string) {
     description: "Example package.",
     codenhub: {
       docs: {
+        label: "Example",
         status: "experimental",
         ...(slug === undefined ? {} : { slug }),
       },
@@ -22,21 +18,6 @@ function createManifest(slug?: string) {
 }
 
 describe("package documentation catalog", () => {
-  it("excludes configured packages from public summaries", () => {
-    const summaries = [
-      {
-        label: "UI Kit",
-        name: "@codenhub/ui-kit",
-      },
-      {
-        label: "Styles",
-        name: "@codenhub/styles",
-      },
-    ];
-
-    expect(excludePublicPackages(summaries, new Set(["@codenhub/ui-kit"]))).toEqual([summaries[1]]);
-  });
-
   it("includes public packages without documentation", () => {
     const manifests = {
       "../../packages/documented/package.json": { ...createManifest(), private: false },
@@ -114,6 +95,50 @@ describe("package documentation catalog", () => {
     ).toThrow('Duplicate documentation slug "shared"');
   });
 
+  it("uses package slugs to deterministically order duplicate labels", () => {
+    const manifests = {
+      "../../packages/beta/package.json": {
+        ...createManifest("beta"),
+        name: "@codenhub/beta",
+      },
+      "../../packages/alpha/package.json": {
+        ...createManifest("alpha"),
+        name: "@codenhub/alpha",
+      },
+    };
+
+    expect(
+      buildPackageDefinitions(manifests, [
+        "../../packages/beta/docs/index.md",
+        "../../packages/alpha/docs/index.md",
+      ]).map(({ slug }) => slug),
+    ).toEqual(["alpha", "beta"]);
+  });
+
+  it("uses package names to deterministically order duplicate summary labels", () => {
+    const manifests = {
+      "../../packages/beta/package.json": {
+        ...createManifest("beta"),
+        name: "@codenhub/beta",
+        private: false,
+      },
+      "../../packages/alpha/package.json": {
+        ...createManifest("alpha"),
+        name: "@codenhub/alpha",
+        private: false,
+      },
+    };
+    const definitions = buildPackageDefinitions(manifests, [
+      "../../packages/beta/docs/index.md",
+      "../../packages/alpha/docs/index.md",
+    ]);
+
+    expect(buildPublicPackageSummaries(manifests, definitions).map(({ name }) => name)).toEqual([
+      "@codenhub/alpha",
+      "@codenhub/beta",
+    ]);
+  });
+
   it("rejects packages without an index", () => {
     expect(() =>
       buildPackageDefinitions({ "../../packages/example/package.json": createManifest() }, [
@@ -132,6 +157,22 @@ describe("package documentation catalog", () => {
         "package.json",
       ),
     ).toThrow("Invalid codenhub.docs.status");
+  });
+
+  it("rejects documentation metadata without a label", () => {
+    expect(() =>
+      parsePackageMetadata(
+        {
+          name: "@codenhub/example",
+          codenhub: { docs: { status: "experimental" } },
+        },
+        "package.json",
+      ),
+    ).toThrow("Invalid codenhub.docs.label");
+  });
+
+  it("uses the package description when documentation metadata omits it", () => {
+    expect(parsePackageMetadata(createManifest(), "package.json")?.description).toBe("Example package.");
   });
 
   it("rewrites package-relative Markdown links", () => {

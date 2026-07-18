@@ -56,17 +56,22 @@ Licensed under Apache-2.0.
 
 <!-- Source: docs/index.md -->
 
-# @codenhub/validation
+# Validate Application Inputs
 
 `@codenhub/validation` validates unknown boundary values and performs explicit
 primitive coercion without runtime dependencies. It is useful when request
 parameters, environment values, form input, or other unknown data needs a typed
 success-or-failure result before entering application logic.
 
-> **Experimental:** Validator coverage, normalization rules, error details, and
-> the public API may change before a stable release.
+## Setup
 
-## Start with a result
+### Installation
+
+```sh
+pnpm add @codenhub/validation
+```
+
+### Quick start
 
 Validators and coercers return a discriminated `ValidationResult` rather than
 throwing for ordinary invalid input:
@@ -85,19 +90,24 @@ if (!port.ok) {
 Coercion only converts primitive values; follow it with a validator when the
 result must satisfy a domain constraint such as a valid port range.
 
-## Choose where to go next
+## Requirements
+
+- ESM-aware package resolution.
+- Browser, Node.js, and SSR runtimes are supported.
+- No runtime dependencies.
+
+All public symbols are imported from `@codenhub/validation`; there are no public
+subpath exports. Error input is omitted by default; enable `includeInput` only
+when retaining the original value is safe. URL and email validators
+intentionally accept public host shapes only.
+
+## Next steps
 
 - [Results and coercion](results-and-coercion.md) explains error shapes, result
   construction, custom validators, primitive conversion, and safe input
   retention.
 - [Validator reference](validators.md) documents the string, number, object,
   and array validators with their defaults and constraints.
-
-All public symbols are imported from `@codenhub/validation`; there are no public
-subpath exports. The package has no runtime dependencies and supports browser,
-Node.js, and SSR runtimes. Error input is omitted by default; enable
-`includeInput` only when retaining the original value is safe. URL and email
-validators intentionally accept public host shapes only.
 
 ---
 

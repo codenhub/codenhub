@@ -90,6 +90,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Components",
       "status": "experimental"
     }
   }

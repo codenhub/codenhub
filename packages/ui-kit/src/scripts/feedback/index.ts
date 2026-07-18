@@ -3,31 +3,50 @@ import { DEFAULT_APP_ERROR_MESSAGE, type AppError, type Result } from "@codenhub
 import { getI18nInstance } from "../i18n";
 import { SemanticToast, type ToastOptions } from "../toast";
 
+/** Translation key and optional plain-text fallback for successful feedback. */
 export interface FeedbackMessage {
+  /** Key resolved through the active UI Kit i18n instance. */
   key: string;
+  /** Text used when the key cannot be translated. */
   fallback?: string;
 }
 
+/** Controls message resolution, diagnostics, and toast display for a registered result. */
 export interface RegisterFeedbackOptions {
+  /** Success message definition; providing it enables the success toast by default. */
   success?: FeedbackMessage;
+  /** Text used only for an unknown error carrying the default application-error message. */
   fallback?: string;
+  /** Overrides the result-specific toast default. Errors default to true; successes require a message definition. */
   toast?: boolean;
+  /** Whether errors are written to `console.error`; defaults to true. */
   log?: boolean;
+  /** Corner used for a generated toast; defaults to the toast API's top-right position. */
   toastPosition?: ToastOptions["position"];
 }
 
+/** Resolved feedback record delivered to subscribers. */
 export interface FeedbackEntry {
+  /** Result branch that produced the record. */
   type: "success" | "error";
+  /** Resolved display text, or null when successful feedback has no message. */
   message: string | null;
 }
 
+/** Payloads delivered by each feedback subscription channel. */
 export interface FeedbackEventMap {
+  /** Successful result payload with its unchanged result value. */
   success: {
+    /** Resolved feedback metadata. */
     entry: FeedbackEntry;
+    /** Value carried by the successful result. */
     value: unknown;
   };
+  /** Failed result payload with its normalized application error. */
   error: {
+    /** Resolved feedback metadata. */
     entry: FeedbackEntry;
+    /** Error carried by the failed result. */
     error: AppError;
   };
 }
@@ -38,6 +57,7 @@ type FeedbackListener<EventName extends FeedbackEventName> = (event: FeedbackEve
 const DEFAULT_SHOULD_LOG = true;
 const DEFAULT_SHOULD_TOAST_ERROR = true;
 
+/** Coordinates result feedback for the exported application-wide singleton. */
 class Feedback {
   private readonly listeners: {
     [EventName in FeedbackEventName]: Set<FeedbackListener<EventName>>;
@@ -46,6 +66,14 @@ class Feedback {
     error: new Set<FeedbackListener<"error">>(),
   };
 
+  /**
+   * Applies logging, translated-message, toast, and subscription side effects for a result.
+   *
+   * @param result - Result to report and return unchanged.
+   * @param options - Overrides for message resolution, logging, and toast display.
+   * @returns The same result object supplied by the caller.
+   * @throws When enabled toast rendering cannot use the current DOM environment.
+   */
   register<T>(result: Result<T>, options: RegisterFeedbackOptions = {}): Result<T> {
     if (result.ok) {
       this.registerSuccess(result.value, options);
@@ -56,6 +84,12 @@ class Feedback {
     return result;
   }
 
+  /**
+   * Subscribes to one result branch for the lifetime of the module singleton.
+   * Listener failures are logged and isolated from other subscribers.
+   *
+   * @returns A function that removes the listener.
+   */
   subscribe<EventName extends FeedbackEventName>(
     eventName: EventName,
     listener: FeedbackListener<EventName>,
@@ -149,4 +183,5 @@ function translateFeedbackMessage(key: string): string | undefined {
   }
 }
 
+/** Shared feedback coordinator; consumers must unsubscribe listeners they no longer own. */
 export const feedback = new Feedback();

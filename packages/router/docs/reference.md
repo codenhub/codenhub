@@ -1,4 +1,8 @@
-# @codenhub/router API, Paths, and Browser Lifecycle
+---
+title: Reference
+---
+
+# Routing API, Paths, and Browser Lifecycle
 
 ## Create and Register
 

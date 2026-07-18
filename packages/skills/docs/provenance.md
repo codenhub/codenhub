@@ -1,3 +1,7 @@
+---
+title: Provenance
+---
+
 # Skill Provenance
 
 This page records the origin and license context of skill assets shipped by

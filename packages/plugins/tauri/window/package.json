@@ -48,6 +48,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Tauri Window",
       "status": "experimental"
     }
   }

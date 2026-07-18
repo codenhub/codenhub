@@ -16,7 +16,7 @@ const { currentPackage, currentRoute } = Astro.props;
       currentPackage.documents.map((document) => (
         <li>
           <a aria-current={document.route === currentRoute ? "page" : undefined} href={document.route}>
-            {document.routePath === "" ? "Overview" : document.title}
+            {document.title}
           </a>
         </li>
       ))

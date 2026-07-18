@@ -1,29 +1,65 @@
-# @codenhub/tauri-plugin-webview
+---
+title: Overview
+---
 
-> **Experimental:** The frontend API, permission set, companion Rust setup, and
-> platform support remain unstable. Test the complete integration on each target
-> before production adoption.
+# Create and control Tauri webviews
 
 `@codenhub/tauri-plugin-webview` creates and controls Tauri v2 `WebviewWindow`
-instances from bundled frontend code. Use it when an app needs separately
-addressable webview windows with typed navigation, reload, geometry, focus,
-zoom, visibility, and destruction operations.
+instances from bundled frontend code. It provides typed navigation, reload,
+geometry, focus, zoom, visibility, and destruction operations.
 
-## Start With Tauri Setup
+## Setup
 
-Follow [Tauri setup, permissions, and security](setup.md) before calling the
-frontend API. Correct setup requires copying and registering the shipped Rust
-navigation and reload commands, then granting only the Tauri capabilities each
-bundled caller needs. The package does not register that backend work for you.
+### Installation
 
-Treat every URL as security-sensitive: the companion command has no origin
-allowlist, and displaying a remote page must not grant it Tauri API access.
+```sh
+pnpm add @codenhub/tauri-plugin-webview @tauri-apps/api
+```
 
-After setup, use the [API and runtime reference](reference.md) to choose creation
-and lookup functions, work with `WebviewHandle`, and understand lifecycle,
-failure, and platform behavior. The package runs in a Tauri v2 WebView, not a
-normal browser, SSR process, or Node.js runtime. Native behavior must be verified
-on every target you ship.
+### Quick start
+
+Before using the frontend API, copy and register the shipped Rust navigation and
+reload commands, then grant the bundled caller the required Tauri capabilities.
+Follow [Setup and security](setup.md) for the exact Rust registration and
+least-privilege permission list.
+
+```ts
+import { spawnWebview } from "@codenhub/tauri-plugin-webview";
+
+const webview = await spawnWebview({
+  label: "help",
+  url: "https://example.com/help",
+  size: { width: 800, height: 600 },
+});
+
+await webview.setFocus();
+```
+
+Creation rejects after five seconds if Tauri does not emit a result. IPC calls
+reject when command registration, capabilities, labels, URLs, or native
+operations are invalid.
+
+## Requirements
+
+- Tauri v2 and a consumer-installed `@tauri-apps/api` compatible with `^2.0.0`.
+- Bundled frontend code running in a Tauri v2 WebView. Normal browsers, SSR,
+  and Node.js runtimes are not supported.
+- The shipped `navigate_webview` and `reload_webview` Rust commands registered
+  with the application.
+- Tauri v2 capabilities for every operation the bundled caller uses.
+- An application-enforced URL allowlist when navigation is restricted. The Rust
+  command accepts any URL parsed by Tauri and provides no origin allowlist;
+  remote pages must not receive Tauri API access merely because they are shown.
+- Per-target testing. Focus, zoom, geometry, parenting, remote navigation, and
+  creation vary by platform, window manager, and system webview; the package
+  provides no compatibility shim or tested platform matrix.
+
+## Next steps
+
+- [Setup and security](setup.md): Register the Rust commands, configure
+  least-privilege capabilities, and secure navigation.
+- [API and runtime reference](reference.md): Choose creation and lookup APIs,
+  use `WebviewHandle`, and understand lifecycle, failures, and platforms.
 
 For OS window state and chrome without webview navigation, use
 `@codenhub/tauri-plugin-window` instead.

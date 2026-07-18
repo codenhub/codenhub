@@ -39,6 +39,10 @@ const isPersistedLocaleState = <TLocale extends string>(
   return locale === undefined || (typeof locale === "string" && config.isLocale(locale));
 };
 
+/**
+ * Loads locale dictionaries, persists preferences, translates DOM leaves, and emits locale lifecycle events.
+ * Browser DOM work is skipped when no document exists, but initialization still requires Fetch and event APIs.
+ */
 export class I18n<TLocale extends string = string> extends EventTarget {
   private currentLocale: TLocale;
   private storageKey = DEFAULT_STORAGE_KEY;
@@ -52,20 +56,34 @@ export class I18n<TLocale extends string = string> extends EventTarget {
   private readonly localeLoader: LocaleLoader<TLocale>;
   private readonly domTranslator = new DomTranslator();
 
+  /**
+   * Creates an uninitialized locale manager at the configured default locale.
+   *
+   * @param config - Locale validation, file resolution, and direction rules.
+   */
   constructor(private readonly config: I18nConfig<TLocale>) {
     super();
     this.currentLocale = config.defaultLocale;
     this.localeLoader = new LocaleLoader(config);
   }
 
+  /** Active locale after initialization or the configured default before initialization. */
   get locale(): TLocale {
     return this.currentLocale;
   }
 
+  /** Whether the latest initialization request completed and can serve translations. */
   get ready(): boolean {
     return this.readyState;
   }
 
+  /**
+   * Resolves and loads the initial locale, updates document language metadata, translates the bound root, and emits `ready`.
+   * Persisted locale state is optional when local storage is unavailable. A newer overlapping request supersedes this one.
+   *
+   * @param options - Optional persistence key and DOM translation root.
+   * @throws When required host APIs such as `structuredClone`, Fetch, or `CustomEvent` are unavailable.
+   */
   async init(options: I18nInitOptions = {}): Promise<void> {
     this.readyState = false;
     this.storageKey = options.storageKey ?? DEFAULT_STORAGE_KEY;
@@ -107,6 +125,12 @@ export class I18n<TLocale extends string = string> extends EventTarget {
     );
   }
 
+  /**
+   * Attempts to load and apply a configured locale, persist it, retranslate the root, and emit `locale-change`.
+   *
+   * @param locale - Locale string matched case-insensitively against `config.locales`.
+   * @returns True when the requested locale loaded, otherwise false for invalid input, pre-init calls, failures, or superseded requests.
+   */
   async setLocale(locale: string): Promise<boolean> {
     if (!this.readyState) {
       console.warn("[I18n] setLocale() was called before init() completed. Call init() first.");
@@ -164,6 +188,11 @@ export class I18n<TLocale extends string = string> extends EventTarget {
     return localeState.isRequestedLocaleLoaded;
   }
 
+  /**
+   * Resolves a trimmed key from the active dictionary without interpreting its value as HTML.
+   *
+   * @returns Translation text, or undefined before initialization, for a blank key, or for a missing translation.
+   */
   translate(key: string): string | undefined {
     if (!this.readyState) {
       console.warn("[I18n] translate() was called before init() completed. Call init() first.");
@@ -232,10 +261,16 @@ export class I18n<TLocale extends string = string> extends EventTarget {
   }
 }
 
+/** Sets or clears the module-level i18n instance used by feedback message translation. */
 export const setI18nInstance = (i18n: I18n | null): void => {
   activeI18n = i18n;
 };
 
+/**
+ * Returns the module-level i18n instance used by feedback.
+ *
+ * @throws When no instance has been configured.
+ */
 export const getI18nInstance = (): I18n => {
   if (activeI18n === null) {
     throw new Error("[I18n] No i18n instance has been configured.");

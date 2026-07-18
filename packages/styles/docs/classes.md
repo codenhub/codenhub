@@ -1,4 +1,8 @@
-# @codenhub/styles Classes
+---
+title: Classes
+---
+
+# CSS classes
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
 

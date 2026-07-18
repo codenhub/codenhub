@@ -54,6 +54,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Theme",
       "status": "experimental"
     }
   }

@@ -4,6 +4,7 @@ import type { ToastIcon, ToastOptions } from "../../types";
 type SemanticToastType = "success" | "error" | "warning" | "info";
 type WithoutSemanticPreset<T> = T extends unknown ? Omit<T, "icon" | "role"> : never;
 type SemanticToastOptions = WithoutSemanticPreset<ToastOptions> & {
+  /** Semantic intent controlling root colors, marker icon, and live-region role. Defaults to success. */
   type?: SemanticToastType;
 };
 
@@ -40,11 +41,17 @@ function getSemanticToastPreset(type: SemanticToastType) {
   } as const;
 }
 
+/** Intent toast that presets accessible urgency, marker icon, and color classes. */
 export class SemanticToast extends Toast {
   protected static getPresetOptions(options: SemanticToastOptions) {
     return getSemanticToastPreset(options.type ?? DEFAULT_SEMANTIC_TYPE);
   }
 
+  /**
+   * Creates a semantic toast while reserving role and icon selection for its intent.
+   *
+   * @throws When content or duration fails base toast validation.
+   */
   public constructor(options: SemanticToastOptions) {
     super(options);
   }

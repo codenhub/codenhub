@@ -53,6 +53,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Router",
       "status": "experimental"
     }
   }

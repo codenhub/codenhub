@@ -1,11 +1,11 @@
 # @codenhub/tauri-plugin-webview
 
+Creates and controls Tauri v2 `WebviewWindow` instances from bundled frontend
+code, including navigation and reload through shipped companion Rust commands.
+
 > **Experimental:** The API, required permissions, Rust integration, and
 > platform support may change before a stable release. Validate it against every
 > Tauri target you ship.
-
-Creates and controls Tauri v2 `WebviewWindow` instances from bundled frontend
-code, including navigation and reload through shipped companion Rust commands.
 
 ## Installation
 

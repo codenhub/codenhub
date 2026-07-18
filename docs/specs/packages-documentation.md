@@ -267,9 +267,9 @@ Canonical external URLs MAY supplement those links.
 
 `llms-full.txt` MUST contain the package README, `docs/index.md`, and then all
 remaining public Markdown documentation in deterministic order. It MUST
-preserve Markdown formatting despite the `.txt` extension and MUST exclude
-`docs/internal/`, source code, tests, generated declarations, and raw
-JSDoc/TSDoc extraction.
+preserve authored Markdown bodies despite the `.txt` extension. It MUST omit
+public-page presentation frontmatter and exclude `docs/internal/`, source code,
+tests, generated declarations, and raw JSDoc/TSDoc extraction.
 
 `llms-full.txt` MAY be maintained manually while no generator exists. Once
 generation tooling exists, packages SHOULD generate it from canonical public

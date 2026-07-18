@@ -57,6 +57,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Store",
       "status": "experimental"
     }
   }

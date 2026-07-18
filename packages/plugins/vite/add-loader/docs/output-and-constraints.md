@@ -1,4 +1,8 @@
-# Add-loader generated output and constraints
+---
+title: Output and Constraints
+---
+
+# Generated output and constraints
 
 ## Generated output
 

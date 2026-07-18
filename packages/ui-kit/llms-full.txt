@@ -1,0 +1,844 @@
+<!-- Source: README.md -->
+
+# @codenhub/ui-kit
+
+Browser UI utilities for feedback, internationalization, light and dark themes,
+toasts, and a compiled global stylesheet.
+
+> [!WARNING]
+> This package is experimental. Its API, browser support, generated markup,
+> styling output, and integration boundaries may change before a stable release.
+
+## Installation
+
+Version `0.1.0` describes the current repository source but has not been
+published to npm. The npm `latest` tag still resolves to incompatible version
+`0.0.1`.
+
+Workspace consumers in this repository can install the current package from the
+workspace root:
+
+```sh
+pnpm --filter=<consumer-package> add @codenhub/ui-kit@workspace:*
+```
+
+External consumers should not use an unversioned `pnpm add @codenhub/ui-kit`
+until `0.1.0` is published. After publication, install the explicit version with
+`pnpm add @codenhub/ui-kit@0.1.0`.
+
+## Usage
+
+Import the global styles once, then use the JavaScript entrypoint:
+
+```ts
+import "@codenhub/ui-kit/styles";
+import { SemanticToast, initTheme } from "@codenhub/ui-kit";
+
+initTheme();
+
+new SemanticToast({
+  type: "success",
+  message: "Saved successfully.",
+}).show();
+```
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Complete public reference](docs/reference.md)
+- [Migration from published 0.0.1](docs/migrating-from-0.0.1.md)
+
+## Requirements
+
+- The package is intended for browser applications. Toast display requires the
+  DOM, timers, and optionally the Web Animations API. Internationalization also
+  uses Fetch, AbortController, `structuredClone`, and DOM event APIs. Local
+  storage is optional; preferences are not persisted when it is unavailable.
+- `@codenhub/ui-kit/styles` is a full global styling system, not toast-only CSS.
+  It includes design tokens, utilities, components, typography, and resets.
+- Toast icons are `ic-*` marker elements. A compatible build-time icon processor
+  must replace them with SVG; otherwise toasts remain usable but iconless.
+
+## Notes
+
+Import `@codenhub/ui-kit/scripts` when a dedicated JavaScript subpath is useful;
+it exports the same values and types as the package root. Feedback, i18n, theme,
+and toast facilities have module- or instance-lifetime state. Follow the cleanup
+and trusted-content guidance in the full documentation.
+
+## License
+
+No license is currently declared for this package.
+
+<!-- Source: docs/index.md -->
+
+# Build browser interfaces with UI Kit
+
+Use `@codenhub/ui-kit` to add feedback, internationalization, light and dark
+themes, toasts, and the shared Codenhub style system to a browser application.
+
+## Setup
+
+### Installation
+
+Version `0.1.0` is currently available from this repository workspace, not npm.
+The npm `latest` tag resolves to incompatible version `0.0.1`. From the workspace
+root, add the current package to a workspace consumer:
+
+```sh
+pnpm --filter=<consumer-package> add @codenhub/ui-kit@workspace:*
+```
+
+External consumers should not run an unversioned
+`pnpm add @codenhub/ui-kit` until `0.1.0` is published. After publication, use
+the explicit version `pnpm add @codenhub/ui-kit@0.1.0`.
+
+### Quick start
+
+Import the global styles once near the application entrypoint, initialize the
+theme, and display UI feedback where the application needs it:
+
+```ts
+import "@codenhub/ui-kit/styles";
+import { SemanticToast, initTheme } from "@codenhub/ui-kit";
+
+initTheme();
+
+new SemanticToast({
+  type: "success",
+  message: "Saved successfully.",
+}).show();
+```
+
+The stylesheet has page-wide effects. Review [styles and icons](./styles-and-icons.md)
+before adding it to an existing design system.
+
+### Configuration
+
+There is no package-wide configuration object. Configure internationalization
+with an `I18nConfig`, install its active instance for feedback translation, and
+use the fixed light/dark theme helpers independently. Toasts are configured per
+instance.
+
+Choose the entrypoint that matches the integration:
+
+| Import path                | Purpose                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| `@codenhub/ui-kit`         | All public JavaScript values and TypeScript types.                                            |
+| `@codenhub/ui-kit/scripts` | Exactly the same JavaScript and type surface as the root.                                     |
+| `@codenhub/ui-kit/styles`  | Full compiled global styles, including tokens, components, utilities, typography, and resets. |
+
+## Requirements
+
+- The package targets browser applications. Toast display requires a document
+  and window timers; the Web Animations API is optional.
+- Internationalization initialization requires Fetch, AbortController, timers,
+  `structuredClone`, `EventTarget`, and `CustomEvent`. Local storage is optional;
+  locale persistence is unavailable when storage cannot be used.
+- `@codenhub/ui-kit/styles` is a full global style and reset system, not
+  toast-only CSS.
+- Built-in toast graphics are `ic-*` markers. A compatible build-time icon
+  processor must replace them with SVG or the controls remain functional but
+  iconless.
+
+### Runtime boundaries
+
+Importing a JavaScript entrypoint does not itself render DOM. Theme operations
+tolerate missing browser globals and use light as the server fallback. Theme
+preferences are not persisted when local storage is unavailable. I18n skips DOM
+translation when `document` is absent and continues without locale persistence
+when local storage is unavailable, but initialization still needs the other host
+APIs listed above. Toast display and feedback that displays a toast require a
+document; custom string toast content also requires a document during
+construction.
+
+No framework adapter or automatic component teardown is provided. Consumers
+must unsubscribe callbacks and DOM event listeners they register, retain toast
+instances they need to hide, and explicitly clear the active i18n singleton when
+its owner is removed. The theme manager is a module singleton without an exposed
+destroy method after initialization.
+
+## Next steps
+
+- [Feedback](./feedback.md) connects `Result` values to translated messages,
+  logging, toast display, and subscriptions.
+- [Internationalization](./internationalization.md) loads locale dictionaries,
+  persists locale selection, and translates leaf DOM elements.
+- [Themes](./themes.md) manages the built-in light and dark themes.
+- [Toasts](./toasts.md) covers rendering, accessibility roles, lifecycle, custom
+  content, and queue limits.
+- [Styles and icons](./styles-and-icons.md) explains the global CSS and required
+  icon-marker processing.
+- [Reference](./reference.md) lists every current public export and default.
+- [Migration from 0.0.1](./migrating-from-0.0.1.md) covers the breaking changes
+  from the only version previously published to npm.
+
+<!-- Source: docs/feedback.md -->
+
+# Feedback
+
+The exported `feedback` singleton accepts `Result<T>` values from
+`@codenhub/error`, returns the same result unchanged, and emits either a success
+or error notification to subscribers.
+
+```ts
+import { err, ok } from "@codenhub/error";
+import { feedback } from "@codenhub/ui-kit";
+
+feedback.register(ok({ id: "file-1" }), {
+  success: {
+    key: "feedback.fileSaved",
+    fallback: "File saved successfully.",
+  },
+});
+
+feedback.register(err(new Error("request failed")), {
+  fallback: "Could not save the file.",
+});
+```
+
+## Success behavior
+
+Success registration has no message and shows no toast by default. Supplying
+`success` resolves its `key` through the active i18n instance. If translation is
+unavailable, `fallback` is used; if neither resolves, the event entry has a
+`null` message and no toast is shown.
+
+A resolved success message displays a success `SemanticToast` by default.
+`toast: false` suppresses it, while `toast: true` cannot create a toast when no
+message resolved.
+
+## Error behavior
+
+Errors are logged with `console.error("Application error", error)` and displayed
+in an error `SemanticToast` by default. Set `log: false` or `toast: false` to
+suppress either side effect. `toastPosition` selects any supported toast
+position.
+
+An error with a `messageKey` first attempts i18n translation, then uses the
+error's message. The registration `fallback` is used only for an `unknown` error
+whose message is `DEFAULT_APP_ERROR_MESSAGE`. Other errors retain their own
+message.
+
+Feedback messages use the toast `message` path and are inserted as text, not
+HTML. They do not create a trusted-HTML boundary.
+
+## Subscriptions and lifetime
+
+```ts
+const unsubscribe = feedback.subscribe("error", ({ entry, error }) => {
+  reportError({ message: entry.message, error });
+});
+
+// Call during owner teardown.
+unsubscribe();
+```
+
+Success events contain `{ entry, value }`; error events contain
+`{ entry, error }`. Listener failures are isolated, logged as
+`"Feedback listener error"`, and do not stop later listeners.
+
+`feedback` is a module singleton with no bulk reset method. Its listeners remain
+registered until their unsubscribe functions are called, so tests and
+short-lived UI owners must always clean them up. Default error and resolved
+success toasts require a browser DOM. Disable toasts when registering feedback
+in a non-DOM environment.
+
+<!-- Source: docs/internationalization.md -->
+
+# Internationalization
+
+`I18n` loads flat JSON dictionaries, resolves an initial locale, persists
+successful locale choices, translates marked leaf elements, and emits readiness
+and locale-change events.
+
+```ts
+import { I18n, setI18nInstance, type I18nConfig } from "@codenhub/ui-kit";
+
+const LOCALES = ["en-US", "pt-BR"] as const;
+type Locale = (typeof LOCALES)[number];
+
+const config: I18nConfig<Locale> = {
+  defaultLocale: "en-US",
+  locales: LOCALES,
+  getLocaleFile: (locale) => `/locales/${locale}.json`,
+  getLocaleDirection: () => "ltr",
+  isLocale: (value): value is Locale => LOCALES.includes(value as Locale),
+};
+
+const i18n = new I18n(config);
+setI18nInstance(i18n);
+await i18n.init({ storageKey: "app-locale" });
+```
+
+Locale files must be JSON objects whose every value is a string:
+
+```json
+{
+  "navigation.home": "Home",
+  "actions.save": "Save"
+}
+```
+
+## Locale selection and loading
+
+Initialization first accepts a persisted locale when `config.isLocale()` accepts
+its stored string; the package does not independently require exact membership
+or casing at this boundary. Otherwise it checks browser languages
+case-insensitively, preferring any exact configured match before language-subtag
+matches, and finally uses `defaultLocale`. Persistence uses the `storageKey`
+option or `"i18n"` by default.
+Local storage is optional: initialization and locale changes continue when it is
+unavailable, but locale preferences are not restored or persisted.
+
+Locale requests time out after 10 seconds. Network failures, HTTP 408/429, and
+5xx responses receive three retries after the initial attempt with exponential
+300, 600, and 1200 millisecond delays. Other HTTP failures, malformed JSON, and
+invalid dictionary shapes fail without retries. A failed non-default locale
+falls back to the default dictionary without overwriting the stored preference.
+If the default also fails, initialization still becomes ready with no
+translations.
+
+`setLocale(value)` returns `false` before initialization, for invalid input, for
+a failed requested locale, or when a newer overlapping request wins. Matching is
+case-insensitive but does not use language subtags. An explicit call retries a
+previously failed or empty active locale. Only non-empty successfully loaded
+dictionaries are cached for the lifetime of the `I18n` instance; an empty
+dictionary is fetched again when that locale is explicitly selected.
+
+## DOM translation
+
+Mark leaf elements with `data-i18n` and retain fallback text in the HTML:
+
+```html
+<button data-i18n="actions.save">Save</button>
+```
+
+`init()` translates the supplied `root`, or the whole document by default. It
+also sets `document.documentElement.lang` and `dir`. Only leaf elements are
+translated; elements with child elements are preserved and produce a warning.
+Translation uses `textContent`, so dictionary values are never interpreted as
+HTML.
+
+Automatic translation does not cross custom-element boundaries. A root that is
+a custom element or is inside one is skipped. Components should own translation
+inside their boundary. Missing or blank keys preserve the element's original
+fallback text, and each missing key warns once per active locale and instance.
+
+## Manual translation and events
+
+```ts
+const label = i18n.translate("actions.save");
+
+i18n.addEventListener("ready", (event) => {
+  const detail = (event as CustomEvent).detail;
+  console.log(detail.locale, detail.translationsAvailable);
+});
+
+i18n.addEventListener("locale-change", (event) => {
+  const detail = (event as CustomEvent).detail;
+  console.log(detail.previousLocale, detail.locale);
+});
+```
+
+`translate()` trims keys and returns `undefined` before initialization, for blank
+keys, or when no translation exists. `ready` fires after each completed latest
+initialization. `locale-change` fires only after a requested locale loads and
+changes the active locale.
+
+## Active instance and cleanup
+
+`setI18nInstance(i18n)` configures the process-wide instance used by feedback.
+`getI18nInstance()` throws when none is configured. Use
+`setI18nInstance(null)` during teardown if the owner is removed, and remove any
+event listeners you added. `I18n` has no `destroy()` method and repeat `init()`
+does not remove consumer event listeners.
+
+The DOM portions tolerate a missing `document`, and unavailable local storage
+only disables persistence. However, `init()` is not a portable SSR abstraction:
+it still needs Fetch, AbortController, timers, `structuredClone`, `EventTarget`,
+and `CustomEvent` in the host. Prefer initializing in the browser unless the
+server runtime intentionally provides all of those APIs.
+
+<!-- Source: docs/migrating-from-0.0.1.md -->
+
+# Migrating from published 0.0.1
+
+Version `0.1.0` documents the current repository source and removes accidental
+aggregation that existed in the npm-published `0.0.1`. Treat the upgrade as
+breaking even though the three package export paths are unchanged.
+
+## 1. Move store imports
+
+Published `0.0.1` re-exported `createStore`, `Store`, and `StoreOptions` from the
+package root. They are no longer UI Kit exports. Install and import the dedicated
+package:
+
+```sh
+pnpm add @codenhub/store
+```
+
+```ts
+import { createStore } from "@codenhub/store";
+
+const preferences = createStore({
+  storageKey: "preferences",
+  initialState: { compact: false },
+});
+```
+
+The old re-export accepted positional `storageKey` and `initialState`
+parameters. The current `@codenhub/store` API accepts one options object and has
+additional drivers and failure behavior. Migrate calls rather than changing only
+the import path.
+
+## 2. Move keyboard imports
+
+Published `0.0.1` exposed `KEYS`, `Keyboard`, `keyboard`, and related keyboard
+types from both the root and `/scripts`. They are no longer UI Kit exports. The
+replacement `@codenhub/kbd` package is currently available only from this
+repository workspace and has not been published to npm. From the workspace root,
+add it to a workspace consumer:
+
+```sh
+pnpm --filter=<consumer-package> add @codenhub/kbd@workspace:*
+```
+
+```ts
+import { KEYS, keyboard } from "@codenhub/kbd";
+
+const registration = keyboard.register(KEYS.escape, closeDialog);
+registration.unregister();
+```
+
+Review the dedicated package's current matching, input-ignore, error handling,
+and lifecycle contract rather than assuming the `0.0.1` implementation is
+identical. External consumers cannot install this replacement from npm yet.
+
+## 3. Update error imports and registrations
+
+Feedback now consumes `Result` and `AppError` from `@codenhub/error` rather than
+the old `@codenhub/helpers` aggregation. Install the dedicated package when your
+application constructs results directly and update those imports. Existing
+feedback calls should then be checked against the current message resolution,
+logging, toast defaults, and listener lifetime in [feedback](./feedback.md).
+
+## 4. Migrate persisted themes and listeners
+
+Published `0.0.1` stored the `app-theme-preference` value as a JSON object such
+as `{"theme":"dark"}`. Version `0.1.0` reads and writes the raw string `"light"`
+or `"dark"`. Convert a valid old value, or remove an invalid value, before the
+first `initTheme()` call:
+
+```ts
+const themeStorageKey = "app-theme-preference";
+const storedTheme = localStorage.getItem(themeStorageKey);
+
+if (storedTheme !== null && storedTheme !== "light" && storedTheme !== "dark") {
+  try {
+    const oldPreference: unknown = JSON.parse(storedTheme);
+    const oldTheme =
+      typeof oldPreference === "object" && oldPreference !== null
+        ? (oldPreference as { theme?: unknown }).theme
+        : undefined;
+
+    if (oldTheme === "light" || oldTheme === "dark") {
+      localStorage.setItem(themeStorageKey, oldTheme);
+    } else {
+      localStorage.removeItem(themeStorageKey);
+    }
+  } catch {
+    localStorage.removeItem(themeStorageKey);
+  }
+}
+
+initTheme();
+```
+
+The `themechange` event detail also changed. A `0.0.1` listener read the active
+string from `event.detail.theme`. In `0.1.0`, `detail.theme` is a
+`ThemeDefinition`; read the active string from `event.detail.name`. The complete
+current payload is `{ name, theme: ThemeDefinition, source }`, as described in
+[themes](./themes.md).
+
+## 5. Audit styles and icons
+
+Keep the style import path, but treat its output as changed:
+
+```ts
+import "@codenhub/ui-kit/styles";
+```
+
+The current file is the complete global `@codenhub/styles` system with resets,
+not isolated toast CSS. Audit page-level styles and reset interactions. Toast
+icons also require compatible `ic-*` marker processing; without it, toast
+content remains functional but iconless. See
+[styles and icons](./styles-and-icons.md).
+
+## 6. Verify browser ownership
+
+The remaining root and `/scripts` APIs are equivalent and cover feedback, i18n,
+themes, and toasts. Review their current contracts rather than relying on the
+old generated declarations:
+
+- Unsubscribe feedback and instance lifecycle listeners.
+- Clear the active i18n instance when its owner is removed.
+- Account for the theme singleton's module-long listeners and lack of destroy.
+- Do not pass untrusted strings to toast `content`; use `message` for plain text.
+- Initialize browser-dependent behavior only where required web APIs exist.
+
+The [public reference](./reference.md) is the complete `0.1.0` export inventory.
+
+<!-- Source: docs/reference.md -->
+
+# Public reference
+
+Both `@codenhub/ui-kit` and `@codenhub/ui-kit/scripts` export every JavaScript
+value and TypeScript type below. They are equivalent entrypoints. The only other
+public path is the CSS file `@codenhub/ui-kit/styles`.
+
+## Feedback
+
+### `feedback`
+
+Module singleton with:
+
+- `register<T>(result, options?): Result<T>` returns the same
+  `@codenhub/error` result and performs feedback side effects.
+- `subscribe("success", listener): () => void` receives `{ entry, value }`.
+- `subscribe("error", listener): () => void` receives `{ entry, error }`.
+
+`RegisterFeedbackOptions` contains `success?: FeedbackMessage`,
+`fallback?: string`, `toast?: boolean`, `log?: boolean`, and
+`toastPosition?: ToastOptions["position"]`. `FeedbackMessage` contains `key` and
+optional `fallback`. `FeedbackEntry` contains `type: "success" | "error"` and
+`message: string | null`. `FeedbackEventMap` describes the two listener payloads.
+See [feedback](./feedback.md) for resolution rules and defaults.
+
+## Internationalization
+
+### `I18n<TLocale>`
+
+An `EventTarget` with:
+
+- `new I18n(config)` starts at `config.defaultLocale` and is not ready.
+- `locale` returns the current configured locale.
+- `ready` reports whether the latest initialization completed.
+- `init(options?): Promise<void>` loads and applies an initial locale.
+- `setLocale(locale: string): Promise<boolean>` attempts a locale change.
+- `translate(key: string): string | undefined` performs a flat-key lookup.
+
+`I18nConfig<TLocale>` requires `defaultLocale`, readonly `locales`,
+`getLocaleFile(locale)`, `getLocaleDirection(locale)`, and an `isLocale(value)`
+type guard. `I18nInitOptions` has optional `storageKey` and `root: ParentNode`.
+`LocaleDictionary` maps string keys to string values. `LocaleDirection` is
+`"ltr" | "rtl"`.
+
+`I18nReadyEventDetail` contains `locale` and `translationsAvailable`.
+`I18nLocaleChangeEventDetail` contains `locale` and `previousLocale`.
+
+### Active i18n instance
+
+- `setI18nInstance(i18n: I18n | null): void` changes the module-level active
+  instance used by feedback.
+- `getI18nInstance(): I18n` returns it or throws
+  `[I18n] No i18n instance has been configured.`
+
+See [internationalization](./internationalization.md) for loading, DOM, event,
+and failure behavior.
+
+## Themes
+
+`Theme` is `"light" | "dark"`.
+
+- `THEME_CHANGE_EVENT` is the string `"themechange"`.
+- `getSystemTheme(): Theme` reads the system color scheme with light fallback.
+- `getStoredTheme(): Theme | null` reads a valid explicit preference.
+- `getTheme(): Theme` returns the singleton's active theme.
+- `setTheme(theme: Theme): void` applies and persists a theme.
+- `clearThemePreference(): Theme` clears storage and applies the system theme.
+- `toggleTheme(): Theme` applies and persists the other color scheme.
+- `initTheme(): void` initializes singleton listeners and current state once.
+
+See [themes](./themes.md) for DOM effects, persistence, events, and lifetime.
+
+## Toasts
+
+### `Toast`
+
+`new Toast(options)` validates and snapshots `ToastOptions`. Methods are
+`show()`, `hide()`, `onShow(subscriber)`, `onShown(subscriber)`,
+`onHide(subscriber)`, and `onHidden(subscriber)`. Each subscription method
+returns an unsubscribe function.
+
+`ToastOptions` requires a non-blank message, non-blank string content, or any DOM
+node content. Empty elements and empty `DocumentFragment` values are accepted.
+Options are:
+
+| Option          | Values and default                                            |
+| --------------- | ------------------------------------------------------------- |
+| `message`       | Plain text; ignored when `content` is present.                |
+| `content`       | Trusted HTML string, DOM `Node`, or factory returning either. |
+| `duration`      | Finite milliseconds at least zero; default `4000`.            |
+| `autoDismiss`   | Boolean; default `true`.                                      |
+| `isDismissable` | Boolean; default `false`.                                     |
+| `icon`          | `ToastIcon`; default none and ignored with `content`.         |
+| `position`      | Four corner positions; default `top-right`.                   |
+| `role`          | `"alert" \| "status"`; default `status`.                      |
+| `className`     | Classes appended to the root preset.                          |
+
+`ToastIcon` is `"success" | "error" | "warning" | "info" | "loader"`.
+
+### `SemanticToast`
+
+Extends `Toast`. Its options add optional
+`type: "success" | "error" | "warning" | "info"`, defaulting to success, and
+omit caller-controlled `icon` and `role`. It presets semantic icon, role, and
+classes.
+
+### `LoadingToast`
+
+Extends `Toast`. Its options omit caller-controlled `icon` and `role`. It
+presets a loader icon, role `status`, and `autoDismiss: false` while retaining
+other toast options.
+
+Constructors throw when both content sources are absent, when the supplied
+message or string content is blank, when resolved content is neither a string nor
+a DOM node, or when duration is negative or non-finite. Empty node content does
+not throw. See [toasts](./toasts.md) for trusted content, stacking, lifecycle,
+browser support, and accessibility. See
+[styles and icons](./styles-and-icons.md) for rendering requirements.
+
+## CSS entrypoint
+
+`@codenhub/ui-kit/styles` resolves to a compiled CSS file. It has no named CSS
+exports and is a complete global style/reset system. Its rules and icon boundary
+are documented in [styles and icons](./styles-and-icons.md).
+
+<!-- Source: docs/styles-and-icons.md -->
+
+# Styles and icons
+
+`@codenhub/ui-kit/styles` is the compiled style entrypoint used by the generated
+toast class names. Import it once from application code or CSS:
+
+```ts
+import "@codenhub/ui-kit/styles";
+```
+
+## Full global style system
+
+This entrypoint is not scoped or toast-only. It compiles the complete
+`@codenhub/styles/tw` source and scans UI Kit scripts for utility classes. The
+result includes Tailwind layers, design tokens, typography, utilities, component
+classes, and a global reset.
+
+The reset affects all elements and page structure. Among other effects, it
+styles scrollbars and selection, sets root/background/text/font behavior, makes
+`body` a flex column, changes focus-visible outlines, assigns body typography,
+and reduces animation and transition durations for reduced-motion users. Audit
+these global effects before combining the stylesheet with another reset or
+design system.
+
+Theme-dependent toast classes expect the tokens and dark-mode behavior supplied
+by this stylesheet and the [theme helpers](./themes.md). `className` can append
+toast root classes, but there are no public internal layout or color slots.
+
+## Icon markers
+
+Toast code emits marker elements for `ic-success`, `ic-error`, `ic-warning`,
+`ic-info`, `ic-loader`, and `ic-close`. The stylesheet does not draw those
+markers. A compatible build-time processor must replace marker elements in the
+package's generated JavaScript with SVG. `@codenhub/vite-plugin-icons` is the
+repository's compatible Vite integration when configured so dependency code is
+passed through its transforms.
+
+Verify the production output, because dependency optimization or an alternative
+bundler may bypass marker transforms. Without compatible processing, marker
+elements remain empty `<i>` elements: the toast message, semantic role, live
+region, and dismiss button continue to work, but no leading, loader, or close
+graphic is visible. The dismiss button remains named by `aria-label`.
+
+Custom `content` suppresses the built-in leading icon entirely. It can therefore
+provide its own accessible graphics, but trusted string content still follows
+the security boundary documented in [toasts](./toasts.md).
+
+<!-- Source: docs/themes.md -->
+
+# Themes
+
+The theme helpers wrap one module-level light/dark theme manager. Call
+`initTheme()` once in the browser to apply a stored preference or the operating
+system color scheme and begin observing system and cross-tab storage changes.
+
+```ts
+import { THEME_CHANGE_EVENT, initTheme, toggleTheme } from "@codenhub/ui-kit";
+
+initTheme();
+
+const button = document.querySelector("#theme-toggle");
+button?.addEventListener("click", () => {
+  toggleTheme();
+});
+
+window.addEventListener(THEME_CHANGE_EVENT, (event) => {
+  const { name, source } = (event as CustomEvent).detail;
+  console.log(name, source);
+});
+```
+
+## State and DOM effects
+
+The only theme names are `"light"` and `"dark"`. The manager stores explicit
+preferences under `app-theme-preference`. Applying a theme sets
+`data-theme` and `color-scheme` on the document root and toggles the root
+`dark` class for Tailwind-compatible dark mode.
+
+| API                      | Behavior                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------- |
+| `initTheme()`            | Initializes once from storage or the system and installs system/storage listeners. |
+| `getTheme()`             | Returns the active theme; initially `"light"` before initialization.               |
+| `getSystemTheme()`       | Returns the current system choice, or `"light"` when unavailable.                  |
+| `getStoredTheme()`       | Returns a valid explicit preference or `null`.                                     |
+| `setTheme(theme)`        | Applies and persists `"light"` or `"dark"`. Invalid JavaScript input throws.       |
+| `toggleTheme()`          | Switches by active color scheme, persists, and returns the new theme.              |
+| `clearThemePreference()` | Removes the preference, applies the system theme, and returns it.                  |
+
+Theme changes dispatch `THEME_CHANGE_EVENT` (`"themechange"`) on `window` after
+the update when browser event APIs are available. Its detail has the current
+source shape `{ name, theme, source }`:
+
+- `name` is the active theme name, `"light"` or `"dark"` in UI Kit.
+- `theme` is the active `ThemeDefinition`, including `name`, `colorScheme`, and
+  optional `tokens`.
+- `source` is the `ThemeChangeSource`: `"init"`, `"set"`, `"toggle"`,
+  `"clearPreference"`, or `"system"`.
+
+The source package names the full payload `ThemeChangeDetail`. UI Kit does not
+re-export `ThemeChangeDetail`, `ThemeDefinition`, or `ThemeChangeSource`. Remove
+any window listener you add during owner teardown.
+
+## Lifetime and SSR
+
+The underlying manager is a package singleton. `initTheme()` is idempotent, but
+the UI Kit exposes no destroy method, so its system and storage listeners remain
+for the module lifetime after initialization. This is suitable for one
+application-wide theme owner, not isolated per-request or per-component theme
+managers.
+
+Theme reads and mutations tolerate missing `window` and `document`. Without
+system APIs, `getSystemTheme()` resolves to light; without storage, preferences
+are not persisted; without a document, no DOM attributes or classes are
+changed. Server calls still mutate the singleton's in-memory active theme, so do
+not share request-specific theme state through it.
+
+<!-- Source: docs/toasts.md -->
+
+# Toasts
+
+Use `Toast` for a neutral notification, `SemanticToast` for status intent, and
+`LoadingToast` for indefinite progress.
+
+```ts
+import { SemanticToast } from "@codenhub/ui-kit";
+
+const toast = new SemanticToast({
+  type: "success",
+  message: "Saved successfully.",
+  isDismissable: true,
+  position: "top-right",
+});
+
+toast.show();
+```
+
+## Options and defaults
+
+Every toast requires a non-blank `message`, non-blank string `content`, or any
+DOM `Node` content. Empty elements and empty `DocumentFragment` values are valid
+node content. Base defaults are a 4000 ms duration, automatic dismissal, no
+dismiss button, `top-right`, and role `status`. Positions are `top-left`,
+`top-right`, `bottom-right`, and `bottom-left`. `duration` must be finite and at
+least zero.
+
+`className` appends classes to the preset root and is the only public styling
+hook. Caller mutations to the original options object do not alter normalized
+toast behavior.
+
+`SemanticToast` defaults to `success`. Types `success` and `info` use role
+`status` with polite announcements; `warning` and `error` use role `alert` with
+assertive announcements. Its type controls icon, role, and intent classes, so
+callers cannot override `icon` or `role` through the typed constructor.
+
+`LoadingToast` uses role `status`, a loader marker, and does not auto-dismiss by
+default. Call `hide()` when the operation completes. Its typed constructor also
+omits `icon` and `role`.
+
+## Plain messages and custom content
+
+`message` is assigned through `textContent` and is safe for untrusted text.
+`content` takes precedence and owns the full inner markup, suppressing the
+message and leading icon. A DOM node is moved, not cloned, so its state and
+listeners remain intact. A `DocumentFragment` contributes its current child
+nodes. Use a factory to create fresh nodes for multiple toast instances.
+
+```ts
+const toast = new Toast({
+  content: () => {
+    const button = document.createElement("button");
+    button.textContent = "Undo";
+    button.addEventListener("click", undo);
+    return button;
+  },
+});
+```
+
+String `content` is parsed with `innerHTML` during construction. It is an
+explicit trusted-HTML boundary: never pass user input or unsanitized external
+content. Content factories also run during construction and throw immediately
+if they return blank string content or a value other than a string or DOM node.
+Any returned node is accepted even when it has no text or child nodes.
+
+## Lifecycle and stacking
+
+Subscribe on the toast instance:
+
+```ts
+const unsubscribe = toast.onHidden(() => {
+  console.log("Toast removed");
+});
+
+toast.show();
+
+// If this owner no longer needs notifications:
+unsubscribe();
+```
+
+Events occur as `show`, `shown`, `hide`, and `hidden`. `show` runs before DOM
+insertion, `shown` after entry animation, `hide` before removal, and `hidden`
+after cleanup. The auto-dismiss timer starts after `shown`. Lifecycle callbacks
+are ordinary callbacks: exceptions are not isolated and may interrupt the
+current operation. Lifecycle events are not dispatched on toast DOM elements.
+
+Calling `show()` while visible or hiding is a no-op. Calling `hide()` when idle
+or already hiding is a no-op. A toast can be shown again after it is fully
+hidden. Each position displays at most five toasts. Showing another asks the
+oldest toast to hide and queues the new toast until that slot is released;
+hiding the queued toast cancels it.
+
+Containers are appended to `document.body` or the document root and remain even
+when empty. The package does not expose bulk dismissal or container cleanup.
+Retain instances when manual dismissal is required.
+
+## Browser and accessibility requirements
+
+`show()` requires a DOM and `window` timers. Message-only construction does not
+touch the DOM, but custom string or node validation uses browser DOM classes.
+The Web Animations API is optional; show/hide falls back to immediate completion
+when animation support is missing or throws.
+
+Toast roots set `aria-live` and `aria-atomic`. Dismiss buttons have the accessible
+name `Dismiss toast`. Consumers remain responsible for choosing appropriate
+urgency, avoiding excessive announcements, and ensuring custom content is
+keyboard accessible. See [styles and icons](./styles-and-icons.md) for required
+CSS and icon handling.

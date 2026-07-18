@@ -1,4 +1,8 @@
-# @codenhub/theme API, Persistence, DOM, and SSR Behavior
+---
+title: Reference
+---
+
+# Theme API, Persistence, DOM, and SSR Behavior
 
 ## Create and Initialize
 

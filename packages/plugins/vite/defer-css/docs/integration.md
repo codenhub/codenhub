@@ -1,4 +1,8 @@
-# Defer-CSS integration and API
+---
+title: Integration
+---
+
+# Integration and API
 
 ## Register the plugin
 

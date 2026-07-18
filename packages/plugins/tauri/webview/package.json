@@ -49,6 +49,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Tauri WebView",
       "status": "experimental"
     }
   }

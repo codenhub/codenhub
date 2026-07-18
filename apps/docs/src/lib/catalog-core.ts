@@ -5,7 +5,7 @@ export type PackageStatus = (typeof DOCS_STATUSES)[number];
 
 interface DocsMetadata {
   description?: string;
-  label?: string;
+  label: string;
   order?: number;
   slug?: string;
   status: PackageStatus;
@@ -56,6 +56,10 @@ function normalizePath(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function getOptionalText(value: unknown, field: string, manifestPath: string): string | undefined {
   if (value === undefined) {
     return undefined;
@@ -81,9 +85,14 @@ function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
     throw new Error(`Invalid codenhub.docs.order in ${manifestPath}: expected a non-negative integer.`);
   }
 
+  const label = getOptionalText(value.label, "label", manifestPath);
+  if (label === undefined) {
+    throw new Error(`Invalid codenhub.docs.label in ${manifestPath}: expected a non-empty string.`);
+  }
+
   return {
     description: getOptionalText(value.description, "description", manifestPath),
-    label: getOptionalText(value.label, "label", manifestPath),
+    label,
     order: value.order as number | undefined,
     slug: getOptionalText(value.slug, "slug", manifestPath),
     status: value.status as PackageStatus,
@@ -117,7 +126,7 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
 
   return {
     description: docs.description ?? packageDescription,
-    label: docs.label ?? manifest.name,
+    label: docs.label,
     order: docs.order,
     slug,
     status: docs.status,
@@ -185,7 +194,8 @@ export function buildPackageDefinitions(
   return packages.sort(
     (left, right) =>
       (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
-      left.label.localeCompare(right.label),
+      compareText(left.label, right.label) ||
+      compareText(left.slug, right.slug),
   );
 }
 
@@ -230,14 +240,8 @@ export function buildPublicPackageSummaries(
     .sort(
       (left, right) =>
         (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
-        left.summary.label.localeCompare(right.summary.label),
+        compareText(left.summary.label, right.summary.label) ||
+        compareText(left.summary.name, right.summary.name),
     )
     .map(({ summary }) => summary);
-}
-
-export function excludePublicPackages(
-  packages: PublicPackageSummary[],
-  excludedPackageNames: ReadonlySet<string>,
-): PublicPackageSummary[] {
-  return packages.filter(({ name }) => !excludedPackageNames.has(name));
 }

@@ -96,6 +96,9 @@ function requestSlot(position: ToastPosition, onAvailable: () => void): (() => v
   };
 }
 
+/**
+ * Browser toast with plain-text or trusted custom content, corner stacking, optional dismissal, and lifecycle callbacks.
+ */
 export class Toast {
   protected readonly options: Readonly<NormalizedToastOptions>;
 
@@ -110,26 +113,42 @@ export class Toast {
     return null;
   }
 
+  /**
+   * Validates and snapshots toast options; content factories run immediately.
+   *
+   * @param options - Content, timing, placement, accessibility, and style options.
+   * @throws When content is absent, message or string content is blank, resolved content is not a string or Node, or duration is invalid.
+   */
   public constructor(options: ToastOptions) {
     this.options = normalizeToastOptions(options, new.target.getPresetOptions(options));
   }
 
+  /** Subscribes before DOM insertion and returns a function that removes the callback. */
   public onShow(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("show", subscriber);
   }
 
+  /** Subscribes after entry animation and returns a function that removes the callback. */
   public onShown(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("shown", subscriber);
   }
 
+  /** Subscribes when hiding starts and returns a function that removes the callback. */
   public onHide(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("hide", subscriber);
   }
 
+  /** Subscribes after DOM removal and returns a function that removes the callback. */
   public onHidden(subscriber: ToastLifecycleSubscriber): () => void {
     return this.subscribe("hidden", subscriber);
   }
 
+  /**
+   * Displays the toast or queues it while its corner already contains five visible toasts.
+   * Calls are ignored while the instance is visible, queued, or hiding.
+   *
+   * @throws When browser DOM APIs are unavailable or a lifecycle callback throws.
+   */
   public show(): void {
     if (this.state !== "idle") {
       return;
@@ -180,6 +199,11 @@ export class Toast {
     });
   }
 
+  /**
+   * Cancels a queued show or begins removal of a visible toast; idle and repeated calls are ignored.
+   *
+   * @throws When a lifecycle callback throws.
+   */
   public hide(): void {
     if (this.state === "queued") {
       this.clearQueuedShow();

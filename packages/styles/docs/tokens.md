@@ -1,4 +1,8 @@
-# @codenhub/styles Tokens
+---
+title: Tokens
+---
+
+# Design tokens
 
 Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
 

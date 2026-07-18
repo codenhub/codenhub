@@ -1,4 +1,8 @@
-# @codenhub/styles Accessibility
+---
+title: Accessibility
+---
+
+# Accessibility responsibilities
 
 This package provides CSS hooks for accessible states. It does not provide semantic HTML, ARIA attributes, keyboard behavior, focus management, validation, announcement timing, or JavaScript behavior.
 

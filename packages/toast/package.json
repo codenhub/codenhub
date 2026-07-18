@@ -68,6 +68,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Toast",
       "status": "experimental"
     }
   }

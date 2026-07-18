@@ -1,3 +1,7 @@
+---
+title: Security and Failures
+---
+
 # Security And Failure Behavior
 
 The package reads and writes local filesystem trees synchronously. Callers and

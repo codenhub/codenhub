@@ -1,3 +1,7 @@
+---
+title: Results
+---
+
 # Result Helpers
 
 `Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`;

@@ -1,16 +1,24 @@
-# @codenhub/styles
+---
+title: Overview
+---
 
-`@codenhub/styles` is a CSS-only foundation for building Codenhub interfaces.
-Use it when an application needs shared design tokens, base styles, typography
-and layout utilities, or composable classes for common UI elements.
+# Style Codenhub interfaces
 
-> **Experimental:** Public tokens, class names, and import-path composition may
-> change while the styling system is stabilized.
+`@codenhub/styles` provides CSS-only design tokens, base styles, typography and
+layout utilities, and composable classes for common UI elements.
 
-## Start with the full stylesheet
+## Setup
 
-For most applications, import the compiled package and compose the helper
-classes in markup:
+### Installation
+
+```sh
+pnpm add @codenhub/styles
+```
+
+### Quick start
+
+Import the compiled stylesheet for the complete token, reset, utility, and
+component-class surface, then compose helper classes in markup:
 
 ```css
 @import "@codenhub/styles";
@@ -24,29 +32,38 @@ classes in markup:
 </main>
 ```
 
-Applications using Tailwind CSS v4 can process `@codenhub/styles/tw` instead.
-Focused compiled and Tailwind source entrypoints are available when an
-application needs only tokens, components, reset, typography, utilities, or a
-specific component domain. The [class reference](./classes.md) lists those
-supported imports and their composition rules.
+The full stylesheet applies global reset, native-element, and focus-visible
+rules. Import focused entrypoints instead when those global rules are not
+appropriate. The [class reference](./classes.md) lists every supported compiled
+and Tailwind source import and explains their composition.
 
-## How composition works
+### Configuration
 
-Helper classes are designed as small composable CSS contracts:
+Apply `.dark` to any ancestor to use dark token values for that subtree. Apps
+own adding and removing the class.
 
-- Intent classes define meaning, such as `.primary`, `.success`, `.warning`, `.destructive`, and `.info`.
-- Presentation classes define treatment, such as `.out`, `.ghost`, `.soft`, `.sm`, `.lg`, and `.icon`.
-- State classes or attributes define current state, such as `.loading`, `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, `[aria-invalid="true"]`, and `[data-state="open"]`.
+```html
+<html class="dark">
+  <body>
+    ...
+  </body>
+</html>
+```
 
-`out`, `ghost`, and `soft` are presentation choices. They consume active intent tone slots instead of carrying a fixed color intent; for example, `.btn.success.soft` uses success subtle and strong tones.
+Customize the public CSS properties documented in [Tokens](./tokens.md). Do not
+depend on component-scoped implementation variables.
 
-Component classes use public foundation tokens for shape, motion, focus,
-surface, and state behavior. Internal scoped variables may help compose
-variants, but they are not the public customization contract. Aesthetic profile
-classes such as `.glassmorphism` or `.brutalism` are not part of the current
-version.
+## Requirements
 
-## Choose where to go next
+- Consumer tooling must resolve package CSS imports.
+- Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
+- The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA,
+  keyboard behavior, focus management, validation, and announcements.
+- Component entrypoints include theme tokens because their classes depend on
+  those variables. Native entrypoints also include the reset and classless
+  mappings for common native elements.
+
+## Next steps
 
 - [Tokens](./tokens.md) explains theme values, dark mode, and the public
   customization contract.
@@ -54,9 +71,3 @@ version.
   states, and composition rules.
 - [Accessibility](./accessibility.md) separates the hooks supplied by CSS from
   the semantics and behavior an application must provide.
-
-The package has no JavaScript runtime. It does not create DOM nodes, attach
-event listeners, manage focus, validate forms, dismiss toasts, or provide
-framework components. Component entrypoints include theme tokens because their
-classes depend on those variables. Native entrypoints also include the reset
-and classless mappings for common native elements.

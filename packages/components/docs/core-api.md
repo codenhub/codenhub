@@ -1,4 +1,8 @@
-# @codenhub/components Core API
+---
+title: Core API
+---
+
+# Core component API
 
 Import the core surface from `@codenhub/components`.
 

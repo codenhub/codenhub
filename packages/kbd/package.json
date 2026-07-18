@@ -47,6 +47,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Keyboard Shortcuts",
       "status": "experimental"
     }
   }

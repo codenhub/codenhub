@@ -1,3 +1,7 @@
+---
+title: API
+---
+
 # Programmatic API
 
 Import all public symbols from `@codenhub/skills`:

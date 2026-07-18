@@ -56,6 +56,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Skills",
       "status": "experimental"
     }
   }

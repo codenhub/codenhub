@@ -1,4 +1,8 @@
-# @codenhub/toast Accessibility and Custom Content
+---
+title: Accessibility and Content
+---
+
+# Accessible and custom content
 
 ## Toast Announcements
 

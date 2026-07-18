@@ -1,4 +1,8 @@
-# @codenhub/components Component Library
+---
+title: Component Library
+---
+
+# Button component
 
 `@codenhub/components/lib` exports `ChButton`, a native component definition for
 the `<ch-button>` custom element. Importing this entrypoint does not register it.

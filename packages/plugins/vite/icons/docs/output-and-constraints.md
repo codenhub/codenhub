@@ -1,4 +1,8 @@
-# Icons generated SVG and constraints
+---
+title: Output and Constraints
+---
+
+# Generated SVG and constraints
 
 ## Generated output
 

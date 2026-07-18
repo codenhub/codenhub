@@ -93,6 +93,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Styles",
       "status": "experimental"
     }
   }

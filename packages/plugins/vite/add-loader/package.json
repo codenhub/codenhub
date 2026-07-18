@@ -50,6 +50,7 @@
   },
   "codenhub": {
     "docs": {
+      "label": "Vite Add Loader",
       "status": "experimental"
     }
   }

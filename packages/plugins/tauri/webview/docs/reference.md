@@ -1,4 +1,8 @@
-# API and Runtime Reference
+---
+title: Reference
+---
+
+# API and runtime reference
 
 All symbols are exported from `@codenhub/tauri-plugin-webview`.
 

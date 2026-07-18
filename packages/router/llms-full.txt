@@ -53,7 +53,7 @@ Licensed under Apache-2.0.
 
 <!-- Source: docs/index.md -->
 
-# @codenhub/router
+# Route browser applications
 
 `@codenhub/router` provides app-local path registration and matching, browser
 history navigation, optional annotated-link interception, and subscriptions.
@@ -62,11 +62,15 @@ Applications retain rendering and page lifecycle ownership.
 It fits small browser applications that want routing primitives while keeping
 rendering, data loading, and framework integration in application code.
 
-> [!WARNING]
-> This package is experimental. Its API, routing behavior, and support level may
-> change before a stable release.
+## Setup
 
-## Quick Start
+### Installation
+
+```sh
+pnpm add @codenhub/router
+```
+
+### Quick start
 
 ```ts
 import { createRouter } from "@codenhub/router";
@@ -78,12 +82,20 @@ const router = createRouter({ basePath: "/app" })
 router.start();
 ```
 
-Call `destroy()` when the router owner is torn down. History integration needs
-browser APIs, while matching and non-history navigation remain usable during
-SSR. The application is responsible for treating URL values as untrusted and
-for updating focus, titles, and route announcements after navigation.
+Call `destroy()` when the router owner is torn down.
 
-## Continue
+## Requirements
+
+- History integration requires `window`, `location`, `history`, and `popstate`.
+- `match()`, `href()`, and non-history `navigate()` behavior remain usable
+  during SSR.
+- Applications own rendering, data loading, framework integration, and route
+  lifecycle behavior.
+
+Treat URL values as untrusted. Applications must also update focus, titles, and
+route announcements after navigation.
+
+## Next steps
 
 - [API, paths, and browser lifecycle](reference.md): Complete exports, matching,
   link interception, history behavior, SSR, failures, URL safety, cleanup, and
@@ -91,7 +103,7 @@ for updating focus, titles, and route announcements after navigation.
 
 <!-- Source: docs/reference.md -->
 
-# @codenhub/router API, Paths, and Browser Lifecycle
+# Routing API, Paths, and Browser Lifecycle
 
 ## Create and Register
 

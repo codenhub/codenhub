@@ -1,3 +1,7 @@
+---
+title: Results and Coercion
+---
+
 # Results And Coercion
 
 ## Result Model

@@ -1,4 +1,8 @@
-# @codenhub/components Framework Adapters
+---
+title: Framework Adapters
+---
+
+# Framework adapters
 
 The framework entrypoints intentionally expose different shapes. All are
 experimental and require the corresponding optional peer dependency.

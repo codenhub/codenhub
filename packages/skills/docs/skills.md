@@ -1,3 +1,7 @@
+---
+title: Skills
+---
+
 # Skill Format And Catalog
 
 The `skills/` tree is shipped product content. Its Markdown files are executable

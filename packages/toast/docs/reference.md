@@ -1,4 +1,8 @@
-# @codenhub/toast API, CSS, and Lifecycle Reference
+---
+title: Reference
+---
+
+# API, CSS, and lifecycle
 
 ## Public Entrypoints
 

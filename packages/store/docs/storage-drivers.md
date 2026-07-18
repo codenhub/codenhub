@@ -1,3 +1,7 @@
+---
+title: Storage Drivers
+---
+
 # Storage Drivers
 
 Drivers are stateful and should not be shared between stores using different
@@ -68,5 +72,6 @@ const settings = createAsyncStore({
 });
 ```
 
-Binding operation failures reject from the driver and are converted to store
-error events and fallback behavior by `createAsyncStore`.
+`createAsyncStore` runs the driver's binding hook synchronously during creation,
+outside operation recovery. Key conflicts and other binding failures throw from
+`createAsyncStore`; they do not produce store error events or fallback behavior.
