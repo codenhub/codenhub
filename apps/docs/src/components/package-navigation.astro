@@ -10,7 +10,7 @@ interface Props {
 const { currentPackage, currentRoute, packages } = Astro.props;
 ---
 
-<nav aria-label="Packages" class="package-navigation">
+<nav aria-label="Packages" class="package-navigation stack tight">
   <p class="nav-eyebrow">Packages</p>
   <ul class="package-list">
     {
@@ -31,7 +31,7 @@ const { currentPackage, currentRoute, packages } = Astro.props;
   {
     currentPackage && (
       <>
-        <div class="nav-rule" />
+        <hr class="divider nav-rule" />
         <p class="nav-eyebrow">In this package</p>
         <ul class="document-list">
           {currentPackage.documents.map((document) => (

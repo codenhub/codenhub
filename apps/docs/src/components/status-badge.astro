@@ -6,13 +6,11 @@ interface Props {
 }
 
 const { status } = Astro.props;
+const statusIntent = status === "experimental" ? "warning" : "destructive";
 ---
 
 {
   status !== "active" && (
-    <span class:list={["status-badge", `status-${status}`]}>
-      <span aria-hidden="true" class="status-dot"></span>
-      {status}
-    </span>
+    <span class:list={["badge", "soft", "capitalize", statusIntent]}>{status}</span>
   )
 }

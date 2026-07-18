@@ -1,6 +1,13 @@
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
-import { buildPackageDefinitions, type PackageStatus } from "./catalog-core";
+import { siteConfig } from "../site-config";
+import {
+  buildPackageDefinitions,
+  buildPublicPackageSummaries,
+  excludePublicPackages,
+  type PackageStatus,
+  type PublicPackageSummary,
+} from "./catalog-core";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
@@ -60,10 +67,8 @@ function readDocumentOrder(frontmatter: Record<string, unknown>, sourcePath: str
 }
 
 async function loadCatalog(): Promise<PublicPackage[]> {
-  const definitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
-
   return Promise.all(
-    definitions.map(async (packageDefinition) => {
+    packageDefinitions.map(async (packageDefinition) => {
       const documents = await Promise.all(
         packageDefinition.documents.map(async (definition): Promise<PublicDocument> => {
           const loadDocument = documentModules[definition.sourcePath];
@@ -116,4 +121,10 @@ async function loadCatalog(): Promise<PublicPackage[]> {
   );
 }
 
+const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
+
 export const packages = await loadCatalog();
+export const publicPackages: PublicPackageSummary[] = excludePublicPackages(
+  buildPublicPackageSummaries(manifestModules, packageDefinitions),
+  siteConfig.excludedPackageNames,
+);

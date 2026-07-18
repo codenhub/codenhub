@@ -17,6 +17,7 @@ interface PackageManifest {
   };
   description?: unknown;
   name?: unknown;
+  private?: unknown;
 }
 
 export interface PackageMetadata {
@@ -37,6 +38,14 @@ export interface PackageDefinition extends PackageMetadata {
   documents: DocumentDefinition[];
   manifestPath: string;
   rootPath: string;
+}
+
+export interface PublicPackageSummary {
+  description?: string;
+  documentationRoute?: string;
+  label: string;
+  name: string;
+  status?: PackageStatus;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -178,4 +187,57 @@ export function buildPackageDefinitions(
       (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
       left.label.localeCompare(right.label),
   );
+}
+
+export function buildPublicPackageSummaries(
+  manifests: Record<string, unknown>,
+  definitions: PackageDefinition[],
+): PublicPackageSummary[] {
+  const definitionsByManifestPath = new Map(
+    definitions.map((definition) => [normalizePath(definition.manifestPath), definition]),
+  );
+
+  return Object.entries(manifests)
+    .flatMap(([rawManifestPath, value]) => {
+      if (!isRecord(value) || value.private !== false) {
+        return [];
+      }
+
+      const manifest = value as PackageManifest;
+      if (typeof manifest.name !== "string" || manifest.name.trim() === "") {
+        throw new Error(`Invalid package name in ${rawManifestPath}: expected a non-empty string.`);
+      }
+
+      const definition = definitionsByManifestPath.get(normalizePath(rawManifestPath));
+      const manifestDescription =
+        typeof manifest.description === "string" && manifest.description.trim() !== ""
+          ? manifest.description
+          : undefined;
+
+      return [
+        {
+          order: definition?.order,
+          summary: {
+            description: definition?.description ?? manifestDescription,
+            documentationRoute: definition === undefined ? undefined : `/${definition.slug}/`,
+            label: definition?.label ?? manifest.name,
+            name: manifest.name,
+            status: definition?.status,
+          } satisfies PublicPackageSummary,
+        },
+      ];
+    })
+    .sort(
+      (left, right) =>
+        (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER) ||
+        left.summary.label.localeCompare(right.summary.label),
+    )
+    .map(({ summary }) => summary);
+}
+
+export function excludePublicPackages(
+  packages: PublicPackageSummary[],
+  excludedPackageNames: ReadonlySet<string>,
+): PublicPackageSummary[] {
+  return packages.filter(({ name }) => !excludedPackageNames.has(name));
 }

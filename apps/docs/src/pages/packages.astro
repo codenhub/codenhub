@@ -1,0 +1,38 @@
+---
+import StatusBadge from "../components/status-badge.astro";
+import { publicPackages } from "../lib/catalog";
+import BaseLayout from "../layouts/base-layout.astro";
+---
+
+<BaseLayout description="All public packages in the CodenHub monorepo." title="Packages">
+  <main aria-labelledby="package-catalog-title" class="section section-content wide">
+    <h1 class="text-title-lg mb-8" id="package-catalog-title">All public packages</h1>
+    <div class="auto-grid package-grid">
+      {
+        publicPackages.map((packageEntry, index) =>
+          packageEntry.documentationRoute === undefined ? (
+            <article class="package-card package-card-pending">
+              <div class="package-card-topline">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <span class="badge secondary soft capitalize">Docs pending</span>
+              </div>
+              <h2>{packageEntry.label}</h2>
+              <p>{packageEntry.description ?? "Public package documentation is not available yet."}</p>
+              <span class="package-card-action">Documentation pending</span>
+            </article>
+          ) : (
+            <a class="package-card" href={packageEntry.documentationRoute}>
+              <div class="package-card-topline">
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                {packageEntry.status !== undefined && <StatusBadge status={packageEntry.status} />}
+              </div>
+              <h2>{packageEntry.label}</h2>
+              <p>{packageEntry.description ?? "Package documentation and reference."}</p>
+              <span class="package-card-action">Read documentation</span>
+            </a>
+          ),
+        )
+      }
+    </div>
+  </main>
+</BaseLayout>

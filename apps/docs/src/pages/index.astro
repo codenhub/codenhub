@@ -1,38 +1,53 @@
 ---
-import StatusBadge from "../components/status-badge.astro";
-import { packages } from "../lib/catalog";
 import BaseLayout from "../layouts/base-layout.astro";
 import { siteConfig } from "../site-config";
 ---
 
 <BaseLayout>
-  <main class="catalog-page">
-    <section class="catalog-intro">
-      <p class="catalog-kicker">Package reference / {packages.length.toString().padStart(2, "0")}</p>
-      <h1>{siteConfig.title}</h1>
-      <p>{siteConfig.description}</p>
+  <main class="section-content wide px-(--layout-gutter)">
+    <section class="landing-hero">
+      <div class="landing-hero-copy">
+        <h1>Shared packages, apps, and project standards.</h1>
+        <p>
+          Built for and by <a href="https://coden.agency">coden.agency</a>. A common foundation for TypeScript,
+          browser, UI, Vite, and Tauri projects.
+        </p>
+        <div class="landing-actions">
+          <a class="btn primary min-h-11 px-5 py-2.5 font-medium" href="/packages/">Browse packages</a>
+          <a class="btn out min-h-11 px-5 py-2.5 font-medium" href={siteConfig.githubUrl}>View GitHub</a>
+        </div>
+      </div>
     </section>
 
-    <section aria-labelledby="package-catalog-title" class="catalog-section">
-      <div class="catalog-heading">
-        <h2 id="package-catalog-title">Package catalog</h2>
-        <span>Choose a package to begin</span>
+    <section aria-labelledby="toolkit-title" class="landing-toolkit">
+      <div class="landing-section-heading">
+        <p class="catalog-kicker">What lives here</p>
+        <h2 id="toolkit-title">One toolkit, three layers.</h2>
       </div>
-      <div class="package-grid">
-        {
-          packages.map((packageEntry, index) => (
-            <a class="package-card" href={`/${packageEntry.slug}/`}>
-              <div class="package-card-topline">
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <StatusBadge status={packageEntry.status} />
-              </div>
-              <h3>{packageEntry.label}</h3>
-              <p>{packageEntry.description ?? "Package documentation and reference."}</p>
-              <span class="package-card-action">Read documentation <span aria-hidden="true">-&gt;</span></span>
-            </a>
-          ))
-        }
+      <div class="capability-grid">
+        <article>
+          <span>01</span>
+          <h3>Application primitives</h3>
+          <p>State, validation, routing, keyboard input, errors, localization, themes, and notifications.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Interface systems</h3>
+          <p>Design tokens, composable styles, native components, and shared UI foundations.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Tooling and platform</h3>
+          <p>Vite build plugins, Tauri integrations, and reusable agent skills.</p>
+        </article>
       </div>
     </section>
+
   </main>
+  <footer class="site-footer">
+    <div class="site-footer-content section-content wide">
+      <p>&copy; 2026 CodenHub. All rights reserved.</p>
+      <p>Made with &lt;3 by <a href="https://coden.agency/">coden</a>.</p>
+    </div>
+  </footer>
 </BaseLayout>

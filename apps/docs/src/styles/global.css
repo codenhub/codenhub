@@ -1,4 +1,6 @@
 @import "@codenhub/styles/tw";
+@import "./catalog.css";
+@import "./landing.css";
 @source "../**/*.{astro,ts}";
 
 :root {
@@ -11,45 +13,80 @@ html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
 }
 
-body {
-  background-image: linear-gradient(
-    to right,
-    color-mix(in srgb, var(--color-border) 38%, transparent) 1px,
-    transparent 1px
-  );
-  background-size: clamp(3.5rem, 8vw, 7rem) 100%;
+.site-header {
+  @apply border-border bg-background/92 sticky top-0 z-30 h-(--docs-header-height) border-b backdrop-blur-md;
 }
 
-.site-header {
-  @apply border-border bg-background/92 sticky top-0 z-30 flex h-(--docs-header-height) items-center justify-between border-b px-(--layout-gutter) backdrop-blur-md;
+.site-header-content {
+  @apply flex h-full items-center justify-between gap-4 px-(--layout-gutter);
 }
 
 .brand {
-  @apply text-label flex items-center gap-3 no-underline;
+  @apply flex min-w-0 items-center no-underline;
 }
 
-.brand-mark {
-  @apply bg-primary text-primary-contrast grid size-8 place-items-center font-mono text-xs font-bold;
+.brand-logo {
+  @apply h-7 w-auto;
 }
 
-.header-link {
-  @apply text-text-secondary hover:text-text transition-colors;
+.brand-logo-on-dark {
+  @apply hidden;
 }
 
-.catalog-page {
-  @apply mx-auto w-full max-w-(--container-wide) px-(--layout-gutter) py-12 md:py-20;
+[data-theme="dark"] .brand-logo-on-light {
+  @apply hidden;
 }
 
-.catalog-intro {
-  @apply border-border grid min-h-72 content-end border-b pb-10 md:min-h-96 md:grid-cols-[1fr_1fr] md:items-end md:gap-12;
+[data-theme="dark"] .brand-logo-on-dark {
+  @apply block;
 }
 
-.catalog-intro h1 {
-  @apply text-title-lg mt-4 max-w-3xl md:col-span-2;
+.header-actions {
+  @apply flex items-center gap-4;
 }
 
-.catalog-intro > p:last-child {
-  @apply text-text-secondary mt-6 max-w-xl text-base leading-7 md:col-start-2;
+.header-end {
+  @apply flex items-center gap-4;
+}
+
+.primary-navigation {
+  @apply flex items-center gap-5;
+}
+
+.primary-navigation a {
+  @apply text-text-secondary hover:text-text text-sm no-underline transition-colors;
+}
+
+.primary-navigation a[aria-current="page"] {
+  @apply font-semibold;
+}
+
+.header-icon-link,
+.theme-toggle {
+  @apply text-text-secondary hover:text-text grid place-items-center bg-transparent transition-colors;
+}
+
+.header-icon-link svg,
+.theme-icon {
+  @apply size-4.5 fill-current;
+}
+
+.theme-icon {
+  @apply fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-icon-sun {
+  @apply hidden;
+}
+
+[data-theme="dark"] .theme-icon-moon {
+  @apply hidden;
+}
+
+[data-theme="dark"] .theme-icon-sun {
+  @apply block;
 }
 
 .catalog-kicker,
@@ -57,72 +94,8 @@ body {
   @apply text-text-secondary font-mono text-xs font-semibold tracking-[0.16em] uppercase;
 }
 
-.catalog-section {
-  @apply py-12 md:py-16;
-}
-
-.catalog-heading {
-  @apply mb-8 flex items-end justify-between gap-6;
-}
-
-.catalog-heading h2 {
-  @apply text-title;
-}
-
-.catalog-heading > span {
-  @apply text-text-secondary hidden font-mono text-xs sm:block;
-}
-
-.package-grid {
-  @apply grid border-t md:grid-cols-2 xl:grid-cols-3;
-}
-
-.package-card {
-  @apply border-border bg-background/70 hover:bg-foreground flex min-h-64 flex-col border-r border-b p-6 no-underline transition-colors;
-}
-
-.package-card-topline {
-  @apply text-text-secondary mb-10 flex items-center justify-between font-mono text-xs;
-}
-
-.package-card h3 {
-  @apply text-title-sm break-words;
-}
-
-.package-card p {
-  @apply text-text-secondary mt-3 leading-6;
-}
-
-.package-card-action {
-  @apply text-label mt-auto flex items-center justify-between pt-8;
-}
-
-.package-card-action span {
-  @apply transition-transform;
-}
-
-.package-card:hover .package-card-action span {
-  @apply translate-x-1;
-}
-
-.status-badge {
-  @apply inline-flex w-fit items-center gap-2 rounded-full border px-2.5 py-1 font-mono text-[0.65rem] tracking-wider uppercase;
-}
-
-.status-dot {
-  @apply size-1.5 rounded-full bg-current;
-}
-
-.status-experimental {
-  @apply border-warning text-warning-strong bg-warning-subtle;
-}
-
-.status-deprecated {
-  @apply border-destructive text-destructive-strong bg-destructive-subtle;
-}
-
 .docs-shell {
-  @apply mx-auto grid w-full max-w-(--container-wide) grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)];
+  @apply grid grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
   min-height: calc(100dvh - var(--docs-header-height));
 }
 
@@ -139,10 +112,6 @@ body {
   @apply border-border border-l pl-6;
 }
 
-.package-navigation {
-  @apply flex flex-col gap-2;
-}
-
 .package-list,
 .document-list,
 .toc-rail ol {
@@ -150,11 +119,11 @@ body {
 }
 
 .package-link {
-  @apply text-text-secondary hover:text-text flex items-start justify-between gap-3 py-2 no-underline transition-colors;
+  @apply text-text-secondary hover:bg-foreground hover:text-text -mx-2 flex items-start justify-between gap-3 rounded-(--radius-small) px-2 py-2 no-underline transition-colors;
 }
 
 .package-link.current {
-  @apply text-text font-semibold;
+  @apply bg-foreground text-text font-semibold;
 }
 
 .package-state {
@@ -171,11 +140,11 @@ body {
 }
 
 .nav-rule {
-  @apply border-border my-5 border-t;
+  @apply my-5;
 }
 
 .document-column {
-  @apply bg-background/85 min-w-0 px-8 py-10 md:px-10 xl:px-14;
+  @apply min-w-0 px-8 py-10 md:px-10 xl:px-14;
 }
 
 .document-context {
@@ -183,7 +152,7 @@ body {
 }
 
 .document-context > a {
-  @apply text-text-secondary font-mono text-xs no-underline;
+  @apply text-text-secondary hover:text-text font-mono text-xs no-underline transition-colors;
 }
 
 .toc-rail ol {
@@ -195,7 +164,7 @@ body {
 }
 
 .markdown-content {
-  @apply mx-auto max-w-3xl;
+  @apply w-full max-w-3xl;
 }
 
 .markdown-content h1 {
@@ -250,11 +219,11 @@ body {
 }
 
 .markdown-content pre {
-  @apply border-border overflow-x-auto rounded-(--radius-control) border p-5 text-sm leading-6 shadow-(--elevation-low);
+  @apply pre border-border rounded-(--radius-surface) border p-5 text-sm leading-6 shadow-(--elevation-low);
 }
 
 .markdown-content blockquote {
-  @apply quote border-warning bg-warning-subtle/35 py-3 pr-4;
+  @apply quote border-warning bg-warning-subtle/35 rounded-r-(--radius-control) py-3 pr-4;
 }
 
 .markdown-content table {
@@ -293,7 +262,7 @@ body {
   }
 
   .docs-shell {
-    @apply block;
+    @apply block px-0;
   }
 
   .left-rail {
@@ -304,7 +273,21 @@ body {
     @apply px-(--layout-gutter) py-8;
   }
 
-  .catalog-heading {
-    @apply items-start;
+  .brand-logo {
+    @apply h-6;
+  }
+}
+
+@media (max-width: 24rem) {
+  .site-header-content {
+    @apply gap-2;
+  }
+
+  .header-end {
+    @apply gap-1;
+  }
+
+  .brand-logo {
+    @apply h-5;
   }
 }
