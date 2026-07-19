@@ -75,4 +75,4 @@ are provided.
 
 Licensed under Apache-2.0.
 
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
+It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.

@@ -96,7 +96,7 @@ supported workspace harness without prompting:
 pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,test-driven-development
 ```
 
-Review the [CLI installer](cli.md) before choosing destinations or automating
+Review the [CLI installer](docs/cli.md) before choosing destinations or automating
 cleanup.
 
 ### Configuration
@@ -121,19 +121,19 @@ transactional. Existing files are merged and overwritten by default. The
 including content not managed by this package. Cleanup failures do not by
 themselves produce a nonzero exit code.
 
-Read [Security and failure behavior](security-and-failures.md) for path and
+Read [Security and failure behavior](docs/security-and-failures.md) for path and
 symlink constraints, partial-write behavior, cleanup risks, and CLI exit
 semantics before copying untrusted trees or automating installation.
 
 ## Next steps
 
-- [CLI installer](cli.md): Review interactive and automated modes, options,
+- [CLI installer](docs/cli.md): Review interactive and automated modes, options,
   destinations, harness behavior, and destructive cleanup.
-- [Programmatic API](api.md): Use synchronous parsing, discovery, and recursive
+- [Programmatic API](docs/api.md): Use synchronous parsing, discovery, and recursive
   copy utilities in custom Node.js workflows.
-- [Skill format and catalog](skills.md): Evaluate or author compatible
+- [Skill format and catalog](docs/skills.md): Evaluate or author compatible
   `SKILL.md` assets and inspect the bundled inventory.
-- [Skill provenance](provenance.md): Review origins, licenses, package notices,
+- [Skill provenance](docs/provenance.md): Review origins, licenses, package notices,
   and the per-skill `NOTICE` files copied during installation.
 
 <!-- Source: docs/api.md -->
@@ -227,7 +227,7 @@ comparison and is case-sensitive.
 The copy follows source symlinks that remain within the source tree and copies
 their resolved contents. It rejects a symlink that resolves outside the source
 tree. It also rejects destinations that resolve to the source itself or inside
-the source. See [Security and failure behavior](security-and-failures.md) before
+the source. See [Security and failure behavior](docs/security-and-failures.md) before
 copying untrusted trees.
 
 The function throws when `src` does not exist, a path constraint is violated, or
@@ -327,14 +327,14 @@ pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,
 ```
 
 For validation errors, cancellation codes, partial writes, and filesystem
-failures, see [Security and failure behavior](security-and-failures.md).
+failures, see [Security and failure behavior](docs/security-and-failures.md).
 
 <!-- Source: docs/provenance.md -->
 
 # Skill Provenance
 
 This page records the origin and license context of skill assets shipped by
-`@codenhub/skills`. The package-level legal terms are in [NOTICE](../NOTICE).
+`@codenhub/skills`. The package-level legal terms are in [NOTICE](NOTICE).
 Each adapted skill also carries a `NOTICE` file in its own directory so its
 attribution is copied during installation.
 
@@ -353,7 +353,7 @@ attribution is copied during installation.
 The package `NOTICE` contains the applicable attribution blocks and bundled MIT
 license text. Per-skill notices are product assets and remain included when the
 installer copies an individual skill. For the current shipped inventory and
-format, see [Skill format and catalog](skills.md).
+format, see [Skill format and catalog](docs/skills.md).
 
 [anthropic's official frontend-design plugin]: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design
 [juliusbrussee/caveman]: https://github.com/JuliusBrussee/caveman
@@ -422,7 +422,7 @@ installed package content. Destination paths are fixed by the selected harness
 and scope, but workspace destinations are resolved from the current working
 directory. Confirm both before running cleanup.
 
-See the [CLI installer](cli.md#destructive-cleanup) for destinations and safe-use
+See the [CLI installer](docs/cli.md#destructive-cleanup) for destinations and safe-use
 guidance.
 
 <!-- Source: docs/skills.md -->
@@ -465,7 +465,7 @@ description: Use when an agent needs the example workflow.
 `name` and `description` are the fields consumed by current package tooling.
 `name` falls back to the directory ID, and `description` falls back to an empty
 string. The parser is intentionally narrower than YAML; see the
-[programmatic API](api.md#parsefrontmatter) for exact parsing rules.
+[programmatic API](docs/api.md#parsefrontmatter) for exact parsing rules.
 
 Supporting Markdown, YAML, notices, examples, and reference files may accompany
 `SKILL.md`. Their meaning is harness- or skill-specific and is not interpreted
@@ -492,5 +492,5 @@ content for the installed package version.
 ## Third-Party Material
 
 Most bundled skills adapt third-party material. Package and per-skill notices
-travel with the relevant assets. See [Skill provenance](provenance.md) and the
-package [NOTICE](../NOTICE) before redistributing or modifying them.
+travel with the relevant assets. See [Skill provenance](docs/provenance.md) and the
+package [NOTICE](NOTICE) before redistributing or modifying them.

@@ -102,7 +102,7 @@ click or touch alternatives.
 
 ## Next steps
 
-- [API, matching, and lifecycle](reference.md): Complete exports, options, errors,
+- [API, matching, and lifecycle](docs/reference.md): Complete exports, options, errors,
   exact matching, SSR, input handling, listener ownership, cleanup, and
   accessibility responsibilities.
 

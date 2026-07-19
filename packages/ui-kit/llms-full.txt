@@ -110,7 +110,7 @@ new SemanticToast({
 }).show();
 ```
 
-The stylesheet has page-wide effects. Review [styles and icons](./styles-and-icons.md)
+The stylesheet has page-wide effects. Review [styles and icons](./docs/styles-and-icons.md)
 before adding it to an existing design system.
 
 ### Configuration
@@ -160,17 +160,17 @@ destroy method after initialization.
 
 ## Next steps
 
-- [Feedback](./feedback.md) connects `Result` values to translated messages,
+- [Feedback](./docs/feedback.md) connects `Result` values to translated messages,
   logging, toast display, and subscriptions.
-- [Internationalization](./internationalization.md) loads locale dictionaries,
+- [Internationalization](./docs/internationalization.md) loads locale dictionaries,
   persists locale selection, and translates leaf DOM elements.
-- [Themes](./themes.md) manages the built-in light and dark themes.
-- [Toasts](./toasts.md) covers rendering, accessibility roles, lifecycle, custom
+- [Themes](./docs/themes.md) manages the built-in light and dark themes.
+- [Toasts](./docs/toasts.md) covers rendering, accessibility roles, lifecycle, custom
   content, and queue limits.
-- [Styles and icons](./styles-and-icons.md) explains the global CSS and required
+- [Styles and icons](./docs/styles-and-icons.md) explains the global CSS and required
   icon-marker processing.
-- [Reference](./reference.md) lists every current public export and default.
-- [Migration from 0.0.1](./migrating-from-0.0.1.md) covers the breaking changes
+- [Reference](./docs/reference.md) lists every current public export and default.
+- [Migration from 0.0.1](./docs/migrating-from-0.0.1.md) covers the breaking changes
   from the only version previously published to npm.
 
 <!-- Source: docs/feedback.md -->
@@ -421,7 +421,7 @@ Feedback now consumes `Result` and `AppError` from `@codenhub/error` rather than
 the old `@codenhub/helpers` aggregation. Install the dedicated package when your
 application constructs results directly and update those imports. Existing
 feedback calls should then be checked against the current message resolution,
-logging, toast defaults, and listener lifetime in [feedback](./feedback.md).
+logging, toast defaults, and listener lifetime in [feedback](./docs/feedback.md).
 
 ## 4. Migrate persisted themes and listeners
 
@@ -459,7 +459,7 @@ The `themechange` event detail also changed. A `0.0.1` listener read the active
 string from `event.detail.theme`. In `0.1.0`, `detail.theme` is a
 `ThemeDefinition`; read the active string from `event.detail.name`. The complete
 current payload is `{ name, theme: ThemeDefinition, source }`, as described in
-[themes](./themes.md).
+[themes](./docs/themes.md).
 
 ## 5. Audit styles and icons
 
@@ -473,7 +473,7 @@ The current file is the complete global `@codenhub/styles` system with resets,
 not isolated toast CSS. Audit page-level styles and reset interactions. Toast
 icons also require compatible `ic-*` marker processing; without it, toast
 content remains functional but iconless. See
-[styles and icons](./styles-and-icons.md).
+[styles and icons](./docs/styles-and-icons.md).
 
 ## 6. Verify browser ownership
 
@@ -487,7 +487,7 @@ old generated declarations:
 - Do not pass untrusted strings to toast `content`; use `message` for plain text.
 - Initialize browser-dependent behavior only where required web APIs exist.
 
-The [public reference](./reference.md) is the complete `0.1.0` export inventory.
+The [public reference](./docs/reference.md) is the complete `0.1.0` export inventory.
 
 <!-- Source: docs/reference.md -->
 
@@ -513,7 +513,7 @@ Module singleton with:
 `toastPosition?: ToastOptions["position"]`. `FeedbackMessage` contains `key` and
 optional `fallback`. `FeedbackEntry` contains `type: "success" | "error"` and
 `message: string | null`. `FeedbackEventMap` describes the two listener payloads.
-See [feedback](./feedback.md) for resolution rules and defaults.
+See [feedback](./docs/feedback.md) for resolution rules and defaults.
 
 ## Internationalization
 
@@ -544,7 +544,7 @@ type guard. `I18nInitOptions` has optional `storageKey` and `root: ParentNode`.
 - `getI18nInstance(): I18n` returns it or throws
   `[I18n] No i18n instance has been configured.`
 
-See [internationalization](./internationalization.md) for loading, DOM, event,
+See [internationalization](./docs/internationalization.md) for loading, DOM, event,
 and failure behavior.
 
 ## Themes
@@ -560,7 +560,7 @@ and failure behavior.
 - `toggleTheme(): Theme` applies and persists the other color scheme.
 - `initTheme(): void` initializes singleton listeners and current state once.
 
-See [themes](./themes.md) for DOM effects, persistence, events, and lifetime.
+See [themes](./docs/themes.md) for DOM effects, persistence, events, and lifetime.
 
 ## Toasts
 
@@ -605,15 +605,15 @@ other toast options.
 Constructors throw when both content sources are absent, when the supplied
 message or string content is blank, when resolved content is neither a string nor
 a DOM node, or when duration is negative or non-finite. Empty node content does
-not throw. See [toasts](./toasts.md) for trusted content, stacking, lifecycle,
+not throw. See [toasts](./docs/toasts.md) for trusted content, stacking, lifecycle,
 browser support, and accessibility. See
-[styles and icons](./styles-and-icons.md) for rendering requirements.
+[styles and icons](./docs/styles-and-icons.md) for rendering requirements.
 
 ## CSS entrypoint
 
 `@codenhub/ui-kit/styles` resolves to a compiled CSS file. It has no named CSS
 exports and is a complete global style/reset system. Its rules and icon boundary
-are documented in [styles and icons](./styles-and-icons.md).
+are documented in [styles and icons](./docs/styles-and-icons.md).
 
 <!-- Source: docs/styles-and-icons.md -->
 
@@ -641,7 +641,7 @@ these global effects before combining the stylesheet with another reset or
 design system.
 
 Theme-dependent toast classes expect the tokens and dark-mode behavior supplied
-by this stylesheet and the [theme helpers](./themes.md). `className` can append
+by this stylesheet and the [theme helpers](./docs/themes.md). `className` can append
 toast root classes, but there are no public internal layout or color slots.
 
 ## Icon markers
@@ -661,7 +661,7 @@ graphic is visible. The dismiss button remains named by `aria-label`.
 
 Custom `content` suppresses the built-in leading icon entirely. It can therefore
 provide its own accessible graphics, but trusted string content still follows
-the security boundary documented in [toasts](./toasts.md).
+the security boundary documented in [toasts](./docs/toasts.md).
 
 <!-- Source: docs/themes.md -->
 
@@ -840,5 +840,5 @@ when animation support is missing or throws.
 Toast roots set `aria-live` and `aria-atomic`. Dismiss buttons have the accessible
 name `Dismiss toast`. Consumers remain responsible for choosing appropriate
 urgency, avoiding excessive announcements, and ensuring custom content is
-keyboard accessible. See [styles and icons](./styles-and-icons.md) for required
+keyboard accessible. See [styles and icons](./docs/styles-and-icons.md) for required
 CSS and icon handling.

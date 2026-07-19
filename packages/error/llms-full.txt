@@ -101,7 +101,7 @@ mutate the global registry.
 Configure the mutable global registry during application initialization, or
 create an isolated registry and pass it to `createAppError`. Exact codes, names,
 messages, prefixes, and regular-expression patterns can provide normalized
-feedback. See [error normalization and registries](error-normalization.md) for
+feedback. See [error normalization and registries](docs/error-normalization.md) for
 matching priority and preset entrypoints.
 
 ## Requirements
@@ -115,10 +115,10 @@ contact services or require Supabase packages.
 
 ## Next steps
 
-- [Error normalization and registries](error-normalization.md) explains
+- [Error normalization and registries](docs/error-normalization.md) explains
   classification, registry configuration, presets, matching priority,
   defaults, and failure behavior.
-- [Result helpers](results.md) covers `Result` construction, transformation,
+- [Result helpers](docs/results.md) covers `Result` construction, transformation,
   matching, and unwrapping for code that prefers explicit success and failure
   values.
 

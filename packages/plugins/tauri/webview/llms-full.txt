@@ -79,7 +79,7 @@ pnpm add @codenhub/tauri-plugin-webview @tauri-apps/api
 
 Before using the frontend API, copy and register the shipped Rust navigation and
 reload commands, then grant the bundled caller the required Tauri capabilities.
-Follow [Setup and security](setup.md) for the exact Rust registration and
+Follow [Setup and security](docs/setup.md) for the exact Rust registration and
 least-privilege permission list.
 
 ```ts
@@ -115,9 +115,9 @@ operations are invalid.
 
 ## Next steps
 
-- [Setup and security](setup.md): Register the Rust commands, configure
+- [Setup and security](docs/setup.md): Register the Rust commands, configure
   least-privilege capabilities, and secure navigation.
-- [API and runtime reference](reference.md): Choose creation and lookup APIs,
+- [API and runtime reference](docs/reference.md): Choose creation and lookup APIs,
   use `WebviewHandle`, and understand lifecycle, failures, and platforms.
 
 For OS window state and chrome without webview navigation, use

@@ -114,9 +114,9 @@ place unencrypted credentials or sensitive personal data in storage.
 
 ## Next steps
 
-- [Core stores](core-stores.md) covers sync and async creation, methods,
+- [Core stores](docs/core-stores.md) covers sync and async creation, methods,
   runtime validation, concurrency, defaults, and failure behavior.
-- [Storage drivers](storage-drivers.md) helps choose and configure memory,
+- [Storage drivers](docs/storage-drivers.md) helps choose and configure memory,
   browser, Node.js, Cloudflare KV, or Durable Object persistence.
 
 ---

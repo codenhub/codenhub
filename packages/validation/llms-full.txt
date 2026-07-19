@@ -103,10 +103,10 @@ intentionally accept public host shapes only.
 
 ## Next steps
 
-- [Results and coercion](results-and-coercion.md) explains error shapes, result
+- [Results and coercion](docs/results-and-coercion.md) explains error shapes, result
   construction, custom validators, primitive conversion, and safe input
   retention.
-- [Validator reference](validators.md) documents the string, number, object,
+- [Validator reference](docs/validators.md) documents the string, number, object,
   and array validators with their defaults and constraints.
 
 ---

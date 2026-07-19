@@ -4,11 +4,17 @@ import "../styles/global.css";
 
 interface Props {
   description?: string;
+  sectionTitle?: string;
   title?: string;
 }
 
-const { description = siteConfig.description, title } = Astro.props;
-const pageTitle = title === undefined ? siteConfig.title : `${title} | ${siteConfig.title}`;
+const { description = siteConfig.description, sectionTitle, title } = Astro.props;
+const pageTitle =
+  title === undefined
+    ? siteConfig.title
+    : sectionTitle === undefined
+      ? `${title} | ${siteConfig.title}`
+      : `${title} | ${sectionTitle} | ${siteConfig.title}`;
 const isHome = Astro.url.pathname === "/";
 ---
 
@@ -43,6 +49,7 @@ const isHome = Astro.url.pathname === "/";
     <title>{pageTitle}</title>
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="site-header-content section-content wide">
         <a aria-label={`${siteConfig.title} home`} class="brand" href="/">

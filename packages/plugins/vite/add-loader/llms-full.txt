@@ -112,9 +112,9 @@ escaping or runtime validation. Do not derive them from untrusted data.
 
 ## Next steps
 
-- [Integration and API](integration.md): Configure colors, timeout, nonce
+- [Integration and API](docs/integration.md): Configure colors, timeout, nonce
   handling, plugin order, and public exports.
-- [Generated output and constraints](output-and-constraints.md): Review exact
+- [Generated output and constraints](docs/output-and-constraints.md): Review exact
   output, CSP, accessibility, markup requirements, and failure behavior.
 
 ---

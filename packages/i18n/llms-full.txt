@@ -104,7 +104,7 @@ Elements with `data-i18n="home.title"` are translated during initialization.
 `createI18n` requires a default locale, supported locales, a locale-file URL
 resolver, and a text-direction resolver. Initialization can select a storage
 key and DOM root, suppress warnings, and enable mutation observation. See
-[API and browser behavior](reference.md#configuration-and-setup) for locale
+[API and browser behavior](docs/reference.md#configuration-and-setup) for locale
 resolution and all initialization options.
 
 ## Requirements
@@ -120,7 +120,7 @@ manager's owner is torn down, especially when observation is enabled.
 
 ## Next steps
 
-- [API and browser behavior](reference.md): Complete exports, loading,
+- [API and browser behavior](docs/reference.md): Complete exports, loading,
   persistence, DOM translation boundaries, SSR behavior, events, fallback
   behavior, and cleanup.
 

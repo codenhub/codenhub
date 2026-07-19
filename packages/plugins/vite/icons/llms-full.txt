@@ -129,9 +129,9 @@ icons or their controls.
 
 ## Next steps
 
-- [Integration and API](integration.md): Review supported marker syntax, custom
+- [Integration and API](docs/integration.md): Review supported marker syntax, custom
   registries, plugin order, and public exports.
-- [Generated SVG and constraints](output-and-constraints.md): Understand
+- [Generated SVG and constraints](docs/output-and-constraints.md): Understand
   attribute merging, security, accessibility, failures, and Lucide attribution.
 
 ---
@@ -237,4 +237,4 @@ Verify custom root attributes after class merging and preserve visible focus ind
 
 ## Attribution
 
-The built-in SVG assets are derived from [Lucide](https://lucide.dev) and licensed under the ISC License. Preserve the package [NOTICE](../NOTICE) in redistributed copies; it contains the Lucide Contributors copyright and required permission and warranty text. The plugin package itself is Apache-2.0 licensed.
+The built-in SVG assets are derived from [Lucide](https://lucide.dev) and licensed under the ISC License. Preserve the package [NOTICE](NOTICE) in redistributed copies; it contains the Lucide Contributors copyright and required permission and warranty text. The plugin package itself is Apache-2.0 licensed.

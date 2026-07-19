@@ -20,6 +20,10 @@ describe("Astro Markdown configuration", () => {
     ]);
   });
 
+  it("installs package documentation validation and resource publication", () => {
+    expect(config.integrations).toEqual([expect.objectContaining({ name: "codenhub-package-documentation" })]);
+  });
+
   it("assigns heading ids before adding anchor controls", () => {
     const processor = config.markdown?.processor as ConfiguredProcessor | undefined;
 

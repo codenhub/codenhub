@@ -115,7 +115,7 @@ trusted or sanitized content.
 Pass property declarations, lifecycle hooks, styles, methods, and a required
 renderer to `defineComponent`. Components use Light DOM by default; set
 `hasShadow: true` when the component should render into an open Shadow Root.
-See the [core API](./core-api.md#configuration) for all options and lifecycle
+See the [core API](./docs/core-api.md#configuration) for all options and lifecycle
 timing.
 
 ## Requirements
@@ -132,16 +132,16 @@ appearance. The core factory itself does not require that stylesheet.
 
 Rendering replaces component content with `innerHTML`. Reactive updates can
 therefore discard child state, focus, selection, and listeners; review the
-[core lifecycle constraints](./core-api.md#component-definitions) before using
+[core lifecycle constraints](./docs/core-api.md#component-definitions) before using
 the factory for stateful content.
 
 ## Next steps
 
-- [Core API](./core-api.md) covers definitions, templates, registration,
+- [Core API](./docs/core-api.md) covers definitions, templates, registration,
   lifecycle timing, rendering behavior, types, and errors.
-- [Component library](./component-library.md) covers the ready-to-use native
+- [Component library](./docs/component-library.md) covers the ready-to-use native
   `ChButton` definition and its styling expectations.
-- [Framework adapters](./framework-adapters.md) explains the distinct React,
+- [Framework adapters](./docs/framework-adapters.md) explains the distinct React,
   Svelte, and Astro entrypoints and their client-loading behavior.
 
 <!-- Source: docs/component-library.md -->

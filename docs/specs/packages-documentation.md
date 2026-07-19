@@ -210,7 +210,7 @@ Every public package `docs/**/*.md` file outside `docs/internal/` MUST start
 with portable presentation frontmatter. Its schema is closed and contains only:
 
 - `title`: REQUIRED non-empty page label used for navigation and sidebar labels
-  and the page-specific browser title.
+  and as the page-specific segment of the browser title.
 - `description`: OPTIONAL non-empty page summary for metadata, previews, or
   search.
 
@@ -221,13 +221,16 @@ metadata; Markdown controls article markup. Publishing tools MUST render the
 Markdown body as authored and MUST NOT inject titles, descriptions, package
 identifiers, status notices, or other metadata into the article body. Site
 chrome outside the article body MAY present package metadata, navigation,
-breadcrumbs, or status.
+breadcrumbs, or status. Browser titles MUST add the package label between the
+page title and site title so pages with common titles remain distinguishable.
 
 Deprecated packages MUST state their status near the top of `README.md` and
 point to a replacement when one exists. Experimental packages MUST identify
 what remains unstable in `README.md`. Supporting tools MAY use
 `codenhub.docs.status` to present the same package-wide status in site chrome
 without requiring public documents to repeat it.
+Documentation chrome MUST show warning status for experimental and deprecated
+packages and MUST NOT show a status badge for active packages.
 
 ## Internal documentation
 
@@ -274,7 +277,9 @@ tests, generated declarations, and raw JSDoc/TSDoc extraction.
 `llms-full.txt` MAY be maintained manually while no generator exists. Once
 generation tooling exists, packages SHOULD generate it from canonical public
 docs in deterministic order. Generated content MUST identify its source docs
-and MUST NOT become a competing contract.
+and MUST NOT become a competing contract. A generator MAY rebase relative link
+destinations so they resolve from `llms-full.txt`; this is the only allowed
+change to copied Markdown bodies.
 
 ## Consumer and maintainer truth
 
@@ -296,6 +301,21 @@ same change. Generated LLM files MUST be regenerated when their inputs change.
 Published package tarballs MUST include `README.md`, public `docs/`, `llms.txt`,
 and `llms-full.txt`. They MUST exclude `docs/internal/`.
 
+Documentation sites MUST publish non-hidden, non-Markdown files under public
+`docs/` at the same path relative to the package documentation root. Packaging
+control files such as `docs/.npmignore` are not public resources. Sites MUST
+also publish a package-root `NOTICE` or `LICENSE` file when present. These
+resources retain their package-relative names: for example,
+`docs/assets/diagram.svg` is available as `assets/diagram.svg` and `NOTICE` is
+available as `NOTICE` within that package's documentation route.
+
+Public documents MAY link outside `docs/` only to package-root `NOTICE` and
+`LICENSE` resources. Other paths escaping public `docs/`, all paths escaping the
+package root, and all links into `docs/internal/` are invalid. Every linked local
+resource in a hosted public document MUST exist in the documentation site
+output. Every local target on any validation surface MUST exist in the package
+tarball.
+
 The exclusion mechanism is package-specific. A nested `docs/.npmignore` is one
 valid option when `package.json` includes `docs/`; it is not required when
 another reliable mechanism is used.
@@ -316,6 +336,16 @@ Documentation checks SHOULD validate, without requiring a particular renderer:
 - `docs/internal/` is excluded from published and generated consumer material.
 - Package documentation status matches notices in the README.
 - Generated `llms-full.txt` content matches its canonical inputs.
+
+Link validation MUST cover `README.md`, public `docs/**/*.md`, `llms.txt`, and
+the Markdown content in `llms-full.txt`. It MUST validate Markdown links, local
+assets, heading fragments, public-document boundaries, local target existence,
+documentation-site publication for hosted public documents, and package-tarball
+publication for all local links. Build-time validation MUST remain deterministic
+and MUST NOT make network requests; external URLs are checked for valid syntax
+only. Package-tarball publication MUST be checked using
+`npm pack --dry-run --json` rather than an approximation of npm's inclusion
+rules.
 
 ## Exceptions
 

@@ -12,7 +12,11 @@ const { currentPackage, document } = Astro.props;
 const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
 ---
 
-<BaseLayout description={document.description ?? currentPackage.description} title={document.title}>
+<BaseLayout
+  description={document.description ?? currentPackage.description}
+  sectionTitle={currentPackage.label}
+  title={document.title}
+>
   <details class="mobile-navigation">
     <summary>Browse documentation</summary>
     <div class="mobile-navigation-panel">
@@ -25,7 +29,7 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
       <PackageNavigation currentPackage={currentPackage} currentRoute={document.route} />
     </aside>
 
-    <main class="document-column">
+    <main class="document-column" id="main-content">
       <article class="markdown-content">
         <slot />
       </article>

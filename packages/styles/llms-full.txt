@@ -77,7 +77,7 @@ are provided.
 
 Licensed under Apache-2.0.
 
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-dev/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
+It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
 
 <!-- Source: docs/index.md -->
 
@@ -113,7 +113,7 @@ component-class surface, then compose helper classes in markup:
 
 The full stylesheet applies global reset, native-element, and focus-visible
 rules. Import focused entrypoints instead when those global rules are not
-appropriate. The [class reference](./classes.md) lists every supported compiled
+appropriate. The [class reference](./docs/classes.md) lists every supported compiled
 and Tailwind source import and explains their composition.
 
 ### Configuration
@@ -129,7 +129,7 @@ own adding and removing the class.
 </html>
 ```
 
-Customize the public CSS properties documented in [Tokens](./tokens.md). Do not
+Customize the public CSS properties documented in [Tokens](./docs/tokens.md). Do not
 depend on component-scoped implementation variables.
 
 ## Requirements
@@ -144,11 +144,11 @@ depend on component-scoped implementation variables.
 
 ## Next steps
 
-- [Tokens](./tokens.md) explains theme values, dark mode, and the public
+- [Tokens](./docs/tokens.md) explains theme values, dark mode, and the public
   customization contract.
-- [Classes](./classes.md) covers supported imports, helper classes, component
+- [Classes](./docs/classes.md) covers supported imports, helper classes, component
   states, and composition rules.
-- [Accessibility](./accessibility.md) separates the hooks supplied by CSS from
+- [Accessibility](./docs/accessibility.md) separates the hooks supplied by CSS from
   the semantics and behavior an application must provide.
 
 <!-- Source: docs/accessibility.md -->

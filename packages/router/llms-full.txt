@@ -97,7 +97,7 @@ route announcements after navigation.
 
 ## Next steps
 
-- [API, paths, and browser lifecycle](reference.md): Complete exports, matching,
+- [API, paths, and browser lifecycle](docs/reference.md): Complete exports, matching,
   link interception, history behavior, SSR, failures, URL safety, cleanup, and
   accessibility responsibilities.
 

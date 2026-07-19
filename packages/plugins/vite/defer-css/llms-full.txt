@@ -111,9 +111,9 @@ apply.
 
 ## Next steps
 
-- [Integration and API](integration.md): Review matching rules, nonce mode,
+- [Integration and API](docs/integration.md): Review matching rules, nonce mode,
   plugin order, and public exports.
-- [Transformed output and constraints](output-and-constraints.md): Inspect exact
+- [Transformed output and constraints](docs/output-and-constraints.md): Inspect exact
   markup, CSP behavior, rendering and accessibility risks, and failures.
 
 ---

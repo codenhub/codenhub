@@ -97,7 +97,7 @@ theme logic before rendering.
 
 ## Next steps
 
-- [API, persistence, DOM, and SSR behavior](reference.md): Complete exports,
+- [API, persistence, DOM, and SSR behavior](docs/reference.md): Complete exports,
   configuration, tokens, browser synchronization, validation, pre-paint
   concerns, and cleanup.
 

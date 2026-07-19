@@ -116,9 +116,9 @@ Configuration values are validated and invalid values throw synchronously.
 
 ## Next steps
 
-- [API, CSS, and lifecycle reference](reference.md): Complete entrypoints,
+- [API, CSS, and lifecycle reference](docs/reference.md): Complete entrypoints,
   configuration, dispatchers, handles, queueing, validation, SSR, and cleanup.
-- [Accessibility and custom content](accessibility-and-content.md): Roles,
+- [Accessibility and custom content](docs/accessibility-and-content.md): Roles,
   message guidance, dialogs, reduced motion, focus, trusted DOM nodes, and
   string sanitization.
 

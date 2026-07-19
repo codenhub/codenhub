@@ -78,7 +78,7 @@ No Rust module or Cargo plugin registration is required.
 
 First grant the bundled caller the core window capabilities for every operation
 it uses. The complete permission list and least-privilege guidance are in
-[Setup and security](setup.md).
+[Setup and security](docs/setup.md).
 
 ```ts
 import { getCurrentWindowHandle } from "@codenhub/tauri-plugin-window";
@@ -106,9 +106,9 @@ perform the native operation.
 
 ## Next steps
 
-- [Setup and security](setup.md): Configure least-privilege Tauri capabilities
+- [Setup and security](docs/setup.md): Configure least-privilege Tauri capabilities
   and understand the trust boundary.
-- [API and runtime reference](reference.md): Choose creation and lookup APIs,
+- [API and runtime reference](docs/reference.md): Choose creation and lookup APIs,
   use `WindowHandle`, and understand state, lifecycle, failures, and platforms.
 
 For webview content, navigation, and reload, use
