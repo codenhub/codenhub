@@ -7,6 +7,7 @@ interface DomTranslatorOptions {
 
 interface TranslateRootOptions {
   readonly root: ParentNode;
+  readonly boundary?: ParentNode;
   readonly translate: (key: string) => string | undefined;
 }
 
@@ -81,9 +82,9 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
   };
 
   return {
-    translateRoot({ root, translate }) {
+    translateRoot({ root, boundary = root, translate }) {
       for (const element of collectElements(root)) {
-        if (!isInsideCustomElement(element, root)) {
+        if (!isInsideCustomElement(element, boundary)) {
           translateElement(element, translate);
         }
       }

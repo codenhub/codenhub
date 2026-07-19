@@ -5,7 +5,8 @@ description: Complete root, browser, and routing entrypoint contracts and errors
 
 # API reference
 
-The package has three public entrypoints. All locale identifiers are trimmed
+The package has three public entrypoints. Locale identifiers use conservative
+ASCII syntax: alphanumeric subtags joined by single hyphens. They are trimmed
 when configuration is created and matched case-insensitively; returned state
 uses the trimmed canonical spelling and order from `locales`.
 
@@ -30,8 +31,8 @@ interface I18nConfig<TLocale extends string = string> {
 function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
 ```
 
-`locales` must be a non-empty array of non-empty strings that remain unique
-case-insensitively after trimming. `defaultLocale` must match one of them.
+`locales` must be a non-empty array of conservative ASCII locale identifiers
+that remain unique case-insensitively after trimming. `defaultLocale` must match one of them.
 `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when
 provided, must be boolean. Invalid configuration throws `TypeError` during
 `createI18n()`.
@@ -110,12 +111,15 @@ const payload = {
 ```
 
 The normalized `LocaleDictionary` has a null prototype, is frozen, and contains
-only string values. A payload throws `TypeError` when it:
+only string values. Dictionaries allow at most 100 levels of nesting, 10,000
+translations, and 1,000 characters per flattened key. A payload throws
+`TypeError` when it:
 
 - Is null, an array, a primitive, or empty.
 - Contains a non-string leaf, array, function, symbol key, accessor, or cycle.
 - Contains an empty dot-separated segment, a `__proto__`, `prototype`, or
   `constructor` segment, or a flat/nested key collision.
+- Exceeds a dictionary depth, translation count, or flattened-key limit.
 
 Validation failures are not wrapped and are retryable on the next load.
 
@@ -152,8 +156,8 @@ translate(key: string): string | undefined;
 
 Trims a non-empty key, checks the active dictionary, then the default
 dictionary. A key missing from both returns `undefined`. Unless `isSilent` is
-true, the manager warns once for each active-locale/key pair. Blank or runtime
-non-string keys throw `TypeError`.
+true, the manager warns once for each of the 1,000 most recently missing
+active-locale/key pairs; an evicted pair can warn again. Blank or runtime non-string keys throw `TypeError`.
 
 The API does not provide interpolation, plural selection, rich messages,
 number/date formatting, or HTML rendering.
@@ -280,6 +284,9 @@ After core initialization succeeds, the binding:
 - Reapplies enabled effects after successful `ready` and `locale-change` events.
 - Observes additions and `data-i18n` changes under `root` only when requested.
 
+Mutation observation translates only affected elements and added subtrees;
+locale changes still retranslate the complete configured root.
+
 Only one initializing or active browser binding may own a manager. A duplicate
 call rejects with `TypeError`. Failed setup releases listeners, observation, and
 ownership so initialization may be retried.
@@ -333,9 +340,9 @@ interface LocaleRouting<TLocale extends string> {
 ```
 
 `createLocaleRouting(config)` trims and snapshots locale configuration.
-`locales` must be non-empty, contain non-empty case-insensitively unique strings,
-and contain `defaultLocale`; `prefixDefaultLocale` must be boolean. Invalid
-configuration throws `TypeError`.
+`locales` must be non-empty, contain conservative ASCII locale identifiers that
+are case-insensitively unique, and contain `defaultLocale`;
+`prefixDefaultLocale` must be boolean. Invalid configuration throws `TypeError`.
 
 ```ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";

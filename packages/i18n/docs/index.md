@@ -3,28 +3,21 @@ title: Overview
 description: Runtime-neutral translations with optional browser and locale-path integrations.
 ---
 
-# Use translations in any runtime
+# Translate applications across runtimes
 
-`@codenhub/i18n` provides an isolated translation manager whose locale data
-source is injected by the consumer. The same core API works in browsers, SSR,
-SSG, Node.js, and workers. Optional entrypoints add browser effects and pure
-locale-prefixed pathname operations without coupling core state to either.
+`@codenhub/i18n` provides isolated translation managers with consumer-owned
+locale loading. Use the core API in browsers, servers, workers, and static
+builds, then add browser effects or locale-prefixed paths when needed.
 
-The package is experimental. Its API, browser integration, routing behavior,
-and support level may change before a stable release.
+## Setup
 
-## Choose an entrypoint
+### Installation
 
-| Import path              | Purpose                                                                    |
-| ------------------------ | -------------------------------------------------------------------------- |
-| `@codenhub/i18n`         | Runtime-neutral loading, validation, fallback, translation, state, events. |
-| `@codenhub/i18n/browser` | Browser locale selection, persistence, document and optional DOM effects.  |
-| `@codenhub/i18n/routing` | Pure parsing and generation of locale-prefixed application pathnames.      |
+```sh
+pnpm add @codenhub/i18n
+```
 
-Only these three package paths are public. Do not import `src`, `dist`, or
-package internals.
-
-## Start with core
+### Quick start
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -51,23 +44,26 @@ Core performs no locale detection. Omitting `init({ locale })` selects the
 configured default. Selecting another locale loads both its dictionary and the
 default dictionary before applying state, so fallback is deterministic.
 
-## Failure model
+### Configuration
 
-Required work fails explicitly:
+Configure supported locales, a default locale, a dictionary loader, and text
+direction resolution. The loader may use imports, HTTP, files, or another
+runtime-specific source.
 
-- Invalid configuration or dictionaries throw `TypeError`.
-- Unsupported locales throw `RangeError`.
-- `translate()` or `setLocale()` before successful initialization throw `Error`.
-- A rejected injected loader becomes `I18nError` with code
-  `"locale_load_failed"`, the failed locale, and the original `cause`.
+Use `@codenhub/i18n/browser` for browser locale selection, persistence, document
+attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure
+locale-prefixed pathname parsing and generation.
 
-Failed initialization does not make a new manager ready. Failed reinitialization
-or locale changes preserve previously applied state. `isSilent` suppresses only
-optional warnings; it never suppresses these failures.
+## Requirements
+
+- ESM-aware package resolution.
+- Core requires standard `Event` and `EventTarget` globals.
+- Browser features require only the browser APIs they enable.
+- Concurrent SSR requests and SSG renders require separate manager instances.
 
 ## Next steps
 
-- [Usage across runtimes](examples.md): Browser, routed hydration, SSR, SSG, and
-  loader examples.
-- [API reference](reference.md): Complete entrypoint exports, contracts,
-  defaults, events, and observable errors.
+- [Usage across runtimes](examples.md) covers browser setup, routed hydration,
+  SSR, SSG, and loader patterns.
+- [API reference](reference.md) documents configuration, dictionaries, browser
+  behavior, routing, events, and failures.

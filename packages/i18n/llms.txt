@@ -4,7 +4,8 @@
 > deterministic fallback, and optional browser and locale-path integrations.
 
 Use only the root, `/browser`, and `/routing` entrypoints. Await successful core
-initialization and keep concurrent server/build instances isolated.
+initialization and keep concurrent server/build instances isolated. Locale
+identifiers use alphanumeric ASCII subtags joined by single hyphens.
 
 ## Documentation
 

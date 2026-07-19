@@ -74,4 +74,26 @@ describe("normalizeDictionary", () => {
 
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
   });
+
+  it("rejects dictionaries deeper than 100 levels", () => {
+    let input: Record<string, unknown> = { value: "translation" };
+
+    for (let depth = 0; depth < 101; depth += 1) {
+      input = { nested: input };
+    }
+
+    expect(() => normalizeDictionary(input)).toThrow("must not exceed 100 levels of nesting");
+  });
+
+  it("rejects dictionaries with more than 10,000 translations", () => {
+    const input = Object.fromEntries(Array.from({ length: 10_001 }, (_, index) => [`key-${index}`, "value"]));
+
+    expect(() => normalizeDictionary(input)).toThrow("must not exceed 10000 translations");
+  });
+
+  it("rejects flattened keys longer than 1,000 characters", () => {
+    expect(() => normalizeDictionary({ ["k".repeat(1_001)]: "value" })).toThrow(
+      "flattened keys must not exceed 1000 characters",
+    );
+  });
 });

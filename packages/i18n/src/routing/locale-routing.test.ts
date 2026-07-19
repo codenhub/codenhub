@@ -26,6 +26,9 @@ describe("createLocaleRouting", () => {
       { defaultLocale: "en", locales: ["en", "  "], prefixDefaultLocale: true },
       { defaultLocale: "en", locales: ["en", "EN"], prefixDefaultLocale: true },
       { defaultLocale: "en", locales: ["en", " EN "], prefixDefaultLocale: true },
+      { defaultLocale: "en", locales: ["en", "../admin"], prefixDefaultLocale: true },
+      { defaultLocale: "en", locales: ["en", "pt BR"], prefixDefaultLocale: true },
+      { defaultLocale: "en", locales: ["en", "fr?admin"], prefixDefaultLocale: true },
       { defaultLocale: "pt", locales: ["en"], prefixDefaultLocale: true },
       {
         defaultLocale: "en",

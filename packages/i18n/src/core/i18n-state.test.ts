@@ -205,6 +205,19 @@ describe("I18n state", () => {
     expect(silentI18n.isSilent).toBe(true);
   });
 
+  it("retains only the 1,000 most recent missing-key diagnostics", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createI18n(createConfig());
+    await i18n.init();
+
+    for (let index = 0; index <= 1_000; index += 1) {
+      i18n.translate(`missing-${index}`);
+    }
+    i18n.translate("missing-0");
+
+    expect(warn).toHaveBeenCalledTimes(1_002);
+  });
+
   it("rejects an empty translation key with native TypeError", async () => {
     const i18n = createI18n(createConfig());
     await i18n.init();

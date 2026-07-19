@@ -90,6 +90,46 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("translates added subtrees without rescanning the observed root", async () => {
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    const queryRoot = vi.spyOn(document.body, "querySelectorAll");
+    const section = document.createElement("section");
+    section.innerHTML = '<p data-i18n="greeting">Added fallback</p>';
+
+    document.body.append(section);
+    await flushMutations();
+
+    expect(section.querySelector("p")?.textContent).toBe("Bonjour");
+    expect(queryRoot).not.toHaveBeenCalled();
+    binding.disconnect();
+  });
+
+  it("does not translate content added inside a custom element", async () => {
+    document.body.innerHTML = "<app-shell></app-shell>";
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    const added = document.createElement("span");
+    added.dataset.i18n = "greeting";
+    added.textContent = "Custom fallback";
+
+    document.querySelector("app-shell")?.append(added);
+    await flushMutations();
+
+    expect(added.textContent).toBe("Custom fallback");
+    binding.disconnect();
+  });
+
   it("retranslates, persists, and synchronizes after locale changes", async () => {
     document.body.innerHTML = '<p data-i18n="greeting">Fallback</p>';
     const i18n = createManager();

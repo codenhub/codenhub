@@ -47,18 +47,21 @@ dictionary. Await successful initialization before calling `translate()` or
 
 ## Requirements
 
-- Core requires standard `Event` and `EventTarget` globals and does not read
-  browser globals. The consumer-provided loader determines runtime requirements.
-- `@codenhub/i18n/browser` requires browser `document`, `navigator`, and, when
-  enabled, `localStorage` and `MutationObserver`.
+- ESM-aware package resolution.
+- Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
+- Browser features require `navigator`, `document`, `localStorage`, or
+  `MutationObserver` only when their related behavior is enabled.
 - Concurrent SSR requests and SSG renders must use separate manager instances.
 
 ## Notes
 
-- Dictionaries may be flat or nested, but every leaf must be a string. They are
-  validated, flattened to dot-separated keys, frozen, and cached per manager.
+- Dictionaries may be flat or nested, but every leaf must be a string. Valid
+  dictionaries are flattened, frozen, and cached per manager.
+- Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined
+  by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing
-  from both returns `undefined` and warns once per locale/key unless silent.
+  from both returns `undefined`; diagnostics deduplicate the 1,000 most recent
+  locale/key pairs unless silent.
 - The package does not own fetch policy, request negotiation, route
   registration, redirects, navigation, rendering, or static page generation.
 

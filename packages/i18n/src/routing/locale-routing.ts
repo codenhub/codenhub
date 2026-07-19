@@ -1,8 +1,10 @@
+import { isValidLocaleIdentifier } from "../locale/identifier";
+
 /** Configuration snapshotted for locale-prefixed pathname parsing and generation. */
 export interface LocaleRoutingConfig<TLocale extends string> {
   /** The trimmed, case-insensitively matched locale used for unprefixed paths. */
   defaultLocale: TLocale;
-  /** Supported locale identifiers, trimmed and preserved in `localizeAll` order. */
+  /** ASCII locale identifiers with alphanumeric hyphen-separated subtags, preserved in `localizeAll` order. */
   locales: readonly TLocale[];
   /** Whether paths require a default-locale prefix, snapshotted when routing is created. */
   prefixDefaultLocale: boolean;
@@ -64,8 +66,8 @@ export interface LocaleRouting<TLocale extends string> {
  *
  * @param config - Supported locales, default locale, and default-prefix policy.
  * @returns Pure parsing and generation operations bound to an immutable configuration snapshot.
- * @throws {TypeError} When locales are empty, blank, duplicated case-insensitively after trimming,
- * the trimmed default locale is unsupported, or `prefixDefaultLocale` is not a boolean.
+ * @throws {TypeError} When locales are empty, invalid conservative ASCII identifiers, duplicated
+ * case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
  */
 export const createLocaleRouting = <TLocale extends string>(
   config: LocaleRoutingConfig<TLocale>,
@@ -88,17 +90,23 @@ export const createLocaleRouting = <TLocale extends string>(
         throw new TypeError("locales must contain non-empty strings");
       }
 
-      return locale.trim() as TLocale;
+      const normalizedLocale = locale.trim();
+
+      if (!isValidLocaleIdentifier(normalizedLocale)) {
+        throw new TypeError("locales must be ASCII locale identifiers with alphanumeric hyphen-separated subtags");
+      }
+
+      return normalizedLocale as TLocale;
     }),
   );
-  const normalizedLocales = new Set<string>();
+  const localeLookup = new Map<string, TLocale>();
 
   for (const locale of locales) {
     const normalizedLocale = locale.toLowerCase();
-    if (normalizedLocales.has(normalizedLocale)) {
+    if (localeLookup.has(normalizedLocale)) {
       throw new TypeError("locales must be unique case-insensitively");
     }
-    normalizedLocales.add(normalizedLocale);
+    localeLookup.set(normalizedLocale, locale);
   }
 
   if (typeof configuredDefaultLocale !== "string") {
@@ -106,13 +114,13 @@ export const createLocaleRouting = <TLocale extends string>(
   }
 
   const normalizedDefaultLocale = configuredDefaultLocale.trim().toLowerCase();
-  if (!normalizedLocales.has(normalizedDefaultLocale)) {
+  if (!localeLookup.has(normalizedDefaultLocale)) {
     throw new TypeError("defaultLocale must match a configured locale");
   }
 
   const findLocale = (value: string, shouldTrim = false): TLocale | undefined => {
     const normalizedValue = (shouldTrim ? value.trim() : value).toLowerCase();
-    return locales.find((locale) => locale.toLowerCase() === normalizedValue);
+    return localeLookup.get(normalizedValue);
   };
   const defaultLocale = findLocale(normalizedDefaultLocale) as TLocale;
 

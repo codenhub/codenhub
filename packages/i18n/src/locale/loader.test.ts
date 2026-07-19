@@ -36,6 +36,21 @@ describe("createLocaleLoader", () => {
     expect(loadLocale).toHaveBeenCalledTimes(1);
   });
 
+  it("deduplicates synchronous reentrant loads", async () => {
+    let reentrantLoad: Promise<Readonly<Record<string, string>>> | undefined;
+    const loadLocale = vi.fn(() => {
+      reentrantLoad ??= loader.loadLocale("en");
+      return { key: "value" };
+    });
+    const loader = createLocaleLoader({ loadLocale });
+
+    const firstLoad = loader.loadLocale("en");
+    const [first, reentrant] = await Promise.all([firstLoad, reentrantLoad]);
+
+    expect(loadLocale).toHaveBeenCalledTimes(1);
+    expect(reentrant).toBe(first);
+  });
+
   it("wraps loader rejection and retries on the next call", async () => {
     const cause = new Error("offline");
     const loadLocale = vi.fn().mockRejectedValueOnce(cause).mockResolvedValueOnce({ key: "recovered" });

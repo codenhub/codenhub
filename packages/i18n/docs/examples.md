@@ -57,7 +57,7 @@ import { createLocaleRouting } from "@codenhub/i18n/routing";
 const routing = createLocaleRouting({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
-  prefixDefaultLocale: false,
+  prefixDefaultLocale: true,
 });
 const route = routing.parse(window.location.pathname);
 

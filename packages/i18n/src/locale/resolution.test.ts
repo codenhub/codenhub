@@ -47,6 +47,8 @@ describe("validateI18nConfig", () => {
     ["empty locales", createConfig({ locales: [] }), "locales must not be empty"],
     ["non-string locale", createConfig({ locales: ["en-US", 1 as unknown as string] }), "non-empty strings"],
     ["empty locale identifier", createConfig({ locales: ["en-US", " "] }), "non-empty strings"],
+    ["unsafe locale identifier", createConfig({ locales: ["en-US", "../admin"] }), "ASCII locale identifiers"],
+    ["locale identifier with whitespace", createConfig({ locales: ["en-US", "pt BR"] }), "ASCII locale identifiers"],
     ["case-insensitive duplicate", createConfig({ locales: ["en-US", "EN-us"] }), "unique"],
     ["duplicate after trimming", createConfig({ locales: [" en-US ", "EN-us"] }), "unique"],
     ["unsupported default", createConfig({ defaultLocale: "fr" }), "defaultLocale must match"],

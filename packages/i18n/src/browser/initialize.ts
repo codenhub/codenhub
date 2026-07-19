@@ -5,6 +5,9 @@ const DEFAULT_STORAGE_KEY = "i18n";
 const LOCALE_CHANGE_EVENT = "locale-change";
 const READY_EVENT = "ready";
 const BOUND_MANAGERS = new WeakSet<object>();
+const ELEMENT_NODE = 1;
+
+const isElement = (node: Node): node is Element => node.nodeType === ELEMENT_NODE;
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -19,15 +22,15 @@ export interface BrowserI18nOptions<TLocale extends string> {
    * Only `undefined` omits this input; other non-string runtime values reject initialization.
    */
   locale?: TLocale;
-  /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. */
+  /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Requires storage when enabled. */
   storageKey?: string;
   /** Whether successful active locales are read from and written to storage. Defaults to `true`. */
   persistLocale?: boolean;
-  /** Whether the document element's `lang` and `dir` attributes stay synchronized. Defaults to `true`. */
+  /** Whether the global document element's `lang` and `dir` stay synchronized. Defaults to `true`. */
   syncDocument?: boolean;
   /** Optional DOM boundary whose safe `data-i18n` leaves are translated. */
   root?: ParentNode;
-  /** Whether additions and `data-i18n` changes below `root` are observed. Defaults to `false`. */
+  /** Whether additions and `data-i18n` changes below `root` are incrementally observed. Defaults to `false`. */
   observe?: boolean;
 }
 
@@ -124,7 +127,9 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @throws {TypeError} When observation lacks a root or the manager already has a browser binding.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
  * @throws {TypeError} When a required dictionary is invalid.
+ * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When a required locale loader rejects.
+ * Exceptions from the direction callback and required browser setup propagate unchanged.
  */
 export async function initializeBrowserI18n<TLocale extends string>(
   options: BrowserI18nOptions<TLocale>,
@@ -203,9 +208,32 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
     if (observe && root !== undefined) {
       const observedRoot = root;
-      observer = new (getMutationObserver(observedRoot))(() => {
-        if (root !== undefined) {
-          domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
+      observer = new (getMutationObserver(observedRoot))((mutations) => {
+        const changedRoots = new Set<ParentNode>();
+
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes") {
+            changedRoots.add(mutation.target as Element);
+            continue;
+          }
+
+          if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
+            changedRoots.add(mutation.target);
+          }
+
+          for (const addedNode of mutation.addedNodes) {
+            if (isElement(addedNode)) {
+              changedRoots.add(addedNode);
+            }
+          }
+        }
+
+        for (const changedRoot of changedRoots) {
+          domTranslator.translateRoot({
+            root: changedRoot,
+            boundary: observedRoot,
+            translate: (key) => i18n.translate(key),
+          });
         }
       });
       observer.observe(observedRoot, {

@@ -41,30 +41,36 @@ export function createLocaleLoader<TLocale extends string>(
         return pendingLoad;
       }
 
-      const load = async (): Promise<LocaleDictionary> => {
-        let payload: unknown;
+      let resolveLoad!: (dictionary: LocaleDictionary) => void;
+      let rejectLoad!: (error: unknown) => void;
+      const nextLoad = new Promise<LocaleDictionary>((resolve, reject) => {
+        resolveLoad = resolve;
+        rejectLoad = reject;
+      });
 
-        try {
-          payload = await options.loadLocale(locale);
-        } catch (cause) {
-          throw new I18nError({ locale, cause });
-        }
-
-        const normalizedDictionary = normalizeDictionary(payload);
-        dictionaries.set(locale, normalizedDictionary);
-        return normalizedDictionary;
-      };
-
-      const loadAndClear = async (): Promise<LocaleDictionary> => {
-        try {
-          return await load();
-        } finally {
-          pendingLoads.delete(locale);
-        }
-      };
-
-      const nextLoad = loadAndClear();
       pendingLoads.set(locale, nextLoad);
+
+      void (async () => {
+        try {
+          let payload: unknown;
+          try {
+            payload = await options.loadLocale(locale);
+          } catch (cause) {
+            throw new I18nError({ locale, cause });
+          }
+
+          const normalizedDictionary = normalizeDictionary(payload);
+          dictionaries.set(locale, normalizedDictionary);
+          resolveLoad(normalizedDictionary);
+        } catch (error) {
+          rejectLoad(error);
+        } finally {
+          if (pendingLoads.get(locale) === nextLoad) {
+            pendingLoads.delete(locale);
+          }
+        }
+      })();
+
       return nextLoad;
     },
   };

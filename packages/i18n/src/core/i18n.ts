@@ -1,5 +1,5 @@
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
-import { resolveConfiguredLocale, validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
+import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import type {
   I18n,
   I18nConfig,
@@ -15,6 +15,8 @@ interface RequiredDictionaries {
   readonly current: LocaleDictionary;
   readonly fallback: LocaleDictionary;
 }
+
+const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
   private eventDetail: TDetail;
@@ -55,7 +57,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private currentDictionary: LocaleDictionary | undefined;
   private defaultDictionary: LocaleDictionary | undefined;
   private requestId = 0;
-  private readonly warnedMissingKeys = new Set<string>();
+  private readonly warnedMissingKeys = new Map<string, undefined>();
+  private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
 
@@ -67,6 +70,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.isSilent = this.config.isSilent;
     this.currentLocale = this.defaultLocale;
     this.currentDirection = this.resolveLocaleDirection(this.defaultLocale);
+    this.localeLookup = new Map(this.locales.map((locale) => [locale.toLowerCase(), locale]));
     this.loader = createLocaleLoader({ loadLocale: this.config.loadLocale });
   }
 
@@ -83,7 +87,11 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   }
 
   resolveLocale(value: string): TLocale | undefined {
-    return resolveConfiguredLocale(this.locales, value);
+    if (typeof value !== "string") {
+      return undefined;
+    }
+
+    return this.localeLookup.get(value.trim().toLowerCase());
   }
 
   async loadLocale(locale: TLocale): Promise<LocaleDictionary> {
@@ -159,8 +167,22 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 
     const warningKey = `${this.currentLocale}\0${normalizedKey}`;
 
-    if (!this.isSilent && !this.warnedMissingKeys.has(warningKey)) {
-      this.warnedMissingKeys.add(warningKey);
+    if (!this.isSilent) {
+      if (this.warnedMissingKeys.delete(warningKey)) {
+        this.warnedMissingKeys.set(warningKey, undefined);
+        return undefined;
+      }
+
+      this.warnedMissingKeys.set(warningKey, undefined);
+
+      if (this.warnedMissingKeys.size > MAX_MISSING_KEY_DIAGNOSTICS) {
+        const oldestWarningKey = this.warnedMissingKeys.keys().next().value;
+
+        if (oldestWarningKey !== undefined) {
+          this.warnedMissingKeys.delete(oldestWarningKey);
+        }
+      }
+
       console.warn(`[I18n] Missing key "${normalizedKey}" in locale "${this.currentLocale}".`);
     }
 
@@ -250,9 +272,11 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  * Creates an isolated runtime-neutral translation manager.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
- * @param config - Locale metadata and injected loading/direction callbacks.
- * @returns An uninitialized consumer-owned manager.
- * @throws {TypeError} When configuration is invalid.
+ * @param config - ASCII locale metadata and injected loading/direction callbacks. Locales are trimmed,
+ * case-insensitively unique, and composed of alphanumeric hyphen-separated subtags. `isSilent` defaults to false.
+ * @returns An uninitialized consumer-owned manager whose initial direction has already been resolved.
+ * @throws {TypeError} When configuration or the initial direction is invalid.
+ * Exceptions from the initial direction callback propagate unchanged.
  */
 export function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale> {
   return new I18nInstance(config);

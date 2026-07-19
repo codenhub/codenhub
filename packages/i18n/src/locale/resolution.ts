@@ -1,4 +1,5 @@
 import type { I18nConfig } from "../core/types";
+import { isValidLocaleIdentifier } from "./identifier";
 
 /** Validated runtime-neutral configuration used by core internals. */
 export interface ValidatedI18nConfig<TLocale extends string> {
@@ -59,6 +60,11 @@ export function validateI18nConfig<TLocale extends string>(config: I18nConfig<TL
   }
 
   const locales = Object.freeze(config.locales.map((locale) => locale.trim() as TLocale));
+
+  if (locales.some((locale) => !isValidLocaleIdentifier(locale))) {
+    throw new TypeError("[I18n] locales must be ASCII locale identifiers with alphanumeric hyphen-separated subtags.");
+  }
+
   const normalizedLocales = locales.map((locale) => locale.toLowerCase());
 
   if (new Set(normalizedLocales).size !== normalizedLocales.length) {

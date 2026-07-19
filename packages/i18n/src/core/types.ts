@@ -12,15 +12,15 @@ export interface LocaleDictionary {
  * @typeParam TLocale - Union of supported canonical locale identifiers.
  */
 export interface I18nConfig<TLocale extends string = string> {
-  /** Locale used initially and for missing-key fallback. */
+  /** Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively. */
   defaultLocale: TLocale;
-  /** Supported canonical locale identifiers. */
+  /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
   locales: readonly TLocale[];
-  /** Loads a flat or nested dictionary through a consumer-selected transport. */
+  /** Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. */
   loadLocale(locale: TLocale): unknown | Promise<unknown>;
-  /** Resolves the rendering direction for an active locale. */
+  /** Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged. */
   getLocaleDirection(locale: TLocale): LocaleDirection;
-  /** Suppresses optional missing-key diagnostics without suppressing failures. */
+  /** Suppresses optional missing-key diagnostics without suppressing failures. Defaults to `false`. */
   isSilent?: boolean;
 }
 
@@ -77,7 +77,9 @@ export interface I18n<TLocale extends string = string> {
    * @param options - Optional explicit locale selection.
    * @throws {RangeError} When the locale is unsupported.
    * @throws {TypeError} When a loaded dictionary is invalid.
+   * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
    * @throws {I18nError} When an injected locale loader rejects.
+   * Exceptions from the direction callback propagate unchanged.
    */
   init(options?: I18nInitOptions<TLocale>): Promise<void>;
 
@@ -99,7 +101,9 @@ export interface I18n<TLocale extends string = string> {
    * @throws {Error} When called before successful initialization.
    * @throws {RangeError} When the locale is unsupported.
    * @throws {TypeError} When a loaded dictionary is invalid.
+   * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
    * @throws {I18nError} When an injected locale loader rejects.
+   * Exceptions from the direction callback propagate unchanged.
    */
   setLocale(locale: TLocale): Promise<void>;
 
@@ -115,7 +119,7 @@ export interface I18n<TLocale extends string = string> {
    * Resolves a trimmed key against active and default dictionaries.
    *
    * @param key - Translation key.
-   * @returns The translated string or undefined when absent.
+   * @returns The translated string or undefined when absent. Missing-key diagnostics retain the 1,000 most recent pairs.
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty or not a string.
    */
