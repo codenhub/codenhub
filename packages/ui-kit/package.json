@@ -64,6 +64,7 @@
     "docs": {
       "label": "UI Kit",
       "status": "experimental",
+      "listed": false,
       "description": "Experimental browser UI utilities and global styles for Codenhub interfaces."
     }
   }

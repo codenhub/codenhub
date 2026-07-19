@@ -62,6 +62,24 @@ describe("package documentation catalog", () => {
     expect(buildPublicPackageSummaries(manifests, definitions)[0]?.documentationRoute).toBe("/custom-slug/");
   });
 
+  it("keeps unlisted documentation routable while excluding its package summary", () => {
+    const manifest = {
+      ...createManifest(),
+      private: false,
+      codenhub: {
+        docs: {
+          ...createManifest().codenhub.docs,
+          listed: false,
+        },
+      },
+    };
+    const manifests = { "../../packages/example/package.json": manifest };
+    const definitions = buildPackageDefinitions(manifests, ["../../packages/example/docs/index.md"]);
+
+    expect(definitions[0]?.documents[0]?.routePath).toBe("");
+    expect(buildPublicPackageSummaries(manifests, definitions)).toEqual([]);
+  });
+
   it("excludes internal documents and derives index routes", () => {
     const packages = buildPackageDefinitions({ "../../packages/example/package.json": createManifest() }, [
       "../../packages/example/docs/index.md",
@@ -169,6 +187,18 @@ describe("package documentation catalog", () => {
         "package.json",
       ),
     ).toThrow("Invalid codenhub.docs.label");
+  });
+
+  it("rejects non-boolean catalog listing metadata", () => {
+    expect(() =>
+      parsePackageMetadata(
+        {
+          name: "@codenhub/example",
+          codenhub: { docs: { label: "Example", listed: "no", status: "experimental" } },
+        },
+        "package.json",
+      ),
+    ).toThrow("Invalid codenhub.docs.listed");
   });
 
   it("uses the package description when documentation metadata omits it", () => {

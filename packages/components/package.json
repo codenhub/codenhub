@@ -91,7 +91,8 @@
   "codenhub": {
     "docs": {
       "label": "Components",
-      "status": "experimental"
+      "status": "experimental",
+      "listed": false
     }
   }
 }

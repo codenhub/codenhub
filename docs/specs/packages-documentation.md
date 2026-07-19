@@ -46,6 +46,7 @@ in the package's `package.json` under `codenhub.docs`:
     "docs": {
       "label": "Example Package",
       "status": "active",
+      "listed": true,
       "slug": "example-package",
       "description": "Utilities for building example workflows.",
       "order": 10
@@ -55,11 +56,16 @@ in the package's `package.json` under `codenhub.docs`:
 ```
 
 The presence of `codenhub.docs` declares that the package has public
-documentation intended for discovery and publication. Its fields are:
+documentation intended for publication and, by default, catalog discovery. Its
+fields are:
 
 - `label`: REQUIRED human-readable package label used by documentation tools.
 - `status`: REQUIRED documentation status. Allowed values are `active`,
   `experimental`, and `deprecated`.
+- `listed`: OPTIONAL boolean controlling catalog discovery. It defaults to
+  `true`. When `false`, catalogs MUST omit the package, but documentation tools
+  MUST still publish its documentation routes. This is not an access-control
+  mechanism; unlisted documentation remains accessible by direct URL.
 - `slug`: OPTIONAL stable kebab-case identifier. It defaults to the unscoped
   package name, such as `styles` for `@codenhub/styles`.
 - `description`: OPTIONAL catalog description. It defaults to the package
@@ -73,7 +79,8 @@ A malformed `codenhub.docs` object or field is invalid. Tools MUST NOT use
 package metadata fallbacks to hide missing required fields or malformed public
 documentation metadata.
 
-Package catalogs use `codenhub.docs.label` and use
+Package catalogs MUST omit packages with `codenhub.docs.listed` set to `false`.
+For listed packages, catalogs use `codenhub.docs.label` and use
 `codenhub.docs.description` when present. A valid metadata object without a
 documentation description falls back to the package `description`. When
 cataloging a package without public documentation metadata, catalogs MAY fall

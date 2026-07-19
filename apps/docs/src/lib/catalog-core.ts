@@ -6,6 +6,7 @@ export type PackageStatus = (typeof DOCS_STATUSES)[number];
 interface DocsMetadata {
   description?: string;
   label: string;
+  listed?: boolean;
   order?: number;
   slug?: string;
   status: PackageStatus;
@@ -23,6 +24,7 @@ interface PackageManifest {
 export interface PackageMetadata {
   description?: string;
   label: string;
+  listed: boolean;
   order?: number;
   slug: string;
   status: PackageStatus;
@@ -85,6 +87,10 @@ function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
     throw new Error(`Invalid codenhub.docs.order in ${manifestPath}: expected a non-negative integer.`);
   }
 
+  if (value.listed !== undefined && typeof value.listed !== "boolean") {
+    throw new Error(`Invalid codenhub.docs.listed in ${manifestPath}: expected a boolean.`);
+  }
+
   const label = getOptionalText(value.label, "label", manifestPath);
   if (label === undefined) {
     throw new Error(`Invalid codenhub.docs.label in ${manifestPath}: expected a non-empty string.`);
@@ -93,6 +99,7 @@ function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
   return {
     description: getOptionalText(value.description, "description", manifestPath),
     label,
+    listed: value.listed as boolean | undefined,
     order: value.order as number | undefined,
     slug: getOptionalText(value.slug, "slug", manifestPath),
     status: value.status as PackageStatus,
@@ -127,6 +134,7 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   return {
     description: docs.description ?? packageDescription,
     label: docs.label,
+    listed: docs.listed ?? true,
     order: docs.order,
     slug,
     status: docs.status,
@@ -219,6 +227,10 @@ export function buildPublicPackageSummaries(
       }
 
       const definition = definitionsByManifestPath.get(normalizePath(rawManifestPath));
+      if (definition?.listed === false) {
+        return [];
+      }
+
       const manifestDescription =
         typeof manifest.description === "string" && manifest.description.trim() !== ""
           ? manifest.description
