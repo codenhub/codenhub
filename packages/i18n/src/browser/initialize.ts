@@ -1,4 +1,4 @@
-import type { I18n } from "../types";
+import type { I18n } from "../core/types";
 import { createDomTranslator } from "./dom-translation";
 
 const DEFAULT_STORAGE_KEY = "i18n";

@@ -6,8 +6,7 @@ integrations.
 
 > [!WARNING]
 > This package is experimental. Its API, browser integration, routing behavior,
-> and support level may change before a stable release. Version `0.1.0` is a
-> breaking change from `0.0.1`; see the [migration guide](docs/migrating-from-0.0.1.md).
+> and support level may change before a stable release.
 
 ## Installation
 
@@ -45,7 +44,6 @@ dictionary. Await successful initialization before calling `translate()` or
 - [Documentation overview](docs/index.md)
 - [Usage across runtimes](docs/examples.md)
 - [API reference](docs/reference.md)
-- [Migration from 0.0.1](docs/migrating-from-0.0.1.md)
 
 ## Requirements
 

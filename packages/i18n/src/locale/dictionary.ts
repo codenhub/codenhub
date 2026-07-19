@@ -1,4 +1,4 @@
-import type { LocaleDictionary } from "./types";
+import type { LocaleDictionary } from "../core/types";
 
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 

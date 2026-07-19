@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initializeBrowserI18n } from "../browser";
-import { createManager, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./browser-i18n-test-helpers";
+import { createManager, type Locale, setNavigatorLocales, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
 

@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { resolveConfiguredLocale, validateI18nConfig } from "./locale-resolution";
-import type { I18nConfig } from "./types";
+import type { I18nConfig } from "../core/types";
+import { resolveConfiguredLocale, validateI18nConfig } from "./resolution";
 
 const createConfig = (overrides: Partial<I18nConfig<string>> = {}): I18nConfig<string> => ({
   defaultLocale: "en-US",

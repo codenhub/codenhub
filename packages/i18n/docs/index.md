@@ -10,9 +10,8 @@ source is injected by the consumer. The same core API works in browsers, SSR,
 SSG, Node.js, and workers. Optional entrypoints add browser effects and pure
 locale-prefixed pathname operations without coupling core state to either.
 
-The package is experimental. Version `0.1.0` intentionally breaks the old
-browser-coupled `0.0.1` contract; existing consumers should follow the
-[migration guide](migrating-from-0.0.1.md).
+The package is experimental. Its API, browser integration, routing behavior,
+and support level may change before a stable release.
 
 ## Choose an entrypoint
 
@@ -72,5 +71,3 @@ optional warnings; it never suppresses these failures.
   loader examples.
 - [API reference](reference.md): Complete entrypoint exports, contracts,
   defaults, events, and observable errors.
-- [Migration from 0.0.1](migrating-from-0.0.1.md): Breaking API and behavior
-  changes.

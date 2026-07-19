@@ -4,8 +4,7 @@
 > deterministic fallback, and optional browser and locale-path integrations.
 
 Use only the root, `/browser`, and `/routing` entrypoints. Await successful core
-initialization, keep concurrent server/build instances isolated, and treat
-version `0.1.0` as breaking from `0.0.1`.
+initialization and keep concurrent server/build instances isolated.
 
 ## Documentation
 
@@ -15,5 +14,3 @@ version `0.1.0` as breaking from `0.0.1`.
   SSG, and loader examples.
 - [API reference](docs/reference.md): Complete exports, defaults, behavior,
   events, routing constraints, and observable errors.
-- [Migration from 0.0.1](docs/migrating-from-0.0.1.md): Required API and
-  behavior changes for existing consumers.

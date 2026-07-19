@@ -1,6 +1,6 @@
+import { I18nError } from "../core/errors";
+import type { LocaleDictionary } from "../core/types";
 import { normalizeDictionary } from "./dictionary";
-import { I18nError } from "./errors";
-import type { LocaleDictionary } from "./types";
 
 /** Injected runtime-specific locale payload loader. */
 export interface LocaleLoaderOptions<TLocale extends string> {

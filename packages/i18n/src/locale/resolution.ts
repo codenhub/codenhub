@@ -1,4 +1,4 @@
-import type { I18nConfig } from "./types";
+import type { I18nConfig } from "../core/types";
 
 /** Validated runtime-neutral configuration used by core internals. */
 export interface ValidatedI18nConfig<TLocale extends string> {

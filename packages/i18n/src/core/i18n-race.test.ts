@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { createI18n, type I18nConfig } from "./index";
+import { createI18n, type I18nConfig } from "../index";
 
 describe("I18n initialization races", () => {
   it("does not let an invalid init cancel an earlier valid in-flight init", async () => {

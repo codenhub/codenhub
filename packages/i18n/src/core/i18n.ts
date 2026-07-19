@@ -1,5 +1,5 @@
-import { createLocaleLoader, type LocaleLoader } from "./locale-loader";
-import { resolveConfiguredLocale, validateI18nConfig, type ValidatedI18nConfig } from "./locale-resolution";
+import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
+import { resolveConfiguredLocale, validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import type {
   I18n,
   I18nConfig,

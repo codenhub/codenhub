@@ -1,6 +1,6 @@
-export { I18nError, i18nErrors } from "./errors";
-export { createI18n } from "./i18n";
-export type { I18nErrorCode } from "./errors";
+export { I18nError, i18nErrors } from "./core/errors";
+export { createI18n } from "./core/i18n";
+export type { I18nErrorCode } from "./core/errors";
 export type {
   I18n,
   I18nConfig,
@@ -10,4 +10,4 @@ export type {
   I18nReadyEventDetail,
   LocaleDictionary,
   LocaleDirection,
-} from "./types";
+} from "./core/types";

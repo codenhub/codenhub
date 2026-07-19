@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { I18nError } from "./errors";
-import { createLocaleLoader } from "./locale-loader";
+import { I18nError } from "../core/errors";
+import { createLocaleLoader } from "./loader";
 
 describe("createLocaleLoader", () => {
   it("normalizes and caches successful locale loads", async () => {

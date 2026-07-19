@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createI18n, I18nError, i18nErrors, type I18n, type I18nConfig } from "./index";
+import { createI18n, I18nError, i18nErrors, type I18n, type I18nConfig } from "../index";
 
 const LOCALES = ["en", "pt", "ar"] as const;
 type Locale = (typeof LOCALES)[number];

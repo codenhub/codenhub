@@ -1,13 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { initializeBrowserI18n } from "../browser";
-import {
-  createDeferred,
-  createManager,
-  dictionaries,
-  flushMutations,
-  setupBrowserTestHooks,
-} from "./browser-i18n-test-helpers";
+import { createDeferred, createManager, dictionaries, flushMutations, setupBrowserTestHooks } from "./test-helpers";
 
 setupBrowserTestHooks();
 

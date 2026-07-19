@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { createI18n, type I18nConfig, type LocaleDirection } from "./index";
+import { createI18n, type I18nConfig, type LocaleDirection } from "../index";
 
 const createConfig = (getLocaleDirection: (locale: "en" | "pt") => LocaleDirection): I18nConfig<"en" | "pt"> => ({
   defaultLocale: "en",
