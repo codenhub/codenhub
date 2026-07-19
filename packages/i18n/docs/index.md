@@ -1,67 +1,76 @@
 ---
 title: Overview
+description: Runtime-neutral translations with optional browser and locale-path integrations.
 ---
 
-# Add browser translations
+# Use translations in any runtime
 
-The `@codenhub/i18n` package loads locale dictionaries, resolves and persists a
-browser locale, translates keys, synchronizes `lang` and `dir`, and can
-translate DOM leaves marked with `data-i18n`.
+`@codenhub/i18n` provides an isolated translation manager whose locale data
+source is injected by the consumer. The same core API works in browsers, SSR,
+SSG, Node.js, and workers. Optional entrypoints add browser effects and pure
+locale-prefixed pathname operations without coupling core state to either.
 
-It fits browser applications that want a small translation manager without a
-framework integration. You can translate keys directly, opt into translating
-marked DOM leaves, or use both approaches.
+The package is experimental. Version `0.1.0` intentionally breaks the old
+browser-coupled `0.0.1` contract; existing consumers should follow the
+[migration guide](migrating-from-0.0.1.md).
 
-## Setup
+## Choose an entrypoint
 
-### Installation
+| Import path              | Purpose                                                                    |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `@codenhub/i18n`         | Runtime-neutral loading, validation, fallback, translation, state, events. |
+| `@codenhub/i18n/browser` | Browser locale selection, persistence, document and optional DOM effects.  |
+| `@codenhub/i18n/routing` | Pure parsing and generation of locale-prefixed application pathnames.      |
 
-```sh
-pnpm add @codenhub/i18n
-```
+Only these three package paths are public. Do not import `src`, `dist`, or
+package internals.
 
-### Quick start
+## Start with core
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
 
+const dictionaries = {
+  en: { page: { title: "Welcome", description: "Learn more" } },
+  pt: { page: { title: "Bem-vindo" } },
+} as const;
+
 const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
-  getLocaleFile: (locale) => `/locales/${locale}.json`,
+  loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ observe: true });
-console.log(i18n.translate("home.title"));
+await i18n.init({ locale: "pt" });
 
-// Remove the MutationObserver when this owner is torn down.
-i18n.disconnect();
+i18n.translate("page.title"); // "Bem-vindo"
+i18n.translate("page.description"); // "Learn more" from the default locale
 ```
 
-Elements with `data-i18n="home.title"` are translated during initialization.
+Core performs no locale detection. Omitting `init({ locale })` selects the
+configured default. Selecting another locale loads both its dictionary and the
+default dictionary before applying state, so fallback is deterministic.
 
-### Configuration
+## Failure model
 
-`createI18n` requires a default locale, supported locales, a locale-file URL
-resolver, and a text-direction resolver. Initialization can select a storage
-key and DOM root, suppress warnings, and enable mutation observation. See
-[API and browser behavior](reference.md#configuration-and-setup) for locale
-resolution and all initialization options.
+Required work fails explicitly:
 
-## Requirements
+- Invalid configuration or dictionaries throw `TypeError`.
+- Unsupported locales throw `RangeError`.
+- `translate()` or `setLocale()` before successful initialization throw `Error`.
+- A rejected injected loader becomes `I18nError` with code
+  `"locale_load_failed"`, the failed locale, and the original `cause`.
 
-- Locale loading requires browser `fetch`; persistence uses `localStorage`.
-- DOM translation requires `document`; observation requires `MutationObserver`.
-- SSR initialization performs no fetching or DOM translation. Avoid the global
-  instance helpers in concurrent SSR requests.
-
-Locale loading failures resolve through documented fallback behavior rather
-than rejecting. Missing keys return `undefined`. Call `disconnect()` when the
-manager's owner is torn down, especially when observation is enabled.
+Failed initialization does not make a new manager ready. Failed reinitialization
+or locale changes preserve previously applied state. `isSilent` suppresses only
+optional warnings; it never suppresses these failures.
 
 ## Next steps
 
-- [API and browser behavior](reference.md): Complete exports, loading,
-  persistence, DOM translation boundaries, SSR behavior, events, fallback
-  behavior, and cleanup.
+- [Usage across runtimes](examples.md): Browser, routed hydration, SSR, SSG, and
+  loader examples.
+- [API reference](reference.md): Complete entrypoint exports, contracts,
+  defaults, events, and observable errors.
+- [Migration from 0.0.1](migrating-from-0.0.1.md): Breaking API and behavior
+  changes.

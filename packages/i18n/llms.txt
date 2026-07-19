@@ -1,13 +1,19 @@
 # @codenhub/i18n
 
-> Experimental browser translation management with locale loading, persistence,
-> events, and optional DOM synchronization.
+> Experimental runtime-neutral translations with consumer-provided loading,
+> deterministic fallback, and optional browser and locale-path integrations.
 
-Await `init()` before translation, avoid global instances in concurrent SSR,
-and call `disconnect()` when DOM observation is no longer owned.
+Use only the root, `/browser`, and `/routing` entrypoints. Await successful core
+initialization, keep concurrent server/build instances isolated, and treat
+version `0.1.0` as breaking from `0.0.1`.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Purpose, status, and starting points.
-- [API and browser behavior](docs/reference.md): Complete exports, DOM, SSR,
-  persistence, failures, events, and cleanup.
+- [Documentation overview](docs/index.md): Entrypoint selection, core quick
+  start, and failure model.
+- [Usage across runtimes](docs/examples.md): Browser, routed hydration, SSR,
+  SSG, and loader examples.
+- [API reference](docs/reference.md): Complete exports, defaults, behavior,
+  events, routing constraints, and observable errors.
+- [Migration from 0.0.1](docs/migrating-from-0.0.1.md): Required API and
+  behavior changes for existing consumers.

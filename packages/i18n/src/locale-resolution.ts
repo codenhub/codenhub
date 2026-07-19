@@ -1,182 +1,93 @@
-import { normalizeValue } from "./helpers";
-import { createEmptyDictionary } from "./locale-loader";
-import type { I18nConfig, ResolvedLocaleState, ResolveLocaleStateOptions } from "./types";
+import type { I18nConfig } from "./types";
 
-const matchLocaleIgnoreCase = <TLocale extends string>(
-  config: I18nConfig<TLocale>,
+/** Validated runtime-neutral configuration used by core internals. */
+export interface ValidatedI18nConfig<TLocale extends string> {
+  readonly defaultLocale: TLocale;
+  readonly locales: readonly TLocale[];
+  readonly loadLocale: I18nConfig<TLocale>["loadLocale"];
+  readonly getLocaleDirection: I18nConfig<TLocale>["getLocaleDirection"];
+  readonly isSilent: boolean;
+}
+
+/**
+ * Resolves an untrusted locale value to its configured canonical spelling.
+ *
+ * @param locales - Canonical supported locales.
+ * @param value - Untrusted locale value.
+ * @returns The canonical locale, or undefined when unsupported.
+ * @internal
+ */
+export function resolveConfiguredLocale<TLocale extends string>(
+  locales: readonly TLocale[],
   value: string,
-): TLocale | undefined => {
-  const normalized = value.toLowerCase();
-
-  return config.locales.find((locale) => locale.toLowerCase() === normalized);
-};
-
-const detectBrowserLocale = <TLocale extends string>(config: I18nConfig<TLocale>): TLocale | undefined => {
-  if (typeof navigator === "undefined") {
+): TLocale | undefined {
+  if (typeof value !== "string") {
     return undefined;
   }
 
-  const languages = navigator.languages?.length ? [...navigator.languages] : [navigator.language];
-  const validLanguages = languages.filter(Boolean);
+  const normalizedValue = value.trim().toLowerCase();
 
-  for (const lang of validLanguages) {
-    const exactMatch = matchLocaleIgnoreCase(config, lang);
-
-    if (exactMatch !== undefined) {
-      return exactMatch;
-    }
-
-    const subtag = lang.split("-")[0]?.toLowerCase();
-
-    if (subtag === undefined || subtag.length === 0) {
-      continue;
-    }
-
-    const exactSubtagMatch = config.locales.find((locale) => locale.toLowerCase() === subtag);
-
-    if (exactSubtagMatch !== undefined) {
-      return exactSubtagMatch;
-    }
-
-    const prefixMatch = config.locales.find((locale) => locale.toLowerCase().startsWith(`${subtag}-`));
-
-    if (prefixMatch !== undefined) {
-      return prefixMatch;
-    }
-  }
-
-  return undefined;
-};
-
-/**
- * Resolves the initial locale based on stored user preferences or browser locale settings.
- *
- * @param config - The translation config.
- * @param persistedLocale - The previously saved locale code, if any.
- * @returns The resolved initial locale code.
- * @internal
- */
-export const getInitialLocale = <TLocale extends string>(
-  config: I18nConfig<TLocale>,
-  persistedLocale: string | undefined,
-): TLocale => {
-  if (persistedLocale !== undefined) {
-    const normalized = normalizeValue(persistedLocale);
-    if (normalized !== undefined) {
-      const matched = matchLocaleIgnoreCase(config, normalized);
-      if (matched !== undefined) {
-        const isLocale =
-          config.isLocale ?? ((val: string): val is TLocale => (config.locales as readonly string[]).includes(val));
-
-        if (isLocale(matched)) {
-          return matched;
-        }
-      }
-    }
-  }
-
-  return detectBrowserLocale(config) ?? config.defaultLocale;
-};
-
-/**
- * Normalizes and matches a locale code case-insensitively.
- *
- * @param config - The translation config.
- * @param locale - The raw locale code to check.
- * @returns The matching configured locale code, or undefined.
- * @internal
- */
-export const normalizeLocale = <TLocale extends string>(
-  config: I18nConfig<TLocale>,
-  locale: string,
-): TLocale | undefined => {
-  const normalizedLocale = normalizeValue(locale);
-
-  if (normalizedLocale === undefined) {
+  if (normalizedValue.length === 0) {
     return undefined;
   }
 
-  return matchLocaleIgnoreCase(config, normalizedLocale);
-};
+  return locales.find((locale) => locale.toLowerCase() === normalizedValue);
+}
 
 /**
- * Resolves the translation dictionary and loaded state for a given locale.
- * Falls back to the default locale if loading fails.
+ * Copies locale metadata before it enters a manager instance.
  *
- * @param config - The translation config.
- * @param loader - The locale loader manager.
- * @param requestedLocale - The locale code that was requested.
- * @returns A promise resolving to the next active state.
+ * @param config - Consumer-provided configuration.
+ * @returns The isolated configuration used by core internals.
  * @internal
  */
-export const resolveLocaleState = async <TLocale extends string>({
-  config,
-  loader,
-  requestedLocale,
-  isSilent,
-}: ResolveLocaleStateOptions<TLocale>): Promise<ResolvedLocaleState<TLocale>> => {
-  if (typeof window === "undefined") {
-    return {
-      locale: requestedLocale,
-      dictionary: createEmptyDictionary(),
-      isRequestedLocaleLoaded: false,
-      isAppliedLocaleLoaded: false,
-    };
+export function validateI18nConfig<TLocale extends string>(config: I18nConfig<TLocale>): ValidatedI18nConfig<TLocale> {
+  if (typeof config !== "object" || config === null || Array.isArray(config)) {
+    throw new TypeError("[I18n] configuration must be an object.");
   }
 
-  const requestedDictionary = await loader.loadLocale(requestedLocale, isSilent);
-
-  if (requestedDictionary !== undefined) {
-    return {
-      locale: requestedLocale,
-      dictionary: requestedDictionary,
-      isRequestedLocaleLoaded: true,
-      isAppliedLocaleLoaded: Object.keys(requestedDictionary).length > 0,
-    };
+  if (!Array.isArray(config.locales)) {
+    throw new TypeError("[I18n] locales must be an array.");
   }
 
-  if (requestedLocale === config.defaultLocale) {
-    if (!isSilent) {
-      console.warn(
-        `[I18n] Default locale "${config.defaultLocale}" could not be loaded. Translations will be unavailable.`,
-      );
-    }
-
-    return {
-      locale: config.defaultLocale,
-      dictionary: createEmptyDictionary(),
-      isRequestedLocaleLoaded: false,
-      isAppliedLocaleLoaded: false,
-    };
+  if (config.locales.length === 0) {
+    throw new TypeError("[I18n] locales must not be empty.");
   }
 
-  if (!isSilent) {
-    console.warn(
-      `[I18n] Falling back to default locale "${config.defaultLocale}" because locale "${requestedLocale}" could not be loaded.`,
-    );
+  if (config.locales.some((locale) => typeof locale !== "string" || locale.trim().length === 0)) {
+    throw new TypeError("[I18n] locales must contain non-empty strings.");
   }
 
-  const recoveredDefaultDictionary = await loader.loadLocale(config.defaultLocale, isSilent);
+  const locales = Object.freeze(config.locales.map((locale) => locale.trim() as TLocale));
+  const normalizedLocales = locales.map((locale) => locale.toLowerCase());
 
-  if (recoveredDefaultDictionary === undefined) {
-    if (!isSilent) {
-      console.warn(
-        `[I18n] Default locale "${config.defaultLocale}" also failed to load. Translations will be unavailable.`,
-      );
-    }
+  if (new Set(normalizedLocales).size !== normalizedLocales.length) {
+    throw new TypeError("[I18n] locales must be case-insensitively unique.");
+  }
 
-    return {
-      locale: config.defaultLocale,
-      dictionary: createEmptyDictionary(),
-      isRequestedLocaleLoaded: false,
-      isAppliedLocaleLoaded: false,
-    };
+  const defaultLocale = resolveConfiguredLocale(locales, config.defaultLocale);
+
+  if (defaultLocale === undefined) {
+    throw new TypeError("[I18n] defaultLocale must match a configured locale.");
+  }
+
+  if (typeof config.loadLocale !== "function") {
+    throw new TypeError("[I18n] loadLocale must be a function.");
+  }
+
+  if (typeof config.getLocaleDirection !== "function") {
+    throw new TypeError("[I18n] getLocaleDirection must be a function.");
+  }
+
+  if (config.isSilent !== undefined && typeof config.isSilent !== "boolean") {
+    throw new TypeError("[I18n] isSilent must be a boolean.");
   }
 
   return {
-    locale: config.defaultLocale,
-    dictionary: recoveredDefaultDictionary,
-    isRequestedLocaleLoaded: false,
-    isAppliedLocaleLoaded: Object.keys(recoveredDefaultDictionary).length > 0,
+    defaultLocale,
+    locales,
+    loadLocale: config.loadLocale,
+    getLocaleDirection: config.getLocaleDirection,
+    isSilent: config.isSilent ?? false,
   };
-};
+}

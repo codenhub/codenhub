@@ -1,8 +1,8 @@
 {
   "name": "@codenhub/i18n",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
-  "description": "Flexible, lightweight i18n translation system with DOM synchronization.",
+  "description": "Runtime-neutral translations with optional browser and locale-path integrations.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/i18n",
   "license": "Apache-2.0",
   "repository": {
@@ -24,13 +24,21 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./routing": {
+      "types": "./dist/routing.d.ts",
+      "import": "./dist/routing.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build": "tsdown src/index.ts src/browser.ts src/routing.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/i18n version dist-tags time --json && npm dist-tag ls @codenhub/i18n && npm access get status @codenhub/i18n",
     "status:pack": "npm pack --dry-run",
@@ -39,10 +47,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@codenhub/store": "workspace:*"
-  },
   "devDependencies": {
+    "@codenhub/error": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",

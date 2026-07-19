@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-07-19
 scope: Runtime-neutral architecture and public API refactor for `@codenhub/i18n`.
 ---
@@ -8,13 +8,11 @@ scope: Runtime-neutral architecture and public API refactor for `@codenhub/i18n`
 
 ## Status
 
-This document specifies approved future behavior. It is not implemented yet.
-The current source, README, public documentation, and generated LLM documents
-continue to describe shipped behavior until the refactor is complete.
-
-Implementation must update all affected public documentation and exports in the
-same change. After implementation, this document should be updated to
-`IMPLEMENTED` and remain the maintainer-facing architecture reference.
+This architecture is implemented in version `0.1.0`. The source, package
+exports, tests, public documentation, and manually maintained derived LLM
+documents describe the runtime-neutral contract specified here. This document
+remains maintainer-only and records the design boundaries behind that public
+contract.
 
 ## Goal
 
@@ -45,7 +43,7 @@ the package to request, route, render, build, and navigation lifecycles.
 
 ## Public entrypoints
 
-The package will expose three intentional entrypoints:
+The package exposes three intentional entrypoints:
 
 ```json
 {
@@ -449,9 +447,8 @@ export function createLocaleRouting<TLocale extends string>(
 ): LocaleRouting<TLocale>;
 ```
 
-The routing factory applies the same locale configuration validation as the
-core. Shared internal validation may be reused without exposing implementation
-helpers.
+The routing factory applies equivalent locale configuration validation to the
+core and snapshots its configuration. Implementation helpers remain private.
 
 ### Path behavior
 
@@ -671,8 +668,8 @@ breaking contract was explicitly approved.
 
 ## Internal module boundaries
 
-The implementation should keep focused modules with no browser imports flowing
-into core code:
+The implementation keeps focused modules with no browser imports flowing into
+core code. Its compact implemented structure is:
 
 ```text
 src/
@@ -683,16 +680,13 @@ src/
   locale-loader.ts
   locale-resolution.ts
   types.ts
+  browser.ts
   browser/
-    index.ts
     browser-i18n.ts
     dom-translation.ts
-  routing/
-    index.ts
-    locale-routing.ts
+  routing.ts
 ```
 
-Names may change during implementation when a smaller structure is clearer.
 The dependency direction may not change:
 
 - Core depends only on core modules.
@@ -740,10 +734,13 @@ part of the approved contract.
 - Non-canonical explicit default prefixes.
 - Invalid path, locale, and configuration errors.
 
-### Integration confidence
+### Automated integration confidence
 
 - Concurrent SSR requests do not share active state.
 - Parallel SSG renders produce deterministic localized output.
+
+### Manual release verification
+
 - Root, browser, and routing imports resolve through built package exports.
 - Public examples typecheck against declarations generated from those exports.
 
@@ -752,9 +749,9 @@ checks required by repository policy. A package-local playground, dev, or debug
 scenario should be added only if it immediately improves cross-runtime consumer
 confidence beyond automated tests.
 
-## Documentation and release requirements
+## Documentation and release state
 
-The implementation change must update:
+The implementation includes:
 
 - Source JSDoc/TSDoc for every public symbol.
 - `README.md` with the default consumer path and breaking migration notice.
@@ -762,18 +759,18 @@ The implementation change must update:
 - Public documentation for each root, browser, and routing entrypoint.
 - Browser, SSR, SSG, and localized-routing examples.
 - `llms.txt` navigation where public documents change.
-- `llms-full.txt` derived content.
-- `package.json` exports and package description where necessary.
+- Manually maintained `llms-full.txt` derived content.
+- `package.json` exports and package description.
 - This document's status and the package roadmap.
 
-The breaking change must follow semantic versioning policy even before 1.0 and
-must be called out in consumer-facing documentation. Pack validation must
-confirm all public entrypoints and declarations are present while
-`docs/internal/` remains unpublished.
+The breaking contract is versioned as `0.1.0` and called out in consumer-facing
+documentation. Pack validation must continue to confirm that all public
+entrypoints and declarations are present while `docs/internal/` remains
+unpublished.
 
 ## Acceptance criteria
 
-The refactor is complete when:
+The implemented refactor satisfies these ongoing invariants:
 
 - The same core manager API renders translations in browser, SSR, and SSG
   environments.
@@ -793,7 +790,7 @@ The refactor is complete when:
 
 - [Roadmap](./roadmap.md)
 - [Public overview](../index.md)
-- [Current public reference](../reference.md)
+- [Public reference](../reference.md)
 - [Repository code guidelines](../../../../docs/code-guidelines.md)
 - [Repository documentation guidelines](../../../../docs/docs-guidelines.md)
 - [Package lifecycle spec](../../../../docs/specs/packages-lifecycle.md)

@@ -1,11 +1,13 @@
 # @codenhub/i18n
 
-Browser translation management with locale loading, persistence, events, and
-optional DOM synchronization.
+Runtime-neutral translations with consumer-provided locale loading, immutable
+dictionaries, deterministic fallback, and optional browser and locale-path
+integrations.
 
 > [!WARNING]
-> This package is experimental. Its API, browser behavior, and support level may
-> change before a stable release.
+> This package is experimental. Its API, browser integration, routing behavior,
+> and support level may change before a stable release. Version `0.1.0` is a
+> breaking change from `0.0.1`; see the [migration guide](docs/migrating-from-0.0.1.md).
 
 ## Installation
 
@@ -18,39 +20,49 @@ pnpm add @codenhub/i18n
 ```ts
 import { createI18n } from "@codenhub/i18n";
 
+const dictionaries = {
+  en: { home: { title: "Welcome" } },
+  pt: { home: { title: "Bem-vindo" } },
+} as const;
+
 const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
-  getLocaleFile: (locale) => `/locales/${locale}.json`,
+  loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ observe: true });
-console.log(i18n.translate("home.title"));
-
-// Remove the MutationObserver when this owner is torn down.
-i18n.disconnect();
+await i18n.init({ locale: "pt" });
+console.log(i18n.translate("home.title")); // "Bem-vindo"
 ```
 
-Elements with `data-i18n="home.title"` are translated during initialization.
+`init()` rejects when a required loader rejects or returns an invalid
+dictionary. Await successful initialization before calling `translate()` or
+`setLocale()`.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md)
-- [API and browser behavior](docs/reference.md)
+- [Usage across runtimes](docs/examples.md)
+- [API reference](docs/reference.md)
+- [Migration from 0.0.1](docs/migrating-from-0.0.1.md)
 
 ## Requirements
 
-- Locale loading requires browser `fetch`; persistence uses `localStorage`.
-- DOM translation requires `document`; observation requires `MutationObserver`.
-- SSR initialization performs no fetching or DOM translation. Avoid the global
-  instance helpers in concurrent SSR requests.
+- Core requires standard `Event` and `EventTarget` globals and does not read
+  browser globals. The consumer-provided loader determines runtime requirements.
+- `@codenhub/i18n/browser` requires browser `document`, `navigator`, and, when
+  enabled, `localStorage` and `MutationObserver`.
+- Concurrent SSR requests and SSG renders must use separate manager instances.
 
 ## Notes
 
-Locale loading failures resolve through documented fallback behavior rather
-than rejecting. Missing keys return `undefined`. See the reference for warnings,
-DOM boundaries, events, and cleanup.
+- Dictionaries may be flat or nested, but every leaf must be a string. They are
+  validated, flattened to dot-separated keys, frozen, and cached per manager.
+- Missing active-locale keys fall back to the default dictionary. A key missing
+  from both returns `undefined` and warns once per locale/key unless silent.
+- The package does not own fetch policy, request negotiation, route
+  registration, redirects, navigation, rendering, or static page generation.
 
 ## License
 

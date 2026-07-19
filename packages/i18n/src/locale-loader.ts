@@ -1,242 +1,71 @@
-/* oxlint-disable no-await-in-loop */
-import type { I18nConfig, LocaleDictionary } from "./types";
+import { normalizeDictionary } from "./dictionary";
+import { I18nError } from "./errors";
+import type { LocaleDictionary } from "./types";
 
-const MAX_LOCALE_RETRIES = 3;
-const RETRY_BASE_DELAY_MS = 300;
-const FETCH_TIMEOUT_MS = 10_000;
-
-/**
- * Creates a dictionary object without prototype properties.
- *
- * @internal
- */
-export const createEmptyDictionary = (): LocaleDictionary => Object.create(null) as LocaleDictionary;
-
-const isLocaleDictionary = (raw: unknown): raw is Record<string, unknown> => {
-  return typeof raw === "object" && raw !== null && !Array.isArray(raw);
-};
-
-const HTTP_STATUS_REQUEST_TIMEOUT = 408;
-const HTTP_STATUS_TOO_MANY_REQUESTS = 429;
-const HTTP_STATUS_INTERNAL_SERVER_ERROR = 500;
-
-const isRetryableStatus = (status: number): boolean =>
-  status === HTTP_STATUS_REQUEST_TIMEOUT ||
-  status === HTTP_STATUS_TOO_MANY_REQUESTS ||
-  status >= HTTP_STATUS_INTERNAL_SERVER_ERROR;
-
-/**
- * Interface for the locale file loader.
- *
- * @internal
- */
-export interface LocaleLoader<TLocale extends string = string> {
-  /** Clears the cache of permanently failed locales. */
-  resetFailedCache(): void;
-  /** Retries loading a specific locale, clearing it from the failed cache. */
-  retryLocale(locale: TLocale): void;
-  /** Fetches and caches the locale dictionary. */
-  loadLocale(locale: TLocale, isSilent?: boolean): Promise<LocaleDictionary | undefined>;
+/** Injected runtime-specific locale payload loader. */
+export interface LocaleLoaderOptions<TLocale extends string> {
+  /** Returns a flat or nested locale payload. */
+  loadLocale(locale: TLocale): unknown | Promise<unknown>;
 }
 
-interface FlattenDictionaryOptions {
-  raw: Record<string, unknown>;
-  locale: string;
-  prefix?: string;
-  result?: LocaleDictionary;
-  isSilent?: boolean;
+/** Cache and normalization boundary used by an i18n manager. */
+export interface LocaleLoader<TLocale extends string> {
+  /** Loads one locale without changing active manager state. */
+  loadLocale(locale: TLocale): Promise<LocaleDictionary>;
 }
 
 /**
- * Recursively flattens a nested dictionary object into flat dot-separated string keys.
- * Filters out prototype pollution keys at any depth.
- */
-const flattenDictionary = ({
-  raw,
-  locale,
-  prefix = "",
-  result = createEmptyDictionary(),
-  isSilent = false,
-}: FlattenDictionaryOptions): LocaleDictionary => {
-  for (const [key, val] of Object.entries(raw)) {
-    if (key === "__proto__" || key === "constructor") {
-      continue;
-    }
-
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-
-    if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-      flattenDictionary({
-        raw: val as Record<string, unknown>,
-        locale,
-        prefix: fullKey,
-        result,
-        isSilent,
-      });
-    } else if (typeof val !== "string") {
-      if (!isSilent) {
-        console.warn(`[I18n] Non-string value found for key "${fullKey}" in locale "${locale}". Coercing to string.`);
-      }
-      result[fullKey] = String(val);
-    } else {
-      result[fullKey] = val;
-    }
-  }
-
-  return result;
-};
-
-/**
- * Creates a locale loader instance.
+ * Creates a per-manager loader with successful and in-flight caching.
  *
- * @param config - The translation configuration.
- * @returns A locale loader instance.
+ * @param options - Injected locale payload callback.
+ * @returns A loader that validates and freezes successful payloads.
  * @internal
  */
-export function createLocaleLoader<TLocale extends string = string>(
-  config: I18nConfig<TLocale>,
+export function createLocaleLoader<TLocale extends string>(
+  options: LocaleLoaderOptions<TLocale>,
 ): LocaleLoader<TLocale> {
-  const localeCache: Partial<Record<TLocale, LocaleDictionary>> = Object.create(null);
-  const localeFetchCache: Partial<Record<TLocale, Promise<LocaleDictionary | undefined>>> = Object.create(null);
-  let localeFailedCache = new Set<TLocale>();
-
-  const delayBeforeRetry = (attempt: number): Promise<void> => {
-    const delayMs = RETRY_BASE_DELAY_MS * 2 ** attempt;
-
-    return new Promise((resolve) => {
-      setTimeout(resolve, delayMs);
-    });
-  };
-
-  const fetchLocaleFile = async (
-    localeFile: string,
-  ): Promise<{ ok: false; status: number } | { ok: true; body: unknown }> => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, FETCH_TIMEOUT_MS);
-
-    try {
-      const response = await fetch(localeFile, { signal: controller.signal });
-
-      if (!response.ok) {
-        return { ok: false, status: response.status };
-      }
-
-      return { ok: true, body: await response.json() };
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  };
-
-  const fetchAndCacheLocale = async (locale: TLocale, isSilent = false): Promise<LocaleDictionary | undefined> => {
-    const localeFile = config.getLocaleFile(locale);
-
-    try {
-      for (let attempt = 0; attempt <= MAX_LOCALE_RETRIES; attempt++) {
-        const isLastAttempt = attempt === MAX_LOCALE_RETRIES;
-
-        try {
-          const result = await fetchLocaleFile(localeFile);
-
-          if (!result.ok) {
-            const isPermanentFailure = !isRetryableStatus(result.status);
-
-            if (!isLastAttempt && !isPermanentFailure) {
-              await delayBeforeRetry(attempt);
-              continue;
-            }
-
-            if (!isSilent) {
-              console.warn(`[I18n] Failed to load locale "${locale}" from "${localeFile}".`);
-            }
-
-            if (isPermanentFailure) {
-              localeFailedCache.add(locale);
-            }
-
-            return undefined;
-          }
-
-          if (!isLocaleDictionary(result.body)) {
-            if (!isSilent) {
-              console.warn(`[I18n] Locale "${locale}" has an invalid dictionary shape.`);
-            }
-            localeFailedCache.add(locale);
-            return undefined;
-          }
-
-          const dictionary = flattenDictionary({
-            raw: result.body as Record<string, unknown>,
-            locale,
-            isSilent,
-          });
-
-          if (Object.keys(dictionary).length === 0) {
-            if (!isSilent) {
-              console.warn(`[I18n] Locale "${locale}" loaded successfully but contains no translations.`);
-            }
-            return dictionary;
-          }
-
-          localeCache[locale] = dictionary;
-          return dictionary;
-        } catch (error) {
-          if (error instanceof SyntaxError) {
-            if (!isSilent) {
-              console.warn(`[I18n] Locale "${locale}" returned malformed JSON.`);
-            }
-            localeFailedCache.add(locale);
-            return undefined;
-          }
-
-          if (!isLastAttempt) {
-            await delayBeforeRetry(attempt);
-            continue;
-          }
-
-          if (!isSilent) {
-            console.warn(`[I18n] Failed to fetch locale "${locale}":`, error);
-          }
-          return undefined;
-        }
-      }
-    } finally {
-      delete localeFetchCache[locale];
-    }
-
-    return undefined;
-  };
+  const dictionaries = new Map<TLocale, LocaleDictionary>();
+  const pendingLoads = new Map<TLocale, Promise<LocaleDictionary>>();
 
   return {
-    resetFailedCache() {
-      localeFailedCache = new Set<TLocale>();
-    },
+    loadLocale(locale) {
+      const dictionary = dictionaries.get(locale);
 
-    retryLocale(locale: TLocale) {
-      localeFailedCache.delete(locale);
-    },
-
-    loadLocale(locale: TLocale, isSilent = false) {
-      const cachedDictionary = localeCache[locale];
-
-      if (cachedDictionary !== undefined) {
-        return Promise.resolve(cachedDictionary);
+      if (dictionary !== undefined) {
+        return Promise.resolve(dictionary);
       }
 
-      if (localeFailedCache.has(locale)) {
-        return Promise.resolve(undefined);
+      const pendingLoad = pendingLoads.get(locale);
+
+      if (pendingLoad !== undefined) {
+        return pendingLoad;
       }
 
-      const inflight = localeFetchCache[locale];
+      const load = async (): Promise<LocaleDictionary> => {
+        let payload: unknown;
 
-      if (inflight !== undefined) {
-        return inflight;
-      }
+        try {
+          payload = await options.loadLocale(locale);
+        } catch (cause) {
+          throw new I18nError({ locale, cause });
+        }
 
-      const promise = fetchAndCacheLocale(locale, isSilent);
-      localeFetchCache[locale] = promise;
-      return promise;
+        const normalizedDictionary = normalizeDictionary(payload);
+        dictionaries.set(locale, normalizedDictionary);
+        return normalizedDictionary;
+      };
+
+      const loadAndClear = async (): Promise<LocaleDictionary> => {
+        try {
+          return await load();
+        } finally {
+          pendingLoads.delete(locale);
+        }
+      };
+
+      const nextLoad = loadAndClear();
+      pendingLoads.set(locale, nextLoad);
+      return nextLoad;
     },
   };
 }

@@ -2,12 +2,14 @@
 
 # @codenhub/i18n
 
-Browser translation management with locale loading, persistence, events, and
-optional DOM synchronization.
+Runtime-neutral translations with consumer-provided locale loading, immutable
+dictionaries, deterministic fallback, and optional browser and locale-path
+integrations.
 
 > [!WARNING]
-> This package is experimental. Its API, browser behavior, and support level may
-> change before a stable release.
+> This package is experimental. Its API, browser integration, routing behavior,
+> and support level may change before a stable release. Version `0.1.0` is a
+> breaking change from `0.0.1`; see the [migration guide](docs/migrating-from-0.0.1.md).
 
 ## Installation
 
@@ -20,39 +22,49 @@ pnpm add @codenhub/i18n
 ```ts
 import { createI18n } from "@codenhub/i18n";
 
+const dictionaries = {
+  en: { home: { title: "Welcome" } },
+  pt: { home: { title: "Bem-vindo" } },
+} as const;
+
 const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
-  getLocaleFile: (locale) => `/locales/${locale}.json`,
+  loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ observe: true });
-console.log(i18n.translate("home.title"));
-
-// Remove the MutationObserver when this owner is torn down.
-i18n.disconnect();
+await i18n.init({ locale: "pt" });
+console.log(i18n.translate("home.title")); // "Bem-vindo"
 ```
 
-Elements with `data-i18n="home.title"` are translated during initialization.
+`init()` rejects when a required loader rejects or returns an invalid
+dictionary. Await successful initialization before calling `translate()` or
+`setLocale()`.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md)
-- [API and browser behavior](docs/reference.md)
+- [Usage across runtimes](docs/examples.md)
+- [API reference](docs/reference.md)
+- [Migration from 0.0.1](docs/migrating-from-0.0.1.md)
 
 ## Requirements
 
-- Locale loading requires browser `fetch`; persistence uses `localStorage`.
-- DOM translation requires `document`; observation requires `MutationObserver`.
-- SSR initialization performs no fetching or DOM translation. Avoid the global
-  instance helpers in concurrent SSR requests.
+- Core requires standard `Event` and `EventTarget` globals and does not read
+  browser globals. The consumer-provided loader determines runtime requirements.
+- `@codenhub/i18n/browser` requires browser `document`, `navigator`, and, when
+  enabled, `localStorage` and `MutationObserver`.
+- Concurrent SSR requests and SSG renders must use separate manager instances.
 
 ## Notes
 
-Locale loading failures resolve through documented fallback behavior rather
-than rejecting. Missing keys return `undefined`. See the reference for warnings,
-DOM boundaries, events, and cleanup.
+- Dictionaries may be flat or nested, but every leaf must be a string. They are
+  validated, flattened to dot-separated keys, frozen, and cached per manager.
+- Missing active-locale keys fall back to the default dictionary. A key missing
+  from both returns `undefined` and warns once per locale/key unless silent.
+- The package does not own fetch policy, request negotiation, route
+  registration, redirects, navigation, rendering, or static page generation.
 
 ## License
 
@@ -60,29 +72,279 @@ Licensed under Apache-2.0.
 
 <!-- Source: docs/index.md -->
 
-# Add browser translations
+# Use translations in any runtime
 
-The `@codenhub/i18n` package loads locale dictionaries, resolves and persists a
-browser locale, translates keys, synchronizes `lang` and `dir`, and can
-translate DOM leaves marked with `data-i18n`.
+`@codenhub/i18n` provides an isolated translation manager whose locale data
+source is injected by the consumer. The same core API works in browsers, SSR,
+SSG, Node.js, and workers. Optional entrypoints add browser effects and pure
+locale-prefixed pathname operations without coupling core state to either.
 
-It fits browser applications that want a small translation manager without a
-framework integration. You can translate keys directly, opt into translating
-marked DOM leaves, or use both approaches.
+The package is experimental. Version `0.1.0` intentionally breaks the old
+browser-coupled `0.0.1` contract; existing consumers should follow the
+[migration guide](docs/migrating-from-0.0.1.md).
 
-## Setup
+## Choose an entrypoint
 
-### Installation
+| Import path              | Purpose                                                                    |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `@codenhub/i18n`         | Runtime-neutral loading, validation, fallback, translation, state, events. |
+| `@codenhub/i18n/browser` | Browser locale selection, persistence, document and optional DOM effects.  |
+| `@codenhub/i18n/routing` | Pure parsing and generation of locale-prefixed application pathnames.      |
 
-```sh
-pnpm add @codenhub/i18n
-```
+Only these three package paths are public. Do not import `src`, `dist`, or
+package internals.
 
-### Quick start
+## Start with core
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
 
+const dictionaries = {
+  en: { page: { title: "Welcome", description: "Learn more" } },
+  pt: { page: { title: "Bem-vindo" } },
+} as const;
+
+const i18n = createI18n({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  loadLocale: (locale) => dictionaries[locale],
+  getLocaleDirection: () => "ltr",
+});
+
+await i18n.init({ locale: "pt" });
+
+i18n.translate("page.title"); // "Bem-vindo"
+i18n.translate("page.description"); // "Learn more" from the default locale
+```
+
+Core performs no locale detection. Omitting `init({ locale })` selects the
+configured default. Selecting another locale loads both its dictionary and the
+default dictionary before applying state, so fallback is deterministic.
+
+## Failure model
+
+Required work fails explicitly:
+
+- Invalid configuration or dictionaries throw `TypeError`.
+- Unsupported locales throw `RangeError`.
+- `translate()` or `setLocale()` before successful initialization throw `Error`.
+- A rejected injected loader becomes `I18nError` with code
+  `"locale_load_failed"`, the failed locale, and the original `cause`.
+
+Failed initialization does not make a new manager ready. Failed reinitialization
+or locale changes preserve previously applied state. `isSilent` suppresses only
+optional warnings; it never suppresses these failures.
+
+## Next steps
+
+- [Usage across runtimes](docs/examples.md): Browser, routed hydration, SSR, SSG, and
+  loader examples.
+- [API reference](docs/reference.md): Complete entrypoint exports, contracts,
+  defaults, events, and observable errors.
+- [Migration from 0.0.1](docs/migrating-from-0.0.1.md): Breaking API and behavior
+  changes.
+
+<!-- Source: docs/examples.md -->
+
+# Use i18n across runtimes
+
+The examples below use consumer-owned configuration. Replace the sample loader
+with the transport appropriate to the runtime.
+
+## Browser application
+
+The browser helper initializes core and optionally owns persistence, document
+attributes, safe leaf translation, and mutation observation.
+
+```ts
+import { createI18n } from "@codenhub/i18n";
+import { initializeBrowserI18n } from "@codenhub/i18n/browser";
+
+const i18n = createI18n({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  async loadLocale(locale) {
+    const response = await fetch(`/locales/${locale}.json`);
+    if (!response.ok) throw new Error(`Could not load ${locale}`);
+    return response.json();
+  },
+  getLocaleDirection: () => "ltr",
+});
+
+const binding = await initializeBrowserI18n({
+  i18n,
+  root: document,
+  observe: true,
+});
+
+console.log(i18n.translate("home.title"));
+
+// Run when this browser owner is torn down.
+binding.disconnect();
+```
+
+With a `root`, leaves such as
+`<h1 data-i18n="home.title">Fallback title</h1>` are translated. Frameworks
+that render translated values themselves should omit `root` and `observe`.
+
+## Routed hydration
+
+Pass the route locale explicitly. It is authoritative over persisted and
+navigator preferences, preventing server/client locale disagreement.
+
+```ts
+import { createI18n } from "@codenhub/i18n";
+import { initializeBrowserI18n } from "@codenhub/i18n/browser";
+import { createLocaleRouting } from "@codenhub/i18n/routing";
+
+const routing = createLocaleRouting({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  prefixDefaultLocale: false,
+});
+const route = routing.parse(window.location.pathname);
+
+if (route === undefined) throw new Error("A locale prefix is required");
+
+const i18n = createI18n(config);
+const binding = await initializeBrowserI18n({
+  i18n,
+  locale: route.locale,
+  syncDocument: true,
+});
+```
+
+Changing a routed locale remains a navigation operation:
+
+```ts
+const nextPathname = routing.localize(route.pathname, "pt");
+await frameworkNavigate(nextPathname);
+```
+
+`setLocale()` changes translation state but never changes the URL.
+
+## SSR
+
+Resolve request input to a canonical locale and create one manager per request.
+
+```ts
+import { createI18n } from "@codenhub/i18n";
+
+export async function renderPage(requestLocale: string) {
+  const i18n = createI18n(config);
+  const locale = i18n.resolveLocale(requestLocale) ?? i18n.defaultLocale;
+
+  await i18n.init({ locale });
+
+  return frameworkRender({
+    locale: i18n.locale,
+    direction: i18n.direction,
+    title: i18n.translate("page.title"),
+  });
+}
+```
+
+Do not share mutable manager state across concurrent requests. Immutable
+dictionary modules and runtime-level import caches may still be shared.
+
+## SSG
+
+Use routing output to drive the framework's static path API. Keep a separate
+manager for every concurrently rendered page.
+
+```ts
+import { createI18n } from "@codenhub/i18n";
+import { createLocaleRouting } from "@codenhub/i18n/routing";
+
+const routing = createLocaleRouting({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  prefixDefaultLocale: false,
+});
+const applicationPaths = ["/", "/about"];
+const localizedPaths = applicationPaths.flatMap((pathname) => routing.localizeAll(pathname));
+
+await Promise.all(
+  localizedPaths.map(async (route) => {
+    const i18n = createI18n(config);
+    await i18n.init({ locale: route.locale });
+
+    await frameworkGeneratePage({
+      pathname: route.pathname,
+      locale: i18n.locale,
+      direction: i18n.direction,
+      title: i18n.translate("page.title"),
+    });
+  }),
+);
+```
+
+Loader and dictionary failures reject, allowing the build to fail rather than
+publishing silently untranslated pages.
+
+## Loader patterns
+
+### Embedded dictionaries
+
+```ts
+const dictionaries = {
+  en: { greeting: "Hello" },
+  pt: { greeting: "Ola" },
+} as const;
+
+const config = {
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  loadLocale: (locale: keyof typeof dictionaries) => dictionaries[locale],
+  getLocaleDirection: () => "ltr" as const,
+};
+```
+
+### Dynamic imports
+
+```ts
+type Locale = "en" | "pt";
+
+const config = {
+  defaultLocale: "en" as const,
+  locales: ["en", "pt"] as const,
+  async loadLocale(locale: Locale) {
+    const module = await import(`./locales/${locale}.json`);
+    return module.default;
+  },
+  getLocaleDirection: () => "ltr" as const,
+};
+```
+
+### HTTP fetch
+
+```ts
+async function loadLocale(locale: "en" | "pt"): Promise<unknown> {
+  const response = await fetch(`https://example.com/locales/${locale}.json`);
+  if (!response.ok) throw new Error(`Locale request failed: ${response.status}`);
+  return response.json();
+}
+```
+
+The loader owns URLs, timeouts, retries, credentials, filesystem access, and all
+other transport policy. Rejected loaders are wrapped in `I18nError`; invalid
+resolved payloads remain native `TypeError` failures.
+
+<!-- Source: docs/migrating-from-0.0.1.md -->
+
+# Migrate from 0.0.1
+
+Version `0.1.0` replaces the browser-coupled `0.0.1` API with a runtime-neutral
+core and explicit browser and routing entrypoints. Treat the upgrade as breaking.
+
+## Replace URL configuration with a loader
+
+Remove `getLocaleFile` and optional `isLocale`. Provide `loadLocale`, which may
+return a payload or promise. Core no longer fetches, retries, or applies a
+timeout.
+
+```ts
+// 0.0.1
 const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
@@ -90,118 +352,476 @@ const i18n = createI18n({
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ observe: true });
-console.log(i18n.translate("home.title"));
-
-// Remove the MutationObserver when this owner is torn down.
-i18n.disconnect();
+// 0.1.0
+const i18n = createI18n({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  async loadLocale(locale) {
+    const response = await fetch(`/locales/${locale}.json`);
+    if (!response.ok) throw new Error(`Could not load ${locale}`);
+    return response.json();
+  },
+  getLocaleDirection: () => "ltr",
+});
 ```
 
-Elements with `data-i18n="home.title"` are translated during initialization.
+## Choose core or browser initialization
 
-### Configuration
+Core `init()` now accepts only an optional explicit locale and performs no
+storage, navigator, document, or DOM work:
 
-`createI18n` requires a default locale, supported locales, a locale-file URL
-resolver, and a text-direction resolver. Initialization can select a storage
-key and DOM root, suppress warnings, and enable mutation observation. See
-[API and browser behavior](docs/reference.md#configuration-and-setup) for locale
-resolution and all initialization options.
+```ts
+await i18n.init({ locale: "pt" });
+```
 
-## Requirements
+For the old browser behavior, import the separate helper. Move `storageKey`,
+`root`, and `observe` to it. Config-level `isSilent` replaces the old
+per-initialization override.
 
-- Locale loading requires browser `fetch`; persistence uses `localStorage`.
-- DOM translation requires `document`; observation requires `MutationObserver`.
-- SSR initialization performs no fetching or DOM translation. Avoid the global
-  instance helpers in concurrent SSR requests.
+```ts
+import { initializeBrowserI18n } from "@codenhub/i18n/browser";
 
-Locale loading failures resolve through documented fallback behavior rather
-than rejecting. Missing keys return `undefined`. Call `disconnect()` when the
-manager's owner is torn down, especially when observation is enabled.
+const binding = await initializeBrowserI18n({
+  i18n,
+  storageKey: "i18n",
+  root: document,
+  observe: true,
+});
 
-## Next steps
+binding.disconnect();
+```
 
-- [API and browser behavior](docs/reference.md): Complete exports, loading,
-  persistence, DOM translation boundaries, SSR behavior, events, fallback
-  behavior, and cleanup.
+DOM translation is no longer enabled by a default `document` root. Pass `root`
+explicitly. `disconnect()` belongs to the returned browser binding and leaves
+core state, existing text, attributes, and persisted data unchanged.
+
+## Handle failures instead of boolean results
+
+`setLocale()` now accepts the configured locale type and resolves `void` on
+success. Unsupported locales reject with `RangeError`; loader and dictionary
+failures reject and preserve active state.
+
+```ts
+try {
+  await i18n.setLocale("pt");
+} catch (error) {
+  // Handle unsupported input, invalid dictionaries, or locale loading failure.
+}
+```
+
+Initialization also rejects if either the selected or required default
+dictionary cannot load. It no longer resolves ready with an empty dictionary or
+falls back after a failed requested locale load. Non-string dictionary leaves
+now throw `TypeError` instead of being coerced.
+
+`translate()` now throws before successful initialization and throws `TypeError`
+for blank or non-string keys. Missing valid keys still return `undefined` and
+warn unless silent.
+
+## Remove global and DOM manager methods
+
+The following root APIs were removed:
+
+- `setI18nInstance()` and `getI18nInstance()`; own and inject instances instead.
+- `translateDocument()`; pass a browser `root` when leaf translation is needed.
+- Manager `disconnect()`; disconnect the `BrowserI18nBinding` instead.
+- Public `dispatchEvent()` typing; only `addEventListener()` and
+  `removeEventListener()` remain supported for manager lifecycle events. Remove
+  consumer-dispatched manager events and drive changes through `init()` or
+  `setLocale()`.
+
+The manager now exposes `defaultLocale`, frozen `locales`, `isSilent`,
+`direction`, `loadLocale()`, and `resolveLocale()` for runtime-neutral
+integration.
+
+## Update events
+
+The `ready` detail is now only `{ locale }`; remove reads of
+`hasTranslationsAvailable`. Successful initialization is the availability
+signal. `locale-change` remains `{ locale, previousLocale }` but emits only after
+a successful applied change. Failed and stale operations emit no success event.
+
+## Add routing explicitly
+
+Locale-prefixed path support is new and lives at `@codenhub/i18n/routing`. It is
+pure pathname parsing and generation; applications and frameworks still own
+route registration, redirects, navigation, rendering, and static generation.
+
+See [usage across runtimes](docs/examples.md) and the [API reference](docs/reference.md)
+for complete current behavior.
 
 <!-- Source: docs/reference.md -->
 
-# API and browser behavior
+# API reference
 
-## Configuration and Setup
+The package has three public entrypoints. All locale identifiers are trimmed
+when configuration is created and matched case-insensitively; returned state
+uses the trimmed canonical spelling and order from `locales`.
 
-`createI18n<TLocale>(config: I18nConfig<TLocale>): I18n<TLocale>` creates an
-uninitialized manager. `I18nConfig` requires `defaultLocale`, `locales`,
-`getLocaleFile(locale)`, and `getLocaleDirection(locale)`. Optional `isLocale`
-validates locale strings and `isSilent` suppresses package warnings.
+## `@codenhub/i18n`
 
-`I18n.init(options?)` resolves locale preference in this order: valid persisted
-locale, browser language match, then `defaultLocale`. `I18nInitOptions` contains:
+The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and
+`i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`,
+`I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`,
+`LocaleDictionary`, and `LocaleDirection` types.
 
-- `storageKey`: persistence key, default `"i18n"`.
-- `root`: translated DOM root, default `document` when available.
-- `isSilent`: per-initialization warning override.
-- `observe`: attach a `MutationObserver`, default `false`.
+### Configuration
 
-Initialization fetches JSON from `getLocaleFile`, flattens nested objects to dot
-keys, coerces non-string leaves with a warning, applies the locale to
-`document.documentElement.lang` and `dir`, translates the root, then emits
-`ready`. Fetches time out and transient failures are retried. A failed requested
-locale falls back to the default; if both fail, initialization still resolves
-with no available translations.
+```ts
+interface I18nConfig<TLocale extends string = string> {
+  defaultLocale: TLocale;
+  locales: readonly TLocale[];
+  loadLocale(locale: TLocale): unknown | Promise<unknown>;
+  getLocaleDirection(locale: TLocale): "ltr" | "rtl";
+  isSilent?: boolean;
+}
 
-## Translation and Locale Changes
+function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
+```
 
-- `locale` is the currently applied locale and `isReady` reports initialization.
-- `translate(key)` returns a string or `undefined`. Before initialization and for
-  missing keys it warns unless silent; missing-key warnings are deduplicated per
-  locale.
-- `setLocale(locale)` is case-insensitive and returns whether the requested
-  dictionary loaded. Invalid, stale concurrent, or failed requests return
-  `false`; fallback may still update the active locale.
-- `translateDocument(root?)` translates the explicit or configured root.
-- `disconnect()` cancels pending locale application, disconnects observation,
-  clears the root, and marks the manager not ready. It does not remove persisted
-  locale data or revert translated DOM and document attributes.
+`locales` must be a non-empty array of non-empty strings that remain unique
+case-insensitively after trimming. `defaultLocale` must match one of them.
+`loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when
+provided, must be boolean. Invalid configuration throws `TypeError` during
+`createI18n()`.
 
-`LocaleDictionary` maps flattened keys to strings. `LocaleDirection` is
-`"ltr" | "rtl"`.
+Configuration locale metadata is copied and frozen. Later caller mutations do
+not alter `defaultLocale`, `locales`, or locale matching. The loading and
+direction callbacks remain consumer-owned dependencies. Exceptions from
+`getLocaleDirection` propagate unchanged; the initial call occurs during
+`createI18n()`, and later calls occur before newly loaded state is applied.
 
-## DOM Contract
+### Initial state and properties
 
-Only elements with `data-i18n` and no child elements are translated. Leaf text
-is preserved as fallback when a key is unavailable. Elements with children are
-skipped with a warning to avoid deleting markup. Traversal does not enter custom
-elements; pass a custom element or shadow root explicitly, or use a separate
-instance for that component.
+An `I18n<TLocale>` starts with:
 
-Observation watches added elements and `data-i18n` attribute changes below the
-root. Call `disconnect()` to release its `MutationObserver`.
+- `defaultLocale`: canonical configured default.
+- `locales`: frozen canonical locale copy.
+- `isSilent`: `config.isSilent ?? false`.
+- `locale`: `defaultLocale`.
+- `direction`: `getLocaleDirection(defaultLocale)`.
+- `isReady`: `false`.
 
-## Events and Global Instance
+The manager provides EventTarget-compatible `addEventListener()` and
+`removeEventListener()` methods. Only those listener methods are part of the
+supported public event API; `dispatchEvent()` and runtime inheritance details
+are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before
+successful initialization. `loadLocale()` and `resolveLocale()` may be used
+before initialization.
 
-`I18n` supports typed `addEventListener`, `removeEventListener`, and
-`dispatchEvent` methods through `I18nEventMap`:
+### `init(options?)`
 
-- `ready` carries `I18nReadyEventDetail` with `locale` and
-  `hasTranslationsAvailable`.
-- `locale-change` carries `I18nLocaleChangeEventDetail` with `locale` and
-  `previousLocale`; it emits only when the applied locale changes.
+```ts
+interface I18nInitOptions<TLocale extends string = string> {
+  locale?: TLocale;
+}
 
-`setI18nInstance(instance | null)` registers or clears a module-global manager.
-`getI18nInstance()` returns it and throws when none is registered. Do not use
-this shared state across concurrent SSR requests; keep instances request-scoped.
+init(options?: I18nInitOptions<TLocale>): Promise<void>;
+```
 
-## SSR and Browser Requirements
+The explicit locale is trimmed and matched case-insensitively. Only `undefined`
+means omitted; omission selects `defaultLocale`. Core never inspects browser,
+route, request, or process state.
 
-Without `window`, locale loading is skipped and initialization resolves with an
-empty dictionary. Without `document`, DOM and document-attribute work is skipped.
-Browser use requires `fetch`, `EventTarget`, and `localStorage`; observation also
-requires `MutationObserver`. The package does not generate localized server HTML.
+Initialization of a non-default locale loads it and the default locale in
+parallel. State is applied only after both required dictionaries and the locale
+direction resolve successfully. A successful call sets `isReady` and emits
+`ready`; repeated successful calls emit another `ready` event.
 
-## Public Exports
+Overlapping initialization and locale-change operations use latest-request-wins
+application. A stale successful completion resolves without applying state or
+emitting a success event. A failed initial call leaves the manager not ready; a
+failed reinitialization preserves prior ready state. A stale operation that
+fails before the application check still rejects with its normal error.
 
-The root entrypoint exports `createI18n`, `setI18nInstance`, and
-`getI18nInstance`, plus `I18n`, `I18nConfig`, `I18nInitOptions`,
-`I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`, `LocaleDictionary`,
-`LocaleDirection`, and `I18nEventMap` types.
+### `loadLocale(locale)`
+
+```ts
+loadLocale(locale: TLocale): Promise<LocaleDictionary>;
+```
+
+Loads one supported locale without changing active locale, direction, readiness,
+or emitting events. Successful dictionaries and in-flight requests are cached
+per manager. Failed loads are removed from the in-flight cache and can be
+retried by a later call.
+
+### Dictionary contract
+
+`loadLocale` may resolve to a flat or nested object. Nested keys are flattened:
+
+```ts
+const payload = {
+  page: {
+    title: "Welcome",
+  },
+};
+// becomes { "page.title": "Welcome" }
+```
+
+The normalized `LocaleDictionary` has a null prototype, is frozen, and contains
+only string values. A payload throws `TypeError` when it:
+
+- Is null, an array, a primitive, or empty.
+- Contains a non-string leaf, array, function, symbol key, accessor, or cycle.
+- Contains an empty dot-separated segment, a `__proto__`, `prototype`, or
+  `constructor` segment, or a flat/nested key collision.
+
+Validation failures are not wrapped and are retryable on the next load.
+
+### `setLocale(locale)`
+
+```ts
+setLocale(locale: TLocale): Promise<void>;
+```
+
+Loads the selected and, when needed, default dictionary before atomically
+applying locale, direction, and fallback state. Failure preserves current state.
+Setting the active locale resolves without loading or emitting. A stale
+successful completion resolves without applying or emitting.
+
+The method does not persist state, update a document, translate DOM, redirect,
+or navigate. An active browser binding reacts to successful changes and applies
+its configured effects.
+
+### `resolveLocale(value)`
+
+```ts
+resolveLocale(value: string): TLocale | undefined;
+```
+
+Trims an untrusted string and returns the canonical case-insensitive exact
+configured match. It returns `undefined` for blank, unsupported, and runtime
+non-string values. It does not perform language-subtag matching.
+
+### `translate(key)`
+
+```ts
+translate(key: string): string | undefined;
+```
+
+Trims a non-empty key, checks the active dictionary, then the default
+dictionary. A key missing from both returns `undefined`. Unless `isSilent` is
+true, the manager warns once for each active-locale/key pair. Blank or runtime
+non-string keys throw `TypeError`.
+
+The API does not provide interpolation, plural selection, rich messages,
+number/date formatting, or HTML rendering.
+
+### Events
+
+Typed `addEventListener` and `removeEventListener` overloads cover:
+
+```ts
+interface I18nReadyEventDetail<TLocale extends string = string> {
+  locale: TLocale;
+}
+
+interface I18nLocaleChangeEventDetail<TLocale extends string = string> {
+  locale: TLocale;
+  previousLocale: TLocale;
+}
+```
+
+- `ready` emits after every successfully applied `init()`.
+- `locale-change` emits after a successful applied change to a different locale.
+- `loadLocale()`, same-locale changes, stale completions, and failed operations
+  emit no lifecycle event.
+
+Events are `CustomEvent` compatible even where the runtime lacks a global
+`CustomEvent` constructor. EventTarget-compatible listener overloads remain
+available, but consumers cannot dispatch manager lifecycle events through the
+public `I18n` type.
+
+### Errors
+
+Native errors identify programmer or payload failures:
+
+| Failure                                                              | Error        |
+| -------------------------------------------------------------------- | ------------ |
+| Invalid configuration or dictionary                                  | `TypeError`  |
+| Unsupported locale or runtime non-string locale in locale operations | `RangeError` |
+| `translate()` or `setLocale()` before successful initialization      | `Error`      |
+| Blank or runtime non-string translation key                          | `TypeError`  |
+
+A rejected injected loader is wrapped:
+
+```ts
+type I18nErrorCode = "locale_load_failed";
+
+class I18nError extends Error {
+  readonly code: I18nErrorCode;
+  readonly locale?: string;
+  override readonly cause?: unknown;
+
+  constructor(options: { locale?: string; cause?: unknown });
+}
+```
+
+Its name is `"I18nError"`, message is
+`Failed to load translations for locale "<locale>".`, `locale` identifies the
+load, and `cause` preserves the rejection. Constructing it without a locale uses
+the message `Failed to load translations.`. `isSilent` does not suppress errors.
+
+`i18nErrors` is a plain safe-feedback mapping for optional registration with
+`@codenhub/error`:
+
+```ts
+{
+  locale_load_failed: {
+    message: "Translations could not be loaded.",
+    messageKey: "error.i18n.loader.localeLoadFailed",
+    source: "i18n.loader",
+  },
+}
+```
+
+## `@codenhub/i18n/browser`
+
+The browser entrypoint exports `initializeBrowserI18n` and the
+`BrowserI18nOptions` and `BrowserI18nBinding` types.
+
+```ts
+interface BrowserI18nOptions<TLocale extends string> {
+  i18n: I18n<TLocale>;
+  locale?: TLocale;
+  storageKey?: string;
+  persistLocale?: boolean;
+  syncDocument?: boolean;
+  root?: ParentNode;
+  observe?: boolean;
+}
+
+interface BrowserI18nBinding {
+  disconnect(): void;
+}
+
+function initializeBrowserI18n<TLocale extends string>(
+  options: BrowserI18nOptions<TLocale>,
+): Promise<BrowserI18nBinding>;
+```
+
+### Locale selection and defaults
+
+The helper selects the initial locale in this order:
+
+1. Explicit `locale`.
+2. Valid JSON `{ "locale": "..." }` from `localStorage`, when persistence is
+   enabled.
+3. `navigator.languages`, or `navigator.language` when that list is empty.
+4. The configured default locale.
+
+An explicit locale is authoritative. Browser preferences test an exact
+case-insensitive match first, then match the language subtag to the first
+configured locale with that language.
+
+Defaults are `storageKey: "i18n"`, `persistLocale: true`,
+`syncDocument: true`, and `observe: false`. DOM translation is disabled unless
+`root` is provided. `observe: true` without a root rejects with `TypeError`
+before core initialization.
+
+### Effects and cleanup
+
+After core initialization succeeds, the binding:
+
+- Persists `{ locale: i18n.locale }` as JSON when enabled.
+- Sets `document.documentElement.lang` and `dir` when enabled.
+- Translates eligible `data-i18n` leaves under `root`, when supplied.
+- Reapplies enabled effects after successful `ready` and `locale-change` events.
+- Observes additions and `data-i18n` changes under `root` only when requested.
+
+Only one initializing or active browser binding may own a manager. A duplicate
+call rejects with `TypeError`. Failed setup releases listeners, observation, and
+ownership so initialization may be retried.
+
+`disconnect()` is idempotent. It removes binding listeners, disconnects its
+observer, releases its root and manager ownership, and allows a new binding. It
+does not reset core readiness or locale, clear storage, revert DOM text, or
+revert document attributes.
+
+Storage read, parse, and write failures are recoverable: they warn unless the
+manager is silent and initialization continues. Explicit invalid locales,
+required loader rejection, invalid dictionaries, and observer setup failures
+still reject. Runtime non-string explicit locales reject with `RangeError`
+without falling through to storage or navigator input.
+
+### DOM translation boundary
+
+Only elements carrying a non-empty `data-i18n` key and no child elements are
+translated. Original text is retained as fallback and restored when a later
+locale lacks the key. Elements containing markup are skipped and warn unless
+silent. Traversal does not enter a custom element from an outer root; pass that
+custom element or its shadow root explicitly when it owns translation.
+
+## `@codenhub/i18n/routing`
+
+The routing entrypoint exports `createLocaleRouting` and the `LocaleRouting`,
+`LocaleRoutingConfig`, `LocalizedPath`, and `ParsedLocalePath` types.
+
+```ts
+interface LocaleRoutingConfig<TLocale extends string> {
+  defaultLocale: TLocale;
+  locales: readonly TLocale[];
+  prefixDefaultLocale: boolean;
+}
+
+interface ParsedLocalePath<TLocale extends string> {
+  locale: TLocale;
+  pathname: string;
+}
+
+interface LocalizedPath<TLocale extends string> {
+  locale: TLocale;
+  pathname: string;
+}
+
+interface LocaleRouting<TLocale extends string> {
+  parse(pathname: string): ParsedLocalePath<TLocale> | undefined;
+  localize(pathname: string, locale: TLocale): string;
+  localizeAll(pathname: string): readonly LocalizedPath<TLocale>[];
+}
+```
+
+`createLocaleRouting(config)` trims and snapshots locale configuration.
+`locales` must be non-empty, contain non-empty case-insensitively unique strings,
+and contain `defaultLocale`; `prefixDefaultLocale` must be boolean. Invalid
+configuration throws `TypeError`.
+
+```ts
+import { createLocaleRouting } from "@codenhub/i18n/routing";
+
+const routing = createLocaleRouting({
+  defaultLocale: "en",
+  locales: ["en", "pt"] as const,
+  prefixDefaultLocale: false,
+});
+
+routing.parse("/pt/about");
+// { locale: "pt", pathname: "/about" }
+
+routing.localize("/about", "pt");
+// "/pt/about"
+
+routing.localizeAll("/about");
+// [{ locale: "en", pathname: "/about" },
+//  { locale: "pt", pathname: "/pt/about" }]
+```
+
+`parse()` recognizes a complete first path segment case-insensitively. With
+`prefixDefaultLocale: true`, an unprefixed path returns `undefined`; with
+`false`, it resolves to the default locale. A recognized prefix is removed and
+the root normalizes to `/`.
+
+`localize()` replaces a recognized locale prefix. It leaves an unsupported
+leading segment as application path content, emits canonical locale spelling,
+and omits the default prefix when configured. An unsupported or runtime
+non-string locale throws `RangeError`. `localizeAll()` returns one result per
+configured locale in configuration order.
+
+All three methods accept only an absolute application pathname beginning with
+`/`. They reject `TypeError` for an empty or relative path, full or protocol
+relative URL, repeated slash, query, fragment, backslash, encoded slash or
+backslash, and literal or encoded dot segment. Non-root trailing slashes are
+preserved.
+
+Routing never reads globals, negotiates headers, registers routes, handles base
+paths, redirects, navigates, renders HTML, or emits static pages.
