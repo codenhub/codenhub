@@ -158,7 +158,9 @@ test.describe("components", () => {
     await page.goto(COMPONENTS_URL);
     const childOpacity = await page.evaluate(() => {
       const child = document.querySelector('[data-testid="loading-nested-text"]');
-      if (!child) throw new Error("Nested text fixture not found");
+      if (!child) {
+        throw new Error("Nested text fixture not found");
+      }
       return getComputedStyle(child).opacity;
     });
     expect(childOpacity).toBe("0");
