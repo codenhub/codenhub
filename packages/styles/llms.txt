@@ -11,6 +11,6 @@ behavior.
 
 - [Documentation](./docs/index.md): Primary entrypoint for the complete public documentation.
 - [README](./README.md): Installation, first use, requirements, and stability notes.
-- [Tokens](./docs/tokens.md): Public CSS custom-property contract.
+- [Tokens](./docs/tokens.md): Public CSS custom-property contract and theme-selector precedence.
 - [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
 - [Accessibility](./docs/accessibility.md): CSS accessibility behavior and consumer responsibilities.

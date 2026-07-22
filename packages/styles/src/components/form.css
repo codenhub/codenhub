@@ -1,5 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
+@source inline("control-base");
 
 @utility field {
   @apply flex w-full flex-col gap-1.5;
@@ -66,15 +67,15 @@
   @apply control-base;
 
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23404040' stroke-width='2'><path stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /></svg>");
-  background-position: right 0.75rem center;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) center,
+    calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
-  background-size: 1rem;
+  background-size: 0.3125rem 0.3125rem;
   padding-right: 2.5rem;
-
-  @variant dark {
-    background-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a3a3a3' stroke-width='2'><path stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /></svg>");
-  }
 }
 
 @utility checkbox {
@@ -317,5 +318,19 @@
   &[aria-disabled="true"],
   &[data-disabled] {
     @apply cursor-not-allowed opacity-[0.58];
+  }
+}
+
+@media (forced-colors: active) {
+  .control-base:focus-visible,
+  .ipt:focus-visible,
+  .textarea:focus-visible,
+  .select:focus-visible,
+  .checkbox:focus-visible,
+  .radio:focus-visible,
+  .switch:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
   }
 }

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-07-22
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -33,15 +33,18 @@ packages/styles/
     package.json
     vite.config.ts
   tests/
-    components.spec.ts
-    environment.spec.ts
-    layout.spec.ts
-    native.spec.ts
-    playground.spec.ts
-    theme.spec.ts
-    typography.spec.ts
-    exit-reporter.ts
-    test-utils.ts
+    browser/
+      accessibility.spec.ts
+      components.spec.ts
+      environment.spec.ts
+      layout.spec.ts
+      native.spec.ts
+      playground.spec.ts
+      test-utils.ts
+      theme.spec.ts
+      typography.spec.ts
+    integration/
+      exports.test.ts
 ```
 
 ## `playground/`
@@ -58,13 +61,20 @@ Starts on http://localhost:5183.
 Vite application running against built package CSS in `dist/` for pre-ship debugging.
 Starts on http://localhost:5184.
 
-## `tests/`
+## `tests/browser/`
 
-Automated cross-browser testing for visual and computed-style confidence. Playwright runs against the `debug` Vite server, which exposes both compiled and Tailwind-source playground environments.
+Automated cross-browser testing for visual and computed-style confidence.
+One-shot runs use the `debug` server and built public exports; UI/source-mode
+runs use the `dev` server and live `src/` aliases for synchronized iteration.
 
-- Focused specs execute component, environment, layout, native, route, theme, and typography assertions.
+- Focused specs execute accessibility, component, environment, layout, native,
+  route, theme, and typography assertions.
 - `test-utils.ts`: Shared Playwright test setup and helpers.
-- `exit-reporter.ts`: Custom Playwright reporter to work around Windows process hang.
+
+## `tests/integration/`
+
+Node-based Vitest checks validate every published target and process each
+Tailwind entrypoint independently against representative public selectors.
 
 ## Scripts
 
@@ -72,9 +82,16 @@ Default package checks:
 
 ```json
 {
-  "test": "pnpm typecheck && pnpm build && pnpm test:visual",
-  "test:visual": "playwright test",
-  "dev": "pnpm build && pnpm --filter=@codenhub/styles-dev dev",
+  "test": "pnpm typecheck && pnpm test:integration && pnpm test:visual:run",
+  "test:coverage": "pnpm test",
+  "test:integration": "vitest run",
+  "test:visual": "pnpm build && pnpm test:visual:run",
+  "test:visual:run": "playwright test",
+  "test:visual:watch": "playwright test --ui",
+  "test:watch": "vitest --watch",
+  "dev": "pnpm --filter=@codenhub/styles-dev dev",
   "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev"
 }
 ```
+
+Because this package has no instrumentable JavaScript or TypeScript, `test:coverage` runs the real package test suite without producing a coverage report. This permanent package exception is recorded in `docs/specs/packages-exceptions.md`.

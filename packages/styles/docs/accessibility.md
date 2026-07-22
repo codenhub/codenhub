@@ -8,16 +8,29 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ## Provided By CSS
 
-| Feature            | Behavior                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
-| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
-| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
-| Current page       | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
-| Reduced motion     | `prefers-reduced-motion: reduce` globally shortens animations and transitions from the full stylesheet.                   |
-| Forced colors      | `forced-colors: active` preserves visible borders on key helpers.                                                         |
+| Feature                 | Behavior                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `:focus-visible`        | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
+| Form control focus      | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
+| Invalid controls        | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
+| Disabled controls       | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
+| Current page            | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
+| Open state              | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
+| Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.       |
+| Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.        |
+| Forced colors           | `forced-colors: active` preserves visible borders on key helpers.                                                         |
+
+The loader fallback is embedded in loader CSS, so focused imports that include
+loaders honor reduced motion without the reset. This includes
+`@codenhub/styles/components`, `@codenhub/styles/tw/components`,
+`@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and
+native entrypoints include both that fallback and the reset's broader animation
+and transition shortening.
+
+In forced colors, class-based form controls including `.control-base` receive a
+2px `Highlight` system-color focus outline. The native entrypoint provides the
+same visible system outline for unclassed text inputs, selects, textareas,
+checkboxes, and radios.
 
 ## Required Outside CSS
 

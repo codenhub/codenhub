@@ -39,7 +39,8 @@ Apps using Tailwind CSS v4 can instead process the source entrypoint:
 @source "./src";
 ```
 
-Apply `.dark` to any ancestor to switch token values for that subtree.
+The root follows the system color-scheme preference. Apply `.light` or `.dark`
+to force a theme for the root or a subtree.
 
 ```html
 <html class="dark">
@@ -49,7 +50,8 @@ Apply `.dark` to any ancestor to switch token values for that subtree.
 </html>
 ```
 
-Apps own adding and removing `.dark`; the package only responds to the class.
+The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
+also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
 ## Documentation
 
@@ -75,9 +77,10 @@ are provided.
 
 ## License
 
-Licensed under Apache-2.0.
-
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
+Licensed under Apache-2.0. Embedded SVG icons derived from
+[Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from
+[svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed.
+See [NOTICE](NOTICE) for the required notices.
 
 <!-- Source: docs/index.md -->
 
@@ -111,15 +114,16 @@ component-class surface, then compose helper classes in markup:
 </main>
 ```
 
-The full stylesheet applies global reset, native-element, and focus-visible
-rules. Import focused entrypoints instead when those global rules are not
-appropriate. The [class reference](./docs/classes.md) lists every supported compiled
-and Tailwind source import and explains their composition.
+The full stylesheet applies global reset and focus-visible rules, but does not
+apply the optional classless native-element mappings. Import focused entrypoints
+when global rules are not appropriate.
 
 ### Configuration
 
-Apply `.dark` to any ancestor to use dark token values for that subtree. Apps
-own adding and removing the class.
+The root uses light values unless the operating-system preference is dark.
+Apply `.light` or `.dark` to the root or any ancestor to force token values for
+that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
+aliases. The [token reference](./docs/tokens.md) documents their precedence.
 
 ```html
 <html class="dark">
@@ -132,22 +136,49 @@ own adding and removing the class.
 Customize the public CSS properties documented in [Tokens](./docs/tokens.md). Do not
 depend on component-scoped implementation variables.
 
+## Import paths
+
+Compiled entrypoints are ready-to-import CSS and require only tooling that can
+resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source
+from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`,
+`@apply`, and related directives. Focused source component entrypoints include
+theme tokens so their classes can work independently.
+
+| Import path                      | Composition and effects                                                                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                   |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables and Codenhub tokens only. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                        |
+| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                      |
+| `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                |
+| `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                        |
+| `@codenhub/styles/tw/theme`      | Source theme and tokens. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                             |
+| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
+| `@codenhub/styles/tw/surface`    | Source theme plus `.empty-state`.                                                                                                                                                                                 |
+| `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.ai` for loading state.                                                       |
+| `@codenhub/styles/tw/form`       | Source theme plus field, public `control-base`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
+| `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                             |
+| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                              |
+| `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                              |
+| `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                               |
+| `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                |
+| `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                  |
+| `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                   |
+
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA,
   keyboard behavior, focus management, validation, and announcements.
-- Component entrypoints include theme tokens because their classes depend on
-  those variables. Native entrypoints also include the reset and classless
-  mappings for common native elements.
+- Focused entrypoints compose as documented above; avoid importing overlapping
+  entrypoints unless duplicate generated CSS is acceptable in your build.
 
 ## Next steps
 
 - [Tokens](./docs/tokens.md) explains theme values, dark mode, and the public
   customization contract.
-- [Classes](./docs/classes.md) covers supported imports, helper classes, component
-  states, and composition rules.
+- [Classes](./docs/classes.md) covers helper classes, component states, and
+  composition rules.
 - [Accessibility](./docs/accessibility.md) separates the hooks supplied by CSS from
   the semantics and behavior an application must provide.
 
@@ -159,16 +190,29 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ## Provided By CSS
 
-| Feature            | Behavior                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
-| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
-| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
-| Current page       | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
-| Reduced motion     | `prefers-reduced-motion: reduce` globally shortens animations and transitions from the full stylesheet.                   |
-| Forced colors      | `forced-colors: active` preserves visible borders on key helpers.                                                         |
+| Feature                 | Behavior                                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `:focus-visible`        | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
+| Form control focus      | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
+| Invalid controls        | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
+| Disabled controls       | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
+| Current page            | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
+| Open state              | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
+| Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.       |
+| Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.        |
+| Forced colors           | `forced-colors: active` preserves visible borders on key helpers.                                                         |
+
+The loader fallback is embedded in loader CSS, so focused imports that include
+loaders honor reduced motion without the reset. This includes
+`@codenhub/styles/components`, `@codenhub/styles/tw/components`,
+`@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and
+native entrypoints include both that fallback and the reset's broader animation
+and transition shortening.
+
+In forced colors, class-based form controls including `.control-base` receive a
+2px `Highlight` system-color focus outline. The native entrypoint provides the
+same visible system outline for unclassed text inputs, selects, textareas,
+checkboxes, and radios.
 
 ## Required Outside CSS
 
@@ -316,25 +360,33 @@ Examples:
 | `.label`                                                              | Form label text.                    |
 | `.hint`                                                               | Secondary helper text.              |
 | `.error` inside `.field` except `.btn.error`                          | Destructive helper text.            |
+| `.control-base`                                                       | Shared public text-control styling. |
 | `.ipt`                                                                | Input control styling.              |
 | `.textarea`                                                           | Textarea control styling.           |
 | `.select`                                                             | Select control styling.             |
 | `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.    |
+| `input[type="radio"].radio`                                           | Custom radio control styling.       |
 | `input[type="checkbox"].switch`                                       | Custom switch control styling.      |
 | `[aria-invalid="true"]` on controls                                   | Destructive border and focus color. |
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                   |
 
-`.checkbox` and `.switch` accept the same intent classes as buttons to set the checked color:
+`.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
+to set the checked color:
 
-| Class                               | Meaning            |
-| ----------------------------------- | ------------------ |
-| _(default)_                         | Primary color.     |
-| `.success`                          | Success color.     |
-| `.warning`                          | Warning color.     |
-| `.destructive`, `.danger`, `.error` | Destructive color. |
-| `.info`                             | Info color.        |
+| Class                               | Meaning                 |
+| ----------------------------------- | ----------------------- |
+| _(default)_                         | Text color.             |
+| `.primary`                          | Primary color.          |
+| `.secondary`                        | Secondary/accent color. |
+| `.success`                          | Success color.          |
+| `.warning`                          | Warning color.          |
+| `.destructive`, `.danger`, `.error` | Destructive color.      |
+| `.info`                             | Info color.             |
 
-> **Note:** `control-base` is an internal composition utility that `ipt`, `textarea`, and `select` build on. It is accessible via `./tw/form` but is not part of the public consumer API. Use `ipt`, `textarea`, or `select` instead.
+`.control-base` is a public low-level utility from the form entrypoint. It
+provides the shared control dimensions, border, placeholder, focus-visible,
+invalid, and disabled styles composed by `ipt`, `textarea`, and `select`. Use it
+for custom text-like controls; prefer those higher-level utilities when they fit.
 
 Example:
 
@@ -349,25 +401,28 @@ Example:
   <span>Accept terms</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
+  <input type="radio" class="radio secondary" name="plan" />
+  <span>Standard plan</span>
+</label>
+<label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="switch destructive" />
   <span>Enable</span>
 </label>
 ```
 
-`.progress` also accepts the same intent classes to color the fill bar:
-
 ## Feedback
 
-| Class       | Purpose                                                                    |
-| ----------- | -------------------------------------------------------------------------- |
-| `.alert`    | Inline feedback surface.                                                   |
-| `.icon`     | Subclass of `.alert`. Adds a corresponding intent icon and padding.        |
-| `.badge`    | Compact status pill.                                                       |
-| `.ai`       | Low-level activity indicator base. Applies CSS mask to show a spinner SVG. |
-| `.loader`   | Standalone inline loader. Composes `.ai` with size and color styles.       |
-| `.skeleton` | Ambient loading placeholder.                                               |
-| `.progress` | Progress track. Uses `--progress-value` variable.                          |
-| `.active`   | Optional on `.progress` to add skeleton shimmer animation.                 |
+| Class            | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `.alert`         | Inline feedback surface.                                                     |
+| `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
+| `.badge`         | Compact status pill.                                                         |
+| `.ai`            | Low-level activity indicator base. Applies CSS mask to show a spinner SVG.   |
+| `.loader`        | Standalone inline loader. Composes `.ai` with size and color styles.         |
+| `.skeleton`      | Ambient loading placeholder.                                                 |
+| `.progress`      | Progress track. Uses `--progress-value` variable.                            |
+| `.active`        | Optional on `.progress` to add a track shimmer.                              |
+| `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
 Activity indicator modifier classes (compose with `.loader` or any element using `.ai`):
 
@@ -384,11 +439,37 @@ Activity indicator modifier classes (compose with `.loader` or any element using
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
+These variants retain their embedded SVG animations normally. Under
+`prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static
+mask. This fallback is part of focused loader, button, and components imports;
+it does not depend on the global reset.
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG icon matching the alert's intent (success, warning, error, info).
+Loader size modifiers:
 
-`.badge` also accepts presentation variant classes:
+| Class    | Size              |
+| -------- | ----------------- |
+| _(none)_ | Default (`2rem`). |
+| `.sm`    | Small (`1.5rem`). |
+| `.lg`    | Large (`2.5rem`). |
+
+Alerts, badges, and progress bars accept `.primary`, `.secondary`, `.success`,
+`.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent,
+they use the text palette.
+
+`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases
+the left padding and adds an embedded SVG. Success, warning, and destructive
+intents use corresponding symbols; other intents use the information symbol.
+
+Alerts accept presentation variant classes:
+
+| Class          | Purpose                                                           |
+| -------------- | ----------------------------------------------------------------- |
+| _(none)_       | Tinted surface, intent-colored text, and mixed intent border.     |
+| `.flat`        | Intent-color fill and border with contrast text.                  |
+| `.soft`        | Tinted surface and intent-colored text with a transparent border. |
+| `.left-accent` | Tinted surface with only a four-pixel intent-colored left border. |
+
+Badges accept presentation variant classes:
 
 | Class    | Purpose                                                                            |
 | -------- | ---------------------------------------------------------------------------------- |
@@ -400,7 +481,9 @@ Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
-<div class="alert success icon" role="status">Saved successfully with icon.</div>
+<div class="alert primary flat" role="status">Deployment started.</div>
+<div class="alert warning soft icon" role="status">Review required.</div>
+<div class="alert destructive left-accent" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success flat">Live</span>
 <span class="badge info soft">Draft</span>
@@ -408,8 +491,33 @@ Examples:
 <span class="loader dots-wave" aria-hidden="true"></span>
 <span class="loader dots-fade" aria-hidden="true"></span>
 <span class="loader bars-wave" aria-hidden="true"></span>
-<div class="progress" aria-label="Upload progress" style="--progress-value: 64%"></div>
-<div class="progress success active" aria-label="Upload progress" style="--progress-value: 64%"></div>
+<span class="loader pulse-ring sm" aria-hidden="true"></span>
+<span class="loader dots-grow lg" aria-hidden="true"></span>
+<div
+  class="progress"
+  role="progressbar"
+  aria-label="Upload progress"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="64"
+  style="--progress-value: 64%"
+></div>
+<div
+  class="progress secondary active"
+  role="progressbar"
+  aria-label="Upload progress"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="64"
+  style="--progress-value: 64%"
+></div>
+<div
+  class="progress info indeterminate"
+  role="progressbar"
+  aria-label="Loading"
+  aria-valuemin="0"
+  aria-valuemax="100"
+></div>
 ```
 
 ## Tooltips
@@ -459,13 +567,35 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 
 # Design tokens
 
-Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
+Tokens are CSS custom properties. The root starts with light values and switches
+to dark values when `prefers-color-scheme: dark` matches. Explicit theme
+selectors can force either palette on the root or any subtree.
 
 ```html
-<section class="dark">
-  <article class="card">Dark token subtree</article>
+<section data-theme="dark">
+  <article>Dark token subtree</article>
 </section>
 ```
+
+## Theme selection and precedence
+
+| Theme | Equivalent selectors                             |
+| ----- | ------------------------------------------------ |
+| Light | `.light`, `.theme-light`, `[data-theme="light"]` |
+| Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
+
+- With no explicit selector, `:root` is light unless the system prefers dark.
+- A light selector on `:root` suppresses the system dark fallback. A dark root
+  selector uses dark values regardless of system preference.
+- Every selector can theme a subtree. Normal CSS inheritance means a nested
+  explicit selector overrides inherited values from an outer theme; the nearest
+  themed ancestor therefore controls that subtree.
+- If conflicting light and dark selectors are placed on the same element, the
+  dark declaration wins because it appears later with equal specificity. Do not
+  rely on this conflict behavior; apply one theme per element.
+- Component colors inherit from tokens or `currentColor`. For example, the
+  select chevron uses `currentColor`, so it follows every explicit selector and
+  the system-preference fallback without a separate dark-variant rule.
 
 ## Color Tokens
 

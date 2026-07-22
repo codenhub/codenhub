@@ -20,7 +20,7 @@
 
   html,
   body {
-    @apply bg-background text-text font-default min-h-dvh overflow-x-hidden;
+    @apply bg-background text-text font-default min-h-dvh;
   }
 
   body {
@@ -46,6 +46,30 @@
   :focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  @media (forced-colors: active) {
+    input:is(
+      [type="text"],
+      [type="email"],
+      [type="password"],
+      [type="url"],
+      [type="tel"],
+      [type="number"],
+      [type="search"],
+      [type="date"],
+      [type="datetime-local"],
+      [type="month"],
+      [type="week"],
+      [type="time"],
+      [type="checkbox"],
+      [type="radio"]
+    ):focus-visible,
+    textarea:focus-visible,
+    select:focus-visible {
+      outline: 2px solid Highlight !important;
+      outline-offset: 2px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

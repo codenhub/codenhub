@@ -4,13 +4,35 @@ title: Tokens
 
 # Design tokens
 
-Tokens are CSS custom properties. Default values apply by default. `.dark` may override any token value for that subtree.
+Tokens are CSS custom properties. The root starts with light values and switches
+to dark values when `prefers-color-scheme: dark` matches. Explicit theme
+selectors can force either palette on the root or any subtree.
 
 ```html
-<section class="dark">
-  <article class="card">Dark token subtree</article>
+<section data-theme="dark">
+  <article>Dark token subtree</article>
 </section>
 ```
+
+## Theme selection and precedence
+
+| Theme | Equivalent selectors                             |
+| ----- | ------------------------------------------------ |
+| Light | `.light`, `.theme-light`, `[data-theme="light"]` |
+| Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
+
+- With no explicit selector, `:root` is light unless the system prefers dark.
+- A light selector on `:root` suppresses the system dark fallback. A dark root
+  selector uses dark values regardless of system preference.
+- Every selector can theme a subtree. Normal CSS inheritance means a nested
+  explicit selector overrides inherited values from an outer theme; the nearest
+  themed ancestor therefore controls that subtree.
+- If conflicting light and dark selectors are placed on the same element, the
+  dark declaration wins because it appears later with equal specificity. Do not
+  rely on this conflict behavior; apply one theme per element.
+- Component colors inherit from tokens or `currentColor`. For example, the
+  select chevron uses `currentColor`, so it follows every explicit selector and
+  the system-preference fallback without a separate dark-variant rule.
 
 ## Color Tokens
 

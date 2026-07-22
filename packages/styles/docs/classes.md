@@ -113,25 +113,33 @@ Examples:
 | `.label`                                                              | Form label text.                    |
 | `.hint`                                                               | Secondary helper text.              |
 | `.error` inside `.field` except `.btn.error`                          | Destructive helper text.            |
+| `.control-base`                                                       | Shared public text-control styling. |
 | `.ipt`                                                                | Input control styling.              |
 | `.textarea`                                                           | Textarea control styling.           |
 | `.select`                                                             | Select control styling.             |
 | `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.    |
+| `input[type="radio"].radio`                                           | Custom radio control styling.       |
 | `input[type="checkbox"].switch`                                       | Custom switch control styling.      |
 | `[aria-invalid="true"]` on controls                                   | Destructive border and focus color. |
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                   |
 
-`.checkbox` and `.switch` accept the same intent classes as buttons to set the checked color:
+`.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
+to set the checked color:
 
-| Class                               | Meaning            |
-| ----------------------------------- | ------------------ |
-| _(default)_                         | Primary color.     |
-| `.success`                          | Success color.     |
-| `.warning`                          | Warning color.     |
-| `.destructive`, `.danger`, `.error` | Destructive color. |
-| `.info`                             | Info color.        |
+| Class                               | Meaning                 |
+| ----------------------------------- | ----------------------- |
+| _(default)_                         | Text color.             |
+| `.primary`                          | Primary color.          |
+| `.secondary`                        | Secondary/accent color. |
+| `.success`                          | Success color.          |
+| `.warning`                          | Warning color.          |
+| `.destructive`, `.danger`, `.error` | Destructive color.      |
+| `.info`                             | Info color.             |
 
-> **Note:** `control-base` is an internal composition utility that `ipt`, `textarea`, and `select` build on. It is accessible via `./tw/form` but is not part of the public consumer API. Use `ipt`, `textarea`, or `select` instead.
+`.control-base` is a public low-level utility from the form entrypoint. It
+provides the shared control dimensions, border, placeholder, focus-visible,
+invalid, and disabled styles composed by `ipt`, `textarea`, and `select`. Use it
+for custom text-like controls; prefer those higher-level utilities when they fit.
 
 Example:
 
@@ -146,25 +154,28 @@ Example:
   <span>Accept terms</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
+  <input type="radio" class="radio secondary" name="plan" />
+  <span>Standard plan</span>
+</label>
+<label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="switch destructive" />
   <span>Enable</span>
 </label>
 ```
 
-`.progress` also accepts the same intent classes to color the fill bar:
-
 ## Feedback
 
-| Class       | Purpose                                                                    |
-| ----------- | -------------------------------------------------------------------------- |
-| `.alert`    | Inline feedback surface.                                                   |
-| `.icon`     | Subclass of `.alert`. Adds a corresponding intent icon and padding.        |
-| `.badge`    | Compact status pill.                                                       |
-| `.ai`       | Low-level activity indicator base. Applies CSS mask to show a spinner SVG. |
-| `.loader`   | Standalone inline loader. Composes `.ai` with size and color styles.       |
-| `.skeleton` | Ambient loading placeholder.                                               |
-| `.progress` | Progress track. Uses `--progress-value` variable.                          |
-| `.active`   | Optional on `.progress` to add skeleton shimmer animation.                 |
+| Class            | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `.alert`         | Inline feedback surface.                                                     |
+| `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
+| `.badge`         | Compact status pill.                                                         |
+| `.ai`            | Low-level activity indicator base. Applies CSS mask to show a spinner SVG.   |
+| `.loader`        | Standalone inline loader. Composes `.ai` with size and color styles.         |
+| `.skeleton`      | Ambient loading placeholder.                                                 |
+| `.progress`      | Progress track. Uses `--progress-value` variable.                            |
+| `.active`        | Optional on `.progress` to add a track shimmer.                              |
+| `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
 Activity indicator modifier classes (compose with `.loader` or any element using `.ai`):
 
@@ -181,11 +192,37 @@ Activity indicator modifier classes (compose with `.loader` or any element using
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-Feedback helpers accept the same intent classes as buttons: `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`.
+These variants retain their embedded SVG animations normally. Under
+`prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static
+mask. This fallback is part of focused loader, button, and components imports;
+it does not depend on the global reset.
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG icon matching the alert's intent (success, warning, error, info).
+Loader size modifiers:
 
-`.badge` also accepts presentation variant classes:
+| Class    | Size              |
+| -------- | ----------------- |
+| _(none)_ | Default (`2rem`). |
+| `.sm`    | Small (`1.5rem`). |
+| `.lg`    | Large (`2.5rem`). |
+
+Alerts, badges, and progress bars accept `.primary`, `.secondary`, `.success`,
+`.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent,
+they use the text palette.
+
+`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases
+the left padding and adds an embedded SVG. Success, warning, and destructive
+intents use corresponding symbols; other intents use the information symbol.
+
+Alerts accept presentation variant classes:
+
+| Class          | Purpose                                                           |
+| -------------- | ----------------------------------------------------------------- |
+| _(none)_       | Tinted surface, intent-colored text, and mixed intent border.     |
+| `.flat`        | Intent-color fill and border with contrast text.                  |
+| `.soft`        | Tinted surface and intent-colored text with a transparent border. |
+| `.left-accent` | Tinted surface with only a four-pixel intent-colored left border. |
+
+Badges accept presentation variant classes:
 
 | Class    | Purpose                                                                            |
 | -------- | ---------------------------------------------------------------------------------- |
@@ -197,7 +234,9 @@ Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
-<div class="alert success icon" role="status">Saved successfully with icon.</div>
+<div class="alert primary flat" role="status">Deployment started.</div>
+<div class="alert warning soft icon" role="status">Review required.</div>
+<div class="alert destructive left-accent" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success flat">Live</span>
 <span class="badge info soft">Draft</span>
@@ -205,8 +244,33 @@ Examples:
 <span class="loader dots-wave" aria-hidden="true"></span>
 <span class="loader dots-fade" aria-hidden="true"></span>
 <span class="loader bars-wave" aria-hidden="true"></span>
-<div class="progress" aria-label="Upload progress" style="--progress-value: 64%"></div>
-<div class="progress success active" aria-label="Upload progress" style="--progress-value: 64%"></div>
+<span class="loader pulse-ring sm" aria-hidden="true"></span>
+<span class="loader dots-grow lg" aria-hidden="true"></span>
+<div
+  class="progress"
+  role="progressbar"
+  aria-label="Upload progress"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="64"
+  style="--progress-value: 64%"
+></div>
+<div
+  class="progress secondary active"
+  role="progressbar"
+  aria-label="Upload progress"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="64"
+  style="--progress-value: 64%"
+></div>
+<div
+  class="progress info indeterminate"
+  role="progressbar"
+  aria-label="Loading"
+  aria-valuemin="0"
+  aria-valuemax="100"
+></div>
 ```
 
 ## Tooltips

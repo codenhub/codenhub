@@ -103,11 +103,51 @@
       <section class="sect-inn">
         <h2 class="text-title-lg">Tooltips</h2>
         <div class="cluster">
-          <span class="tooltip tooltip-icon" data-tooltip="Fallback tooltip" data-testid="fallback-tooltip">?</span>
-          <span class="tooltip tooltip-icon" data-tooltip="Left tooltip" data-tooltip-position="left">?</span>
-          <span class="tooltip tooltip-icon" data-tooltip="Top tooltip" data-tooltip-position="top">?</span>
-          <span class="tooltip tooltip-icon" data-tooltip="Bottom tooltip" data-tooltip-position="bottom">?</span>
-          <span class="tooltip tooltip-icon" data-tooltip="Right tooltip" data-tooltip-position="right">?</span>
+          <span
+            class="tooltip tooltip-icon"
+            data-tooltip="Fallback tooltip"
+            data-testid="fallback-tooltip"
+            tabindex="0"
+            aria-label="Fallback tooltip"
+          >
+            ?
+          </span>
+          <span
+            class="tooltip tooltip-icon"
+            data-tooltip="Left tooltip"
+            data-tooltip-position="left"
+            tabindex="0"
+            aria-label="Left tooltip"
+          >
+            ?
+          </span>
+          <span
+            class="tooltip tooltip-icon"
+            data-tooltip="Top tooltip"
+            data-tooltip-position="top"
+            tabindex="0"
+            aria-label="Top tooltip"
+          >
+            ?
+          </span>
+          <span
+            class="tooltip tooltip-icon"
+            data-tooltip="Bottom tooltip"
+            data-tooltip-position="bottom"
+            tabindex="0"
+            aria-label="Bottom tooltip"
+          >
+            ?
+          </span>
+          <span
+            class="tooltip tooltip-icon"
+            data-tooltip="Right tooltip"
+            data-tooltip-position="right"
+            tabindex="0"
+            aria-label="Right tooltip"
+          >
+            ?
+          </span>
         </div>
       </section>
 
@@ -118,12 +158,12 @@
           <div class="loader" data-testid="loader-default"></div>
           <div class="loader lg" data-testid="loader-lg"></div>
           <div class="loader lg dots-wave" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dots-fade" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dots-queue" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dots-rotate" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dots-grow" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dots-grow-alternate" data-testid="loader-dots-wave"></div>
-          <div class="loader lg dot-bounce" data-testid="loader-dots-wave"></div>
+          <div class="loader lg dots-fade" data-testid="loader-dots-fade"></div>
+          <div class="loader lg dots-queue" data-testid="loader-dots-queue"></div>
+          <div class="loader lg dots-rotate" data-testid="loader-dots-rotate"></div>
+          <div class="loader lg dots-grow" data-testid="loader-dots-grow"></div>
+          <div class="loader lg dots-grow-alternate" data-testid="loader-dots-grow-alternate"></div>
+          <div class="loader lg dot-bounce" data-testid="loader-dot-bounce"></div>
           <div class="loader lg bars-wave" data-testid="loader-bars-wave"></div>
           <div class="loader lg pulse-ring" data-testid="loader-pulse-ring"></div>
         </div>
@@ -348,58 +388,102 @@
           </div>
         </div>
         <div class="skeleton" aria-hidden="true" data-testid="skeleton-block"></div>
-        <div class="progress" aria-label="Progress" data-testid="progress-bar" style="--progress-value: 64%"></div>
+        <div
+          class="progress"
+          role="progressbar"
+          aria-label="Progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="64"
+          data-testid="progress-bar"
+          style="--progress-value: 64%"
+        ></div>
         <div
           class="progress active"
+          role="progressbar"
           aria-label="Active progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="64"
           data-testid="progress-bar-active"
           style="--progress-value: 64%"
         ></div>
         <div
           class="progress primary"
+          role="progressbar"
           aria-label="Primary progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="50"
           data-testid="progress-bar-primary"
           style="--progress-value: 50%"
         ></div>
         <div
           class="progress secondary"
+          role="progressbar"
           aria-label="Secondary progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="80"
           data-testid="progress-bar-secondary"
           style="--progress-value: 80%"
         ></div>
         <div
           class="progress success"
+          role="progressbar"
           aria-label="Success progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="40"
           data-testid="progress-bar-success"
           style="--progress-value: 40%"
         ></div>
         <div
           class="progress success active"
+          role="progressbar"
           aria-label="Active success progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="40"
           data-testid="progress-bar-success-active"
           style="--progress-value: 40%"
         ></div>
         <div
           class="progress warning"
+          role="progressbar"
           aria-label="Warning progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="75"
           data-testid="progress-bar-warning"
           style="--progress-value: 75%"
         ></div>
         <div
           class="progress destructive"
+          role="progressbar"
           aria-label="Destructive progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="90"
           data-testid="progress-bar-destructive"
           style="--progress-value: 90%"
         ></div>
         <div
           class="progress info"
+          role="progressbar"
           aria-label="Info progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="30"
           data-testid="progress-bar-info"
           style="--progress-value: 30%"
         ></div>
         <div
           class="progress indeterminate"
+          role="progressbar"
           aria-label="Indeterminate progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
           data-testid="progress-bar-indeterminate"
         ></div>
       </section>

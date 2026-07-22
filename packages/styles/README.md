@@ -37,7 +37,8 @@ Apps using Tailwind CSS v4 can instead process the source entrypoint:
 @source "./src";
 ```
 
-Apply `.dark` to any ancestor to switch token values for that subtree.
+The root follows the system color-scheme preference. Apply `.light` or `.dark`
+to force a theme for the root or a subtree.
 
 ```html
 <html class="dark">
@@ -47,7 +48,8 @@ Apply `.dark` to any ancestor to switch token values for that subtree.
 </html>
 ```
 
-Apps own adding and removing `.dark`; the package only responds to the class.
+The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
+also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
 ## Documentation
 
@@ -73,6 +75,7 @@ are provided.
 
 ## License
 
-Licensed under Apache-2.0.
-
-It includes SVG icons from [Lucide](https://lucide.dev) which are licensed under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE). See the [NOTICE](NOTICE) file for details.
+Licensed under Apache-2.0. Embedded SVG icons derived from
+[Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from
+[svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed.
+See [NOTICE](NOTICE) for the required notices.

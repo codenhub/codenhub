@@ -6,6 +6,6 @@
     "types": ["node"]
   },
   "extends": "../../tsconfig.json",
-  "include": ["playwright.config.ts", "tests/**/*.ts", "dev/**/*.ts", "debug/**/*.ts"],
+  "include": ["playwright.config.ts", "vitest.config.ts", "tests/**/*.ts", "dev/**/*.ts", "debug/**/*.ts"],
   "exclude": ["dist", "node_modules", "test-results"]
 }

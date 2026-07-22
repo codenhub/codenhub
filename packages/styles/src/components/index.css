@@ -1,4 +1,5 @@
 @reference "tailwindcss";
+@import "tailwindcss/utilities.css";
 @source not "../../dist";
 @source not "../../tests";
 @source not "../../dev";
@@ -12,3 +13,5 @@
 @import "./loader.css";
 @import "./surface.css";
 @import "./tooltip.css";
+
+@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field control-base ipt textarea select checkbox radio switch alert badge skeleton progress empty-state tooltip");

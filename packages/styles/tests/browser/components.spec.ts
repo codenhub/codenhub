@@ -54,67 +54,23 @@ test.describe("components", () => {
     await page.goto(COMPONENTS_URL);
 
     const styles = await page.evaluate(() => {
-      const successButton = document.querySelector('[data-testid="success-button"]');
       const successOutlineButton = document.querySelector('[data-testid="success-outline-button"]');
       const successSoftButton = document.querySelector('[data-testid="success-soft-button"]');
       const primaryPillButton = document.querySelector('[data-testid="primary-pill-button"]');
       const secondaryGhostButton = document.querySelector('[data-testid="secondary-ghost-button"]');
-      const secondaryButton = document.querySelector('[data-testid="secondary-button"]');
-      const loadingButton = document.querySelector('[data-testid="loading-button"]');
-      const ariaDisabledButton = document.querySelector('[data-testid="aria-disabled-button"]');
-      const errorButton = document.querySelector('[data-testid="error-button"]');
-      const fieldErrorButton = document.querySelector('[data-testid="field-error-button"]');
 
-      if (
-        !successButton ||
-        !successOutlineButton ||
-        !successSoftButton ||
-        !primaryPillButton ||
-        !secondaryGhostButton ||
-        !secondaryButton ||
-        !loadingButton ||
-        !ariaDisabledButton ||
-        !errorButton ||
-        !fieldErrorButton
-      ) {
+      if (!successOutlineButton || !successSoftButton || !primaryPillButton || !secondaryGhostButton) {
         throw new Error("Expected button composition fixtures to exist.");
       }
 
-      const successButtonStyles = getComputedStyle(successButton);
       const successOutlineStyles = getComputedStyle(successOutlineButton);
       const successSoftStyles = getComputedStyle(successSoftButton);
       const primaryPillStyles = getComputedStyle(primaryPillButton);
       const secondaryGhostStyles = getComputedStyle(secondaryGhostButton);
-      const secondaryButtonStyles = getComputedStyle(secondaryButton);
-      const loadingRootStyles = getComputedStyle(loadingButton);
-      const loadingButtonStyles = getComputedStyle(loadingButton, "::after");
-      const ariaDisabledStyles = getComputedStyle(ariaDisabledButton);
-      const errorButtonStyles = getComputedStyle(errorButton);
-      const fieldErrorButtonStyles = getComputedStyle(fieldErrorButton);
 
       return {
-        disabledCursor: ariaDisabledStyles.cursor,
-        disabledOpacity: ariaDisabledStyles.opacity,
-        errorBackground: errorButtonStyles.backgroundColor,
-        errorColor: errorButtonStyles.color,
-        fieldErrorBackground: fieldErrorButtonStyles.backgroundColor,
-        fieldErrorColor: fieldErrorButtonStyles.color,
         ghostBackground: secondaryGhostStyles.backgroundColor,
         ghostColor: secondaryGhostStyles.color,
-        secondaryBackground: secondaryButtonStyles.backgroundColor,
-        loadingButtonHeight: loadingButton.getBoundingClientRect().height,
-        loadingButtonWidth: loadingButton.getBoundingClientRect().width,
-        loadingSpinnerAnimation:
-          loadingButtonStyles.animationName !== "none"
-            ? loadingButtonStyles.animationName
-            : loadingButtonStyles.maskImage || loadingButtonStyles.webkitMaskImage || "none",
-        loadingSpinnerHeight: loadingButtonStyles.height,
-        loadingSpinnerLeft: loadingButtonStyles.left,
-        loadingSpinnerTranslate: loadingButtonStyles.translate,
-        loadingTransitionProperty: loadingRootStyles.transitionProperty,
-        loadingSpinnerWidth: loadingButtonStyles.width,
-        loadingSpinnerTop: loadingButtonStyles.top,
-        successBackground: successButtonStyles.backgroundColor,
         successOutlineBackground: successOutlineStyles.backgroundColor,
         successOutlineBorder: successOutlineStyles.borderColor,
         successOutlineColor: successOutlineStyles.color,
@@ -132,18 +88,6 @@ test.describe("components", () => {
     expect(styles.successSoftBackground).not.toBe("rgba(0, 0, 0, 0)");
     expect(styles.successSoftColor).not.toBe("rgba(0, 0, 0, 0)");
     expect(Number.parseFloat(styles.primaryPillBorderRadius)).toBeGreaterThan(20);
-    expect(styles.loadingSpinnerAnimation).not.toBe("none");
-    expect(Number.parseFloat(styles.loadingSpinnerTop)).toBeCloseTo(styles.loadingButtonHeight / 2, 1);
-    expect(Number.parseFloat(styles.loadingSpinnerLeft)).toBeCloseTo(styles.loadingButtonWidth / 2, 1);
-    expect(styles.loadingSpinnerTranslate).toBe("-50% -50%");
-    expect(styles.loadingTransitionProperty).not.toContain("background-color");
-    expect(styles.loadingTransitionProperty).not.toContain("color");
-    expect(styles.loadingSpinnerWidth).not.toBe("0px");
-    expect(styles.loadingSpinnerHeight).not.toBe("0px");
-    expect(styles.errorColor).not.toBe(styles.errorBackground);
-    expect(styles.fieldErrorColor).not.toBe(styles.fieldErrorBackground);
-    expect(styles.disabledCursor).toBe("not-allowed");
-    expect(Number(styles.disabledOpacity)).toBeLessThan(1);
 
     await page.getByTestId("secondary-ghost-button").hover();
 
@@ -152,6 +96,77 @@ test.describe("components", () => {
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
     expect(ghostHoverBackground).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("centers the loading spinner without transitioning hidden colors", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.getByTestId("loading-button").evaluate((button) => {
+      const rootStyles = getComputedStyle(button);
+      const spinnerStyles = getComputedStyle(button, "::after");
+
+      return {
+        buttonHeight: button.getBoundingClientRect().height,
+        buttonWidth: button.getBoundingClientRect().width,
+        spinnerAnimation:
+          spinnerStyles.animationName !== "none"
+            ? spinnerStyles.animationName
+            : spinnerStyles.maskImage || spinnerStyles.webkitMaskImage || "none",
+        spinnerHeight: spinnerStyles.height,
+        spinnerLeft: spinnerStyles.left,
+        spinnerTop: spinnerStyles.top,
+        spinnerTranslate: spinnerStyles.translate,
+        spinnerWidth: spinnerStyles.width,
+        transitionProperty: rootStyles.transitionProperty,
+      };
+    });
+
+    expect(styles.spinnerAnimation).not.toBe("none");
+    expect(Number.parseFloat(styles.spinnerTop)).toBeCloseTo(styles.buttonHeight / 2, 1);
+    expect(Number.parseFloat(styles.spinnerLeft)).toBeCloseTo(styles.buttonWidth / 2, 1);
+    expect(styles.spinnerTranslate).toBe("-50% -50%");
+    expect(styles.transitionProperty).not.toContain("background-color");
+    expect(styles.transitionProperty).not.toContain("color");
+    expect(styles.spinnerWidth).not.toBe("0px");
+    expect(styles.spinnerHeight).not.toBe("0px");
+  });
+
+  test("uses loader variants on loading buttons", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const images = await Promise.all(
+      ["loading-button", "loading-button-dots", "loading-button-bars"].map((testId) =>
+        page
+          .getByTestId(testId)
+          .evaluate((button) => getComputedStyle(button, "::after").getPropertyValue("--ai-image")),
+      ),
+    );
+
+    expect(new Set(images).size).toBe(images.length);
+  });
+
+  test("styles disabled and error button states", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const disabledStyles = getComputedStyle(document.querySelector('[data-testid="aria-disabled-button"]')!);
+      const errorStyles = getComputedStyle(document.querySelector('[data-testid="error-button"]')!);
+      const fieldErrorStyles = getComputedStyle(document.querySelector('[data-testid="field-error-button"]')!);
+
+      return {
+        disabledCursor: disabledStyles.cursor,
+        disabledOpacity: disabledStyles.opacity,
+        errorBackground: errorStyles.backgroundColor,
+        errorColor: errorStyles.color,
+        fieldErrorBackground: fieldErrorStyles.backgroundColor,
+        fieldErrorColor: fieldErrorStyles.color,
+      };
+    });
+
+    expect(styles.errorColor).not.toBe(styles.errorBackground);
+    expect(styles.fieldErrorColor).not.toBe(styles.fieldErrorBackground);
+    expect(styles.disabledCursor).toBe("not-allowed");
+    expect(Number(styles.disabledOpacity)).toBeLessThan(1);
   });
 
   test("hides nested elements inside loading buttons", async ({ page }) => {
@@ -278,85 +293,131 @@ test.describe("components", () => {
       .toBe(successContrast);
   });
 
-  test("styles layout, form, and feedback helper classes", async ({ page }) => {
+  test("styles section and cluster layout helpers", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
 
     const styles = await page.evaluate(() => {
-      const layoutSection = document.querySelector('[data-testid="layout-section"]');
-      const clusterLayout = document.querySelector('[data-testid="cluster-layout"]');
-      const invalidInput = document.querySelector('[data-testid="invalid-input"]');
-      const successAlert = document.querySelector('[data-testid="default-success-alert"]');
-      const successAlertIcon = document.querySelector('[data-testid="default-success-alert-icon"]');
-      const skeletonBlock = document.querySelector('[data-testid="skeleton-block"]');
-      const progressBar = document.querySelector('[data-testid="progress-bar"]');
-      const loaderSm = document.querySelector('[data-testid="loader-sm"]');
-      const loaderDefault = document.querySelector('[data-testid="loader-default"]');
-      const loaderLg = document.querySelector('[data-testid="loader-lg"]');
-      const loaderDots = document.querySelector('[data-testid="loader-dots-wave"]');
-
-      if (
-        !layoutSection ||
-        !clusterLayout ||
-        !invalidInput ||
-        !successAlert ||
-        !successAlertIcon ||
-        !skeletonBlock ||
-        !progressBar ||
-        !loaderSm ||
-        !loaderDefault ||
-        !loaderLg ||
-        !loaderDots
-      ) {
-        throw new Error("Expected helper class fixtures to exist.");
-      }
-
-      const layoutStyles = getComputedStyle(layoutSection);
-      const clusterStyles = getComputedStyle(clusterLayout);
-      const invalidInputStyles = getComputedStyle(invalidInput);
-      const successAlertStyles = getComputedStyle(successAlert);
-      const successAlertIconStyles = getComputedStyle(successAlertIcon);
-      const skeletonStyles = getComputedStyle(skeletonBlock);
-      const progressStyles = getComputedStyle(progressBar);
-      const loaderSmStyles = getComputedStyle(loaderSm);
-      const loaderDefaultStyles = getComputedStyle(loaderDefault);
-      const loaderLgStyles = getComputedStyle(loaderLg);
-      const loaderDotsStyles = getComputedStyle(loaderDots);
-
+      const layoutStyles = getComputedStyle(document.querySelector('[data-testid="layout-section"]')!);
+      const clusterStyles = getComputedStyle(document.querySelector('[data-testid="cluster-layout"]')!);
       return {
-        alertBorderWidth: successAlertStyles.borderWidth,
-        alertColor: successAlertStyles.color,
-        alertPaddingLeft: successAlertStyles.paddingLeft,
-        alertIconPaddingLeft: successAlertIconStyles.paddingLeft,
         clusterDisplay: clusterStyles.display,
-        invalidBorderColor: invalidInputStyles.borderColor,
         layoutDisplay: layoutStyles.display,
         layoutMaxWidth: layoutStyles.maxWidth,
-        progressOverflow: progressStyles.overflow,
-        progressBgColor: progressStyles.backgroundColor,
-        skeletonAnimationName: skeletonStyles.animationName,
-        loaderSmWidth: loaderSmStyles.width,
-        loaderDefaultWidth: loaderDefaultStyles.width,
-        loaderLgWidth: loaderLgStyles.width,
-        loaderDefaultMask: loaderDefaultStyles.maskImage || loaderDefaultStyles.webkitMaskImage || "none",
-        loaderDotsImage: loaderDotsStyles.getPropertyValue("--ai-image"),
       };
     });
 
     expect(styles.layoutDisplay).toBe("flex");
     expect(styles.layoutMaxWidth).not.toBe("none");
     expect(styles.clusterDisplay).toBe("flex");
-    expect(styles.invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.alertBorderWidth).not.toBe("0px");
-    expect(styles.alertColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.alertIconPaddingLeft).toBe("44px");
-    expect(styles.skeletonAnimationName).not.toBe("none");
-    expect(styles.progressOverflow).toBe("hidden");
-    expect(styles.progressBgColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.loaderSmWidth).toBe("24px");
-    expect(styles.loaderDefaultWidth).toBe("32px");
-    expect(styles.loaderLgWidth).toBe("40px");
-    expect(styles.loaderDefaultMask).not.toBe("none");
-    expect(styles.loaderDotsImage).toContain("data:image/svg+xml");
+  });
+
+  test("styles invalid fields and success alerts", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const invalidBorderColor = await page
+      .getByTestId("invalid-input")
+      .evaluate((element) => getComputedStyle(element).borderColor);
+    const alertStyles = await page.getByTestId("default-success-alert").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { borderWidth: styles.borderWidth, color: styles.color };
+    });
+    const alertIconPaddingLeft = await page
+      .getByTestId("default-success-alert-icon")
+      .evaluate((element) => getComputedStyle(element).paddingLeft);
+
+    expect(invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(alertStyles.borderWidth).not.toBe("0px");
+    expect(alertStyles.color).not.toBe("rgba(0, 0, 0, 0)");
+    expect(alertIconPaddingLeft).toBe("44px");
+  });
+
+  test("animates skeletons and styles progress tracks", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const skeletonAnimationName = await page
+      .getByTestId("skeleton-block")
+      .evaluate((element) => getComputedStyle(element).animationName);
+    const progressStyles = await page.getByTestId("progress-bar").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { backgroundColor: styles.backgroundColor, overflow: styles.overflow };
+    });
+
+    expect(skeletonAnimationName).not.toBe("none");
+    expect(progressStyles.overflow).toBe("hidden");
+    expect(progressStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("matches the representative primary progress bar", async ({ browserName, page }) => {
+    test.skip(browserName !== "chromium", "The baseline targets the stable Chromium rendering path.");
+    await page.goto(COMPONENTS_URL);
+
+    const progressBar = page.getByTestId("progress-bar-primary");
+    await progressBar.evaluate((element) => {
+      element.style.width = "320px";
+    });
+
+    await expect(progressBar).toHaveScreenshot("primary-progress.png", { animations: "disabled" });
+  });
+
+  test("sizes loaders and renders every loader variant", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const loaderWidths = await Promise.all(
+      ["loader-sm", "loader-default", "loader-lg"].map((testId) =>
+        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).width),
+      ),
+    );
+    const loaderDefaultMask = await page
+      .getByTestId("loader-default")
+      .evaluate(
+        (element) => getComputedStyle(element).maskImage || getComputedStyle(element).webkitMaskImage || "none",
+      );
+    const variantIds = [
+      "loader-dots-wave",
+      "loader-dots-fade",
+      "loader-dots-queue",
+      "loader-dots-rotate",
+      "loader-dots-grow",
+      "loader-dots-grow-alternate",
+      "loader-dot-bounce",
+      "loader-bars-wave",
+      "loader-pulse-ring",
+    ];
+    const variantImages = await Promise.all(
+      variantIds.map((testId) =>
+        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
+      ),
+    );
+
+    expect(loaderWidths).toEqual(["24px", "32px", "40px"]);
+    expect(loaderDefaultMask).not.toBe("none");
+    for (const [index, image] of variantImages.entries()) {
+      expect(image, variantIds[index]).toContain("data:image/svg+xml");
+    }
+  });
+
+  test("preserves a distinct mask for every loader variant", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const testIds = [
+      "loader-default",
+      "loader-dots-wave",
+      "loader-dots-fade",
+      "loader-dots-queue",
+      "loader-dots-rotate",
+      "loader-dots-grow",
+      "loader-dots-grow-alternate",
+      "loader-dot-bounce",
+      "loader-bars-wave",
+      "loader-pulse-ring",
+    ];
+    const images = await Promise.all(
+      testIds.map((testId) =>
+        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
+      ),
+    );
+
+    expect(new Set(images).size).toBe(testIds.length);
   });
 
   test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {

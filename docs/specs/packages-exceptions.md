@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-18
+last_updated: 2026-07-22
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -32,3 +32,15 @@ exception rules in `docs/docs-guidelines.md`.
   TypeScript API. Adding `main`, `module`, and `types` would provide no usable
   runtime or declaration entrypoint.
 - **Temporary or permanent:** Permanent.
+
+## `@codenhub/styles`: Coverage report
+
+- **Rule bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage
+  report).
+- **Where it applies:** The `test:coverage` script in
+  `packages/styles/package.json`.
+- **Why acceptable:** The package contains only CSS, so JavaScript or TypeScript
+  instrumentation cannot produce meaningful code coverage. The script runs the
+  package's actual type, build, and cross-browser visual/computed-style tests
+  instead of reporting a false success or generating an irrelevant report.
+- **Temporary or permanent:** Permanent while the package remains CSS-only.
