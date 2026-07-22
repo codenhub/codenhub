@@ -4,11 +4,12 @@ import "../styles/global.css";
 
 interface Props {
   description?: string;
+  isDocs?: boolean;
   sectionTitle?: string;
   title?: string;
 }
 
-const { description = siteConfig.description, sectionTitle, title } = Astro.props;
+const { description = siteConfig.description, isDocs = false, sectionTitle, title } = Astro.props;
 const pageTitle =
   title === undefined
     ? siteConfig.title
@@ -48,7 +49,7 @@ const isHome = Astro.url.pathname === "/";
     </script>
     <title>{pageTitle}</title>
   </head>
-  <body>
+  <body class:list={{ "docs-page": isDocs }}>
     <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header">
       <div class="site-header-content section-content wide">

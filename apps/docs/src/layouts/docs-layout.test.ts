@@ -71,4 +71,20 @@ describe("documentation chrome", () => {
     expect(activeRule).toContain("font-semibold");
     expect(activeRule).not.toMatch(/border|\b(?:p|m)l-/);
   });
+
+  it("constrains minimum height on layout containers to prevent viewport scrolling", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const railsRule = css.match(/\.left-rail,\s*\.toc-rail\s*\{([^}]*)\}/)?.[1];
+    const docColRule = css.match(/\.document-column\s*\{([^}]*)\}/)?.[1];
+
+    expect(railsRule).toContain("min-h-0");
+    expect(docColRule).toContain("min-h-0");
+    expect(css).toMatch(/body\.docs-page\s*\{[^}]*overflow:\s*hidden;/s);
+  });
+
+  it("adds docs-page class to body on documentation pages", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).toContain('<body class="docs-page">');
+  });
 });

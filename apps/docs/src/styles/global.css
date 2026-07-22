@@ -124,6 +124,16 @@ html {
   @apply mb-0;
 }
 
+@media (min-width: 48.001rem) {
+  html:has(.docs-shell),
+  body:has(.docs-shell),
+  body.docs-page {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+}
+
 .docs-shell {
   @apply grid grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
   height: calc(100dvh - var(--docs-header-height));
@@ -131,7 +141,7 @@ html {
 
 .left-rail,
 .toc-rail {
-  @apply h-full overflow-y-auto py-8;
+  @apply h-full min-h-0 overflow-y-auto py-8;
 }
 
 .left-rail {
@@ -157,7 +167,7 @@ html {
 }
 
 .document-column {
-  @apply h-full min-w-0 overflow-y-auto px-8 py-10 md:px-10 xl:px-14;
+  @apply h-full min-h-0 min-w-0 overflow-y-auto px-8 py-10 md:px-10 xl:px-14;
 }
 
 .toc-rail ol {
@@ -177,11 +187,11 @@ html {
 }
 
 .markdown-content h2 {
-  @apply text-title border-border mt-14 scroll-mt-24 border-t pt-8;
+  @apply text-title border-border mt-14 scroll-mt-6 border-t pt-8;
 }
 
 .markdown-content h3 {
-  @apply text-title-sm mt-10 scroll-mt-24;
+  @apply text-title-sm mt-10 scroll-mt-6;
 }
 
 .markdown-content h4 {
