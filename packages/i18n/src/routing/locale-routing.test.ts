@@ -90,6 +90,17 @@ describe("createLocaleRouting", () => {
       "/about%2Fteam",
       "/about%5cteam",
       "/about\\team",
+      "/about\rteam",
+      "/about\nteam",
+      "/about\0team",
+      "/about\u007fteam",
+      "/about%",
+      "/about%2",
+      "/about%GG",
+      "/about%0dteam",
+      "/about%0Ateam",
+      "/about%00team",
+      "/about%7fteam",
     ];
 
     for (const pathname of invalidPathnames) {

@@ -14,8 +14,8 @@ uses the trimmed canonical spelling and order from `locales`.
 
 The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, and
 `i18nErrors`, plus the `I18n`, `I18nConfig`, `I18nErrorCode`, `I18nEventMap`,
-`I18nInitOptions`, `I18nLocaleChangeEventDetail`, `I18nReadyEventDetail`,
-`LocaleDictionary`, and `LocaleDirection` types.
+`I18nErrorOptions`, `I18nInitOptions`, `I18nLocaleChangeEventDetail`,
+`I18nReadyEventDetail`, `LocaleDictionary`, and `LocaleDirection` types.
 
 ### Configuration
 
@@ -203,12 +203,17 @@ A rejected injected loader is wrapped:
 ```ts
 type I18nErrorCode = "locale_load_failed";
 
+interface I18nErrorOptions {
+  readonly locale?: string;
+  readonly cause?: unknown;
+}
+
 class I18nError extends Error {
   readonly code: I18nErrorCode;
   readonly locale?: string;
   override readonly cause?: unknown;
 
-  constructor(options: { locale?: string; cause?: unknown });
+  constructor(options: I18nErrorOptions);
 }
 ```
 
@@ -290,6 +295,10 @@ locale changes still retranslate the complete configured root.
 Only one initializing or active browser binding may own a manager. A duplicate
 call rejects with `TypeError`. Failed setup releases listeners, observation, and
 ownership so initialization may be retried.
+
+If a concurrent direct core initialization supersedes the browser helper before
+its selected locale becomes active, the helper rejects with `Error` and releases
+its ownership. A later browser initialization may then retry.
 
 `disconnect()` is idempotent. It removes binding listeners, disconnects its
 observer, releases its root and manager ownership, and allows a new binding. It
@@ -378,8 +387,9 @@ configured locale in configuration order.
 All three methods accept only an absolute application pathname beginning with
 `/`. They reject `TypeError` for an empty or relative path, full or protocol
 relative URL, repeated slash, query, fragment, backslash, encoded slash or
-backslash, and literal or encoded dot segment. Non-root trailing slashes are
-preserved.
+backslash, ASCII control character, encoded ASCII control character, malformed
+percent escape, and literal or encoded dot segment. Non-root trailing slashes
+are preserved.
 
 Routing never reads globals, negotiates headers, registers routes, handles base
 paths, redirects, navigates, renders HTML, or emits static pages.

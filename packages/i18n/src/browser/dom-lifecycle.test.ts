@@ -185,6 +185,28 @@ describe("initializeBrowserI18n binding lifecycle", () => {
     binding.disconnect();
   });
 
+  it("rejects and releases ownership when core initialization supersedes it before readiness", async () => {
+    const localeLoads = {
+      en: createDeferred<unknown>(),
+      fr: createDeferred<unknown>(),
+    };
+    const i18n = createManager({
+      loadLocale: (locale) => (locale === "fr" ? localeLoads.fr.promise : localeLoads.en.promise),
+    });
+
+    const browserInitialization = initializeBrowserI18n({ i18n, locale: "en" });
+    const coreInitialization = i18n.init({ locale: "fr" });
+    localeLoads.en.resolve(dictionaries.en);
+
+    await expect(browserInitialization).rejects.toThrow("Browser initialization was superseded");
+    expect(i18n.isReady).toBe(false);
+
+    localeLoads.fr.resolve(dictionaries.fr);
+    await coreInitialization;
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    binding.disconnect();
+  });
+
   it("rejects a duplicate binding while another binding is active", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n });

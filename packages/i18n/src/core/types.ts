@@ -75,6 +75,8 @@ export interface I18n<TLocale extends string = string> {
    * Atomically loads and activates an explicit locale or the default locale.
    *
    * @param options - Optional explicit locale selection.
+   * @returns A promise that resolves after loading completes. Applied initialization emits `ready`; a stale successful
+   * request resolves without changing state or emitting an event. Failure preserves any previously ready state.
    * @throws {RangeError} When the locale is unsupported.
    * @throws {TypeError} When a loaded dictionary is invalid.
    * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
@@ -98,6 +100,8 @@ export interface I18n<TLocale extends string = string> {
    * Atomically changes the active locale after all required loads succeed.
    *
    * @param locale - Supported locale to activate.
+   * @returns A promise that resolves after loading completes. Applied changes emit `locale-change`; same-locale and stale
+   * successful requests resolve without changing state or emitting an event. Failure preserves active state.
    * @throws {Error} When called before successful initialization.
    * @throws {RangeError} When the locale is unsupported.
    * @throws {TypeError} When a loaded dictionary is invalid.

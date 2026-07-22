@@ -126,6 +126,7 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @returns A binding that disconnects browser-owned listeners and observation.
  * @throws {TypeError} When observation lacks a root or the manager already has a browser binding.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
+ * @throws {Error} When another core initialization supersedes this call before its locale becomes active.
  * @throws {TypeError} When a required dictionary is invalid.
  * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.
  * @throws {I18nError} When a required locale loader rejects.
@@ -205,6 +206,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
     }
 
     await i18n.init({ locale: initialLocale });
+
+    if (!i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {
+      throw new Error("[I18n] Browser initialization was superseded before its locale became active.");
+    }
 
     if (observe && root !== undefined) {
       const observedRoot = root;

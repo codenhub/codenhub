@@ -59,6 +59,8 @@ locale-prefixed pathname parsing and generation.
 - ESM-aware package resolution.
 - Core requires standard `Event` and `EventTarget` globals.
 - Browser features require only the browser APIs they enable.
+- Browser initialization must not overlap direct core initialization on the same
+  manager; a superseded browser call rejects and releases ownership.
 - Concurrent SSR requests and SSG renders require separate manager instances.
 
 ## Next steps

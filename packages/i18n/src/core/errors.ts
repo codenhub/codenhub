@@ -3,7 +3,7 @@ import type { ErrorFeedback } from "@codenhub/error";
 /** Stable code for an operational i18n failure. */
 export type I18nErrorCode = "locale_load_failed";
 
-/** Options used to retain context from a rejected locale loader. */
+/** Consumer-provided context retained by an `I18nError`. */
 export interface I18nErrorOptions {
   /** Locale whose translations could not be loaded. */
   readonly locale?: string;
@@ -12,7 +12,8 @@ export interface I18nErrorOptions {
 }
 
 /**
- * Reports an operational locale loader failure without obscuring its cause.
+ * Operational locale-loader failure named `I18nError`, with a stable code and deterministic message.
+ * The optional locale appears in the message and the original rejection remains available as `cause`.
  */
 export class I18nError extends Error {
   /** Stable identifier for consumer classification. */
@@ -36,7 +37,10 @@ export class I18nError extends Error {
   }
 }
 
-/** Safe consumer feedback keyed by the stable i18n error code. */
+/**
+ * Safe consumer feedback keyed by stable i18n error code.
+ * Each entry provides a fallback `message`, translation `messageKey`, and diagnostic `source`.
+ */
 export const i18nErrors = {
   locale_load_failed: {
     message: "Translations could not be loaded.",

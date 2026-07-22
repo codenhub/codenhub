@@ -51,6 +51,8 @@ dictionary. Await successful initialization before calling `translate()` or
 - Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
 - Browser features require `navigator`, `document`, `localStorage`, or
   `MutationObserver` only when their related behavior is enabled.
+- Do not overlap `initializeBrowserI18n()` with direct `init()` calls on the same
+  manager; a superseded browser initialization rejects and releases its binding.
 - Concurrent SSR requests and SSG renders must use separate manager instances.
 
 ## Notes

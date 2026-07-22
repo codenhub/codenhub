@@ -133,7 +133,11 @@ export const createLocaleRouting = <TLocale extends string>(
       pathname.includes("?") ||
       pathname.includes("#") ||
       pathname.includes("\\") ||
-      /%(?:2f|5c)/i.test(pathname)
+      [...pathname].some((character) => {
+        const characterCode = character.charCodeAt(0);
+        return characterCode <= 0x1f || characterCode === 0x7f;
+      }) ||
+      /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|2f|5c|7f)/i.test(pathname)
     ) {
       throw new TypeError("pathname must be a valid absolute application pathname");
     }
