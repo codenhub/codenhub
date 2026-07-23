@@ -1,4 +1,4 @@
-import { lucideProvider } from "./registry/providers/lucide.js";
+import { lucideProvider } from "./registry/providers/lucide/index.js";
 import { IconRegistry } from "./registry/registry.js";
 
 /**
@@ -8,7 +8,7 @@ export const registry: IconRegistry = new IconRegistry();
 registry.registerProvider(lucideProvider);
 
 export { IconRegistry } from "./registry/registry.js";
-export { lucideIconSet, lucideProvider } from "./registry/providers/lucide.js";
+export { lucideIconSet, lucideProvider } from "./registry/providers/lucide/index.js";
 export type { IconDefinition, IconProvider, IconRegistryOptions, IconSet, ResolvedIcon } from "./registry/types.js";
 
 export { generateBaseCss, generateIconCss, generateIconSetCss } from "./generator/css-generator.js";

@@ -1,7 +1,7 @@
 import type { Plugin } from "vite";
 
 import { generateIconSetCss } from "../generator/css-generator.js";
-import { lucideProvider } from "../registry/providers/lucide.js";
+import { lucideProvider } from "../registry/providers/lucide/index.js";
 import { IconRegistry } from "../registry/registry.js";
 import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
 

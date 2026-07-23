@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lucideProvider } from "./providers/lucide.js";
+import { lucideProvider } from "./providers/lucide/index.js";
 import { IconRegistry } from "./registry.js";
 import type { IconProvider } from "./types.js";
 
