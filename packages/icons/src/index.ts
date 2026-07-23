@@ -11,11 +11,11 @@ export { IconRegistry } from "./registry/registry.js";
 export { lucideIconSet, lucideProvider } from "./registry/providers/lucide.js";
 export type { IconDefinition, IconProvider, IconRegistryOptions, IconSet, ResolvedIcon } from "./registry/types.js";
 
-export { generateBaseCss, generateIconCss } from "./generator/css-generator.js";
-export type { BaseCssOptions } from "./generator/css-generator.js";
+export { generateBaseCss, generateIconCss, generateIconSetCss } from "./generator/css-generator.js";
+export type { BaseCssOptions, GenerateIconSetCssOptions } from "./generator/css-generator.js";
 export { svgToDataUri } from "./generator/svg-encoder.js";
 
-export { scanIconClasses } from "./scanner/class-scanner.js";
+export { scanFiles, scanIconClasses } from "./scanner/class-scanner.js";
 export type { ScanIconClassesOptions } from "./scanner/class-scanner.js";
 
 export default registry;

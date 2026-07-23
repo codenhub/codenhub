@@ -1,3 +1,5 @@
+import fs from "node:fs";
+
 /**
  * Options for scanning content for icon class names.
  */
@@ -29,4 +31,35 @@ export function scanIconClasses(content: string, options?: ScanIconClassesOption
   }
 
   return new Set<string>(matches);
+}
+
+/**
+ * Scans multiple file paths on disk for icon class usages matching the given prefix.
+ * Safely ignores non-existent or unreadable files.
+ *
+ * @param filePaths - Iterable collection of file system paths to scan.
+ * @param options - Options specifying the icon class prefix.
+ * @param targetSet - Optional existing `Set` to populate with extracted class names.
+ * @returns `Set` containing unique extracted icon class names.
+ */
+export function scanFiles(
+  filePaths: Iterable<string>,
+  options?: ScanIconClassesOptions,
+  targetSet: Set<string> = new Set<string>(),
+): Set<string> {
+  for (const filePath of filePaths) {
+    try {
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        const matches = scanIconClasses(content, options);
+        for (const cls of matches) {
+          targetSet.add(cls);
+        }
+      }
+    } catch {
+      // Ignore unreadable files gracefully
+    }
+  }
+
+  return targetSet;
 }

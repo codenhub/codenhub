@@ -99,7 +99,8 @@ export class IconRegistry {
 
     const provider = this.providers.get(parsed.prefix);
     if (provider) {
-      const providerIcon = provider.getIcon(targetName) ?? provider.getIcon(parsed.name);
+      const providerIcon =
+        provider.getIcon(targetName) ?? (targetName !== parsed.name ? provider.getIcon(parsed.name) : undefined);
       if (providerIcon) {
         const iconObj = typeof providerIcon === "string" ? { svg: providerIcon } : providerIcon;
         const primaryName = (iconObj as { primaryName?: string }).primaryName ?? targetName;
@@ -107,15 +108,12 @@ export class IconRegistry {
         if (targetName !== primaryName) {
           this.addAlias(parsed.prefix, targetName, primaryName);
         }
-        const resolved = this.icons.get(parsed.prefix)?.get(primaryName);
-        if (resolved) {
-          return {
-            name: `${parsed.prefix}:${primaryName}`,
-            primaryName: primaryName,
-            prefix: parsed.prefix,
-            svg: resolved.svg,
-          };
-        }
+        return {
+          name: `${parsed.prefix}:${primaryName}`,
+          primaryName,
+          prefix: parsed.prefix,
+          svg: iconObj.svg,
+        };
       }
     }
 

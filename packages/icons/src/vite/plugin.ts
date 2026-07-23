@@ -1,11 +1,9 @@
-import fs from "node:fs";
-
 import type { Plugin } from "vite";
 
-import { generateBaseCss, generateIconCss } from "../generator/css-generator.js";
+import { generateIconSetCss } from "../generator/css-generator.js";
 import { lucideProvider } from "../registry/providers/lucide.js";
 import { IconRegistry } from "../registry/registry.js";
-import { scanIconClasses } from "../scanner/class-scanner.js";
+import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
 
 /**
  * Options for configuring the Vite icons plugin.
@@ -54,68 +52,12 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     const foundClasses = new Set<string>(inMemoryClasses);
 
     // 1. Scan files specified in options.content
-    for (const filePath of contentPaths) {
-      try {
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          const fileContent = fs.readFileSync(filePath, "utf-8");
-          const matches = scanIconClasses(fileContent, { prefix });
-          for (const cls of matches) {
-            foundClasses.add(cls);
-          }
-        }
-      } catch {
-        // Ignore unreadable files
-      }
-    }
+    scanFiles(contentPaths, { prefix }, foundClasses);
 
     // 2. Scan tracked runtime files in Vite project
-    for (const filePath of scannedFiles) {
-      try {
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          const fileContent = fs.readFileSync(filePath, "utf-8");
-          const matches = scanIconClasses(fileContent, { prefix });
-          for (const cls of matches) {
-            foundClasses.add(cls);
-          }
-        }
-      } catch {
-        // Ignore unreadable files
-      }
-    }
+    scanFiles(scannedFiles, { prefix }, foundClasses);
 
-    if (foundClasses.size === 0) {
-      return generateBaseCss({ prefix });
-    }
-
-    const svgToSelectorsMap = new Map<string, string[]>();
-    const prefixDash = `${prefix}-`;
-
-    for (const cls of foundClasses) {
-      if (!cls.startsWith(prefixDash)) {
-        continue;
-      }
-
-      const iconName = cls.slice(prefixDash.length);
-      const resolved = registry.resolve(iconName);
-
-      if (resolved) {
-        const selector = `.${cls}`;
-        const existing = svgToSelectorsMap.get(resolved.svg);
-        if (existing) {
-          existing.push(selector);
-        } else {
-          svgToSelectorsMap.set(resolved.svg, [selector]);
-        }
-      }
-    }
-
-    const cssChunks: string[] = [generateBaseCss({ prefix })];
-
-    for (const [svg, selectors] of svgToSelectorsMap.entries()) {
-      cssChunks.push(generateIconCss(selectors, svg));
-    }
-
-    return cssChunks.join("\n\n");
+    return generateIconSetCss(foundClasses, registry, { prefix, injectBase: true });
   }
 
   return {
@@ -180,10 +122,10 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       }
 
       // Replace `@import "@codenhub/icons";` or `@import "@codenhub/icons/style.css";`
-      if (id && (id.endsWith(".css") || id.endsWith(".scss") || id.endsWith(".sass") || id.endsWith(".less"))) {
+      if (id && /\.(css|scss|sass|less)$/i.test(id)) {
         const importPattern =
           /@import\s+["'](?:@codenhub\/icons|@codenhub\/icons\/style\.css|virtual:icons\.css)["'];?/g;
-        if (importPattern.test(code)) {
+        if (code.includes("@codenhub/icons") || code.includes("virtual:icons.css")) {
           const generated = generateCssFromContent();
           return {
             code: code.replace(importPattern, generated),

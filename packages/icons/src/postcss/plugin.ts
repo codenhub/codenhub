@@ -1,11 +1,9 @@
-import fs from "node:fs";
-
 import type { Plugin } from "postcss";
 
-import { generateBaseCss, generateIconCss } from "../generator/css-generator.js";
+import { generateIconSetCss } from "../generator/css-generator.js";
 import { lucideProvider } from "../registry/providers/lucide.js";
 import { IconRegistry } from "../registry/registry.js";
-import { scanIconClasses } from "../scanner/class-scanner.js";
+import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
 
 /**
  * Options for configuring the PostCSS icons plugin.
@@ -61,74 +59,23 @@ export const postcssIcons = (options: PostcssIconsOptions = {}): PostcssIconsPlu
   return {
     postcssPlugin: "postcss-codenhub-icons",
     Once(root, helpers) {
-      const foundClasses = new Set<string>();
-
       // 1. Scan inline CSS root content
-      const cssString = root.toString();
-      const cssMatches = scanIconClasses(cssString, { prefix });
-      for (const cls of cssMatches) {
-        foundClasses.add(cls);
-      }
+      const foundClasses = scanIconClasses(root.toString(), { prefix });
 
       // 2. Scan external files specified in options.content
-      for (const filePath of contentPaths) {
-        try {
-          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            const fileContent = fs.readFileSync(filePath, "utf-8");
-            const fileMatches = scanIconClasses(fileContent, { prefix });
-            for (const cls of fileMatches) {
-              foundClasses.add(cls);
-            }
-          }
-        } catch {
-          // Ignore unreadable files gracefully
-        }
-      }
+      scanFiles(contentPaths, { prefix }, foundClasses);
 
       if (foundClasses.size === 0 && !injectBase) {
         return;
       }
 
-      // Group icon class selectors by resolved SVG content to maximize CSS deduplication
-      const svgToSelectorsMap = new Map<string, string[]>();
-
-      const prefixDash = `${prefix}-`;
-      for (const cls of foundClasses) {
-        if (!cls.startsWith(prefixDash)) {
-          continue;
-        }
-
-        const iconName = cls.slice(prefixDash.length);
-        const resolved = registry.resolve(iconName);
-
-        if (resolved) {
-          const selector = `.${cls}`;
-          const existing = svgToSelectorsMap.get(resolved.svg);
-          if (existing) {
-            existing.push(selector);
-          } else {
-            svgToSelectorsMap.set(resolved.svg, [selector]);
-          }
-        }
-      }
-
-      const cssChunks: string[] = [];
-      if (injectBase) {
-        cssChunks.push(generateBaseCss({ prefix }));
-      }
-
-      for (const [svg, selectors] of svgToSelectorsMap.entries()) {
-        cssChunks.push(generateIconCss(selectors, svg));
-      }
-
-      if (cssChunks.length === 0) {
+      const generatedCss = generateIconSetCss(foundClasses, registry, { prefix, injectBase });
+      if (!generatedCss) {
         return;
       }
 
-      const generatedCss = cssChunks.join("\n\n");
       if (helpers && typeof helpers.parse === "function") {
-        const generatedAst = helpers.parse(generatedCss);
-        root.append(generatedAst);
+        root.append(helpers.parse(generatedCss));
       } else {
         root.append(generatedCss);
       }

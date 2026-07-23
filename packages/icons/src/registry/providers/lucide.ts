@@ -129,25 +129,33 @@ export const lucideIconSet: IconSet = {
   },
 };
 
+// Pre-build alias lookup map for O(1) alias resolution
+const lucideAliasMap = new Map<string, string>();
+for (const [key, iconVal] of Object.entries(lucideIconSet.icons)) {
+  if (typeof iconVal !== "string" && iconVal.alt) {
+    for (const alias of iconVal.alt) {
+      lucideAliasMap.set(alias, key);
+    }
+  }
+}
+
 /**
  * Built-in provider for Lucide dataset icons.
  */
 export const lucideProvider: IconProvider = {
   prefix: "lucide",
   getIcon(name: string): (IconDefinition & { primaryName?: string }) | undefined {
-    const direct = lucideIconSet.icons[name];
-    if (direct) {
-      const def = typeof direct === "string" ? { svg: direct } : { ...direct };
-      return { ...def, primaryName: name };
+    const primaryName = lucideIconSet.icons[name] ? name : lucideAliasMap.get(name);
+    if (!primaryName) {
+      return undefined;
     }
 
-    for (const [key, iconVal] of Object.entries(lucideIconSet.icons)) {
-      if (typeof iconVal !== "string" && iconVal.alt?.includes(name)) {
-        const def = { ...iconVal };
-        return { ...def, primaryName: key };
-      }
+    const entry = lucideIconSet.icons[primaryName];
+    if (!entry) {
+      return undefined;
     }
 
-    return undefined;
+    const def = typeof entry === "string" ? { svg: entry } : { ...entry };
+    return { ...def, primaryName };
   },
 };
