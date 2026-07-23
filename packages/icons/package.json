@@ -1,0 +1,77 @@
+{
+  "name": "@codenhub/icons",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Icon registry, CSS mask generator, and scanner module for Codenhub icon system.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/icons"
+  },
+  "files": [
+    "dist",
+    "NOTICE",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./postcss": {
+      "types": "./dist/postcss.d.ts",
+      "import": "./dist/postcss.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "dev": "pnpm --filter=@codenhub/icons-dev dev",
+    "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:check": "oxlint",
+    "format:check": "oxfmt --check"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "postcss": ">=8.0.0",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "postcss": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "codenhub": {
+    "docs": {
+      "label": "Icons",
+      "status": "experimental"
+    }
+  }
+}
