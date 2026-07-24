@@ -12,6 +12,9 @@
   },
   "files": [
     "dist",
+    "docs",
+    "llms.txt",
+    "llms-full.txt",
     "NOTICE",
     "README.md"
   ],
@@ -42,6 +45,9 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/icons version dist-tags time --json && npm dist-tag ls @codenhub/icons && npm access get status @codenhub/icons",
+    "status:pack": "npm pack --dry-run",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

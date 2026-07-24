@@ -1,0 +1,10 @@
+# @codenhub/icons
+
+> Icon registry, CSS mask generator, and scanner module for Codenhub icon system.
+
+- Core API provides IconRegistry, Lucide provider integration, SVG mask generation, and static class scanning.
+- Framework integrations support Vite and PostCSS plugins.
+
+## Documentation
+
+- [Overview](docs/index.md): Package architecture, setup, and usage guidance.

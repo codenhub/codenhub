@@ -11,12 +11,10 @@ export function svgToDataUri(svg: string): string {
     cleaned = cleaned.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
   }
 
-  // Replace double quotes with single quotes for XML attribute safety
-  cleaned = cleaned.replace(/"/g, "'");
-
-  // Encode characters that interfere with CSS url() or URL parsing and collapse whitespace
+  // Encode characters that interfere with CSS url(), double quotes, or URL parsing, and collapse whitespace
   const encoded = cleaned
     .replace(/%/g, "%25")
+    .replace(/"/g, "%22")
     .replace(/#/g, "%23")
     .replace(/</g, "%3C")
     .replace(/>/g, "%3E")

@@ -9,7 +9,7 @@ describe("svgToDataUri", () => {
     const svg = '<svg><path d="M12 2"/></svg>';
     const uri = svgToDataUri(svg);
     expect(uri).toContain("data:image/svg+xml;charset=utf-8,");
-    expect(uri).toContain("xmlns='http://www.w3.org/2000/svg'");
+    expect(uri).toContain("xmlns=%22http://www.w3.org/2000/svg%22");
     expect(uri).not.toContain('"');
   });
 

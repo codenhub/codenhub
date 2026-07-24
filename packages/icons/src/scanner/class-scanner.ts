@@ -10,8 +10,19 @@ export interface ScanIconClassesOptions {
   prefix?: string;
 }
 
+const regexCache = new Map<string, RegExp>();
+
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getPatternForPrefix(prefix: string): RegExp {
+  let pattern = regexCache.get(prefix);
+  if (!pattern) {
+    pattern = new RegExp(`\\b${escapeRegExp(prefix)}-[a-zA-Z0-9_-]+\\b`, "g");
+    regexCache.set(prefix, pattern);
+  }
+  return pattern;
 }
 
 /**
@@ -23,7 +34,7 @@ function escapeRegExp(str: string): string {
  */
 export function scanIconClasses(content: string, options?: ScanIconClassesOptions): Set<string> {
   const prefix = options?.prefix ?? "ic";
-  const pattern = new RegExp(`\\b${escapeRegExp(prefix)}-[a-zA-Z0-9_-]+\\b`, "g");
+  const pattern = getPatternForPrefix(prefix);
   const matches = content.match(pattern);
 
   if (!matches) {

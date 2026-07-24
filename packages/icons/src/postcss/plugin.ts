@@ -84,5 +84,9 @@ export const postcssIcons = (options: PostcssIconsOptions = {}): PostcssIconsPlu
 };
 
 postcssIcons.postcss = true;
+
+/**
+ * Named alias for `postcssIcons` plugin creator.
+ */
 export const postcssIconsPlugin = postcssIcons;
 export default postcssIcons;

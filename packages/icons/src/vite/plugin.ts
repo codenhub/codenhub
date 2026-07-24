@@ -47,6 +47,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
   const scannedFiles = new Set<string>();
   const inMemoryClasses = new Set<string>();
+  const resolvedVirtualIds = new Set<string>();
 
   function generateCssFromContent(): string {
     const foundClasses = new Set<string>(inMemoryClasses);
@@ -74,13 +75,20 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         id.endsWith("virtual:icons.css") ||
         id.endsWith("@codenhub/icons/style.css")
       ) {
-        return "\0" + rawId;
+        const resolvedId = "\0" + rawId;
+        resolvedVirtualIds.add(resolvedId);
+        return resolvedId;
       }
       return null;
     },
 
     load(id: string) {
-      if (id.startsWith("\0virtual:") || id.startsWith("\0@codenhub/icons/") || id === RESOLVED_VIRTUAL_ID) {
+      if (
+        resolvedVirtualIds.has(id) ||
+        id.startsWith("\0virtual:") ||
+        id.startsWith("\0@codenhub/icons/") ||
+        id === RESOLVED_VIRTUAL_ID
+      ) {
         return generateCssFromContent();
       }
       return null;
@@ -145,20 +153,23 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
         scannedFiles.add(filePath);
 
-        const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_ID);
-        if (mod) {
-          server.moduleGraph.invalidateModule(mod);
-          server.ws.send({
-            type: "update",
-            updates: [
-              {
-                type: "js-update",
-                path: mod.url,
-                acceptedPath: mod.url,
-                timestamp: Date.now(),
-              },
-            ],
-          });
+        const targets = new Set<string>([RESOLVED_VIRTUAL_ID, ...resolvedVirtualIds]);
+        for (const targetId of targets) {
+          const mod = server.moduleGraph.getModuleById(targetId);
+          if (mod) {
+            server.moduleGraph.invalidateModule(mod);
+            server.ws.send({
+              type: "update",
+              updates: [
+                {
+                  type: "js-update",
+                  path: mod.url,
+                  acceptedPath: mod.url,
+                  timestamp: Date.now(),
+                },
+              ],
+            });
+          }
         }
       };
 
@@ -168,6 +179,9 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   };
 }
 
+/**
+ * Named alias for `viteIcons` plugin creator.
+ */
 export const viteIconsPlugin = viteIcons;
 
 export default viteIcons;
