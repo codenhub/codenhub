@@ -22,7 +22,7 @@ test("associates every native form label with its control", async ({ page }) => 
   await page.goto(NATIVE_URL);
 
   const labels = page.locator(".native-label");
-  await expect(labels).toHaveCount(14);
+  await expect(labels).toHaveCount(16);
   expect(
     await labels.evaluateAll((elements) =>
       elements.every((label) => label instanceof HTMLLabelElement && label.control === label.nextElementSibling),

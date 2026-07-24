@@ -5,10 +5,11 @@ const PLAYGROUND_URL = "http://localhost:5184/";
 test("links to each focused playground route", async ({ page }) => {
   await page.goto(PLAYGROUND_URL);
 
-  await expect(page.getByRole("link", { exact: true, name: "Typography" })).toHaveAttribute("href", "/typography/");
-  await expect(page.getByRole("link", { exact: true, name: "Layout" })).toHaveAttribute("href", "/layout/");
-  await expect(page.getByRole("link", { exact: true, name: "Components" })).toHaveAttribute("href", "/components/");
-  await expect(page.getByRole("link", { exact: true, name: "Native" })).toHaveAttribute("href", "/native/");
+  await expect(page.locator('.playground-route[href="/typography/"]')).toBeVisible();
+  await expect(page.locator('.playground-route[href="/layout/"]')).toBeVisible();
+  await expect(page.locator('.playground-route[href="/components/"]')).toBeVisible();
+  await expect(page.locator('.playground-route[href="/forms/"]')).toBeVisible();
+  await expect(page.locator('.playground-route[href="/native/"]')).toBeVisible();
 });
 
 test("keeps route cards compact", async ({ page }) => {

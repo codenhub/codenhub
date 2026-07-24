@@ -11,6 +11,22 @@
 @import "./reset.css";
 
 @layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  figure,
+  blockquote,
+  dl,
+  dd,
+  ul,
+  ol {
+    margin: 0;
+  }
+
   /* Headings */
   h1 {
     @apply text-title-lg;
@@ -74,22 +90,48 @@
 
   /* Form controls */
   input[type="text"],
+  input[type="number"] {
+    @apply ipt;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
+  }
+
   input[type="email"],
   input[type="password"],
   input[type="url"],
   input[type="tel"],
-  input[type="number"],
   input[type="search"],
   input[type="date"],
   input[type="datetime-local"],
   input[type="month"],
   input[type="week"],
   input[type="time"] {
-    @apply ipt;
+    @apply ipt icon;
 
     border-width: var(--border-width);
     border-style: solid;
     border-color: var(--color-border);
+
+    &.left {
+      background-position: 0.75rem center;
+      padding-left: 2.375rem;
+      padding-right: 0.75rem;
+    }
+
+    &.right {
+      background-position: calc(100% - 0.75rem) center;
+      padding-left: 0.75rem;
+      padding-right: 2.375rem;
+    }
+
+    &.no-icon,
+    &[data-no-icon] {
+      background-image: none !important;
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
   }
 
   textarea {

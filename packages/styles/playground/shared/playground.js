@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <a href="${getRouteHref("/typography/")}">Typography</a>
           <a href="${getRouteHref("/layout/")}">Layout</a>
           <a href="${getRouteHref("/components/")}">Components</a>
+          <a href="${getRouteHref("/forms/")}">Forms</a>
           <a href="${getRouteHref("/native/")}">Native</a>
         </div>
       </nav>`,

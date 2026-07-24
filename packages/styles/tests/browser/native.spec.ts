@@ -59,3 +59,20 @@ test("styles native forms and buttons without utility classes", async ({ page })
   await expect(button).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
+
+test("adds default icons and position modifiers to native inputs", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const emailInput = page.locator("#native-email");
+  const emailRightInput = page.locator("#native-email-right");
+  const searchNoIconInput = page.locator("#native-search-noicon");
+
+  const emailBg = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
+  const emailRightPos = await emailRightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
+  const searchNoIconBg = await searchNoIconInput.evaluate((el) => getComputedStyle(el).backgroundImage);
+
+  expect(emailBg).not.toBe("none");
+  expect(emailBg).toContain("data:image/svg+xml");
+  expect(emailRightPos).toContain("100%");
+  expect(searchNoIconBg).toBe("none");
+});

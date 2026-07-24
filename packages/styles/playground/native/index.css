@@ -20,13 +20,14 @@
 
 .native-form {
   max-width: 25rem;
-  gap: 1.5rem;
+  gap: 0.75rem;
 }
 
 .native-label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-weight: 500;
+  font-size: 0.875rem;
 }
 
 .native-choices,
