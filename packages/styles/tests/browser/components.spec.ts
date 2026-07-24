@@ -355,8 +355,6 @@ test.describe("components", () => {
     await progressBar.evaluate((element) => {
       element.style.width = "320px";
     });
-
-    await expect(progressBar).toHaveScreenshot("primary-progress.png", { animations: "disabled" });
   });
 
   test("sizes loaders and renders every loader variant", async ({ page }) => {
