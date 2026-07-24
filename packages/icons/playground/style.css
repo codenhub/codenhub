@@ -1,0 +1,345 @@
+@import "@codenhub/styles/native";
+
+/* Custom layout and minimalist playground styles */
+:root {
+  --playground-icon-color: currentColor;
+}
+
+body {
+  margin: 0;
+  padding: 2rem 1.5rem;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.playground-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.playground-header h1 {
+  margin: 0;
+}
+
+.playground-subtitle {
+  margin: 0;
+  opacity: 0.7;
+}
+
+/* Control bar */
+.playground-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.search-input-wrapper {
+  flex: 1;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+}
+
+.color-controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.color-picker-input {
+  width: 38px;
+  height: 38px;
+  padding: 2px;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.color-picker-input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-picker-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+/* Icon Grid - Even 0.5rem gap horizontally and vertically */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Square 1:1, flat, borderless minimalist cards with hover micro-animation */
+.icon-card {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid transparent;
+  background-color: var(--color-surface-elevated, rgba(125, 125, 125, 0.07));
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+  color: inherit;
+}
+
+.icon-card:hover {
+  background-color: var(--color-surface-hover, rgba(125, 125, 125, 0.14));
+  border-color: var(--color-border-hover, rgba(125, 125, 125, 0.35));
+  transform: scale(1.06);
+}
+
+.icon-card:active {
+  transform: scale(1);
+}
+
+.icon-card .icon-preview {
+  font-size: 28px;
+  width: 28px;
+  height: 28px;
+  color: var(--playground-icon-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  opacity: 0.6;
+  grid-column: 1 / -1;
+}
+
+/* Modal dialog */
+.icon-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.icon-modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.icon-modal {
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #0f172a);
+  border-radius: var(--radius-xl, 12px);
+  padding: 1.75rem;
+  max-width: 440px;
+  width: 90%;
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.2));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transform: scale(0.95);
+  transition: transform 0.2s ease;
+}
+
+.dark .icon-modal {
+  background: var(--color-surface, #1e293b);
+  color: var(--color-text, #f8fafc);
+}
+
+.icon-modal-backdrop.open .icon-modal {
+  transform: scale(1);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  line-height: 1;
+}
+
+/* Modal 1:1 Aspect Ratio Icon Preview Container with background */
+.modal-icon-container {
+  width: 120px;
+  height: 120px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-xl, 12px);
+  background-color: var(--color-surface-elevated, rgba(125, 125, 125, 0.08));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.modal-icon-upscaled {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--playground-icon-color);
+}
+
+.modal-icon-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Alias tags */
+.modal-aliases {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+/* Code Snippet Outer Box Container */
+.code-snippet-wrapper {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--color-surface-elevated, rgba(125, 125, 125, 0.12));
+  border: 1px solid var(--color-border, rgba(125, 125, 125, 0.2));
+  border-radius: var(--radius-md, 6px);
+  display: flex;
+  align-items: center;
+}
+
+.code-snippet-container {
+  flex: 1;
+  margin: 0;
+  padding: 0.65rem 2.5rem 0.65rem 0.75rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  border: none;
+  background: transparent;
+}
+
+.code-snippet-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85rem;
+  user-select: all;
+  color: var(--color-text);
+  background: transparent;
+  padding: 0;
+}
+
+.copy-html-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  color: var(--color-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.copy-html-btn:hover {
+  opacity: 1;
+  background: transparent;
+}
+
+/* Modal Actions - Equal width buttons with intuitive icons */
+.modal-actions {
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.modal-action-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Floating controls bottom right */
+.playground-controls {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 900;
+}
+
+.playground-control {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.playground-control svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Toast feedback */
+.toast-feedback {
+  position: fixed;
+  bottom: 5rem;
+  right: 1.5rem;
+  background: #10b981;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: none;
+  z-index: 1100;
+}
+
+.toast-feedback.show {
+  opacity: 1;
+  transform: translateY(0);
+}

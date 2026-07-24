@@ -11,9 +11,15 @@ export default defineConfig({
   root: resolve(__dirname, "../playground"),
   plugins: [
     viteIcons({
-      content: [resolve(__dirname, "../playground/index.html")],
+      content: [resolve(__dirname, "../playground/index.html"), resolve(__dirname, "../playground/main.ts")],
     }),
   ],
+  resolve: {
+    alias: {
+      "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
+      "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),
+    },
+  },
   server: {
     port: 5186,
   },

@@ -11,7 +11,7 @@ export default defineConfig({
   root: resolve(__dirname, "../playground"),
   plugins: [
     viteIcons({
-      content: [resolve(__dirname, "../playground/index.html")],
+      content: [resolve(__dirname, "../playground/index.html"), resolve(__dirname, "../playground/main.ts")],
     }),
   ],
   resolve: {
@@ -19,6 +19,8 @@ export default defineConfig({
       "@codenhub/icons/postcss": resolve(__dirname, "../src/postcss/index.ts"),
       "@codenhub/icons/vite": resolve(__dirname, "../src/vite/index.ts"),
       "@codenhub/icons": resolve(__dirname, "../src/index.ts"),
+      "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
+      "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),
     },
   },
   server: {

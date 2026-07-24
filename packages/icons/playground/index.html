@@ -4,195 +4,106 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@codenhub/icons Playground</title>
-    <script type="module">
-      import "virtual:icons.css";
-    </script>
-    <style>
-      :root {
-        --color-primary: #2563eb;
-        --color-success: #16a34a;
-        --color-danger: #dc2626;
-        --bg-surface: #0f172a;
-        --text-color: #f8fafc;
-      }
-
-      body {
-        margin: 0;
-        padding: 2rem;
-        font-family:
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          sans-serif;
-        background-color: var(--bg-surface);
-        color: var(--text-color);
-      }
-
-      h1 {
-        font-size: 1.75rem;
-        margin-bottom: 0.5rem;
-      }
-
-      p.subtitle {
-        color: #94a3b8;
-        margin-top: 0;
-        margin-bottom: 2rem;
-      }
-
-      .section {
-        margin-bottom: 2.5rem;
-        background: #1e293b;
-        padding: 1.5rem;
-        border-radius: 0.75rem;
-        border: 1px solid #334155;
-      }
-
-      .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-top: 0;
-        margin-bottom: 1rem;
-        color: #e2e8f0;
-      }
-
-      .icon-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 1.5rem;
-        align-items: center;
-      }
-
-      .icon-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 1rem;
-        background: #0f172a;
-        border-radius: 0.5rem;
-        border: 1px solid #334155;
-      }
-
-      .icon-card span {
-        font-size: 0.75rem;
-        color: #94a3b8;
-      }
-
-      /* Size variants */
-      .size-16 {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-      .size-24 {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
-      }
-      .size-32 {
-        font-size: 32px;
-        width: 32px;
-        height: 32px;
-      }
-      .size-48 {
-        font-size: 48px;
-        width: 48px;
-        height: 48px;
-      }
-
-      /* Color variants */
-      .color-current {
-        color: currentColor;
-      }
-      .color-primary {
-        color: var(--color-primary);
-      }
-      .color-success {
-        color: var(--color-success);
-      }
-      .color-danger {
-        color: var(--color-danger);
-      }
-    </style>
+    <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <h1>@codenhub/icons Playground</h1>
-    <p class="subtitle">CSS Mask-based SVG Icon System Demonstration</p>
+    <div class="playground-container section-content">
+      <header class="playground-header stack tight">
+        <h1 class="text-display">@codenhub/icons</h1>
+        <p class="playground-subtitle text-body">Collection of lightweight CSS mask-based SVG icons</p>
+      </header>
 
-    <div class="section">
-      <h2 class="section-title">Required Icons Test Matrix</h2>
-      <div class="icon-grid">
-        <div class="icon-card">
-          <i class="ic-close color-primary size-24"></i>
-          <span>ic-close</span>
+      <div class="playground-toolbar cluster between">
+        <div class="search-input-wrapper">
+          <input type="search" id="search-input" class="ipt" placeholder="Search icons..." aria-label="Search icons" />
         </div>
-        <div class="icon-card">
-          <i class="ic-x color-danger size-24"></i>
-          <span>ic-x</span>
+
+        <div class="color-controls cluster tight">
+          <input
+            type="color"
+            id="icon-color-picker"
+            class="color-picker-input"
+            value="#000000"
+            title="Custom icon color"
+            aria-label="Icon color picker"
+          />
+          <button
+            type="button"
+            id="color-reset-btn"
+            class="btn secondary sm icon"
+            title="Reset color to currentColor"
+            aria-label="Reset color"
+          >
+            <i class="ic-rotate-ccw"></i>
+          </button>
         </div>
-        <div class="icon-card">
-          <i class="ic-check color-success size-24"></i>
-          <span>ic-check</span>
+      </div>
+
+      <div id="icon-grid" class="icon-grid"></div>
+    </div>
+
+    <!-- Icon Details Modal -->
+    <div id="icon-modal-backdrop" class="icon-modal-backdrop" role="dialog" aria-modal="true">
+      <div class="icon-modal stack">
+        <button type="button" id="modal-close-btn" class="modal-close-btn btn ghost icon sm" aria-label="Close modal">
+          <i class="ic-x"></i>
+        </button>
+
+        <div class="modal-icon-container">
+          <div id="modal-icon-upscaled" class="modal-icon-upscaled"></div>
         </div>
-        <div class="icon-card">
-          <i class="ic-search color-current size-24"></i>
-          <span>ic-search</span>
+
+        <h2 id="modal-icon-title" class="modal-icon-title text-title-sm"></h2>
+        <div id="modal-aliases" class="modal-aliases cluster tight"></div>
+
+        <div class="code-snippet-wrapper">
+          <pre class="code-snippet-container"><code id="modal-code-snippet" class="code-snippet-text code"></code></pre>
+          <button
+            type="button"
+            id="copy-html-btn"
+            class="copy-html-btn"
+            title="Copy HTML snippet"
+            aria-label="Copy HTML snippet"
+          >
+            <i class="ic-copy"></i>
+          </button>
         </div>
-        <div class="icon-card">
-          <i class="ic-user color-primary size-24"></i>
-          <span>ic-user</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-settings color-success size-24"></i>
-          <span>ic-settings</span>
+
+        <div class="modal-actions cluster fill-width">
+          <button type="button" id="copy-svg-btn" class="btn secondary modal-action-btn">
+            <i class="ic-copy"></i>
+            <span>Copy SVG</span>
+          </button>
+          <button type="button" id="download-svg-btn" class="btn primary modal-action-btn">
+            <i class="ic-download"></i>
+            <span>Download SVG</span>
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="section">
-      <h2 class="section-title">Sizes (16px, 24px, 32px, 48px)</h2>
-      <div style="display: flex; gap: 2rem; align-items: flex-end">
-        <div class="icon-card">
-          <i class="ic-search color-primary size-16"></i>
-          <span>16px</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-search color-primary size-24"></i>
-          <span>24px</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-search color-primary size-32"></i>
-          <span>32px</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-search color-primary size-48"></i>
-          <span>48px</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2 class="section-title">Colors (currentColor, Primary Blue, Success Green, Danger Red)</h2>
-      <div style="display: flex; gap: 2rem; align-items: center">
-        <div class="icon-card">
-          <i class="ic-settings color-current size-32"></i>
-          <span>currentColor</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-settings color-primary size-32"></i>
-          <span>Primary Blue</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-settings color-success size-32"></i>
-          <span>Success Green</span>
-        </div>
-        <div class="icon-card">
-          <i class="ic-settings color-danger size-32"></i>
-          <span>Danger Red</span>
-        </div>
-      </div>
+    <!-- Floating Theme Toggle Control -->
+    <div class="playground-controls">
+      <button
+        id="theme-toggle"
+        class="playground-control btn secondary icon pill"
+        type="button"
+        aria-label="Toggle theme"
+        title="Toggle theme"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
+        </svg>
+      </button>
     </div>
   </body>
 </html>

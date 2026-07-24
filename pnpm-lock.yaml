@@ -234,6 +234,9 @@ importers:
         specifier: '>=5.0.0'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
     devDependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../styles
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
