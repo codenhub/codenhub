@@ -286,10 +286,12 @@ test.describe("components", () => {
       return color;
     });
 
-    await page.getByTestId("success-outline-button").hover();
+    await page.getByTestId("success-outline-fill-button").hover();
 
     await expect
-      .poll(() => page.getByTestId("success-outline-button").evaluate((element) => getComputedStyle(element).color))
+      .poll(() =>
+        page.getByTestId("success-outline-fill-button").evaluate((element) => getComputedStyle(element).color),
+      )
       .toBe(successContrast);
   });
 

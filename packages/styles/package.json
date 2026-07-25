@@ -14,10 +14,7 @@
     "dist",
     "NOTICE",
     "README.md",
-    "docs/index.md",
-    "docs/tokens.md",
-    "docs/classes.md",
-    "docs/accessibility.md",
+    "docs",
     "llms.txt",
     "llms-full.txt"
   ],
