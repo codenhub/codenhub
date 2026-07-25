@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: "./tests/browser",
   timeout: 120000,
   fullyParallel: true,
-  workers: process.env.CI ? 2 : 4,
+  workers: process.env.CI ? 2 : process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : 2,
   reporter: "list",
   snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   webServer: [
