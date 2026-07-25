@@ -10,7 +10,7 @@
   </head>
   <body>
     <main class="sect bg-background text-text font-default" data-testid="preview-root">
-      <section class="sect-inn">
+      <section class="sect-inn stack tight">
         <header class="stack tight">
           <p class="text-label">UI fixtures</p>
           <h1 class="text-title-lg">Forms</h1>
@@ -18,8 +18,13 @@
         </header>
       </section>
 
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Inputs with Icons (Default Left Position)</h2>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Inputs with Icons (Default Left Position)</h2>
+          <p class="text-body text-text-secondary">
+            Opt-in default left-aligned contextual icons for standard input types.
+          </p>
+        </div>
         <div class="form-grid">
           <label class="field">
             <span class="label">Email Address</span>
@@ -58,8 +63,11 @@
         </div>
       </section>
 
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Icon Position Configuration (Left vs Right)</h2>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Icon Position Configuration (Left vs Right)</h2>
+          <p class="text-body text-text-secondary">Explicit left vs right placement settings for input icon badges.</p>
+        </div>
         <div class="form-grid">
           <label class="field">
             <span class="label">Explicit Left Position</span>
@@ -107,8 +115,13 @@
         </div>
       </section>
 
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Field States</h2>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Field States</h2>
+          <p class="text-body text-text-secondary">
+            Visual styles and validation responses representing input validity states.
+          </p>
+        </div>
         <div class="form-grid">
           <label class="field">
             <span class="label">Valid State</span>
@@ -142,8 +155,11 @@
         </div>
       </section>
 
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Other Form Controls</h2>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Other Form Controls</h2>
+          <p class="text-body text-text-secondary">Textareas, select dropdown menus, and standard container inputs.</p>
+        </div>
         <div class="form-grid">
           <label class="field">
             <span class="label">Textarea</span>
@@ -161,29 +177,139 @@
         </div>
       </section>
 
-      <section class="sect-inn">
-        <h2 class="text-title-lg">Checkboxes & Radios</h2>
-        <div class="cluster">
-          <label class="cluster tight component-option">
-            <input type="checkbox" class="checkbox" checked />
-            <span class="text-body font-medium">Default Checkbox</span>
-          </label>
-          <label class="cluster tight component-option">
-            <input type="checkbox" class="checkbox primary" checked />
-            <span class="text-body font-medium">Primary Checkbox</span>
-          </label>
-          <label class="cluster tight component-option">
-            <input type="radio" name="forms-radio" class="radio" checked />
-            <span class="text-body font-medium">Radio 1</span>
-          </label>
-          <label class="cluster tight component-option">
-            <input type="radio" name="forms-radio" class="radio" />
-            <span class="text-body font-medium">Radio 2</span>
-          </label>
-          <label class="cluster tight component-option">
-            <input type="checkbox" class="switch" checked />
-            <span class="text-body font-medium">Switch</span>
-          </label>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Checkboxes, Switches, & Radios</h2>
+          <p class="text-body text-text-secondary">
+            All semantic variants, selections, themes, and disabled configurations.
+          </p>
+        </div>
+        <div class="stack loose">
+          <div class="stack tight">
+            <h3 class="text-title-sm">Checkboxes</h3>
+            <div class="cluster">
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox" checked />
+                <span class="text-body font-medium">Default</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox" />
+                <span class="text-body font-medium">Unchecked</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox" disabled checked />
+                <span class="text-body font-medium">Disabled Checked</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox primary" checked />
+                <span class="text-body font-medium">Primary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox secondary" checked />
+                <span class="text-body font-medium">Secondary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox success" checked />
+                <span class="text-body font-medium">Success</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox warning" checked />
+                <span class="text-body font-medium">Warning</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox destructive" checked />
+                <span class="text-body font-medium">Destructive</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="checkbox info" checked />
+                <span class="text-body font-medium">Info</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="stack tight">
+            <h3 class="text-title-sm">Switches</h3>
+            <div class="cluster">
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch" checked />
+                <span class="text-body font-medium">Default</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch" />
+                <span class="text-body font-medium">Unchecked</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch" disabled checked />
+                <span class="text-body font-medium">Disabled Checked</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch primary" checked />
+                <span class="text-body font-medium">Primary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch secondary" checked />
+                <span class="text-body font-medium">Secondary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch success" checked />
+                <span class="text-body font-medium">Success</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch warning" checked />
+                <span class="text-body font-medium">Warning</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch destructive" checked />
+                <span class="text-body font-medium">Destructive</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="checkbox" class="switch info" checked />
+                <span class="text-body font-medium">Info</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="stack tight">
+            <h3 class="text-title-sm">Radios</h3>
+            <div class="cluster">
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio" class="radio" checked />
+                <span class="text-body font-medium">Radio 1</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio" class="radio" />
+                <span class="text-body font-medium">Radio 2</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-disabled" class="radio" disabled checked />
+                <span class="text-body font-medium">Disabled Checked</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-p" class="radio primary" checked />
+                <span class="text-body font-medium">Primary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-s" class="radio secondary" checked />
+                <span class="text-body font-medium">Secondary</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-su" class="radio success" checked />
+                <span class="text-body font-medium">Success</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-w" class="radio warning" checked />
+                <span class="text-body font-medium">Warning</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-d" class="radio destructive" checked />
+                <span class="text-body font-medium">Destructive</span>
+              </label>
+              <label class="cluster tight component-option">
+                <input type="radio" name="forms-radio-i" class="radio info" checked />
+                <span class="text-body font-medium">Info</span>
+              </label>
+            </div>
+          </div>
         </div>
       </section>
     </main>
