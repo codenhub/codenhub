@@ -29,6 +29,11 @@ export interface PostcssIconsOptions {
    * If omitted, a default registry pre-configured with `lucideProvider` is used.
    */
   registry?: IconRegistry;
+
+  /**
+   * Default stroke width for configurable icons.
+   */
+  strokeWidth?: number | string;
 }
 
 /**
@@ -69,7 +74,11 @@ export const postcssIcons = (options: PostcssIconsOptions = {}): PostcssIconsPlu
         return;
       }
 
-      const generatedCss = generateIconSetCss(foundClasses, registry, { prefix, injectBase });
+      const generatedCss = generateIconSetCss(foundClasses, registry, {
+        prefix,
+        injectBase,
+        strokeWidth: options.strokeWidth,
+      });
       if (!generatedCss) {
         return;
       }

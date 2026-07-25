@@ -19,6 +19,37 @@ export interface GenerateIconSetCssOptions extends BaseCssOptions {
    * Whether to include base CSS container rules (`.ic`). Defaults to `true`.
    */
   injectBase?: boolean;
+
+  /**
+   * Default global stroke width for configurable icons.
+   */
+  strokeWidth?: number | string;
+}
+
+/**
+ * Modifies an SVG string to change its stroke-width attributes.
+ * If stroke-width is not defined on the SVG, it will be added to the root element.
+ *
+ * @param svg - The original SVG string content.
+ * @param strokeWidth - The new stroke width to apply.
+ * @returns The modified SVG string.
+ */
+export function setSvgStrokeWidth(svg: string, strokeWidth: number | string): string {
+  if (svg.includes("stroke-width=")) {
+    return svg.replace(/stroke-width="[^"]*"/g, `stroke-width="${strokeWidth}"`);
+  }
+  return svg.replace(/<svg([^>]*)>/i, (_, attrs) => `<svg${attrs} stroke-width="${strokeWidth}">`);
+}
+
+/**
+ * Escapes characters in a CSS class name so it can be safely used in a selector.
+ * Especially escapes dots in floating point stroke width classes (e.g. `ic-stroke-1.5` -> `ic-stroke-1\.5`).
+ *
+ * @param cls - The class name to escape.
+ * @returns The escaped selector part.
+ */
+export function escapeSelectorClass(cls: string): string {
+  return cls.replace(/\./g, "\\.");
 }
 
 /**
@@ -81,22 +112,61 @@ export function generateIconSetCss(
 
   const svgToSelectorsMap = new Map<string, string[]>();
   const prefixDash = `${prefix}-`;
+  const strokePrefix = `${prefixDash}stroke-`;
+
+  const strokeValues = new Set<string>();
+  const iconClasses = new Set<string>();
 
   for (const cls of classes) {
     if (!cls.startsWith(prefixDash)) {
       continue;
     }
+    if (cls.startsWith(strokePrefix)) {
+      const valStr = cls.slice(strokePrefix.length);
+      if (/^[0-9]+(?:\.[0-9]+)?$/.test(valStr)) {
+        strokeValues.add(valStr);
+      }
+    } else {
+      iconClasses.add(cls);
+    }
+  }
 
+  for (const cls of iconClasses) {
     const iconName = cls.slice(prefixDash.length);
     const resolved = registry.resolve(iconName);
 
     if (resolved) {
+      // 1. Base rule with default / global override stroke width
+      let baseSvg = resolved.svg;
+      if (resolved.strokeConfigurable) {
+        const defaultStrokeWidth = options?.strokeWidth ?? registry.options?.strokeWidth;
+        if (defaultStrokeWidth !== undefined) {
+          baseSvg = setSvgStrokeWidth(baseSvg, defaultStrokeWidth);
+        }
+      }
+
       const selector = `.${cls}`;
-      const existing = svgToSelectorsMap.get(resolved.svg);
+      const existing = svgToSelectorsMap.get(baseSvg);
       if (existing) {
         existing.push(selector);
       } else {
-        svgToSelectorsMap.set(resolved.svg, [selector]);
+        svgToSelectorsMap.set(baseSvg, [selector]);
+      }
+
+      // 2. Combined rules for other stroke-widths if icon is stroke-configurable
+      if (resolved.strokeConfigurable) {
+        for (const strokeVal of strokeValues) {
+          const strokeClass = `${strokePrefix}${strokeVal}`;
+          const combinedSelector = `.${cls}.${escapeSelectorClass(strokeClass)}`;
+          const strokeSvg = setSvgStrokeWidth(resolved.svg, strokeVal);
+
+          const existingStroke = svgToSelectorsMap.get(strokeSvg);
+          if (existingStroke) {
+            existingStroke.push(combinedSelector);
+          } else {
+            svgToSelectorsMap.set(strokeSvg, [combinedSelector]);
+          }
+        }
       }
     }
   }

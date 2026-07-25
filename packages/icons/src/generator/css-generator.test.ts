@@ -65,4 +65,34 @@ describe("css-generator", () => {
     expect(css).toContain(".ic-home,\n.ic-main {");
     expect(css).toContain(".ic-user {");
   });
+
+  it("should generate custom global stroke width CSS", () => {
+    const registry = new IconRegistry();
+    registry.registerIcon("home", '<svg stroke-width="2"><path d="1"/></svg>');
+    const css = generateIconSetCss(["ic-home"], registry, { strokeWidth: 1.5 });
+    // Verify that the stroke-width got changed to 1.5
+    expect(css).toContain("stroke-width=%221.5%22");
+    expect(css).not.toContain("stroke-width=%222%22");
+  });
+
+  it("should generate combined rules for per-icon stroke override classes", () => {
+    const registry = new IconRegistry();
+    registry.registerIcon("home", '<svg stroke-width="2"><path d="1"/></svg>');
+    registry.registerIcon("static", {
+      svg: '<svg stroke-width="2"><path d="2"/></svg>',
+      strokeConfigurable: false,
+    });
+
+    const css = generateIconSetCss(["ic-home", "ic-static", "ic-stroke-1.5", "ic-stroke-3"], registry);
+
+    // Check that we get .ic-home.ic-stroke-1\.5 rule
+    expect(css).toContain(".ic-home.ic-stroke-1\\.5 {");
+    expect(css).toContain(".ic-home.ic-stroke-3 {");
+    expect(css).toContain("stroke-width=%221.5%22");
+    expect(css).toContain("stroke-width=%223%22");
+
+    // Check that we DO NOT get any stroke-width override rules for "static" icon
+    expect(css).not.toContain(".ic-static.ic-stroke-1\\.5 {");
+    expect(css).not.toContain(".ic-static.ic-stroke-3 {");
+  });
 });

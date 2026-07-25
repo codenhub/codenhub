@@ -4,6 +4,7 @@ import type { IconDefinition, IconProvider, IconRegistryOptions, IconSet, Resolv
  * Manages icon registrations, provider lookups, alias normalizations, and resolution.
  */
 export class IconRegistry {
+  public readonly options?: IconRegistryOptions;
   private readonly defaultPrefix: string;
   private readonly icons = new Map<string, Map<string, IconDefinition>>();
   private readonly aliases = new Map<string, Map<string, string>>();
@@ -15,6 +16,7 @@ export class IconRegistry {
    * @param options - Optional configuration options for the registry.
    */
   constructor(options?: IconRegistryOptions) {
+    this.options = options;
     this.defaultPrefix = options?.defaultPrefix ?? "lucide";
   }
 
@@ -27,7 +29,8 @@ export class IconRegistry {
    */
   public registerIcon(name: string, icon: IconDefinition | string, prefix?: string): void {
     const parsed = this.parseName(name, prefix);
-    const iconDef: IconDefinition = typeof icon === "string" ? { svg: icon } : { ...icon };
+    const iconDef: IconDefinition =
+      typeof icon === "string" ? { svg: icon, strokeConfigurable: true } : { strokeConfigurable: true, ...icon };
 
     let prefixIcons = this.icons.get(parsed.prefix);
     if (!prefixIcons) {
@@ -94,6 +97,7 @@ export class IconRegistry {
         primaryName: targetName,
         prefix: parsed.prefix,
         svg: foundIcon.svg,
+        strokeConfigurable: foundIcon.strokeConfigurable !== false,
       };
     }
 
@@ -102,7 +106,10 @@ export class IconRegistry {
       const providerIcon =
         provider.getIcon(targetName) ?? (targetName !== parsed.name ? provider.getIcon(parsed.name) : undefined);
       if (providerIcon) {
-        const iconObj = typeof providerIcon === "string" ? { svg: providerIcon } : providerIcon;
+        const iconObj =
+          typeof providerIcon === "string"
+            ? { svg: providerIcon, strokeConfigurable: true }
+            : { strokeConfigurable: true, ...providerIcon };
         const primaryName = (iconObj as { primaryName?: string }).primaryName ?? targetName;
         this.registerIcon(primaryName, iconObj, parsed.prefix);
         if (targetName !== primaryName) {
@@ -113,6 +120,7 @@ export class IconRegistry {
           primaryName,
           prefix: parsed.prefix,
           svg: iconObj.svg,
+          strokeConfigurable: iconObj.strokeConfigurable !== false,
         };
       }
     }

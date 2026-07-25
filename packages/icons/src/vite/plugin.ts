@@ -24,6 +24,11 @@ export interface ViteIconsOptions {
    * Defaults to a registry instance initialized with `lucideProvider`.
    */
   registry?: IconRegistry;
+
+  /**
+   * Default stroke width for configurable icons.
+   */
+  strokeWidth?: number | string;
 }
 
 const VIRTUAL_ID = "virtual:icons.css";
@@ -58,7 +63,11 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     // 2. Scan tracked runtime files in Vite project
     scanFiles(scannedFiles, { prefix }, foundClasses);
 
-    return generateIconSetCss(foundClasses, registry, { prefix, injectBase: true });
+    return generateIconSetCss(foundClasses, registry, {
+      prefix,
+      injectBase: true,
+      strokeWidth: options.strokeWidth,
+    });
   }
 
   return {

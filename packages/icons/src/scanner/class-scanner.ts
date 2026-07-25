@@ -19,7 +19,7 @@ function escapeRegExp(str: string): string {
 function getPatternForPrefix(prefix: string): RegExp {
   let pattern = regexCache.get(prefix);
   if (!pattern) {
-    pattern = new RegExp(`\\b${escapeRegExp(prefix)}-[a-zA-Z0-9_-]+\\b`, "g");
+    pattern = new RegExp(`\\b${escapeRegExp(prefix)}-(?:stroke-[0-9]+(?:\\.[0-9]+)?|[a-zA-Z0-9_-]+)\\b`, "g");
     regexCache.set(prefix, pattern);
   }
   return pattern;

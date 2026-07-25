@@ -24,6 +24,7 @@ describe("IconRegistry", () => {
       primaryName: "test-icon",
       prefix: "lucide",
       svg: "<svg>test</svg>",
+      strokeConfigurable: true,
     });
   });
 
@@ -82,6 +83,7 @@ describe("IconRegistry", () => {
       primaryName: "heart",
       prefix: "dynamic",
       svg: "<svg><path d='heart'/></svg>",
+      strokeConfigurable: true,
     });
     expect(registry.list("dynamic")).toContain("heart");
   });
@@ -98,6 +100,21 @@ describe("IconRegistry", () => {
     const closeIcon = registry.resolve("close");
     expect(closeIcon?.svg).toContain("<svg");
     expect(closeIcon?.primaryName).toBe("x");
+  });
+
+  it("handles strokeConfigurable property and defaults to true", () => {
+    const registry = new IconRegistry();
+    registry.registerIcon("icon-default", "<svg>test</svg>");
+    registry.registerIcon("icon-custom-false", {
+      svg: "<svg>test</svg>",
+      strokeConfigurable: false,
+    });
+
+    const resolvedDefault = registry.resolve("icon-default");
+    expect(resolvedDefault?.strokeConfigurable).toBe(true);
+
+    const resolvedCustom = registry.resolve("icon-custom-false");
+    expect(resolvedCustom?.strokeConfigurable).toBe(false);
   });
 
   it("returns undefined for non-existent icons", () => {

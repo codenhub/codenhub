@@ -11,6 +11,12 @@ export interface IconDefinition {
    * Optional alternative names or aliases for the icon (e.g. `["close", "cancel", "times"]` for `x`).
    */
   alt?: string[];
+
+  /**
+   * Whether the icon's stroke-width can be configured.
+   * Defaults to `true` if not specified.
+   */
+  strokeConfigurable?: boolean;
 }
 
 /**
@@ -60,6 +66,11 @@ export interface IconRegistryOptions {
    * Defaults to `"lucide"`.
    */
   defaultPrefix?: string;
+
+  /**
+   * Default global stroke width for configurable icons.
+   */
+  strokeWidth?: number;
 }
 
 /**
@@ -85,4 +96,9 @@ export interface ResolvedIcon {
    * The raw SVG string content of the icon.
    */
   svg: string;
+
+  /**
+   * Whether the icon's stroke-width can be configured.
+   */
+  strokeConfigurable: boolean;
 }

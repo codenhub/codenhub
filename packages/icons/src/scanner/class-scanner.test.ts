@@ -54,4 +54,13 @@ describe("class-scanner", () => {
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+
+  it("should extract stroke utility classes, including floats", () => {
+    const html = '<button class="ic-close ic-stroke-1.5 ic-stroke-2 ic-stroke-3.75"></button>';
+    const found = scanIconClasses(html);
+    expect(Array.from(found)).toContain("ic-stroke-1.5");
+    expect(Array.from(found)).toContain("ic-stroke-2");
+    expect(Array.from(found)).toContain("ic-stroke-3.75");
+    expect(Array.from(found)).toContain("ic-close");
+  });
 });
