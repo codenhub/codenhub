@@ -122,6 +122,24 @@
     @apply aspect-square min-w-(--control-height,2.5rem) p-2;
   }
 
+  &.p-sm,
+  &.compact {
+    @apply px-2.5 py-1;
+
+    &.icon {
+      @apply p-1;
+    }
+  }
+
+  &.p-lg,
+  &.spacious {
+    @apply px-6 py-3;
+
+    &.icon {
+      @apply p-3;
+    }
+  }
+
   &.pill {
     @apply rounded-full;
   }

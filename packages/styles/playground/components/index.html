@@ -128,6 +128,67 @@
           </div>
 
           <div class="stack tight">
+            <h3 class="text-title-sm">Padding Configurations</h3>
+            <p class="text-body text-text-secondary">
+              Configure spacing density. Canonical classes
+              <code>p-sm</code>
+              and
+              <code>p-lg</code>
+              . Aliases
+              <code>compact</code>
+              and
+              <code>spacious</code>
+              also supported.
+            </p>
+            <div class="cluster">
+              <button class="btn primary p-sm" data-testid="btn-p-sm">Compact (p-sm)</button>
+              <button class="btn primary" data-testid="btn-default">Default</button>
+              <button class="btn primary p-lg" data-testid="btn-p-lg">Spacious (p-lg)</button>
+
+              <!-- Icon buttons with different paddings -->
+              <button class="btn icon primary p-sm" aria-label="Compact Create" data-testid="btn-icon-p-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+              <button class="btn icon primary" aria-label="Default Create" data-testid="btn-icon-default">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+              <button class="btn icon primary p-lg" aria-label="Spacious Create" data-testid="btn-icon-p-lg">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="stack tight">
             <h3 class="text-title-sm">Loading and Disabled States</h3>
             <div class="cluster">
               <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>

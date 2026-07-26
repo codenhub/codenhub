@@ -20,137 +20,416 @@
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Inputs with Icons (Default Left Position)</h2>
+          <h2 class="text-title">Email Input</h2>
           <p class="text-body text-text-secondary">
-            Opt-in default left-aligned contextual icons for standard input types.
+            Testing standard, icon alignments, and validation/disabled states for email input types.
           </p>
         </div>
         <div class="form-grid">
           <label class="field">
-            <span class="label">Email Address</span>
-            <input class="ipt email icon" type="email" placeholder="you@example.com" data-testid="icon-input-email" />
-            <span class="hint">Opt-in email icon via class="ipt email icon"</span>
+            <span class="label">Standard</span>
+            <input class="ipt" type="email" placeholder="you@example.com" data-testid="matrix-email-standard" />
           </label>
-
           <label class="field">
-            <span class="label">Password</span>
-            <input class="ipt password icon" type="password" placeholder="••••••••" data-testid="icon-input-password" />
-            <span class="hint">Opt-in password icon via class="ipt password icon"</span>
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="email" placeholder="you@example.com" data-testid="icon-input-email" />
           </label>
-
           <label class="field">
-            <span class="label">Website URL</span>
-            <input class="ipt url icon" type="url" placeholder="https://example.com" data-testid="icon-input-url" />
-            <span class="hint">Opt-in URL icon via class="ipt url icon"</span>
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="email" placeholder="you@example.com" data-testid="matrix-email-right" />
           </label>
-
           <label class="field">
-            <span class="label">Phone Number</span>
-            <input class="ipt tel icon" type="tel" placeholder="+1 (555) 000-0000" data-testid="icon-input-tel" />
-            <span class="hint">Opt-in phone icon via class="ipt tel icon"</span>
-          </label>
-
-          <label class="field">
-            <span class="label">Search Query</span>
+            <span class="label">Invalid (Icon Left)</span>
             <input
-              class="ipt search icon"
-              type="search"
-              placeholder="Search documentation..."
-              data-testid="icon-input-search"
-            />
-            <span class="hint">Opt-in search icon via class="ipt search icon"</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Icon Position Configuration (Left vs Right)</h2>
-          <p class="text-body text-text-secondary">Explicit left vs right placement settings for input icon badges.</p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Explicit Left Position</span>
-            <input
-              class="ipt search icon left"
-              type="search"
-              placeholder="Search left..."
-              data-testid="icon-input-left"
-            />
-            <span class="hint">class="ipt search icon left"</span>
-          </label>
-
-          <label class="field">
-            <span class="label">Right Position</span>
-            <input
-              class="ipt search icon right"
-              type="search"
-              placeholder="Search right..."
-              data-testid="icon-input-right"
-            />
-            <span class="hint">class="ipt search icon right"</span>
-          </label>
-
-          <label class="field">
-            <span class="label">Password Right Icon</span>
-            <input
-              class="ipt password icon right"
-              type="password"
-              placeholder="Password right..."
-              data-testid="icon-input-password-right"
-            />
-            <span class="hint">class="ipt password icon right"</span>
-          </label>
-
-          <label class="field">
-            <span class="label">Email Right Icon</span>
-            <input
-              class="ipt email icon right"
-              type="email"
-              placeholder="email@example.com"
-              data-testid="icon-input-email-right"
-            />
-            <span class="hint">class="ipt email icon right"</span>
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Field States</h2>
-          <p class="text-body text-text-secondary">
-            Visual styles and validation responses representing input validity states.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Valid State</span>
-            <input class="ipt email icon" type="email" value="alex@example.com" />
-            <span class="hint">Normal valid input with icon</span>
-          </label>
-
-          <label class="field">
-            <span class="label">Invalid State</span>
-            <input
-              class="ipt email icon"
+              class="ipt icon"
               type="email"
               value="invalid-email"
               aria-invalid="true"
-              data-testid="invalid-icon-input"
+              data-testid="matrix-email-invalid"
             />
             <span class="error">Please enter a valid email address.</span>
           </label>
-
           <label class="field">
-            <span class="label">Disabled State</span>
+            <span class="label">Disabled (Icon Left)</span>
             <input
-              class="ipt email icon"
+              class="ipt icon"
               type="email"
               value="disabled@example.com"
               disabled
-              data-testid="disabled-icon-input"
+              data-testid="matrix-email-disabled"
             />
-            <span class="hint">Disabled input with icon</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Password Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for password input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="password" placeholder="••••••••" data-testid="matrix-password-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="password" placeholder="••••••••" data-testid="matrix-password-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="password" placeholder="••••••••" data-testid="matrix-password-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input
+              class="ipt icon"
+              type="password"
+              value="short"
+              aria-invalid="true"
+              data-testid="matrix-password-invalid"
+            />
+            <span class="error">Password is too short.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input
+              class="ipt icon"
+              type="password"
+              value="locked-pass"
+              disabled
+              data-testid="matrix-password-disabled"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Website URL Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for URL input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="url" placeholder="https://example.com" data-testid="matrix-url-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="url" placeholder="https://example.com" data-testid="matrix-url-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="url" placeholder="https://example.com" data-testid="matrix-url-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="url" value="not-a-url" aria-invalid="true" data-testid="matrix-url-invalid" />
+            <span class="error">Please enter a valid URL.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="url" value="https://example.com" disabled data-testid="matrix-url-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Phone Number Input (tel)</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for telephone input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="tel" value="abc-123" aria-invalid="true" data-testid="matrix-tel-invalid" />
+            <span class="error">Please enter a valid phone number.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="tel" value="+1 (555) 000-0000" disabled data-testid="matrix-tel-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Search Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for search input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="search" placeholder="Search..." data-testid="matrix-search-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="search" placeholder="Search..." data-testid="matrix-search-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="search" placeholder="Search..." data-testid="icon-input-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input
+              class="ipt icon"
+              type="search"
+              value="bad-query"
+              aria-invalid="true"
+              data-testid="matrix-search-invalid"
+            />
+            <span class="error">Invalid search query.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input
+              class="ipt icon"
+              type="search"
+              value="search-disabled"
+              disabled
+              data-testid="matrix-search-disabled"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Date Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for date input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="date" data-testid="matrix-date-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="date" data-testid="matrix-date-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="date" data-testid="matrix-date-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input
+              class="ipt icon"
+              type="date"
+              value="invalid-date"
+              aria-invalid="true"
+              data-testid="matrix-date-invalid"
+            />
+            <span class="error">Please enter a valid date.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="date" disabled data-testid="matrix-date-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Datetime-local Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for datetime-local input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="datetime-local" data-testid="matrix-datetime-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="datetime-local" data-testid="matrix-datetime-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="datetime-local" data-testid="matrix-datetime-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="datetime-local" aria-invalid="true" data-testid="matrix-datetime-invalid" />
+            <span class="error">Please enter a valid date and time.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="datetime-local" disabled data-testid="matrix-datetime-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Month Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for month input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="month" data-testid="matrix-month-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="month" data-testid="matrix-month-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="month" data-testid="matrix-month-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="month" aria-invalid="true" data-testid="matrix-month-invalid" />
+            <span class="error">Please enter a valid month.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="month" disabled data-testid="matrix-month-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Week Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for week input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="week" data-testid="matrix-week-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="week" data-testid="matrix-week-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="week" data-testid="matrix-week-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="week" aria-invalid="true" data-testid="matrix-week-invalid" />
+            <span class="error">Please enter a valid week.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="week" disabled data-testid="matrix-week-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Time Input</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, icon alignments, and validation/disabled states for time input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="time" data-testid="matrix-time-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Left (Default)</span>
+            <input class="ipt icon" type="time" data-testid="matrix-time-left" />
+          </label>
+          <label class="field">
+            <span class="label">Icon Right</span>
+            <input class="ipt icon right" type="time" data-testid="matrix-time-right" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid (Icon Left)</span>
+            <input class="ipt icon" type="time" aria-invalid="true" data-testid="matrix-time-invalid" />
+            <span class="error">Please enter a valid time.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled (Icon Left)</span>
+            <input class="ipt icon" type="time" disabled data-testid="matrix-time-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Text Input (Generic - No Icon support)</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, invalid, and disabled states for generic text input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="text" placeholder="John Doe" data-testid="matrix-text-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid</span>
+            <input class="ipt" type="text" value="invalid text" aria-invalid="true" data-testid="matrix-text-invalid" />
+            <span class="error">Please check the input.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled</span>
+            <input class="ipt" type="text" value="disabled text" disabled data-testid="matrix-text-disabled" />
+          </label>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Number Input (Generic - No Icon support)</h2>
+          <p class="text-body text-text-secondary">
+            Testing standard, invalid, and disabled states for generic number input types.
+          </p>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span class="label">Standard</span>
+            <input class="ipt" type="number" placeholder="42" data-testid="matrix-number-standard" />
+          </label>
+          <label class="field">
+            <span class="label">Invalid</span>
+            <input
+              class="ipt"
+              type="number"
+              value="not-a-number"
+              aria-invalid="true"
+              data-testid="matrix-number-invalid"
+            />
+            <span class="error">Please enter a valid number.</span>
+          </label>
+          <label class="field">
+            <span class="label">Disabled</span>
+            <input class="ipt" type="number" value="999" disabled data-testid="matrix-number-disabled" />
           </label>
         </div>
       </section>

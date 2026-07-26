@@ -810,4 +810,55 @@ test.describe("components", () => {
     expect(rightPadding).not.toBe("0px");
     expect(rightPos).toContain("100%");
   });
+
+  test("configures button padding options with p-sm/compact and p-lg/spacious modifier classes", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const btnPSm = page.getByTestId("btn-p-sm");
+    const btnDefault = page.getByTestId("btn-default");
+    const btnPLg = page.getByTestId("btn-p-lg");
+    const btnIconPSm = page.getByTestId("btn-icon-p-sm");
+    const btnIconDefault = page.getByTestId("btn-icon-default");
+    const btnIconPLg = page.getByTestId("btn-icon-p-lg");
+
+    // Standard Buttons Horizontal Padding
+    const pSmLeft = await btnPSm.evaluate((el) => getComputedStyle(el).paddingLeft);
+    const defaultLeft = await btnDefault.evaluate((el) => getComputedStyle(el).paddingLeft);
+    const pLgLeft = await btnPLg.evaluate((el) => getComputedStyle(el).paddingLeft);
+
+    expect(pSmLeft).toBe("10px");
+    expect(defaultLeft).toBe("16px");
+    expect(pLgLeft).toBe("24px");
+
+    // Icon Buttons Padding (all sides)
+    const iconPSmPadding = await btnIconPSm.evaluate((el) => getComputedStyle(el).padding);
+    const iconDefaultPadding = await btnIconDefault.evaluate((el) => getComputedStyle(el).padding);
+    const iconPLgPadding = await btnIconPLg.evaluate((el) => getComputedStyle(el).padding);
+
+    expect(iconPSmPadding).toBe("4px");
+    expect(iconDefaultPadding).toBe("8px");
+    expect(iconPLgPadding).toBe("12px");
+
+    // Test Aliases dynamically
+    await page.evaluate(() => {
+      const btn = document.createElement("button");
+      btn.className = "btn primary compact";
+      btn.setAttribute("data-testid", "btn-alias-compact");
+      document.body.appendChild(btn);
+
+      const btnSpacious = document.createElement("button");
+      btnSpacious.className = "btn primary spacious";
+      btnSpacious.setAttribute("data-testid", "btn-alias-spacious");
+      document.body.appendChild(btnSpacious);
+    });
+
+    const btnAliasCompact = page.getByTestId("btn-alias-compact");
+    const btnAliasSpacious = page.getByTestId("btn-alias-spacious");
+
+    const aliasCompactLeft = await btnAliasCompact.evaluate((el) => getComputedStyle(el).paddingLeft);
+    const aliasSpaciousLeft = await btnAliasSpacious.evaluate((el) => getComputedStyle(el).paddingLeft);
+
+    expect(aliasCompactLeft).toBe("10px");
+    expect(aliasSpaciousLeft).toBe("24px");
+  });
 });
