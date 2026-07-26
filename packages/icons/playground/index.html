@@ -36,16 +36,48 @@
           <button
             type="button"
             id="color-reset-btn"
-            class="btn secondary sm icon"
-            title="Reset color to currentColor"
+            class="btn ghost secondary sm icon tooltip"
+            data-tooltip="Reset color"
+            data-tooltip-position="top"
             aria-label="Reset color"
           >
-            <i class="ic-rotate-ccw"></i>
+            <i class="ic-rotate-ccw ic-stroke-2.5"></i>
           </button>
+          <div class="popover-wrapper">
+            <button
+              type="button"
+              id="stroke-width-btn"
+              class="btn ghost secondary sm icon tooltip"
+              data-tooltip="Stroke width"
+              data-tooltip-position="top"
+              aria-label="Stroke width"
+            >
+              <i class="ic-settings ic-stroke-2.5"></i>
+            </button>
+            <div id="stroke-width-popover" class="stroke-width-popover">
+              <div class="popover-content stack tight">
+                <div class="label-wrapper cluster between">
+                  <span class="text-body-sm font-semibold">Stroke Width</span>
+                  <span id="stroke-width-value" class="text-body-sm opacity-70">2.0px</span>
+                </div>
+                <input
+                  type="range"
+                  id="stroke-width-slider"
+                  min="0.5"
+                  max="4"
+                  step="0.25"
+                  value="2"
+                  class="stroke-width-slider"
+                  aria-label="Stroke width slider"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div id="icon-grid" class="icon-grid"></div>
+      <div id="pagination-controls" class="pagination-controls cluster center tight"></div>
     </div>
 
     <!-- Icon Details Modal -->
