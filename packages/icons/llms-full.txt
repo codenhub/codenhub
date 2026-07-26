@@ -29,6 +29,7 @@ export default defineConfig({
     viteIcons({
       content: ["./src/**/*.{html,js,ts,jsx,tsx,vue,svelte}"],
       prefix: "ic",
+      mode: "css", // "css" (default) generates CSS mask rules; "svg" embeds inline SVG elements directly
     }),
   ],
 });

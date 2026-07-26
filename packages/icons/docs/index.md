@@ -20,10 +20,10 @@ pnpm add @codenhub/icons
 - **IconRegistry**: Manage icon registrations, aliases, and dynamic datasets.
 - **CSS Mask Generator**: Generate lightweight CSS mask rules for icons using `currentColor`.
 - **Static Class Scanner**: Extract icon class names (`ic-*`) from source markup and code files.
-- **Vite & PostCSS Plugins**: Automatically scan source files and inject generated icon CSS rules during build or dev server execution.
+- **Vite & PostCSS Plugins**: Automatically scan source files and inject generated icon CSS rules (or embed inline SVG elements directly via Vite plugin `mode: "svg"`) during build or dev server execution.
 
 ## Entrypoints
 
 - `@codenhub/icons`: Core JavaScript API, SVG data URI converter, CSS generator, class scanner, and default IconRegistry instance.
-- `@codenhub/icons/vite`: Vite plugin integration.
+- `@codenhub/icons/vite`: Vite plugin integration (supports `mode: "css"` or `"svg"`).
 - `@codenhub/icons/postcss`: PostCSS plugin integration.

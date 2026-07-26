@@ -73,4 +73,42 @@ describe("viteIcons", () => {
     expect(result?.code).toContain(".ic-close {");
     expect(result?.code).not.toContain('@import "@codenhub/icons";');
   });
+
+  it("replaces icon tags with inline SVG when mode is 'svg' in HTML", () => {
+    const plugin = viteIcons({ mode: "svg" });
+    const htmlTransform = plugin.transformIndexHtml as unknown as (
+      html: string,
+      ctx: Record<string, unknown>,
+    ) => string;
+
+    const htmlInput = '<button><i class="ic-search" aria-hidden="true"></i> Search</button>';
+    const result = htmlTransform(htmlInput, {});
+
+    expect(result).toContain("<svg");
+    expect(result).toContain('aria-hidden="true"');
+    expect(result).not.toContain("<i class=");
+  });
+
+  it("replaces icon tags with inline SVG in JS/JSX when mode is 'svg'", () => {
+    const customRegistry = new IconRegistry({ defaultPrefix: "custom" });
+    customRegistry.registerIcon("close", '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>');
+
+    const plugin = viteIcons({
+      mode: "svg",
+      prefix: "ic",
+      registry: customRegistry,
+      strokeWidth: 2,
+    });
+
+    const transformFn = plugin.transform as (code: string, id: string) => { code: string; map: null } | null;
+    const jsxInput = `export function CloseButton() { return <i className="ic-close btn-icon" id="btn-1"></i>; }`;
+    const result = transformFn(jsxInput, "component.tsx");
+
+    expect(result).not.toBeNull();
+    expect(result?.code).toContain("<svg");
+    expect(result?.code).toContain('className="btn-icon"');
+    expect(result?.code).toContain('id="btn-1"');
+    expect(result?.code).toContain('stroke-width="2"');
+    expect(result?.code).not.toContain("<i ");
+  });
 });
