@@ -88,6 +88,8 @@ Presentation and size classes:
 | `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.                  |
 | `.sm`                                                                  | Smaller button.                                                               |
 | `.lg`                                                                  | Larger button.                                                                |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                                     |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                                      |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
 | `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                   |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
@@ -107,27 +109,28 @@ Examples:
 
 ## Forms
 
-| Class or Selector                                                     | Purpose                              |
-| --------------------------------------------------------------------- | ------------------------------------ |
-| `.field`                                                              | Vertical field wrapper.              |
-| `.label`                                                              | Form label text.                     |
-| `.hint`                                                               | Secondary helper text.               |
-| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.             |
-| `.control-base`                                                       | Shared public text-control styling.  |
-| `.ipt`                                                                | Input control styling.               |
-| `.ipt.icon`                                                           | Opts-in to displaying an input icon. |
-| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).    |
-| `.email`, `.password`, `.url`, `.tel`, `.search`                      | Input type icon selectors.           |
-| `.textarea`                                                           | Textarea control styling.            |
-| `.select`                                                             | Select control styling.              |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.     |
-| `input[type="radio"].radio`                                           | Custom radio control styling.        |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.       |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.  |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                    |
+| Class or Selector                                                     | Purpose                                                         |
+| --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                         |
+| `.label`                                                              | Form label text.                                                |
+| `.hint`                                                               | Secondary helper text.                                          |
+| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.                                        |
+| `.control-base`                                                       | Shared public text-control styling.                             |
+| `.ipt`                                                                | Input control styling.                                          |
+| `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
+| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
+| `.email`, `.password`, `.url`, `.tel`, `.search`, `.date`, etc.       | Input type icon selectors (class or matching `type` attribute). |
+| `.no-icon`, `[data-no-icon]`                                          | Suppresses auto-included icons on native form inputs.           |
+| `.textarea`                                                           | Textarea control styling.                                       |
+| `.select`                                                             | Select control styling.                                         |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                   |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                  |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                             |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
-Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`) include input icons by default.
+Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `date`, `datetime`, `month`, `week`, `time`) include input icons by default; use `.no-icon` or `data-no-icon` to suppress them.
 Icon colors use `--color-text-secondary` by default and transition to `--color-text` on focus.
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
