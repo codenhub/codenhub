@@ -49,7 +49,8 @@ in the package's `package.json` under `codenhub.docs`:
       "listed": true,
       "slug": "example-package",
       "description": "Utilities for building example workflows.",
-      "order": 10
+      "order": 10,
+      "demoUrl": "https://example.coden.agency"
     }
   }
 }
@@ -73,6 +74,8 @@ fields are:
 - `order`: OPTIONAL non-negative integer used for relative ordering. Lower
   values appear first; tools MUST use a deterministic fallback when it is
   absent.
+- `demoUrl`: OPTIONAL absolute URL to a standalone live demo application for
+  the package. Catalog and documentation sites MAY use this to render live demo links or embedded previews.
 
 Slugs MUST be unique among packages that declare public documentation metadata.
 A malformed `codenhub.docs` object or field is invalid. Tools MUST NOT use

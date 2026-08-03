@@ -46,6 +46,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
+    "demo": "pnpm --filter=@codenhub/icons-demo dev",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/icons version dist-tags time --json && npm dist-tag ls @codenhub/icons && npm access get status @codenhub/icons",
     "status:pack": "npm pack --dry-run",
@@ -79,7 +80,8 @@
   "codenhub": {
     "docs": {
       "label": "Icons",
-      "status": "experimental"
+      "status": "experimental",
+      "demoUrl": "https://icons.codenhub.dev"
     }
   }
 }

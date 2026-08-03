@@ -3,145 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@codenhub/icons Playground</title>
+    <title>@codenhub/icons Test Playground</title>
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <div class="playground-container section-content">
-      <header class="playground-header stack tight">
-        <h1 class="text-title-lg">@codenhub/icons</h1>
-        <p class="playground-subtitle text-body">Collection of lightweight CSS mask-based SVG icons</p>
-      </header>
+    <div style="max-width: 600px; margin: 2rem auto; font-family: system-ui, sans-serif">
+      <h1>@codenhub/icons Test Playground</h1>
+      <p>Minimal test harness for development and integration checks.</p>
 
-      <div class="playground-toolbar cluster between">
-        <div class="search-input-wrapper">
-          <input
-            type="search"
-            id="search-input"
-            class="ipt icon left"
-            placeholder="Search icons..."
-            aria-label="Search icons"
-          />
-        </div>
+      <section style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center; font-size: 2rem">
+        <i class="ic-search" title="search"></i>
+        <i class="ic-check" title="check"></i>
+        <i class="ic-x" title="x"></i>
+        <i class="ic-settings" title="settings"></i>
+      </section>
 
-        <div class="color-controls cluster tight">
-          <input
-            type="color"
-            id="icon-color-picker"
-            class="color-picker-input"
-            value="#000000"
-            title="Custom icon color"
-            aria-label="Icon color picker"
-          />
-          <button
-            type="button"
-            id="color-reset-btn"
-            class="btn ghost secondary sm icon tooltip"
-            data-tooltip="Reset color"
-            data-tooltip-position="top"
-            aria-label="Reset color"
-          >
-            <i class="ic-rotate-ccw ic-stroke-2.5"></i>
-          </button>
-          <div class="popover-wrapper">
-            <button
-              type="button"
-              id="stroke-width-btn"
-              class="btn ghost secondary sm icon tooltip"
-              data-tooltip="Stroke width"
-              data-tooltip-position="top"
-              aria-label="Stroke width"
-            >
-              <i class="ic-settings ic-stroke-2.5"></i>
-            </button>
-            <div id="stroke-width-popover" class="stroke-width-popover">
-              <div class="popover-content stack tight">
-                <div class="label-wrapper cluster between">
-                  <span class="text-body-sm font-semibold">Stroke Width</span>
-                  <span id="stroke-width-value" class="text-body-sm opacity-70">2.0px</span>
-                </div>
-                <input
-                  type="range"
-                  id="stroke-width-slider"
-                  min="0.5"
-                  max="4"
-                  step="0.25"
-                  value="2"
-                  class="stroke-width-slider"
-                  aria-label="Stroke width slider"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div id="icon-grid" class="icon-grid"></div>
-      <div id="pagination-controls" class="pagination-controls cluster center tight"></div>
-    </div>
-
-    <!-- Icon Details Modal -->
-    <div id="icon-modal-backdrop" class="icon-modal-backdrop" role="dialog" aria-modal="true">
-      <div class="icon-modal stack">
-        <button type="button" id="modal-close-btn" class="modal-close-btn btn ghost icon sm" aria-label="Close modal">
-          <i class="ic-x"></i>
-        </button>
-
-        <div class="modal-icon-container">
-          <div id="modal-icon-upscaled" class="modal-icon-upscaled"></div>
-        </div>
-
-        <h2 id="modal-icon-title" class="modal-icon-title text-title-sm"></h2>
-        <div id="modal-aliases" class="modal-aliases cluster tight"></div>
-
-        <div class="code-snippet-wrapper">
-          <pre class="code-snippet-container"><code id="modal-code-snippet" class="code-snippet-text code"></code></pre>
-          <button
-            type="button"
-            id="copy-html-btn"
-            class="copy-html-btn"
-            title="Copy HTML snippet"
-            aria-label="Copy HTML snippet"
-          >
-            <i class="ic-copy"></i>
-          </button>
-        </div>
-
-        <div class="modal-actions cluster fill-width">
-          <button type="button" id="copy-svg-btn" class="btn secondary modal-action-btn">
-            <i class="ic-copy"></i>
-            <span>Copy SVG</span>
-          </button>
-          <button type="button" id="download-svg-btn" class="btn primary modal-action-btn">
-            <i class="ic-download"></i>
-            <span>Download SVG</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Floating Theme Toggle Control -->
-    <div class="playground-controls">
-      <button
-        id="theme-toggle"
-        class="playground-control btn secondary icon pill"
-        type="button"
-        aria-label="Toggle theme"
-        title="Toggle theme"
+      <div
+        id="test-output"
+        style="margin-top: 2rem; padding: 1rem; background: rgba(125, 125, 125, 0.1); border-radius: 6px"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
-        </svg>
-      </button>
+        <p>Testing dynamic icon generation...</p>
+      </div>
     </div>
   </body>
 </html>

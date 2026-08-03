@@ -1,8 +1,8 @@
 packages:
   - "apps/*"
   - "packages/*"
-  - "packages/*/{dev,debug}"
-  - "packages/*/{dev,debug}/*"
+  - "packages/*/{dev,debug,demo}"
+  - "packages/*/{dev,debug,demo}/*"
   - "packages/plugins/**"
 
 catalog:
