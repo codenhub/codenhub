@@ -14,12 +14,12 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ### @codenhub
 
-- [ ] Add collocated demo app for each package, when applicable
+- [x] Enable collocated demo app for each package
 
 ### @codenhub/docs
 
+- [ ] Polish UI/UX and code in general
 - [ ] Add fuzzy search
-- [ ] Polish UI/UX
 
 ### @codenhub/styles
 
@@ -33,6 +33,7 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] Icon registry, SVG scanner module & CSS mask generator
 - [x] PostCSS & Vite build plugins (`/postcss`, `/vite`)
 - [ ] Add simple mask-image helper for maximum compatibility with other packages
+- [ ] Playground and demo polish
 - [ ] Registry improvement and stabilization
 - [ ] Registry population
 - [ ] Dynamic icon bundle optimization
@@ -48,7 +49,7 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] Instance-based toast & native dialog manager
 - [x] Playwright integration tests & default stylesheet (`/styles`)
 - [ ] Toast stacking / position container controls
-- [ ] Custom animation presets
+- [ ] Better interactions and animations (shadcn-like)
 
 ### @codenhub/validation
 
