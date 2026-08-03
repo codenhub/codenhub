@@ -20,12 +20,10 @@
     "typecheck": "pnpm -r --if-present typecheck"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "esbuild": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

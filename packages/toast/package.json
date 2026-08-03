@@ -47,8 +47,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@tailwindcss/cli": "catalog:",
     "@codenhub/styles": "workspace:*",
     "@playwright/test": "catalog:",
     "@vitest/coverage-v8": "catalog:",
