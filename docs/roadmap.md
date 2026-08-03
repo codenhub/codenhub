@@ -16,12 +16,16 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Core CSS design tokens & Tailwind v4 integration
 - [x] Base component classes (`button`, `form`, `surface`, `feedback`, `loader`)
+- [ ] Use `@codenhub/icons` for basic icons after the helper is ready
 - [ ] Aesthetic themes (glassmorphism, brutalism, glitch)
 
 ### @codenhub/icons
 
 - [x] Icon registry, SVG scanner module & CSS mask generator
 - [x] PostCSS & Vite build plugins (`/postcss`, `/vite`)
+- [ ] Add simple mask-image helper for maximum compatibility with other packages
+- [ ] Registry improvement and stabilization
+- [ ] Registry population
 - [ ] Dynamic icon bundle optimization
 
 ### @codenhub/i18n
@@ -53,15 +57,24 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ## Planned
 
+### @codenhub
+
+- [ ] Repo-wide CI/CD
+- [ ] Review/finish/publish docs app
+- [ ] Add collocated demo app for each package, when applicable
+- [ ] Documentation MCP server
+
 ### @codenhub/kbd
 
 - [x] Global & target-scoped keyboard shortcut registry
+- [ ] Better playground using internal packages
 - [ ] Key combo recording / remapping helper
 
 ### @codenhub/error
 
 - [x] Typed error normalization & result helpers (`Result<T, E>`)
 - [x] Registries (`/registries`, `/registries/browser`, `/registries/supabase`)
+- [ ] Better playground using internal packages
 - [ ] Framework error boundary adapters
 
 ### @codenhub/components
