@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-08-03
 scope: repo-wide package progress tracking
 ---
@@ -11,6 +11,15 @@ scope: repo-wide package progress tracking
 Track high-level progress and milestone status for foundation and utility packages.
 
 ## Current focus
+
+### @codenhub
+
+- [ ] Add collocated demo app for each package, when applicable
+
+### @codenhub/docs
+
+- [ ] Add fuzzy search
+- [ ] Polish UI/UX
 
 ### @codenhub/styles
 
@@ -53,15 +62,11 @@ Track high-level progress and milestone status for foundation and utility packag
 - [ ] npm publishing validation & clean machine `npx`/`pnpm dlx` setup
 - [ ] Additional core skill templates
 
----
-
 ## Planned
 
 ### @codenhub
 
 - [ ] Repo-wide CI/CD
-- [ ] Review/finish/publish docs app
-- [ ] Add collocated demo app for each package, when applicable
 - [ ] Documentation MCP server
 
 ### @codenhub/kbd
@@ -87,8 +92,6 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - `@codenhub/a11y`: Focus management, ARIA primitives, accessibility utilities
 - `@codenhub/ui`: High-level UI layout & composite primitives
-
----
 
 ## Notes & exclusions
 

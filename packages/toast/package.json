@@ -48,9 +48,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:",
     "@codenhub/styles": "workspace:*",
     "@playwright/test": "catalog:",
+    "@tailwindcss/cli": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",
