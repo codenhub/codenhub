@@ -156,6 +156,17 @@
     border-color: var(--color-border);
   }
 
+  @supports selector(input::-webkit-calendar-picker-indicator) {
+    input[type="date"],
+    input[type="datetime-local"] {
+      @apply icon h-10 py-0;
+
+      &::-webkit-calendar-picker-indicator {
+        display: none !important;
+      }
+    }
+  }
+
   textarea {
     @apply textarea;
 
