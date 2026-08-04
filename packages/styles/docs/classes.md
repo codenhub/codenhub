@@ -130,8 +130,8 @@ Examples:
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
-Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `date`, `datetime`, `month`, `week`, `time`) include input icons by default; use `.no-icon` or `data-no-icon` to suppress them.
-Icon colors use `--color-text-secondary` by default and transition to `--color-text` on focus.
+Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default; `date` and `datetime-local` inputs retain only the browser-native picker icon. Use `.no-icon` or `data-no-icon` to suppress custom icons on the other native inputs.
+Input icons adapt dynamically to theme variables (`--ipt-icon-color` / `--ipt-icon-color-focus`, defaulting to `var(--color-text-secondary)` and `var(--color-text)`). Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
 to set the checked color:

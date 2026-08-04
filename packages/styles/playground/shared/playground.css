@@ -122,12 +122,12 @@
   max-width: var(--container-max);
   flex-direction: column;
   gap: 1rem;
-  margin-inline: 0 auto;
+  margin-inline: auto;
 }
 
 .sect-inn.narrow {
   max-width: var(--container-narrow);
-  margin-inline: 0 auto;
+  margin-inline: auto;
 }
 
 @media (width < 40rem) {

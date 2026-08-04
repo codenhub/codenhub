@@ -103,8 +103,6 @@
   input[type="url"],
   input[type="tel"],
   input[type="search"],
-  input[type="date"],
-  input[type="datetime-local"],
   input[type="month"],
   input[type="week"],
   input[type="time"] {
@@ -126,12 +124,36 @@
       padding-right: 2.375rem;
     }
 
+    &::-webkit-calendar-picker-indicator,
+    &::-webkit-inner-spin-button,
+    &::-webkit-clear-button {
+      -webkit-appearance: none;
+      display: none !important;
+      opacity: 0;
+    }
+
     &.no-icon,
     &[data-no-icon] {
       background-image: none !important;
       padding-left: 0.75rem !important;
       padding-right: 0.75rem !important;
     }
+  }
+
+  input[type="date"] {
+    @apply ipt;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
+  }
+
+  input[type="datetime-local"] {
+    @apply ipt;
+
+    border-width: var(--border-width);
+    border-style: solid;
+    border-color: var(--color-border);
   }
 
   textarea {

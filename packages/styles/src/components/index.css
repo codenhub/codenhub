@@ -14,4 +14,4 @@
 @import "./surface.css";
 @import "./tooltip.css";
 
-@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field control-base ipt email password url tel search date datetime month week time icon left right no-icon textarea select checkbox radio switch alert badge skeleton progress empty-state tooltip");
+@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint control-base ipt email password url tel search date datetime month week time icon left right no-icon textarea select checkbox radio switch alert badge skeleton progress empty-state tooltip");

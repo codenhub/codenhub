@@ -25,7 +25,7 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Core CSS design tokens & Tailwind v4 integration
 - [x] Base component classes (`button`, `form`, `surface`, `feedback`, `loader`)
-- [ ] Use `@codenhub/icons` for basic icons after the helper is ready and make icon colors dynamic
+- [x] Use `@codenhub/icons` for basic icons after the helper is ready
 - [ ] Aesthetic themes (glassmorphism, brutalism, glitch...) + refactor/improve semantics(flat, soft, ghost, outline...)
 
 ### @codenhub/icons

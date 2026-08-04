@@ -788,21 +788,25 @@ test.describe("components", () => {
     expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 
-  test("configures input icons with composable classes, position, and focus state", async ({ page }) => {
+  test("configures input icons with composable classes, position, and theme variables", async ({ page }) => {
     await page.goto("http://localhost:5184/forms/?env=vanilla");
 
     const emailInput = page.getByTestId("icon-input-email");
     const rightInput = page.getByTestId("icon-input-right");
+    const searchStandardInput = page.getByTestId("matrix-search-standard");
 
     const emailBgBefore = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
     expect(emailBgBefore).toContain("data:image/svg+xml");
     expect(emailBgBefore).toContain("%23737373");
 
     await emailInput.focus();
-
     const emailBgFocused = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
     expect(emailBgFocused).toContain("data:image/svg+xml");
     expect(emailBgFocused).toContain("%230a0a0a");
+
+    // Search input without .icon should not have native WebKit search decoration conflict
+    const searchPaddingLeft = await searchStandardInput.evaluate((el) => getComputedStyle(el).paddingLeft);
+    expect(searchPaddingLeft).toBe("12px");
 
     const rightPadding = await rightInput.evaluate((el) => getComputedStyle(el).paddingRight);
     const rightPos = await rightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
