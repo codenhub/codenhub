@@ -12,6 +12,16 @@ export interface BaseCssOptions {
 }
 
 /**
+ * Options for generating icon CSS rules.
+ */
+export interface GenerateIconCssOptions {
+  /**
+   * Class prefix for base icon styles. Defaults to `"ic"`.
+   */
+  prefix?: string;
+}
+
+/**
  * Options for generating CSS rules for a collection of icon class names.
  */
 export interface GenerateIconSetCssOptions extends BaseCssOptions {
@@ -53,43 +63,103 @@ export function escapeSelectorClass(cls: string): string {
 }
 
 /**
- * Generates base CSS rules for icon containers using CSS mask properties.
+ * Generates base CSS rules for icon containers using CSS mask and background properties.
+ * Supports standalone elements (`<i>`, `<span>`), pseudo-elements (`::before`, `::after`),
+ * and direct `background-image` integration for form inputs (`<input>`, `<select>`).
  *
  * @param options - Options object specifying icon prefix.
  * @returns Generated CSS rule string for base icon styling.
  */
 export function generateBaseCss(options?: BaseCssOptions): string {
-  const prefix = options?.prefix ?? "ic";
-  return `.${prefix},
-[class^="${prefix}-"],
-[class*=" ${prefix}-"] {
+  const p = options?.prefix ?? "ic";
+  return `i[class^="${p}-"],
+i[class*=" ${p}-"],
+.${p} {
   display: inline-block;
-  width: 1em;
-  height: 1em;
+  width: var(--${p}-size, 1em);
+  height: var(--${p}-size, 1em);
   vertical-align: -0.125em;
-  background-color: currentColor;
+  background-color: var(--${p}-color, currentColor);
+  mask-image: var(--${p}-mask);
+  -webkit-mask-image: var(--${p}-mask);
   mask-repeat: no-repeat;
   mask-position: center;
   mask-size: 100% 100%;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: 100% 100%;
+}
+
+:not(i, input, select, textarea, .${p})[class^="${p}-"]::before,
+:not(i, input, select, textarea, .${p})[class*=" ${p}-"]::before {
+  content: "";
+  display: inline-block;
+  width: var(--${p}-size, 1em);
+  height: var(--${p}-size, 1em);
+  vertical-align: -0.125em;
+  background-color: var(--${p}-color, currentColor);
+  mask-image: var(--${p}-mask);
+  -webkit-mask-image: var(--${p}-mask);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+}
+
+:not(i, input, select, textarea, .${p})[class*="${p}-after"]::before,
+:not(i, input, select, textarea, .${p})[class*=" ${p}-after"]::before,
+.${p}-after::before {
+  display: none !important;
+}
+
+:not(i, input, select, textarea, .${p})[class*="${p}-after"]::after,
+:not(i, input, select, textarea, .${p})[class*=" ${p}-after"]::after,
+.${p}-after::after {
+  content: "";
+  display: inline-block;
+  width: var(--${p}-size, 1em);
+  height: var(--${p}-size, 1em);
+  vertical-align: -0.125em;
+  background-color: var(--${p}-color, currentColor);
+  mask-image: var(--${p}-mask);
+  -webkit-mask-image: var(--${p}-mask);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: 100% 100%;
+}
+
+input[class^="${p}-"],
+input[class*=" ${p}-"],
+select[class^="${p}-"],
+select[class*=" ${p}-"],
+textarea[class^="${p}-"],
+textarea[class*=" ${p}-"],
+.${p}-bg {
+  background-image: var(--${p}-uri);
+  background-repeat: no-repeat;
 }`;
 }
 
 /**
- * Generates CSS mask rules for specific icon selectors and an SVG string.
+ * Generates CSS custom property rules (`--ic-uri` and `--ic-mask`) for icon selectors.
  *
  * @param selectors - Single CSS selector or array of selectors (e.g. `".ic-close"` or `[".ic-close", ".ic-x"]`).
  * @param svg - The SVG string content for the icon.
+ * @param options - Options object specifying icon prefix.
  * @returns Generated CSS rule string.
  */
-export function generateIconCss(selectors: string | string[], svg: string): string {
+export function generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string {
   const selectorList = Array.isArray(selectors) ? selectors.join(",\n") : selectors;
   const uri = svgToDataUri(svg);
+  const prefix = options?.prefix ?? "ic";
   return `${selectorList} {
-  mask-image: url("${uri}");
-  -webkit-mask-image: url("${uri}");
+  --${prefix}-uri: url("${uri}");
+  --${prefix}-mask: var(--${prefix}-uri);
 }`;
 }
 
@@ -178,8 +248,63 @@ export function generateIconSetCss(
   }
 
   for (const [svg, selectors] of svgToSelectorsMap.entries()) {
-    cssChunks.push(generateIconCss(selectors, svg));
+    cssChunks.push(generateIconCss(selectors, svg, { prefix }));
   }
 
   return cssChunks.join("\n\n");
+}
+
+/**
+ * Helper to get formatted CSS `url("data:image/svg+xml,...")` for an SVG string or registered icon name.
+ *
+ * @param iconNameOrSvg - Raw SVG string or icon name registered in the registry.
+ * @param registry - Optional IconRegistry instance if resolving by icon name.
+ * @param options - Additional options like strokeWidth.
+ * @returns CSS url() string or undefined if icon could not be resolved.
+ */
+export function getIconMaskUrl(
+  iconNameOrSvg: string,
+  registry?: IconRegistry,
+  options?: { strokeWidth?: number | string },
+): string | undefined {
+  let svg: string | undefined;
+  if (iconNameOrSvg.startsWith("<svg")) {
+    svg = iconNameOrSvg;
+  } else if (registry) {
+    const resolved = registry.resolve(iconNameOrSvg);
+    if (resolved) {
+      svg = resolved.svg;
+      if (resolved.strokeConfigurable && options?.strokeWidth !== undefined) {
+        svg = setSvgStrokeWidth(svg, options.strokeWidth);
+      }
+    }
+  }
+  if (!svg) {
+    return undefined;
+  }
+  return `url("${svgToDataUri(svg)}")`;
+}
+
+/**
+ * Helper to get CSS style object with custom properties (`--ic-uri` and `--ic-mask`) for inline styles.
+ *
+ * @param iconNameOrSvg - Raw SVG string or icon name registered in the registry.
+ * @param registry - Optional IconRegistry instance if resolving by icon name.
+ * @param options - Additional options like prefix and strokeWidth.
+ * @returns Record of CSS custom property names to values, or undefined if unresolved.
+ */
+export function getIconCssProps(
+  iconNameOrSvg: string,
+  registry?: IconRegistry,
+  options?: { prefix?: string; strokeWidth?: number | string },
+): Record<string, string> | undefined {
+  const maskUrl = getIconMaskUrl(iconNameOrSvg, registry, options);
+  if (!maskUrl) {
+    return undefined;
+  }
+  const prefix = options?.prefix ?? "ic";
+  return {
+    [`--${prefix}-uri`]: maskUrl,
+    [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
+  };
 }

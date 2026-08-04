@@ -19,10 +19,10 @@ describe("postcssIcons plugin", () => {
     plugin.Once(mockRoot, { parse: mockParse } as never);
 
     expect(plugin.postcssPlugin).toBe("postcss-codenhub-icons");
-    expect(appended).toContain(".ic,");
+    expect(appended).toContain(".ic {");
     expect(appended).toContain(".ic-close {");
     expect(appended).toContain(".ic-search {");
-    expect(appended).toContain("mask-image: url(");
+    expect(appended).toContain("--ic-uri: url(");
   });
 
   it("respects custom registry and prefix", () => {
@@ -45,7 +45,7 @@ describe("postcssIcons plugin", () => {
     const mockParse = (css: string) => css;
     plugin.Once(mockRoot, { parse: mockParse } as never);
 
-    expect(appendedCss).toContain(".icon,");
+    expect(appendedCss).toContain(".icon {");
     expect(appendedCss).toContain(".icon-star {");
   });
 });

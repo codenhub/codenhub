@@ -1,8 +1,118 @@
 @import "@codenhub/styles/native";
 
+:root {
+  color-scheme: light dark;
+}
+
 body {
   margin: 0;
-  padding: 1rem;
-  background-color: var(--color-surface, #ffffff);
-  color: var(--color-text, #0f172a);
+  padding: 2rem 1rem;
+  background-color: var(--color-background, #0f172a);
+  color: var(--color-text, #f8fafc);
+  font-family: var(--font-default, system-ui, -apple-system, sans-serif);
+  min-height: 100vh;
+  transition:
+    background-color var(--motion-duration-normal) var(--motion-ease),
+    color var(--motion-duration-normal) var(--motion-ease);
+}
+
+.playground-container {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+.playground-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border, #334155);
+}
+
+.header-titles h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-text, #f8fafc);
+}
+
+.header-titles p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.playground-card {
+  background-color: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  border-radius: var(--radius-surface, 0.875rem);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--elevation-low);
+  transition:
+    background-color var(--motion-duration-normal) var(--motion-ease),
+    border-color var(--motion-duration-normal) var(--motion-ease);
+}
+
+.playground-card h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--color-primary, #38bdf8);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-desc {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.demo-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.icon-grid-standalone {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 2rem;
+  padding: 0.5rem 0;
+}
+
+.icon-grid-standalone i,
+.icon-grid-standalone span {
+  transition: transform var(--motion-duration-fast) var(--motion-ease);
+}
+
+.icon-grid-standalone i:hover,
+.icon-grid-standalone span:hover {
+  transform: scale(1.2);
+}
+
+.custom-js-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-control, 0.5rem);
+  background-color: var(--color-background, #0f172a);
+  border: 1px dashed var(--color-border, #334155);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.test-output-banner {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-control, 0.5rem);
+  background-color: var(--color-surface, #1e293b);
+  border: 1px solid var(--color-border, #334155);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
 }

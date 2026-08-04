@@ -31,11 +31,11 @@ describe("viteIcons", () => {
     const cssResult = loadFn("\0virtual:codenhub-icons.css");
 
     expect(typeof cssResult).toBe("string");
-    expect(cssResult).toContain(".ic,");
+    expect(cssResult).toContain(".ic {");
     expect(cssResult).toContain(".ic-user {");
     expect(cssResult).toContain(".ic-settings {");
     expect(cssResult).toContain(".ic-close {");
-    expect(cssResult).toContain("mask-image: url(");
+    expect(cssResult).toContain("--ic-uri: url(");
   });
 
   it("supports custom prefix and registry in Vite plugin", () => {
@@ -53,7 +53,7 @@ describe("viteIcons", () => {
     const loadFn = plugin.load as (id: string) => string | null;
     const css = loadFn("\0virtual:codenhub-icons.css");
 
-    expect(css).toContain(".myicon,");
+    expect(css).toContain(".myicon {");
     expect(css).toContain(".myicon-home {");
   });
 
@@ -69,7 +69,7 @@ describe("viteIcons", () => {
     const result = transformFn(cssCode, "styles.css");
 
     expect(result).not.toBeNull();
-    expect(result?.code).toContain(".ic,");
+    expect(result?.code).toContain(".ic {");
     expect(result?.code).toContain(".ic-close {");
     expect(result?.code).not.toContain('@import "@codenhub/icons";');
   });

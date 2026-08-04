@@ -25,14 +25,14 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Core CSS design tokens & Tailwind v4 integration
 - [x] Base component classes (`button`, `form`, `surface`, `feedback`, `loader`)
-- [ ] Use `@codenhub/icons` for basic icons after the helper is ready
+- [ ] Use `@codenhub/icons` for basic icons after the helper is ready and make icon colors dynamic
 - [ ] Aesthetic themes (glassmorphism, brutalism, glitch...) + refactor/improve semantics(flat, soft, ghost, outline...)
 
 ### @codenhub/icons
 
 - [x] Icon registry, SVG scanner module & CSS mask generator
 - [x] PostCSS & Vite build plugins (`/postcss`, `/vite`)
-- [ ] Add simple mask-image helper for maximum compatibility with other packages
+- [x] Add simple mask-image helper for maximum compatibility with other packages
 - [ ] Playground and demo polish
 - [ ] Registry improvement and stabilization
 - [ ] Registry population

@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { IconRegistry } from "../registry/registry.js";
-import { generateBaseCss, generateIconCss, generateIconSetCss } from "./css-generator.js";
+import {
+  generateBaseCss,
+  generateIconCss,
+  generateIconSetCss,
+  getIconCssProps,
+  getIconMaskUrl,
+} from "./css-generator.js";
 import { svgToDataUri } from "./svg-encoder.js";
 
 describe("svgToDataUri", () => {
@@ -31,26 +37,35 @@ describe("svgToDataUri", () => {
 describe("css-generator", () => {
   it("should generate base CSS with default prefix", () => {
     const css = generateBaseCss();
-    expect(css).toContain(".ic,");
-    expect(css).toContain("background-color: currentColor;");
-    expect(css).toContain("-webkit-mask-repeat: no-repeat;");
+    expect(css).toContain('i[class^="ic-"],');
+    expect(css).toContain(".ic {");
+    expect(css).toContain("mask-image: var(--ic-mask);");
+    expect(css).toContain("background-color: var(--ic-color, currentColor);");
+    expect(css).toContain("::before {");
+    expect(css).toContain(".ic-after::after");
+    expect(css).toContain('input[class^="ic-"],');
+    expect(css).toContain("background-image: var(--ic-uri);");
   });
 
   it("should generate base CSS with custom prefix", () => {
     const css = generateBaseCss({ prefix: "icon" });
-    expect(css).toContain(".icon,");
+    expect(css).toContain('i[class^="icon-"],');
+    expect(css).toContain(".icon {");
+    expect(css).toContain("mask-image: var(--icon-mask);");
+    expect(css).toContain("background-image: var(--icon-uri);");
   });
 
-  it("should generate icon CSS for single selector", () => {
+  it("should generate icon CSS with custom properties for single selector", () => {
     const css = generateIconCss(".ic-close", "<svg></svg>");
     expect(css).toContain(".ic-close {");
-    expect(css).toContain("mask-image: url(");
-    expect(css).toContain("-webkit-mask-image: url(");
+    expect(css).toContain("--ic-uri: url(");
+    expect(css).toContain("--ic-mask: var(--ic-uri);");
   });
 
   it("should generate icon CSS for multiple selectors", () => {
     const css = generateIconCss([".ic-close", ".ic-x"], "<svg></svg>");
     expect(css).toContain(".ic-close,\n.ic-x {");
+    expect(css).toContain("--ic-uri: url(");
   });
 
   it("should generate combined icon set CSS grouping duplicate SVGs", () => {
@@ -61,16 +76,16 @@ describe("css-generator", () => {
     registry.registerIcon("user", '<svg><path d="2"/></svg>');
 
     const css = generateIconSetCss(["ic-home", "ic-main", "ic-user"], registry);
-    expect(css).toContain(".ic,");
+    expect(css).toContain(".ic {");
     expect(css).toContain(".ic-home,\n.ic-main {");
     expect(css).toContain(".ic-user {");
+    expect(css).toContain("--ic-uri: url(");
   });
 
   it("should generate custom global stroke width CSS", () => {
     const registry = new IconRegistry();
     registry.registerIcon("home", '<svg stroke-width="2"><path d="1"/></svg>');
     const css = generateIconSetCss(["ic-home"], registry, { strokeWidth: 1.5 });
-    // Verify that the stroke-width got changed to 1.5
     expect(css).toContain("stroke-width=%221.5%22");
     expect(css).not.toContain("stroke-width=%222%22");
   });
@@ -85,14 +100,29 @@ describe("css-generator", () => {
 
     const css = generateIconSetCss(["ic-home", "ic-static", "ic-stroke-1.5", "ic-stroke-3"], registry);
 
-    // Check that we get .ic-home.ic-stroke-1\.5 rule
     expect(css).toContain(".ic-home.ic-stroke-1\\.5 {");
     expect(css).toContain(".ic-home.ic-stroke-3 {");
     expect(css).toContain("stroke-width=%221.5%22");
     expect(css).toContain("stroke-width=%223%22");
 
-    // Check that we DO NOT get any stroke-width override rules for "static" icon
     expect(css).not.toContain(".ic-static.ic-stroke-1\\.5 {");
     expect(css).not.toContain(".ic-static.ic-stroke-3 {");
+  });
+
+  it("should provide getIconMaskUrl and getIconCssProps helpers", () => {
+    const registry = new IconRegistry();
+    const svg = '<svg stroke-width="2"><path d="1"/></svg>';
+    registry.registerIcon("check", svg);
+
+    const maskUrlFromSvg = getIconMaskUrl(svg);
+    expect(maskUrlFromSvg).toContain('url("data:image/svg+xml');
+
+    const maskUrlFromName = getIconMaskUrl("check", registry, { strokeWidth: 3 });
+    expect(maskUrlFromName).toContain("stroke-width=%223%22");
+
+    const cssProps = getIconCssProps("check", registry);
+    expect(cssProps).toBeDefined();
+    expect(cssProps?.["--ic-uri"]).toContain('url("data:image/svg+xml');
+    expect(cssProps?.["--ic-mask"]).toBe("var(--ic-uri)");
   });
 });

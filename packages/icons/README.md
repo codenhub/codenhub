@@ -41,42 +41,25 @@ Then in your CSS or HTML entrypoint, import `virtual:icons.css` or use `@import 
 @import "@codenhub/icons";
 ```
 
-In your markup, use the base `.ic` class along with any icon class:
+In your markup, use icon classes directly on `<i>` tags or container elements (`<button>`, `<a>`):
 
 ```html
-<button class="btn">
-  <span class="ic ic-search" aria-hidden="true"></span>
-  Search
-</button>
-<button class="btn btn-danger">
-  <span class="ic ic-close" aria-hidden="true"></span>
-  Close
-</button>
+<!-- Standalone element (no .ic base class required) -->
+<i class="ic-search" aria-hidden="true"></i>
+
+<!-- Tag with automatic ::before pseudo-element icon -->
+<button class="btn ic-check">Submit</button>
+
+<!-- Tag with automatic ::after pseudo-element icon -->
+<button class="btn ic-arrow-right ic-after">Next</button>
 ```
 
-### PostCSS Plugin
+### Static & Programmatic CSS Generation
 
-In `postcss.config.js` or `postcss.config.mjs`:
-
-```js
-import postcssIcons from "@codenhub/icons/postcss";
-
-export default {
-  plugins: [
-    postcssIcons({
-      content: ["./src/**/*.{html,js,ts,jsx,tsx}"],
-      prefix: "ic",
-    }),
-  ],
-};
-```
-
-### Static CSS Generation
-
-Generate static CSS string programmatically without bundlers:
+Generate static CSS string or CSS custom properties programmatically without bundlers:
 
 ```ts
-import { generateBaseCss, generateIconCss, registry } from "@codenhub/icons";
+import { generateBaseCss, generateIconCss, getIconCssProps, getIconMaskUrl, registry } from "@codenhub/icons";
 
 // 1. Base styles
 const baseCss = generateBaseCss({ prefix: "ic" });
@@ -87,6 +70,13 @@ if (closeIcon) {
   const iconCss = generateIconCss(".ic-close", closeIcon.svg);
   console.log(baseCss + "\n" + iconCss);
 }
+
+// 3. Dynamic JS helpers for inline styles / CSS-in-JS
+const maskUrl = getIconMaskUrl("check", registry);
+// => 'url("data:image/svg+xml,...")'
+
+const cssProps = getIconCssProps("check", registry);
+// => { "--ic-uri": 'url(...)', "--ic-mask": "var(--ic-uri)" }
 ```
 
 ### JavaScript API & Registry

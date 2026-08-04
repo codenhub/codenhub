@@ -1,28 +1,86 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@codenhub/icons Test Playground</title>
+    <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <div style="max-width: 600px; margin: 2rem auto; font-family: system-ui, sans-serif">
-      <h1>@codenhub/icons Test Playground</h1>
-      <p>Minimal test harness for development and integration checks.</p>
+    <div class="playground-container">
+      <header class="playground-header">
+        <div class="header-titles">
+          <h1>@codenhub/icons Playground</h1>
+          <p>Native CSS custom properties, pseudo-elements, and JS helpers harness.</p>
+        </div>
+        <button type="button" id="theme-toggle-btn" class="btn out sm ic-moon" aria-label="Toggle color theme">
+          Dark Mode
+        </button>
+      </header>
 
-      <section style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center; font-size: 2rem">
-        <i class="ic-search" title="search"></i>
-        <i class="ic-check" title="check"></i>
-        <i class="ic-x" title="x"></i>
-        <i class="ic-settings" title="settings"></i>
+      <!-- 1. Standalone Elements -->
+      <section class="playground-card">
+        <h2>
+          1. Standalone Elements (
+          <code>&lt;i class="ic-*"&gt;</code>
+          )
+        </h2>
+        <p class="card-desc">
+          Zero-verbosity markup — direct element rendering without needing a base
+          <code>.ic</code>
+          class:
+        </p>
+        <div class="demo-row icon-grid-standalone">
+          <i class="ic-search" title="search"></i>
+          <i class="ic-check" title="check" style="color: var(--color-success, #4ade80)"></i>
+          <i class="ic-x" title="close" style="color: var(--color-destructive, #f87171)"></i>
+          <i class="ic-settings" title="settings" style="color: var(--color-info, #38bdf8)"></i>
+          <i class="ic-user" title="user"></i>
+          <i class="ic-moon" title="moon"></i>
+          <i class="ic-sun" title="sun"></i>
+        </div>
       </section>
 
-      <div
-        id="test-output"
-        style="margin-top: 2rem; padding: 1rem; background: rgba(125, 125, 125, 0.1); border-radius: 6px"
-      >
-        <p>Testing dynamic icon generation...</p>
+      <!-- 2. Pseudo-Element Icons on Closed Tags -->
+      <section class="playground-card">
+        <h2>
+          2. Automatic Pseudo-Elements (
+          <code>::before</code>
+          &amp;
+          <code>::after</code>
+          )
+        </h2>
+        <p class="card-desc">
+          Icon mask applied directly to buttons, links, badges, or tags without extra nested child tags:
+        </p>
+        <div class="demo-row">
+          <button type="button" class="btn primary ic-check">Submit Form</button>
+          <button type="button" class="btn ic-search">Search Docs</button>
+          <button type="button" class="btn ic-arrow-right ic-after">Next Step</button>
+          <span class="btn soft ic-settings">Settings Badge</span>
+        </div>
+      </section>
+
+      <!-- 3. JS Helpers -->
+      <section class="playground-card">
+        <h2>
+          3. Programmatic JS Helpers (
+          <code>getIconMaskUrl</code>
+          &amp;
+          <code>getIconCssProps</code>
+          )
+        </h2>
+        <p class="card-desc">Dynamically generated icon properties applied via JS inline styles:</p>
+        <div class="custom-js-box">
+          <span>Dynamic Icon via JS:</span>
+          <i id="js-dynamic-icon" style="font-size: 1.75rem; color: var(--color-warning, #fbbf24)"></i>
+        </div>
+      </section>
+
+      <!-- Test Output Banner -->
+      <div id="test-output" class="test-output-banner">
+        <p style="margin: 0">Running assertions...</p>
       </div>
     </div>
   </body>
