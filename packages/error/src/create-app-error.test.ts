@@ -101,6 +101,21 @@ describe("createAppError — basic normalization", () => {
     expect(createAppError(error).type).toBe("unknown");
   });
 
+  it("should read each classification field once per candidate", () => {
+    const registry = createErrorRegistry();
+    registry.patterns.add(/network failure/i, { message: "Network failure" });
+    let messageReads = 0;
+    const error = {
+      get message(): string {
+        messageReads += 1;
+        return "network failure";
+      },
+    };
+
+    expect(createAppError(error, { registry }).type).toBe("unexpected");
+    expect(messageReads).toBe(1);
+  });
+
   it("should ignore throwing proxy traps while normalizing unknown values", () => {
     const hostile = new Proxy(
       {},

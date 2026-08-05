@@ -100,6 +100,18 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.codes.get("code_two")).toEqual({ message: "Two" });
   });
 
+  it("should not add any entries when addList contains an invalid entry", () => {
+    const registry = createErrorRegistry();
+
+    expect(() =>
+      registry.codes.addList([
+        ["valid", { message: "Valid" }],
+        ["invalid", {} as ErrorFeedback],
+      ]),
+    ).toThrow(TypeError);
+    expect(registry.codes.get("valid")).toBeUndefined();
+  });
+
   it("should keep addList callable when destructured", () => {
     const registry = createErrorRegistry();
     const { addList } = registry.codes;
@@ -180,6 +192,18 @@ describe("prefix bucket", () => {
     expect(registry.prefixes.values()).toHaveLength(2);
   });
 
+  it("should not add any prefixes when addList contains an invalid entry", () => {
+    const registry = createErrorRegistry();
+
+    expect(() =>
+      registry.prefixes.addList([
+        ["Valid prefix:", { message: "Valid" }],
+        ["!!!", { message: "Invalid" }],
+      ]),
+    ).toThrow(TypeError);
+    expect(registry.prefixes.values()).toHaveLength(0);
+  });
+
   it("should delete a prefix and return true, then false on repeated delete", () => {
     const registry = createErrorRegistry();
     registry.prefixes.add("Upload failed:", { message: "Msg" });
@@ -226,6 +250,18 @@ describe("pattern bucket", () => {
       [/timeout/i, { message: "Timeout" }],
     ]);
     expect(registry.patterns.values()).toHaveLength(2);
+  });
+
+  it("should not add any patterns when addList contains an invalid entry", () => {
+    const registry = createErrorRegistry();
+
+    expect(() =>
+      registry.patterns.addList([
+        [/valid/i, { message: "Valid" }],
+        ["invalid" as unknown as RegExp, { message: "Invalid" }],
+      ]),
+    ).toThrow(TypeError);
+    expect(registry.patterns.values()).toHaveLength(0);
   });
 
   it("should strip global and sticky flags to prevent stateful lastIndex drift", () => {

@@ -15,6 +15,12 @@ interface ErrorClassification {
   isRetryable: boolean;
 }
 
+interface ClassifyErrorCandidateOptions {
+  registry: ErrorRegistry | ReadonlyErrorRegistry;
+  error: unknown;
+  shouldMatchPatterns: boolean;
+}
+
 const ERROR_UNWRAP_MAX_DEPTH = 3;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error", "err", "inner", "innerError"] as const;
 
@@ -190,18 +196,14 @@ const resolveHeuristicUnexpectedError = (
   return toUnexpectedClassification(matchedDefinition);
 };
 
-export const classifyErrorCandidateKnown = (
-  registry: ErrorRegistry | ReadonlyErrorRegistry,
-  error: unknown,
-): ErrorClassification | null => {
+export const classifyErrorCandidate = ({
+  registry,
+  error,
+  shouldMatchPatterns,
+}: ClassifyErrorCandidateOptions): ErrorClassification | null => {
   const normalizedError = normalizeError(error);
-  return resolveDeterministicKnownError(registry, normalizedError);
-};
-
-export const classifyErrorCandidateUnexpected = (
-  registry: ErrorRegistry | ReadonlyErrorRegistry,
-  error: unknown,
-): ErrorClassification | null => {
-  const normalizedError = normalizeError(error);
-  return resolveHeuristicUnexpectedError(registry, normalizedError);
+  const knownClassification = resolveDeterministicKnownError(registry, normalizedError);
+  return (
+    knownClassification ?? (shouldMatchPatterns ? resolveHeuristicUnexpectedError(registry, normalizedError) : null)
+  );
 };

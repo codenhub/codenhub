@@ -119,7 +119,7 @@ export interface ErrorRegistryBucket {
    * Adds or replaces multiple feedback entries from a list of tuple definitions.
    *
    * @param entries - List of tuples containing [identifier, feedback].
-   * @throws TypeError - If any identifier or feedback in the list is invalid.
+   * @throws TypeError - If any identifier or feedback in the list is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
 
@@ -191,7 +191,7 @@ export interface ErrorPrefixRegistryBucket {
    * Adds or replaces multiple prefix feedback definitions from a list of tuples.
    *
    * @param entries - List of tuples containing [prefix, feedback].
-   * @throws TypeError - If any entry is invalid.
+   * @throws TypeError - If any entry is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
 
@@ -234,7 +234,7 @@ export interface ErrorPatternRegistryBucket {
    * Adds or replaces multiple RegExp pattern definitions from a list of tuples.
    *
    * @param entries - List of tuples containing [pattern, feedback].
-   * @throws TypeError - If any entry is invalid.
+   * @throws TypeError - If any entry is invalid. No entries are added on failure.
    */
   addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
 
@@ -296,8 +296,10 @@ export interface ErrorRegistry {
 
   /**
    * Merges all mappings from the source registry into this registry, overwriting matching identifiers.
+   * Leaves this registry unchanged when reading or validating the source fails.
    *
    * @param registry - The source registry to merge. Accepts both mutable and read-only registries.
+   * @throws TypeError - If the source contains an invalid registry entry.
    */
   merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
 }

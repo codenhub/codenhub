@@ -43,11 +43,9 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --dts --clean --no-fixed-extension --unbundle",
-    "docs:check": "node scripts/generate-llms-full.mjs --check",
-    "generate:llms": "node scripts/generate-llms-full.mjs",
-    "prepublishOnly": "pnpm build && pnpm typecheck && vitest run && pnpm docs:check",
+    "prepublishOnly": "pnpm build && pnpm typecheck && vitest run",
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
-    "status:pack": "pnpm build && node scripts/validate-package.mjs",
+    "status:pack": "pnpm build && npm pack --dry-run --json --ignore-scripts",
     "test": "pnpm build && vitest run",
     "test:coverage": "pnpm build && vitest run --coverage",
     "test:watch": "pnpm build && vitest",

@@ -38,13 +38,18 @@ Unmatched values become `type: "unknown"` and use
 ## Requirements
 
 - ESM-aware package resolution.
-- Browser, Node.js, SSR, worker, and edge runtimes are supported.
+- A modern JavaScript runtime with native `Error` cause support.
 - No runtime dependencies.
+
+Runtime code does not access browser or Node.js globals, making it suitable for
+browser, Node.js, SSR, worker, and edge environments that meet these
+requirements.
 
 ## Notes
 
 - Registry presets are opt-in and do not mutate the global registry on import.
 - Configure the mutable global registry during application initialization.
+- Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances and read-only registry snapshots are frozen.
 - Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.
 - `originalError` remains available for diagnostics but is omitted from default JSON serialization.

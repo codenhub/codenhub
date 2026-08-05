@@ -48,6 +48,7 @@ export function ok<T>(value?: T): Ok<T> {
  * @param error - The raw error value to normalize.
  * @param options - Configuration options for AppError normalization.
  * @returns An Err result object.
+ * @throws TypeError - If `options.maxDepth` is not an integer from 0 through 3.
  */
 export const err = (error: unknown, options: AppErrorOptions = {}): Err => ({
   ok: false,

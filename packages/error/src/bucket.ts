@@ -135,15 +135,20 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
     }
     return normalizedIdentifier;
   };
+  const prepareEntry = ([identifier, feedback]: readonly [string, ErrorFeedback]): [string, ErrorFeedback] => [
+    getNormalizedIdentifier(identifier),
+    cloneFeedback(feedback),
+  ];
   const add = (identifier: string, feedback: ErrorFeedback): void => {
-    entries.set(getNormalizedIdentifier(identifier), cloneFeedback(feedback));
+    entries.set(...prepareEntry([identifier, feedback]));
   };
 
   return {
     add,
     addList(errorEntries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void {
-      for (const [identifier, feedback] of errorEntries) {
-        add(identifier, feedback);
+      const preparedEntries = errorEntries.map(prepareEntry);
+      for (const entry of preparedEntries) {
+        entries.set(...entry);
       }
     },
     clear(): void {
@@ -199,21 +204,26 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
     return sortedCache!;
   };
 
-  const add = (prefix: string, feedback: ErrorFeedback): void => {
+  const prepareEntry = ([prefix, feedback]: readonly [string, ErrorFeedback]): [string, ErrorFeedback] => {
     if (typeof prefix !== "string" || normalizeErrorMessage(prefix).length === 0) {
       throw new TypeError("Error registry prefix must be a non-empty string.");
     }
 
-    entries.set(normalizeErrorMessage(prefix), cloneFeedback(feedback));
+    return [normalizeErrorMessage(prefix), cloneFeedback(feedback)];
+  };
+  const add = (prefix: string, feedback: ErrorFeedback): void => {
+    entries.set(...prepareEntry([prefix, feedback]));
     sortedCache = null;
   };
 
   return {
     add,
     addList(errorEntries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void {
-      for (const [prefix, feedback] of errorEntries) {
-        add(prefix, feedback);
+      const preparedEntries = errorEntries.map(prepareEntry);
+      for (const entry of preparedEntries) {
+        entries.set(...entry);
       }
+      sortedCache = null;
     },
     clear(): void {
       entries.clear();
@@ -245,21 +255,22 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   const entries: ErrorPatternDefinition[] = [];
   let cachedValues: ErrorPatternDefinition[] | null = null;
 
-  const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
+  const prepareDefinition = ([pattern, feedback]: readonly [RegExp, ErrorFeedback]): ErrorPatternDefinition => {
     if (!isRegExp(pattern)) {
       throw new TypeError("Error registry pattern must be a RegExp.");
     }
 
     const source = pattern.source;
     const flags = pattern.flags.replace(/[gy]/g, "");
-    const existingIndex = entries.findIndex(
-      (entry) => entry.pattern.source === source && entry.pattern.flags === flags,
-    );
-
-    const definition: ErrorPatternDefinition = {
+    return {
       ...cloneFeedback(feedback),
       pattern: new RegExp(source, flags),
     };
+  };
+  const storeDefinition = (definition: ErrorPatternDefinition): void => {
+    const existingIndex = entries.findIndex(
+      (entry) => entry.pattern.source === definition.pattern.source && entry.pattern.flags === definition.pattern.flags,
+    );
 
     if (existingIndex !== -1) {
       entries[existingIndex] = definition;
@@ -268,12 +279,16 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     }
     cachedValues = null;
   };
+  const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
+    storeDefinition(prepareDefinition([pattern, feedback]));
+  };
 
   return {
     add,
     addList(errorEntries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void {
-      for (const [pattern, feedback] of errorEntries) {
-        add(pattern, feedback);
+      const definitions = errorEntries.map(prepareDefinition);
+      for (const definition of definitions) {
+        storeDefinition(definition);
       }
     },
     clear(): void {

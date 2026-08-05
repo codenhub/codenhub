@@ -40,13 +40,18 @@ Unmatched values become `type: "unknown"` and use
 ## Requirements
 
 - ESM-aware package resolution.
-- Browser, Node.js, SSR, worker, and edge runtimes are supported.
+- A modern JavaScript runtime with native `Error` cause support.
 - No runtime dependencies.
+
+Runtime code does not access browser or Node.js globals, making it suitable for
+browser, Node.js, SSR, worker, and edge environments that meet these
+requirements.
 
 ## Notes
 
 - Registry presets are opt-in and do not mutate the global registry on import.
 - Configure the mutable global registry during application initialization.
+- Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances and read-only registry snapshots are frozen.
 - Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.
 - `originalError` remains available for diagnostics but is omitted from default JSON serialization.
@@ -115,11 +120,12 @@ matching priority and preset entrypoints.
 ## Requirements
 
 - ESM-aware package resolution is required.
-- Browser, Node.js, SSR, worker, and edge runtimes are supported.
+- A modern JavaScript runtime with native `Error` cause support is required.
 - The package has no runtime dependencies.
 
-Browser preset imports do not access DOM globals. Supabase preset imports do not
-contact services or require Supabase packages.
+Runtime code does not access browser or Node.js globals. Browser preset imports
+do not access DOM globals. Supabase preset imports do not contact services or
+require Supabase packages.
 
 ## Next steps
 
@@ -215,11 +221,16 @@ feedback, definitions, and collection arrays are defensively copied.
 
 Code and name identifiers are trimmed but otherwise exact, so punctuation
 remains significant. Message and prefix identifiers are trimmed and trailing
-`.`, `!`, and `?` are removed. Empty identifiers, inaccessible or invalid
-feedback fields, and non-`RegExp` patterns throw `TypeError`. Feedback fields
-are read once and copied into plain data. Duplicate exact identifiers, prefixes,
-or equivalent regexes are replaced. Global and sticky flags are removed from
-registered regexes.
+`.`, `!`, and `?` are removed. Adding or deleting empty identifiers, adding
+inaccessible or invalid feedback fields, and adding or deleting non-`RegExp`
+patterns throw `TypeError`; exact-bucket `get` returns `undefined` for an empty
+or non-string identifier. Feedback fields are read once and copied into plain
+data. Duplicate exact identifiers, prefixes, or equivalent regexes are
+replaced. Global and sticky flags are removed from registered regexes.
+
+`addList` validates the complete batch before adding entries. `merge` stages and
+validates the complete source before changing its target. Either operation
+leaves its target unchanged when validation fails.
 
 Classification priority is:
 

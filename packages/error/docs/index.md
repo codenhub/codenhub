@@ -50,11 +50,12 @@ matching priority and preset entrypoints.
 ## Requirements
 
 - ESM-aware package resolution is required.
-- Browser, Node.js, SSR, worker, and edge runtimes are supported.
+- A modern JavaScript runtime with native `Error` cause support is required.
 - The package has no runtime dependencies.
 
-Browser preset imports do not access DOM globals. Supabase preset imports do not
-contact services or require Supabase packages.
+Runtime code does not access browser or Node.js globals. Browser preset imports
+do not access DOM globals. Supabase preset imports do not contact services or
+require Supabase packages.
 
 ## Next steps
 

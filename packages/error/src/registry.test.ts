@@ -10,8 +10,11 @@ import {
   type ReadonlyErrorRegistry,
 } from "./index";
 
+const defaultRegistry = getErrorRegistry();
+
 afterEach(() => {
-  getErrorRegistry().clear();
+  setErrorRegistry(defaultRegistry);
+  defaultRegistry.clear();
 });
 
 describe("createErrorRegistry", () => {
@@ -90,6 +93,23 @@ describe("createErrorRegistry", () => {
       message: "Network request failed.",
     });
   });
+
+  it("should leave the target unchanged when a source bucket is invalid", () => {
+    const target = createErrorRegistry();
+    target.codes.add("existing", { message: "Existing" });
+    const source = createErrorRegistry();
+    source.codes.add("new", { message: "New" });
+    const invalidSource = {
+      ...source,
+      prefixes: {
+        values: () => [{ prefix: "!!!", message: "Invalid" }],
+      },
+    } as unknown as ReadonlyErrorRegistry;
+
+    expect(() => target.merge(invalidSource)).toThrow(TypeError);
+    expect(target.codes.get("existing")).toEqual({ message: "Existing" });
+    expect(target.codes.get("new")).toBeUndefined();
+  });
 });
 
 describe("getErrorRegistry / setErrorRegistry", () => {
@@ -99,7 +119,6 @@ describe("getErrorRegistry / setErrorRegistry", () => {
   });
 
   it("should replace the active registry and affect createAppError", () => {
-    const defaultRegistry = getErrorRegistry();
     const customRegistry = createErrorRegistry();
     customRegistry.codes.add("code_one", { message: "Custom message" });
 
@@ -109,8 +128,6 @@ describe("getErrorRegistry / setErrorRegistry", () => {
       type: "known",
       message: "Custom message",
     });
-
-    setErrorRegistry(defaultRegistry);
   });
 
   it("should reject a non-object registry value", () => {

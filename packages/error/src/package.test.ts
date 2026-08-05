@@ -11,4 +11,43 @@ describe("published package exports", () => {
     expect(browserRegistries.browserErrorNames).toBeDefined();
     expect(supabaseRegistries.supabaseErrorCodes).toBeDefined();
   });
+
+  it("should expose only the documented runtime exports", () => {
+    expect(Object.keys(errorPackage).sort()).toEqual(
+      [
+        "DEFAULT_APP_ERROR_MESSAGE",
+        "andThen",
+        "andThenAsync",
+        "createAppError",
+        "createErrorRegistry",
+        "err",
+        "freezeRegistry",
+        "getErrorRegistry",
+        "isAppError",
+        "map",
+        "mapAsync",
+        "match",
+        "ok",
+        "setErrorRegistry",
+        "unwrap",
+        "unwrapOr",
+      ].sort(),
+    );
+    expect(Object.keys(registries).sort()).toEqual(
+      [
+        "browserErrorNames",
+        "browserErrorPatterns",
+        "browserErrorRegistry",
+        "supabaseErrorCodes",
+        "supabaseErrorNames",
+        "supabaseErrorRegistry",
+      ].sort(),
+    );
+    expect(Object.keys(browserRegistries).sort()).toEqual(
+      ["browserErrorNames", "browserErrorPatterns", "browserErrorRegistry"].sort(),
+    );
+    expect(Object.keys(supabaseRegistries).sort()).toEqual(
+      ["supabaseErrorCodes", "supabaseErrorNames", "supabaseErrorRegistry"].sort(),
+    );
+  });
 });

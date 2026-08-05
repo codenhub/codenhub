@@ -58,20 +58,20 @@ export const browserErrorNames = freezeFeedbackMap({
 
 const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
-    /failed to fetch|networkerror|load failed/i,
-    {
-      message: "Network request failed.",
-      messageKey: "error.browser.network",
-      source: "browser.network",
-    },
-  ] as const,
-  [
     /connection refused|dns_probe_finished/i,
     {
       message: "Could not connect to the server.",
       messageKey: "error.browser.connectionRefused",
       source: "browser.network",
       isRetryable: true,
+    },
+  ] as const,
+  [
+    /failed to fetch|networkerror|load failed/i,
+    {
+      message: "Network request failed.",
+      messageKey: "error.browser.network",
+      source: "browser.network",
     },
   ] as const,
 ];

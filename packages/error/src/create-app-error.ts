@@ -1,4 +1,4 @@
-import { classifyErrorCandidateKnown, classifyErrorCandidateUnexpected, getErrorCandidates } from "./normalize";
+import { classifyErrorCandidate, getErrorCandidates } from "./normalize";
 import { getErrorRegistry } from "./registry";
 import type { AppError, AppErrorOptions, AppErrorSource, AppErrorType } from "./types";
 
@@ -100,17 +100,18 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
       continue;
     }
 
-    const classification = classifyErrorCandidateKnown(registry, candidate);
-    if (classification !== null) {
+    const classification = classifyErrorCandidate({
+      registry,
+      error: candidate,
+      shouldMatchPatterns: unexpectedResult === null,
+    });
+    if (classification?.type === "known") {
       knownResult = { ...classification, originalError: error };
       break;
     }
 
-    if (unexpectedResult === null) {
-      const classification = classifyErrorCandidateUnexpected(registry, candidate);
-      if (classification !== null) {
-        unexpectedResult = { ...classification, originalError: error };
-      }
+    if (classification?.type === "unexpected" && unexpectedResult === null) {
+      unexpectedResult = { ...classification, originalError: error };
     }
   }
 

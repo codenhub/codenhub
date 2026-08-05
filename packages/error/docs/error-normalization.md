@@ -82,11 +82,16 @@ feedback, definitions, and collection arrays are defensively copied.
 
 Code and name identifiers are trimmed but otherwise exact, so punctuation
 remains significant. Message and prefix identifiers are trimmed and trailing
-`.`, `!`, and `?` are removed. Empty identifiers, inaccessible or invalid
-feedback fields, and non-`RegExp` patterns throw `TypeError`. Feedback fields
-are read once and copied into plain data. Duplicate exact identifiers, prefixes,
-or equivalent regexes are replaced. Global and sticky flags are removed from
-registered regexes.
+`.`, `!`, and `?` are removed. Adding or deleting empty identifiers, adding
+inaccessible or invalid feedback fields, and adding or deleting non-`RegExp`
+patterns throw `TypeError`; exact-bucket `get` returns `undefined` for an empty
+or non-string identifier. Feedback fields are read once and copied into plain
+data. Duplicate exact identifiers, prefixes, or equivalent regexes are
+replaced. Global and sticky flags are removed from registered regexes.
+
+`addList` validates the complete batch before adding entries. `merge` stages and
+validates the complete source before changing its target. Either operation
+leaves its target unchanged when validation fails.
 
 Classification priority is:
 

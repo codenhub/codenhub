@@ -7,6 +7,8 @@ import {
 } from "./bucket";
 import type { ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
+type RegistryBuckets = Pick<ErrorRegistry, "codes" | "names" | "messages" | "prefixes" | "patterns">;
+
 const MUTABLE_BUCKET_METHODS = ["add", "addList", "clear", "delete", "get", "values"] as const;
 const PREFIX_BUCKET_METHODS = ["add", "addList", "clear", "delete", "values"] as const;
 const PATTERN_BUCKET_METHODS = ["add", "addList", "clear", "delete", "values"] as const;
@@ -47,6 +49,21 @@ const isMutableErrorRegistry = (value: unknown): value is ErrorRegistry => {
   );
 };
 
+const copyRegistryEntries = (
+  sourceRegistry: ErrorRegistry | ReadonlyErrorRegistry,
+  targetRegistry: RegistryBuckets,
+): void => {
+  targetRegistry.codes.addList([...sourceRegistry.codes.values()]);
+  targetRegistry.names.addList([...sourceRegistry.names.values()]);
+  targetRegistry.messages.addList([...sourceRegistry.messages.values()]);
+  targetRegistry.prefixes.addList(
+    sourceRegistry.prefixes.values().map(({ prefix, ...feedback }) => [prefix, feedback] as const),
+  );
+  targetRegistry.patterns.addList(
+    sourceRegistry.patterns.values().map(({ pattern, ...feedback }) => [pattern, feedback] as const),
+  );
+};
+
 /**
  * Creates an empty, isolated error registry.
  *
@@ -76,25 +93,16 @@ export const createErrorRegistry = (presets?: readonly (ErrorRegistry | Readonly
       patterns.clear();
     },
     merge(sourceRegistry: ErrorRegistry | ReadonlyErrorRegistry): void {
-      for (const [identifier, feedback] of sourceRegistry.codes.values()) {
-        codes.add(identifier, feedback);
-      }
+      const stagedRegistry: RegistryBuckets = {
+        codes: createFeedbackMapBucket(normalizeExactErrorIdentifier),
+        names: createFeedbackMapBucket(normalizeExactErrorIdentifier),
+        messages: createFeedbackMapBucket(normalizeErrorMessage),
+        prefixes: createPrefixBucket(),
+        patterns: createPatternBucket(),
+      };
 
-      for (const [identifier, feedback] of sourceRegistry.names.values()) {
-        names.add(identifier, feedback);
-      }
-
-      for (const [identifier, feedback] of sourceRegistry.messages.values()) {
-        messages.add(identifier, feedback);
-      }
-
-      for (const { prefix, ...feedback } of sourceRegistry.prefixes.values()) {
-        prefixes.add(prefix, feedback);
-      }
-
-      for (const { pattern, ...feedback } of sourceRegistry.patterns.values()) {
-        patterns.add(pattern, feedback);
-      }
+      copyRegistryEntries(sourceRegistry, stagedRegistry);
+      copyRegistryEntries(stagedRegistry, registry);
     },
   };
 

@@ -112,7 +112,6 @@ export const supabaseErrorNames = freezeFeedbackMap({
     message: "Failed to fetch Edge Function.",
     messageKey: "error.supabase.functions.fetch",
     source: "supabase.functions",
-    isRetryable: true,
   },
 });
 
