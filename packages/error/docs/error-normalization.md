@@ -21,11 +21,11 @@ const error = createAppError(new Error("Request failed"), {
 
 `AppErrorOptions` supports:
 
-| Option            | Default                     | Behavior                                                                                                              |
-| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.                                                                                       |
-| `registry`        | `getErrorRegistry()`        | Classification source.                                                                                                |
-| `maxDepth`        | `3`                         | Maximum wrapper traversal depth. Finite negatives clamp to `0`, fractions are floored, and non-finite values use `3`. |
+| Option            | Default                     | Behavior                                                        |
+| ----------------- | --------------------------- | --------------------------------------------------------------- |
+| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.                                 |
+| `registry`        | `getErrorRegistry()`        | Classification source.                                          |
+| `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`. |
 
 `DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
 `isAppError(value)` identifies errors created by the current package runtime.
@@ -33,7 +33,7 @@ Structurally similar or serialized values are not accepted. Passing an `AppError
 to `createAppError` returns the same object when no custom options are supplied;
 custom options cause it to be normalized again.
 
-An `AppError` implements `Error` and exposes:
+An `AppError` is frozen, implements `Error`, and exposes:
 
 - `type: AppErrorType`, where deterministic matches are `"known"`, pattern
   matches are `"unexpected"`, and unmatched values are `"unknown"`.
@@ -45,9 +45,9 @@ Normalization does not throw for ordinary unknown input, including objects or
 proxies whose inspected properties throw. JSON serialization excludes the raw
 `originalError` diagnostic value, preventing sensitive fields and cyclic wrapper
 objects from being serialized through the normalized error. Registry
-configuration errors throw `TypeError` at their configuration boundary. Finite
-negative `maxDepth` values clamp to `0`, fractional values are floored, and
-non-finite values use the default depth of `3`.
+configuration errors throw `TypeError` at their configuration boundary. A
+`maxDepth` outside the integer range from `0` through `3` also throws
+`TypeError` before traversal.
 
 ## Configure A Registry
 
@@ -62,8 +62,8 @@ import { createAppError, createErrorRegistry } from "@codenhub/error";
 const registry = createErrorRegistry();
 registry.codes.add("E_RATE_LIMIT", {
   message: "Try again later.",
-  messageKey: "errors.rateLimit",
-  source: "api",
+  messageKey: "error.my-app.api.rateLimit",
+  source: "my-app.api",
   isRetryable: true,
 });
 
@@ -80,10 +80,13 @@ Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
 `ErrorPrefixDefinition` and `ErrorPatternDefinition` values. All returned
 feedback, definitions, and collection arrays are defensively copied.
 
-Identifiers are trimmed and trailing `.`, `!`, and `?` are removed. Empty
-identifiers, invalid feedback fields, and non-`RegExp` patterns throw
-`TypeError`. Duplicate exact identifiers, prefixes, or equivalent regexes are
-replaced. Global and sticky flags are removed from registered regexes.
+Code and name identifiers are trimmed but otherwise exact, so punctuation
+remains significant. Message and prefix identifiers are trimmed and trailing
+`.`, `!`, and `?` are removed. Empty identifiers, inaccessible or invalid
+feedback fields, and non-`RegExp` patterns throw `TypeError`. Feedback fields
+are read once and copied into plain data. Duplicate exact identifiers, prefixes,
+or equivalent regexes are replaced. Global and sticky flags are removed from
+registered regexes.
 
 Classification priority is:
 
@@ -101,10 +104,10 @@ the first heuristic match. `AppErrorType`, `AppErrorSource`,
 ## Read-Only Presets
 
 `freezeRegistry(registry)` returns an immutable `ReadonlyErrorRegistry` snapshot.
-Its read methods remain available, but runtime attempts to mutate a proxied
-bucket throw `TypeError`. Later mutations to the source registry do not affect
-the snapshot. Use frozen registries as presets passed to `createErrorRegistry`
-or `merge`.
+Its frozen bucket facades expose only read methods at runtime; mutation methods
+are absent, including through reflection. Later mutations to the source registry
+do not affect the snapshot. Use frozen registries as presets passed to
+`createErrorRegistry` or `merge`.
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
@@ -128,3 +131,12 @@ network-message matches are not marked retryable; connection refusal and DNS
 matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
 Edge Function error names. Preset coverage is not exhaustive, and message
 patterns are heuristic.
+
+## Migration From 0.1
+
+Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are
+frozen, `isAppError` recognizes only values created by the current package
+runtime, `originalError` is non-enumerable, frozen registries are isolated
+snapshots without runtime mutators, code and name punctuation remains
+significant, and invalid `maxDepth` values throw. Pass `fallbackMessage`
+explicitly when a string supplied to `err()` is safe for users.

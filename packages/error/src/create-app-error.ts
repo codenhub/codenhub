@@ -25,7 +25,6 @@ class AppErrorImpl extends Error implements AppError {
 
   constructor(resolved: AppErrorResolution) {
     super(resolved.message, { cause: resolved.originalError });
-    Object.setPrototypeOf(this, new.target.prototype);
     this.name = "AppError";
     this.type = resolved.type;
     this.messageKey = resolved.messageKey;
@@ -38,6 +37,7 @@ class AppErrorImpl extends Error implements AppError {
       configurable: false,
     });
     APP_ERROR_INSTANCES.add(this);
+    Object.freeze(this);
   }
 }
 
@@ -54,7 +54,7 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
  * Normalizes an unknown error value into a predictable, structured AppError shape.
  *
  * This function processes the error value by unrolling nested wrappers (e.g., `cause` or `originalError`)
- * up to a fixed depth to locate a registered classification.
+ * up to the configured depth to locate a registered classification.
  *
  * Classifications are resolved in priority order across all candidates:
  * 1. Known AppError or deterministic registry match (code, name, message, prefix).
@@ -63,8 +63,9 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
  * 4. Fallback unknown error.
  *
  * @param error - The raw error value to normalize (e.g., Error instances, plain objects, or strings).
- * @param options - Configuration options controlling fallback message and registry source.
- * @returns A normalized AppError instance. If the input is already a normalized AppError, it is returned as-is.
+ * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
+ * @returns A frozen AppError. An existing AppError is returned as-is only when no custom options are supplied.
+ * @throws TypeError - If `maxDepth` is not an integer from 0 through 3.
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
   const hasCustomOptions =

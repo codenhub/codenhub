@@ -8,6 +8,8 @@ known errors, regex matches become unexpected errors, and unmatched values use
 the configured fallback message.
 
 `isAppError` recognizes errors created by the current package runtime.
+`AppError` values and read-only registry snapshots are frozen. Raw strings passed
+to `err` require an explicit safe `fallbackMessage` to become user-facing.
 `originalError` remains available for diagnostics but is omitted from default
 JSON serialization.
 

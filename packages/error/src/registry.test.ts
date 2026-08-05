@@ -21,7 +21,7 @@ describe("createErrorRegistry", () => {
 
     firstRegistry.codes.add("invalid_credentials", {
       message: "Invalid email or password.",
-      source: "auth",
+      source: "my-app.auth",
     });
 
     expect(createAppError({ code: "invalid_credentials" }, { registry: firstRegistry })).toMatchObject({
@@ -129,49 +129,49 @@ describe("freezeRegistry", () => {
     expect([...frozen.codes.values()]).toHaveLength(1);
   });
 
-  it("should throw TypeError when mutation methods are called on frozen buckets (runtime guard)", () => {
+  it("should not expose mutation methods through property descriptors", () => {
     const registry = createErrorRegistry();
     const frozen = freezeRegistry(registry);
 
-    // TypeScript prevents direct calls — cast to test runtime guard
-    const mutableCodes = frozen.codes as unknown as ErrorRegistry["codes"];
-    expect(() => mutableCodes.add("code", { message: "err" })).toThrow(TypeError);
-    expect(() => mutableCodes.addList([["code", { message: "err" }]])).toThrow(TypeError);
-    expect(() => mutableCodes.clear()).toThrow(TypeError);
-    expect(() => mutableCodes.delete("code")).toThrow(TypeError);
-
-    const mutablePrefixes = frozen.prefixes as unknown as ErrorRegistry["prefixes"];
-    expect(() => mutablePrefixes.add("prefix", { message: "err" })).toThrow(TypeError);
-    expect(() => mutablePrefixes.addList([["prefix", { message: "err" }]])).toThrow(TypeError);
-    expect(() => mutablePrefixes.clear()).toThrow(TypeError);
-    expect(() => mutablePrefixes.delete("prefix")).toThrow(TypeError);
-
-    const mutablePatterns = frozen.patterns as unknown as ErrorRegistry["patterns"];
-    expect(() => mutablePatterns.add(/p/, { message: "err" })).toThrow(TypeError);
-    expect(() => mutablePatterns.addList([[/p/, { message: "err" }]])).toThrow(TypeError);
-    expect(() => mutablePatterns.clear()).toThrow(TypeError);
-    expect(() => mutablePatterns.delete(/p/)).toThrow(TypeError);
+    expect(Object.getOwnPropertyDescriptor(frozen.codes, "add")).toBeUndefined();
+    expect(Object.getOwnPropertyDescriptor(frozen.prefixes, "clear")).toBeUndefined();
+    expect(Object.getOwnPropertyDescriptor(frozen.patterns, "delete")).toBeUndefined();
   });
 
-  it("should throw TypeError when advanced structural mutations are attempted on a frozen bucket", () => {
+  it("should omit mutation methods from frozen buckets", () => {
     const registry = createErrorRegistry();
     const frozen = freezeRegistry(registry);
 
-    expect(() => {
-      delete (frozen.codes as unknown as Record<string, unknown>).add;
-    }).toThrow(TypeError);
+    const mutableCodes = frozen.codes as unknown as ErrorRegistry["codes"];
+    expect(mutableCodes.add).toBeUndefined();
+    expect(mutableCodes.addList).toBeUndefined();
+    expect(mutableCodes.clear).toBeUndefined();
+    expect(mutableCodes.delete).toBeUndefined();
+
+    const mutablePrefixes = frozen.prefixes as unknown as ErrorRegistry["prefixes"];
+    expect(mutablePrefixes.add).toBeUndefined();
+    expect(mutablePrefixes.addList).toBeUndefined();
+    expect(mutablePrefixes.clear).toBeUndefined();
+    expect(mutablePrefixes.delete).toBeUndefined();
+
+    const mutablePatterns = frozen.patterns as unknown as ErrorRegistry["patterns"];
+    expect(mutablePatterns.add).toBeUndefined();
+    expect(mutablePatterns.addList).toBeUndefined();
+    expect(mutablePatterns.clear).toBeUndefined();
+    expect(mutablePatterns.delete).toBeUndefined();
+  });
+
+  it("should freeze each read-only bucket facade", () => {
+    const registry = createErrorRegistry();
+    const frozen = freezeRegistry(registry);
 
     expect(() => {
       Object.defineProperty(frozen.codes, "newProp", { value: "val" });
     }).toThrow(TypeError);
-
-    expect(() => {
-      Object.preventExtensions(frozen.codes);
-    }).toThrow(TypeError);
-
     expect(() => {
       Object.setPrototypeOf(frozen.codes, {});
     }).toThrow(TypeError);
+    expect(Object.isFrozen(frozen.codes)).toBe(true);
   });
 
   it("should throw TypeError when a property is set on a frozen bucket", () => {

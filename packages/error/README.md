@@ -19,7 +19,7 @@ import { createAppError, getErrorRegistry } from "@codenhub/error";
 
 getErrorRegistry().codes.add("invalid_credentials", {
   message: "Invalid email or password.",
-  source: "auth",
+  source: "my-app.auth",
 });
 
 const error = createAppError({ code: "invalid_credentials" });
@@ -45,8 +45,16 @@ Unmatched values become `type: "unknown"` and use
 
 - Registry presets are opt-in and do not mutate the global registry on import.
 - Configure the mutable global registry during application initialization.
+- `AppError` instances and read-only registry snapshots are frozen.
+- Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.
 - `originalError` remains available for diagnostics but is omitted from default JSON serialization.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
+
+### Migration From 0.1
+
+Version 0.2 is a clean API reset. `AppError` values are frozen, `maxDepth` only
+accepts integers from `0` through `3`, code and name punctuation is significant,
+and `err(string)` no longer exposes that string as its message.
 
 ## License
 

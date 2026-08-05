@@ -1,5 +1,5 @@
 /**
- * A predictable, structured error shape representing a normalized application error.
+ * A predictable, frozen error shape representing a normalized application error.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
  * localization support, and original error wrapping.
@@ -18,7 +18,7 @@ export interface AppError extends Error {
   readonly messageKey: string | null;
 
   /**
-   * The optional source namespace, module, or package (e.g., `auth`, `supabase.database`)
+   * The optional source namespace, module, or package (e.g., `my-app.auth`, `supabase.database`)
    * that originally produced the error.
    */
   readonly source: AppErrorSource;
@@ -54,7 +54,7 @@ export interface AppErrorOptions {
 
   /**
    * The maximum depth to unwrap nested error wrappers (e.g. cause, originalError).
-   * Defaults to 3.
+   * Must be an integer from 0 through 3. Defaults to 3.
    */
   maxDepth?: number;
 }
@@ -107,7 +107,7 @@ export interface ErrorFeedback {
 export interface ErrorRegistryBucket {
   /**
    * Adds or replaces error feedback for a given identifier.
-   * Trims whitespace and strips trailing punctuation from the identifier before storing.
+   * Code and name buckets trim whitespace. Message buckets also strip trailing sentence punctuation.
    *
    * @param identifier - The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
    * @param feedback - The feedback metadata to attach to this identifier.
@@ -138,7 +138,7 @@ export interface ErrorRegistryBucket {
 
   /**
    * Removes error feedback mapped to the specified identifier.
-   * Trims whitespace and strips trailing punctuation from the identifier before deleting.
+   * Uses the same bucket-specific normalization as `add`.
    *
    * @param identifier - The exact identifier to delete.
    * @returns True if an element in the bucket existed and has been removed, or false if the element does not exist.
@@ -305,9 +305,8 @@ export interface ErrorRegistry {
 /**
  * An immutable snapshot of an error registry returned by `freezeRegistry`.
  *
- * Exposes only the read-facing surface of each bucket. Mutation methods (`add`, `addList`,
- * `clear`, `delete`) are not part of this type. Suitable as a preset source passed to
- * `createErrorRegistry` or `merge`.
+ * Exposes only the read-facing surface of each bucket at both type and runtime levels.
+ * Suitable as a preset source passed to `createErrorRegistry` or `merge`.
  */
 export interface ReadonlyErrorRegistry {
   /** Read-only view of code mappings. */

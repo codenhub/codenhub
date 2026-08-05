@@ -12,17 +12,20 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.codes.get("invalid_credentials")).toEqual({ message: "Invalid email or password." });
   });
 
-  it("should normalize identifiers by trimming whitespace and stripping trailing punctuation", () => {
+  it("should trim code identifiers without stripping punctuation", () => {
     const registry = createErrorRegistry();
-    registry.codes.add(" invalid_credentials. ", { message: "Invalid email or password." });
-    expect(registry.codes.get("invalid_credentials")).toEqual({ message: "Invalid email or password." });
+    registry.codes.add(" E ", { message: "Base code." });
+    registry.codes.add(" E! ", { message: "Punctuated code." });
+
+    expect(registry.codes.get("E")).toEqual({ message: "Base code." });
+    expect(registry.codes.get("E!")).toEqual({ message: "Punctuated code." });
   });
 
-  it("should normalize whitespace before trailing punctuation consistently", () => {
+  it("should normalize trailing punctuation for message identifiers", () => {
     const registry = createErrorRegistry();
-    registry.codes.add("code .", { message: "Mapped code." });
+    registry.messages.add("Message .", { message: "Mapped message." });
 
-    expect(registry.codes.get("code")).toEqual({ message: "Mapped code." });
+    expect(registry.messages.get("Message")).toEqual({ message: "Mapped message." });
   });
 
   it("should return a defensive copy from get so external mutation does not affect stored state", () => {
@@ -58,6 +61,33 @@ describe("feedback map bucket (codes / names / messages)", () => {
     registry.codes.add("non-enumerable", feedback);
 
     expect(registry.codes.get("non-enumerable")).toEqual({ message: "Hidden message" });
+  });
+
+  it("should read each feedback field only once", () => {
+    const registry = createErrorRegistry();
+    let messageReads = 0;
+    const feedback = {
+      get message(): string {
+        messageReads += 1;
+        return "Stable message";
+      },
+    };
+
+    registry.codes.add("single_read", feedback);
+
+    expect(messageReads).toBe(1);
+    expect(registry.codes.get("single_read")).toEqual({ message: "Stable message" });
+  });
+
+  it("should convert inaccessible feedback fields to TypeError", () => {
+    const registry = createErrorRegistry();
+    const feedback = {
+      get message(): string {
+        throw new Error("Accessor detail");
+      },
+    };
+
+    expect(() => registry.codes.add("inaccessible", feedback)).toThrow(TypeError);
   });
 
   it("should add multiple entries with addList", () => {

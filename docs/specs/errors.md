@@ -31,6 +31,29 @@ Packages that do not expose errors do not need to follow this spec.
 recognizing serialized errors or instances created by another package copy or
 runtime.
 
+## `@codenhub/error` runtime contract
+
+`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT
+be writable, configurable, added, or removed after construction. The referenced
+`originalError` value is diagnostic input and is not recursively frozen.
+
+Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth`
+MUST be an integer from `0` through `3`; all other values are programmer errors
+and MUST throw `TypeError` before traversal begins.
+
+Raw strings passed to `err()` MUST be treated as untrusted error values. They
+MUST NOT become user-facing messages unless the caller explicitly supplies a
+safe `fallbackMessage`.
+
+`freezeRegistry()` MUST return an immutable snapshot rather than a live view.
+The returned registry and buckets MUST expose only their documented read
+methods at runtime. Reflection MUST NOT reveal mutation methods from the source
+or snapshot registry.
+
+Registry feedback MUST be copied into plain data before storage. Each feedback
+field MUST be read at most once, and inaccessible or invalid fields MUST produce
+a `TypeError` rather than allowing invalid data into a bucket.
+
 ## Providing error mappings (not registries)
 
 Packages MUST NOT introduce a runtime dependency on `@codenhub/error` solely for the purpose of exposing their error definitions. Consequently, if a package only wants to publish error definitions, it MUST NOT create or export `ErrorRegistry` or `ReadonlyErrorRegistry` instances directly.
@@ -81,6 +104,11 @@ Use the bucket that matches the most stable identifier available for the error:
 | `patterns` | The error can only be identified heuristically. Results are classified as `"unexpected"`, not `"known"`. | `/connection timed out/i`, `/rate limit/i`     |
 
 Prefer `codes` over `names` over `messages`. Prefer `messages` over `prefixes`. Prefer `prefixes` over `patterns`.
+
+Code and name identifiers are exact machine identifiers after trimming leading
+and trailing whitespace. Their punctuation MUST remain significant. Message and
+prefix identifiers are human-readable text; implementations MAY ignore trailing
+sentence punctuation consistently during registration and matching.
 
 Avoid registering message patterns unless no stable code or name exists. Pattern matches are heuristic by nature and classified as `"unexpected"`, which signals lower confidence to consumers.
 

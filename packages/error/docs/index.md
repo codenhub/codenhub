@@ -29,7 +29,7 @@ import { createAppError, getErrorRegistry } from "@codenhub/error";
 
 getErrorRegistry().codes.add("invalid_credentials", {
   message: "Invalid email or password.",
-  source: "auth",
+  source: "my-app.auth",
 });
 
 const error = createAppError({ code: "invalid_credentials" });

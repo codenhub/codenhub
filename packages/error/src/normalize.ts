@@ -1,4 +1,4 @@
-import { normalizeErrorIdentifier } from "./bucket";
+import { normalizeErrorMessage } from "./bucket";
 import type { AppErrorType, ErrorFeedback, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 interface NormalizedError {
@@ -81,7 +81,10 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
 };
 
 export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
-  const sanitizedMaxDepth = Number.isFinite(maxDepth) ? Math.max(0, Math.floor(maxDepth)) : ERROR_UNWRAP_MAX_DEPTH;
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
+    throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
+  }
+
   const visitedObjects = new Set<object>();
 
   if (isRecord(error)) {
@@ -96,7 +99,7 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
 
     candidates.push(candidate.value);
 
-    if (candidate.depth >= sanitizedMaxDepth) {
+    if (candidate.depth >= maxDepth) {
       continue;
     }
 
@@ -120,7 +123,7 @@ const getKnownMessageFeedback = (
   registry: ErrorRegistry | ReadonlyErrorRegistry,
   message: string,
 ): ErrorClassification | null => {
-  const normalizedMessage = normalizeErrorIdentifier(message);
+  const normalizedMessage = normalizeErrorMessage(message);
 
   const exactFeedback = registry.messages.get(normalizedMessage);
   if (exactFeedback !== undefined) {

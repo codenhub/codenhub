@@ -1,4 +1,10 @@
-import { createFeedbackMapBucket, createPatternBucket, createPrefixBucket } from "./bucket";
+import {
+  createFeedbackMapBucket,
+  createPatternBucket,
+  createPrefixBucket,
+  normalizeErrorMessage,
+  normalizeExactErrorIdentifier,
+} from "./bucket";
 import type { ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 const MUTABLE_BUCKET_METHODS = ["add", "addList", "clear", "delete", "get", "values"] as const;
@@ -50,9 +56,9 @@ const isMutableErrorRegistry = (value: unknown): value is ErrorRegistry => {
  * @returns A new, mutable ErrorRegistry instance.
  */
 export const createErrorRegistry = (presets?: readonly (ErrorRegistry | ReadonlyErrorRegistry)[]): ErrorRegistry => {
-  const codes = createFeedbackMapBucket();
-  const names = createFeedbackMapBucket();
-  const messages = createFeedbackMapBucket();
+  const codes = createFeedbackMapBucket(normalizeExactErrorIdentifier);
+  const names = createFeedbackMapBucket(normalizeExactErrorIdentifier);
+  const messages = createFeedbackMapBucket(normalizeErrorMessage);
   const prefixes = createPrefixBucket();
   const patterns = createPatternBucket();
 
@@ -131,58 +137,19 @@ export const setErrorRegistry = (registry: ErrorRegistry): void => {
 };
 
 /**
- * Creates an immutable snapshot of an ErrorRegistry behind read-only proxies.
- *
- * All mutating methods (such as `add`, `addList`, `clear`, `delete`) will throw a TypeError
- * if called on a frozen registry bucket. The returned type is `ReadonlyErrorRegistry`,
- * which only exposes the read-facing bucket surface at the type level.
+ * Creates an immutable snapshot containing only read-facing bucket methods.
  *
  * @param registry - The ErrorRegistry instance to freeze.
  * @returns An immutable `ReadonlyErrorRegistry` snapshot.
  */
 export const freezeRegistry = (registry: ErrorRegistry): ReadonlyErrorRegistry => {
-  const throwReadOnly = (): never => {
-    throw new TypeError("Cannot modify a read-only error registry.");
-  };
-
-  const freezeBucket = <T extends object>(bucket: T): T => {
-    return new Proxy(bucket, {
-      get(target, prop, receiver) {
-        if (prop === "add" || prop === "addList" || prop === "clear" || prop === "delete") {
-          return throwReadOnly;
-        }
-        return Reflect.get(target, prop, receiver);
-      },
-      set() {
-        throwReadOnly();
-        return false;
-      },
-      defineProperty() {
-        throwReadOnly();
-        return false;
-      },
-      deleteProperty() {
-        throwReadOnly();
-        return false;
-      },
-      preventExtensions() {
-        throwReadOnly();
-        return false;
-      },
-      setPrototypeOf() {
-        throwReadOnly();
-        return false;
-      },
-    });
-  };
-
   const snapshot = createErrorRegistry([registry]);
 
   return Object.freeze({
-    codes: freezeBucket(snapshot.codes),
-    names: freezeBucket(snapshot.names),
-    messages: freezeBucket(snapshot.messages),
-    prefixes: freezeBucket(snapshot.prefixes),
-    patterns: freezeBucket(snapshot.patterns),
+    codes: Object.freeze({ get: snapshot.codes.get, values: snapshot.codes.values }),
+    names: Object.freeze({ get: snapshot.names.get, values: snapshot.names.values }),
+    messages: Object.freeze({ get: snapshot.messages.get, values: snapshot.messages.values }),
+    prefixes: Object.freeze({ values: snapshot.prefixes.values }),
+    patterns: Object.freeze({ values: snapshot.patterns.values }),
   });
 };

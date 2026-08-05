@@ -17,6 +17,16 @@ describe("createAppError — basic normalization", () => {
     expect(appError.isRetryable).toBe(false);
   });
 
+  it.each(["", ".", { code: "" }, { name: "!" }, { message: "?" }])(
+    "should safely normalize empty identifier input %#",
+    (input) => {
+      expect(createAppError(input)).toMatchObject({
+        type: "unknown",
+        message: DEFAULT_APP_ERROR_MESSAGE,
+      });
+    },
+  );
+
   it("should return as-is when input is already a normalized AppError", () => {
     const original = createAppError("Something failed");
     expect(createAppError(original)).toBe(original);
@@ -25,13 +35,13 @@ describe("createAppError — basic normalization", () => {
   it("should use the active global registry by default", () => {
     getErrorRegistry().codes.add("invalid_credentials", {
       message: "Invalid email or password.",
-      source: "auth",
+      source: "my-app.auth",
     });
 
     expect(createAppError({ code: "invalid_credentials" })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
-      source: "auth",
+      source: "my-app.auth",
     });
   });
 
@@ -45,6 +55,15 @@ describe("createAppError — basic normalization", () => {
     const appError = createAppError({ token: "secret-token" });
 
     expect(JSON.stringify(appError)).not.toContain("secret-token");
+  });
+
+  it("should freeze the complete AppError instance", () => {
+    const appError = createAppError("internal detail");
+
+    expect(Object.isFrozen(appError)).toBe(true);
+    expect(() => {
+      (appError as { message: string }).message = "Changed";
+    }).toThrow(TypeError);
   });
 
   it("should serialize normalized errors when the original error is cyclic", () => {
@@ -121,7 +140,7 @@ describe("createAppError — basic normalization", () => {
 describe("createAppError — registry matching priority", () => {
   it("should classify via exact code match", () => {
     const registry = createErrorRegistry();
-    registry.codes.add("invalid_credentials", { message: "Invalid email or password.", source: "auth" });
+    registry.codes.add("invalid_credentials", { message: "Invalid email or password.", source: "my-app.auth" });
     expect(createAppError({ code: "invalid_credentials" }, { registry })).toMatchObject({
       type: "known",
       message: "Invalid email or password.",
@@ -453,18 +472,18 @@ describe("createAppError — appErrorFallback nested unknown AppError resolution
     expect(result.type).toBe("unknown");
   });
 
-  it("should sanitize negative or invalid maxDepth to zero or default", () => {
+  it.each([-1, 1.5, 4, Number.NaN, Number.POSITIVE_INFINITY])("should reject invalid maxDepth %s", (maxDepth) => {
+    expect(() => createAppError({ cause: new Error("nested") }, { maxDepth })).toThrow(TypeError);
+  });
+
+  it("should allow maxDepth values from zero through three", () => {
     const registry = createErrorRegistry();
     registry.codes.add("nested_code", { message: "Nested error." });
     const errorWithCause = { cause: { code: "nested_code" }, message: "Outer message" };
 
-    // maxDepth = -1 should sanitize to 0, inspecting only top-level error object
-    const resultNegative = createAppError(errorWithCause, { maxDepth: -1, registry });
-    expect(resultNegative.type).toBe("unknown");
-
-    // maxDepth = NaN should sanitize to default ERROR_UNWRAP_MAX_DEPTH (3)
-    const resultNaN = createAppError(errorWithCause, { maxDepth: Number.NaN, registry });
-    expect(resultNaN.type).toBe("known");
-    expect(resultNaN.message).toBe("Nested error.");
+    expect(createAppError(errorWithCause, { maxDepth: 0, registry }).type).toBe("unknown");
+    expect(createAppError(errorWithCause, { maxDepth: 1, registry }).type).toBe("known");
+    expect(createAppError(errorWithCause, { maxDepth: 2, registry }).type).toBe("known");
+    expect(createAppError(errorWithCause, { maxDepth: 3, registry }).type).toBe("known");
   });
 });

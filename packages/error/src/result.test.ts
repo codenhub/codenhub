@@ -41,9 +41,14 @@ describe("err", () => {
     expect(result.error.message).toBe("Invalid email or password.");
   });
 
-  it("should use a string error value as the fallback message", () => {
+  it("should treat a string error value as untrusted by default", () => {
     const result = err("Missing user id");
     expect(result.error.type).toBe("unknown");
+    expect(result.error.message).toBe("An unexpected error occurred.");
+  });
+
+  it("should use an explicit fallback message for a string error value", () => {
+    const result = err("internal detail", { fallbackMessage: "Missing user id" });
     expect(result.error.message).toBe("Missing user id");
   });
 
@@ -71,10 +76,18 @@ describe("map", () => {
   });
 
   it("should pass a failed result through without calling the mapper", () => {
-    const result = err("failed");
+    const result = err("internal detail", { fallbackMessage: "failed" });
     const mapped = map(result, (val: number) => val * 2);
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("failed");
+  });
+
+  it("should propagate mapper exceptions", () => {
+    expect(() =>
+      map(ok("value"), () => {
+        throw new Error("Mapper failed");
+      }),
+    ).toThrow("Mapper failed");
   });
 });
 
@@ -86,7 +99,7 @@ describe("mapAsync", () => {
   });
 
   it("should pass a failed result through without calling the async mapper", async () => {
-    const result = err("failed");
+    const result = err("internal detail", { fallbackMessage: "failed" });
     let called = false;
     const mapped = await mapAsync(result, async (val: number) => {
       called = true;
@@ -95,6 +108,12 @@ describe("mapAsync", () => {
     expect(called).toBe(false);
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("failed");
+  });
+
+  it("should reject when the mapper rejects", async () => {
+    await expect(mapAsync(ok("value"), async () => Promise.reject(new Error("Mapper failed")))).rejects.toThrow(
+      "Mapper failed",
+    );
   });
 });
 
@@ -110,13 +129,24 @@ describe("match", () => {
   });
 
   it("should call onErr with the AppError for a failed result", () => {
-    const result = err("failed");
+    const result = err("internal detail", { fallbackMessage: "failed" });
     expect(
       match(result, {
         onOk: (val) => `OK: ${val}`,
         onErr: (error) => `ERR: ${error.message}`,
       }),
     ).toBe("ERR: failed");
+  });
+
+  it("should propagate callback exceptions", () => {
+    expect(() =>
+      match(ok("value"), {
+        onOk: () => {
+          throw new Error("Callback failed");
+        },
+        onErr: () => "unused",
+      }),
+    ).toThrow("Callback failed");
   });
 });
 
@@ -129,13 +159,13 @@ describe("andThen", () => {
 
   it("should return the Err result from the mapper function on success", () => {
     const result = ok(10);
-    const mapped = andThen(result, () => err("nested failure"));
+    const mapped = andThen(result, () => err("internal detail", { fallbackMessage: "nested failure" }));
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("nested failure");
   });
 
   it("should forward a failed result without calling the mapper", () => {
-    const result = err("failed");
+    const result = err("internal detail", { fallbackMessage: "failed" });
     let called = false;
     const mapped = andThen(result, (val: number) => {
       called = true;
@@ -144,6 +174,14 @@ describe("andThen", () => {
     expect(called).toBe(false);
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("failed");
+  });
+
+  it("should propagate mapper exceptions", () => {
+    expect(() =>
+      andThen(ok("value"), () => {
+        throw new Error("Mapper failed");
+      }),
+    ).toThrow("Mapper failed");
   });
 });
 
@@ -156,13 +194,15 @@ describe("andThenAsync", () => {
 
   it("should return the Err result from the async mapper function on success", async () => {
     const result = ok(10);
-    const mapped = await andThenAsync(result, async () => err("nested async failure"));
+    const mapped = await andThenAsync(result, async () =>
+      err("internal detail", { fallbackMessage: "nested async failure" }),
+    );
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("nested async failure");
   });
 
   it("should forward a failed result without calling the async mapper", async () => {
-    const result = err("failed");
+    const result = err("internal detail", { fallbackMessage: "failed" });
     let called = false;
     const mapped = await andThenAsync(result, async (val: number) => {
       called = true;
@@ -171,6 +211,12 @@ describe("andThenAsync", () => {
     expect(called).toBe(false);
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("failed");
+  });
+
+  it("should reject when the mapper rejects", async () => {
+    await expect(andThenAsync(ok("value"), async () => Promise.reject(new Error("Mapper failed")))).rejects.toThrow(
+      "Mapper failed",
+    );
   });
 });
 

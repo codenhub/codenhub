@@ -43,8 +43,7 @@ export function ok<T>(value?: T): Ok<T> {
 
 /**
  * Creates a failed Result instance wrapping a normalized AppError.
- *
- * If the input error is a string, it is automatically treated as the fallback message.
+ * Raw strings remain diagnostic input and do not become the fallback message automatically.
  *
  * @param error - The raw error value to normalize.
  * @param options - Configuration options for AppError normalization.
@@ -52,7 +51,7 @@ export function ok<T>(value?: T): Ok<T> {
  */
 export const err = (error: unknown, options: AppErrorOptions = {}): Err => ({
   ok: false,
-  error: createAppError(error, typeof error === "string" ? { fallbackMessage: error, ...options } : options),
+  error: createAppError(error, options),
 });
 
 /**
@@ -78,6 +77,7 @@ export const unwrap = <T>(result: Result<T>): T => {
  * @param result - The Result instance to map.
  * @param mapper - The function to map the success value.
  * @returns A new Result instance with the mapped value or the original Err.
+ * @throws The exception thrown by `mapper`; callback failures are not normalized.
  */
 export const map = <T, U>(result: Result<T>, mapper: (value: T) => U): Result<U> => {
   if (!result.ok) {
@@ -94,6 +94,7 @@ export const map = <T, U>(result: Result<T>, mapper: (value: T) => U): Result<U>
  * @param result - The Result instance to match.
  * @param callbacks - An object containing onOk and onErr callback functions.
  * @returns The value returned by the executed callback.
+ * @throws The exception thrown by the selected callback; callback failures are not normalized.
  */
 export const match = <T, U>(
   result: Result<T>,
@@ -117,6 +118,7 @@ export const match = <T, U>(
  * @param result - The Result instance to process.
  * @param mapper - The function to map the success value to a new Result.
  * @returns A new Result instance from the mapper or the original Err.
+ * @throws The exception thrown by `mapper`; callback failures are not normalized.
  */
 export const andThen = <T, U>(result: Result<T>, mapper: (value: T) => Result<U>): Result<U> => {
   if (!result.ok) {
@@ -147,7 +149,8 @@ export const unwrapOr = <T>(result: Result<T>, fallback: T): T => {
  * @typeParam U - The type of the mapped value.
  * @param result - The Result instance to map.
  * @param mapper - The asynchronous function to map the success value.
- * @returns A Promise resolving to a new Result instance with the mapped value or the original Err.
+ * @returns A Promise resolving to a new Result instance with the mapped value or the original Err. The promise rejects
+ * if `mapper` throws or rejects; callback failures are not normalized.
  */
 export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => Promise<U>): Promise<Result<U>> => {
   if (!result.ok) {
@@ -164,7 +167,8 @@ export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => Pr
  * @typeParam U - The type of the mapped success value.
  * @param result - The Result instance to process.
  * @param mapper - The asynchronous function to map the success value to a Promise of a new Result.
- * @returns A Promise resolving to the Result returned by the mapper or the original Err.
+ * @returns A Promise resolving to the Result returned by the mapper or the original Err. The promise rejects if
+ * `mapper` throws or rejects; callback failures are not normalized.
  */
 export const andThenAsync = async <T, U>(
   result: Result<T>,

@@ -10,12 +10,14 @@ title: Results
 ```ts
 import { err, ok, type Result } from "@codenhub/error";
 
-const loadName = (value: string | null): Result<string> => (value === null ? err("Name is missing") : ok(value));
+const loadName = (value: string | null): Result<string> =>
+  value === null ? err("missing_name", { fallbackMessage: "Name is missing." }) : ok(value);
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
-options?)` delegates to `createAppError`; when `error` is a string, that string
-becomes the fallback message unless `options.fallbackMessage` overrides it.
+options?)` delegates to `createAppError`. Raw strings are treated as untrusted
+diagnostic input and use the generic fallback message. Supply `fallbackMessage`
+explicitly only when the text is safe for users.
 
 The remaining helpers operate only on the success branch unless stated:
 

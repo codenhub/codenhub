@@ -16,64 +16,68 @@ const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
  * @param identifier - The raw error identifier string.
  * @returns The normalized error identifier string.
  */
-export const normalizeErrorIdentifier = (identifier: string): string => {
+export const normalizeErrorMessage = (identifier: string): string => {
   return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "").trim();
 };
 
-/**
- * Asserts that an identifier normalizes to a non-empty string.
- *
- * @throws TypeError - If the identifier is empty after normalization.
- * @internal
- */
-export const assertNonEmptyIdentifier = (identifier: string, label: string): void => {
-  if (typeof identifier !== "string" || normalizeErrorIdentifier(identifier).length === 0) {
-    throw new TypeError(`Error registry ${label} must be a non-empty string.`);
-  }
+/** @internal */
+export const normalizeExactErrorIdentifier = (identifier: string): string => {
+  return identifier.trim();
 };
 
 /**
- * Validates that a feedback object has the required shape and field types.
+ * Copies and validates feedback while reading each external property once.
  *
  * @throws TypeError - If feedback is missing or has invalid field types.
  * @internal
  */
-export const assertFeedback = (feedback: ErrorFeedback): void => {
+export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
   if (typeof feedback !== "object" || feedback === null) {
     throw new TypeError("Error registry feedback must be an object.");
   }
 
-  if (typeof feedback.message !== "string" || feedback.message.trim().length === 0) {
+  let message: unknown;
+  let messageKey: unknown;
+  let source: unknown;
+  let isRetryable: unknown;
+
+  try {
+    message = feedback.message;
+    messageKey = feedback.messageKey;
+    source = feedback.source;
+    isRetryable = feedback.isRetryable;
+  } catch {
+    throw new TypeError("Error registry feedback fields must be readable.");
+  }
+
+  if (typeof message !== "string" || message.trim().length === 0) {
     throw new TypeError("Error registry feedback.message must be a non-empty string.");
   }
 
-  if (feedback.messageKey !== undefined && typeof feedback.messageKey !== "string") {
+  if (messageKey !== undefined && typeof messageKey !== "string") {
     throw new TypeError("Error registry feedback.messageKey must be a string when provided.");
   }
 
-  if (feedback.source !== undefined && typeof feedback.source !== "string") {
+  if (source !== undefined && typeof source !== "string") {
     throw new TypeError("Error registry feedback.source must be a string when provided.");
   }
 
-  if (feedback.isRetryable !== undefined && typeof feedback.isRetryable !== "boolean") {
+  if (isRetryable !== undefined && typeof isRetryable !== "boolean") {
     throw new TypeError("Error registry feedback.isRetryable must be a boolean when provided.");
   }
-};
 
-/** @internal */
-export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
-  const clone: ErrorFeedback = { message: feedback.message };
+  const clone: ErrorFeedback = { message };
 
-  if (feedback.messageKey !== undefined) {
-    clone.messageKey = feedback.messageKey;
+  if (messageKey !== undefined) {
+    clone.messageKey = messageKey;
   }
 
-  if (feedback.source !== undefined) {
-    clone.source = feedback.source;
+  if (source !== undefined) {
+    clone.source = source;
   }
 
-  if (feedback.isRetryable !== undefined) {
-    clone.isRetryable = feedback.isRetryable;
+  if (isRetryable !== undefined) {
+    clone.isRetryable = isRetryable;
   }
 
   return clone;
@@ -118,13 +122,21 @@ const isRegExp = (value: unknown): value is RegExp => {
  *
  * @internal
  */
-export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
+export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string) => string): ErrorRegistryBucket => {
   const entries = new Map<string, ErrorFeedback>();
-  const add = (identifier: string, feedback: ErrorFeedback): void => {
-    assertNonEmptyIdentifier(identifier, "identifier");
-    assertFeedback(feedback);
+  const getNormalizedIdentifier = (identifier: string): string => {
+    if (typeof identifier !== "string") {
+      throw new TypeError("Error registry identifier must be a non-empty string.");
+    }
 
-    entries.set(normalizeErrorIdentifier(identifier), cloneFeedback(feedback));
+    const normalizedIdentifier = normalizeIdentifier(identifier);
+    if (normalizedIdentifier.length === 0) {
+      throw new TypeError("Error registry identifier must be a non-empty string.");
+    }
+    return normalizedIdentifier;
+  };
+  const add = (identifier: string, feedback: ErrorFeedback): void => {
+    entries.set(getNormalizedIdentifier(identifier), cloneFeedback(feedback));
   };
 
   return {
@@ -138,11 +150,19 @@ export const createFeedbackMapBucket = (): ErrorRegistryBucket => {
       entries.clear();
     },
     delete(identifier: string): boolean {
-      assertNonEmptyIdentifier(identifier, "identifier");
-      return entries.delete(normalizeErrorIdentifier(identifier));
+      return entries.delete(getNormalizedIdentifier(identifier));
     },
     get(identifier: string): ErrorFeedback | undefined {
-      const feedback = entries.get(normalizeErrorIdentifier(identifier));
+      if (typeof identifier !== "string") {
+        return undefined;
+      }
+
+      const normalizedIdentifier = normalizeIdentifier(identifier);
+      if (normalizedIdentifier.length === 0) {
+        return undefined;
+      }
+
+      const feedback = entries.get(normalizedIdentifier);
       return feedback === undefined ? undefined : cloneFeedback(feedback);
     },
     *values(): IterableIterator<[string, ErrorFeedback]> {
@@ -180,10 +200,11 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   };
 
   const add = (prefix: string, feedback: ErrorFeedback): void => {
-    assertNonEmptyIdentifier(prefix, "prefix");
-    assertFeedback(feedback);
+    if (typeof prefix !== "string" || normalizeErrorMessage(prefix).length === 0) {
+      throw new TypeError("Error registry prefix must be a non-empty string.");
+    }
 
-    entries.set(normalizeErrorIdentifier(prefix), cloneFeedback(feedback));
+    entries.set(normalizeErrorMessage(prefix), cloneFeedback(feedback));
     sortedCache = null;
   };
 
@@ -199,8 +220,10 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
       sortedCache = [];
     },
     delete(prefix: string): boolean {
-      assertNonEmptyIdentifier(prefix, "prefix");
-      const deleted = entries.delete(normalizeErrorIdentifier(prefix));
+      if (typeof prefix !== "string" || normalizeErrorMessage(prefix).length === 0) {
+        throw new TypeError("Error registry prefix must be a non-empty string.");
+      }
+      const deleted = entries.delete(normalizeErrorMessage(prefix));
       if (deleted) {
         sortedCache = null;
       }
@@ -226,8 +249,6 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     if (!isRegExp(pattern)) {
       throw new TypeError("Error registry pattern must be a RegExp.");
     }
-
-    assertFeedback(feedback);
 
     const source = pattern.source;
     const flags = pattern.flags.replace(/[gy]/g, "");

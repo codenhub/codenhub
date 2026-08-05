@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/error",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": false,
   "description": "Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.",
   "license": "Apache-2.0",
@@ -43,12 +43,14 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --dts --clean --no-fixed-extension --unbundle",
-    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "docs:check": "node scripts/generate-llms-full.mjs --check",
+    "generate:llms": "node scripts/generate-llms-full.mjs",
+    "prepublishOnly": "pnpm build && pnpm typecheck && vitest run && pnpm docs:check",
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
-    "status:pack": "npm pack --dry-run",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
+    "status:pack": "pnpm build && node scripts/validate-package.mjs",
+    "test": "pnpm build && vitest run",
+    "test:coverage": "pnpm build && vitest run --coverage",
+    "test:watch": "pnpm build && vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
