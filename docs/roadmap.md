@@ -15,6 +15,8 @@ Track high-level progress and milestone status for foundation and utility packag
 ### @codenhub
 
 - [x] Enable collocated demo app for each package
+- [ ] Add and improve scripts
+- [ ] Organize dependencies, remove unused, ensure all packages are self-contained
 
 ### @codenhub/docs
 

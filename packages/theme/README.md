@@ -15,13 +15,16 @@ pnpm add @codenhub/theme
 ## Usage
 
 ```ts
-import { createTheme } from "@codenhub/theme";
+import { createTheme, getPrePaintScript } from "@codenhub/theme";
 
 const theme = createTheme().init();
 theme.set("dark");
 
+// Get inline IIFE script string for <head> to prevent FOUC:
+const script = theme.getPrePaintScript(); // or standalone getPrePaintScript()
+
 // Remove media-query/storage listeners and subscribers on teardown.
-theme.destroy();
+theme.destroy({ revertDom: true });
 ```
 
 ## Documentation

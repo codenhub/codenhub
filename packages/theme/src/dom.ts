@@ -134,3 +134,37 @@ export const emitThemeEvent = <TSchema extends Record<string, string>>(detail: T
 
   window.dispatchEvent(new CustomEvent<ThemeChangeDetail<TSchema>>(THEME_CHANGE_EVENT, { detail }));
 };
+
+/**
+ * Reverts DOM attribute, classes, colorScheme, and CSS Custom Properties applied to the document element.
+ *
+ * @internal
+ */
+export const removeAppliedTheme = <TSchema extends Record<string, string>>(args: {
+  options: ResolvedThemeOptions<TSchema>;
+  resolvedClasses: readonly string[];
+}): void => {
+  const { options, resolvedClasses } = args;
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const root = document.documentElement;
+
+  root.removeAttribute(options.attribute);
+  root.style.removeProperty("color-scheme");
+
+  for (const configuredClass of resolvedClasses) {
+    root.classList.remove(configuredClass);
+  }
+
+  if (options.isTailwindCss) {
+    root.classList.remove(DARK_CLASS);
+  }
+
+  if (options.tokenSchema) {
+    for (const cssVarName of Object.values(options.tokenSchema)) {
+      root.style.removeProperty(cssVarName);
+    }
+  }
+};

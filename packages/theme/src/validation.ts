@@ -52,6 +52,12 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
       );
     }
 
+    if (theme.pairedTheme !== undefined) {
+      if (typeof theme.pairedTheme !== "string" || theme.pairedTheme.trim().length === 0) {
+        throw new Error(`Theme "${theme.name}" pairedTheme must be a non-empty string.`);
+      }
+    }
+
     if (names.has(theme.name)) {
       throw new Error(`Duplicate theme name: ${theme.name}.`);
     }
@@ -71,6 +77,12 @@ export const assertThemeConfig = <TSchema extends Record<string, string>>(
           throw new Error(`Theme "${theme.name}" defines token "${tokenKey}" which is not present in tokenSchema.`);
         }
       }
+    }
+  }
+
+  for (const theme of options.themes) {
+    if (theme.pairedTheme !== undefined && !names.has(theme.pairedTheme)) {
+      throw new Error(`Theme "${theme.name}" references unconfigured pairedTheme: ${theme.pairedTheme}.`);
     }
   }
 

@@ -6,6 +6,8 @@ export interface ThemeDefinition<TSchema extends Record<string, string> = Record
   colorScheme: "light" | "dark";
   /** Optional theme-specific static token values. */
   tokens?: Partial<Record<keyof TSchema, string>>;
+  /** Optional theme name activated when calling `toggle()` from this theme. */
+  pairedTheme?: string;
 }
 
 /** Mapping from OS color-scheme preferences to configured theme names. */
@@ -171,11 +173,20 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
   subscribe(listener: ThemeChangeListener<TSchema>): () => void;
 
   /**
+   * Generates a synchronous inline IIFE script string to inject into document `<head>`.
+   * Prevents Flash of Unstyled Content (FOUC) by applying storage or system theme before render.
+   *
+   * @returns Minified JavaScript script string.
+   */
+  getPrePaintScript(): string;
+
+  /**
    * Cleans up the theme instance by removing all in-process change listeners and the system
    * preference media query listener. Resets active tokens and the active theme name to the
    * configured `defaultTheme` so the instance can be safely re-initialized with `init()`.
    *
-   * @sideEffect Removes event listeners from `window` and clears internal subscriber sets.
+   * @param options - Optional cleanup options. Set `revertDom: true` to remove configured DOM attributes, classes, and CSS custom properties applied to `document.documentElement`.
+   * @sideEffect Removes event listeners from `window` and clears internal subscriber sets. If `revertDom: true`, removes theme attributes, classes, and custom properties from the DOM root.
    */
-  destroy(): void;
+  destroy(options?: { revertDom?: boolean }): void;
 }

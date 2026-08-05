@@ -5,6 +5,7 @@ import {
   DARK_THEME,
   LIGHT_THEME,
   createTheme as originalCreateTheme,
+  getPrePaintScript,
   THEME_CHANGE_EVENT,
   type ThemeChangeDetail,
   type ThemeDefinition,
@@ -865,6 +866,22 @@ describe("Theme CSS tokens support", () => {
     expect(theme.get().name).toBe("light");
   });
 
+  it("should revert DOM attributes, classes, and properties on destroy({ revertDom: true })", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({ tokenSchema, isTailwindCss: true }).init({ primary: "blue" });
+    theme.set("dark");
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("blue");
+
+    theme.destroy({ revertDom: true });
+
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("");
+  });
+
   it("should reject token definitions or overrides that use prototype properties", () => {
     expect(() =>
       createTheme({
@@ -913,5 +930,60 @@ describe("Theme CSS tokens support", () => {
     theme.set("dark");
     theme.set("light");
     expect(resolver).not.toHaveBeenCalled(); // Cached, no more resolver calls
+  });
+
+  it("should support pairedTheme when toggling between themes", () => {
+    const theme = createTheme({
+      themes: [
+        { name: "solarized-light", colorScheme: "light", pairedTheme: "solarized-dark" },
+        { name: "solarized-dark", colorScheme: "dark", pairedTheme: "solarized-light" },
+        LIGHT_THEME,
+        DARK_THEME,
+      ],
+      defaultTheme: "solarized-light",
+      systemTheme: { light: "solarized-light", dark: "solarized-dark" },
+    }).init();
+
+    expect(theme.get().name).toBe("solarized-light");
+    expect(theme.toggle().name).toBe("solarized-dark");
+    expect(theme.toggle().name).toBe("solarized-light");
+  });
+
+  it("should reject invalid or unconfigured pairedTheme", () => {
+    expect(() =>
+      createTheme({
+        themes: [{ name: "light", colorScheme: "light", pairedTheme: "missing-theme" }, DARK_THEME],
+      }),
+    ).toThrow('Theme "light" references unconfigured pairedTheme: missing-theme.');
+
+    expect(() =>
+      createTheme({
+        themes: [{ name: "light", colorScheme: "light", pairedTheme: "" }, DARK_THEME],
+      }),
+    ).toThrow('Theme "light" pairedTheme must be a non-empty string.');
+  });
+
+  it("should generate a valid pre-paint IIFE script string and execute safely in DOM", () => {
+    const theme = createTheme({
+      storageKey: "custom-key",
+      attribute: "data-mode",
+      isTailwindCss: true,
+    });
+
+    const script = theme.getPrePaintScript();
+    expect(typeof script).toBe("string");
+    expect(script).toContain("custom-key");
+    expect(script).toContain("data-mode");
+
+    // Also test standalone getPrePaintScript export
+    const standaloneScript = getPrePaintScript({ attribute: "data-mode" });
+    expect(typeof standaloneScript).toBe("string");
+
+    // Execute generated script in JSDOM environment
+    window.localStorage.setItem("custom-key", "dark");
+    new Function(script)();
+
+    expect(document.documentElement.getAttribute("data-mode")).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 });

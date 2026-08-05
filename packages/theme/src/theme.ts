@@ -1,6 +1,7 @@
 import { getThemeClass } from "./class-resolver";
 import { DEFAULT_OPTIONS } from "./constants";
-import { applyTheme, readComputedTokens, emitThemeEvent } from "./dom";
+import { applyTheme, readComputedTokens, emitThemeEvent, removeAppliedTheme } from "./dom";
+import { getPrePaintScript } from "./pre-paint";
 import { readStorage, writeStorage, removeStorage } from "./storage";
 import { readSystemTheme, registerSystemListener, registerStorageListener } from "./system";
 import type {
@@ -126,10 +127,18 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
   }
 
   toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema> {
-    const nextName =
-      this.#getTheme(this.#activeName).colorScheme === "dark"
-        ? this.#options.systemTheme.light
-        : this.#options.systemTheme.dark;
+    const currentTheme = this.#getTheme(this.#activeName);
+    let nextName: string;
+
+    if (
+      currentTheme.pairedTheme !== undefined &&
+      this.#options.themes.some((t) => t.name === currentTheme.pairedTheme)
+    ) {
+      nextName = currentTheme.pairedTheme;
+    } else {
+      nextName = currentTheme.colorScheme === "dark" ? this.#options.systemTheme.light : this.#options.systemTheme.dark;
+    }
+
     return this.#activate(nextName, { source: "toggle", shouldStore: true, tokens });
   }
 
@@ -157,7 +166,18 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     };
   }
 
-  destroy(): void {
+  getPrePaintScript(): string {
+    return getPrePaintScript(this.#options);
+  }
+
+  destroy(options?: { revertDom?: boolean }): void {
+    if (options?.revertDom) {
+      removeAppliedTheme({
+        options: this.#options,
+        resolvedClasses: this.#getResolvedClassesList(),
+      });
+    }
+
     if (this.#systemListenerCleanup) {
       this.#systemListenerCleanup();
       this.#systemListenerCleanup = null;
