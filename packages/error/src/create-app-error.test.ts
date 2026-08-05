@@ -388,4 +388,19 @@ describe("createAppError — appErrorFallback nested unknown AppError resolution
     const result = createAppError({ cause: "primitive cause string" }, { registry });
     expect(result.type).toBe("unknown");
   });
+
+  it("should sanitize negative or invalid maxDepth to zero or default", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("nested_code", { message: "Nested error." });
+    const errorWithCause = { cause: { code: "nested_code" }, message: "Outer message" };
+
+    // maxDepth = -1 should sanitize to 0, inspecting only top-level error object
+    const resultNegative = createAppError(errorWithCause, { maxDepth: -1, registry });
+    expect(resultNegative.type).toBe("unknown");
+
+    // maxDepth = NaN should sanitize to default ERROR_UNWRAP_MAX_DEPTH (3)
+    const resultNaN = createAppError(errorWithCause, { maxDepth: Number.NaN, registry });
+    expect(resultNaN.type).toBe("known");
+    expect(resultNaN.message).toBe("Nested error.");
+  });
 });

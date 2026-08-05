@@ -3,9 +3,6 @@
 Typed error normalization, result helpers, and opt-in registry presets for
 TypeScript applications.
 
-> **Experimental:** Error classification rules, preset contents, and the public
-> API may change before a stable release.
-
 ## Installation
 
 ```sh

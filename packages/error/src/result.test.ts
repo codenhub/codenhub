@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { andThen, createErrorRegistry, err, map, match, ok, unwrap, unwrapOr, type Err, type Result } from "./index";
+import {
+  andThen,
+  andThenAsync,
+  createErrorRegistry,
+  err,
+  map,
+  mapAsync,
+  match,
+  ok,
+  unwrap,
+  unwrapOr,
+  type Err,
+  type Result,
+} from "./index";
 
 describe("ok", () => {
   it("should create a successful result wrapping the provided value", () => {
@@ -65,6 +78,26 @@ describe("map", () => {
   });
 });
 
+describe("mapAsync", () => {
+  it("should transform the value of a successful result with an async mapper", async () => {
+    const result = ok(10);
+    const mapped = await mapAsync(result, async (val) => val * 2);
+    expect(unwrap(mapped)).toBe(20);
+  });
+
+  it("should pass a failed result through without calling the async mapper", async () => {
+    const result = err("failed");
+    let called = false;
+    const mapped = await mapAsync(result, async (val: number) => {
+      called = true;
+      return val * 2;
+    });
+    expect(called).toBe(false);
+    expect(mapped.ok).toBe(false);
+    expect((mapped as Err).error.message).toBe("failed");
+  });
+});
+
 describe("match", () => {
   it("should call onOk with the value for a successful result", () => {
     const result = ok("success");
@@ -105,6 +138,33 @@ describe("andThen", () => {
     const result = err("failed");
     let called = false;
     const mapped = andThen(result, (val: number) => {
+      called = true;
+      return ok(val * 2);
+    });
+    expect(called).toBe(false);
+    expect(mapped.ok).toBe(false);
+    expect((mapped as Err).error.message).toBe("failed");
+  });
+});
+
+describe("andThenAsync", () => {
+  it("should transform the value of a successful result using an async mapper returning a Result", async () => {
+    const result = ok(10);
+    const mapped = await andThenAsync(result, async (val) => ok(val * 2));
+    expect(unwrap(mapped)).toBe(20);
+  });
+
+  it("should return the Err result from the async mapper function on success", async () => {
+    const result = ok(10);
+    const mapped = await andThenAsync(result, async () => err("nested async failure"));
+    expect(mapped.ok).toBe(false);
+    expect((mapped as Err).error.message).toBe("nested async failure");
+  });
+
+  it("should forward a failed result without calling the async mapper", async () => {
+    const result = err("failed");
+    let called = false;
+    const mapped = await andThenAsync(result, async (val: number) => {
       called = true;
       return ok(val * 2);
     });

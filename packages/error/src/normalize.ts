@@ -81,6 +81,7 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
 };
 
 export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
+  const sanitizedMaxDepth = Number.isFinite(maxDepth) ? Math.max(0, Math.floor(maxDepth)) : ERROR_UNWRAP_MAX_DEPTH;
   const visitedObjects = new Set<object>();
 
   if (isRecord(error)) {
@@ -95,7 +96,7 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
 
     candidates.push(candidate.value);
 
-    if (candidate.depth >= maxDepth) {
+    if (candidate.depth >= sanitizedMaxDepth) {
       continue;
     }
 

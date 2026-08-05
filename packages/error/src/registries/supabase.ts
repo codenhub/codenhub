@@ -6,7 +6,7 @@ import type { ErrorFeedback } from "../types";
  *
  * Includes Postgres database codes and Supabase Auth specific error codes.
  */
-export const supabaseErrorCodes: Record<string, ErrorFeedback> = {
+export const supabaseErrorCodes: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
   invalid_credentials: {
     message: "Invalid email or password.",
     messageKey: "error.supabase.auth.invalidCredentials",
@@ -89,14 +89,14 @@ export const supabaseErrorCodes: Record<string, ErrorFeedback> = {
     source: "supabase.database",
     isRetryable: true,
   },
-};
+});
 
 /**
  * Raw name mapping definitions for common Supabase service errors.
  *
  * Includes name mappings for edge function execution issues.
  */
-export const supabaseErrorNames: Record<string, ErrorFeedback> = {
+export const supabaseErrorNames: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
   FunctionsHttpError: {
     message: "Edge Function request failed.",
     messageKey: "error.supabase.functions.http",
@@ -115,7 +115,7 @@ export const supabaseErrorNames: Record<string, ErrorFeedback> = {
     source: "supabase.functions",
     isRetryable: true,
   },
-};
+});
 
 const registry = createErrorRegistry();
 

@@ -6,7 +6,7 @@ import type { ErrorFeedback } from "../types";
  *
  * Provides fallback messages, translation keys, and source labels for typical browser DOMExceptions.
  */
-export const browserErrorNames: Record<string, ErrorFeedback> = {
+export const browserErrorNames: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
   AbortError: {
     message: "Request cancelled.",
     messageKey: "error.browser.abort",
@@ -54,14 +54,14 @@ export const browserErrorNames: Record<string, ErrorFeedback> = {
     source: "browser.network",
     isRetryable: true,
   },
-};
+});
 
 /**
  * Raw heuristic pattern mappings for common browser and Web API errors.
  *
  * Defines regex patterns to identify fetch failures, DNS issues, and network connection refusal.
  */
-export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[] = [
+export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[] = Object.freeze([
   [
     /failed to fetch|networkerror|load failed/i,
     {
@@ -70,7 +70,7 @@ export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[]
       source: "browser.network",
       isRetryable: true,
     },
-  ],
+  ] as const,
   [
     /connection refused|dns_probe_finished/i,
     {
@@ -79,8 +79,8 @@ export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[]
       source: "browser.network",
       isRetryable: true,
     },
-  ],
-];
+  ] as const,
+]);
 
 const registry = createErrorRegistry();
 

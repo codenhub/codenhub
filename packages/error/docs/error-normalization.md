@@ -115,7 +115,7 @@ Public preset exports are:
 | `@codenhub/error/registries/browser`  | `browserErrorRegistry`, `browserErrorNames`, `browserErrorPatterns`                                                                      |
 | `@codenhub/error/registries/supabase` | `supabaseErrorRegistry`, `supabaseErrorCodes`, `supabaseErrorNames`                                                                      |
 
-The raw name/code records and browser pattern tuples are mutable exports; the
+The raw name/code records and browser pattern tuples are read-only exports; the
 prebuilt registry values are read-only. Browser mappings cover common
 `DOMException` names and network-message patterns. Supabase mappings cover
 selected Auth and PostgreSQL codes plus Edge Function error names. Preset

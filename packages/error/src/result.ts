@@ -139,3 +139,39 @@ export const unwrapOr = <T>(result: Result<T>, fallback: T): T => {
   }
   return result.value;
 };
+
+/**
+ * Maps the success value of a Result asynchronously using the provided async mapper function.
+ *
+ * @typeParam T - The type of the original value.
+ * @typeParam U - The type of the mapped value.
+ * @param result - The Result instance to map.
+ * @param mapper - The asynchronous function to map the success value.
+ * @returns A Promise resolving to a new Result instance with the mapped value or the original Err.
+ */
+export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => Promise<U>): Promise<Result<U>> => {
+  if (!result.ok) {
+    return result;
+  }
+  return ok(await mapper(result.value));
+};
+
+/**
+ * Maps the success value of a Result asynchronously using the provided mapper function that returns a Promise of another Result.
+ * Prevents nested Result structures in asynchronous pipelines.
+ *
+ * @typeParam T - The type of the original success value.
+ * @typeParam U - The type of the mapped success value.
+ * @param result - The Result instance to process.
+ * @param mapper - The asynchronous function to map the success value to a Promise of a new Result.
+ * @returns A Promise resolving to the Result returned by the mapper or the original Err.
+ */
+export const andThenAsync = async <T, U>(
+  result: Result<T>,
+  mapper: (value: T) => Promise<Result<U>>,
+): Promise<Result<U>> => {
+  if (!result.ok) {
+    return result;
+  }
+  return mapper(result.value);
+};

@@ -1,8 +1,7 @@
 # @codenhub/error
 
 > Typed error normalization, result helpers, and opt-in browser and Supabase
-> registry presets. The package is experimental, and its default registry is
-> empty.
+> registry presets.
 
 Register application mappings explicitly. Deterministic registry matches become
 known errors, regex matches become unexpected errors, and unmatched values use
