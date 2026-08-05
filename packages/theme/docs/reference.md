@@ -91,7 +91,10 @@ Without browser APIs, storage, DOM, events, and listeners are skipped;
 HTML attributes. To avoid a flash, applications must apply equivalent validated
 storage/system logic in a blocking pre-paint script or render matching server
 markup. Keep that logic aligned with custom names, mappings, storage key,
-attribute, classes, and color scheme.
+attribute, classes, and color scheme. Note that `getPrePaintScript()` serializes
+static tokens defined on configured theme definitions (`ThemeDefinition.tokens`);
+runtime token overrides passed to `init(tokens)` or `set(name, tokens)` are applied
+during client-side execution after hydration.
 
 ## Public Exports
 

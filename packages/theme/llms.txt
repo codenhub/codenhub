@@ -1,6 +1,6 @@
 # @codenhub/theme
 
-> Experimental browser theme preference, persistence, DOM, cross-tab, event,
+> Zero-dependency browser theme preference, persistence, DOM, cross-tab, event,
 > and token manager with SSR-safe fallbacks.
 
 Call `init()` in the browser, keep pre-paint logic aligned with configuration,

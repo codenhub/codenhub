@@ -2,10 +2,6 @@
 
 Zero-dependency browser theme preference, persistence, DOM, and token manager.
 
-> [!WARNING]
-> This package is experimental. Its API, DOM behavior, and support level may
-> change before a stable release.
-
 ## Installation
 
 ```sh
