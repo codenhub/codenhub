@@ -986,4 +986,42 @@ describe("Theme CSS tokens support", () => {
     expect(document.documentElement.getAttribute("data-mode")).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
+
+  it("should generate pre-paint script with custom shouldApplyClass resolver and tokenSchema static variables", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const customLight = { name: "light", colorScheme: "light" as const, tokens: { primary: "#ffffff" } };
+    const customDark = { name: "dark", colorScheme: "dark" as const, tokens: { primary: "#000000" } };
+
+    const script = getPrePaintScript({
+      themes: [customLight, customDark],
+      tokenSchema,
+      shouldApplyClass: (t) => `app-${t.name}`,
+      storageKey: "theme-token-key",
+    });
+
+    expect(script).toContain("app-light");
+    expect(script).toContain("app-dark");
+    expect(script).toContain("--color-primary");
+
+    window.localStorage.setItem("theme-token-key", "dark");
+    new Function(script)();
+
+    expect(document.documentElement.classList.contains("app-dark")).toBe(true);
+    expect(document.documentElement.style.getPropertyValue("--color-primary")).toBe("#000000");
+  });
+
+  it("should respect skipComputed option in get()", () => {
+    const tokenSchema = { primary: "--color-primary" };
+    const theme = createTheme({ tokenSchema }).init();
+
+    const spy = vi.spyOn(window, "getComputedStyle");
+    try {
+      const fullTheme = theme.get({ skipComputed: true });
+      expect(fullTheme.tokens).toEqual({});
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      theme.destroy();
+    }
+  });
 });

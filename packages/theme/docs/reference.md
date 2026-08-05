@@ -29,9 +29,9 @@ preference, applies the theme, and emits an `"init"` change.
 
 ## Theme Operations
 
-- `get()` returns the active definition. Tokens merge computed CSS values,
+- `get(options?)` returns the active definition. Tokens merge computed CSS values,
   static theme values, then runtime overrides. Reading computed values can force
-  style calculation.
+  style calculation; pass `{ skipComputed: true }` to bypass reading computed DOM styles.
 - `set(name, tokens?)` applies and persists a configured theme; unknown names
   throw.
 - `toggle(tokens?)` switches to `pairedTheme` if defined on the active theme, or
@@ -42,8 +42,9 @@ preference, applies the theme, and emits an `"init"` change.
 - `getSystem()` returns the mapped system theme, or `defaultTheme` when media
   queries are unavailable.
 - `getPrePaintScript()` returns a synchronous inline IIFE script string to inject
-  into document `<head>` to prevent flash of unstyled content (FOUC). Also available
-  as standalone export `getPrePaintScript(options?)`.
+  into document `<head>` to prevent flash of unstyled content (FOUC). Supports custom
+  class resolvers and static token custom properties. Also available as standalone export
+  `getPrePaintScript(options?)`.
 
 Runtime token overrides persist across theme changes. Passing a new object,
 including `{}`, replaces them. Tokens require a schema and unknown token keys

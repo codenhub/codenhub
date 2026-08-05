@@ -96,10 +96,11 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
     return this;
   }
 
-  get(): ThemeDefinition<TSchema> {
+  get(options?: { skipComputed?: boolean }): ThemeDefinition<TSchema> {
     const baseTheme = this.#getTheme(this.#activeName);
-    const options = this.#options;
+    const resolvedOptions = this.#options;
     const activeTokens = this.#activeTokens;
+    const skipComputed = options?.skipComputed;
     let cachedTokens: Partial<Record<keyof TSchema, string>> | null = null;
 
     return {
@@ -108,8 +109,9 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
         if (cachedTokens === null) {
           const computedTokens = readComputedTokens({
             theme: baseTheme,
-            options,
+            options: resolvedOptions,
             activeTokens,
+            skipComputed,
           });
           cachedTokens = {
             ...computedTokens,

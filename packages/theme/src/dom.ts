@@ -68,11 +68,13 @@ export const readComputedTokens = <TSchema extends Record<string, string>>(args:
   theme: ThemeDefinition<TSchema>;
   options: ResolvedThemeOptions<TSchema>;
   activeTokens: Partial<Record<keyof TSchema, string>>;
+  skipComputed?: boolean;
 }): Partial<Record<keyof TSchema, string>> => {
-  const { theme, options, activeTokens } = args;
+  const { theme, options, activeTokens, skipComputed } = args;
   const computedTokens: Partial<Record<keyof TSchema, string>> = {};
 
   if (
+    skipComputed ||
     typeof window === "undefined" ||
     typeof window.getComputedStyle !== "function" ||
     typeof document === "undefined" ||

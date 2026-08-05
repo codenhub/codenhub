@@ -107,15 +107,16 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
    * Retrieves the active theme configuration including static and computed tokens.
    *
    * Token values are merged in this priority order (last wins):
-   * 1. CSS computed style — values read from `window.getComputedStyle` for tokens not defined in JS.
+   * 1. CSS computed style — values read from `window.getComputedStyle` for tokens not defined in JS (unless `options.skipComputed` is true).
    * 2. Theme static tokens — values defined in `ThemeDefinition.tokens` for the active theme.
    * 3. Runtime overrides — values passed to `init()`, `set()`, `toggle()`, or other methods.
    *
+   * @param options - Optional getter options. Set `skipComputed: true` to avoid reading computed styles from the DOM via `window.getComputedStyle`, preventing potential layout reflows.
    * @returns The active `ThemeDefinition` object. If `tokenSchema` is configured and a token is not
    * explicitly defined in JS, its value is dynamically resolved from the computed style of the root DOM element in browser environments.
-   * @warning Reading computed styles from the DOM via `window.getComputedStyle` can trigger a synchronous layout reflow. Avoid calling `get()` frequently or inside high-performance loops.
+   * @warning Reading computed styles from the DOM via `window.getComputedStyle` can trigger a synchronous layout reflow. Avoid calling `get()` frequently or inside high-performance loops, or pass `{ skipComputed: true }`.
    */
-  get(): ThemeDefinition<TSchema>;
+  get(options?: { skipComputed?: boolean }): ThemeDefinition<TSchema>;
 
   /**
    * Activates a configured theme by name and updates the stored preference in `localStorage`.
