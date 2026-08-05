@@ -142,11 +142,11 @@ const error = createAppError(new Error("Request failed"), {
 
 `AppErrorOptions` supports:
 
-| Option            | Default                     | Behavior                         |
-| ----------------- | --------------------------- | -------------------------------- |
-| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.  |
-| `registry`        | `getErrorRegistry()`        | Classification source.           |
-| `maxDepth`        | `3`                         | Maximum wrapper traversal depth. |
+| Option            | Default                     | Behavior                                                                                                              |
+| ----------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.                                                                                       |
+| `registry`        | `getErrorRegistry()`        | Classification source.                                                                                                |
+| `maxDepth`        | `3`                         | Maximum wrapper traversal depth. Finite negatives clamp to `0`, fractions are floored, and non-finite values use `3`. |
 
 `DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
 `isAppError(value)` identifies branded errors created by this package. Passing
@@ -161,16 +161,18 @@ An `AppError` implements `Error` and exposes:
 - `originalError`, preserving the original top-level input.
 - `isRetryable`, which defaults to `false` unless matched feedback sets it.
 
-Normalization does not throw for ordinary unknown input. Accessors on hostile
-objects are ignored when they throw. Registry configuration errors and invalid
-`maxDepth` values are not normalized or validated specially.
+Normalization does not throw for ordinary unknown input, including objects or
+proxies whose inspected properties throw. Registry configuration errors throw
+`TypeError` at their configuration boundary. Finite negative `maxDepth` values
+clamp to `0`, fractional values are floored, and non-finite values use the
+default depth of `3`.
 
 ## Configure A Registry
 
 `getErrorRegistry()` returns the active mutable global `ErrorRegistry`.
-`setErrorRegistry(registry)` replaces it and throws `TypeError` when passed
-`null` or a non-object. `createErrorRegistry(presets?)` creates an isolated,
-empty registry and merges optional presets in order.
+`setErrorRegistry(registry)` replaces it and throws `TypeError` when the value
+does not implement the mutable registry interface. `createErrorRegistry(presets?)`
+creates an isolated, empty registry and merges optional presets in order.
 
 ```ts
 import { createAppError, createErrorRegistry } from "@codenhub/error";
@@ -194,7 +196,7 @@ An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
 Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
 `values`. Prefix and pattern buckets omit `get`; their `values()` methods return
 `ErrorPrefixDefinition` and `ErrorPatternDefinition` values. All returned
-feedback is defensively copied.
+feedback, definitions, and collection arrays are defensively copied.
 
 Identifiers are trimmed and trailing `.`, `!`, and `?` are removed. Empty
 identifiers, invalid feedback fields, and non-`RegExp` patterns throw
@@ -216,9 +218,10 @@ the first heuristic match. `AppErrorType`, `AppErrorSource`,
 
 ## Read-Only Presets
 
-`freezeRegistry(registry)` returns a `ReadonlyErrorRegistry`. Its read methods
-remain available, but runtime attempts to mutate a proxied bucket throw
-`TypeError`. Use frozen registries as presets passed to `createErrorRegistry`
+`freezeRegistry(registry)` returns an immutable `ReadonlyErrorRegistry` snapshot.
+Its read methods remain available, but runtime attempts to mutate a proxied
+bucket throw `TypeError`. Later mutations to the source registry do not affect
+the snapshot. Use frozen registries as presets passed to `createErrorRegistry`
 or `merge`.
 
 ```ts

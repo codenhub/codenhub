@@ -183,6 +183,42 @@ describe("freezeRegistry", () => {
     }).toThrow(TypeError);
   });
 
+  it("should snapshot the source registry when freezing", () => {
+    const source = createErrorRegistry();
+    source.codes.add("before", { message: "Before" });
+
+    const frozen = freezeRegistry(source);
+    source.codes.add("after", { message: "After" });
+
+    expect(frozen.codes.get("before")).toEqual({ message: "Before" });
+    expect(frozen.codes.get("after")).toBeUndefined();
+  });
+
+  it("should isolate prefix and pattern values from external mutation", () => {
+    const registry = createErrorRegistry();
+    registry.prefixes.add("Upload failed:", { message: "Original prefix" });
+    registry.patterns.add(/network error/i, { message: "Original pattern" });
+
+    const prefixValues = registry.prefixes.values();
+    const patternValues = registry.patterns.values();
+
+    (prefixValues[0] as { message: string }).message = "Mutated prefix";
+    (prefixValues as unknown as Array<{ prefix: string; message: string }>).push({
+      prefix: "Injected",
+      message: "Injected prefix",
+    });
+    (patternValues[0] as { message: string }).message = "Mutated pattern";
+    (patternValues as unknown as Array<{ pattern: RegExp; message: string }>).push({
+      pattern: /injected/,
+      message: "Injected pattern",
+    });
+
+    expect(registry.prefixes.values()).toHaveLength(1);
+    expect(registry.prefixes.values()[0].message).toBe("Original prefix");
+    expect(registry.patterns.values()).toHaveLength(1);
+    expect(registry.patterns.values()[0].message).toBe("Original pattern");
+  });
+
   it("should be usable as a preset source for createErrorRegistry", () => {
     const source = createErrorRegistry();
     source.codes.add("code_a", { message: "Message A" });
@@ -200,5 +236,15 @@ describe("freezeRegistry", () => {
     const target = createErrorRegistry();
     target.merge(frozen);
     expect(target.codes.get("code_b")).toEqual({ message: "Message B" });
+  });
+
+  it("should reject structurally invalid global registries", () => {
+    const activeRegistry = getErrorRegistry();
+
+    try {
+      expect(() => setErrorRegistry({} as unknown as ErrorRegistry)).toThrow(TypeError);
+    } finally {
+      setErrorRegistry(activeRegistry);
+    }
   });
 });

@@ -63,6 +63,27 @@ export const assertFeedback = (feedback: ErrorFeedback): void => {
 /** @internal */
 export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => ({ ...feedback });
 
+/** @internal */
+export const freezeFeedbackMap = (
+  feedbackMap: Record<string, ErrorFeedback>,
+): Readonly<Record<string, Readonly<ErrorFeedback>>> => {
+  const frozenFeedbackMap = Object.fromEntries(
+    Object.entries(feedbackMap).map(([key, feedback]) => [key, Object.freeze({ ...feedback })]),
+  ) as Readonly<Record<string, Readonly<ErrorFeedback>>>;
+
+  return Object.freeze(frozenFeedbackMap);
+};
+
+const clonePrefixDefinition = (definition: ErrorPrefixDefinition): ErrorPrefixDefinition => {
+  const { prefix, ...feedback } = definition;
+  return { ...cloneFeedback(feedback), prefix };
+};
+
+const clonePatternDefinition = (definition: ErrorPatternDefinition): ErrorPatternDefinition => {
+  const { pattern, ...feedback } = definition;
+  return { ...cloneFeedback(feedback), pattern: new RegExp(pattern.source, pattern.flags) };
+};
+
 /**
  * Creates a feedback map bucket for exact identifier matching (codes, names, messages).
  *
@@ -157,7 +178,7 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
       return deleted;
     },
     values(): readonly ErrorPrefixDefinition[] {
-      return getSortedCache();
+      return getSortedCache().map(clonePrefixDefinition);
     },
   };
 };
@@ -233,7 +254,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
           pattern: new RegExp(entry.pattern.source, entry.pattern.flags),
         }));
       }
-      return cachedValues;
+      return cachedValues.map(clonePatternDefinition);
     },
   };
 };

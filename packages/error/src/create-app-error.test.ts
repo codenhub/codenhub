@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE, createErrorRegistry, getErrorRegistry } from "./index";
+import { browserErrorRegistry } from "./registries/browser";
 
 afterEach(() => {
   getErrorRegistry().clear();
@@ -66,6 +67,41 @@ describe("createAppError — basic normalization", () => {
     };
     expect(() => createAppError(error)).not.toThrow();
     expect(createAppError(error).type).toBe("unknown");
+  });
+
+  it("should ignore throwing proxy traps while normalizing unknown values", () => {
+    const hostile = new Proxy(
+      {},
+      {
+        get(): never {
+          throw new Error("Getter failed.");
+        },
+        has(): never {
+          throw new Error("Has failed.");
+        },
+      },
+    );
+
+    expect(() => isAppError(hostile)).not.toThrow();
+    expect(isAppError(hostile)).toBe(false);
+    expect(() => createAppError(hostile)).not.toThrow();
+    expect(createAppError(hostile).type).toBe("unknown");
+  });
+
+  it("should reject values containing only the AppError brand", () => {
+    const brandedValue = { [Symbol.for("@codenhub/error/AppError")]: true };
+
+    expect(isAppError(brandedValue)).toBe(false);
+    expect(createAppError(brandedValue).type).toBe("unknown");
+  });
+
+  it("should accept a read-only registry as a normalization option", () => {
+    expect(createAppError(new DOMException("Aborted", "AbortError"), { registry: browserErrorRegistry })).toMatchObject(
+      {
+        type: "known",
+        messageKey: "error.browser.abort",
+      },
+    );
   });
 });
 
@@ -234,7 +270,16 @@ describe("createAppError — nested AppError handling", () => {
   });
 
   it("should match isAppError brand on objects from other realms with the same brand symbol", () => {
-    const mockAppError = { [Symbol.for("@codenhub/error/AppError")]: true };
+    const mockAppError = {
+      [Symbol.for("@codenhub/error/AppError")]: true,
+      name: "AppError",
+      message: "Existing application error",
+      type: "unknown",
+      messageKey: null,
+      source: null,
+      originalError: null,
+      isRetryable: false,
+    };
     expect(isAppError(mockAppError)).toBe(true);
   });
 });
@@ -315,6 +360,11 @@ describe("isAppError", () => {
   it("should return true for a function value that implements the AppError brand", () => {
     const fnError = Object.assign(() => {}, {
       [Symbol.for("@codenhub/error/AppError")]: true,
+      type: "unknown",
+      message: "Function error",
+      messageKey: null,
+      source: null,
+      isRetryable: false,
     });
     expect(isAppError(fnError)).toBe(true);
   });

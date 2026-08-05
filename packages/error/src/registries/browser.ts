@@ -1,3 +1,4 @@
+import { freezeFeedbackMap } from "../bucket";
 import { createErrorRegistry, freezeRegistry } from "../registry";
 import type { ErrorFeedback } from "../types";
 
@@ -6,7 +7,7 @@ import type { ErrorFeedback } from "../types";
  *
  * Provides fallback messages, translation keys, and source labels for typical browser DOMExceptions.
  */
-export const browserErrorNames: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
+export const browserErrorNames = freezeFeedbackMap({
   AbortError: {
     message: "Request cancelled.",
     messageKey: "error.browser.abort",
@@ -61,7 +62,7 @@ export const browserErrorNames: Readonly<Record<string, ErrorFeedback>> = Object
  *
  * Defines regex patterns to identify fetch failures, DNS issues, and network connection refusal.
  */
-export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[] = Object.freeze([
+const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
     /failed to fetch|networkerror|load failed/i,
     {
@@ -80,7 +81,13 @@ export const browserErrorPatterns: readonly (readonly [RegExp, ErrorFeedback])[]
       isRetryable: true,
     },
   ] as const,
-]);
+];
+
+export const browserErrorPatterns: readonly (readonly [RegExp, Readonly<ErrorFeedback>])[] = Object.freeze(
+  browserErrorPatternDefinitions.map(([pattern, feedback]) =>
+    Object.freeze([Object.freeze(pattern) as RegExp, Object.freeze({ ...feedback })] as const),
+  ),
+);
 
 const registry = createErrorRegistry();
 

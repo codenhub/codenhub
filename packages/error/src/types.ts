@@ -49,7 +49,7 @@ export interface AppErrorOptions {
    * The specific error registry to query for classifications.
    * Defaults to the global registry retrieved by `getErrorRegistry()`.
    */
-  registry?: ErrorRegistry;
+  registry?: ErrorRegistry | ReadonlyErrorRegistry;
 
   /**
    * The maximum depth to unwrap nested error wrappers (e.g. cause, originalError).
@@ -302,7 +302,7 @@ export interface ErrorRegistry {
 }
 
 /**
- * A read-only view of an error registry returned by `freezeRegistry`.
+ * An immutable snapshot of an error registry returned by `freezeRegistry`.
  *
  * Exposes only the read-facing surface of each bucket. Mutation methods (`add`, `addList`,
  * `clear`, `delete`) are not part of this type. Suitable as a preset source passed to

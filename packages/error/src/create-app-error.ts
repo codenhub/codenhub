@@ -16,6 +16,22 @@ export const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
 const APP_ERROR_BRAND = Symbol.for("@codenhub/error/AppError");
 
+const getSafeProperty = (value: object, key: PropertyKey): unknown => {
+  try {
+    return Reflect.get(value, key);
+  } catch {
+    return undefined;
+  }
+};
+
+const isAppErrorType = (value: unknown): value is AppErrorType => {
+  return value === "known" || value === "unexpected" || value === "unknown";
+};
+
+const isNullableString = (value: unknown): value is string | null => {
+  return value === null || typeof value === "string";
+};
+
 class AppErrorImpl extends Error implements AppError {
   readonly [APP_ERROR_BRAND] = true;
   readonly type: AppErrorType;
@@ -125,16 +141,25 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
 /**
  * Type guard to determine if an unknown value is a normalized AppError instance.
  *
- * Checks the value's prototype chain and verifies the unique internal AppError brand symbol.
+ * Verifies the internal AppError brand and required normalized error fields.
+ * Property access is guarded so hostile objects cannot make this type guard throw.
  *
  * @param value - The value to inspect.
  * @returns True if the value is a normalized AppError; otherwise, false.
  */
 export function isAppError(value: unknown): value is AppError {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) {
+    return false;
+  }
+
+  const objectValue = value as object;
+
   return (
-    value !== null &&
-    (typeof value === "object" || typeof value === "function") &&
-    APP_ERROR_BRAND in value &&
-    (value as Record<symbol, unknown>)[APP_ERROR_BRAND] === true
+    getSafeProperty(objectValue, APP_ERROR_BRAND) === true &&
+    isAppErrorType(getSafeProperty(objectValue, "type")) &&
+    typeof getSafeProperty(objectValue, "message") === "string" &&
+    isNullableString(getSafeProperty(objectValue, "messageKey")) &&
+    isNullableString(getSafeProperty(objectValue, "source")) &&
+    typeof getSafeProperty(objectValue, "isRetryable") === "boolean"
   );
 }

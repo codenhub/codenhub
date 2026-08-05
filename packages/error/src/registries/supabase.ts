@@ -1,12 +1,12 @@
+import { freezeFeedbackMap } from "../bucket";
 import { createErrorRegistry, freezeRegistry } from "../registry";
-import type { ErrorFeedback } from "../types";
 
 /**
  * Raw code mapping definitions for common Supabase service errors.
  *
  * Includes Postgres database codes and Supabase Auth specific error codes.
  */
-export const supabaseErrorCodes: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
+export const supabaseErrorCodes = freezeFeedbackMap({
   invalid_credentials: {
     message: "Invalid email or password.",
     messageKey: "error.supabase.auth.invalidCredentials",
@@ -36,17 +36,18 @@ export const supabaseErrorCodes: Readonly<Record<string, ErrorFeedback>> = Objec
     message: "Failed to send SMS message.",
     messageKey: "error.supabase.auth.smsSendFailed",
     source: "supabase.auth",
-    isRetryable: true,
   },
   over_sms_send_rate_limit: {
     message: "SMS send rate limit exceeded. Please try again later.",
     messageKey: "error.supabase.auth.overSmsSendRateLimit",
     source: "supabase.auth",
+    isRetryable: true,
   },
   over_email_send_rate_limit: {
     message: "Email send rate limit exceeded. Please try again later.",
     messageKey: "error.supabase.auth.overEmailSendRateLimit",
     source: "supabase.auth",
+    isRetryable: true,
   },
   invalid_grant: {
     message: "Invalid login credentials or refresh token.",
@@ -87,7 +88,6 @@ export const supabaseErrorCodes: Readonly<Record<string, ErrorFeedback>> = Objec
     message: "Database query timed out or was cancelled.",
     messageKey: "error.supabase.database.timeout",
     source: "supabase.database",
-    isRetryable: true,
   },
 });
 
@@ -96,12 +96,11 @@ export const supabaseErrorCodes: Readonly<Record<string, ErrorFeedback>> = Objec
  *
  * Includes name mappings for edge function execution issues.
  */
-export const supabaseErrorNames: Readonly<Record<string, ErrorFeedback>> = Object.freeze({
+export const supabaseErrorNames = freezeFeedbackMap({
   FunctionsHttpError: {
     message: "Edge Function request failed.",
     messageKey: "error.supabase.functions.http",
     source: "supabase.functions",
-    isRetryable: true,
   },
   FunctionsRelayError: {
     message: "Edge Function relay failed.",
