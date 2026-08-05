@@ -24,8 +24,9 @@ export interface AppError extends Error {
   readonly source: AppErrorSource;
 
   /**
-   * The original error value passed to the factory, or the original error retrieved
-   * from nested wrapper structures (such as `cause`, `originalError`, or `error` properties).
+   * The original top-level value passed to the factory. Nested wrapper values are
+   * inspected for classification but are not stored as this property.
+   * This diagnostic value is non-enumerable on errors created by this package.
    */
   readonly originalError: unknown;
 

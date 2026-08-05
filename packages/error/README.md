@@ -45,6 +45,8 @@ Unmatched values become `type: "unknown"` and use
 
 - Registry presets are opt-in and do not mutate the global registry on import.
 - Configure the mutable global registry during application initialization.
+- `originalError` remains available for diagnostics but is omitted from default JSON serialization.
+- `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 
 ## License
 

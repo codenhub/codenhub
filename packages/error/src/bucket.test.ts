@@ -1,6 +1,9 @@
+// @ts-expect-error Vitest runs tests in Node without adding Node types to this package.
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
-import { createErrorRegistry } from "./index";
+import { createErrorRegistry, type ErrorFeedback } from "./index";
 
 describe("feedback map bucket (codes / names / messages)", () => {
   it("should store and retrieve an entry by identifier", () => {
@@ -13,6 +16,13 @@ describe("feedback map bucket (codes / names / messages)", () => {
     const registry = createErrorRegistry();
     registry.codes.add(" invalid_credentials. ", { message: "Invalid email or password." });
     expect(registry.codes.get("invalid_credentials")).toEqual({ message: "Invalid email or password." });
+  });
+
+  it("should normalize whitespace before trailing punctuation consistently", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("code .", { message: "Mapped code." });
+
+    expect(registry.codes.get("code")).toEqual({ message: "Mapped code." });
   });
 
   it("should return a defensive copy from get so external mutation does not affect stored state", () => {
@@ -29,6 +39,25 @@ describe("feedback map bucket (codes / names / messages)", () => {
     const [[, copy]] = [...registry.codes.values()];
     copy.message = "mutated";
     expect(registry.codes.get("code1")!.message).toBe("Msg");
+  });
+
+  it("should preserve feedback fields inherited from the source object", () => {
+    const registry = createErrorRegistry();
+    const feedback = Object.create({ message: "Inherited message" }) as ErrorFeedback;
+
+    registry.codes.add("inherited", feedback);
+
+    expect(registry.codes.get("inherited")).toEqual({ message: "Inherited message" });
+  });
+
+  it("should preserve non-enumerable feedback fields accepted by validation", () => {
+    const registry = createErrorRegistry();
+    const feedback = {} as ErrorFeedback;
+    Object.defineProperty(feedback, "message", { value: "Hidden message" });
+
+    registry.codes.add("non-enumerable", feedback);
+
+    expect(registry.codes.get("non-enumerable")).toEqual({ message: "Hidden message" });
   });
 
   it("should add multiple entries with addList", () => {
@@ -174,6 +203,27 @@ describe("pattern bucket", () => {
     registry.patterns.add(/test-error/g, { message: "Test error" });
     const [stored] = registry.patterns.values();
     expect(stored.pattern.flags).not.toContain("g");
+  });
+
+  it("should accept regular expressions created in another realm", () => {
+    const registry = createErrorRegistry();
+    const pattern = runInNewContext("/network/i") as RegExp;
+
+    registry.patterns.add(pattern, { message: "Network error" });
+
+    expect(registry.patterns.values()).toHaveLength(1);
+  });
+
+  it("should accept frozen global patterns without mutating caller state", () => {
+    const registry = createErrorRegistry();
+    const pattern = /network/g;
+    pattern.lastIndex = 2;
+    Object.freeze(pattern);
+
+    registry.patterns.add(pattern, { message: "Network error" });
+
+    expect(pattern.lastIndex).toBe(2);
+    expect(registry.patterns.values()[0].pattern.flags).not.toContain("g");
   });
 
   it("should delete a pattern by reference (matching source and flags) and return true, then false", () => {

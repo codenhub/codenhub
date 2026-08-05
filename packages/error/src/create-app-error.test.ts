@@ -41,6 +41,19 @@ describe("createAppError — basic normalization", () => {
     expect(appError.cause).toBe(original);
   });
 
+  it("should omit the original error from default JSON serialization", () => {
+    const appError = createAppError({ token: "secret-token" });
+
+    expect(JSON.stringify(appError)).not.toContain("secret-token");
+  });
+
+  it("should serialize normalized errors when the original error is cyclic", () => {
+    const original: Record<string, unknown> = {};
+    original.self = original;
+
+    expect(() => JSON.stringify(createAppError(original))).not.toThrow();
+  });
+
   it("should coerce a numeric code to string when looking up registry codes", () => {
     const registry = createErrorRegistry();
     registry.codes.add("500", { message: "Internal server error." });
@@ -269,7 +282,7 @@ describe("createAppError — nested AppError handling", () => {
     expect(reWrapped).toBe(original);
   });
 
-  it("should match isAppError brand on objects from other realms with the same brand symbol", () => {
+  it("should reject AppError-shaped values that were not created by this package", () => {
     const mockAppError = {
       [Symbol.for("@codenhub/error/AppError")]: true,
       name: "AppError",
@@ -280,7 +293,8 @@ describe("createAppError — nested AppError handling", () => {
       originalError: null,
       isRetryable: false,
     };
-    expect(isAppError(mockAppError)).toBe(true);
+    expect(isAppError(mockAppError)).toBe(false);
+    expect(createAppError(mockAppError)).not.toBe(mockAppError);
   });
 });
 
@@ -357,7 +371,7 @@ describe("isAppError", () => {
     expect(isAppError("string")).toBe(false);
   });
 
-  it("should return true for a function value that implements the AppError brand", () => {
+  it("should return false for a function value that only implements the AppError brand", () => {
     const fnError = Object.assign(() => {}, {
       [Symbol.for("@codenhub/error/AppError")]: true,
       type: "unknown",
@@ -366,7 +380,7 @@ describe("isAppError", () => {
       source: null,
       isRetryable: false,
     });
-    expect(isAppError(fnError)).toBe(true);
+    expect(isAppError(fnError)).toBe(false);
   });
 });
 

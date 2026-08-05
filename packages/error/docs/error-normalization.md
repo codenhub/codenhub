@@ -28,23 +28,26 @@ const error = createAppError(new Error("Request failed"), {
 | `maxDepth`        | `3`                         | Maximum wrapper traversal depth. Finite negatives clamp to `0`, fractions are floored, and non-finite values use `3`. |
 
 `DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
-`isAppError(value)` identifies branded errors created by this package. Passing
-an `AppError` to `createAppError` returns the same object when no custom options
-are supplied; custom options cause it to be normalized again.
+`isAppError(value)` identifies errors created by the current package runtime.
+Structurally similar or serialized values are not accepted. Passing an `AppError`
+to `createAppError` returns the same object when no custom options are supplied;
+custom options cause it to be normalized again.
 
 An `AppError` implements `Error` and exposes:
 
 - `type: AppErrorType`, where deterministic matches are `"known"`, pattern
   matches are `"unexpected"`, and unmatched values are `"unknown"`.
 - `message`, plus nullable `messageKey` and `source: AppErrorSource` metadata.
-- `originalError`, preserving the original top-level input.
+- `originalError`, preserving the original top-level input as a non-enumerable diagnostic value.
 - `isRetryable`, which defaults to `false` unless matched feedback sets it.
 
 Normalization does not throw for ordinary unknown input, including objects or
-proxies whose inspected properties throw. Registry configuration errors throw
-`TypeError` at their configuration boundary. Finite negative `maxDepth` values
-clamp to `0`, fractional values are floored, and non-finite values use the
-default depth of `3`.
+proxies whose inspected properties throw. JSON serialization excludes the raw
+`originalError` diagnostic value, preventing sensitive fields and cyclic wrapper
+objects from being serialized through the normalized error. Registry
+configuration errors throw `TypeError` at their configuration boundary. Finite
+negative `maxDepth` values clamp to `0`, fractional values are floored, and
+non-finite values use the default depth of `3`.
 
 ## Configure A Registry
 
@@ -120,6 +123,8 @@ Public preset exports are:
 
 The raw name/code records and browser pattern tuples are read-only exports; the
 prebuilt registry values are read-only. Browser mappings cover common
-`DOMException` names and network-message patterns. Supabase mappings cover
-selected Auth and PostgreSQL codes plus Edge Function error names. Preset
-coverage is not exhaustive, and message patterns are heuristic.
+`DOMException` names and network-message patterns. Ambiguous browser fetch and
+network-message matches are not marked retryable; connection refusal and DNS
+matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
+Edge Function error names. Preset coverage is not exhaustive, and message
+patterns are heuristic.

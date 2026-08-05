@@ -14,30 +14,13 @@ interface AppErrorResolution {
 /** Default message used when no registry entry or fallback message can describe an error. */
 export const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
-const APP_ERROR_BRAND = Symbol.for("@codenhub/error/AppError");
-
-const getSafeProperty = (value: object, key: PropertyKey): unknown => {
-  try {
-    return Reflect.get(value, key);
-  } catch {
-    return undefined;
-  }
-};
-
-const isAppErrorType = (value: unknown): value is AppErrorType => {
-  return value === "known" || value === "unexpected" || value === "unknown";
-};
-
-const isNullableString = (value: unknown): value is string | null => {
-  return value === null || typeof value === "string";
-};
+const APP_ERROR_INSTANCES = new WeakSet<object>();
 
 class AppErrorImpl extends Error implements AppError {
-  readonly [APP_ERROR_BRAND] = true;
   readonly type: AppErrorType;
   readonly messageKey: string | null;
   readonly source: AppErrorSource;
-  readonly originalError: unknown;
+  declare readonly originalError: unknown;
   readonly isRetryable: boolean;
 
   constructor(resolved: AppErrorResolution) {
@@ -47,8 +30,14 @@ class AppErrorImpl extends Error implements AppError {
     this.type = resolved.type;
     this.messageKey = resolved.messageKey;
     this.source = resolved.source;
-    this.originalError = resolved.originalError;
     this.isRetryable = resolved.isRetryable;
+    Object.defineProperty(this, "originalError", {
+      value: resolved.originalError,
+      enumerable: false,
+      writable: false,
+      configurable: false,
+    });
+    APP_ERROR_INSTANCES.add(this);
   }
 }
 
@@ -141,8 +130,7 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
 /**
  * Type guard to determine if an unknown value is a normalized AppError instance.
  *
- * Verifies the internal AppError brand and required normalized error fields.
- * Property access is guarded so hostile objects cannot make this type guard throw.
+ * Verifies that a value was created by this package runtime.
  *
  * @param value - The value to inspect.
  * @returns True if the value is a normalized AppError; otherwise, false.
@@ -152,14 +140,5 @@ export function isAppError(value: unknown): value is AppError {
     return false;
   }
 
-  const objectValue = value as object;
-
-  return (
-    getSafeProperty(objectValue, APP_ERROR_BRAND) === true &&
-    isAppErrorType(getSafeProperty(objectValue, "type")) &&
-    typeof getSafeProperty(objectValue, "message") === "string" &&
-    isNullableString(getSafeProperty(objectValue, "messageKey")) &&
-    isNullableString(getSafeProperty(objectValue, "source")) &&
-    typeof getSafeProperty(objectValue, "isRetryable") === "boolean"
-  );
+  return APP_ERROR_INSTANCES.has(value);
 }

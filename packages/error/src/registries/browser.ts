@@ -53,15 +53,9 @@ export const browserErrorNames = freezeFeedbackMap({
     message: "A network error occurred.",
     messageKey: "error.browser.network",
     source: "browser.network",
-    isRetryable: true,
   },
 });
 
-/**
- * Raw heuristic pattern mappings for common browser and Web API errors.
- *
- * Defines regex patterns to identify fetch failures, DNS issues, and network connection refusal.
- */
 const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[] = [
   [
     /failed to fetch|networkerror|load failed/i,
@@ -69,7 +63,6 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
       message: "Network request failed.",
       messageKey: "error.browser.network",
       source: "browser.network",
-      isRetryable: true,
     },
   ] as const,
   [
@@ -83,6 +76,11 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
   ] as const,
 ];
 
+/**
+ * Read-only heuristic pattern mappings for common browser and Web API errors.
+ *
+ * Identifies fetch failures, DNS issues, and network connection refusal.
+ */
 export const browserErrorPatterns: readonly (readonly [RegExp, Readonly<ErrorFeedback>])[] = Object.freeze(
   browserErrorPatternDefinitions.map(([pattern, feedback]) =>
     Object.freeze([Object.freeze(pattern) as RegExp, Object.freeze({ ...feedback })] as const),

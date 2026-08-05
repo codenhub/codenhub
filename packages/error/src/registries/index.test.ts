@@ -70,4 +70,12 @@ describe("ready registries", () => {
     expect(createAppError({ code: "over_sms_send_rate_limit" }, { registry }).isRetryable).toBe(true);
     expect(createAppError({ code: "over_email_send_rate_limit" }, { registry }).isRetryable).toBe(true);
   });
+
+  it("should not mark ambiguous browser fetch failures as retryable", () => {
+    const registry = createErrorRegistry([browserErrorRegistry]);
+
+    expect(createAppError(new Error("Load failed"), { registry }).isRetryable).toBe(false);
+    expect(createAppError(new Error("Failed to fetch"), { registry }).isRetryable).toBe(false);
+    expect(createAppError({ name: "NetworkError" }, { registry }).isRetryable).toBe(false);
+  });
 });

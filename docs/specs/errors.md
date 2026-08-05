@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
+last_updated: 2026-08-05
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -23,6 +23,13 @@ Packages that do not expose errors do not need to follow this spec.
 - i18n-ready error messages via `messageKey`
 - Retry signaling via `isRetryable`
 - Composable registry presets that consumers can merge into their own registry
+- Diagnostic access through `AppError.originalError` without including raw input
+  in default JSON serialization
+
+`isAppError()` recognizes `AppError` instances created by the current
+`@codenhub/error` package runtime. It is an identity guard, not a mechanism for
+recognizing serialized errors or instances created by another package copy or
+runtime.
 
 ## Providing error mappings (not registries)
 
@@ -132,6 +139,12 @@ Set `isRetryable: true` only when retrying the same operation **without user int
 
 When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively.
 
+Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD
+remain non-retryable because they can represent permanent failures such as CORS,
+invalid URLs, or TLS errors. More specific transient signals, such as connection
+refusal, DNS failure, or timeout, MAY be marked retryable when package behavior
+supports retrying without user intervention.
+
 ## Error-propagation pattern (throwing vs. returning Results)
 
 Packages that avoid runtime dependencies on `@codenhub/error` MUST NOT return `@codenhub/error`'s `Result<T>` or instantiate `AppError` at runtime.
@@ -164,7 +177,13 @@ export const myPackageErrors = {
 };
 ```
 
-**Do not ship preset registries.** Presets MUST NOT instantiate `createErrorRegistry()` or `freezeRegistry()` in general library packages to avoid forcing a runtime dependency. Export raw dictionary objects instead.
+**Do not ship preset registries from general library packages.** Presets MUST
+NOT instantiate `createErrorRegistry()` or `freezeRegistry()` in packages that
+only expose error definitions, because doing so forces a runtime dependency.
+Export raw dictionary objects instead. `@codenhub/error` is the designated owner
+of built-in, opt-in presets and MAY export frozen registry snapshots alongside
+their raw mappings; those presets MUST NOT mutate the global registry on import.
+This exception is recorded in `docs/specs/packages-exceptions.md`.
 
 **Do not rely on message matching when a stable code or name exists.** Message strings change across library versions; codes and names are generally more stable.
 

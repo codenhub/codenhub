@@ -40,8 +40,10 @@ describe("documentation chrome", () => {
   );
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
-    const html = await readOutput("error/index.html");
-    const chromeLabels = html.match(/class="package-navigation-title"[^>]*>.*?Error.*?experimental.*?<\/div>/g);
+    const html = await readOutput("i18n/index.html");
+    const chromeLabels = html.match(
+      /class="package-navigation-title"[^>]*>.*?Internationalization.*?experimental.*?<\/div>/g,
+    );
 
     expect(chromeLabels).toHaveLength(2);
   });

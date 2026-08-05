@@ -17,7 +17,7 @@ const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
  * @returns The normalized error identifier string.
  */
 export const normalizeErrorIdentifier = (identifier: string): string => {
-  return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "");
+  return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "").trim();
 };
 
 /**
@@ -61,27 +61,56 @@ export const assertFeedback = (feedback: ErrorFeedback): void => {
 };
 
 /** @internal */
-export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => ({ ...feedback });
+export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
+  const clone: ErrorFeedback = { message: feedback.message };
+
+  if (feedback.messageKey !== undefined) {
+    clone.messageKey = feedback.messageKey;
+  }
+
+  if (feedback.source !== undefined) {
+    clone.source = feedback.source;
+  }
+
+  if (feedback.isRetryable !== undefined) {
+    clone.isRetryable = feedback.isRetryable;
+  }
+
+  return clone;
+};
 
 /** @internal */
 export const freezeFeedbackMap = (
   feedbackMap: Record<string, ErrorFeedback>,
 ): Readonly<Record<string, Readonly<ErrorFeedback>>> => {
   const frozenFeedbackMap = Object.fromEntries(
-    Object.entries(feedbackMap).map(([key, feedback]) => [key, Object.freeze({ ...feedback })]),
+    Object.entries(feedbackMap).map(([key, feedback]) => [key, Object.freeze(cloneFeedback(feedback))]),
   ) as Readonly<Record<string, Readonly<ErrorFeedback>>>;
 
   return Object.freeze(frozenFeedbackMap);
 };
 
 const clonePrefixDefinition = (definition: ErrorPrefixDefinition): ErrorPrefixDefinition => {
-  const { prefix, ...feedback } = definition;
-  return { ...cloneFeedback(feedback), prefix };
+  return { ...cloneFeedback(definition), prefix: definition.prefix };
 };
 
 const clonePatternDefinition = (definition: ErrorPatternDefinition): ErrorPatternDefinition => {
-  const { pattern, ...feedback } = definition;
-  return { ...cloneFeedback(feedback), pattern: new RegExp(pattern.source, pattern.flags) };
+  return { ...cloneFeedback(definition), pattern: new RegExp(definition.pattern.source, definition.pattern.flags) };
+};
+
+const REGEXP_SOURCE_GETTER = Object.getOwnPropertyDescriptor(RegExp.prototype, "source")?.get;
+
+const isRegExp = (value: unknown): value is RegExp => {
+  if (typeof value !== "object" || value === null || REGEXP_SOURCE_GETTER === undefined) {
+    return false;
+  }
+
+  try {
+    REGEXP_SOURCE_GETTER.call(value);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -194,7 +223,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   let cachedValues: ErrorPatternDefinition[] | null = null;
 
   const add = (pattern: RegExp, feedback: ErrorFeedback): void => {
-    if (!(pattern instanceof RegExp)) {
+    if (!isRegExp(pattern)) {
       throw new TypeError("Error registry pattern must be a RegExp.");
     }
 
@@ -231,7 +260,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
       cachedValues = [];
     },
     delete(pattern: RegExp): boolean {
-      if (!(pattern instanceof RegExp)) {
+      if (!isRegExp(pattern)) {
         throw new TypeError("Error registry pattern must be a RegExp.");
       }
       let isDeleted = false;

@@ -7,6 +7,10 @@ Register application mappings explicitly. Deterministic registry matches become
 known errors, regex matches become unexpected errors, and unmatched values use
 the configured fallback message.
 
+`isAppError` recognizes errors created by the current package runtime.
+`originalError` remains available for diagnostics but is omitted from default
+JSON serialization.
+
 ## Documentation
 
 - [Documentation overview](docs/index.md): Scope, stability, entrypoints, and

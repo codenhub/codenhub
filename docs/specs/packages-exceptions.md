@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-22
+last_updated: 2026-08-05
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -44,3 +44,18 @@ exception rules in `docs/docs-guidelines.md`.
   package's actual type, build, and cross-browser visual/computed-style tests
   instead of reporting a false success or generating an irrelevant report.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.
+
+## `@codenhub/error`: built-in opt-in registry presets
+
+- **Rules bypassed:** `docs/specs/errors.md` (general library packages must not
+  instantiate or export preset registries when publishing error definitions).
+- **Where it applies:** `packages/error/src/registries/` and the public registry
+  preset exports from `@codenhub/error/registries` and its browser and Supabase
+  subpaths.
+- **Why acceptable:** `@codenhub/error` owns the shared registry implementation
+  and built-in integrations. Its presets are frozen, opt-in snapshots; importing
+  them does not mutate the global registry, establish external connections, or
+  add runtime dependencies. Raw mapping exports remain available for consumers
+  that need definitions without preset registries.
+- **Temporary or permanent:** Permanent while `@codenhub/error` remains the
+  designated owner of built-in error integrations.
