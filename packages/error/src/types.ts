@@ -2,8 +2,9 @@
  * A predictable, frozen error shape representing a normalized application error.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
- * localization support, and original error wrapping. Default JSON serialization
- * includes the normalized fields and excludes diagnostic `cause` and `originalError` values.
+ * localization support, and original error wrapping. An explicit `toJSON` keeps JSON
+ * serialization limited to the normalized fields, excluding diagnostic `cause` and
+ * `originalError` values on every engine.
  */
 export interface AppError extends Error {
   /**
@@ -35,6 +36,21 @@ export interface AppError extends Error {
    * Indicates whether retrying the operation that failed with this error is likely to succeed.
    */
   readonly isRetryable: boolean;
+
+  /**
+   * Produces the normalized fields used by `JSON.stringify`, excluding the diagnostic
+   * `cause` and `originalError` values.
+   *
+   * @returns The safe, serializable projection of this error.
+   */
+  toJSON(): {
+    name: string;
+    message: string;
+    type: AppErrorType;
+    messageKey: string | null;
+    source: AppErrorSource;
+    isRetryable: boolean;
+  };
 }
 
 /**

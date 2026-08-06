@@ -86,6 +86,13 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
   );
 };
 
+/**
+ * Collects the error value and every nested wrapper candidate found within `maxDepth`,
+ * skipping objects already visited so cyclic wrappers terminate.
+ *
+ * @internal
+ * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
+ */
 export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
   if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
     throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
@@ -195,6 +202,12 @@ const resolveHeuristicUnexpectedError = (
   return toUnexpectedClassification(matchedDefinition);
 };
 
+/**
+ * Resolves the registry classification for a single candidate, preferring a deterministic
+ * known match over a heuristic pattern match.
+ *
+ * @internal
+ */
 export const classifyErrorCandidate = ({
   registry,
   error,

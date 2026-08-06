@@ -64,6 +64,20 @@ describe("createAppError — basic normalization", () => {
     });
   });
 
+  it("should serialize the same fields regardless of own property enumerability", () => {
+    const appError = createAppError({ token: "secret-token" });
+
+    expect(appError.toJSON()).toEqual({
+      name: "AppError",
+      message: DEFAULT_APP_ERROR_MESSAGE,
+      type: "unknown",
+      messageKey: null,
+      source: null,
+      isRetryable: false,
+    });
+    expect(Object.keys(appError.toJSON())).not.toContain("stack");
+  });
+
   it("should freeze the complete AppError instance", () => {
     const appError = createAppError("internal detail");
 

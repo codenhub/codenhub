@@ -57,12 +57,7 @@ requirements.
 - Default JSON serialization includes normalized fields such as `message`, `type`, and `source`, while omitting diagnostic `cause` and `originalError` values.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
-
-### Migration From 0.1
-
-Version 0.2 is a clean API reset. `AppError` values are frozen, `maxDepth` only
-accepts integers from `0` through `3`, code and name punctuation is significant,
-and `err(string)` no longer exposes that string as its message.
+- Invalid registry entries and invalid `createAppError` options are programmer errors and throw `TypeError`.
 
 ## License
 

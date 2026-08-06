@@ -24,6 +24,16 @@ interface CreateAppErrorInput {
   shouldClassifyRootString: boolean;
 }
 
+/** The exact field set produced by `AppError.toJSON()`. */
+interface SerializedAppError {
+  name: string;
+  message: string;
+  type: AppErrorType;
+  messageKey: string | null;
+  source: AppErrorSource;
+  isRetryable: boolean;
+}
+
 interface ResolvedAppErrorOptions {
   fallbackMessage: string;
   registry: ErrorRegistry | ReadonlyErrorRegistry;
@@ -45,6 +55,8 @@ class AppErrorImpl extends Error implements AppError {
 
   constructor(resolved: AppErrorResolution) {
     super(resolved.message, { cause: resolved.originalError });
+    // Native Error hides message from enumeration, which would list it apart from the other
+    // normalized fields when an AppError is logged, spread, or inspected.
     Object.defineProperty(this, "message", { enumerable: true });
     this.name = "AppError";
     this.type = resolved.type;
@@ -59,6 +71,19 @@ class AppErrorImpl extends Error implements AppError {
     });
     APP_ERROR_INSTANCES.add(this);
     Object.freeze(this);
+  }
+
+  // Serialization is declared explicitly so the published contract does not depend on which
+  // own properties a given engine marks enumerable on native Error instances.
+  toJSON(): SerializedAppError {
+    return {
+      name: this.name,
+      message: this.message,
+      type: this.type,
+      messageKey: this.messageKey,
+      source: this.source,
+      isRetryable: this.isRetryable,
+    };
   }
 }
 
@@ -99,23 +124,7 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
   isRetryable: appError.isRetryable,
 });
 
-/**
- * Normalizes an unknown error value into a predictable, structured AppError shape.
- *
- * This function processes the error value by unrolling nested wrappers (e.g., `cause` or `originalError`)
- * up to the configured depth to locate a registered classification.
- *
- * Classifications are resolved in priority order across all candidates:
- * 1. Known AppError or deterministic registry match (code, name, message, prefix).
- * 2. Unexpected AppError or heuristic registry match (pattern).
- * 3. Any remaining AppError candidate.
- * 4. Fallback unknown error.
- *
- * @param error - The raw error value to normalize (e.g., Error instances, plain objects, or strings).
- * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
- * @returns A frozen AppError. An existing AppError is returned as-is only when no custom options are supplied.
- * @throws TypeError - If `maxDepth` is not an integer from 0 through 3.
- */
+/** @internal */
 const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateAppErrorInput): AppError => {
   const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveOptions(options);
 
@@ -179,6 +188,28 @@ const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateA
   );
 };
 
+/**
+ * Normalizes an unknown error value into a predictable, frozen `AppError`.
+ *
+ * Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`)
+ * up to the configured depth, then resolves a classification in priority order across every
+ * candidate found:
+ *
+ * 1. Known `AppError` or deterministic registry match (code, name, exact message, prefix).
+ * 2. Unexpected `AppError` or heuristic registry pattern match.
+ * 3. Any remaining `AppError` candidate.
+ * 4. An unknown error carrying the fallback message.
+ *
+ * A deep known match outranks a shallow unexpected match. Ordinary unknown input never throws,
+ * including objects and proxies whose inspected properties throw.
+ *
+ * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
+ * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
+ * @returns A frozen AppError. An existing AppError is returned as-is only when no options are supplied.
+ * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
+ * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
+ * from 0 through 3.
+ */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
   return normalizeAppError({ error, options, shouldClassifyRootString: true });
 }

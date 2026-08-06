@@ -42,8 +42,9 @@ An `AppError` is frozen, implements `Error`, and exposes:
 - `isRetryable`, which defaults to `false` unless matched feedback sets it.
 
 Normalization does not throw for ordinary unknown input, including objects or
-proxies whose inspected properties throw. JSON serialization includes `name`,
-`message`, `type`, `messageKey`, `source`, and `isRetryable`. It excludes the raw
+proxies whose inspected properties throw. An explicit `toJSON()` defines
+serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`,
+`messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw
 `cause` and `originalError` diagnostic values, preventing sensitive fields and
 cyclic wrapper objects from being serialized through the normalized error.
 Registry configuration errors throw `TypeError` at their configuration
