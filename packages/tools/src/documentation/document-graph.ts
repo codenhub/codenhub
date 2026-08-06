@@ -190,6 +190,12 @@ function resolveLocalPath(sourcePath: string, target: string): { fragment?: stri
   const hashIndex = target.indexOf("#");
   const rawPath = (hashIndex === -1 ? target : target.slice(0, hashIndex)).split("?", 1)[0]!;
   const fragment = hashIndex === -1 ? undefined : target.slice(hashIndex + 1);
+  // A target without a path part, such as `#section`, points at the document it
+  // was written in. Resolving it through the segment walk below would yield the
+  // document's directory instead.
+  if (rawPath === "") {
+    return { fragment, path: sourcePath };
+  }
   try {
     const decodedPath = decodeURIComponent(rawPath);
     if (decodedPath.startsWith("/")) {
@@ -286,12 +292,7 @@ function addLinkIssues(
     });
     return;
   }
-  if (
-    context.siteFiles !== undefined &&
-    document.path.startsWith("docs/") &&
-    link.target.split(/[?#]/, 1)[0] !== "" &&
-    !context.siteFiles.has(resolved.path)
-  ) {
+  if (context.siteFiles !== undefined && document.path.startsWith("docs/") && !context.siteFiles.has(resolved.path)) {
     issues.push({
       code: "site-unpublished-target",
       message: `Local link target is not published by the site.`,

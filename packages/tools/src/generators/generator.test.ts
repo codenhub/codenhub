@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { replaceGeneratedRegion } from "./generator.ts";
+import { hasContentDrift, replaceGeneratedRegion } from "./generator.ts";
 
 const SOURCE = [
   "# Title",
@@ -41,5 +41,15 @@ describe("replaceGeneratedRegion", () => {
     expect(() => replaceGeneratedRegion(SOURCE, "commands", "- new entry")).toThrow(
       'Missing "commands" generated region markers.',
     );
+  });
+});
+
+describe("hasContentDrift", () => {
+  it("shouldIgnoreLineEndingDifferences", () => {
+    expect(hasContentDrift("a\nb\n", "a\r\nb\r\n")).toBe(false);
+  });
+
+  it("shouldReportDifferentText", () => {
+    expect(hasContentDrift("a\nb\n", "a\nc\n")).toBe(true);
   });
 });

@@ -15,6 +15,10 @@ An exception to a rule that `hub check` enforces MUST also declare a
 below. `hub check` reads that bullet, so a waiver cannot exist without being
 recorded here. Run `pnpm check --json` to see the code behind any finding.
 
+`hub check` reports a waiver that suppresses nothing, so a stale entry or a
+mistyped code or package name surfaces instead of looking effective. Remove an
+entry once the package no longer needs it.
+
 ## `@codenhub/tauri-plugin-webview`: Rust-specific conventions
 
 - **Rules bypassed:** `docs/code-guidelines.md` (files and folders use kebab-case;
@@ -41,7 +45,7 @@ recorded here. Run `pnpm check --json` to see the code behind any finding.
 
 ## `@codenhub/styles`: Coverage report
 
-- **Rule bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage
+- **Rules bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage
   report).
 - **Where it applies:** The `test:coverage` script in
   `packages/styles/package.json`.

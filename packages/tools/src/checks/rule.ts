@@ -26,6 +26,8 @@ export interface CheckRuleContext {
   package: WorkspacePackage;
   /** Whether slow `npm pack --dry-run` checks are allowed to run. */
   includePack: boolean;
+  /** Milliseconds before a child process a rule spawns is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
 }
 
 /** A compliance rule derived from a repository specification. */
@@ -43,23 +45,4 @@ export interface CheckRule {
   appliesTo(workspacePackage: WorkspacePackage): boolean;
   /** Inspects one package. */
   run(context: CheckRuleContext): Promise<Finding[]> | Finding[];
-}
-
-/**
- * Reports whether a package declares public documentation metadata.
- * @param workspacePackage Package to inspect.
- * @returns `true` when the manifest has a `codenhub.docs` object.
- */
-export function hasDocumentationMetadata(workspacePackage: WorkspacePackage): boolean {
-  const codenhub = workspacePackage.manifest.codenhub;
-  return typeof codenhub === "object" && codenhub !== null && "docs" in codenhub;
-}
-
-/**
- * Reports whether a package must comply with the public package specs.
- * @param workspacePackage Package to inspect.
- * @returns `true` for published packages and private packages that opt in.
- */
-export function isDocumentedPackage(workspacePackage: WorkspacePackage): boolean {
-  return !workspacePackage.isPrivate || hasDocumentationMetadata(workspacePackage);
 }

@@ -26,6 +26,44 @@ function getIssueCodes(
   }).map(({ code }) => code);
 }
 
+describe("same-document link targets", () => {
+  it("resolves a fragment-only link against the document it was written in", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/index.md": "---\ntitle: Example\n---\n\n# Example\n\n## Quick start\n\n[Jump](#quick-start)",
+      }),
+    ).toEqual([]);
+  });
+
+  it("resolves a fragment-only link from a nested public document", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n## Requirements\n\n[Jump](#requirements)",
+      }),
+    ).toEqual([]);
+  });
+
+  it("reports a fragment-only link with no matching heading", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[Jump](#missing)",
+      }),
+    ).toEqual(["invalid-fragment"]);
+  });
+
+  it("resolves a query-only link against the document it was written in", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[Same page](?tab=cli)",
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe("package document graph", () => {
   it("discovers every validation surface and excludes internal Markdown", () => {
     const graph = createDocumentGraph({

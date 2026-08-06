@@ -1,8 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { hasContentDrift } from "../documentation/llms-full.ts";
-import type { GeneratedFile } from "../generators/generator.ts";
+import { hasContentDrift, type GeneratedFile } from "../generators/generator.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 
@@ -15,6 +14,8 @@ async function generateFiles(context: CommandContext): Promise<GeneratedFile[]> 
   // The generators pull in a Markdown parser, which every other command can do without.
   const { createGenerators } = await import("../generators/registry.ts");
   const generatorContext = {
+    // Coverage is measured rather than read from `selection.isImplicit` so that
+    // naming every package explicitly regenerates the workspace-wide files too.
     isWholeWorkspace: context.selection.targets.length === context.workspace.packages.length,
     packages: context.selection.targets.map(({ package: workspacePackage }) => workspacePackage),
     workspace: context.workspace,

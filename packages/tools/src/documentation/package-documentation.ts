@@ -25,6 +25,8 @@ export interface InspectPackageOptions {
   includeNpmInventory?: boolean;
   /** Command runner used for the pack inventory, injected by tests. */
   runCommand?: CommandRunner;
+  /** Milliseconds before the pack inventory is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
 }
 
 /** Everything an inspection learned about one package's documentation. */
@@ -82,7 +84,13 @@ export async function inspectPackageDocumentation(options: InspectPackageOptions
   }
 
   const npmFiles =
-    options.includeNpmInventory === true ? await readNpmPackInventory(options.rootPath, options.runCommand) : undefined;
+    options.includeNpmInventory === true
+      ? await readNpmPackInventory({
+          packageRoot: options.rootPath,
+          runCommand: options.runCommand,
+          timeoutMs: options.timeoutMs,
+        })
+      : undefined;
   const siteFiles = new Set([
     ...files.filter(
       (packagePath) =>

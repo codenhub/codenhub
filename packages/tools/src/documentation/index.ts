@@ -18,13 +18,18 @@ export {
 } from "./document-policy.ts";
 export {
   buildLlmsFull,
-  hasContentDrift,
+  listLlmsFullSources,
   orderLlmsFullSources,
   rebaseMarkdownTargets,
   renderLlmsFull,
   type LlmsFullSection,
 } from "./llms-full.ts";
-export { readNpmPackInventory, type CommandRunner } from "./pack-inventory.ts";
+export {
+  readNpmPackInventory,
+  type CommandRunner,
+  type PackInventoryOptions,
+  type PackInvocation,
+} from "./pack-inventory.ts";
 export {
   inspectPackageDocumentation,
   loadPackageDocumentation,

@@ -1,5 +1,6 @@
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { hasDocumentationMetadata, type CheckRule, type Finding } from "./rule.ts";
+import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
+import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
 const REQUIRED_STRING_FIELDS = ["name", "version", "main", "module", "types"];
@@ -11,6 +12,7 @@ const RECOMMENDED_FIELDS = ["description", "license", "repository"];
 const RESOLVED_DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies"];
 const BUILD_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?build\b/;
 const PACK_INVOCATION = /\bnpm\s+pack\b[^&|]*--dry-run\b/;
+const PACK_IGNORES_SCRIPTS = /\bnpm\s+pack\b[^&|]*--ignore-scripts\b/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -80,6 +82,11 @@ function checkScripts(workspacePackage: WorkspacePackage): Finding[] {
     const pack = scripts["status:pack"];
     if (pack !== undefined && !PACK_INVOCATION.test(pack)) {
       fail("status-pack", `"status:pack" must run \`npm pack --dry-run\`.`);
+    } else if (pack !== undefined && !PACK_IGNORES_SCRIPTS.test(pack)) {
+      fail(
+        "status-pack-ignore-scripts",
+        `"status:pack" must pass \`--ignore-scripts\`; without it the dry run triggers packaging scripts and builds twice.`,
+      );
     }
   }
 

@@ -5,6 +5,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export type PackageStatus = (typeof DOCS_STATUSES)[number];
 
 interface DocsMetadata {
+  demoUrl?: string;
   description?: string;
   label: string;
   listed?: boolean;
@@ -24,6 +25,8 @@ interface PackageManifest {
 
 /** Resolved `codenhub.docs` metadata with defaults applied. */
 export interface PackageMetadata {
+  /** Absolute URL of a standalone live demo application. */
+  demoUrl?: string;
   /** Catalog description, falling back to the package description. */
   description?: string;
   /** Human-readable package label. */
@@ -118,7 +121,13 @@ function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
     throw new Error(`Invalid codenhub.docs.label in ${manifestPath}: expected a non-empty string.`);
   }
 
+  const demoUrl = getOptionalText(value.demoUrl, "demoUrl", manifestPath);
+  if (demoUrl !== undefined && !URL.canParse(demoUrl)) {
+    throw new Error(`Invalid codenhub.docs.demoUrl in ${manifestPath}: expected an absolute URL.`);
+  }
+
   return {
+    demoUrl,
     description: getOptionalText(value.description, "description", manifestPath),
     label,
     listed: value.listed as boolean | undefined,
@@ -161,6 +170,7 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
     typeof manifest.description === "string" && manifest.description.trim() !== "" ? manifest.description : undefined;
 
   return {
+    demoUrl: docs.demoUrl,
     description: docs.description ?? packageDescription,
     label: docs.label,
     listed: docs.listed ?? true,

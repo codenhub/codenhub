@@ -1,16 +1,44 @@
 import { execute } from "../process/execute.ts";
 
+/** A child process a pack inventory needs to run. */
+export interface PackInvocation {
+  /** Executable name resolved through `PATH`. */
+  command: string;
+  /** Arguments passed to the executable. */
+  args: readonly string[];
+  /** Absolute working directory. */
+  cwd: string;
+  /** Milliseconds before the process is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
+}
+
 /**
  * Runs a command and returns its standard output.
  *
  * Injected by tests so pack inventories can be exercised without npm.
  */
-export type CommandRunner = (command: string, args: readonly string[], cwd: string) => Promise<{ stdout: string }>;
+export type CommandRunner = (invocation: PackInvocation) => Promise<{ stdout: string }>;
 
-const runPackCommand: CommandRunner = async (command, args, cwd) => {
-  const outcome = await execute({ args, command, cwd }, { stdio: "pipe" });
+/** How a package's publishable file list should be read. */
+export interface PackInventoryOptions {
+  /** Absolute package directory. */
+  packageRoot: string;
+  /** Command runner, defaulting to `npm pack`. */
+  runCommand?: CommandRunner;
+  /** Milliseconds before npm is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
+}
+
+// `--ignore-scripts` keeps the dry run from triggering packaging lifecycle
+// scripts, which would build the package a second time for a read-only check.
+const PACK_ARGUMENTS = ["pack", "--dry-run", "--ignore-scripts", "--json"];
+
+const runPackCommand: CommandRunner = async (invocation) => {
+  const outcome = await execute(invocation, { stdio: "pipe", timeoutMs: invocation.timeoutMs });
   if (!outcome.isSuccess) {
-    throw new Error(`\`${command} ${args.join(" ")}\` failed in ${cwd}: ${outcome.output?.trim() ?? ""}`);
+    throw new Error(
+      `\`${invocation.command} ${invocation.args.join(" ")}\` failed in ${invocation.cwd}: ${outcome.output?.trim() ?? ""}`,
+    );
   }
   return { stdout: outcome.stdout ?? "" };
 };
@@ -24,16 +52,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *
  * The documentation spec requires real npm output rather than an approximation
  * of its inclusion rules, so this always shells out.
- * @param packageRoot Absolute package directory.
- * @param runCommand Command runner, defaulting to `npm pack --dry-run --json`.
+ * @param options Package directory, command runner, and timeout.
  * @returns Package-relative POSIX paths included in the tarball.
  * @throws When npm fails or its output is not the expected JSON shape.
  */
-export async function readNpmPackInventory(
-  packageRoot: string,
-  runCommand: CommandRunner = runPackCommand,
-): Promise<Set<string>> {
-  const result = await runCommand("npm", ["pack", "--dry-run", "--json"], packageRoot);
+export async function readNpmPackInventory(options: PackInventoryOptions): Promise<Set<string>> {
+  const { packageRoot, runCommand = runPackCommand, timeoutMs } = options;
+  const result = await runCommand({ args: PACK_ARGUMENTS, command: "npm", cwd: packageRoot, timeoutMs });
   let parsed: unknown;
   try {
     parsed = JSON.parse(result.stdout);

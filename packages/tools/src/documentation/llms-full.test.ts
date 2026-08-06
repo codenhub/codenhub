@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseMarkdown } from "./document-policy.ts";
-import { hasContentDrift, orderLlmsFullSources, rebaseMarkdownTargets, renderLlmsFull } from "./llms-full.ts";
+import { orderLlmsFullSources, rebaseMarkdownTargets, renderLlmsFull } from "./llms-full.ts";
 
 describe("parseMarkdown", () => {
   it("shouldSplitFrontmatterFromTheAuthoredBody", () => {
@@ -70,6 +70,24 @@ describe("rebaseMarkdownTargets", () => {
     expect(rebaseMarkdownTargets(body, "docs")).toBe(body);
   });
 
+  it("shouldNotRewritePathsInsideIndentedCodeBlocks", () => {
+    const body = "Example:\n\n    [x](reference.md)\n";
+
+    expect(rebaseMarkdownTargets(body, "docs")).toBe(body);
+  });
+
+  it("shouldNotRewritePathsInsideTildeFencedBlocks", () => {
+    const body = "~~~sh\ncat [x](reference.md)\n~~~\n";
+
+    expect(rebaseMarkdownTargets(body, "docs")).toBe(body);
+  });
+
+  it("shouldStillRebaseTargetsSurroundingACodeBlock", () => {
+    expect(rebaseMarkdownTargets("[Before](a.md)\n\n```\n[x](b.md)\n```\n\n[After](c.md)", "docs")).toBe(
+      "[Before](docs/a.md)\n\n```\n[x](b.md)\n```\n\n[After](docs/c.md)",
+    );
+  });
+
   it("shouldKeepTargetsThatWouldEscapeThePackageRoot", () => {
     expect(rebaseMarkdownTargets("[License](../LICENSE)", "docs")).toBe("[License](LICENSE)");
     expect(rebaseMarkdownTargets("[Outside](../../elsewhere.md)", "docs")).toBe("[Outside](../../elsewhere.md)");
@@ -99,12 +117,5 @@ describe("renderLlmsFull", () => {
         "",
       ].join("\n"),
     );
-  });
-});
-
-describe("hasContentDrift", () => {
-  it("shouldIgnoreLineEndingDifferences", () => {
-    expect(hasContentDrift("a\nb\n", "a\r\nb\r\n")).toBe(false);
-    expect(hasContentDrift("a\nb\n", "a\nc\n")).toBe(true);
   });
 });

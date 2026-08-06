@@ -106,9 +106,9 @@ function unquote(value: string): string {
  * Splits a Markdown document into frontmatter fields and its authored body.
  *
  * Only the flat scalar fields allowed by the public document schema are read, so
- * no YAML dependency is needed. A nested or unreadable field is reported as an
- * unknown value rather than being silently dropped, which keeps schema
- * validation strict.
+ * no YAML dependency is needed. A field whose value is not a scalar still records
+ * its key, so schema validation rejects it as unknown or empty; the lines making
+ * up such a value are skipped rather than guessed at.
  * @param source Raw Markdown file contents.
  * @returns Frontmatter fields and the body that follows them.
  */

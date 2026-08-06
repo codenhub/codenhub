@@ -203,4 +203,25 @@ describe("package documentation catalog", () => {
   it("uses the package description when documentation metadata omits it", () => {
     expect(parsePackageMetadata(createManifest(), "package.json")?.description).toBe("Example package.");
   });
+
+  it("keeps an absolute demo URL", () => {
+    const manifest = {
+      name: "@codenhub/example",
+      codenhub: { docs: { demoUrl: "https://example.coden.agency", label: "Example", status: "experimental" } },
+    };
+
+    expect(parsePackageMetadata(manifest, "package.json")?.demoUrl).toBe("https://example.coden.agency");
+  });
+
+  it("rejects a demo URL that is not absolute", () => {
+    expect(() =>
+      parsePackageMetadata(
+        {
+          name: "@codenhub/example",
+          codenhub: { docs: { demoUrl: "/demo", label: "Example", status: "experimental" } },
+        },
+        "package.json",
+      ),
+    ).toThrow("Invalid codenhub.docs.demoUrl");
+  });
 });

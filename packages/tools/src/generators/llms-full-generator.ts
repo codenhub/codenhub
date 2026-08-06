@@ -1,6 +1,5 @@
-import { listLlmsFullSources } from "../checks/documentation-rules.ts";
-import { isDocumentedPackage } from "../checks/rule.ts";
-import { buildLlmsFull } from "../documentation/llms-full.ts";
+import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
+import { isDocumentedPackage } from "../workspace/package-policy.ts";
 import type { Generator } from "./generator.ts";
 
 /**

@@ -35,6 +35,19 @@ export interface Generator {
   generate(context: GeneratorContext): Promise<GeneratedFile[]>;
 }
 
+/**
+ * Compares generated and authored text while ignoring line-ending differences.
+ *
+ * Repository files are checked out with platform line endings, so a byte
+ * comparison would report every generated file as stale on Windows.
+ * @param generated Freshly generated text.
+ * @param authored Text currently on disk.
+ * @returns `true` when the two differ in anything but line endings.
+ */
+export function hasContentDrift(generated: string, authored: string): boolean {
+  return generated.replaceAll("\r\n", "\n") !== authored.replaceAll("\r\n", "\n");
+}
+
 const MARKER = /^<!-- generated: (?<name>[a-z-]+) (?<edge>start|end) -->$/;
 
 /**

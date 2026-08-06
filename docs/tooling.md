@@ -158,13 +158,18 @@ fail the run; `warning` covers SHOULD-level rules such as the recommended
 | `llms-full`     | `llms-full.txt` still matches the documents it compiles.                    |
 
 Tarball publication is checked only with `--pack`, which runs
-`npm pack --dry-run --json` per package. The documentation spec requires real npm
-output rather than an approximation of its inclusion rules, so the check is
-skipped rather than estimated when the flag is absent.
+`npm pack --dry-run --ignore-scripts --json` per package. The documentation spec
+requires real npm output rather than an approximation of its inclusion rules, so
+the check is skipped rather than estimated when the flag is absent. Scripts are
+ignored because a read-only check must not build the package, and npm is subject
+to `--timeout` like any other child process.
 
 A finding is waived only by a `Checks bypassed` bullet in
 `docs/specs/packages-exceptions.md`. There is no in-code suppression: a waiver
-that is not documented does not exist.
+that is not documented does not exist. The reverse is reported too: a waiver that
+suppresses no finding is listed as dead, so a stale entry or a mistyped code or
+package name cannot sit in the register looking effective. A dead waiver is a
+warning and does not fail the run.
 
 ## Generated files
 
@@ -220,3 +225,8 @@ The documentation model both of them build on lives in
 `packages/tools/src/documentation/` and is published as
 `@codenhub/tools/documentation`. `apps/docs` consumes the same module, so the
 documentation contract has one implementation rather than two.
+
+Checks and generators are siblings and neither imports the other's rules. What
+both need lives below them: predicates over a package in
+`packages/tools/src/workspace/package-policy.ts`, and the documents an
+`llms-full.txt` compiles in `packages/tools/src/documentation/llms-full.ts`.

@@ -1,10 +1,13 @@
-import { readFile } from "node:fs/promises";
+import { glob, readFile } from "node:fs/promises";
 import { join, posix } from "node:path";
+
+import remarkParse from "remark-parse";
+import { unified } from "unified";
 
 import { comparePublicDocumentPaths, parseMarkdown } from "./document-policy.ts";
 
 const SOURCE_MARKER = "<!-- Source: %s -->";
-const CODE_SEGMENT = /^ {0,3}(?<fence>```|~~~)[^\n]*\n[\s\S]*?^ {0,3}\k<fence>[^\n]*$|`+[^`\n]*`+/gm;
+const CODE_TYPES = new Set(["code", "inlineCode"]);
 const INLINE_TARGET = /(?<prefix>\]\(\s*)(?<target>[^)\s]+)/g;
 const DEFINITION_TARGET = /(?<prefix>^ {0,3}\[[^\]\n]+\]:[^\S\n]*)(?<target>\S+)/gm;
 const ATTRIBUTE_TARGET = /(?<prefix>\b(?:href|src)\s*=\s*["'])(?<target>[^"']+)/g;
@@ -36,10 +39,48 @@ function rebaseTarget(target: string, sourceDirectory: string): string {
   return rebased.startsWith("../") ? target : `${rebased}${suffix}`;
 }
 
+interface CodeRange {
+  start: number;
+  end: number;
+}
+
+interface PositionedNode {
+  children?: PositionedNode[];
+  position?: { start: { offset?: number }; end: { offset?: number } };
+  type: string;
+}
+
+/**
+ * Locates every code span and code block in a Markdown body.
+ *
+ * The Markdown parser is asked rather than matched with a regular expression
+ * because indented code blocks, fenced blocks, and inline spans have no single
+ * lexical shape and each of them must keep the paths their authors wrote.
+ * @param body Authored Markdown body.
+ * @returns Ranges of the body that hold code, ordered by offset.
+ */
+function findCodeRanges(body: string): CodeRange[] {
+  const tree = unified().use(remarkParse).parse(body) as PositionedNode;
+  const ranges: CodeRange[] = [];
+
+  function visit(node: PositionedNode): void {
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (CODE_TYPES.has(node.type) && start !== undefined && end !== undefined) {
+      ranges.push({ end, start });
+      return;
+    }
+    node.children?.forEach(visit);
+  }
+
+  visit(tree);
+  return ranges.sort((left, right) => left.start - right.start);
+}
+
 /**
  * Rewrites package-relative link targets so they resolve from the package root.
  *
- * Code fences and inline code spans are left untouched so example snippets keep
+ * Code blocks and inline code spans are left untouched so example snippets keep
  * the paths their authors wrote.
  * @param body Authored Markdown body.
  * @param sourceDirectory Package-relative directory the body was authored in.
@@ -62,9 +103,9 @@ export function rebaseMarkdownTargets(body: string, sourceDirectory: string): st
 
   const parts: string[] = [];
   let cursor = 0;
-  for (const match of body.matchAll(CODE_SEGMENT)) {
-    parts.push(rebaseText(body.slice(cursor, match.index)), match[0]);
-    cursor = match.index + match[0].length;
+  for (const { end, start } of findCodeRanges(body)) {
+    parts.push(rebaseText(body.slice(cursor, start)), body.slice(start, end));
+    cursor = end;
   }
   parts.push(rebaseText(body.slice(cursor)));
   return parts.join("");
@@ -89,6 +130,23 @@ export function orderLlmsFullSources(packageFiles: readonly string[]): string[] 
     .sort(comparePublicDocumentPaths)
     .map((relativePath) => `docs/${relativePath}`);
   return packageFiles.includes("README.md") ? ["README.md", ...documents] : documents;
+}
+
+/**
+ * Lists the documents an `llms-full.txt` compilation is generated from.
+ * @param rootPath Absolute package directory.
+ * @returns Package-relative POSIX paths, including `README.md` when it exists.
+ */
+export async function listLlmsFullSources(rootPath: string): Promise<string[]> {
+  const [documents, hasReadme] = await Promise.all([
+    Array.fromAsync(glob("docs/**/*.md", { cwd: rootPath })),
+    readFile(join(rootPath, "README.md"), "utf8").then(
+      () => true,
+      () => false,
+    ),
+  ]);
+  const paths = documents.map((path) => path.replaceAll("\\", "/"));
+  return hasReadme ? ["README.md", ...paths] : paths;
 }
 
 /**
@@ -121,14 +179,4 @@ export async function buildLlmsFull(rootPath: string, packageFiles: readonly str
     }),
   );
   return renderLlmsFull(sections);
-}
-
-/**
- * Compares generated and authored text while ignoring line-ending differences.
- * @param generated Freshly generated text.
- * @param authored Text currently on disk.
- * @returns `true` when the two differ in anything but line endings.
- */
-export function hasContentDrift(generated: string, authored: string): boolean {
-  return generated.replaceAll("\r\n", "\n") !== authored.replaceAll("\r\n", "\n");
 }

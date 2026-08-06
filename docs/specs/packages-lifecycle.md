@@ -69,11 +69,14 @@ Root workspace scripts MUST keep supporting:
 - `pnpm check`
 - `pnpm format:check`
 - `pnpm format:fix`
+- `pnpm generate`
 - `pnpm lint:check`
 - `pnpm lint:fix`
 - `pnpm status:npm`
 - `pnpm status:pack`
 - `pnpm test`
+- `pnpm test:coverage`
+- `pnpm test:watch`
 - `pnpm typecheck`
 
 Each of those MUST also accept an optional target selecting a package, workspace
