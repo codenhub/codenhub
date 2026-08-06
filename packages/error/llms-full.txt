@@ -39,8 +39,9 @@ Unmatched values become `type: "unknown"` and use
 
 ## Requirements
 
+- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Native `Error` cause support.
 - ESM-aware package resolution.
-- A modern JavaScript runtime with native `Error` cause support.
 - No runtime dependencies.
 
 Runtime code does not access browser or Node.js globals, making it suitable for
@@ -54,7 +55,7 @@ requirements.
 - Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances and read-only registry snapshots are frozen.
-- Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.
+- Raw strings passed to `err()` bypass registry matching and use the generic fallback unless `fallbackMessage` is explicit.
 - Default JSON serialization includes normalized fields such as `message`, `type`, and `source`, while omitting diagnostic `cause` and `originalError` values.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
@@ -121,8 +122,9 @@ matching priority and preset entrypoints.
 
 ## Requirements
 
+- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
+- Native `Error` cause support is required.
 - ESM-aware package resolution is required.
-- A modern JavaScript runtime with native `Error` cause support is required.
 - The package has no runtime dependencies.
 
 Runtime code does not access browser or Node.js globals. Browser preset imports
@@ -213,7 +215,10 @@ const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
 ```
 
 `ErrorFeedback` requires a non-empty `message` and optionally accepts
-`messageKey`, `source`, and `isRetryable`.
+`messageKey`, `source`, and `isRetryable`. A `messageKey` must be a dot-separated
+key under the `error` namespace with lower-camel-case segments, such as
+`error.myApp.api.rateLimit`. A `source` must use dot-separated lowercase
+kebab-case segments, such as `my-app.api`. Invalid formats throw `TypeError`.
 
 An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
 `prefixes` and regex `patterns`. It also provides `clear()` and `merge()`.
@@ -311,9 +316,10 @@ const loadName = (value: string | null): Result<string> =>
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
-options?)` delegates to `createAppError`. Raw strings are treated as untrusted
-diagnostic input and use the generic fallback message. Supply `fallbackMessage`
-explicitly only when the text is safe for users.
+options?)` normalizes failures through the same pipeline as `createAppError`.
+Raw strings are treated as untrusted diagnostic input, bypass registry matching,
+and use the generic fallback message. Supply `fallbackMessage` explicitly only
+when the text is safe for users.
 
 The remaining helpers operate only on the success branch unless stated:
 

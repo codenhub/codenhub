@@ -49,8 +49,9 @@ matching priority and preset entrypoints.
 
 ## Requirements
 
+- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
+- Native `Error` cause support is required.
 - ESM-aware package resolution is required.
-- A modern JavaScript runtime with native `Error` cause support is required.
 - The package has no runtime dependencies.
 
 Runtime code does not access browser or Node.js globals. Browser preset imports

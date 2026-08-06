@@ -1,4 +1,4 @@
-import { createAppError } from "./create-app-error";
+import { createUntrustedAppError } from "./create-app-error";
 import type { AppError, AppErrorOptions } from "./types";
 
 /**
@@ -43,7 +43,7 @@ export function ok<T>(value?: T): Ok<T> {
 
 /**
  * Creates a failed Result instance wrapping a normalized AppError.
- * Raw strings remain diagnostic input and do not become the fallback message automatically.
+ * Raw strings remain diagnostic input, bypass registry matching, and do not become the fallback message automatically.
  *
  * @param error - The raw error value to normalize.
  * @param options - Configuration options for AppError normalization.
@@ -52,7 +52,7 @@ export function ok<T>(value?: T): Ok<T> {
  */
 export const err = (error: unknown, options: AppErrorOptions = {}): Err => ({
   ok: false,
-  error: createAppError(error, options),
+  error: createUntrustedAppError(error, options),
 });
 
 /**

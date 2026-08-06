@@ -11,6 +11,12 @@ interface AppErrorResolution {
   isRetryable: boolean;
 }
 
+interface CreateAppErrorInput {
+  error: unknown;
+  options: AppErrorOptions;
+  shouldClassifyRootString: boolean;
+}
+
 /** Default message used when no registry entry or fallback message can describe an error. */
 export const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
@@ -68,7 +74,7 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
  * @returns A frozen AppError. An existing AppError is returned as-is only when no custom options are supplied.
  * @throws TypeError - If `maxDepth` is not an integer from 0 through 3.
  */
-export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
+const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateAppErrorInput): AppError => {
   const hasCustomOptions =
     options.fallbackMessage !== undefined || options.registry !== undefined || options.maxDepth !== undefined;
 
@@ -88,7 +94,7 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
   let unexpectedResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
 
-  for (const candidate of errorCandidates) {
+  for (const [candidateIndex, candidate] of errorCandidates.entries()) {
     if (isAppError(candidate)) {
       if (candidate.type === "known") {
         knownResult = resolveFromAppError(candidate, error);
@@ -98,6 +104,10 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
       } else if (appErrorFallback === null) {
         appErrorFallback = resolveFromAppError(candidate, error);
       }
+      continue;
+    }
+
+    if (!shouldClassifyRootString && candidateIndex === 0 && typeof candidate === "string") {
       continue;
     }
 
@@ -128,6 +138,15 @@ export function createAppError(error: unknown, options: AppErrorOptions = {}): A
         isRetryable: false,
       },
   );
+};
+
+export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
+  return normalizeAppError({ error, options, shouldClassifyRootString: true });
+}
+
+/** @internal */
+export function createUntrustedAppError(error: unknown, options: AppErrorOptions = {}): AppError {
+  return normalizeAppError({ error, options, shouldClassifyRootString: false });
 }
 
 /**

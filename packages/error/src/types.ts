@@ -86,12 +86,13 @@ export interface ErrorFeedback {
   message: string;
 
   /**
-   * An optional localization/translation key corresponding to the message.
+   * An optional dot-separated localization key under the `error` namespace.
+   * Each segment after `error` uses lower camel case.
    */
   messageKey?: string;
 
   /**
-   * An optional namespace or source label (e.g. `supabase.auth`).
+   * An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
    */
   source?: string;
 
@@ -143,6 +144,7 @@ export interface ErrorRegistryBucket {
    *
    * @param identifier - The exact identifier to delete.
    * @returns True if an element in the bucket existed and has been removed, or false if the element does not exist.
+   * @throws TypeError - If the identifier is not a non-empty string.
    */
   delete(identifier: string): boolean;
 
@@ -207,6 +209,7 @@ export interface ErrorPrefixRegistryBucket {
    *
    * @param prefix - The message prefix to delete.
    * @returns True if the prefix definition existed and has been removed; otherwise, false.
+   * @throws TypeError - If the prefix is not a non-empty string.
    */
   delete(prefix: string): boolean;
 
@@ -249,6 +252,7 @@ export interface ErrorPatternRegistryBucket {
    *
    * @param pattern - The regular expression to remove.
    * @returns True if the pattern existed and has been removed; otherwise, false.
+   * @throws TypeError - If `pattern` is not a RegExp.
    */
   delete(pattern: RegExp): boolean;
 

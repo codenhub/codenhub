@@ -71,6 +71,7 @@ const copyRegistryEntries = (
  *
  * @param presets - Optional list of existing registries to merge during creation.
  * @returns A new, mutable ErrorRegistry instance.
+ * @throws TypeError - If any preset contains an invalid identifier, pattern, or feedback field.
  */
 export const createErrorRegistry = (presets?: readonly (ErrorRegistry | ReadonlyErrorRegistry)[]): ErrorRegistry => {
   const codes = createFeedbackMapBucket(normalizeExactErrorIdentifier);

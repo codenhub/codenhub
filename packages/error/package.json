@@ -42,7 +42,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --dts --clean --no-fixed-extension --unbundle",
+    "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --target es2022 --dts --clean --no-fixed-extension --unbundle",
     "prepublishOnly": "pnpm typecheck && vitest run",
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
     "status:pack": "pnpm build && npm pack --dry-run --json --ignore-scripts",
@@ -56,6 +56,9 @@
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "codenhub": {
     "docs": {

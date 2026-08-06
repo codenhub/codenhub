@@ -111,6 +111,16 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.codes.get("valid")).toBeUndefined();
   });
 
+  it("should not add any entries when addList contains a sparse slot", () => {
+    const registry = createErrorRegistry();
+    const entries: Array<readonly [string, ErrorFeedback]> = [];
+    entries[0] = ["first", { message: "First" }];
+    entries[2] = ["third", { message: "Third" }];
+
+    expect(() => registry.codes.addList(entries)).toThrow(TypeError);
+    expect([...registry.codes.values()]).toEqual([]);
+  });
+
   it("should keep addList callable when destructured", () => {
     const registry = createErrorRegistry();
     const { addList } = registry.codes;
@@ -168,6 +178,22 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(() => registry.codes.add("code1", { message: "Msg", isRetryable: "yes" } as never)).toThrow(TypeError);
   });
 
+  it.each(["", "validation.required", "error.Validation.required", "error.validation.required-value"])(
+    "should reject invalid messageKey %j",
+    (messageKey) => {
+      const registry = createErrorRegistry();
+      expect(() => registry.codes.add("code1", { message: "Msg", messageKey })).toThrow(TypeError);
+    },
+  );
+
+  it.each(["", "Supabase.auth", "supabase.Auth", "supabase_auth", "supabase..auth"])(
+    "should reject invalid source %j",
+    (source) => {
+      const registry = createErrorRegistry();
+      expect(() => registry.codes.add("code1", { message: "Msg", source })).toThrow(TypeError);
+    },
+  );
+
   it("should reject an empty or whitespace-only identifier on delete", () => {
     const registry = createErrorRegistry();
     expect(() => registry.codes.delete("   ")).toThrow(TypeError);
@@ -211,6 +237,16 @@ describe("prefix bucket", () => {
       ]),
     ).toThrow(TypeError);
     expect(registry.prefixes.values()).toHaveLength(0);
+  });
+
+  it("should not add any prefixes when addList contains a sparse slot", () => {
+    const registry = createErrorRegistry();
+    const entries: Array<readonly [string, ErrorFeedback]> = [];
+    entries[0] = ["First prefix:", { message: "First" }];
+    entries[2] = ["Third prefix:", { message: "Third" }];
+
+    expect(() => registry.prefixes.addList(entries)).toThrow(TypeError);
+    expect(registry.prefixes.values()).toEqual([]);
   });
 
   it("should delete a prefix and return true, then false on repeated delete", () => {
@@ -276,6 +312,16 @@ describe("pattern bucket", () => {
       ]),
     ).toThrow(TypeError);
     expect(registry.patterns.values()).toHaveLength(0);
+  });
+
+  it("should not add any patterns when addList contains a sparse slot", () => {
+    const registry = createErrorRegistry();
+    const entries: Array<readonly [RegExp, ErrorFeedback]> = [];
+    entries[0] = [/first/i, { message: "First" }];
+    entries[2] = [/third/i, { message: "Third" }];
+
+    expect(() => registry.patterns.addList(entries)).toThrow(TypeError);
+    expect(registry.patterns.values()).toEqual([]);
   });
 
   it("should strip global and sticky flags to prevent stateful lastIndex drift", () => {

@@ -37,8 +37,9 @@ Unmatched values become `type: "unknown"` and use
 
 ## Requirements
 
+- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Native `Error` cause support.
 - ESM-aware package resolution.
-- A modern JavaScript runtime with native `Error` cause support.
 - No runtime dependencies.
 
 Runtime code does not access browser or Node.js globals, making it suitable for
@@ -52,7 +53,7 @@ requirements.
 - Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances and read-only registry snapshots are frozen.
-- Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.
+- Raw strings passed to `err()` bypass registry matching and use the generic fallback unless `fallbackMessage` is explicit.
 - Default JSON serialization includes normalized fields such as `message`, `type`, and `source`, while omitting diagnostic `cause` and `originalError` values.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.

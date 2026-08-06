@@ -15,9 +15,10 @@ const loadName = (value: string | null): Result<string> =>
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
-options?)` delegates to `createAppError`. Raw strings are treated as untrusted
-diagnostic input and use the generic fallback message. Supply `fallbackMessage`
-explicitly only when the text is safe for users.
+options?)` normalizes failures through the same pipeline as `createAppError`.
+Raw strings are treated as untrusted diagnostic input, bypass registry matching,
+and use the generic fallback message. Supply `fallbackMessage` explicitly only
+when the text is safe for users.
 
 The remaining helpers operate only on the success branch unless stated:
 

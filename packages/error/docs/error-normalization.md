@@ -72,7 +72,10 @@ const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
 ```
 
 `ErrorFeedback` requires a non-empty `message` and optionally accepts
-`messageKey`, `source`, and `isRetryable`.
+`messageKey`, `source`, and `isRetryable`. A `messageKey` must be a dot-separated
+key under the `error` namespace with lower-camel-case segments, such as
+`error.myApp.api.rateLimit`. A `source` must use dot-separated lowercase
+kebab-case segments, such as `my-app.api`. Invalid formats throw `TypeError`.
 
 An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
 `prefixes` and regex `patterns`. It also provides `clear()` and `merge()`.

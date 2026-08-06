@@ -8,6 +8,8 @@ import type {
 } from "./types";
 
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
+const ERROR_MESSAGE_KEY_PATTERN = /^error(?:\.[a-z][A-Za-z0-9]*)+$/;
+const ERROR_SOURCE_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/;
 
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
@@ -54,12 +56,16 @@ export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
     throw new TypeError("Error registry feedback.message must be a non-empty string.");
   }
 
-  if (messageKey !== undefined && typeof messageKey !== "string") {
-    throw new TypeError("Error registry feedback.messageKey must be a string when provided.");
+  if (messageKey !== undefined && (typeof messageKey !== "string" || !ERROR_MESSAGE_KEY_PATTERN.test(messageKey))) {
+    throw new TypeError(
+      "Error registry feedback.messageKey must be a dot-separated key under the error namespace when provided.",
+    );
   }
 
-  if (source !== undefined && typeof source !== "string") {
-    throw new TypeError("Error registry feedback.source must be a string when provided.");
+  if (source !== undefined && (typeof source !== "string" || !ERROR_SOURCE_PATTERN.test(source))) {
+    throw new TypeError(
+      "Error registry feedback.source must use lowercase kebab-case namespace segments when provided.",
+    );
   }
 
   if (isRetryable !== undefined && typeof isRetryable !== "boolean") {
@@ -146,7 +152,7 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
   return {
     add,
     addList(errorEntries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void {
-      const preparedEntries = errorEntries.map(prepareEntry);
+      const preparedEntries = Array.from(errorEntries, prepareEntry);
       for (const entry of preparedEntries) {
         entries.set(...entry);
       }
@@ -219,7 +225,7 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
   return {
     add,
     addList(errorEntries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void {
-      const preparedEntries = errorEntries.map(prepareEntry);
+      const preparedEntries = Array.from(errorEntries, prepareEntry);
       for (const entry of preparedEntries) {
         entries.set(...entry);
       }
@@ -286,7 +292,7 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
   return {
     add,
     addList(errorEntries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void {
-      const definitions = errorEntries.map(prepareDefinition);
+      const definitions = Array.from(errorEntries, prepareDefinition);
       for (const definition of definitions) {
         storeDefinition(definition);
       }

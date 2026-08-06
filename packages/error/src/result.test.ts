@@ -52,6 +52,30 @@ describe("err", () => {
     expect(result.error.message).toBe("Missing user id");
   });
 
+  it.each([
+    [
+      "exact message",
+      (registry: ReturnType<typeof createErrorRegistry>) => registry.messages.add("raw secret", { message: "Mapped" }),
+    ],
+    [
+      "prefix",
+      (registry: ReturnType<typeof createErrorRegistry>) => registry.prefixes.add("raw", { message: "Mapped" }),
+    ],
+    [
+      "pattern",
+      (registry: ReturnType<typeof createErrorRegistry>) => registry.patterns.add(/raw secret/, { message: "Mapped" }),
+    ],
+  ])("should not classify a raw string through a %s mapping", (_, register) => {
+    const registry = createErrorRegistry();
+    register(registry);
+
+    expect(err("raw secret", { registry }).error).toMatchObject({
+      type: "unknown",
+      message: "An unexpected error occurred.",
+      originalError: "raw secret",
+    });
+  });
+
   it("should produce unknown type when no registry matches", () => {
     const result = err({ code: "unregistered" });
     expect(result.ok).toBe(false);
