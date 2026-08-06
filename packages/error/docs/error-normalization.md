@@ -88,8 +88,14 @@ Bucket contents are mutable, but the bucket references are read-only and cannot
 be replaced.
 Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
 `values`. Prefix and pattern buckets omit `get`; their `values()` methods return
-`ErrorPrefixDefinition` and `ErrorPatternDefinition` values. All returned
-feedback, definitions, and collection arrays are defensively copied.
+`ErrorPrefixDefinition` and `ErrorPatternDefinition` values.
+
+Entries are validated and frozen when they are registered, and read methods
+return those frozen values directly instead of rebuilding a copy per lookup.
+Returned feedback objects, definitions, definition lists, and stored `RegExp`
+instances are all frozen, so writing to them throws `TypeError` in strict mode
+and cannot affect registry state. Prefix definitions are returned ordered from
+longest to shortest prefix; pattern definitions keep insertion order.
 
 Code and name identifiers are trimmed but otherwise exact, so punctuation
 remains significant. Message and prefix identifiers are trimmed and trailing

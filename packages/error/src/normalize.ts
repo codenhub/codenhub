@@ -1,5 +1,5 @@
 import { normalizeErrorMessage } from "./bucket";
-import type { AppErrorType, ErrorFeedback, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
+import type { AppErrorType, ErrorFeedback, ErrorPrefixDefinition, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 interface NormalizedError {
   code: string | null;
@@ -143,15 +143,20 @@ const getKnownMessageFeedback = (
     return toKnownClassification(exactFeedback);
   }
 
-  const sortedPrefixes = [...registry.prefixes.values()].sort((a, b) => b.prefix.length - a.prefix.length);
+  // Scanning for the longest match keeps custom registries that return unordered prefix
+  // definitions correct without copying and sorting the list on every classification.
+  let longestMatch: ErrorPrefixDefinition | null = null;
 
-  for (const definition of sortedPrefixes) {
-    if (normalizedMessage.startsWith(definition.prefix)) {
-      return toKnownClassification(definition);
+  for (const definition of registry.prefixes.values()) {
+    if (
+      normalizedMessage.startsWith(definition.prefix) &&
+      (longestMatch === null || definition.prefix.length > longestMatch.prefix.length)
+    ) {
+      longestMatch = definition;
     }
   }
 
-  return null;
+  return longestMatch === null ? null : toKnownClassification(longestMatch);
 };
 
 const resolveDeterministicKnownError = (

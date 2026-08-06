@@ -263,21 +263,56 @@ describe("freezeRegistry", () => {
     const prefixValues = registry.prefixes.values();
     const patternValues = registry.patterns.values();
 
-    (prefixValues[0] as { message: string }).message = "Mutated prefix";
-    (prefixValues as unknown as Array<{ prefix: string; message: string }>).push({
-      prefix: "Injected",
-      message: "Injected prefix",
-    });
-    (patternValues[0] as { message: string }).message = "Mutated pattern";
-    (patternValues as unknown as Array<{ pattern: RegExp; message: string }>).push({
-      pattern: /injected/,
-      message: "Injected pattern",
-    });
+    expect(() => {
+      (prefixValues[0] as { message: string }).message = "Mutated prefix";
+    }).toThrow(TypeError);
+    expect(() => {
+      (prefixValues as unknown as Array<{ prefix: string; message: string }>).push({
+        prefix: "Injected",
+        message: "Injected prefix",
+      });
+    }).toThrow(TypeError);
+    expect(() => {
+      (patternValues[0] as { message: string }).message = "Mutated pattern";
+    }).toThrow(TypeError);
+    expect(() => {
+      (patternValues as unknown as Array<{ pattern: RegExp; message: string }>).push({
+        pattern: /injected/,
+        message: "Injected pattern",
+      });
+    }).toThrow(TypeError);
 
     expect(registry.prefixes.values()).toHaveLength(1);
     expect(registry.prefixes.values()[0].message).toBe("Original prefix");
     expect(registry.patterns.values()).toHaveLength(1);
     expect(registry.patterns.values()[0].message).toBe("Original pattern");
+  });
+
+  it("should freeze stored pattern RegExp instances without breaking matching", () => {
+    const registry = createErrorRegistry();
+    registry.patterns.add(/failed to fetch/i, { message: "Network request failed." });
+
+    const [definition] = registry.patterns.values();
+
+    expect(Object.isFrozen(definition.pattern)).toBe(true);
+    expect(definition.pattern.test("Failed to fetch")).toBe(true);
+    expect(definition.pattern.test("unrelated")).toBe(false);
+    expect(definition.pattern.lastIndex).toBe(0);
+  });
+
+  it("should return the same frozen definition list until the bucket changes", () => {
+    const registry = createErrorRegistry();
+    registry.prefixes.add("Upload failed:", { message: "Upload failure." });
+    registry.patterns.add(/timeout/i, { message: "Timed out." });
+
+    expect(registry.prefixes.values()).toBe(registry.prefixes.values());
+    expect(registry.patterns.values()).toBe(registry.patterns.values());
+
+    const previousPrefixes = registry.prefixes.values();
+    registry.prefixes.add("Download failed:", { message: "Download failure." });
+
+    expect(registry.prefixes.values()).not.toBe(previousPrefixes);
+    expect(registry.prefixes.values()).toHaveLength(2);
   });
 
   it("should be usable as a preset source for createErrorRegistry", () => {

@@ -147,12 +147,12 @@ export interface ErrorRegistryBucket {
   clear(): void;
 
   /**
-   * Retrieves a defensive copy of the feedback mapping for the specified identifier.
+   * Retrieves the frozen feedback mapping for the specified identifier.
    *
    * @param identifier - The exact error identifier to lookup.
-   * @returns The matched feedback mapping, or `undefined` if not found.
+   * @returns The matched frozen feedback mapping, or `undefined` if not found.
    */
-  get(identifier: string): ErrorFeedback | undefined;
+  get(identifier: string): Readonly<ErrorFeedback> | undefined;
 
   /**
    * Removes error feedback mapped to the specified identifier.
@@ -165,11 +165,11 @@ export interface ErrorRegistryBucket {
   delete(identifier: string): boolean;
 
   /**
-   * Returns an iterator yielding defensive copies of all mappings stored in the bucket.
+   * Returns an iterator yielding every frozen mapping stored in the bucket.
    *
    * @returns An iterator of [identifier, feedback] entries.
    */
-  values(): IterableIterator<[string, ErrorFeedback]>;
+  values(): IterableIterator<[string, Readonly<ErrorFeedback>]>;
 }
 
 /**
@@ -230,11 +230,13 @@ export interface ErrorPrefixRegistryBucket {
   delete(prefix: string): boolean;
 
   /**
-   * Returns defensive copies of all prefix definitions registered in this bucket.
+   * Returns every registered prefix definition, ordered from longest to shortest prefix.
    *
-   * @returns Readonly list of prefix definitions.
+   * The returned list and its definitions are frozen.
+   *
+   * @returns Frozen list of prefix definitions.
    */
-  values(): readonly ErrorPrefixDefinition[];
+  values(): readonly Readonly<ErrorPrefixDefinition>[];
 }
 
 /**
@@ -273,12 +275,15 @@ export interface ErrorPatternRegistryBucket {
   delete(pattern: RegExp): boolean;
 
   /**
-   * Returns defensive copies of all pattern definitions registered in this bucket.
-   * RegExp instances are stateless since global and sticky flags are stripped on registration.
+   * Returns every registered pattern definition in insertion order.
    *
-   * @returns Readonly list of pattern definitions.
+   * The returned list, its definitions, and their RegExp instances are frozen. Sharing the
+   * RegExp instances is safe because global and sticky flags are stripped on registration,
+   * leaving them stateless.
+   *
+   * @returns Frozen list of pattern definitions.
    */
-  values(): readonly ErrorPatternDefinition[];
+  values(): readonly Readonly<ErrorPatternDefinition>[];
 }
 
 /**

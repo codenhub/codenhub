@@ -27,20 +27,39 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.messages.get("Message")).toEqual({ message: "Mapped message." });
   });
 
-  it("should return a defensive copy from get so external mutation does not affect stored state", () => {
+  it("should return frozen feedback from get so external mutation cannot affect stored state", () => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Msg" });
-    const copy = registry.codes.get("code1")!;
-    copy.message = "mutated";
+    const stored = registry.codes.get("code1")!;
+
+    expect(Object.isFrozen(stored)).toBe(true);
+    expect(() => {
+      (stored as { message: string }).message = "mutated";
+    }).toThrow(TypeError);
     expect(registry.codes.get("code1")!.message).toBe("Msg");
   });
 
-  it("should return defensive copies from values so external mutation does not affect stored state", () => {
+  it("should return frozen feedback from values so external mutation cannot affect stored state", () => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Msg" });
-    const [[, copy]] = [...registry.codes.values()];
-    copy.message = "mutated";
+    const [[, stored]] = [...registry.codes.values()];
+
+    expect(Object.isFrozen(stored)).toBe(true);
+    expect(() => {
+      (stored as { message: string }).message = "mutated";
+    }).toThrow(TypeError);
     expect(registry.codes.get("code1")!.message).toBe("Msg");
+  });
+
+  it("should isolate stored feedback from later mutation of the source object", () => {
+    const registry = createErrorRegistry();
+    const feedback = { message: "Original", isRetryable: false };
+
+    registry.codes.add("code1", feedback);
+    feedback.message = "Mutated";
+    feedback.isRetryable = true;
+
+    expect(registry.codes.get("code1")).toEqual({ message: "Original", isRetryable: false });
   });
 
   it("should preserve feedback fields inherited from the source object", () => {
@@ -283,6 +302,13 @@ describe("prefix bucket", () => {
   it("should reject an invalid prefix on delete", () => {
     const registry = createErrorRegistry();
     expect(() => registry.prefixes.delete("!!!")).toThrow(TypeError);
+  });
+
+  it.each([null, undefined, 42, {}])("should reject a non-string prefix %j", (prefix) => {
+    const registry = createErrorRegistry();
+
+    expect(() => registry.prefixes.add(prefix as never, { message: "Msg" })).toThrow(TypeError);
+    expect(() => registry.prefixes.delete(prefix as never)).toThrow(TypeError);
   });
 });
 

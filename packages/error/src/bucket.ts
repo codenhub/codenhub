@@ -28,12 +28,15 @@ export const normalizeExactErrorIdentifier = (identifier: string): string => {
 };
 
 /**
- * Copies and validates feedback while reading each external property once.
+ * Copies, validates, and freezes feedback while reading each external property once.
+ *
+ * Stored entries are frozen at registration so read paths can share them instead of rebuilding
+ * a defensive copy on every lookup.
  *
  * @throws TypeError - If feedback is missing or has invalid field types.
  * @internal
  */
-export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
+export const freezeFeedback = (feedback: ErrorFeedback): Readonly<ErrorFeedback> => {
   if (typeof feedback !== "object" || feedback === null) {
     throw new TypeError("Error registry feedback must be an object.");
   }
@@ -86,7 +89,7 @@ export const cloneFeedback = (feedback: ErrorFeedback): ErrorFeedback => {
     clone.isRetryable = isRetryable;
   }
 
-  return clone;
+  return Object.freeze(clone);
 };
 
 /** @internal */
@@ -94,18 +97,10 @@ export const freezeFeedbackMap = (
   feedbackMap: Record<string, ErrorFeedback>,
 ): Readonly<Record<string, Readonly<ErrorFeedback>>> => {
   const frozenFeedbackMap = Object.fromEntries(
-    Object.entries(feedbackMap).map(([key, feedback]) => [key, Object.freeze(cloneFeedback(feedback))]),
+    Object.entries(feedbackMap).map(([key, feedback]) => [key, freezeFeedback(feedback)]),
   ) as Readonly<Record<string, Readonly<ErrorFeedback>>>;
 
   return Object.freeze(frozenFeedbackMap);
-};
-
-const clonePrefixDefinition = (definition: ErrorPrefixDefinition): ErrorPrefixDefinition => {
-  return { ...cloneFeedback(definition), prefix: definition.prefix };
-};
-
-const clonePatternDefinition = (definition: ErrorPatternDefinition): ErrorPatternDefinition => {
-  return { ...cloneFeedback(definition), pattern: new RegExp(definition.pattern.source, definition.pattern.flags) };
 };
 
 const REGEXP_SOURCE_GETTER = Object.getOwnPropertyDescriptor(RegExp.prototype, "source")?.get;
@@ -129,7 +124,7 @@ const isRegExp = (value: unknown): value is RegExp => {
  * @internal
  */
 export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string) => string): ErrorRegistryBucket => {
-  const entries = new Map<string, ErrorFeedback>();
+  const entries = new Map<string, Readonly<ErrorFeedback>>();
   const getNormalizedIdentifier = (identifier: string): string => {
     if (typeof identifier !== "string") {
       throw new TypeError("Error registry identifier must be a non-empty string.");
@@ -141,10 +136,10 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
     }
     return normalizedIdentifier;
   };
-  const prepareEntry = ([identifier, feedback]: readonly [string, ErrorFeedback]): [string, ErrorFeedback] => [
-    getNormalizedIdentifier(identifier),
-    cloneFeedback(feedback),
-  ];
+  const prepareEntry = ([identifier, feedback]: readonly [string, ErrorFeedback]): [
+    string,
+    Readonly<ErrorFeedback>,
+  ] => [getNormalizedIdentifier(identifier), freezeFeedback(feedback)];
   const add = (identifier: string, feedback: ErrorFeedback): void => {
     entries.set(...prepareEntry([identifier, feedback]));
   };
@@ -163,7 +158,7 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
     delete(identifier: string): boolean {
       return entries.delete(getNormalizedIdentifier(identifier));
     },
-    get(identifier: string): ErrorFeedback | undefined {
+    get(identifier: string): Readonly<ErrorFeedback> | undefined {
       if (typeof identifier !== "string") {
         return undefined;
       }
@@ -173,13 +168,10 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
         return undefined;
       }
 
-      const feedback = entries.get(normalizedIdentifier);
-      return feedback === undefined ? undefined : cloneFeedback(feedback);
+      return entries.get(normalizedIdentifier);
     },
-    *values(): IterableIterator<[string, ErrorFeedback]> {
-      for (const [identifier, feedback] of entries) {
-        yield [identifier, cloneFeedback(feedback)];
-      }
+    *values(): IterableIterator<[string, Readonly<ErrorFeedback>]> {
+      yield* entries;
     },
   };
 };
@@ -190,32 +182,22 @@ export const createFeedbackMapBucket = (normalizeIdentifier: (identifier: string
  * @internal
  */
 export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
-  const entries = new Map<string, ErrorFeedback>();
-  let sortedCache: ErrorPrefixDefinition[] | null = null;
+  const entries = new Map<string, Readonly<ErrorPrefixDefinition>>();
+  let sortedCache: readonly Readonly<ErrorPrefixDefinition>[] | null = null;
 
-  const rebuildCache = (): void => {
-    sortedCache = Array.from(
-      entries.entries(),
-      ([prefix, feedback]): ErrorPrefixDefinition => ({
-        ...cloneFeedback(feedback),
-        prefix,
-      }),
-    ).sort((a, b) => b.prefix.length - a.prefix.length);
-  };
-
-  const getSortedCache = (): readonly ErrorPrefixDefinition[] => {
-    if (sortedCache === null) {
-      rebuildCache();
-    }
-    return sortedCache!;
-  };
-
-  const prepareEntry = ([prefix, feedback]: readonly [string, ErrorFeedback]): [string, ErrorFeedback] => {
-    if (typeof prefix !== "string" || normalizeErrorMessage(prefix).length === 0) {
+  const getNormalizedPrefix = (prefix: string): string => {
+    const normalizedPrefix = typeof prefix === "string" ? normalizeErrorMessage(prefix) : "";
+    if (normalizedPrefix.length === 0) {
       throw new TypeError("Error registry prefix must be a non-empty string.");
     }
-
-    return [normalizeErrorMessage(prefix), cloneFeedback(feedback)];
+    return normalizedPrefix;
+  };
+  const prepareEntry = ([prefix, feedback]: readonly [string, ErrorFeedback]): [
+    string,
+    Readonly<ErrorPrefixDefinition>,
+  ] => {
+    const normalizedPrefix = getNormalizedPrefix(prefix);
+    return [normalizedPrefix, Object.freeze({ ...freezeFeedback(feedback), prefix: normalizedPrefix })];
   };
   const add = (prefix: string, feedback: ErrorFeedback): void => {
     entries.set(...prepareEntry([prefix, feedback]));
@@ -233,20 +215,20 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
     },
     clear(): void {
       entries.clear();
-      sortedCache = [];
+      sortedCache = null;
     },
     delete(prefix: string): boolean {
-      if (typeof prefix !== "string" || normalizeErrorMessage(prefix).length === 0) {
-        throw new TypeError("Error registry prefix must be a non-empty string.");
-      }
-      const deleted = entries.delete(normalizeErrorMessage(prefix));
+      const deleted = entries.delete(getNormalizedPrefix(prefix));
       if (deleted) {
         sortedCache = null;
       }
       return deleted;
     },
-    values(): readonly ErrorPrefixDefinition[] {
-      return getSortedCache().map(clonePrefixDefinition);
+    values(): readonly Readonly<ErrorPrefixDefinition>[] {
+      sortedCache ??= Object.freeze(
+        Array.from(entries.values()).sort((first, second) => second.prefix.length - first.prefix.length),
+      );
+      return sortedCache;
     },
   };
 };
@@ -258,22 +240,28 @@ export const createPrefixBucket = (): ErrorPrefixRegistryBucket => {
  * @internal
  */
 export const createPatternBucket = (): ErrorPatternRegistryBucket => {
-  const entries: ErrorPatternDefinition[] = [];
-  let cachedValues: ErrorPatternDefinition[] | null = null;
+  const entries: Readonly<ErrorPatternDefinition>[] = [];
+  let cachedValues: readonly Readonly<ErrorPatternDefinition>[] | null = null;
 
-  const prepareDefinition = ([pattern, feedback]: readonly [RegExp, ErrorFeedback]): ErrorPatternDefinition => {
+  const getStatelessFlags = (pattern: RegExp): string => {
     if (!isRegExp(pattern)) {
       throw new TypeError("Error registry pattern must be a RegExp.");
     }
-
-    const source = pattern.source;
-    const flags = pattern.flags.replace(/[gy]/g, "");
-    return {
-      ...cloneFeedback(feedback),
-      pattern: new RegExp(source, flags),
-    };
+    return pattern.flags.replace(/[gy]/g, "");
   };
-  const storeDefinition = (definition: ErrorPatternDefinition): void => {
+  const prepareDefinition = ([pattern, feedback]: readonly [
+    RegExp,
+    ErrorFeedback,
+  ]): Readonly<ErrorPatternDefinition> => {
+    const flags = getStatelessFlags(pattern);
+    return Object.freeze({
+      ...freezeFeedback(feedback),
+      // Freezing the stored RegExp is safe because stripping `g` and `y` leaves `test` stateless,
+      // so read paths can share one instance instead of rebuilding it per lookup.
+      pattern: Object.freeze(new RegExp(pattern.source, flags)),
+    });
+  };
+  const storeDefinition = (definition: Readonly<ErrorPatternDefinition>): void => {
     const existingIndex = entries.findIndex(
       (entry) => entry.pattern.source === definition.pattern.source && entry.pattern.flags === definition.pattern.flags,
     );
@@ -299,17 +287,14 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
     },
     clear(): void {
       entries.length = 0;
-      cachedValues = [];
+      cachedValues = null;
     },
     delete(pattern: RegExp): boolean {
-      if (!isRegExp(pattern)) {
-        throw new TypeError("Error registry pattern must be a RegExp.");
-      }
+      const flags = getStatelessFlags(pattern);
       let isDeleted = false;
-      const flags = pattern.flags.replace(/[gy]/g, "");
-      for (let i = entries.length - 1; i >= 0; i--) {
-        if (entries[i].pattern.source === pattern.source && entries[i].pattern.flags === flags) {
-          entries.splice(i, 1);
+      for (let index = entries.length - 1; index >= 0; index -= 1) {
+        if (entries[index].pattern.source === pattern.source && entries[index].pattern.flags === flags) {
+          entries.splice(index, 1);
           isDeleted = true;
         }
       }
@@ -318,14 +303,9 @@ export const createPatternBucket = (): ErrorPatternRegistryBucket => {
       }
       return isDeleted;
     },
-    values(): readonly ErrorPatternDefinition[] {
-      if (cachedValues === null) {
-        cachedValues = entries.map((entry) => ({
-          ...entry,
-          pattern: new RegExp(entry.pattern.source, entry.pattern.flags),
-        }));
-      }
-      return cachedValues.map(clonePatternDefinition);
+    values(): readonly Readonly<ErrorPatternDefinition>[] {
+      cachedValues ??= Object.freeze([...entries]);
+      return cachedValues;
     },
   };
 };
