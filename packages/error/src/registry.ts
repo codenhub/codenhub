@@ -9,9 +9,28 @@ import type { ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 type RegistryBuckets = Pick<ErrorRegistry, "codes" | "names" | "messages" | "prefixes" | "patterns">;
 
+interface RegistryBucketMethods {
+  /** Methods required on the identifier-keyed `codes`, `names`, and `messages` buckets. */
+  readonly bucketMethods: readonly PropertyKey[];
+
+  /** Methods required on the definition-list `prefixes` and `patterns` buckets. */
+  readonly definitionBucketMethods: readonly PropertyKey[];
+}
+
 const MUTABLE_BUCKET_METHODS = ["add", "addList", "clear", "delete", "get", "values"] as const;
-const PREFIX_BUCKET_METHODS = ["add", "addList", "clear", "delete", "values"] as const;
-const PATTERN_BUCKET_METHODS = ["add", "addList", "clear", "delete", "values"] as const;
+const MUTABLE_DEFINITION_BUCKET_METHODS = ["add", "addList", "clear", "delete", "values"] as const;
+const READABLE_BUCKET_METHODS = ["get", "values"] as const;
+const READABLE_DEFINITION_BUCKET_METHODS = ["values"] as const;
+
+const MUTABLE_REGISTRY_METHODS: RegistryBucketMethods = {
+  bucketMethods: MUTABLE_BUCKET_METHODS,
+  definitionBucketMethods: MUTABLE_DEFINITION_BUCKET_METHODS,
+};
+
+const READABLE_REGISTRY_METHODS: RegistryBucketMethods = {
+  bucketMethods: READABLE_BUCKET_METHODS,
+  definitionBucketMethods: READABLE_DEFINITION_BUCKET_METHODS,
+};
 
 const getSafeProperty = (value: object, key: PropertyKey): unknown => {
   try {
@@ -33,20 +52,39 @@ const hasMethods = (value: unknown, methodNames: readonly PropertyKey[]): boolea
   return methodNames.every((methodName) => typeof getSafeProperty(value, methodName) === "function");
 };
 
+const hasRegistryBuckets = (
+  value: object,
+  { bucketMethods, definitionBucketMethods }: RegistryBucketMethods,
+): boolean => {
+  return (
+    hasMethods(getSafeProperty(value, "codes"), bucketMethods) &&
+    hasMethods(getSafeProperty(value, "names"), bucketMethods) &&
+    hasMethods(getSafeProperty(value, "messages"), bucketMethods) &&
+    hasMethods(getSafeProperty(value, "prefixes"), definitionBucketMethods) &&
+    hasMethods(getSafeProperty(value, "patterns"), definitionBucketMethods)
+  );
+};
+
 const isMutableErrorRegistry = (value: unknown): value is ErrorRegistry => {
   if (!isObject(value)) {
     return false;
   }
 
   return (
-    hasMethods(getSafeProperty(value, "codes"), MUTABLE_BUCKET_METHODS) &&
-    hasMethods(getSafeProperty(value, "names"), MUTABLE_BUCKET_METHODS) &&
-    hasMethods(getSafeProperty(value, "messages"), MUTABLE_BUCKET_METHODS) &&
-    hasMethods(getSafeProperty(value, "prefixes"), PREFIX_BUCKET_METHODS) &&
-    hasMethods(getSafeProperty(value, "patterns"), PATTERN_BUCKET_METHODS) &&
+    hasRegistryBuckets(value, MUTABLE_REGISTRY_METHODS) &&
     typeof getSafeProperty(value, "clear") === "function" &&
     typeof getSafeProperty(value, "merge") === "function"
   );
+};
+
+/**
+ * Checks that a value exposes the read-facing bucket surface needed to classify errors
+ * and to act as a merge or preset source.
+ *
+ * @internal
+ */
+export const isReadableErrorRegistry = (value: unknown): value is ReadonlyErrorRegistry => {
+  return isObject(value) && hasRegistryBuckets(value, READABLE_REGISTRY_METHODS);
 };
 
 const copyRegistryEntries = (
@@ -71,7 +109,8 @@ const copyRegistryEntries = (
  *
  * @param presets - Optional list of existing registries to merge during creation.
  * @returns A new, mutable ErrorRegistry instance.
- * @throws TypeError - If any preset contains an invalid identifier, pattern, or feedback field.
+ * @throws TypeError - If `presets` is not a list, if a preset does not implement the readable
+ * registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
  */
 export const createErrorRegistry = (presets?: readonly (ErrorRegistry | ReadonlyErrorRegistry)[]): ErrorRegistry => {
   const codes = createFeedbackMapBucket(normalizeExactErrorIdentifier);
@@ -94,6 +133,10 @@ export const createErrorRegistry = (presets?: readonly (ErrorRegistry | Readonly
       patterns.clear();
     },
     merge(sourceRegistry: ErrorRegistry | ReadonlyErrorRegistry): void {
+      if (!isReadableErrorRegistry(sourceRegistry)) {
+        throw new TypeError("Error registry merge source must implement the readable registry interface.");
+      }
+
       const stagedRegistry: RegistryBuckets = {
         codes: createFeedbackMapBucket(normalizeExactErrorIdentifier),
         names: createFeedbackMapBucket(normalizeExactErrorIdentifier),
@@ -111,7 +154,11 @@ export const createErrorRegistry = (presets?: readonly (ErrorRegistry | Readonly
     Object.defineProperty(registry, bucketName, { configurable: false, writable: false });
   }
 
-  if (presets) {
+  if (presets !== undefined) {
+    if (!Array.isArray(presets)) {
+      throw new TypeError("Error registry presets must be a list of registries.");
+    }
+
     for (const preset of presets) {
       registry.merge(preset);
     }

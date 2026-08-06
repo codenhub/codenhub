@@ -43,13 +43,13 @@ export interface AppError extends Error {
 export interface AppErrorOptions {
   /**
    * The fallback error message to use when the error cannot be matched in the registry.
-   * Defaults to `DEFAULT_APP_ERROR_MESSAGE`.
+   * Must be a non-empty string. Defaults to `DEFAULT_APP_ERROR_MESSAGE`.
    */
   fallbackMessage?: string;
 
   /**
-   * The specific error registry to query for classifications.
-   * Defaults to the global registry retrieved by `getErrorRegistry()`.
+   * The specific error registry to query for classifications. Must expose the read-facing
+   * registry surface. Defaults to the global registry retrieved by `getErrorRegistry()`.
    */
   registry?: ErrorRegistry | ReadonlyErrorRegistry;
 
@@ -306,7 +306,8 @@ export interface ErrorRegistry {
    * Leaves this registry unchanged when reading or validating the source fails.
    *
    * @param registry - The source registry to merge. Accepts both mutable and read-only registries.
-   * @throws TypeError - If the source contains an invalid registry entry.
+   * @throws TypeError - If the source does not implement the readable registry interface or
+   * contains an invalid registry entry.
    */
   merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
 }

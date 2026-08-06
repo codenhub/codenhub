@@ -526,3 +526,28 @@ describe("createAppError — appErrorFallback nested unknown AppError resolution
     expect(createAppError(errorWithCause, { maxDepth: 3, registry }).type).toBe("known");
   });
 });
+
+describe("createAppError — option validation", () => {
+  it.each([null, "options", 42])("should reject a non-object options value %j", (options) => {
+    expect(() => createAppError({ code: "any" }, options as never)).toThrow(TypeError);
+  });
+
+  it.each(["", "   ", 123, true])("should reject an invalid fallbackMessage %j", (fallbackMessage) => {
+    expect(() => createAppError({ code: "any" }, { fallbackMessage } as never)).toThrow(TypeError);
+  });
+
+  it.each([null, "registry", 42, {}, []])("should reject a registry without read methods %j", (registry) => {
+    expect(() => createAppError({ code: "any" }, { registry } as never)).toThrow(TypeError);
+  });
+
+  it("should reject an invalid registry even when the error carries no identifiers", () => {
+    expect(() => createAppError({}, { registry: {} } as never)).toThrow(TypeError);
+  });
+
+  it("should accept a frozen read-only registry as a classification source", () => {
+    expect(createAppError({ name: "AbortError" }, { registry: browserErrorRegistry })).toMatchObject({
+      type: "known",
+      source: "browser",
+    });
+  });
+});

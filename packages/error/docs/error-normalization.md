@@ -21,11 +21,11 @@ const error = createAppError(new Error("Request failed"), {
 
 `AppErrorOptions` supports:
 
-| Option            | Default                     | Behavior                                                        |
-| ----------------- | --------------------------- | --------------------------------------------------------------- |
-| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value.                                 |
-| `registry`        | `getErrorRegistry()`        | Classification source.                                          |
-| `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`. |
+| Option            | Default                     | Behavior                                                             |
+| ----------------- | --------------------------- | -------------------------------------------------------------------- |
+| `fallbackMessage` | `DEFAULT_APP_ERROR_MESSAGE` | Message for an unmatched value; must be a non-empty string.          |
+| `registry`        | `getErrorRegistry()`        | Classification source; must expose the read-facing registry surface. |
+| `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`.      |
 
 `DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
 `isAppError(value)` identifies errors created by the current package runtime.
@@ -47,15 +47,19 @@ proxies whose inspected properties throw. JSON serialization includes `name`,
 `cause` and `originalError` diagnostic values, preventing sensitive fields and
 cyclic wrapper objects from being serialized through the normalized error.
 Registry configuration errors throw `TypeError` at their configuration
-boundary. A `maxDepth` outside the integer range from `0` through `3` also
-throws `TypeError` before traversal.
+boundary. Invalid options are programmer errors and throw `TypeError` before
+traversal begins: a non-object `options` value, an empty or non-string
+`fallbackMessage`, a `registry` that does not expose the read-facing registry
+surface, and a `maxDepth` outside the integer range from `0` through `3`.
 
 ## Configure A Registry
 
 `getErrorRegistry()` returns the active mutable global `ErrorRegistry`.
 `setErrorRegistry(registry)` replaces it and throws `TypeError` when the value
 does not implement the mutable registry interface. `createErrorRegistry(presets?)`
-creates an isolated, empty registry and merges optional presets in order.
+creates an isolated, empty registry and merges optional presets in order; it
+throws `TypeError` when `presets` is not a list. `merge()` throws `TypeError`
+when its source does not expose the read-facing registry surface.
 
 ```ts
 import { createAppError, createErrorRegistry } from "@codenhub/error";
@@ -63,7 +67,7 @@ import { createAppError, createErrorRegistry } from "@codenhub/error";
 const registry = createErrorRegistry();
 registry.codes.add("E_RATE_LIMIT", {
   message: "Try again later.",
-  messageKey: "error.my-app.api.rateLimit",
+  messageKey: "error.myApp.api.rateLimit",
   source: "my-app.api",
   isRetryable: true,
 });

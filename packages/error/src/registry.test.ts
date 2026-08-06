@@ -115,6 +115,19 @@ describe("createErrorRegistry", () => {
     });
   });
 
+  it.each([null, "registry", 42, {}, []])("should reject a merge source without read methods %j", (source) => {
+    const target = createErrorRegistry();
+    expect(() => target.merge(source as never)).toThrow(TypeError);
+  });
+
+  it.each([null, "presets", 42, {}])("should reject a presets value that is not a list %j", (presets) => {
+    expect(() => createErrorRegistry(presets as never)).toThrow(TypeError);
+  });
+
+  it("should reject a preset without read methods", () => {
+    expect(() => createErrorRegistry([{} as never])).toThrow(TypeError);
+  });
+
   it("should leave the target unchanged when a source bucket is invalid", () => {
     const target = createErrorRegistry();
     target.codes.add("existing", { message: "Existing" });

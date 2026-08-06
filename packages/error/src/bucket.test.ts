@@ -194,6 +194,17 @@ describe("feedback map bucket (codes / names / messages)", () => {
     },
   );
 
+  it.each([
+    ["error.myApp.api.rateLimit", "my-app.api"],
+    ["error.supabase.auth.invalidCredentials", "supabase.auth"],
+    ["error.browser", "browser"],
+  ])("should accept documented messageKey %j with source %j", (messageKey, source) => {
+    const registry = createErrorRegistry();
+    registry.codes.add("code1", { message: "Msg", messageKey, source });
+
+    expect(registry.codes.get("code1")).toEqual({ message: "Msg", messageKey, source });
+  });
+
   it("should reject an empty or whitespace-only identifier on delete", () => {
     const registry = createErrorRegistry();
     expect(() => registry.codes.delete("   ")).toThrow(TypeError);

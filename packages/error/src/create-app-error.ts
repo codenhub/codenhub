@@ -1,6 +1,13 @@
 import { classifyErrorCandidate, getErrorCandidates } from "./normalize";
-import { getErrorRegistry } from "./registry";
-import type { AppError, AppErrorOptions, AppErrorSource, AppErrorType } from "./types";
+import { getErrorRegistry, isReadableErrorRegistry } from "./registry";
+import type {
+  AppError,
+  AppErrorOptions,
+  AppErrorSource,
+  AppErrorType,
+  ErrorRegistry,
+  ReadonlyErrorRegistry,
+} from "./types";
 
 interface AppErrorResolution {
   type: AppErrorType;
@@ -15,6 +22,13 @@ interface CreateAppErrorInput {
   error: unknown;
   options: AppErrorOptions;
   shouldClassifyRootString: boolean;
+}
+
+interface ResolvedAppErrorOptions {
+  fallbackMessage: string;
+  registry: ErrorRegistry | ReadonlyErrorRegistry;
+  maxDepth: number | undefined;
+  hasCustomOptions: boolean;
 }
 
 /** Default message used when no registry entry or fallback message can describe an error. */
@@ -48,6 +62,34 @@ class AppErrorImpl extends Error implements AppError {
   }
 }
 
+/**
+ * Reads each supplied option once and validates it before any traversal begins.
+ *
+ * @throws TypeError - If options or any supplied option value is invalid.
+ */
+const resolveOptions = (options: AppErrorOptions): ResolvedAppErrorOptions => {
+  if (typeof options !== "object" || options === null) {
+    throw new TypeError("AppError options must be an object.");
+  }
+
+  const { fallbackMessage, registry, maxDepth } = options;
+
+  if (fallbackMessage !== undefined && (typeof fallbackMessage !== "string" || fallbackMessage.trim().length === 0)) {
+    throw new TypeError("AppError options.fallbackMessage must be a non-empty string when provided.");
+  }
+
+  if (registry !== undefined && !isReadableErrorRegistry(registry)) {
+    throw new TypeError("AppError options.registry must implement the readable registry interface.");
+  }
+
+  return {
+    fallbackMessage: fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE,
+    registry: registry ?? getErrorRegistry(),
+    maxDepth,
+    hasCustomOptions: fallbackMessage !== undefined || registry !== undefined || maxDepth !== undefined,
+  };
+};
+
 const resolveFromAppError = (appError: AppError, originalError: unknown): AppErrorResolution => ({
   type: appError.type,
   message: appError.message,
@@ -75,16 +117,13 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
  * @throws TypeError - If `maxDepth` is not an integer from 0 through 3.
  */
 const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateAppErrorInput): AppError => {
-  const hasCustomOptions =
-    options.fallbackMessage !== undefined || options.registry !== undefined || options.maxDepth !== undefined;
+  const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveOptions(options);
 
   if (isAppError(error) && !hasCustomOptions) {
     return error;
   }
 
-  const fallbackMessage = options.fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE;
-  const errorCandidates = getErrorCandidates(isAppError(error) ? error.originalError : error, options.maxDepth);
-  const registry = options.registry ?? getErrorRegistry();
+  const errorCandidates = getErrorCandidates(isAppError(error) ? error.originalError : error, maxDepth);
 
   // Single pass over candidates resolving by priority tier:
   // known > unexpected > appError fallback (any type).
