@@ -1,0 +1,25 @@
+{
+  "name": "@codenhub/tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace-aware repository tooling behind the root pnpm scripts.",
+  "bin": {
+    "hub": "./src/cli.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

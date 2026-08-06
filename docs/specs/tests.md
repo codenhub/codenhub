@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-08-06
 ---
 
 # Testing specification
@@ -71,7 +71,9 @@ To maintain clean and explicit testing setups, follow these configuration rules:
 
 ## Execution Commands
 
-Always run tests from the repository root:
+Always run tests from the repository root. Test scripts MUST NOT chain their own
+build step; `docs/tooling.md` defines how build ordering is owned by the root
+tooling instead.
 
 ### Workspace-wide Checks
 
@@ -80,14 +82,19 @@ pnpm test
 pnpm test:coverage
 ```
 
-### Package-filtered Checks
+### Narrowed Checks
 
-Prefer using package-filtered commands when testing a single package or to avoid workspace timeouts:
+Prefer a narrowed run when working on a single package, a single file, or a set
+of changed packages:
 
 ```sh
-pnpm --filter=<package-dir> test
-pnpm --filter=<package-dir> test:watch
-pnpm --filter=<package-dir> test:coverage
+pnpm test error
+pnpm test packages/error/src/bucket.test.ts
+pnpm test:watch error
+pnpm test:coverage error
+pnpm test --changed
 ```
 
-_(Replace `<package-dir>` with the package name or folder name under `packages/` or `apps/`, e.g., `pnpm --filter=error test`)_
+A target may be a package name, a workspace directory, a path, or a glob. File
+paths are forwarded to Vitest, so a single test file runs on its own. See
+`docs/tooling.md` for the full selector and option surface.

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
+last_updated: 2026-08-06
 scope: Public workspace packages.
 ---
 
@@ -51,6 +51,12 @@ Public packages MUST define:
 
 Packages MAY omit `test` and `test:watch` only when they contain no executable code and the exception is documented.
 
+Package scripts MUST invoke their own tool directly and MUST NOT chain a build
+step into `test`, `test:coverage`, `test:watch`, `typecheck`, or `status:pack`.
+Root tooling runs the build first, as defined by `docs/tooling.md`; chaining it
+again would build twice. `prepublishOnly` is exempt because npm runs it outside
+that tooling and it MUST remain self-contained.
+
 Root workspace scripts MUST keep supporting:
 
 - `pnpm build`
@@ -62,6 +68,9 @@ Root workspace scripts MUST keep supporting:
 - `pnpm status:pack`
 - `pnpm test`
 - `pnpm typecheck`
+
+Each of those MUST also accept an optional target selecting a package, workspace
+directory, path, or glob.
 
 ## Build output
 

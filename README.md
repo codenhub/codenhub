@@ -10,25 +10,35 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 ### Libraries & Primitives
 
+- `packages/components`: Lightweight, native Web Components wrapper for fast-loading SPA UIs.
 - `packages/error`: Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.
+- `packages/i18n`: Runtime-neutral translations with optional browser and locale-path integrations.
+- `packages/icons`: Icon registry, CSS mask generator, and scanner module for the Codenhub icon system.
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
 - `packages/router`: Small browser router with DOM page helpers for TypeScript apps.
 - `packages/skills`: Curated collection of AI agent skills with a built-in installer.
 - `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
 - `packages/styles`: CSS-only design tokens, base styles, and composable UI helper classes.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
+- `packages/toast`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
 - `packages/ui-kit`: UI scripts (feedback, i18n, theme, toast notifications) and styles built on primitive packages.
 - `packages/validation`: Zero-dependency validation and primitive coercion helpers for TypeScript apps.
 
+### Tooling
+
+- `packages/tools`: Private workspace-aware CLI (`hub`) behind every root script.
+
 ### Plugins
 
+- `packages/plugins/tauri/webview`: TypeScript plugin for spawning and controlling Tauri v2 WebViews.
+- `packages/plugins/tauri/window`: TypeScript plugin for controlling Tauri v2 window state, chrome, and placement.
 - `packages/plugins/vite/add-loader`: Vite plugin that injects a full-screen page-loader overlay into every HTML entry point.
 - `packages/plugins/vite/defer-css`: Vite plugin that defers loading of CSS stylesheets to prevent render blocking.
 - `packages/plugins/vite/icons`: Vite plugin that replaces inline SVG icons at build time.
 
 ## Commands
 
-Use pnpm from the repository root. Run workspace-wide commands with no package filter:
+Use pnpm from the repository root. With no target, a command covers the whole workspace:
 
 ```sh
 pnpm build
@@ -40,21 +50,18 @@ pnpm test
 pnpm typecheck
 ```
 
-Format and lint scripts accept an optional root-relative path:
+Every command accepts the same targets: a package name, a workspace directory, a path, or a glob.
 
 ```sh
-pnpm format:check
-pnpm format:check packages/error
+pnpm test error
+pnpm test packages/error/src/bucket.test.ts
+pnpm test "packages/*/src/**/*.test.ts"
+pnpm typecheck packages/plugins/vite/icons
 pnpm lint:fix packages/error/src
+pnpm test --changed
 ```
 
-When working on one package, run package scripts with `--filter` from the repository root. Use the directory name under `packages/` as the filter value:
-
-```sh
-pnpm --filter=error build
-pnpm --filter=styles test
-pnpm --filter=theme typecheck
-```
+Unrecognized flags reach the underlying tool, so `pnpm test error --reporter=verbose` works. Run `pnpm hub --help` for the full surface, or `pnpm packages` to see what a target resolves to.
 
 Before publishing or merging package behavior changes, run at least:
 
@@ -75,6 +82,7 @@ Read these before changing package behavior, public APIs, or project conventions
 
 - `docs/docs-guidelines.md`: repository documentation structure, status model,
   and exception rules.
+- `docs/tooling.md`: root scripts, the `hub` CLI, and package script rules.
 - `docs/code-guidelines.md`: coding conventions and enforceable quality rules.
 - `docs/specs/packages-development.md`: optional package-local playground, dev, and debug workflow for real usage scenarios.
 - `docs/specs/packages-documentation.md`: public and internal package

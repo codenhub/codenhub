@@ -40,7 +40,7 @@
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/toast version dist-tags time --json && npm dist-tag ls @codenhub/toast && npm access get status @codenhub/toast",
     "status:pack": "npm pack --dry-run",
-    "test": "vitest run && pnpm build && playwright test",
+    "test": "vitest run && playwright test",
     "test:browser": "playwright test",
     "test:browser:watch": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
