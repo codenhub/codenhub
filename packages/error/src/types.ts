@@ -2,7 +2,8 @@
  * A predictable, frozen error shape representing a normalized application error.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
- * localization support, and original error wrapping.
+ * localization support, and original error wrapping. Default JSON serialization
+ * includes the normalized fields and excludes diagnostic `cause` and `originalError` values.
  */
 export interface AppError extends Error {
   /**

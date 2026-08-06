@@ -42,12 +42,13 @@ An `AppError` is frozen, implements `Error`, and exposes:
 - `isRetryable`, which defaults to `false` unless matched feedback sets it.
 
 Normalization does not throw for ordinary unknown input, including objects or
-proxies whose inspected properties throw. JSON serialization excludes the raw
-`originalError` diagnostic value, preventing sensitive fields and cyclic wrapper
-objects from being serialized through the normalized error. Registry
-configuration errors throw `TypeError` at their configuration boundary. A
-`maxDepth` outside the integer range from `0` through `3` also throws
-`TypeError` before traversal.
+proxies whose inspected properties throw. JSON serialization includes `name`,
+`message`, `type`, `messageKey`, `source`, and `isRetryable`. It excludes the raw
+`cause` and `originalError` diagnostic values, preventing sensitive fields and
+cyclic wrapper objects from being serialized through the normalized error.
+Registry configuration errors throw `TypeError` at their configuration
+boundary. A `maxDepth` outside the integer range from `0` through `3` also
+throws `TypeError` before traversal.
 
 ## Configure A Registry
 
@@ -137,8 +138,10 @@ prebuilt registry values are read-only. Browser mappings cover common
 `DOMException` names and network-message patterns. Ambiguous browser fetch and
 network-message matches are not marked retryable; connection refusal and DNS
 matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
-Edge Function error names. Preset coverage is not exhaustive, and message
-patterns are heuristic.
+Edge Function error names. Built-in `messageKey` values are stable integration
+keys for consumer-owned translations. The package does not yet ship a canonical
+translation map, so consumers must provide translations when using these keys.
+Preset coverage is not exhaustive, and message patterns are heuristic.
 
 ## Migration From 0.1
 

@@ -42,6 +42,17 @@ describe("ready registries", () => {
     expect(supabaseErrorNames.FunctionsHttpError).toBeDefined();
   });
 
+  it("should provide stable message keys for consumer-owned translations", () => {
+    const presetFeedback = [
+      ...Object.values(browserErrorNames),
+      ...browserErrorPatterns.map(([, feedback]) => feedback),
+      ...Object.values(supabaseErrorCodes),
+      ...Object.values(supabaseErrorNames),
+    ];
+
+    expect(presetFeedback.every((feedback) => typeof feedback.messageKey === "string")).toBe(true);
+  });
+
   it("should preserve string-keyed access to raw mappings", () => {
     const browserName: string = "AbortError";
     const supabaseCode: string = "invalid_credentials";

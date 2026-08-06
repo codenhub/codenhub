@@ -51,10 +51,17 @@ describe("createAppError — basic normalization", () => {
     expect(appError.cause).toBe(original);
   });
 
-  it("should omit the original error from default JSON serialization", () => {
+  it("should serialize normalized fields without the original error", () => {
     const appError = createAppError({ token: "secret-token" });
 
-    expect(JSON.stringify(appError)).not.toContain("secret-token");
+    expect(JSON.parse(JSON.stringify(appError))).toEqual({
+      name: "AppError",
+      message: DEFAULT_APP_ERROR_MESSAGE,
+      type: "unknown",
+      messageKey: null,
+      source: null,
+      isRetryable: false,
+    });
   });
 
   it("should freeze the complete AppError instance", () => {

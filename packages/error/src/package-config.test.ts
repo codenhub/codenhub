@@ -4,6 +4,10 @@ import packageJson from "../package.json";
 import vitestConfig from "../vitest.config";
 
 describe("package configuration", () => {
+  it("should advance the patch version for JSON serialization support", () => {
+    expect(packageJson.version).toBe("0.2.1");
+  });
+
   it("should build declarations before typechecking package self-imports", () => {
     expect(packageJson.scripts.typecheck).toBe("pnpm build && tsc --noEmit");
   });

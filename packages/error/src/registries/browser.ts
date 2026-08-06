@@ -5,7 +5,7 @@ import type { ErrorFeedback } from "../types";
 /**
  * Raw name mapping definitions for common browser and Web API errors.
  *
- * Provides fallback messages, translation keys, and source labels for typical browser DOMExceptions.
+ * Provides fallback messages, stable consumer translation keys, and source labels for typical browser DOMExceptions.
  */
 export const browserErrorNames = freezeFeedbackMap({
   AbortError: {

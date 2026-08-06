@@ -25,6 +25,7 @@ class AppErrorImpl extends Error implements AppError {
 
   constructor(resolved: AppErrorResolution) {
     super(resolved.message, { cause: resolved.originalError });
+    Object.defineProperty(this, "message", { enumerable: true });
     this.name = "AppError";
     this.type = resolved.type;
     this.messageKey = resolved.messageKey;

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-05
+last_updated: 2026-08-06
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -23,8 +23,8 @@ Packages that do not expose errors do not need to follow this spec.
 - i18n-ready error messages via `messageKey`
 - Retry signaling via `isRetryable`
 - Composable registry presets that consumers can merge into their own registry
-- Diagnostic access through `AppError.originalError` without including raw input
-  in default JSON serialization
+- Diagnostic access through `AppError.originalError` while default JSON
+  serialization retains normalized fields without including raw input
 
 `isAppError()` recognizes `AppError` instances created by the current
 `@codenhub/error` package runtime. It is an identity guard, not a mechanism for
@@ -36,6 +36,9 @@ runtime.
 `createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT
 be writable, configurable, added, or removed after construction. The referenced
 `originalError` value is diagnostic input and is not recursively frozen.
+Default JSON serialization MUST include `name`, `message`, `type`, `messageKey`,
+`source`, and `isRetryable`, and MUST omit diagnostic `cause` and
+`originalError` values.
 
 Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth`
 MUST be an integer from `0` through `3`; all other values are programmer errors
@@ -152,7 +155,12 @@ Rules:
 
 - All segments lowercase camelCase, except `error` root which is always lowercase.
 - The key must match the `message` fallback in meaning and tone.
-- Omit `messageKey` when there is no i18n system or translation file to back it up.
+- A key MAY be backed by bundled translations or defined as a documented, stable
+  integration key for consumer-owned translations.
+- Packages that define stable integration keys MUST treat them as public API and
+  preserve their meaning across non-breaking releases.
+- Omit `messageKey` when neither bundled translations nor a consumer translation
+  contract exists.
 
 ## `isRetryable` guidance
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-05
+last_updated: 2026-08-06
 scope: repo-wide package progress tracking
 ---
 
@@ -82,6 +82,7 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Typed error normalization & result helpers (`Result<T>`)
 - [x] Registries (`/registries`, `/registries/browser`, `/registries/supabase`)
+- [ ] Ship canonical translation map for built-in registry message keys
 - [ ] Better playground using internal packages
 - [ ] Framework error boundary adapters
 

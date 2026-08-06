@@ -11,8 +11,10 @@ the configured fallback message.
 `AppError` values and read-only registry snapshots are frozen. Raw strings passed
 to `err` require an explicit safe `fallbackMessage` to become user-facing.
 Mutable registry bucket contents can change, but bucket references cannot be replaced.
-`originalError` remains available for diagnostics but is omitted from default
-JSON serialization.
+Default JSON serialization includes normalized fields and omits diagnostic
+`cause` and `originalError` values. Built-in preset `messageKey` values are
+stable integration keys for consumer-owned translations; no translation map is
+currently bundled.
 
 ## Documentation
 
