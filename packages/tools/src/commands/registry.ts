@@ -1,4 +1,6 @@
+import { createCheckCommand } from "./check-command.ts";
 import type { CommandDefinition } from "./definition.ts";
+import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
@@ -52,6 +54,8 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "cloc",
     summary: "Count lines of code in the selected paths, or the whole repository.",
   }),
+  createCheckCommand(),
+  createGenerateCommand(),
   createListCommand(),
 ];
 

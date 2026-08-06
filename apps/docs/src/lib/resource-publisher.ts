@@ -1,13 +1,7 @@
 import { copyFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-export interface PublicResource {
-  packagePath: string;
-  rootPath: string;
-  routePath: string;
-}
-
-interface DiscoveredResource extends Omit<PublicResource, "rootPath"> {}
+import type { PublicResource } from "@codenhub/tools/documentation";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
@@ -20,66 +14,6 @@ const CONTENT_TYPES: Record<string, string> = {
   ".txt": "text/plain; charset=utf-8",
   ".webp": "image/webp",
 };
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function normalizePath(filePath: string): string {
-  return filePath.replaceAll("\\", "/").replace(/^\.\//, "");
-}
-
-export function discoverPublicResources(slug: string, packageFiles: string[]): DiscoveredResource[] {
-  const normalizedFiles = packageFiles.map(normalizePath);
-  const resources = normalizedFiles.flatMap((packagePath): DiscoveredResource[] => {
-    if (packagePath === "LICENSE" || packagePath === "NOTICE") {
-      return [{ packagePath, routePath: `/${slug}/${packagePath}` }];
-    }
-    if (
-      !packagePath.startsWith("docs/") ||
-      packagePath.startsWith("docs/internal/") ||
-      packagePath
-        .slice("docs/".length)
-        .split("/")
-        .some((segment) => segment.startsWith(".")) ||
-      packagePath.toLowerCase().endsWith(".md")
-    ) {
-      return [];
-    }
-    return [{ packagePath, routePath: `/${slug}/${packagePath.slice("docs/".length)}` }];
-  });
-  const documentOutputs = normalizedFiles
-    .filter(
-      (packagePath) =>
-        packagePath.startsWith("docs/") &&
-        !packagePath.startsWith("docs/internal/") &&
-        packagePath.toLowerCase().endsWith(".md"),
-    )
-    .map((packagePath) => {
-      const relativePath = packagePath.slice("docs/".length).replace(/\.md$/i, "");
-      const routePath = relativePath.replace(/(^|\/)index$/i, "");
-      return `/${slug}/${routePath}`.replace(/\/$/, "") + "/index.html";
-    });
-  const resourceRoutes = new Set<string>();
-  for (const resource of resources) {
-    const portableRoute = resource.routePath.toLowerCase();
-    if (resourceRoutes.has(portableRoute)) {
-      throw new Error(`Duplicate public resource route ${resource.routePath}.`);
-    }
-    resourceRoutes.add(portableRoute);
-    if (
-      documentOutputs.some(
-        (outputPath) =>
-          outputPath.toLowerCase() === portableRoute ||
-          outputPath.toLowerCase().startsWith(`${portableRoute}/`) ||
-          portableRoute.startsWith(`${outputPath.toLowerCase()}/`),
-      )
-    ) {
-      throw new Error(`Public resource ${resource.packagePath} collides with a documentation page.`);
-    }
-  }
-  return resources.sort((left, right) => compareText(left.routePath, right.routePath));
-}
 
 function getResourcePath(resource: PublicResource): string {
   const sourcePath = path.resolve(resource.rootPath, resource.packagePath);

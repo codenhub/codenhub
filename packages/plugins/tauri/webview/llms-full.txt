@@ -1,5 +1,3 @@
-<!-- Generated from README.md, docs/index.md, docs/reference.md, and docs/setup.md in that order. -->
-
 <!-- Source: README.md -->
 
 # @codenhub/tauri-plugin-webview

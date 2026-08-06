@@ -49,7 +49,7 @@
     "demo": "pnpm --filter=@codenhub/icons-demo dev",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/icons version dist-tags time --json && npm dist-tag ls @codenhub/icons && npm access get status @codenhub/icons",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

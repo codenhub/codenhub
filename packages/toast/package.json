@@ -39,7 +39,7 @@
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/toast version dist-tags time --json && npm dist-tag ls @codenhub/toast && npm access get status @codenhub/toast",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run && playwright test",
     "test:browser": "playwright test",
     "test:browser:watch": "playwright test --ui",

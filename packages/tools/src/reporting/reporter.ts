@@ -9,7 +9,7 @@ const STYLES = {
 } as const;
 
 /** Outcome shown for one row of a run summary. */
-export type SummaryStatus = "passed" | "failed" | "skipped" | "timed-out";
+export type SummaryStatus = "passed" | "failed" | "warned" | "skipped" | "timed-out";
 
 /** One line of a run summary. */
 export interface SummaryRow {
@@ -54,6 +54,7 @@ const STATUS_LABELS: Record<SummaryStatus, { text: string; color: keyof typeof S
   passed: { color: "green", text: "PASS" },
   skipped: { color: "dim", text: "SKIP" },
   "timed-out": { color: "yellow", text: "TIME" },
+  warned: { color: "yellow", text: "WARN" },
 };
 
 function detectColorSupport(): boolean {

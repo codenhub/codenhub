@@ -8,6 +8,7 @@ function createPackage(name: string, workspaceDependencies: string[] = []): Work
     directory: `/repo/packages/${name}`,
     directoryName: name,
     isPrivate: false,
+    manifest: {},
     location: `packages/${name}`,
     name,
     scripts: {},

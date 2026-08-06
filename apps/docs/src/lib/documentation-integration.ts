@@ -1,10 +1,10 @@
 import type { ServerResponse } from "node:http";
 import { fileURLToPath } from "node:url";
 
+import { loadWorkspaceDocumentation, type PublicResource } from "@codenhub/tools/documentation";
 import type { AstroIntegration } from "astro";
 
-import { loadWorkspaceDocumentation } from "./package-documentation";
-import { copyPublicResources, createResourceMiddleware, type PublicResource } from "./resource-publisher";
+import { copyPublicResources, createResourceMiddleware } from "./resource-publisher";
 
 interface IntegrationOptions {
   loadDocumentation?: (packagesRoot: string) => Promise<PublicResource[]>;

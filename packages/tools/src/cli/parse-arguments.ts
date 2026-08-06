@@ -23,6 +23,8 @@ export interface CliOptions {
   isDryRun: boolean;
   /** Whether the command applies fixes rather than only reporting. */
   shouldFix: boolean;
+  /** Whether checks may run `npm pack --dry-run` to inspect publishable contents. */
+  includePack: boolean;
   /** Whether machine-readable output is requested. */
   wantsJson: boolean;
   /** Whether usage information is requested. */
@@ -45,6 +47,7 @@ function createDefaultOptions(): CliOptions {
   return {
     baseRef: DEFAULT_BASE_REF,
     concurrency: 1,
+    includePack: false,
     isDryRun: false,
     shouldBail: false,
     shouldBuild: true,
@@ -110,6 +113,10 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "fix": {
       options.shouldFix = true;
+      return true;
+    }
+    case "pack": {
+      options.includePack = true;
       return true;
     }
     case "json": {

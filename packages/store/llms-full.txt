@@ -57,8 +57,6 @@ return `false` and are reported through `onError` when provided.
 
 Licensed under Apache-2.0.
 
----
-
 <!-- Source: docs/index.md -->
 
 # Persist Typed Application State
@@ -118,8 +116,6 @@ place unencrypted credentials or sensitive personal data in storage.
   runtime validation, concurrency, defaults, and failure behavior.
 - [Storage drivers](docs/storage-drivers.md) helps choose and configure memory,
   browser, Node.js, Cloudflare KV, or Durable Object persistence.
-
----
 
 <!-- Source: docs/core-stores.md -->
 
@@ -204,8 +200,6 @@ is an exported symbol used by built-in drivers for one-time key binding. Custom
 drivers may implement this symbol, but application code normally should not call
 it. A driver that has been bound to a different key may throw during store
 creation.
-
----
 
 <!-- Source: docs/storage-drivers.md -->
 

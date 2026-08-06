@@ -34,7 +34,7 @@
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/vite-plugin-icons version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugin-icons && npm access get status @codenhub/vite-plugin-icons",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

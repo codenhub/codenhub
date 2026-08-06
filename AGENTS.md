@@ -22,7 +22,13 @@ pnpm format:check
 pnpm lint:check
 pnpm typecheck
 pnpm test
+pnpm check
 ```
+
+`pnpm check` reports packages against the lifecycle and documentation specs.
+After changing a package README or any file under a package's `docs/`, run
+`pnpm generate` to rewrite the files derived from them; never edit a generated
+file by hand.
 
 Every root script accepts the same targets: a package name, a workspace
 directory, a path, a glob, or nothing to select the whole workspace.
@@ -39,8 +45,10 @@ Run scripts from the repository root. Do not change into a package directory, an
 prefer these targets over `pnpm --filter`: filtering skips the build ordering that
 package scripts no longer perform themselves.
 
-Use narrow targets when a full workspace check is unnecessary, but full workspace
-checks are preferred before final delivery when practical.
+Always pass a target when working on a package. Every command narrows to one,
+including `check` and `generate`, so there is no reason to run the workspace to
+exercise a single package. Run the unfiltered form only for final verification
+before delivering a change, and for commands that are repo-wide by nature.
 
 Package runs are killed after 600 seconds, so a hanging browser-test worker no
 longer blocks a workspace run. Use `--timeout=<seconds>` or `--no-timeout` to
@@ -61,6 +69,8 @@ See `docs/tooling.md` for the full command surface, selector rules, and options.
 - Keep package README files and public docs aligned with `package.json`
   `exports`.
 - Do not add dependencies unless simple in-house code is worse.
+- Record an exception in `docs/specs/packages-exceptions.md` rather than
+  weakening a rule; a `pnpm check` finding is waived only from that register.
 - Do not commit secrets, build artifacts, or unrelated changes.
 
 ## Public packages

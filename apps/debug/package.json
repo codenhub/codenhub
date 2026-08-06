@@ -2,6 +2,7 @@
   "name": "@codenhub/debug",
   "version": "0.0.1",
   "private": true,
+  "description": "Private local debug workspace to run, test, and verify packages in integration.",
   "type": "module",
   "scripts": {
     "dev": "vite",

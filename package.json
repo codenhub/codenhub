@@ -8,8 +8,10 @@
   "scripts": {
     "cloc": "hub cloc",
     "build": "hub build",
+    "check": "hub check",
     "format:check": "hub format",
     "format:fix": "hub format --fix",
+    "generate": "hub generate",
     "hub": "hub",
     "lint:check": "hub lint",
     "lint:fix": "hub lint --fix",

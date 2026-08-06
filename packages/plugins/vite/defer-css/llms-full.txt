@@ -1,4 +1,4 @@
-<!-- Sources: README.md, docs/index.md, docs/integration.md, docs/output-and-constraints.md -->
+<!-- Source: README.md -->
 
 # @codenhub/vite-plugin-defer-css
 
@@ -47,7 +47,7 @@ By default, generated preload links use inline `onload`. Pass a trusted build-ti
 
 Licensed under Apache-2.0.
 
----
+<!-- Source: docs/index.md -->
 
 # Defer HTML-linked stylesheets
 
@@ -116,7 +116,7 @@ apply.
 - [Transformed output and constraints](docs/output-and-constraints.md): Inspect exact
   markup, CSP behavior, rendering and accessibility risks, and failures.
 
----
+<!-- Source: docs/integration.md -->
 
 # Integration and API
 
@@ -149,7 +149,7 @@ Creates the Vite plugin. It matches `<link>` tags with an `href` and a `rel` val
 
 The nonce is a trusted build-time value interpolated into generated HTML without escaping. It must match the deployed `script-src` policy. Do not derive it from request data or other untrusted values.
 
----
+<!-- Source: docs/output-and-constraints.md -->
 
 # Transformed output and constraints
 

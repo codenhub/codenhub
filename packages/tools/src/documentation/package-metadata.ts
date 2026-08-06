@@ -1,6 +1,7 @@
 const DOCS_STATUSES = ["active", "experimental", "deprecated"] as const;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+/** Documentation status declared by `codenhub.docs.status`. */
 export type PackageStatus = (typeof DOCS_STATUSES)[number];
 
 interface DocsMetadata {
@@ -21,32 +22,53 @@ interface PackageManifest {
   private?: unknown;
 }
 
+/** Resolved `codenhub.docs` metadata with defaults applied. */
 export interface PackageMetadata {
+  /** Catalog description, falling back to the package description. */
   description?: string;
+  /** Human-readable package label. */
   label: string;
+  /** Whether catalogs list the package. */
   listed: boolean;
+  /** Relative ordering hint. */
   order?: number;
+  /** Stable kebab-case identifier, defaulting to the unscoped package name. */
   slug: string;
+  /** Documentation status. */
   status: PackageStatus;
 }
 
+/** One public Markdown document belonging to a package. */
 export interface DocumentDefinition {
+  /** Path relative to the package `docs/` directory. */
   relativePath: string;
+  /** Route segment derived from `relativePath`. */
   routePath: string;
+  /** Path relative to the repository root. */
   sourcePath: string;
 }
 
+/** A package that declares public documentation, with its documents resolved. */
 export interface PackageDefinition extends PackageMetadata {
+  /** Public documents, unordered. */
   documents: DocumentDefinition[];
+  /** Path to the package manifest. */
   manifestPath: string;
+  /** Package directory containing the manifest. */
   rootPath: string;
 }
 
+/** Catalog entry for a published package. */
 export interface PublicPackageSummary {
+  /** Catalog description. */
   description?: string;
+  /** Documentation route when the package declares public documentation. */
   documentationRoute?: string;
+  /** Human-readable label. */
   label: string;
+  /** Published package name. */
   name: string;
+  /** Documentation status when the package declares public documentation. */
   status?: PackageStatus;
 }
 
@@ -106,6 +128,13 @@ function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
   };
 }
 
+/**
+ * Reads the `codenhub.docs` metadata that opts a package into public documentation.
+ * @param value Parsed package manifest.
+ * @param manifestPath Manifest path used in error messages.
+ * @returns Resolved metadata, or `null` when the package declares none.
+ * @throws When the manifest or its documentation metadata is malformed.
+ */
 export function parsePackageMetadata(value: unknown, manifestPath: string): PackageMetadata | null {
   if (!isRecord(value)) {
     throw new Error(`Invalid package manifest ${manifestPath}: expected an object.`);
@@ -141,6 +170,11 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   };
 }
 
+/**
+ * Derives the route segment for a documentation path.
+ * @param relativePath Path relative to the package `docs/` directory.
+ * @returns Route segment with the extension and any trailing `index` removed.
+ */
 export function getDocumentRoute(relativePath: string): string {
   const normalizedPath = normalizePath(relativePath);
   const pathWithoutExtension = normalizedPath.slice(0, -".md".length);
@@ -149,6 +183,13 @@ export function getDocumentRoute(relativePath: string): string {
     : pathWithoutExtension;
 }
 
+/**
+ * Builds the documented packages of a workspace from manifests and document paths.
+ * @param manifests Parsed manifests keyed by manifest path.
+ * @param sourcePaths Every Markdown path considered for publication.
+ * @returns Documented packages in catalog order.
+ * @throws When metadata is malformed, `docs/index.md` is missing, or a slug or route repeats.
+ */
 export function buildPackageDefinitions(
   manifests: Record<string, unknown>,
   sourcePaths: string[],
@@ -207,6 +248,13 @@ export function buildPackageDefinitions(
   );
 }
 
+/**
+ * Builds catalog entries for every published package.
+ * @param manifests Parsed manifests keyed by manifest path.
+ * @param definitions Documented packages produced by {@link buildPackageDefinitions}.
+ * @returns Catalog entries in presentation order, omitting unlisted packages.
+ * @throws When a published manifest has no usable name.
+ */
 export function buildPublicPackageSummaries(
   manifests: Record<string, unknown>,
   definitions: PackageDefinition[],

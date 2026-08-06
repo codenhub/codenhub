@@ -7,11 +7,19 @@
     "hub": "./src/cli.ts"
   },
   "type": "module",
+  "exports": {
+    "./documentation": "./src/documentation/index.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "github-slugger": "2.0.0",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
   },
   "devDependencies": {
     "@types/node": "catalog:",

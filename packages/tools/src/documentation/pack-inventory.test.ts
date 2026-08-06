@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { readNpmPackInventory } from "./package-inventory";
+import { readNpmPackInventory } from "./pack-inventory.ts";
 
 describe("npm package publication inventory", () => {
   it("uses npm pack dry-run JSON output as the inventory source", async () => {

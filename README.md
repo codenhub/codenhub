@@ -4,29 +4,32 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 ## Packages
 
+<!-- generated: packages start -->
+
 ### Applications
 
 - `apps/debug`: Private local debug workspace to run, test, and verify packages in integration.
+- `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
 
 ### Libraries & Primitives
 
 - `packages/components`: Lightweight, native Web Components wrapper for fast-loading SPA UIs.
 - `packages/error`: Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.
 - `packages/i18n`: Runtime-neutral translations with optional browser and locale-path integrations.
-- `packages/icons`: Icon registry, CSS mask generator, and scanner module for the Codenhub icon system.
+- `packages/icons`: Icon registry, CSS mask generator, and scanner module for Codenhub icon system.
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
-- `packages/router`: Small browser router with DOM page helpers for TypeScript apps.
+- `packages/router`: Small browser router for TypeScript apps.
 - `packages/skills`: Curated collection of AI agent skills with a built-in installer.
 - `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
-- `packages/styles`: CSS-only design tokens, base styles, and composable UI helper classes.
+- `packages/styles`: CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toast`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
-- `packages/ui-kit`: UI scripts (feedback, i18n, theme, toast notifications) and styles built on primitive packages.
+- `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
 - `packages/validation`: Zero-dependency validation and primitive coercion helpers for TypeScript apps.
 
 ### Tooling
 
-- `packages/tools`: Private workspace-aware CLI (`hub`) behind every root script.
+- `packages/tools`: Workspace-aware repository tooling behind the root pnpm scripts.
 
 ### Plugins
 
@@ -36,21 +39,29 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/plugins/vite/defer-css`: Vite plugin that defers loading of CSS stylesheets to prevent render blocking.
 - `packages/plugins/vite/icons`: Vite plugin that replaces inline SVG icons at build time.
 
+<!-- generated: packages end -->
+
 ## Commands
 
 Use pnpm from the repository root. With no target, a command covers the whole workspace:
 
 ```sh
 pnpm build
+pnpm check
 pnpm format:check
 pnpm format:fix
+pnpm generate
 pnpm lint:check
 pnpm lint:fix
 pnpm test
 pnpm typecheck
 ```
 
-Every command accepts the same targets: a package name, a workspace directory, a path, or a glob.
+`pnpm check` reports packages against the lifecycle and documentation specs, and
+`pnpm generate` rewrites the files derived from them, such as each package's
+`llms-full.txt` and the package list above.
+
+Every command accepts the same targets: a package name, a workspace directory, a path, or a glob. Pass one to work on a single package from the root; omitting it covers the whole workspace and is meant for final verification.
 
 ```sh
 pnpm test error
@@ -70,6 +81,7 @@ pnpm format:check
 pnpm lint:check
 pnpm typecheck
 pnpm test
+pnpm check
 ```
 
 ## Documentation

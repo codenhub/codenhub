@@ -34,9 +34,11 @@ Root scripts map directly onto it:
 | Root script          | Command             |
 | -------------------- | ------------------- |
 | `pnpm build`         | `hub build`         |
+| `pnpm check`         | `hub check`         |
 | `pnpm cloc`          | `hub cloc`          |
 | `pnpm format:check`  | `hub format`        |
 | `pnpm format:fix`    | `hub format --fix`  |
+| `pnpm generate`      | `hub generate`      |
 | `pnpm lint:check`    | `hub lint`          |
 | `pnpm lint:fix`      | `hub lint --fix`    |
 | `pnpm packages`      | `hub list`          |
@@ -51,6 +53,13 @@ A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
 
 ## Targets
+
+Every command SHOULD be given a target. Omitting one covers the whole workspace,
+which is a deliberate choice rather than a convenient default: a repo-wide `test`
+takes minutes, while the same command narrowed to one package takes seconds. Work
+on a package by naming it from the repository root, and reserve the omitted form
+for final verification before delivering a change and for commands that are
+repo-wide by nature, such as `cloc`.
 
 Every command takes the same selectors, resolved through one fallback chain:
 
@@ -81,6 +90,12 @@ as a way to name its package.
 `hub test --changed` runs changed packages and `hub test error --changed` runs
 `error` only when it changed.
 
+Every command narrows to one package, including `check` and `generate`. Two
+generated artifacts are workspace-wide and are therefore skipped by a narrowed
+`hub generate`: the root README package list is only rewritten when the selection
+covers the whole workspace. Run `pnpm generate` unfiltered before delivering a
+change that touched package metadata.
+
 ## Execution order
 
 `hub` owns build ordering. `test`, `test:coverage`, `test:watch`, `typecheck`,
@@ -96,19 +111,20 @@ self-contained.
 
 ## Options
 
-| Option                | Effect                                                               |
-| --------------------- | -------------------------------------------------------------------- |
-| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.      |
-| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one. |
-| `--bail`              | Stop after the first failing package.                                |
-| `--no-build`          | Skip prerequisite builds.                                            |
-| `--deps`              | Include workspace dependencies in prerequisite builds.               |
-| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.               |
-| `--no-timeout`        | Never kill a package run.                                            |
-| `--dry-run`           | Print the commands that would run.                                   |
-| `--fix`               | Apply fixes instead of only reporting.                               |
-| `--json`              | Emit machine-readable output where supported.                        |
-| `-h`, `--help`        | Show usage.                                                          |
+| Option                | Effect                                                                |
+| --------------------- | --------------------------------------------------------------------- |
+| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.       |
+| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one.  |
+| `--bail`              | Stop after the first failing package.                                 |
+| `--no-build`          | Skip prerequisite builds.                                             |
+| `--deps`              | Include workspace dependencies in prerequisite builds.                |
+| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                |
+| `--no-timeout`        | Never kill a package run.                                             |
+| `--dry-run`           | Print the commands that would run.                                    |
+| `--fix`               | Apply fixes instead of only reporting.                                |
+| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents. |
+| `--json`              | Emit machine-readable output where supported.                         |
+| `-h`, `--help`        | Show usage.                                                           |
 
 Unrecognized flags and everything after a bare `--` are forwarded to the
 underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
@@ -121,6 +137,56 @@ hanging browser-test worker from blocking a whole workspace run.
 `lint`, `format`, and `cloc` run their tool once from the repository root with
 resolved paths rather than once per package. Selecting nothing falls back to the
 whole repository, which is why `pnpm cloc` needs no argument.
+
+## Compliance checks
+
+`hub check` reads each selected package and reports it against
+`docs/specs/packages-lifecycle.md` and `docs/specs/packages-documentation.md`.
+Every package is inspected before anything is printed, so one non-compliant
+package cannot hide the rest.
+
+Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings
+fail the run; `warning` covers SHOULD-level rules such as the recommended
+`license` and `repository` metadata. `pnpm check --json` prints the codes.
+
+| Rule            | Checks                                                                      |
+| --------------- | --------------------------------------------------------------------------- |
+| `metadata`      | Required and recommended manifest fields of published packages.             |
+| `scripts`       | Required scripts, a self-contained `prepublishOnly`, and no chained builds. |
+| `dependencies`  | Workspace-internal dependencies use a `workspace:` range.                   |
+| `documentation` | Required surfaces, frontmatter, single H1, and every link target.           |
+| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                    |
+
+Tarball publication is checked only with `--pack`, which runs
+`npm pack --dry-run --json` per package. The documentation spec requires real npm
+output rather than an approximation of its inclusion rules, so the check is
+skipped rather than estimated when the flag is absent.
+
+A finding is waived only by a `Checks bypassed` bullet in
+`docs/specs/packages-exceptions.md`. There is no in-code suppression: a waiver
+that is not documented does not exist.
+
+## Generated files
+
+`hub generate` rewrites derived files from their canonical sources and writes
+only the ones that actually changed:
+
+- `<package>/llms-full.txt`, compiled from the package README, `docs/index.md`,
+  and the remaining public documents in that order. Presentation frontmatter is
+  stripped, `docs/internal/` is excluded, each section is introduced by a
+  `<!-- Source: ... -->` marker, and relative link targets are rebased so they
+  resolve from the package root.
+- The root `README.md` package list, between its
+  `<!-- generated: packages start -->` and `<!-- generated: packages end -->`
+  markers. Descriptions come from package manifests, so the list cannot drift
+  from what each package says about itself.
+
+`llms.txt` stays hand-authored. It is a router whose value is the editorial
+summary a generator cannot write; `hub check` validates it like any other
+documentation surface.
+
+`hub generate --dry-run` lists the files that are out of date and exits non-zero,
+which is what a CI job should run.
 
 ## Adding a command
 
@@ -136,14 +202,21 @@ Anything else implements `CommandDefinition` directly and receives a
 Selection, execution, and reporting are shared; a new command should not resolve
 targets or spawn processes on its own.
 
-## Planned
+## Adding a check or a generator
 
-These are approved directions, not current behavior:
+Checks live in `packages/tools/src/checks/` and implement `CheckRule`: a name, an
+`appliesTo` predicate, and a `run` that returns findings. Register it in
+`checks/registry.ts`. Rules report rather than throw so every package can be
+inspected in one pass, and each finding needs a stable code because that code is
+what the exception register bypasses.
 
-- `hub check`: package compliance derived from `docs/specs/packages-lifecycle.md`
-  and the validation list in `docs/specs/packages-documentation.md`.
-- `hub generate`: `llms-full.txt` generation and a generated root README package
-  list. `llms.txt` stays hand-authored per
-  `docs/specs/packages-documentation.md`.
-- Sharing the documentation model in `apps/docs/src/lib/` with `hub` instead of
-  maintaining two implementations of the same documentation contract.
+Generators live in `packages/tools/src/generators/` and implement `Generator`,
+returning the contents a file should have rather than writing it. The command
+diffs and writes, so `--dry-run` and change detection are not reimplemented per
+generator. Use `replaceGeneratedRegion` for a generated region inside an
+otherwise hand-written file.
+
+The documentation model both of them build on lives in
+`packages/tools/src/documentation/` and is published as
+`@codenhub/tools/documentation`. `apps/docs` consumes the same module, so the
+documentation contract has one implementation rather than two.

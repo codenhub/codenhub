@@ -12,6 +12,7 @@ function createPackage(name: string, location: string): WorkspacePackage {
     directory: `/repo/${location}`,
     directoryName: location.slice(location.lastIndexOf("/") + 1),
     isPrivate: false,
+    manifest: {},
     location,
     name,
     scripts: {},

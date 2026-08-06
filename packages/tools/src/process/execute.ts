@@ -39,6 +39,13 @@ export interface CommandOutcome {
   durationMs: number;
   /** Combined stdout and stderr, present only when `stdio` was `pipe`. */
   output?: string;
+  /**
+   * Standard output alone, present only when `stdio` was `pipe`.
+   *
+   * Commands that emit machine-readable output on stdout and progress on stderr
+   * cannot use {@link CommandOutcome.output}, which interleaves both.
+   */
+  stdout?: string;
 }
 
 function quoteWindowsArgument(argument: string): string {
@@ -118,7 +125,11 @@ export async function execute(spec: CommandSpec, options: ExecuteOptions): Promi
     });
 
     const chunks: string[] = [];
-    child.stdout?.setEncoding("utf8").on("data", (chunk: string) => chunks.push(chunk));
+    const stdoutChunks: string[] = [];
+    child.stdout?.setEncoding("utf8").on("data", (chunk: string) => {
+      chunks.push(chunk);
+      stdoutChunks.push(chunk);
+    });
     child.stderr?.setEncoding("utf8").on("data", (chunk: string) => chunks.push(chunk));
 
     let didTimeOut = false;
@@ -145,6 +156,7 @@ export async function execute(spec: CommandSpec, options: ExecuteOptions): Promi
         exitCode: code ?? undefined,
         isSuccess: code === 0 && !didTimeOut,
         output: options.stdio === "pipe" ? chunks.join("") : undefined,
+        stdout: options.stdio === "pipe" ? stdoutChunks.join("") : undefined,
       });
     });
   });

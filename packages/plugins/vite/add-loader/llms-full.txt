@@ -1,4 +1,4 @@
-<!-- Sources: README.md, docs/index.md, docs/integration.md, docs/output-and-constraints.md -->
+<!-- Source: README.md -->
 
 # @codenhub/vite-plugin-add-loader
 
@@ -47,7 +47,7 @@ The defaults use `var(--color-background, #fafafa)` and `var(--color-primary, #0
 
 Licensed under Apache-2.0.
 
----
+<!-- Source: docs/index.md -->
 
 # Add an initial page loader
 
@@ -117,7 +117,7 @@ escaping or runtime validation. Do not derive them from untrusted data.
 - [Generated output and constraints](docs/output-and-constraints.md): Review exact
   output, CSP, accessibility, markup requirements, and failure behavior.
 
----
+<!-- Source: docs/integration.md -->
 
 # Integration and API
 
@@ -159,7 +159,7 @@ Creates the Vite plugin. It injects the overlay into each eligible HTML entry an
 
 Option values come from trusted build configuration and are interpolated into generated HTML, CSS, or JavaScript without escaping or runtime validation. Use a finite, non-negative timeout and do not pass request data or other untrusted values.
 
----
+<!-- Source: docs/output-and-constraints.md -->
 
 # Generated output and constraints
 

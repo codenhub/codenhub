@@ -26,6 +26,13 @@ export interface WorkspacePackage {
   scripts: Readonly<Record<string, string>>;
   /** Names of workspace packages this package depends on. */
   workspaceDependencies: readonly string[];
+  /**
+   * The parsed manifest.
+   *
+   * Compliance checks read fields the rest of the tooling has no use for, so the
+   * whole document is kept rather than growing this interface for each of them.
+   */
+  manifest: Readonly<Record<string, unknown>>;
 }
 
 /** Every package reachable from the workspace root. */
@@ -126,6 +133,7 @@ async function readPackage(root: string, manifestPath: string): Promise<Workspac
     directoryName: location.slice(location.lastIndexOf("/") + 1),
     isPrivate: manifest.private === true,
     location,
+    manifest,
     name: manifest.name,
     scripts: readStringMap(manifest.scripts),
     unscopedName: manifest.name.slice(manifest.name.lastIndexOf("/") + 1),

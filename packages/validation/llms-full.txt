@@ -52,8 +52,6 @@ if (!port.ok) {
 
 Licensed under Apache-2.0.
 
----
-
 <!-- Source: docs/index.md -->
 
 # Validate Application Inputs
@@ -108,8 +106,6 @@ intentionally accept public host shapes only.
   retention.
 - [Validator reference](docs/validators.md) documents the string, number, object,
   and array validators with their defaults and constraints.
-
----
 
 <!-- Source: docs/results-and-coercion.md -->
 
@@ -179,8 +175,6 @@ The public type exports `ValidationErrorInput`, `ValidationErrorOptions`,
 `ValidationIssue`, `ValidationError`, `ValidationOptions`, `ValidationOk`,
 `ValidationErr`, `ValidationResult`, `ValidationErrorCode`, and
 `ValidationPathSegment` describe these workflows.
-
----
 
 <!-- Source: docs/validators.md -->
 

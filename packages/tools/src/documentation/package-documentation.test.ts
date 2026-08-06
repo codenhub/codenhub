@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { loadPackageDocumentation, loadWorkspaceDocumentation } from "./package-documentation";
+import { loadPackageDocumentation, loadWorkspaceDocumentation } from "./package-documentation.ts";
 
 async function createPackageFixture(): Promise<string> {
   const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-package-docs-"));
@@ -13,7 +13,7 @@ async function createPackageFixture(): Promise<string> {
     writeFile(path.join(rootPath, "README.md"), "# Example\n\n[Docs](docs/index.md)"),
     writeFile(path.join(rootPath, "llms.txt"), "# Example\n\n[Docs](docs/index.md)"),
     writeFile(path.join(rootPath, "llms-full.txt"), "# Example\n\n[Docs](docs/index.md)"),
-    writeFile(path.join(rootPath, "docs", "index.md"), "# Example"),
+    writeFile(path.join(rootPath, "docs", "index.md"), "---\ntitle: Example\n---\n\n# Example"),
     writeFile(path.join(rootPath, "docs", "assets", "diagram.svg"), "<svg/>"),
   ]);
   return rootPath;
@@ -32,7 +32,9 @@ describe("package documentation loading", () => {
       ]),
     });
 
-    await expect(loadPackageDocumentation({ rootPath, runCommand, slug: "example" })).resolves.toEqual([
+    await expect(
+      loadPackageDocumentation({ includeNpmInventory: true, rootPath, runCommand, slug: "example" }),
+    ).resolves.toEqual([
       {
         packagePath: "docs/assets/diagram.svg",
         rootPath,
@@ -52,9 +54,9 @@ describe("package documentation loading", () => {
       ]),
     });
 
-    await expect(loadPackageDocumentation({ rootPath, runCommand, slug: "example" })).rejects.toThrow(
-      "README.md: missing-target (docs/missing.md)",
-    );
+    await expect(
+      loadPackageDocumentation({ includeNpmInventory: true, rootPath, runCommand, slug: "example" }),
+    ).rejects.toThrow("README.md: missing-target (docs/missing.md)");
   });
 
   it("aggregates workspace package failures in deterministic order", async () => {

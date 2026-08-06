@@ -16,9 +16,9 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Enable collocated demo app for each package
 - [x] Workspace-aware root scripts with flexible targets (`docs/tooling.md`)
-- [ ] `hub check`: package lifecycle and documentation compliance
-- [ ] `hub generate`: `llms-full.txt` and root README package list
-- [ ] Share the `apps/docs` documentation model with `hub`
+- [x] `hub check`: package lifecycle and documentation compliance
+- [x] `hub generate`: `llms-full.txt` and root README package list
+- [x] Share the `apps/docs` documentation model with `hub`
 - [ ] Organize dependencies, remove unused, ensure all packages are self-contained
 
 ### @codenhub/docs

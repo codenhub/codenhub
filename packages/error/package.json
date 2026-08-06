@@ -43,9 +43,9 @@
   },
   "scripts": {
     "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --target es2022 --dts --clean --no-fixed-extension --unbundle",
-    "prepublishOnly": "pnpm typecheck && vitest run",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
-    "status:pack": "npm pack --dry-run --json --ignore-scripts",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --exclude src/package.test.ts",

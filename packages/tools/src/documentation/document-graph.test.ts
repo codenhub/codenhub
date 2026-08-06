@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDocumentGraph, validateDocumentGraph } from "./document-graph";
+import { createDocumentGraph, validateDocumentGraph } from "./document-graph.ts";
 
 const BASE_FILES = {
   "README.md": "# Example\n\n[Docs](docs/index.md)",
@@ -151,7 +151,7 @@ describe("package document graph", () => {
     const files = {
       ...BASE_FILES,
       LICENSE: "License",
-      "docs/guides/setup.md": "# Setup\n\n[License](../../LICENSE)",
+      "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[License](../../LICENSE)",
     };
 
     expect(getIssueCodes(files, Object.keys(files))).toEqual([]);

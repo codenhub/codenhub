@@ -13,6 +13,10 @@ This document defines how packages are structured, built, tested, exported, and 
 Every `private: false` workspace package MUST follow this spec. A package's
 location within the workspace does not change these requirements.
 
+`pnpm check` enforces the mechanically checkable parts of this spec, as defined
+by `docs/tooling.md`. A finding is waived only by a `Checks bypassed` bullet in
+`docs/specs/packages-exceptions.md`.
+
 Private packages and apps MAY follow this spec when useful. They are not required to comply unless another document says so.
 
 ## Package metadata
@@ -47,7 +51,9 @@ Public packages MUST define:
 - `test:watch`: runs tests in watch mode.
 - `prepublishOnly`: runs at least `pnpm build && pnpm typecheck`.
 - `status:npm`: checks published registry metadata, dist tags, and access status for the package.
-- `status:pack`: checks publishable package contents with `npm pack --dry-run`.
+- `status:pack`: checks publishable package contents with
+  `npm pack --dry-run --ignore-scripts`. Ignoring scripts is required so the dry
+  run does not trigger `prepublishOnly` and build the package a second time.
 
 Packages MAY omit `test` and `test:watch` only when they contain no executable code and the exception is documented.
 
@@ -60,6 +66,7 @@ that tooling and it MUST remain self-contained.
 Root workspace scripts MUST keep supporting:
 
 - `pnpm build`
+- `pnpm check`
 - `pnpm format:check`
 - `pnpm format:fix`
 - `pnpm lint:check`
@@ -123,6 +130,7 @@ Before publishing a public package, run:
 - `pnpm lint:check`
 - `pnpm typecheck`
 - `pnpm test`
+- `pnpm check --pack`
 - Package `prepublishOnly`
 - Package `status:pack`
 

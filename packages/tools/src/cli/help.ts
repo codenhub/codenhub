@@ -11,6 +11,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--no-timeout", "Never kill a package run."],
   ["--dry-run", "Print the commands that would run."],
   ["--fix", "Apply fixes instead of only reporting."],
+  ["--pack", "Let checks run npm pack --dry-run to inspect publishable contents."],
   ["--json", "Emit machine-readable output where supported."],
   ["-h, --help", "Show this help."],
 ];

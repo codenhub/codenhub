@@ -123,7 +123,7 @@ when global rules are not appropriate.
 The root uses light values unless the operating-system preference is dark.
 Apply `.light` or `.dark` to the root or any ancestor to force token values for
 that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-aliases. The [token reference](./docs/tokens.md) documents their precedence.
+aliases. The [token reference](docs/tokens.md) documents their precedence.
 
 ```html
 <html class="dark">
@@ -133,7 +133,7 @@ aliases. The [token reference](./docs/tokens.md) documents their precedence.
 </html>
 ```
 
-Customize the public CSS properties documented in [Tokens](./docs/tokens.md). Do not
+Customize the public CSS properties documented in [Tokens](docs/tokens.md). Do not
 depend on component-scoped implementation variables.
 
 ## Import paths
@@ -175,11 +175,11 @@ theme tokens so their classes can work independently.
 
 ## Next steps
 
-- [Tokens](./docs/tokens.md) explains theme values, dark mode, and the public
+- [Tokens](docs/tokens.md) explains theme values, dark mode, and the public
   customization contract.
-- [Classes](./docs/classes.md) covers helper classes, component states, and
+- [Classes](docs/classes.md) covers helper classes, component states, and
   composition rules.
-- [Accessibility](./docs/accessibility.md) separates the hooks supplied by CSS from
+- [Accessibility](docs/accessibility.md) separates the hooks supplied by CSS from
   the semantics and behavior an application must provide.
 
 <!-- Source: docs/accessibility.md -->
@@ -356,29 +356,29 @@ Examples:
 
 ## Forms
 
-| Class or Selector                                                     | Purpose                                                        |
-| --------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                        |
-| `.label`                                                              | Form label text.                                               |
-| `.hint`                                                               | Secondary helper text.                                         |
-| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.                                       |
-| `.control-base`                                                       | Shared public text-control styling.                            |
-| `.ipt`                                                                | Input control styling.                                         |
-| `.ipt.icon`                                                           | Opts-in to displaying an input icon.                           |
-| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                              |
+| Class or Selector                                                     | Purpose                                                         |
+| --------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                         |
+| `.label`                                                              | Form label text.                                                |
+| `.hint`                                                               | Secondary helper text.                                          |
+| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.                                        |
+| `.control-base`                                                       | Shared public text-control styling.                             |
+| `.ipt`                                                                | Input control styling.                                          |
+| `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
+| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
 | `.email`, `.password`, `.url`, `.tel`, `.search`, `.date`, etc.       | Input type icon selectors (class or matching `type` attribute). |
-| `.no-icon`, `[data-no-icon]`                                          | Suppresses auto-included icons on native form inputs.          |
-| `.textarea`                                                           | Textarea control styling.                                      |
-| `.select`                                                             | Select control styling.                                        |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                               |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                  |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                 |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                            |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                              |
+| `.no-icon`, `[data-no-icon]`                                          | Suppresses auto-included icons on native form inputs.           |
+| `.textarea`                                                           | Textarea control styling.                                       |
+| `.select`                                                             | Select control styling.                                         |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                   |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                  |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                             |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
-Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `date`, `datetime`, `month`, `week`, `time`) include input icons by default; use `.no-icon` or `data-no-icon` to suppress them.
-Icon colors use `--color-text-secondary` by default and transition to `--color-text` on focus.
+Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default; `date` and `datetime-local` inputs retain only the browser-native picker icon. Use `.no-icon` or `data-no-icon` to suppress custom icons on the other native inputs.
+Input icons adapt dynamically to theme variables (`--ipt-icon-color` / `--ipt-icon-color-focus`, defaulting to `var(--color-text-secondary)` and `var(--color-text)`). Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
 to set the checked color:

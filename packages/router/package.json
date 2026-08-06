@@ -35,7 +35,7 @@
     "debug": "pnpm build && pnpm --filter=@codenhub/router-debug dev",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/router version dist-tags time --json && npm dist-tag ls @codenhub/router && npm access get status @codenhub/router",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run && pnpm test:visual",
     "test:coverage": "vitest run --coverage",
     "test:visual": "playwright test",

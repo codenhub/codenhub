@@ -66,10 +66,7 @@ requirements.
 
 Licensed under Apache-2.0.
 
----
-
 <!-- Source: docs/index.md -->
-
 
 # Normalize application errors
 
@@ -136,10 +133,7 @@ require Supabase packages.
   matching, and unwrapping for code that prefers explicit success and failure
   values.
 
----
-
 <!-- Source: docs/error-normalization.md -->
-
 
 # Error Normalization And Registries
 
@@ -335,10 +329,7 @@ runtime, `originalError` is non-enumerable, frozen registries are isolated
 snapshots without runtime mutators, code and name punctuation remains
 significant, and invalid `maxDepth` values throw.
 
----
-
 <!-- Source: docs/results.md -->
-
 
 # Result Helpers
 
