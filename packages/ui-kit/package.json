@@ -55,8 +55,10 @@
     "@codenhub/validation": "workspace:*"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
