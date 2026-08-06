@@ -333,6 +333,23 @@ describe("createAppError — nested AppError handling", () => {
 });
 
 describe("createAppError — custom registry implementations", () => {
+  it("should choose the longest matching prefix regardless of custom registry order", () => {
+    const customRegistry = {
+      ...createErrorRegistry(),
+      prefixes: {
+        values: () => [
+          { prefix: "Upload failed", message: "Short match" },
+          { prefix: "Upload failed: image", message: "Longest match" },
+        ],
+      },
+    };
+
+    expect(createAppError(new Error("Upload failed: image.png"), { registry: customRegistry })).toMatchObject({
+      type: "known",
+      message: "Longest match",
+    });
+  });
+
   it("should work with a custom registry that only implements the public interface", () => {
     const customRegistry = {
       codes: {

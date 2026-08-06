@@ -1,4 +1,3 @@
-// @ts-expect-error Vitest runs tests in Node without adding Node types to this package.
 import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
@@ -146,6 +145,16 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(() => registry.codes.add("   ", { message: "Msg" })).toThrow(TypeError);
   });
 
+  it("should reject a non-string identifier on add", () => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.add(null as never, { message: "Msg" })).toThrow(TypeError);
+  });
+
+  it("should return undefined for a non-string identifier on get", () => {
+    const registry = createErrorRegistry();
+    expect(registry.codes.get(null as never)).toBeUndefined();
+  });
+
   it("should reject feedback without a non-empty message", () => {
     const registry = createErrorRegistry();
     expect(() => registry.codes.add("code1", {} as never)).toThrow(TypeError);
@@ -222,6 +231,11 @@ describe("prefix bucket", () => {
   it("should reject a prefix that normalizes to an empty string", () => {
     const registry = createErrorRegistry();
     expect(() => registry.prefixes.add("!!!", { message: "Msg" })).toThrow(TypeError);
+  });
+
+  it("should reject an invalid prefix on delete", () => {
+    const registry = createErrorRegistry();
+    expect(() => registry.prefixes.delete("!!!")).toThrow(TypeError);
   });
 });
 
@@ -318,6 +332,13 @@ describe("pattern bucket", () => {
   it("should reject a non-RegExp pattern on add", () => {
     const registry = createErrorRegistry();
     expect(() => registry.patterns.add("failed to fetch" as never, { message: "Msg" })).toThrow(TypeError);
+  });
+
+  it("should reject a proxied RegExp that fails the intrinsic brand check", () => {
+    const registry = createErrorRegistry();
+    const pattern = new Proxy(/network/, {});
+
+    expect(() => registry.patterns.add(pattern, { message: "Msg" })).toThrow(TypeError);
   });
 
   it("should reject a non-RegExp pattern on delete", () => {

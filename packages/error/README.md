@@ -49,6 +49,7 @@ requirements.
 
 - Registry presets are opt-in and do not mutate the global registry on import.
 - Configure the mutable global registry during application initialization.
+- Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances and read-only registry snapshots are frozen.
 - Raw strings passed to `err()` use the generic fallback unless `fallbackMessage` is explicit.

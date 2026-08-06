@@ -75,6 +75,8 @@ const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
 
 An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
 `prefixes` and regex `patterns`. It also provides `clear()` and `merge()`.
+Bucket contents are mutable, but the bucket references are read-only and cannot
+be replaced.
 Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
 `values`. Prefix and pattern buckets omit `get`; their `values()` methods return
 `ErrorPrefixDefinition` and `ErrorPatternDefinition` values. All returned
@@ -100,8 +102,9 @@ Classification priority is:
 3. Any remaining `AppError`.
 4. An unknown error using the fallback message.
 
-The longest matching normalized prefix wins. Pattern insertion order determines
-the first heuristic match. `AppErrorType`, `AppErrorSource`,
+The longest matching normalized prefix wins, including for custom registry
+implementations whose prefix definitions are not ordered. Pattern insertion
+order determines the first heuristic match. `AppErrorType`, `AppErrorSource`,
 `ErrorRegistryBucket`, `ErrorPrefixRegistryBucket`,
 `ErrorPatternRegistryBucket`, `ErrorPrefixDefinition`, and
 `ErrorPatternDefinition` are exported for consumers typing registry workflows.

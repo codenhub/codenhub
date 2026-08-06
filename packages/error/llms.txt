@@ -10,6 +10,7 @@ the configured fallback message.
 `isAppError` recognizes errors created by the current package runtime.
 `AppError` values and read-only registry snapshots are frozen. Raw strings passed
 to `err` require an explicit safe `fallbackMessage` to become user-facing.
+Mutable registry bucket contents can change, but bucket references cannot be replaced.
 `originalError` remains available for diagnostics but is omitted from default
 JSON serialization.
 

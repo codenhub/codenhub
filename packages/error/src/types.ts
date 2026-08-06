@@ -261,33 +261,35 @@ export interface ErrorPatternRegistryBucket {
 }
 
 /**
- * A mutable collection of exact and heuristic error buckets used to classify unknown errors.
+ * A collection of mutable exact and heuristic error buckets used to classify unknown errors.
+ * Bucket references are read-only and cannot be replaced.
  */
 export interface ErrorRegistry {
   /**
    * Mappings for exact error codes, typically returned by database systems or APIs.
+   * The bucket contents are mutable, but the bucket reference cannot be replaced.
    */
-  codes: ErrorRegistryBucket;
+  readonly codes: ErrorRegistryBucket;
 
   /**
    * Mappings for exact error names, typically found on native `Error.name` or `DOMException.name` properties.
    */
-  names: ErrorRegistryBucket;
+  readonly names: ErrorRegistryBucket;
 
   /**
    * Mappings for exact error messages (matched after trimming whitespace and trailing punctuation).
    */
-  messages: ErrorRegistryBucket;
+  readonly messages: ErrorRegistryBucket;
 
   /**
    * Mappings for matching errors by message prefixes (e.g., longest prefix match wins).
    */
-  prefixes: ErrorPrefixRegistryBucket;
+  readonly prefixes: ErrorPrefixRegistryBucket;
 
   /**
    * Heuristic mappings for matching errors using RegExp patterns. Matches are classified as `"unexpected"`.
    */
-  patterns: ErrorPatternRegistryBucket;
+  readonly patterns: ErrorPatternRegistryBucket;
 
   /**
    * Clears all mappings from every bucket in this registry.

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-03
+last_updated: 2026-08-05
 scope: repo-wide package progress tracking
 ---
 
@@ -80,7 +80,7 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ### @codenhub/error
 
-- [x] Typed error normalization & result helpers (`Result<T, E>`)
+- [x] Typed error normalization & result helpers (`Result<T>`)
 - [x] Registries (`/registries`, `/registries/browser`, `/registries/supabase`)
 - [ ] Better playground using internal packages
 - [ ] Framework error boundary adapters

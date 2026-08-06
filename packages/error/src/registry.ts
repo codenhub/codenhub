@@ -106,6 +106,10 @@ export const createErrorRegistry = (presets?: readonly (ErrorRegistry | Readonly
     },
   };
 
+  for (const bucketName of ["codes", "names", "messages", "prefixes", "patterns"] as const) {
+    Object.defineProperty(registry, bucketName, { configurable: false, writable: false });
+  }
+
   if (presets) {
     for (const preset of presets) {
       registry.merge(preset);

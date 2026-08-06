@@ -71,6 +71,27 @@ describe("createErrorRegistry", () => {
     expect(targetRegistry.codes.get("invalid_credentials")).toBeUndefined();
   });
 
+  it("should prevent registry bucket reassignment", () => {
+    const registry = createErrorRegistry();
+    const replacement = createErrorRegistry().codes;
+
+    expect(() => {
+      (registry as unknown as Record<string, unknown>).codes = replacement;
+    }).toThrow(TypeError);
+    expect(registry.codes).not.toBe(replacement);
+  });
+
+  it("should prevent registry bucket replacement through reflection", () => {
+    const registry = createErrorRegistry();
+    const replacement = createErrorRegistry().codes;
+
+    expect(() => Object.defineProperty(registry, "codes", { value: replacement })).toThrow(TypeError);
+    expect(Object.getOwnPropertyDescriptor(registry, "codes")).toMatchObject({
+      configurable: false,
+      writable: false,
+    });
+  });
+
   it("should merge all bucket types from source into target", () => {
     const source = createErrorRegistry();
     const target = createErrorRegistry();
@@ -133,6 +154,16 @@ describe("getErrorRegistry / setErrorRegistry", () => {
   it("should reject a non-object registry value", () => {
     expect(() => setErrorRegistry(null as never)).toThrow(TypeError);
     expect(() => setErrorRegistry("invalid" as never)).toThrow(TypeError);
+  });
+
+  it("should reject a registry whose bucket property cannot be read", () => {
+    const registry = Object.defineProperty({}, "codes", {
+      get() {
+        throw new Error("unreadable");
+      },
+    });
+
+    expect(() => setErrorRegistry(registry as ErrorRegistry)).toThrow(TypeError);
   });
 });
 
