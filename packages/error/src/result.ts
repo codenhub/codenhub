@@ -1,4 +1,4 @@
-import { createUntrustedAppError } from "./create-app-error";
+import { createAppError, resolveAppErrorOptions } from "./create-app-error";
 import type { AppError, AppErrorOptions } from "./types";
 
 /**
@@ -38,22 +38,72 @@ export type Result<T> = Ok<T> | Err;
 export function ok(): Ok<void>;
 export function ok<T>(value: T): Ok<T>;
 export function ok<T>(value?: T): Ok<T> {
-  return { ok: true, value: value as T };
+  return Object.freeze({ ok: true, value: value as T });
 }
 
 /**
  * Creates a failed Result instance wrapping a normalized AppError.
- * Raw strings remain diagnostic input, bypass registry matching, and do not become the fallback message automatically.
+ *
+ * A raw string is matched against the registry like any other value. An unmatched string does not
+ * become the message; supply `fallbackMessage` when user-facing text is needed.
  *
  * @param error - The raw error value to normalize.
  * @param options - Configuration options for AppError normalization.
  * @returns An Err result object.
- * @throws TypeError - If `options.maxDepth` is not an integer from 0 through 3.
+ * @throws TypeError - If `options` or any supplied option value is invalid.
  */
-export const err = (error: unknown, options: AppErrorOptions = {}): Err => ({
-  ok: false,
-  error: createUntrustedAppError(error, options),
-});
+export const err = (error: unknown, options: AppErrorOptions = {}): Err =>
+  Object.freeze({
+    ok: false,
+    error: createAppError(error, options),
+  });
+
+/**
+ * Runs a callback and captures a thrown value as a normalized `Err` instead of propagating it.
+ *
+ * This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`,
+ * and anything thrown is normalized through the same pipeline as `createAppError`.
+ *
+ * @typeParam T - The type returned by the callback on success.
+ * @param operation - The callback to run.
+ * @param options - Configuration options for AppError normalization.
+ * @returns An Ok result holding the callback value, or an Err holding the normalized failure.
+ * @throws TypeError - If `options` or any supplied option value is invalid.
+ */
+export const attempt = <T>(operation: () => T, options: AppErrorOptions = {}): Result<T> => {
+  // Validated up front so invalid options surface immediately instead of only on the failure path.
+  resolveAppErrorOptions(options);
+
+  try {
+    return ok(operation());
+  } catch (caughtError) {
+    return err(caughtError, options);
+  }
+};
+
+/**
+ * Runs an async callback and captures a thrown or rejected value as a normalized `Err`.
+ *
+ * @typeParam T - The type the callback resolves to on success.
+ * @param operation - The asynchronous callback to run.
+ * @param options - Configuration options for AppError normalization.
+ * @returns A Promise resolving to an Ok result holding the awaited value, or an Err holding the
+ * normalized failure. The promise does not reject for failures raised by `operation`.
+ * @throws TypeError - If `options` or any supplied option value is invalid.
+ */
+export const attemptAsync = async <T>(
+  operation: () => Promise<T> | T,
+  options: AppErrorOptions = {},
+): Promise<Result<T>> => {
+  // Validated up front so invalid options surface immediately instead of only on the failure path.
+  resolveAppErrorOptions(options);
+
+  try {
+    return ok(await operation());
+  } catch (caughtError) {
+    return err(caughtError, options);
+  }
+};
 
 /**
  * Unwraps a Result, returning the value if successful, or throwing the normalized AppError if failed.

@@ -18,12 +18,6 @@ interface AppErrorResolution {
   isRetryable: boolean;
 }
 
-interface CreateAppErrorInput {
-  error: unknown;
-  options: AppErrorOptions;
-  shouldClassifyRootString: boolean;
-}
-
 /** The exact field set produced by `AppError.toJSON()`. */
 interface SerializedAppError {
   name: string;
@@ -90,9 +84,10 @@ class AppErrorImpl extends Error implements AppError {
 /**
  * Reads each supplied option once and validates it before any traversal begins.
  *
+ * @internal
  * @throws TypeError - If options or any supplied option value is invalid.
  */
-const resolveOptions = (options: AppErrorOptions): ResolvedAppErrorOptions => {
+export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErrorOptions => {
   if (typeof options !== "object" || options === null) {
     throw new TypeError("AppError options must be an object.");
   }
@@ -125,8 +120,8 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
 });
 
 /** @internal */
-const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateAppErrorInput): AppError => {
-  const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveOptions(options);
+const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError => {
+  const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveAppErrorOptions(options);
 
   if (isAppError(error) && !hasCustomOptions) {
     return error;
@@ -142,7 +137,7 @@ const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateA
   let unexpectedResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
 
-  for (const [candidateIndex, candidate] of errorCandidates.entries()) {
+  for (const candidate of errorCandidates) {
     if (isAppError(candidate)) {
       if (candidate.type === "known") {
         knownResult = resolveFromAppError(candidate, error);
@@ -152,10 +147,6 @@ const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateA
       } else if (appErrorFallback === null) {
         appErrorFallback = resolveFromAppError(candidate, error);
       }
-      continue;
-    }
-
-    if (!shouldClassifyRootString && candidateIndex === 0 && typeof candidate === "string") {
       continue;
     }
 
@@ -201,7 +192,9 @@ const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateA
  * 4. An unknown error carrying the fallback message.
  *
  * A deep known match outranks a shallow unexpected match. Ordinary unknown input never throws,
- * including objects and proxies whose inspected properties throw.
+ * including objects and proxies whose inspected properties throw. A raw string is matched against
+ * the registry like any other candidate; when nothing matches, the resolved message is the
+ * fallback rather than the string itself, so raw text is never surfaced to consumers.
  *
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
@@ -211,12 +204,7 @@ const normalizeAppError = ({ error, options, shouldClassifyRootString }: CreateA
  * from 0 through 3.
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
-  return normalizeAppError({ error, options, shouldClassifyRootString: true });
-}
-
-/** @internal */
-export function createUntrustedAppError(error: unknown, options: AppErrorOptions = {}): AppError {
-  return normalizeAppError({ error, options, shouldClassifyRootString: false });
+  return normalizeAppError(error, options);
 }
 
 /**

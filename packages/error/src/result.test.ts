@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   andThen,
   andThenAsync,
+  attempt,
+  attemptAsync,
   createErrorRegistry,
   err,
   map,
@@ -41,10 +43,11 @@ describe("err", () => {
     expect(result.error.message).toBe("Invalid email or password.");
   });
 
-  it("should treat a string error value as untrusted by default", () => {
+  it("should not expose an unmatched string as the user-facing message", () => {
     const result = err("Missing user id");
     expect(result.error.type).toBe("unknown");
     expect(result.error.message).toBe("An unexpected error occurred.");
+    expect(result.error.originalError).toBe("Missing user id");
   });
 
   it("should use an explicit fallback message for a string error value", () => {
@@ -56,30 +59,128 @@ describe("err", () => {
     [
       "exact message",
       (registry: ReturnType<typeof createErrorRegistry>) => registry.messages.add("raw secret", { message: "Mapped" }),
+      "known",
     ],
     [
       "prefix",
       (registry: ReturnType<typeof createErrorRegistry>) => registry.prefixes.add("raw", { message: "Mapped" }),
+      "known",
     ],
     [
       "pattern",
       (registry: ReturnType<typeof createErrorRegistry>) => registry.patterns.add(/raw secret/, { message: "Mapped" }),
+      "unexpected",
     ],
-  ])("should not classify a raw string through a %s mapping", (_, register) => {
+  ])("should classify a string value through a %s mapping", (_, register, expectedType) => {
     const registry = createErrorRegistry();
     register(registry);
 
     expect(err("raw secret", { registry }).error).toMatchObject({
-      type: "unknown",
-      message: "An unexpected error occurred.",
+      type: expectedType,
+      message: "Mapped",
       originalError: "raw secret",
     });
+  });
+
+  it("should classify root and nested string values identically", () => {
+    const registry = createErrorRegistry();
+    registry.patterns.add(/failed to fetch/i, { message: "Network request failed." });
+
+    const rootResult = err("Failed to fetch", { registry });
+    const nestedResult = err({ cause: "Failed to fetch" }, { registry });
+
+    expect(rootResult.error.type).toBe(nestedResult.error.type);
+    expect(rootResult.error.message).toBe(nestedResult.error.message);
+    expect(rootResult.error.message).toBe("Network request failed.");
   });
 
   it("should produce unknown type when no registry matches", () => {
     const result = err({ code: "unregistered" });
     expect(result.ok).toBe(false);
     expect(result.error.type).toBe("unknown");
+  });
+
+  it("should freeze the returned result objects", () => {
+    expect(Object.isFrozen(ok("value"))).toBe(true);
+    expect(Object.isFrozen(err("internal detail"))).toBe(true);
+  });
+});
+
+describe("attempt", () => {
+  it("should return an Ok result holding the callback value", () => {
+    expect(attempt(() => 42)).toEqual({ ok: true, value: 42 });
+  });
+
+  it("should capture a thrown value as a normalized Err result", () => {
+    const registry = createErrorRegistry();
+    registry.names.add("RangeError", { message: "Value out of range." });
+
+    const result = attempt(
+      () => {
+        throw new RangeError("too big");
+      },
+      { registry },
+    );
+
+    expect(result.ok).toBe(false);
+    expect((result as Err).error).toMatchObject({ type: "known", message: "Value out of range." });
+  });
+
+  it("should not expose a thrown string as the user-facing message", () => {
+    const result = attempt(() => {
+      throw "internal detail";
+    });
+
+    expect((result as Err).error.message).toBe("An unexpected error occurred.");
+    expect((result as Err).error.originalError).toBe("internal detail");
+  });
+
+  it("should reject invalid options before running the callback", () => {
+    let didRun = false;
+
+    expect(() =>
+      attempt(
+        () => {
+          didRun = true;
+          return 1;
+        },
+        { fallbackMessage: "" },
+      ),
+    ).toThrow(TypeError);
+    expect(didRun).toBe(false);
+  });
+});
+
+describe("attemptAsync", () => {
+  it("should return an Ok result holding the resolved value", async () => {
+    await expect(attemptAsync(async () => "done")).resolves.toEqual({ ok: true, value: "done" });
+  });
+
+  it("should capture a rejected promise as a normalized Err result", async () => {
+    const registry = createErrorRegistry();
+    registry.names.add("RangeError", { message: "Value out of range." });
+
+    const result = await attemptAsync(
+      async () => {
+        throw new RangeError("too big");
+      },
+      { registry },
+    );
+
+    expect(result.ok).toBe(false);
+    expect((result as Err).error).toMatchObject({ type: "known", message: "Value out of range." });
+  });
+
+  it("should capture a synchronous throw from the callback", async () => {
+    const result = await attemptAsync((): number => {
+      throw new Error("sync failure");
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
+  it("should accept a callback returning a plain value", async () => {
+    await expect(attemptAsync(() => 7)).resolves.toEqual({ ok: true, value: 7 });
   });
 });
 

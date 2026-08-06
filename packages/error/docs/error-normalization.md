@@ -155,13 +155,43 @@ matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
 Edge Function error names. Built-in `messageKey` values are stable integration
 keys for consumer-owned translations. The package does not yet ship a canonical
 translation map, so consumers must provide translations when using these keys.
-Preset coverage is not exhaustive, and message patterns are heuristic.
+Each key maps to exactly one fallback message. Preset coverage is not
+exhaustive, and message patterns are heuristic.
 
-## Migration From 0.1
+Registered patterns run against arbitrary error text, so a pattern that
+backtracks catastrophically will stall classification. Keep custom patterns
+linear and prefer `codes`, `names`, `messages`, or `prefixes` whenever a stable
+identifier exists. The built-in preset patterns are simple alternations.
+
+## Migrations
+
+### To 0.3
+
+- Bucket `get()` and `values()` return frozen values and frozen lists. Writing to
+  a returned feedback object, definition, definition list, or stored `RegExp`
+  throws `TypeError` in strict mode instead of mutating a private copy. Copy
+  explicitly with a spread when a mutable object is needed.
+- Invalid `createAppError` and `err()` options throw `TypeError`:
+  `fallbackMessage` must be a non-empty string, `registry` must expose the
+  read-facing registry surface, and `options` must be an object. An invalid
+  registry previously surfaced only when the error carried a code, name, or
+  message.
+- `merge()` throws `TypeError` when its source does not expose the read-facing
+  registry surface, and `createErrorRegistry(presets)` throws when `presets` is
+  not a list.
+- Strings are classified against the registry at every wrapper depth, including
+  the top-level value passed to `err()`. Unmatched strings still resolve to the
+  fallback message, so raw text is never surfaced. Registering a message,
+  prefix, or pattern that matches a string previously had no effect at the top
+  level and now produces a `known` or `unexpected` result.
+- The browser pattern for generic fetch and network messages uses
+  `error.browser.requestFailed` instead of sharing `error.browser.network` with
+  the `NetworkError` name mapping.
+
+### To 0.2
 
 Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are
 frozen, `isAppError` recognizes only values created by the current package
 runtime, `originalError` is non-enumerable, frozen registries are isolated
 snapshots without runtime mutators, code and name punctuation remains
-significant, and invalid `maxDepth` values throw. Pass `fallbackMessage`
-explicitly when a string supplied to `err()` is safe for users.
+significant, and invalid `maxDepth` values throw.

@@ -69,8 +69,10 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
   [
     /failed to fetch|networkerror|load failed/i,
     {
+      // Distinct from error.browser.network so one translation key never has to cover both the
+      // DOMException name match and this heuristic message match.
       message: "Network request failed.",
-      messageKey: "error.browser.network",
+      messageKey: "error.browser.requestFailed",
       source: "browser.network",
     },
   ] as const,

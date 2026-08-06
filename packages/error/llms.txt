@@ -8,14 +8,16 @@ known errors, regex matches become unexpected errors, and unmatched values use
 the configured fallback message.
 
 `isAppError` recognizes errors created by the current package runtime.
-`AppError` values and read-only registry snapshots are frozen. Raw strings passed
-to `err` bypass registry matching and require an explicit safe `fallbackMessage`
-to become user-facing.
+`AppError` values, result objects, read-only registry snapshots, and every value
+returned by a registry bucket are frozen. Strings are classified like any other
+value, but an unmatched string never becomes the message, so an explicit
+`fallbackMessage` is required for user-facing text.
 Mutable registry bucket contents can change, but bucket references cannot be replaced.
-Default JSON serialization includes normalized fields and omits diagnostic
-`cause` and `originalError` values. Built-in preset `messageKey` values are
-stable integration keys for consumer-owned translations; no translation map is
-currently bundled.
+`AppError.toJSON` defines serialization and omits diagnostic `cause` and
+`originalError` values. Built-in preset `messageKey` values are stable
+integration keys for consumer-owned translations; no translation map is
+currently bundled. Use `attempt` and `attemptAsync` to convert throwing code
+into results.
 
 ## Documentation
 

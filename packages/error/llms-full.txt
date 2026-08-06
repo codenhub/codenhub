@@ -54,12 +54,13 @@ requirements.
 - Configure the mutable global registry during application initialization.
 - Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
-- `AppError` instances and read-only registry snapshots are frozen.
-- Raw strings passed to `err()` bypass registry matching and use the generic fallback unless `fallbackMessage` is explicit.
-- Default JSON serialization includes normalized fields such as `message`, `type`, and `source`, while omitting diagnostic `cause` and `originalError` values.
+- `AppError` instances, result objects, read-only registry snapshots, and every value returned by a bucket are frozen.
+- An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
+- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
 - Invalid registry entries and invalid `createAppError` options are programmer errors and throw `TypeError`.
+- Custom registry patterns run against arbitrary error text; keep them linear to avoid catastrophic backtracking.
 
 ## License
 
@@ -293,16 +294,46 @@ matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
 Edge Function error names. Built-in `messageKey` values are stable integration
 keys for consumer-owned translations. The package does not yet ship a canonical
 translation map, so consumers must provide translations when using these keys.
-Preset coverage is not exhaustive, and message patterns are heuristic.
+Each key maps to exactly one fallback message. Preset coverage is not
+exhaustive, and message patterns are heuristic.
 
-## Migration From 0.1
+Registered patterns run against arbitrary error text, so a pattern that
+backtracks catastrophically will stall classification. Keep custom patterns
+linear and prefer `codes`, `names`, `messages`, or `prefixes` whenever a stable
+identifier exists. The built-in preset patterns are simple alternations.
+
+## Migrations
+
+### To 0.3
+
+- Bucket `get()` and `values()` return frozen values and frozen lists. Writing to
+  a returned feedback object, definition, definition list, or stored `RegExp`
+  throws `TypeError` in strict mode instead of mutating a private copy. Copy
+  explicitly with a spread when a mutable object is needed.
+- Invalid `createAppError` and `err()` options throw `TypeError`:
+  `fallbackMessage` must be a non-empty string, `registry` must expose the
+  read-facing registry surface, and `options` must be an object. An invalid
+  registry previously surfaced only when the error carried a code, name, or
+  message.
+- `merge()` throws `TypeError` when its source does not expose the read-facing
+  registry surface, and `createErrorRegistry(presets)` throws when `presets` is
+  not a list.
+- Strings are classified against the registry at every wrapper depth, including
+  the top-level value passed to `err()`. Unmatched strings still resolve to the
+  fallback message, so raw text is never surfaced. Registering a message,
+  prefix, or pattern that matches a string previously had no effect at the top
+  level and now produces a `known` or `unexpected` result.
+- The browser pattern for generic fetch and network messages uses
+  `error.browser.requestFailed` instead of sharing `error.browser.network` with
+  the `NetworkError` name mapping.
+
+### To 0.2
 
 Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are
 frozen, `isAppError` recognizes only values created by the current package
 runtime, `originalError` is non-enumerable, frozen registries are isolated
 snapshots without runtime mutators, code and name punctuation remains
-significant, and invalid `maxDepth` values throw. Pass `fallbackMessage`
-explicitly when a string supplied to `err()` is safe for users.
+significant, and invalid `maxDepth` values throw.
 
 ---
 
@@ -323,9 +354,26 @@ const loadName = (value: string | null): Result<string> =>
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
 options?)` normalizes failures through the same pipeline as `createAppError`.
-Raw strings are treated as untrusted diagnostic input, bypass registry matching,
-and use the generic fallback message. Supply `fallbackMessage` explicitly only
-when the text is safe for users.
+Both return frozen result objects.
+
+String values are matched against the registry like any other value, at every
+wrapper depth. An unmatched string never becomes the message, so raw diagnostic
+text is not surfaced to users; supply `fallbackMessage` when user-facing text is
+needed.
+
+Use `attempt` and `attemptAsync` at boundaries where existing code throws:
+
+```ts
+import { attempt, attemptAsync } from "@codenhub/error";
+
+const parsed = attempt(() => JSON.parse(payload) as Config);
+const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
+```
+
+Both run the supplied callback and convert anything it throws or rejects with
+into a normalized `Err`, so the returned promise from `attemptAsync` does not
+reject for callback failures. Invalid options throw `TypeError` before the
+callback runs.
 
 The remaining helpers operate only on the success branch unless stated:
 
@@ -350,5 +398,6 @@ const output = match(doubled, {
 });
 ```
 
-These helpers do not catch callback errors. Use `err()` explicitly when thrown
-values should be converted into normalized failures.
+`map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback
+errors. Use `attempt` or `attemptAsync` when thrown values should become
+normalized failures.

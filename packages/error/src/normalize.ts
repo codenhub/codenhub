@@ -41,16 +41,8 @@ const getStringField = (source: Record<string, unknown>, key: string): string | 
   return typeof value === "string" ? value : null;
 };
 
-const toKnownClassification = (feedback: ErrorFeedback): ErrorClassification => ({
-  type: "known",
-  message: feedback.message,
-  messageKey: feedback.messageKey ?? null,
-  source: feedback.source ?? null,
-  isRetryable: feedback.isRetryable ?? false,
-});
-
-const toUnexpectedClassification = (feedback: ErrorFeedback): ErrorClassification => ({
-  type: "unexpected",
+const toClassification = (type: ErrorClassification["type"], feedback: ErrorFeedback): ErrorClassification => ({
+  type,
   message: feedback.message,
   messageKey: feedback.messageKey ?? null,
   source: feedback.source ?? null,
@@ -140,7 +132,7 @@ const getKnownMessageFeedback = (
 
   const exactFeedback = registry.messages.get(normalizedMessage);
   if (exactFeedback !== undefined) {
-    return toKnownClassification(exactFeedback);
+    return toClassification("known", exactFeedback);
   }
 
   // Scanning for the longest match keeps custom registries that return unordered prefix
@@ -156,7 +148,7 @@ const getKnownMessageFeedback = (
     }
   }
 
-  return longestMatch === null ? null : toKnownClassification(longestMatch);
+  return longestMatch === null ? null : toClassification("known", longestMatch);
 };
 
 const resolveDeterministicKnownError = (
@@ -167,7 +159,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.codes.get(code);
 
     if (feedback !== undefined) {
-      return toKnownClassification(feedback);
+      return toClassification("known", feedback);
     }
   }
 
@@ -175,7 +167,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.names.get(name);
 
     if (feedback !== undefined) {
-      return toKnownClassification(feedback);
+      return toClassification("known", feedback);
     }
   }
 
@@ -204,7 +196,7 @@ const resolveHeuristicUnexpectedError = (
     return null;
   }
 
-  return toUnexpectedClassification(matchedDefinition);
+  return toClassification("unexpected", matchedDefinition);
 };
 
 /**

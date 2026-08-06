@@ -52,12 +52,13 @@ requirements.
 - Configure the mutable global registry during application initialization.
 - Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
-- `AppError` instances and read-only registry snapshots are frozen.
-- Raw strings passed to `err()` bypass registry matching and use the generic fallback unless `fallbackMessage` is explicit.
-- Default JSON serialization includes normalized fields such as `message`, `type`, and `source`, while omitting diagnostic `cause` and `originalError` values.
+- `AppError` instances, result objects, read-only registry snapshots, and every value returned by a bucket are frozen.
+- An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
+- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
 - Invalid registry entries and invalid `createAppError` options are programmer errors and throw `TypeError`.
+- Custom registry patterns run against arbitrary error text; keep them linear to avoid catastrophic backtracking.
 
 ## License
 

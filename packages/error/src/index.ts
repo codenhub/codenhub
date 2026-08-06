@@ -1,14 +1,16 @@
 export { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
 export { createErrorRegistry, getErrorRegistry, setErrorRegistry, freezeRegistry } from "./registry";
 export {
+  andThen,
+  andThenAsync,
+  attempt,
+  attemptAsync,
   err,
-  ok,
-  unwrap,
   map,
   mapAsync,
   match,
-  andThen,
-  andThenAsync,
+  ok,
+  unwrap,
   unwrapOr,
   type Err,
   type Ok,

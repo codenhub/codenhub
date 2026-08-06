@@ -16,9 +16,26 @@ const loadName = (value: string | null): Result<string> =>
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
 options?)` normalizes failures through the same pipeline as `createAppError`.
-Raw strings are treated as untrusted diagnostic input, bypass registry matching,
-and use the generic fallback message. Supply `fallbackMessage` explicitly only
-when the text is safe for users.
+Both return frozen result objects.
+
+String values are matched against the registry like any other value, at every
+wrapper depth. An unmatched string never becomes the message, so raw diagnostic
+text is not surfaced to users; supply `fallbackMessage` when user-facing text is
+needed.
+
+Use `attempt` and `attemptAsync` at boundaries where existing code throws:
+
+```ts
+import { attempt, attemptAsync } from "@codenhub/error";
+
+const parsed = attempt(() => JSON.parse(payload) as Config);
+const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
+```
+
+Both run the supplied callback and convert anything it throws or rejects with
+into a normalized `Err`, so the returned promise from `attemptAsync` does not
+reject for callback failures. Invalid options throw `TypeError` before the
+callback runs.
 
 The remaining helpers operate only on the success branch unless stated:
 
@@ -43,5 +60,6 @@ const output = match(doubled, {
 });
 ```
 
-These helpers do not catch callback errors. Use `err()` explicitly when thrown
-values should be converted into normalized failures.
+`map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback
+errors. Use `attempt` or `attemptAsync` when thrown values should become
+normalized failures.

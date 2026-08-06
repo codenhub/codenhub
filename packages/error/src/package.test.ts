@@ -18,6 +18,8 @@ describe("published package exports", () => {
         "DEFAULT_APP_ERROR_MESSAGE",
         "andThen",
         "andThenAsync",
+        "attempt",
+        "attemptAsync",
         "createAppError",
         "createErrorRegistry",
         "err",
