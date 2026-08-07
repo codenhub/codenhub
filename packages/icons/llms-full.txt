@@ -1,3 +1,5 @@
+<!-- Source: README.md -->
+
 # @codenhub/icons
 
 High-performance, zero-runtime icon system for Codenhub. `@codenhub/icons` provides a flexible `IconRegistry`, SVG mask generator, static class scanner, PostCSS plugin, and Vite plugin to generate optimized CSS mask rules for icons across web applications.
@@ -139,6 +141,8 @@ This package is licensed under the [Apache-2.0](LICENSE) license.
 
 SVG icon assets derived from Lucide are licensed under the ISC License. See the [NOTICE](NOTICE) file for third-party copyright notices.
 
+<!-- Source: docs/index.md -->
+
 # Icons Documentation
 
 `@codenhub/icons` is a high-performance, zero-runtime icon system. It provides a flexible `IconRegistry`, SVG mask generator, static class scanner, PostCSS plugin, Vite plugin, and programmatic JS helpers to generate optimized CSS mask rules for icons across web applications.
@@ -219,6 +223,7 @@ import {
 ### CSS Generators
 
 #### `generateBaseCss(options?: BaseCssOptions): string`
+
 Generates base container, pseudo-element (`::before`/`::after`), and custom property rules.
 
 ```ts
@@ -226,6 +231,7 @@ const baseCss = generateBaseCss({ prefix: "ic" });
 ```
 
 #### `generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string`
+
 Generates `--ic-uri` and `--ic-mask` CSS rules for specific selectors and SVG string.
 
 ```ts
@@ -233,6 +239,7 @@ const iconCss = generateIconCss(".ic-close", "<svg>...</svg>");
 ```
 
 #### `generateIconSetCss(classes: Iterable<string>, registry: IconRegistry, options?: GenerateIconSetCssOptions): string`
+
 Scans class names, resolves icons from registry, groups duplicate SVGs, and outputs deduplicated CSS.
 
 ---
@@ -240,6 +247,7 @@ Scans class names, resolves icons from registry, groups duplicate SVGs, and outp
 ### JS Mask Helpers
 
 #### `getIconMaskUrl(iconNameOrSvg: string, registry?: IconRegistry, options?: { strokeWidth?: number | string }): string | undefined`
+
 Returns formatted `url("data:image/svg+xml,...")` for an SVG string or registered icon name.
 
 ```ts
@@ -248,6 +256,7 @@ const maskUrl = getIconMaskUrl("search", registry);
 ```
 
 #### `getIconCssProps(iconNameOrSvg: string, registry?: IconRegistry, options?: { prefix?: string; strokeWidth?: number | string }): Record<string, string> | undefined`
+
 Returns an inline style object containing `--ic-uri` and `--ic-mask` custom properties.
 
 ```ts

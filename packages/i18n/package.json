@@ -42,7 +42,7 @@
     "build": "tsdown src/index.ts src/browser.ts src/routing.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/i18n version dist-tags time --json && npm dist-tag ls @codenhub/i18n && npm access get status @codenhub/i18n",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

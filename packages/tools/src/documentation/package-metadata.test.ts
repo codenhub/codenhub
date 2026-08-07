@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPackageDefinitions, buildPublicPackageSummaries, parsePackageMetadata } from "./catalog-core";
-import { rewritePackageMarkdownLinks } from "./markdown-links";
+import { buildPackageDefinitions, buildPublicPackageSummaries, parsePackageMetadata } from "./package-metadata.ts";
 
 function createManifest(slug?: string) {
   return {
@@ -205,37 +204,24 @@ describe("package documentation catalog", () => {
     expect(parsePackageMetadata(createManifest(), "package.json")?.description).toBe("Example package.");
   });
 
-  it("rewrites package-relative Markdown links", () => {
-    const html =
-      '<p><a href="../reference.md#errors">Reference</a> <a href="https://example.com/file.md">External</a></p>';
+  it("keeps an absolute demo URL", () => {
+    const manifest = {
+      name: "@codenhub/example",
+      codenhub: { docs: { demoUrl: "https://example.coden.agency", label: "Example", status: "experimental" } },
+    };
 
-    expect(
-      rewritePackageMarkdownLinks(html, {
-        packageSlug: "example",
-        sourceRelativePath: "guides/setup.md",
-      }),
-    ).toBe(
-      '<p><a href="/example/reference/#errors">Reference</a> <a href="https://example.com/file.md">External</a></p>',
-    );
+    expect(parsePackageMetadata(manifest, "package.json")?.demoUrl).toBe("https://example.coden.agency");
   });
 
-  it("rewrites package-relative assets and legal resources", () => {
-    const html = '<p><img src="../assets/setup.svg"><a href="../../NOTICE">Notice</a></p>';
-
-    expect(
-      rewritePackageMarkdownLinks(html, {
-        packageSlug: "example",
-        sourceRelativePath: "guides/setup.md",
-      }),
-    ).toBe('<p><img src="/example/assets/setup.svg"><a href="/example/NOTICE">Notice</a></p>');
-  });
-
-  it("preserves complete queries and fragments when rewriting links", () => {
-    expect(
-      rewritePackageMarkdownLinks('<a href="reference.md?filter=a?b#first#second">Reference</a>', {
-        packageSlug: "example",
-        sourceRelativePath: "index.md",
-      }),
-    ).toBe('<a href="/example/reference/?filter=a?b#first#second">Reference</a>');
+  it("rejects a demo URL that is not absolute", () => {
+    expect(() =>
+      parsePackageMetadata(
+        {
+          name: "@codenhub/example",
+          codenhub: { docs: { demoUrl: "/demo", label: "Example", status: "experimental" } },
+        },
+        "package.json",
+      ),
+    ).toThrow("Invalid codenhub.docs.demoUrl");
   });
 });

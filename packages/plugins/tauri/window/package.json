@@ -32,19 +32,21 @@
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/tauri-plugin-window version dist-tags time --json && npm dist-tag ls @codenhub/tauri-plugin-window && npm access get status @codenhub/tauri-plugin-window",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@tauri-apps/api": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@tauri-apps/api": "catalog:"
+    "@tauri-apps/api": "^2.0.0"
   },
   "codenhub": {
     "docs": {

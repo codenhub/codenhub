@@ -33,7 +33,7 @@
     "build": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/validation version dist-tags time --json && npm dist-tag ls @codenhub/validation && npm access get status @codenhub/validation",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

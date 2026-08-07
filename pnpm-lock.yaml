@@ -56,6 +56,9 @@ importers:
 
   .:
     devDependencies:
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:packages/tools
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
@@ -76,14 +79,10 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   apps/debug:
-    dependencies:
-      '@codenhub/theme':
-        specifier: workspace:*
-        version: link:../../packages/theme
+    devDependencies:
       '@codenhub/ui-kit':
         specifier: workspace:*
         version: link:../../packages/ui-kit
-    devDependencies:
       '@codenhub/vite-plugin-add-loader':
         specifier: workspace:*
         version: link:../../packages/plugins/vite/add-loader
@@ -99,37 +98,30 @@ importers:
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.2
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
       vite:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   apps/docs:
-    dependencies:
+    devDependencies:
       '@astrojs/markdown-remark':
         specifier: 7.2.1
         version: 7.2.1
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../packages/styles
-      astro:
-        specifier: 7.0.7
-        version: 7.0.7(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(jiti@2.7.0)
-      github-slugger:
-        specifier: 2.0.0
-        version: 2.0.0
-      remark-parse:
-        specifier: 11.0.0
-        version: 11.0.0
-      unified:
-        specifier: 11.0.5
-        version: 11.0.5
-    devDependencies:
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../../packages/tools
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
+      astro:
+        specifier: 7.0.7
+        version: 7.0.7(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(jiti@2.7.0)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.2
@@ -142,9 +134,6 @@ importers:
 
   packages/components:
     dependencies:
-      '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
       astro:
         specifier: '>=4.0.0'
         version: 7.0.7(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(jiti@2.7.0)
@@ -152,6 +141,9 @@ importers:
         specifier: '>=4.0.0'
         version: 5.56.5
     devDependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../styles
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17
@@ -182,6 +174,9 @@ importers:
 
   packages/error:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
@@ -220,39 +215,37 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/icons:
-    dependencies:
-      postcss:
-        specifier: '>=8.0.0'
-        version: 8.5.19
-      vite:
-        specifier: '>=5.0.0'
-        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
     devDependencies:
-      '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)
+      postcss:
+        specifier: ^8.4.0
+        version: 8.5.19
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      vite:
+        specifier: 'catalog:'
+        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
       vitest:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/icons/debug:
-    dependencies:
+    devDependencies:
       '@codenhub/icons':
         specifier: workspace:*
         version: link:..
-    devDependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../../styles
       vite:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
@@ -270,11 +263,13 @@ importers:
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   packages/icons/dev:
-    dependencies:
+    devDependencies:
       '@codenhub/icons':
         specifier: workspace:*
         version: link:..
-    devDependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../../styles
       vite:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
@@ -302,6 +297,9 @@ importers:
       '@tauri-apps/api':
         specifier: 'catalog:'
         version: 2.11.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -317,6 +315,9 @@ importers:
       '@tauri-apps/api':
         specifier: 'catalog:'
         version: 2.11.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -332,6 +333,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -350,6 +354,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -368,6 +375,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -403,14 +413,13 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/router/debug:
-    dependencies:
+    devDependencies:
       '@codenhub/router':
         specifier: workspace:*
         version: link:..
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -422,14 +431,13 @@ importers:
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   packages/router/dev:
-    dependencies:
+    devDependencies:
       '@codenhub/router':
         specifier: workspace:*
         version: link:..
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -445,6 +453,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -498,11 +509,10 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/styles/debug:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:..
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -514,11 +524,10 @@ importers:
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   packages/styles/dev:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:..
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -531,15 +540,12 @@ importers:
 
   packages/theme:
     devDependencies:
-      '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
-      '@codenhub/vite-plugin-icons':
-        specifier: workspace:*
-        version: link:../plugins/vite/icons
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
@@ -554,14 +560,16 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/theme/debug:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
       '@codenhub/theme':
         specifier: workspace:*
         version: link:..
-    devDependencies:
+      '@codenhub/vite-plugin-icons':
+        specifier: workspace:*
+        version: link:../../plugins/vite/icons
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -573,14 +581,16 @@ importers:
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   packages/theme/dev:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
       '@codenhub/theme':
         specifier: workspace:*
         version: link:..
-    devDependencies:
+      '@codenhub/vite-plugin-icons':
+        specifier: workspace:*
+        version: link:../../plugins/vite/icons
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -622,14 +632,13 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/toast/debug:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
       '@codenhub/toast':
         specifier: workspace:*
         version: link:..
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -641,14 +650,13 @@ importers:
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
   packages/toast/dev:
-    dependencies:
+    devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
       '@codenhub/toast':
         specifier: workspace:*
         version: link:..
-    devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
@@ -658,6 +666,31 @@ importers:
       vite:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
+
+  packages/tools:
+    dependencies:
+      github-slugger:
+        specifier: 2.0.0
+        version: 2.0.0
+      remark-parse:
+        specifier: 11.0.0
+        version: 11.0.0
+      unified:
+        specifier: 11.0.5
+        version: 11.0.5
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/ui-kit:
     dependencies:
@@ -673,13 +706,13 @@ importers:
       '@codenhub/theme':
         specifier: workspace:*
         version: link:../theme
-      '@codenhub/validation':
-        specifier: workspace:*
-        version: link:../validation
     devDependencies:
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.3.2
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-05
+last_updated: 2026-08-06
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -9,6 +9,15 @@ scope: Approved exceptions for workspace packages.
 This document is the central register for package-specific exceptions to
 repository guidelines and package specs. New exceptions MUST follow the
 exception rules in `docs/docs-guidelines.md`.
+
+An exception to a rule that `hub check` enforces MUST also declare a
+`Checks bypassed` bullet listing the affected check codes in backticks, as shown
+below. `hub check` reads that bullet, so a waiver cannot exist without being
+recorded here. Run `pnpm check --json` to see the code behind any finding.
+
+`hub check` reports a waiver that suppresses nothing, so a stale entry or a
+mistyped code or package name surfaces instead of looking effective. Remove an
+entry once the package no longer needs it.
 
 ## `@codenhub/tauri-plugin-webview`: Rust-specific conventions
 
@@ -27,6 +36,7 @@ exception rules in `docs/docs-guidelines.md`.
 
 - **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main`,
   `module`, and `types` required in `package.json`).
+- **Checks bypassed:** `metadata/main`, `metadata/module`, `metadata/types`.
 - **Where it applies:** `packages/styles/`.
 - **Why acceptable:** The package is CSS-only and exposes no JavaScript or
   TypeScript API. Adding `main`, `module`, and `types` would provide no usable
@@ -35,7 +45,7 @@ exception rules in `docs/docs-guidelines.md`.
 
 ## `@codenhub/styles`: Coverage report
 
-- **Rule bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage
+- **Rules bypassed:** `docs/specs/tests.md` (`test:coverage` outputs a coverage
   report).
 - **Where it applies:** The `test:coverage` script in
   `packages/styles/package.json`.

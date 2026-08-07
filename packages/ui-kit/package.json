@@ -41,7 +41,7 @@
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/ui-kit version dist-tags time --json && npm dist-tag ls @codenhub/ui-kit && npm access get status @codenhub/ui-kit",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -51,11 +51,11 @@
     "@codenhub/error": "workspace:*",
     "@codenhub/store": "workspace:*",
     "@codenhub/styles": "workspace:*",
-    "@codenhub/theme": "workspace:*",
-    "@codenhub/validation": "workspace:*"
+    "@codenhub/theme": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",

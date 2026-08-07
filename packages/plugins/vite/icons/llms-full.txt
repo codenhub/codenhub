@@ -1,4 +1,4 @@
-<!-- Sources: README.md, docs/index.md, docs/integration.md, docs/output-and-constraints.md -->
+<!-- Source: README.md -->
 
 # @codenhub/vite-plugin-icons
 
@@ -62,7 +62,7 @@ Licensed under Apache-2.0.
 
 The built-in SVGs are derived from [Lucide](https://lucide.dev) under the ISC License. Redistributions must preserve the [NOTICE](NOTICE), which contains the Lucide copyright and license text.
 
----
+<!-- Source: docs/index.md -->
 
 # Replace icon markers at build time
 
@@ -134,7 +134,7 @@ icons or their controls.
 - [Generated SVG and constraints](docs/output-and-constraints.md): Understand
   attribute merging, security, accessibility, failures, and Lucide attribution.
 
----
+<!-- Source: docs/integration.md -->
 
 # Integration and API
 
@@ -191,7 +191,7 @@ Primary names and `alternativeNames` share one lookup registry. A later custom e
 
 Custom markup is trusted build input. Keep it as a complete `<svg>...</svg>` string from a controlled source.
 
----
+<!-- Source: docs/output-and-constraints.md -->
 
 # Generated SVG and constraints
 

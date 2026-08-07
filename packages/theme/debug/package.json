@@ -6,11 +6,10 @@
   "scripts": {
     "dev": "vite"
   },
-  "dependencies": {
-    "@codenhub/styles": "workspace:*",
-    "@codenhub/theme": "workspace:*"
-  },
   "devDependencies": {
+    "@codenhub/styles": "workspace:*",
+    "@codenhub/theme": "workspace:*",
+    "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:"

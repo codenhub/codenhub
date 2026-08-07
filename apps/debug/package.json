@@ -2,23 +2,20 @@
   "name": "@codenhub/debug",
   "version": "0.0.1",
   "private": true,
+  "description": "Private local debug workspace to run, test, and verify packages in integration.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@codenhub/theme": "workspace:*",
-    "@codenhub/ui-kit": "workspace:*"
-  },
   "devDependencies": {
+    "@codenhub/ui-kit": "workspace:*",
     "@codenhub/vite-plugin-add-loader": "workspace:*",
     "@codenhub/vite-plugin-defer-css": "workspace:*",
     "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
     "vite": "catalog:"
   }
 }

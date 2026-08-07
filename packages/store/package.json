@@ -41,7 +41,7 @@
     "build": "tsdown src/index.ts src/node.ts src/cloudflare.ts --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/store version dist-tags time --json && npm dist-tag ls @codenhub/store && npm access get status @codenhub/store",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

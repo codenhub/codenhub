@@ -15,29 +15,49 @@ If APPROVED or IMPLEMENTED docs conflict with code, treat code as legacy unless 
 
 ## Commands
 
-Run relevant checks after changes from the repository root:
+Run `pnpm verify` after changes from the repository root. It runs formatting,
+linting, type checking, tests, and compliance checks in that order and stops at
+the first failure:
 
 ```sh
-pnpm format:check
-pnpm lint:check
-pnpm typecheck
-pnpm test
+pnpm verify error
+pnpm verify --changed
+pnpm verify
 ```
 
-Format and lint scripts can run repo-wide or against a root-relative path:
+Run the individual steps (`pnpm format:check`, `pnpm lint:check`,
+`pnpm typecheck`, `pnpm test`, `pnpm check`) only when you need one of them alone.
+
+`pnpm check` reports packages against the lifecycle and documentation specs.
+After changing a package README or any file under a package's `docs/`, run
+`pnpm generate` to rewrite the files derived from them; never edit a generated
+file by hand.
+
+Every root script accepts the same targets: a package name, a workspace
+directory, a path, a glob, or nothing to select the whole workspace.
 
 ```sh
-pnpm format:check
-pnpm format:check packages/error
+pnpm test error
+pnpm test packages/error/src/bucket.test.ts
+pnpm typecheck packages/plugins/vite/icons
 pnpm lint:fix packages/error/src
+pnpm test --changed
 ```
 
-When checking or running scripts for one package, use `pnpm --filter=<package-dir> <script>` from the repository root, where `<package-dir>` is the directory name under `packages/`. For example, use `pnpm --filter=error typecheck` or `pnpm --filter=error test`. Do not change into a package directory to run package scripts.
+Run scripts from the repository root. Do not change into a package directory, and
+prefer these targets over `pnpm --filter`: filtering skips the build ordering that
+package scripts no longer perform themselves.
 
-Use package-filtered commands when a full workspace check is unnecessary, but full workspace checks are preferred before final delivery when practical.
+Always pass a target when working on a package. Every command narrows to one,
+including `check` and `generate`, so there is no reason to run the workspace to
+exercise a single package. Run the unfiltered form only for final verification
+before delivering a change, and for commands that are repo-wide by nature.
 
-> [!WARNING]
-> Running `pnpm test` repo-wide may hang/fail to exit because of Playwright worker timeout issues in the `styles` package. Prefer package-filtered test execution (e.g. `pnpm --filter=<pkg> test`) or target specific packages.
+Package runs are killed after 600 seconds, so a hanging browser-test worker no
+longer blocks a workspace run. Use `--timeout=<seconds>` or `--no-timeout` to
+change that.
+
+See `docs/tooling.md` for the full command surface, selector rules, and options.
 
 ## Change rules
 
@@ -45,12 +65,15 @@ Use package-filtered commands when a full workspace check is unnecessary, but fu
 - Do not refactor outside the requested scope.
 - Update docs in the same change when behavior, public APIs, package exports, conventions, or lifecycle rules change.
 - Follow `docs/code-guidelines.md` for code style, architecture, TypeScript, testing, and source documentation requirements.
+- Follow `docs/tooling.md` when changing root scripts, package scripts, or repository tooling.
 - Follow `docs/docs-guidelines.md` when creating, updating, interpreting, or making exceptions to durable documentation.
 - Follow `docs/specs/packages-documentation.md` for package consumer and
   maintainer documentation.
 - Keep package README files and public docs aligned with `package.json`
   `exports`.
 - Do not add dependencies unless simple in-house code is worse.
+- Record an exception in `docs/specs/packages-exceptions.md` rather than
+  weakening a rule; a `pnpm check` finding is waived only from that register.
 - Do not commit secrets, build artifacts, or unrelated changes.
 
 ## Public packages

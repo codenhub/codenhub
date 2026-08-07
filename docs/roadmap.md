@@ -15,8 +15,12 @@ Track high-level progress and milestone status for foundation and utility packag
 ### @codenhub
 
 - [x] Enable collocated demo app for each package
-- [ ] Add and improve scripts
-- [ ] Organize dependencies, remove unused, ensure all packages are self-contained
+- [x] Workspace-aware root scripts with flexible targets (`docs/tooling.md`)
+- [x] `hub check`: package lifecycle and documentation compliance
+- [x] `hub generate`: `llms-full.txt` and root README package list
+- [x] Share the `apps/docs` documentation model with `hub`
+- [x] Organize dependencies, remove unused, ensure all packages are self-contained
+- [x] `hub verify`, `hub clean`, `hub new`, `hub release`, and a pre-commit hook
 
 ### @codenhub/docs
 

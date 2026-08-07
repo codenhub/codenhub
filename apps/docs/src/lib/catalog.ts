@@ -1,13 +1,15 @@
-import type { MarkdownHeading, MarkdownInstance } from "astro";
-
 import {
+  assertSingleH1,
   buildPackageDefinitions,
   buildPublicPackageSummaries,
+  comparePublicDocumentPaths,
+  parsePublicDocumentFrontmatter,
   type PackageStatus,
   type PublicPackageSummary,
-} from "./catalog-core";
+} from "@codenhub/tools/documentation";
+import type { MarkdownHeading, MarkdownInstance } from "astro";
+
 import { rewritePackageMarkdownLinks } from "./markdown-links";
-import { assertSingleH1, comparePublicDocumentPaths, parsePublicDocumentFrontmatter } from "./public-document-policy";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 

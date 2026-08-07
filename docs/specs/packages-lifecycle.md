@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
+last_updated: 2026-08-06
 scope: Public workspace packages.
 ---
 
@@ -12,6 +12,10 @@ This document defines how packages are structured, built, tested, exported, and 
 
 Every `private: false` workspace package MUST follow this spec. A package's
 location within the workspace does not change these requirements.
+
+`pnpm check` enforces the mechanically checkable parts of this spec, as defined
+by `docs/tooling.md`. A finding is waived only by a `Checks bypassed` bullet in
+`docs/specs/packages-exceptions.md`.
 
 Private packages and apps MAY follow this spec when useful. They are not required to comply unless another document says so.
 
@@ -44,24 +48,41 @@ Public packages MUST define:
 - `build`: produces publishable output.
 - `typecheck`: runs TypeScript without emitting.
 - `test`: runs tests once.
+- `test:coverage`: runs tests once and outputs a coverage report, as required by
+  `docs/specs/tests.md`.
 - `test:watch`: runs tests in watch mode.
 - `prepublishOnly`: runs at least `pnpm build && pnpm typecheck`.
 - `status:npm`: checks published registry metadata, dist tags, and access status for the package.
-- `status:pack`: checks publishable package contents with `npm pack --dry-run`.
+- `status:pack`: checks publishable package contents with
+  `npm pack --dry-run --ignore-scripts`. Ignoring scripts is required so the dry
+  run does not trigger `prepublishOnly` and build the package a second time.
 
-Packages MAY omit `test` and `test:watch` only when they contain no executable code and the exception is documented.
+Packages MAY omit `test`, `test:coverage`, and `test:watch` only when they contain no executable code and the exception is documented.
+
+Package scripts MUST invoke their own tool directly and MUST NOT chain a build
+step into `test`, `test:coverage`, `test:watch`, `typecheck`, or `status:pack`.
+Root tooling runs the build first, as defined by `docs/tooling.md`; chaining it
+again would build twice. `prepublishOnly` is exempt because npm runs it outside
+that tooling and it MUST remain self-contained.
 
 Root workspace scripts MUST keep supporting:
 
 - `pnpm build`
+- `pnpm check`
 - `pnpm format:check`
 - `pnpm format:fix`
+- `pnpm generate`
 - `pnpm lint:check`
 - `pnpm lint:fix`
 - `pnpm status:npm`
 - `pnpm status:pack`
 - `pnpm test`
+- `pnpm test:coverage`
+- `pnpm test:watch`
 - `pnpm typecheck`
+
+Each of those MUST also accept an optional target selecting a package, workspace
+directory, path, or glob.
 
 ## Build output
 
@@ -96,26 +117,52 @@ CSS or asset exports MUST be listed explicitly when consumers import them direct
 
 ## Dependencies
 
-Use `dependencies` for packages required at runtime.
+### Choosing the field
 
-Use `peerDependencies` when the consumer must provide the dependency, such as framework, bundler, or host runtime integrations.
+One question decides the field: **does a consumer who installs this package need the dependency?**
 
-Use `devDependencies` for build, test, lint, type, and local-only dependencies.
+- `dependencies`: yes, and this package should bring it. Anything reachable from a published entry point belongs here.
+- `peerDependencies`: yes, but the consumer must supply it, so that one copy is shared. Framework, bundler, and host-runtime integrations belong here.
+- `devDependencies`: no. Build, test, lint, type, and local-only dependencies belong here, along with everything a playground, `dev`, or `debug` environment needs.
+
+`hub check` decides the "reachable from a published entry point" part mechanically. It resolves each `exports`, `main`, `module`, and `bin` target back to its source file, follows the relative imports from there, and requires every external package it arrives at to be a `dependency` or a `peerDependency`. A file that no entry point reaches — a test helper living beside the source, for instance — is not published, whatever directory it sits in.
+
+Three cases the check cannot settle, which reviewers MUST watch for:
+
+- **Type-only imports.** The check ignores them for the runtime question, because a build erases them. It cannot see the other half: an erased import still reaches a consumer when the emitted `.d.ts` refers to the package. If a published type names a package, that package is a `dependency` or a `peerDependency` even though no JavaScript imports it.
+- **Dependencies selected by configuration.** A tool named by an option rather than by an import — a test environment, a coverage provider — is invisible to import analysis. The check treats a name appearing anywhere in the package as used and never reports it, which is the safe direction.
+- **Dynamic and computed specifiers.** A specifier assembled from a variable names no package the check can read. Declare whatever such code loads.
+
+### Ranges
 
 Workspace-internal dependencies SHOULD use `workspace:*`.
+
+An external dependency that two or more workspace packages install MUST use `catalog:`. Sharing is what the catalog is for: a dependency declared twice can drift to two versions, and two majors of the same library in one install tree is a failure no other check would catch. A dependency only one package installs MAY pin its own range, because it has no second declaration to drift from.
+
+`peerDependencies` are exempt from both rules. A peer range is a contract with the consumer, and a `workspace:` or `catalog:` range would publish it pinned.
+
+Workspace dependencies MUST NOT form a cycle. A cycle has no valid build order, so the tooling falls back to the declaration order and builds something before its own dependency.
 
 Do not add dependencies for simple logic that can be maintained in-house.
 
 ## Publishing
 
-Before publishing a public package, run:
+Before publishing a public package, run `pnpm hub release <package>`. It runs
+`pnpm verify` and then reports the preconditions a build and a test run cannot
+answer:
 
-- `pnpm format:check`
-- `pnpm lint:check`
-- `pnpm typecheck`
-- `pnpm test`
-- Package `prepublishOnly`
-- Package `status:pack`
+- **version**: the local version is newer than the one already on the registry,
+  or the package has never been published.
+- **worktree**: the package has no uncommitted changes, so the tarball matches a
+  commit.
+- **tarball**: `npm pack --dry-run` includes every file `exports`, `main`,
+  `module`, and `types` point at.
+
+The command writes nothing and publishes nothing. Publishing is irreversible in
+a way no other repository action is — a version can be deprecated but never
+replaced — so the tooling stops at the report and leaves `npm publish` to a
+person. Package `prepublishOnly` still runs the build and typecheck that npm
+requires at publish time.
 
 After publishing a public package, run package `status:npm` to confirm the registry version, dist tags, and package access status. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
 

@@ -2,50 +2,12 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { discoverPublicResources, type PublicResource } from "@codenhub/tools/documentation";
 import { describe, expect, it } from "vitest";
 
-import {
-  copyPublicResources,
-  createResourceMiddleware,
-  discoverPublicResources,
-  type PublicResource,
-} from "./resource-publisher";
+import { copyPublicResources, createResourceMiddleware } from "./resource-publisher";
 
 describe("package documentation resources", () => {
-  it("discovers public non-Markdown docs and package legal files with stable routes", () => {
-    expect(
-      discoverPublicResources("example", [
-        "LICENSE",
-        "README.md",
-        "docs/.npmignore",
-        "docs/assets/diagram.svg",
-        "docs/internal/secret.txt",
-        "docs/reference.md",
-      ]).map(({ packagePath, routePath }) => ({ packagePath, routePath })),
-    ).toEqual([
-      { packagePath: "LICENSE", routePath: "/example/LICENSE" },
-      { packagePath: "docs/assets/diagram.svg", routePath: "/example/assets/diagram.svg" },
-    ]);
-  });
-
-  it("rejects resources that collide with generated document output", () => {
-    expect(() => discoverPublicResources("example", ["docs/index.md", "docs/index.html"])).toThrow(
-      "collides with a documentation page",
-    );
-    expect(() => discoverPublicResources("example", ["docs/guides/index.md", "docs/guides"])).toThrow(
-      "collides with a documentation page",
-    );
-    expect(() =>
-      discoverPublicResources("example", ["docs/reference.md", "docs/reference/index.html/details.txt"]),
-    ).toThrow("collides with a documentation page");
-  });
-
-  it("rejects duplicate resource routes using portable casing", () => {
-    expect(() => discoverPublicResources("example", ["NOTICE", "docs/notice"])).toThrow(
-      "Duplicate public resource route",
-    );
-  });
-
   it("serves discovered resources in development", async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-resource-"));
     await mkdir(path.join(rootPath, "docs", "assets"), { recursive: true });

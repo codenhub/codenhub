@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSingleH1, comparePublicDocumentPaths, parsePublicDocumentFrontmatter } from "./public-document-policy";
+import { assertSingleH1, comparePublicDocumentPaths, parsePublicDocumentFrontmatter } from "./document-policy.ts";
 
 describe("public document policy", () => {
   it("accepts a required title and optional description", () => {

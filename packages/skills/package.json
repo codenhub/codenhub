@@ -39,7 +39,7 @@
     "cli": "pnpm build && node dist/cli.js",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/skills version dist-tags time --json && npm dist-tag ls @codenhub/skills && npm access get status @codenhub/skills",
-    "status:pack": "npm pack --dry-run",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

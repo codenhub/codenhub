@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createDocumentGraph, validateDocumentGraph } from "./document-graph";
+import { createDocumentGraph, validateDocumentGraph } from "./document-graph.ts";
 
 const BASE_FILES = {
   "README.md": "# Example\n\n[Docs](docs/index.md)",
@@ -25,6 +25,44 @@ function getIssueCodes(
     siteFiles: new Set(siteFiles),
   }).map(({ code }) => code);
 }
+
+describe("same-document link targets", () => {
+  it("resolves a fragment-only link against the document it was written in", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/index.md": "---\ntitle: Example\n---\n\n# Example\n\n## Quick start\n\n[Jump](#quick-start)",
+      }),
+    ).toEqual([]);
+  });
+
+  it("resolves a fragment-only link from a nested public document", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n## Requirements\n\n[Jump](#requirements)",
+      }),
+    ).toEqual([]);
+  });
+
+  it("reports a fragment-only link with no matching heading", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[Jump](#missing)",
+      }),
+    ).toEqual(["invalid-fragment"]);
+  });
+
+  it("resolves a query-only link against the document it was written in", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[Same page](?tab=cli)",
+      }),
+    ).toEqual([]);
+  });
+});
 
 describe("package document graph", () => {
   it("discovers every validation surface and excludes internal Markdown", () => {
@@ -151,7 +189,7 @@ describe("package document graph", () => {
     const files = {
       ...BASE_FILES,
       LICENSE: "License",
-      "docs/guides/setup.md": "# Setup\n\n[License](../../LICENSE)",
+      "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup\n\n[License](../../LICENSE)",
     };
 
     expect(getIssueCodes(files, Object.keys(files))).toEqual([]);
@@ -196,5 +234,55 @@ describe("package document graph", () => {
         "docs/assets/diagram.svg",
       ]),
     ).toContain("npm-unpublished-target");
+  });
+});
+
+describe("document policy", () => {
+  it("reports a docs/README.md competing with the documentation index", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "docs/README.md": "---\ntitle: Read me\n---\n\n# Read me" })).toContain(
+      "invalid-docs-readme",
+    );
+  });
+
+  it("reports two documents that collapse to the same identifier", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides.md": "---\ntitle: Guides\n---\n\n# Guides",
+        "docs/guides/index.md": "---\ntitle: Guides\n---\n\n# Guides",
+      }),
+    ).toContain("duplicate-document-identifier");
+  });
+
+  it("accepts an area index alongside its own documents", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/index.md": "---\ntitle: Guides\n---\n\n# Guides",
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup",
+      }),
+    ).toEqual([]);
+  });
+
+  it("reports a README with more than one H1", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "README.md": "# Example\n\n# Second\n\n[Docs](docs/index.md)" })).toContain(
+      "invalid-heading-count",
+    );
+  });
+
+  it("reports an llms.txt with no H1", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "llms.txt": "## Example\n\n[Docs](docs/index.md)" })).toContain(
+      "invalid-heading-count",
+    );
+  });
+
+  it("does not count the H1 of every section compiled into llms-full.txt", () => {
+    expect(
+      getIssueCodes({ ...BASE_FILES, "llms-full.txt": "# Example\n\n[Docs](docs/index.md)\n\n# Index\n" }),
+    ).toEqual([]);
+  });
+
+  it("does not require frontmatter outside the docs directory", () => {
+    expect(getIssueCodes(BASE_FILES)).toEqual([]);
   });
 });
