@@ -220,6 +220,23 @@ describe("dependency usage", () => {
 
     expect(await runRuleForCodes(workspacePackage)).toEqual([]);
   });
+
+  it("reports unused scoped dependencies even when multiple dependencies share the scope", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { "@fixture/tools": "1.0.0", "@fixture/unused-pkg": "1.0.0" } },
+      { "src/index.ts": `import { a } from "@fixture/tools";` },
+    );
+
+    expect(await runRule(workspacePackage)).toEqual([
+      {
+        code: "dependencies/unused",
+        location: "package.json",
+        message: `"@fixture/unused-pkg" is declared but named nowhere in the package.`,
+        severity: "warning",
+      },
+    ]);
+  });
 });
 
 describe("type-only imports", () => {

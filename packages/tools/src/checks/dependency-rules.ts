@@ -227,10 +227,7 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
       }
       const scope = name.slice(1, name.indexOf("/"));
       const rootName = scope.replace(/js$/, "");
-      return ![...declaredNames].some(
-        (declared) =>
-          declared === scope || declared === rootName || (declared !== name && declared.startsWith(`@${scope}/`)),
-      );
+      return ![...declaredNames].some((declared) => declared === scope || declared === rootName);
     })
     .sort();
   const unmentioned = await Promise.all(
