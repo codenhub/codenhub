@@ -178,7 +178,7 @@ async function isUnmentioned(workspacePackage: WorkspacePackage, name: string, t
     return false;
   }
   const binaries = await readBinaryNames(workspacePackage, name);
-  return !binaries.some((binary) => new RegExp(`\\b${escapeRegExp(binary)}\\b`).test(text));
+  return !binaries.some((binary) => new RegExp(`(?<![\\w-])${escapeRegExp(binary)}(?![\\w-])`).test(text));
 }
 
 async function checkUsage(workspacePackage: WorkspacePackage, context: DependencyContext): Promise<Finding[]> {
@@ -225,8 +225,12 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
       if (!name.startsWith("@") || !name.includes("/")) {
         return true;
       }
-      const scopeName = name.slice(1, name.indexOf("/"));
-      return !declaredNames.has(scopeName);
+      const scope = name.slice(1, name.indexOf("/"));
+      const rootName = scope.replace(/js$/, "");
+      return ![...declaredNames].some(
+        (declared) =>
+          declared === scope || declared === rootName || (declared !== name && declared.startsWith(`@${scope}/`)),
+      );
     })
     .sort();
   const unmentioned = await Promise.all(

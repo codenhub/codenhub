@@ -153,16 +153,15 @@ function collectTargets(value: unknown, found: string[] = []): string[] {
 }
 
 /**
- * Maps a published target back to the source file it is built from.
+ * Maps a published target back to the source files it is built from.
  *
  * `exports` names build output, so the mapping rewrites the build directory to
- * the source one and tries the source extensions. A target that resolves to
- * nothing is dropped rather than guessed at.
+ * the source one and tries the source extensions.
  * @param root Absolute package directory.
  * @param target Target as written in the manifest, such as `./dist/lib/react.js`.
- * @returns Package-relative source path, or `undefined` when nothing matches.
+ * @returns Package-relative source paths.
  */
-async function resolveEntry(root: string, target: string): Promise<string | undefined> {
+async function resolveEntry(root: string, target: string): Promise<string[]> {
   const cleaned = target.replace(/^\.\//, "").replaceAll("\\", "/");
   const inSource = cleaned.startsWith(BUILD_DIRECTORY)
     ? `${SOURCE_DIRECTORY}${cleaned.slice(BUILD_DIRECTORY.length)}`
@@ -170,16 +169,17 @@ async function resolveEntry(root: string, target: string): Promise<string | unde
   if (inSource.includes("*")) {
     const pattern = inSource.replaceAll("*", "**/*").replace(/\.d\.[cm]?ts$|\.[cm]?jsx?$/, ".*");
     const matches = await Array.fromAsync(glob(pattern, { cwd: root }));
-    return matches.map((match) => match.replaceAll("\\", "/")).sort()[0];
+    return matches.map((match) => match.replaceAll("\\", "/")).sort();
   }
   if (inSource.endsWith(".css")) {
-    return (await isFile(join(root, inSource))) ? inSource : undefined;
+    return (await isFile(join(root, inSource))) ? [inSource] : [];
   }
   const base = inSource.replace(/\.d\.[cm]?ts$|\.[cm]?jsx?$/, "");
-  return findFirstFile(
+  const file = await findFirstFile(
     root,
     SOURCE_EXTENSIONS.flatMap((extension) => [`${base}${extension}`, `${base}/index${extension}`]),
   );
+  return file === undefined ? [] : [file];
 }
 
 async function resolveRelative(root: string, fromPath: string, specifier: string): Promise<string | undefined> {
@@ -287,7 +287,7 @@ export async function readDependencyUsage(
     ...collectTargets(manifest.bin),
   ];
   const entries = await Promise.all([...new Set(targets)].map(async (target) => resolveEntry(root, target)));
-  const resolvedEntries = [...new Set(entries.filter((entry) => entry !== undefined))];
+  const resolvedEntries = [...new Set(entries.flat())];
 
   const shipped = new Set<string>();
   const seen = new Set<string>();

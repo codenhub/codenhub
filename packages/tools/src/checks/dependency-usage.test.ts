@@ -92,6 +92,20 @@ describe("readDependencyUsage", () => {
     expect([...usage.shipped].sort()).toEqual(["reached", "reached-deeper"]);
   });
 
+  it("follows the import graph across all files matching wildcard export patterns", async () => {
+    const workspacePackage = await createPackageFixture(
+      {
+        "src/alpha.ts": `import { a } from "alpha-dep";`,
+        "src/beta.ts": `import { b } from "beta-dep";`,
+      },
+      { exports: { "./*": "./dist/*.js" } },
+    );
+
+    const usage = await readDependencyUsage(workspacePackage);
+
+    expect([...usage.shipped].sort()).toEqual(["alpha-dep", "beta-dep"]);
+  });
+
   it("does not treat a test helper beside the source as published", async () => {
     const workspacePackage = await createPackageFixture(
       {
