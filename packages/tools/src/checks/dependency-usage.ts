@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from "node:fs/promises";
+import { glob, readdir, readFile, stat } from "node:fs/promises";
 import { builtinModules } from "node:module";
 import { join, posix } from "node:path";
 
@@ -166,6 +166,11 @@ async function resolveEntry(root: string, target: string): Promise<string | unde
   const inSource = cleaned.startsWith(BUILD_DIRECTORY)
     ? `${SOURCE_DIRECTORY}${cleaned.slice(BUILD_DIRECTORY.length)}`
     : cleaned;
+  if (inSource.includes("*")) {
+    const pattern = inSource.replaceAll("*", "**/*").replace(/\.d\.[cm]?ts$|\.[cm]?jsx?$/, ".*");
+    const matches = await Array.fromAsync(glob(pattern, { cwd: root }));
+    return matches.map((match) => match.replaceAll("\\", "/")).sort()[0];
+  }
   if (inSource.endsWith(".css")) {
     return (await isFile(join(root, inSource))) ? inSource : undefined;
   }

@@ -153,6 +153,19 @@ describe("readDependencyUsage", () => {
     expect(usage.text).toContain("tsdown src/index.ts");
     expect(usage.text).toContain("Built with tsdown.");
   });
+
+  it("handles wildcard export targets when resolving shipped dependencies", async () => {
+    const workspacePackage = await createPackageFixture(
+      {
+        "src/components/button.ts": `import { c } from "wildcard-dep";`,
+      },
+      { exports: { "./*": "./dist/*.js" } },
+    );
+
+    const usage = await readDependencyUsage(workspacePackage);
+
+    expect([...usage.shipped]).toEqual(["wildcard-dep"]);
+  });
 });
 
 describe("readBinaryNames", () => {
