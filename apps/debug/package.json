@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@codenhub/theme": "workspace:*",
     "@codenhub/ui-kit": "workspace:*"
   },
   "devDependencies": {
@@ -19,7 +18,6 @@
     "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
     "vite": "catalog:"
   }
 }

@@ -117,11 +117,23 @@ CSS or asset exports MUST be listed explicitly when consumers import them direct
 
 ## Dependencies
 
-Use `dependencies` for packages required at runtime.
+### Choosing the field
 
-Use `peerDependencies` when the consumer must provide the dependency, such as framework, bundler, or host runtime integrations.
+One question decides the field: **does a consumer who installs this package need the dependency?**
 
-Use `devDependencies` for build, test, lint, type, and local-only dependencies.
+- `dependencies`: yes, and this package should bring it. Anything reachable from a published entry point belongs here.
+- `peerDependencies`: yes, but the consumer must supply it, so that one copy is shared. Framework, bundler, and host-runtime integrations belong here.
+- `devDependencies`: no. Build, test, lint, type, and local-only dependencies belong here, along with everything a playground, `dev`, or `debug` environment needs.
+
+`hub check` decides the "reachable from a published entry point" part mechanically. It resolves each `exports`, `main`, `module`, and `bin` target back to its source file, follows the relative imports from there, and requires every external package it arrives at to be a `dependency` or a `peerDependency`. A file that no entry point reaches — a test helper living beside the source, for instance — is not published, whatever directory it sits in.
+
+Three cases the check cannot settle, which reviewers MUST watch for:
+
+- **Type-only imports.** An import erased at build time still ships when the emitted `.d.ts` refers to it. If a published type names a package, that package is a `dependency` or a `peerDependency`, not a `devDependency`.
+- **Dependencies selected by configuration.** A tool named by an option rather than by an import — a test environment, a coverage provider — is invisible to import analysis. The check treats a name appearing anywhere in the package as used and never reports it, which is the safe direction.
+- **Dynamic and computed specifiers.** A specifier assembled from a variable names no package the check can read. Declare whatever such code loads.
+
+### Ranges
 
 Workspace-internal dependencies SHOULD use `workspace:*`.
 

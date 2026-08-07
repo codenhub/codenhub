@@ -44,8 +44,6 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@codenhub/styles": "workspace:*",
-    "@codenhub/vite-plugin-icons": "workspace:*",
     "@playwright/test": "catalog:",
     "jsdom": "catalog:",
     "tsdown": "catalog:",

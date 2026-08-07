@@ -1,4 +1,5 @@
 import type { Workspace } from "../workspace/discover.ts";
+import { createDependencyRules } from "./dependency-rules.ts";
 import { createDocumentationRules } from "./documentation-rules.ts";
 import { createExportsRules } from "./exports-rules.ts";
 import { createManifestRules } from "./manifest-rules.ts";
@@ -16,7 +17,8 @@ import type { CheckRule } from "./rule.ts";
  */
 export function createCheckRules(workspace: Workspace): CheckRule[] {
   return [
-    ...createManifestRules(workspace.packages),
+    ...createManifestRules(),
+    ...createDependencyRules(workspace.packages),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
     ...createReadmeRules(),

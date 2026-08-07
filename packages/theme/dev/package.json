@@ -11,6 +11,7 @@
     "@codenhub/theme": "workspace:*"
   },
   "devDependencies": {
+    "@codenhub/vite-plugin-icons": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:"

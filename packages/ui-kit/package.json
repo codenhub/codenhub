@@ -51,8 +51,7 @@
     "@codenhub/error": "workspace:*",
     "@codenhub/store": "workspace:*",
     "@codenhub/styles": "workspace:*",
-    "@codenhub/theme": "workspace:*",
-    "@codenhub/validation": "workspace:*"
+    "@codenhub/theme": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",

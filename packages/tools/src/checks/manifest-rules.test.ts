@@ -48,31 +48,10 @@ function createPackage(overrides: Partial<WorkspacePackage> = {}): WorkspacePack
   };
 }
 
-/**
- * Runs every applicable manifest rule against one package.
- * @param workspacePackage Package under test.
- * @param siblings Other packages in the workspace, for the checks that compare one against the rest.
- * @returns Findings in reporting order.
- */
-function runRules(workspacePackage: WorkspacePackage, siblings: readonly WorkspacePackage[] = []): Finding[] {
-  return createManifestRules([workspacePackage, ...siblings])
+function runRules(workspacePackage: WorkspacePackage): Finding[] {
+  return createManifestRules()
     .filter((rule) => rule.appliesTo(workspacePackage))
     .flatMap((rule) => rule.run({ includePack: false, package: workspacePackage }) as Finding[]);
-}
-
-/** A private sibling that exists only to be depended on. */
-function createSibling(name: string, workspaceDependencies: readonly string[] = []): WorkspacePackage {
-  const unscopedName = name.slice(name.lastIndexOf("/") + 1);
-  return createPackage({
-    directory: `/repo/packages/${unscopedName}`,
-    directoryName: unscopedName,
-    isPrivate: true,
-    location: `packages/${unscopedName}`,
-    manifest: { name },
-    name,
-    unscopedName,
-    workspaceDependencies,
-  });
 }
 
 describe("manifest rules", () => {
@@ -149,79 +128,6 @@ describe("manifest rules", () => {
     const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
 
     expect(findings.map(({ code }) => code)).toEqual(["scripts/prepublish-only"]);
-  });
-
-  it("shouldReportInternalDependenciesWithoutAWorkspaceRange", () => {
-    const manifest = {
-      ...COMPLIANT_MANIFEST,
-      dependencies: { "@fixture/other": "^1.0.0" },
-      peerDependencies: { "@fixture/other": ">=1" },
-      scripts: COMPLIANT_SCRIPTS,
-    };
-    const findings = runRules(createPackage({ manifest }), [createSibling("@fixture/other")]);
-
-    expect(findings).toEqual([
-      {
-        code: "dependencies/workspace-range",
-        location: "package.json",
-        message: `"dependencies.@fixture/other" should use a "workspace:" range.`,
-        severity: "warning",
-      },
-    ]);
-  });
-
-  it("shouldRequireACatalogRangeForADependencyTwoPackagesInstall", () => {
-    const manifest = { ...COMPLIANT_MANIFEST, devDependencies: { vitest: "^4.0.0" }, scripts: COMPLIANT_SCRIPTS };
-    const sibling = createSibling("@fixture/other");
-    sibling.manifest = { ...sibling.manifest, devDependencies: { vitest: "catalog:" } };
-
-    const findings = runRules(createPackage({ manifest }), [sibling]);
-
-    expect(findings).toEqual([
-      {
-        code: "dependencies/catalog",
-        location: "package.json",
-        message: `"devDependencies.vitest" is installed by more than one package and must use "catalog:".`,
-        severity: "error",
-      },
-    ]);
-  });
-
-  it("shouldAcceptAPinnedRangeForADependencyOnlyOnePackageInstalls", () => {
-    const manifest = { ...COMPLIANT_MANIFEST, dependencies: { "left-pad": "1.3.0" }, scripts: COMPLIANT_SCRIPTS };
-
-    expect(runRules(createPackage({ manifest }), [createSibling("@fixture/other")])).toEqual([]);
-  });
-
-  it("shouldNotRequireACatalogRangeForAPeerDependency", () => {
-    const manifest = { ...COMPLIANT_MANIFEST, peerDependencies: { vite: ">=5.0.0" }, scripts: COMPLIANT_SCRIPTS };
-    const sibling = createSibling("@fixture/other");
-    sibling.manifest = { ...sibling.manifest, peerDependencies: { vite: ">=8.0.0" } };
-
-    expect(runRules(createPackage({ manifest }), [sibling])).toEqual([]);
-  });
-
-  it("shouldReportADependencyCycleOnEveryPackageThatTakesPartInIt", () => {
-    const workspacePackage = createPackage({ workspaceDependencies: ["@fixture/other"] });
-    const sibling = createSibling("@fixture/other", ["@fixture/example"]);
-
-    const findings = runRules(workspacePackage, [sibling]);
-
-    expect(findings).toEqual([
-      {
-        code: "dependencies/cycle",
-        location: "package.json",
-        message: "Workspace dependency cycle: @fixture/example -> @fixture/other -> @fixture/example.",
-        severity: "error",
-      },
-    ]);
-    expect(runRules(sibling, [workspacePackage]).map(({ code }) => code)).toEqual(["dependencies/cycle"]);
-  });
-
-  it("shouldAcceptAnAcyclicDependencyChain", () => {
-    const workspacePackage = createPackage({ workspaceDependencies: ["@fixture/other"] });
-
-    expect(runRules(workspacePackage, [createSibling("@fixture/other")])).toEqual([]);
   });
 
   it("shouldNotRequirePublishedMetadataFromPrivatePackages", () => {

@@ -58,7 +58,6 @@
     "format:check": "oxfmt --check"
   },
   "devDependencies": {
-    "@codenhub/styles": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",

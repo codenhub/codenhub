@@ -179,7 +179,7 @@ fail the run; `warning` covers SHOULD-level rules such as the recommended
 | --------------- | ----------------------------------------------------------------------------- |
 | `metadata`      | Required and recommended manifest fields of published packages.               |
 | `scripts`       | Required scripts, a self-contained `prepublishOnly`, and no chained builds.   |
-| `dependencies`  | Workspace ranges, `catalog:` for shared dependencies, and no cycles.          |
+| `dependencies`  | Declared where used, in the right field, with catalog ranges and no cycles.   |
 | `exports`       | Import paths shown in the README and public docs are declared in `exports`.   |
 | `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness. |
 | `llms-full`     | `llms-full.txt` still matches the documents it compiles.                      |
@@ -190,11 +190,40 @@ sentence is not a promise that it resolves, but showing it in an `import` is.
 The reverse direction — a supported path the package never documents — is not
 mechanically knowable and stays a review responsibility.
 
-The `dependencies` rule reads installed fields only. A `peerDependencies` range is
-a contract with the consumer rather than an installation, so neither the
-`workspace:` nor the `catalog:` requirement applies to it. A cycle is reported on
-every package that takes part in it, naming one cycle per package: breaking that
-one re-runs the check against whatever remains.
+The `dependencies` rule reads installed fields only for ranges. A
+`peerDependencies` range is a contract with the consumer rather than an
+installation, so neither the `workspace:` nor the `catalog:` requirement applies
+to it. A cycle is reported on every package that takes part in it, naming one
+cycle per package: breaking that one re-runs the check against whatever remains.
+
+The same rule reads the package's own files, in two scopes that answer different
+questions:
+
+- `dependencies/runtime-declaration` walks the import graph from the published
+  entry points, mapping each `exports` target back to its source file. That is
+  the only way to tell code a consumer receives from a test helper that happens
+  to live beside it, so it is what decides whether a dependency belongs in
+  `dependencies` rather than `devDependencies`. Private packages are exempt:
+  nothing installs them, so the field changes nothing.
+- `dependencies/undeclared` covers every non-test source file, because importing
+  something undeclared is a bug wherever it is written — it resolves today only
+  by borrowing another package's installation. Test files are excluded: they
+  quote example imports freely, and a test that imports something missing fails
+  the moment it runs.
+
+`dependencies/unused` runs the other way and is deliberately permissive, because
+the two mistakes do not cost the same. Reporting a dependency that is quietly
+needed sends someone chasing a removal that breaks a build; missing an unused one
+leaves the manifest as it already is. A dependency is reported only when its name
+appears nowhere in the package at all — no import, no script, no quoted string,
+no comment — and when no binary it installs is named by a script either. Ambient
+`@types/*` packages and companions published under a used tool's own scope, such
+as a coverage provider, are never reported.
+
+A `playground` directory is read as part of the `dev` and `debug` workspaces that
+run it rather than the package that hosts it. `docs/specs/packages-development.md`
+makes it leaf code rather than a workspace package, and its imports resolve
+through the environment whose server loads it.
 
 A `readme` status notice is a blockquote above the first section heading, which
 is where a consumer sees it before adopting the package. An `active` package
