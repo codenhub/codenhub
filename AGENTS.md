@@ -15,15 +15,18 @@ If APPROVED or IMPLEMENTED docs conflict with code, treat code as legacy unless 
 
 ## Commands
 
-Run relevant checks after changes from the repository root:
+Run `pnpm verify` after changes from the repository root. It runs formatting,
+linting, type checking, tests, and compliance checks in that order and stops at
+the first failure:
 
 ```sh
-pnpm format:check
-pnpm lint:check
-pnpm typecheck
-pnpm test
-pnpm check
+pnpm verify error
+pnpm verify --changed
+pnpm verify
 ```
+
+Run the individual steps (`pnpm format:check`, `pnpm lint:check`,
+`pnpm typecheck`, `pnpm test`, `pnpm check`) only when you need one of them alone.
 
 `pnpm check` reports packages against the lifecycle and documentation specs.
 After changing a package README or any file under a package's `docs/`, run

@@ -60,6 +60,11 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "-h"]).options.wantsHelp).toBe(true);
   });
 
+  it("shouldReadVersionFlagWithoutACommand", () => {
+    expect(parseArguments(["--version"]).options.wantsVersion).toBe(true);
+    expect(parseArguments(["--version"]).commandName).toBe("");
+  });
+
   it("shouldReportAnEmptyCommandWhenNothingWasTyped", () => {
     expect(parseArguments([]).commandName).toBe("");
   });

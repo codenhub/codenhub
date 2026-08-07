@@ -9,6 +9,7 @@
     "cloc": "hub cloc",
     "build": "hub build",
     "check": "hub check",
+    "clean": "hub clean",
     "format:check": "hub format",
     "format:fix": "hub format --fix",
     "generate": "hub generate",
@@ -21,7 +22,8 @@
     "test": "hub test",
     "test:coverage": "hub test:coverage",
     "test:watch": "hub test:watch",
-    "typecheck": "hub typecheck"
+    "typecheck": "hub typecheck",
+    "verify": "hub verify"
   },
   "devDependencies": {
     "@codenhub/tools": "workspace:*",

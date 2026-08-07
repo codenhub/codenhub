@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 
 import { renderCommandHelp, renderHelp } from "./cli/help.ts";
 import { parseArguments } from "./cli/parse-arguments.ts";
+import { readToolVersion } from "./cli/version.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS } from "./commands/definition.ts";
 import { resolveCommand } from "./commands/registry.ts";
 import { createReporter } from "./reporting/reporter.ts";
@@ -48,6 +49,10 @@ async function main(): Promise<number> {
   const reporter = createReporter();
   const parsed = parseArguments(process.argv.slice(2));
 
+  if (parsed.options.wantsVersion || parsed.commandName === "version") {
+    reporter.info(await readToolVersion());
+    return EXIT_SUCCESS;
+  }
   if (parsed.commandName === "" || parsed.commandName === "help") {
     reporter.info(renderHelp());
     return EXIT_SUCCESS;

@@ -29,6 +29,8 @@ export interface CliOptions {
   wantsJson: boolean;
   /** Whether usage information is requested. */
   wantsHelp: boolean;
+  /** Whether the tooling version is requested. */
+  wantsVersion: boolean;
 }
 
 /** A command invocation split into its command, selectors, and tool arguments. */
@@ -57,6 +59,7 @@ function createDefaultOptions(): CliOptions {
     useChangedFilter: false,
     wantsHelp: false,
     wantsJson: false,
+    wantsVersion: false,
   };
 }
 
@@ -125,6 +128,10 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "help": {
       options.wantsHelp = true;
+      return true;
+    }
+    case "version": {
+      options.wantsVersion = true;
       return true;
     }
     default: {

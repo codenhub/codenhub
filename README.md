@@ -48,6 +48,7 @@ Use pnpm from the repository root. With no target, a command covers the whole wo
 ```sh
 pnpm build
 pnpm check
+pnpm clean
 pnpm format:check
 pnpm format:fix
 pnpm generate
@@ -55,6 +56,7 @@ pnpm lint:check
 pnpm lint:fix
 pnpm test
 pnpm typecheck
+pnpm verify
 ```
 
 `pnpm check` reports packages against the lifecycle and documentation specs, and
@@ -74,14 +76,14 @@ pnpm test --changed
 
 Unrecognized flags reach the underlying tool, so `pnpm test error --reporter=verbose` works. Run `pnpm hub --help` for the full surface, or `pnpm packages` to see what a target resolves to.
 
-Before publishing or merging package behavior changes, run at least:
+Before publishing or merging package behavior changes, run `pnpm verify`. It runs
+formatting, linting, type checking, tests, and compliance checks in that order and
+stops at the first failure, so a whole branch is one command:
 
 ```sh
-pnpm format:check
-pnpm lint:check
-pnpm typecheck
-pnpm test
-pnpm check
+pnpm verify
+pnpm verify error
+pnpm verify --changed
 ```
 
 ## Documentation

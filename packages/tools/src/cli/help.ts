@@ -14,6 +14,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--pack", "Let checks run npm pack --dry-run to inspect publishable contents."],
   ["--json", "Emit machine-readable output where supported."],
   ["-h, --help", "Show this help."],
+  ["--version", "Print the tooling version."],
 ];
 
 const TARGET_FORMS: readonly string[] = [

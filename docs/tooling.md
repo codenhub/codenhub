@@ -35,6 +35,7 @@ Root scripts map directly onto it:
 | -------------------- | ------------------- |
 | `pnpm build`         | `hub build`         |
 | `pnpm check`         | `hub check`         |
+| `pnpm clean`         | `hub clean`         |
 | `pnpm cloc`          | `hub cloc`          |
 | `pnpm format:check`  | `hub format`        |
 | `pnpm format:fix`    | `hub format --fix`  |
@@ -48,6 +49,7 @@ Root scripts map directly onto it:
 | `pnpm test:coverage` | `hub test:coverage` |
 | `pnpm test:watch`    | `hub test:watch`    |
 | `pnpm typecheck`     | `hub typecheck`     |
+| `pnpm verify`        | `hub verify`        |
 
 A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
@@ -125,6 +127,7 @@ self-contained.
 | `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents. |
 | `--json`              | Emit machine-readable output where supported.                         |
 | `-h`, `--help`        | Show usage.                                                           |
+| `--version`           | Print the tooling version.                                            |
 
 Unrecognized flags and everything after a bare `--` are forwarded to the
 underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
@@ -137,6 +140,29 @@ hanging browser-test worker from blocking a whole workspace run.
 `lint`, `format`, and `cloc` run their tool once from the repository root with
 resolved paths rather than once per package. Selecting nothing falls back to the
 whole repository, which is why `pnpm cloc` needs no argument.
+
+## Verification
+
+`hub verify` runs `format`, `lint`, `typecheck`, `test`, and `check` in that
+order and stops at the first failure. The order is by cost: the cheapest step
+that is most likely to fail on a fresh change runs first, and a compliance report
+is only worth reading once the code it describes compiles and passes. Steps that
+never ran are reported as skipped rather than omitted, so the summary always
+accounts for all five.
+
+Tool arguments are not forwarded, because the steps run different executables and
+no argument could mean the same thing to all of them. Selection and every other
+option still apply, so `hub verify error` verifies one package and
+`hub verify --changed` verifies a branch.
+
+## Cleaning
+
+`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` from the
+selected packages, descending below each package root so playgrounds and nested
+workspaces are covered too. It stops at each artifact it finds rather than
+descending into it, and it never touches `node_modules`: dependencies belong to
+the package manager, and removing them turns a seconds-long cleanup into a
+reinstall.
 
 ## Compliance checks
 

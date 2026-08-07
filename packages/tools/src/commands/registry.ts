@@ -1,9 +1,11 @@
 import { createCheckCommand } from "./check-command.ts";
+import { createCleanCommand } from "./clean-command.ts";
 import type { CommandDefinition } from "./definition.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
+import { createVerifyCommand } from "./verify-command.ts";
 
 const CLOC_EXCLUDED_DIRECTORIES = "node_modules,dist,coverage,test-results,.git";
 const CLOC_EXCLUDED_EXTENSIONS = "md,yaml,json";
@@ -54,8 +56,10 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "cloc",
     summary: "Count lines of code in the selected paths, or the whole repository.",
   }),
+  createVerifyCommand(),
   createCheckCommand(),
   createGenerateCommand(),
+  createCleanCommand(),
   createListCommand(),
 ];
 
