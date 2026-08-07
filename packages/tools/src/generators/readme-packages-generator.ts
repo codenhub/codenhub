@@ -21,8 +21,7 @@ const GROUPS = [
   { heading: "Applications", matches: ({ location }: WorkspacePackage) => location.startsWith(APPS_PREFIX) },
   {
     heading: "Libraries & Primitives",
-    matches: (workspacePackage: WorkspacePackage) =>
-      isLibraryLocation(workspacePackage) && !workspacePackage.isPrivate,
+    matches: (workspacePackage: WorkspacePackage) => isLibraryLocation(workspacePackage) && !workspacePackage.isPrivate,
   },
   {
     heading: "Tooling",

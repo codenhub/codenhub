@@ -12,9 +12,9 @@ describe("npm package publication inventory", () => {
       stdout: JSON.stringify([{ files: [{ path: "README.md" }, { path: "docs/index.md" }] }]),
     });
 
-    await expect(
-      readNpmPackInventory({ packageRoot: "C:/repo/packages/example", runCommand }),
-    ).resolves.toEqual(new Set(["README.md", "docs/index.md"]));
+    await expect(readNpmPackInventory({ packageRoot: "C:/repo/packages/example", runCommand })).resolves.toEqual(
+      new Set(["README.md", "docs/index.md"]),
+    );
     expect(runCommand).toHaveBeenCalledWith({
       args: ["pack", "--dry-run", "--ignore-scripts", "--json"],
       command: "npm",
