@@ -74,7 +74,12 @@ async function inspectPackages(context: CommandContext): Promise<CheckReport> {
         }),
       ),
     );
-    return inspectPackage(workspacePackage, exceptions.get(workspacePackage.name) ?? new Set(), results, applicable.length);
+    return inspectPackage(
+      workspacePackage,
+      exceptions.get(workspacePackage.name) ?? new Set(),
+      results,
+      applicable.length,
+    );
   });
 
   return { packages: reports, unknownPackages: findUnknownRegisterPackages(context, exceptions) };
@@ -97,6 +102,16 @@ function describeStatus(report: PackageReport): SummaryRow {
   };
 }
 
+/**
+ * Prints one package's findings.
+ *
+ * Findings go to stdout rather than to `reporter.warn` and `reporter.error`,
+ * which carry operational diagnostics. A compliance report is what the command
+ * produces, not a complaint about running it, and splitting the block across two
+ * streams would let the terminal interleave it out of order.
+ * @param context Command invocation.
+ * @param packageReport Inspection results for one package.
+ */
 function reportFindings(context: CommandContext, packageReport: PackageReport): void {
   if (packageReport.findings.length === 0) {
     return;

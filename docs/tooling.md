@@ -149,13 +149,25 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings
 fail the run; `warning` covers SHOULD-level rules such as the recommended
 `license` and `repository` metadata. `pnpm check --json` prints the codes.
 
-| Rule            | Checks                                                                      |
-| --------------- | --------------------------------------------------------------------------- |
-| `metadata`      | Required and recommended manifest fields of published packages.             |
-| `scripts`       | Required scripts, a self-contained `prepublishOnly`, and no chained builds. |
-| `dependencies`  | Workspace-internal dependencies use a `workspace:` range.                   |
-| `documentation` | Required surfaces, frontmatter, single H1, and every link target.           |
-| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                    |
+| Rule            | Checks                                                                        |
+| --------------- | ----------------------------------------------------------------------------- |
+| `metadata`      | Required and recommended manifest fields of published packages.               |
+| `scripts`       | Required scripts, a self-contained `prepublishOnly`, and no chained builds.   |
+| `dependencies`  | Workspace-internal dependencies use a `workspace:` range.                     |
+| `exports`       | Import paths shown in the README and public docs are declared in `exports`.   |
+| `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness. |
+| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                      |
+| `readme`        | README status notices agree with `codenhub.docs.status`.                      |
+
+The `exports` rule reads import statements, not prose: naming a path in a
+sentence is not a promise that it resolves, but showing it in an `import` is.
+The reverse direction — a supported path the package never documents — is not
+mechanically knowable and stays a review responsibility.
+
+A `readme` status notice is a blockquote above the first section heading, which
+is where a consumer sees it before adopting the package. An `active` package
+carrying an experimental or deprecated notice is reported the same way as an
+experimental package carrying none.
 
 Tarball publication is checked only with `--pack`, which runs
 `npm pack --dry-run --ignore-scripts --json` per package. The documentation spec

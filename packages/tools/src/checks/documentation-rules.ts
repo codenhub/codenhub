@@ -28,12 +28,47 @@ function resolveSlug(workspacePackage: WorkspacePackage): { slug: string; findin
   }
 }
 
-async function checkDocumentation(context: CheckRuleContext): Promise<Finding[]> {
+/**
+ * Maps every documentation slug in a workspace to the packages claiming it.
+ *
+ * Uniqueness cannot be seen from one package, so the map is built once from the
+ * whole workspace rather than from the selected packages.
+ * @param workspacePackages Every discovered package.
+ * @returns Slugs mapped to the names of the packages that resolve to them.
+ */
+function collectSlugOwners(workspacePackages: readonly WorkspacePackage[]): Map<string, string[]> {
+  const owners = new Map<string, string[]>();
+  for (const workspacePackage of workspacePackages.filter(isDocumentedPackage)) {
+    const { finding, slug } = resolveSlug(workspacePackage);
+    if (finding === undefined) {
+      owners.set(slug, [...(owners.get(slug) ?? []), workspacePackage.name]);
+    }
+  }
+  return owners;
+}
+
+async function checkDocumentation(
+  context: CheckRuleContext,
+  slugOwners: ReadonlyMap<string, string[]>,
+): Promise<Finding[]> {
   const workspacePackage = context.package;
   const { finding, slug } = resolveSlug(workspacePackage);
   if (finding !== undefined) {
     return [finding];
   }
+
+  const conflicts = (slugOwners.get(slug) ?? []).filter((name) => name !== workspacePackage.name);
+  const findings: Finding[] =
+    conflicts.length === 0
+      ? []
+      : [
+          {
+            code: "documentation/duplicate-slug",
+            location: "package.json",
+            message: `Documentation slug "${slug}" is also claimed by ${conflicts.join(", ")}.`,
+            severity: "error",
+          },
+        ];
 
   const report = await inspectPackageDocumentation({
     includeNpmInventory: context.includePack,
@@ -41,15 +76,20 @@ async function checkDocumentation(context: CheckRuleContext): Promise<Finding[]>
     slug,
     timeoutMs: context.timeoutMs,
   });
-  return report.issues.map((issue) => ({
-    code: `documentation/${issue.code}`,
-    location: issue.sourcePath ?? issue.target,
-    message:
-      issue.target === undefined || issue.sourcePath === undefined
-        ? issue.message
-        : `${issue.message} (${issue.target})`,
-    severity: "error",
-  }));
+  return [
+    ...findings,
+    ...report.issues.map(
+      (issue): Finding => ({
+        code: `documentation/${issue.code}`,
+        location: issue.sourcePath ?? issue.target,
+        message:
+          issue.target === undefined || issue.sourcePath === undefined
+            ? issue.message
+            : `${issue.message} (${issue.target})`,
+        severity: "error",
+      }),
+    ),
+  ];
 }
 
 async function checkLlmsFull(workspacePackage: WorkspacePackage): Promise<Finding[]> {
@@ -82,15 +122,17 @@ async function checkLlmsFull(workspacePackage: WorkspacePackage): Promise<Findin
 
 /**
  * Creates the rules that check package documentation against its specs.
+ * @param workspacePackages Every discovered package, used to spot repeated documentation slugs.
  * @returns Documentation rules ready for registration.
  */
-export function createDocumentationRules(): CheckRule[] {
+export function createDocumentationRules(workspacePackages: readonly WorkspacePackage[]): CheckRule[] {
+  const slugOwners = collectSlugOwners(workspacePackages);
   return [
     {
       appliesTo: isDocumentedPackage,
       name: "documentation",
-      run: checkDocumentation,
-      summary: "Documentation surfaces, frontmatter, headings, and links resolve.",
+      run: (context) => checkDocumentation(context, slugOwners),
+      summary: "Documentation surfaces, frontmatter, headings, links, and slug uniqueness.",
     },
     {
       appliesTo: isDocumentedPackage,

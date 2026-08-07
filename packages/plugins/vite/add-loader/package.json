@@ -35,11 +35,13 @@
     "status:npm": "npm view @codenhub/vite-plugin-add-loader version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugin-add-loader && npm access get status @codenhub/vite-plugin-add-loader",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

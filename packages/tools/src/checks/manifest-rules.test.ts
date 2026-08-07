@@ -13,6 +13,7 @@ const COMPLIANT_MANIFEST = {
   main: "./dist/index.js",
   module: "./dist/index.js",
   name: "@fixture/example",
+  private: false,
   publishConfig: { access: "public" },
   repository: "https://example.com/repo",
   type: "module",
@@ -26,6 +27,7 @@ const COMPLIANT_SCRIPTS = {
   "status:npm": "npm view @fixture/example",
   "status:pack": "npm pack --dry-run --ignore-scripts",
   test: "vitest run",
+  "test:coverage": "vitest run --coverage",
   "test:watch": "vitest",
   typecheck: "tsc --noEmit",
 };
@@ -67,6 +69,7 @@ describe("manifest rules", () => {
       "metadata/main",
       "metadata/module",
       "metadata/types",
+      "metadata/private",
       "metadata/type",
       "metadata/files",
       "metadata/exports",
@@ -87,6 +90,19 @@ describe("manifest rules", () => {
     ]);
   });
 
+  it("shouldRequirePrivateToBeDeclaredAsFalse", () => {
+    const manifest = { ...COMPLIANT_MANIFEST, private: undefined, scripts: COMPLIANT_SCRIPTS };
+
+    expect(runRules(createPackage({ manifest })).map(({ code }) => code)).toEqual(["metadata/private"]);
+  });
+
+  it("shouldRequireACoverageScript", () => {
+    const scripts = { ...COMPLIANT_SCRIPTS, "test:coverage": undefined };
+    const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
+
+    expect(findings.map(({ code }) => code)).toEqual(["scripts/test:coverage"]);
+  });
+
   it("shouldRejectAScriptThatChainsABuild", () => {
     const scripts = { ...COMPLIANT_SCRIPTS, test: "pnpm build && vitest run" };
     const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
@@ -99,6 +115,12 @@ describe("manifest rules", () => {
     const findings = runRules(createPackage({ isPrivate: true, manifest: { name: "@fixture/private", scripts } }));
 
     expect(findings.map(({ code }) => code)).toEqual(["scripts/build-chain"]);
+  });
+
+  it("shouldNotReadANamespacedBuildScriptAsAChainedBuild", () => {
+    const scripts = { ...COMPLIANT_SCRIPTS, test: "pnpm build:fixtures && vitest run" };
+
+    expect(runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }))).toEqual([]);
   });
 
   it("shouldRequirePrepublishOnlyToStaySelfContained", () => {

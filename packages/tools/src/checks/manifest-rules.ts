@@ -4,13 +4,24 @@ import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
 const REQUIRED_STRING_FIELDS = ["name", "version", "main", "module", "types"];
-const REQUIRED_SCRIPTS = ["build", "typecheck", "test", "test:watch", "prepublishOnly", "status:npm", "status:pack"];
+const REQUIRED_SCRIPTS = [
+  "build",
+  "typecheck",
+  "test",
+  "test:coverage",
+  "test:watch",
+  "prepublishOnly",
+  "status:npm",
+  "status:pack",
+];
 const UNCHAINED_SCRIPTS = ["test", "test:coverage", "test:watch", "typecheck", "status:pack"];
 const RECOMMENDED_FIELDS = ["description", "license", "repository"];
 // `peerDependencies` is deliberately absent: a peer range is the consumer's
 // contract, and a workspace range would publish as a pinned version.
 const RESOLVED_DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies"];
-const BUILD_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?build\b/;
+// The negative lookahead keeps `pnpm build:styles` from reading as a chained
+// `pnpm build`; only the umbrella script is the one root tooling already runs.
+const BUILD_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?build(?![\w:-])/;
 const PACK_INVOCATION = /\bnpm\s+pack\b[^&|]*--dry-run\b/;
 const PACK_IGNORES_SCRIPTS = /\bnpm\s+pack\b[^&|]*--ignore-scripts\b/;
 
@@ -29,6 +40,11 @@ function checkMetadata(workspacePackage: WorkspacePackage): Finding[] {
     if (typeof manifest[field] !== "string" || (manifest[field] as string).trim() === "") {
       fail(field, `Missing "${field}".`);
     }
+  }
+  // A missing `private` publishes just as readily as `private: false`, so the
+  // spec asks for the declaration rather than merely the absence of `true`.
+  if (manifest.private !== false) {
+    fail("private", `"private" must be declared as false.`);
   }
   if (manifest.type !== "module") {
     fail("type", `"type" must be "module".`);

@@ -3,6 +3,7 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 
 import { assertSingleH1, parseMarkdown, parsePublicDocumentFrontmatter } from "./document-policy.ts";
+import { getDocumentRoute } from "./package-metadata.ts";
 
 interface MarkdownNode {
   children?: MarkdownNode[];
@@ -51,9 +52,11 @@ export interface DocumentGraph {
 export interface ValidationIssue {
   /** Machine-readable problem kind. */
   code:
+    | "duplicate-document-identifier"
     | "internal-published"
     | "internal-target"
     | "invalid-docs-escape"
+    | "invalid-docs-readme"
     | "invalid-external-url"
     | "invalid-frontmatter"
     | "invalid-fragment"
@@ -85,6 +88,11 @@ export interface PublicationInventories {
 }
 
 const REQUIRED_SURFACES = ["README.md", "docs/index.md", "llms.txt", "llms-full.txt"];
+const DOCS_PREFIX = "docs/";
+const DOCS_README = "docs/README.md";
+// `llms-full.txt` is deliberately absent: it concatenates every document, so it
+// carries one H1 per source by design.
+const SINGLE_H1_SURFACES = new Set(["README.md", "llms.txt"]);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -328,18 +336,51 @@ function addLinkIssues(
 }
 
 function addDocumentPolicyIssues(document: GraphDocument, issues: ValidationIssue[]): void {
-  if (!document.path.startsWith("docs/")) {
+  const isPublicDocument = document.path.startsWith(DOCS_PREFIX);
+  if (!isPublicDocument && !SINGLE_H1_SURFACES.has(document.path)) {
     return;
   }
-  try {
-    parsePublicDocumentFrontmatter(document.frontmatter, document.path);
-  } catch (cause) {
-    issues.push({ code: "invalid-frontmatter", message: (cause as Error).message, sourcePath: document.path });
+  if (isPublicDocument) {
+    try {
+      parsePublicDocumentFrontmatter(document.frontmatter, document.path);
+    } catch (cause) {
+      issues.push({ code: "invalid-frontmatter", message: (cause as Error).message, sourcePath: document.path });
+    }
   }
   try {
     assertSingleH1(document.headings, document.path);
   } catch (cause) {
     issues.push({ code: "invalid-heading-count", message: (cause as Error).message, sourcePath: document.path });
+  }
+}
+
+/**
+ * Reports public documents whose relative paths collapse to the same identifier.
+ *
+ * `docs/guides/index.md` identifies the `guides` area and `docs/guides.md`
+ * identifies the `guides` document, so a package holding both has no stable name
+ * for either.
+ * @param graph Parsed documents of one package.
+ * @param issues Collector the problems are appended to.
+ */
+function addDocumentIdentifierIssues(graph: DocumentGraph, issues: ValidationIssue[]): void {
+  const owners = new Map<string, string>();
+  for (const { path } of graph.documents) {
+    if (!path.startsWith(DOCS_PREFIX)) {
+      continue;
+    }
+    const identifier = getDocumentRoute(path.slice(DOCS_PREFIX.length));
+    const owner = owners.get(identifier);
+    if (owner === undefined) {
+      owners.set(identifier, path);
+    } else {
+      issues.push({
+        code: "duplicate-document-identifier",
+        message: `Documents ${owner} and ${path} share the identifier "${identifier || "index"}".`,
+        sourcePath: path,
+        target: owner,
+      });
+    }
   }
 }
 
@@ -369,6 +410,14 @@ export function validateDocumentGraph(
       });
     }
   }
+  if (graph.files.has(DOCS_README)) {
+    issues.push({
+      code: "invalid-docs-readme",
+      message: `Remove ${DOCS_README}; docs/index.md owns the documentation entrypoint.`,
+      target: DOCS_README,
+    });
+  }
+  addDocumentIdentifierIssues(graph, issues);
   for (const filePath of npmFiles ?? []) {
     if (filePath.startsWith("docs/internal/")) {
       issues.push({ code: "internal-published", message: `Internal documentation is published.`, target: filePath });

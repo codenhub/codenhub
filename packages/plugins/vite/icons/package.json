@@ -36,11 +36,13 @@
     "status:npm": "npm view @codenhub/vite-plugin-icons version dist-tags time --json && npm dist-tag ls @codenhub/vite-plugin-icons && npm access get status @codenhub/vite-plugin-icons",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

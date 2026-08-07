@@ -39,12 +39,17 @@ export interface PackageDocumentationReport {
   files: string[];
 }
 
+// Build output is skipped so an inspection reports the same problems whether or
+// not the package happens to be built: a link into `dist` must not pass only
+// because the last build left the file behind.
+const IGNORED_DIRECTORIES = new Set([".astro", ".git", "coverage", "dist", "node_modules", "test-results"]);
+
 async function listFiles(rootPath: string, relativePath = ""): Promise<string[]> {
   const entries = await readdir(join(rootPath, relativePath), { withFileTypes: true });
   const files = await Promise.all(
     entries.map(async (entry): Promise<string[]> => {
       const entryPath = posix.join(relativePath.replaceAll("\\", "/"), entry.name);
-      if (entry.isSymbolicLink() || entry.name === "node_modules" || entry.name === ".git") {
+      if (entry.isSymbolicLink() || IGNORED_DIRECTORIES.has(entry.name)) {
         return [];
       }
       if (entry.isDirectory()) {

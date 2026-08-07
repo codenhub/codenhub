@@ -35,11 +35,13 @@
     "status:npm": "npm view @codenhub/tauri-plugin-webview version dist-tags time --json && npm dist-tag ls @codenhub/tauri-plugin-webview && npm access get status @codenhub/tauri-plugin-webview",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@tauri-apps/api": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

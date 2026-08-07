@@ -4,7 +4,11 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { loadPackageDocumentation, loadWorkspaceDocumentation } from "./package-documentation.ts";
+import {
+  inspectPackageDocumentation,
+  loadPackageDocumentation,
+  loadWorkspaceDocumentation,
+} from "./package-documentation.ts";
 
 async function createPackageFixture(): Promise<string> {
   const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-package-docs-"));
@@ -57,6 +61,19 @@ describe("package documentation loading", () => {
     await expect(
       loadPackageDocumentation({ includeNpmInventory: true, rootPath, runCommand, slug: "example" }),
     ).rejects.toThrow("README.md: missing-target (docs/missing.md)");
+  });
+
+  it("reports the same issues whether or not the package has been built", async () => {
+    const rootPath = await createPackageFixture();
+    await writeFile(path.join(rootPath, "README.md"), "# Example\n\n[Bundle](dist/index.js)");
+    const clean = await inspectPackageDocumentation({ rootPath, slug: "example" });
+    await mkdir(path.join(rootPath, "dist"));
+    await writeFile(path.join(rootPath, "dist", "index.js"), "export {};");
+
+    const built = await inspectPackageDocumentation({ rootPath, slug: "example" });
+
+    expect(built.issues.map(({ code }) => code)).toEqual(clean.issues.map(({ code }) => code));
+    expect(built.issues.map(({ code }) => code)).toContain("missing-target");
   });
 
   it("aggregates workspace package failures in deterministic order", async () => {

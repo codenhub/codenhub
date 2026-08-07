@@ -236,3 +236,53 @@ describe("package document graph", () => {
     ).toContain("npm-unpublished-target");
   });
 });
+
+describe("document policy", () => {
+  it("reports a docs/README.md competing with the documentation index", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "docs/README.md": "---\ntitle: Read me\n---\n\n# Read me" })).toContain(
+      "invalid-docs-readme",
+    );
+  });
+
+  it("reports two documents that collapse to the same identifier", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides.md": "---\ntitle: Guides\n---\n\n# Guides",
+        "docs/guides/index.md": "---\ntitle: Guides\n---\n\n# Guides",
+      }),
+    ).toContain("duplicate-document-identifier");
+  });
+
+  it("accepts an area index alongside its own documents", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/guides/index.md": "---\ntitle: Guides\n---\n\n# Guides",
+        "docs/guides/setup.md": "---\ntitle: Setup\n---\n\n# Setup",
+      }),
+    ).toEqual([]);
+  });
+
+  it("reports a README with more than one H1", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "README.md": "# Example\n\n# Second\n\n[Docs](docs/index.md)" })).toContain(
+      "invalid-heading-count",
+    );
+  });
+
+  it("reports an llms.txt with no H1", () => {
+    expect(getIssueCodes({ ...BASE_FILES, "llms.txt": "## Example\n\n[Docs](docs/index.md)" })).toContain(
+      "invalid-heading-count",
+    );
+  });
+
+  it("does not count the H1 of every section compiled into llms-full.txt", () => {
+    expect(
+      getIssueCodes({ ...BASE_FILES, "llms-full.txt": "# Example\n\n[Docs](docs/index.md)\n\n# Index\n" }),
+    ).toEqual([]);
+  });
+
+  it("does not require frontmatter outside the docs directory", () => {
+    expect(getIssueCodes(BASE_FILES)).toEqual([]);
+  });
+});

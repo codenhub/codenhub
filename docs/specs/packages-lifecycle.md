@@ -48,6 +48,8 @@ Public packages MUST define:
 - `build`: produces publishable output.
 - `typecheck`: runs TypeScript without emitting.
 - `test`: runs tests once.
+- `test:coverage`: runs tests once and outputs a coverage report, as required by
+  `docs/specs/tests.md`.
 - `test:watch`: runs tests in watch mode.
 - `prepublishOnly`: runs at least `pnpm build && pnpm typecheck`.
 - `status:npm`: checks published registry metadata, dist tags, and access status for the package.
@@ -55,7 +57,7 @@ Public packages MUST define:
   `npm pack --dry-run --ignore-scripts`. Ignoring scripts is required so the dry
   run does not trigger `prepublishOnly` and build the package a second time.
 
-Packages MAY omit `test` and `test:watch` only when they contain no executable code and the exception is documented.
+Packages MAY omit `test`, `test:coverage`, and `test:watch` only when they contain no executable code and the exception is documented.
 
 Package scripts MUST invoke their own tool directly and MUST NOT chain a build
 step into `test`, `test:coverage`, `test:watch`, `typecheck`, or `status:pack`.

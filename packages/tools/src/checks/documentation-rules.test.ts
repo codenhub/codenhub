@@ -16,6 +16,7 @@ const LLMS = "# @codenhub/example\n\n> Example package.\n\n## Docs\n\n- [Index](
 interface PackageOverrides {
   files?: Record<string, string>;
   manifest?: Record<string, unknown>;
+  name?: string;
   omit?: readonly string[];
 }
 
@@ -58,15 +59,19 @@ async function createDocumentedPackage(overrides: PackageOverrides = {}): Promis
       name: "@codenhub/example",
       ...overrides.manifest,
     },
-    name: "@codenhub/example",
+    name: overrides.name ?? "@codenhub/example",
     scripts: {},
     unscopedName: "example",
     workspaceDependencies: [],
   };
 }
 
-async function runRule(name: string, workspacePackage: WorkspacePackage): Promise<Finding[]> {
-  const rule = createDocumentationRules().find((candidate: CheckRule) => candidate.name === name);
+async function runRule(
+  name: string,
+  workspacePackage: WorkspacePackage,
+  workspacePackages: readonly WorkspacePackage[] = [workspacePackage],
+): Promise<Finding[]> {
+  const rule = createDocumentationRules(workspacePackages).find((candidate: CheckRule) => candidate.name === name);
   return rule === undefined ? [] : rule.run({ includePack: false, package: workspacePackage });
 }
 
@@ -112,7 +117,7 @@ describe("documentation rule", () => {
   });
 
   it("applies to a private package that opts in through documentation metadata", () => {
-    const rules = createDocumentationRules();
+    const rules = createDocumentationRules([]);
     const optedIn = {
       isPrivate: true,
       manifest: { codenhub: { docs: { label: "Example", status: "active" } } },
@@ -124,7 +129,29 @@ describe("documentation rule", () => {
   it("skips a private package with no documentation metadata", () => {
     const internal = { isPrivate: true, manifest: {} } as unknown as WorkspacePackage;
 
-    expect(createDocumentationRules().some((rule) => rule.appliesTo(internal))).toBe(false);
+    expect(createDocumentationRules([]).some((rule) => rule.appliesTo(internal))).toBe(false);
+  });
+
+  it("reports a documentation slug claimed by another package", async () => {
+    const workspacePackage = await createDocumentedPackage();
+    const rival = await createDocumentedPackage({
+      manifest: {
+        codenhub: { docs: { label: "Rival", slug: "example", status: "active" } },
+        name: "@fixture/rival",
+      },
+      name: "@fixture/rival",
+    });
+
+    expect(
+      (await runRule("documentation", workspacePackage, [workspacePackage, rival])).map(({ code }) => code),
+    ).toEqual(["documentation/duplicate-slug"]);
+  });
+
+  it("does not report a slug the package alone claims", async () => {
+    const other = await createDocumentedPackage({ manifest: { name: "@codenhub/other" } });
+    const workspacePackage = await createDocumentedPackage();
+
+    expect(await runRule("documentation", workspacePackage, [workspacePackage, other])).toEqual([]);
   });
 });
 
