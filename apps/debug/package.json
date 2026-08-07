@@ -9,10 +9,8 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@codenhub/ui-kit": "workspace:*"
-  },
   "devDependencies": {
+    "@codenhub/ui-kit": "workspace:*",
     "@codenhub/vite-plugin-add-loader": "workspace:*",
     "@codenhub/vite-plugin-defer-css": "workspace:*",
     "@codenhub/vite-plugin-icons": "workspace:*",

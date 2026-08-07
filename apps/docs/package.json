@@ -12,14 +12,13 @@
     "test:watch": "vitest",
     "typecheck": "astro sync && tsc --noEmit"
   },
-  "dependencies": {
+  "devDependencies": {
     "@astrojs/markdown-remark": "7.2.1",
     "@codenhub/styles": "workspace:*",
     "@codenhub/tools": "workspace:*",
-    "astro": "7.0.7"
-  },
-  "devDependencies": {
     "@tailwindcss/vite": "catalog:",
+    "@types/node": "catalog:",
+    "astro": "7.0.7",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

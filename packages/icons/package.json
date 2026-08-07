@@ -53,15 +53,15 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "lint:check": "oxlint",
-    "format:check": "oxfmt --check"
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "postcss": "^8.4.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

@@ -6,11 +6,9 @@
   "scripts": {
     "dev": "vite"
   },
-  "dependencies": {
-    "@codenhub/router": "workspace:*",
-    "@codenhub/styles": "workspace:*"
-  },
   "devDependencies": {
+    "@codenhub/router": "workspace:*",
+    "@codenhub/styles": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:"
