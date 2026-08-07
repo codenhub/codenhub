@@ -217,4 +217,10 @@ describe("stripTypeOnlyStatements", () => {
 
     expect(readSpecifiers(stripTypeOnlyStatements(kept)).sort()).toEqual(["mixed", "side-effect", "value"]);
   });
+
+  it("does not erase value imports that follow type alias declarations", () => {
+    const source = [`export type Mode = "fast" | "slow";`, `import { run } from "value-pkg";`].join("\n");
+
+    expect(readSpecifiers(stripTypeOnlyStatements(source))).toEqual(["value-pkg"]);
+  });
 });

@@ -70,9 +70,10 @@ function extensionOf(path: string): string {
   return index === -1 ? "" : path.slice(index);
 }
 
-// A statement that imports or exports only types. TypeScript erases it, so it
-// contributes nothing to what the built file loads at run time.
-const TYPE_ONLY_STATEMENT = /(?:^|[\n;])[^\S\n]*(?:import|export)\s+type\b[\s\S]*?["'][^"'\n]+["'][^\n]*/g;
+// Statements that import or export only types from a module specifier.
+// TypeScript erases them, so they contribute nothing to what the built file loads at run time.
+const SINGLE_LINE_TYPE_ONLY = /^[^\S\n]*(?:import|export)\s+type\b[^\n]*?\bfrom\s*["'][^"'\n]+["'][^\n]*$/gm;
+const MULTILINE_TYPE_ONLY = /^[^\S\n]*(?:import|export)\s+type\s*\{[^}]*\}\s*from\s*["'][^"'\n]+["'][^\n]*$/gm;
 
 /**
  * Removes the statements a TypeScript build erases.
@@ -83,7 +84,7 @@ const TYPE_ONLY_STATEMENT = /(?:^|[\n;])[^\S\n]*(?:import|export)\s+type\b[\s\S]
  * @returns The source with type-only import and export statements blanked out.
  */
 export function stripTypeOnlyStatements(source: string): string {
-  return source.replaceAll(TYPE_ONLY_STATEMENT, "");
+  return source.replaceAll(SINGLE_LINE_TYPE_ONLY, "").replaceAll(MULTILINE_TYPE_ONLY, "");
 }
 
 /**

@@ -221,10 +221,13 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
 
   const candidates = [...declaredNames]
     .filter((name) => !name.startsWith(TYPE_PACKAGE_PREFIX))
-    // A companion published under a tool's own scope, such as a Vitest coverage
-    // provider, is configured by an option rather than named by the package that
-    // installs it. It counts as used whenever the tool it belongs to is.
-    .filter((name) => !(name.startsWith("@") && declaredNames.has(name.slice(1, name.indexOf("/")))))
+    .filter((name) => {
+      if (!name.startsWith("@") || !name.includes("/")) {
+        return true;
+      }
+      const scopeName = name.slice(1, name.indexOf("/"));
+      return !declaredNames.has(scopeName);
+    })
     .sort();
   const unmentioned = await Promise.all(
     candidates.map(async (name) => isUnmentioned(workspacePackage, name, usage.text)),
