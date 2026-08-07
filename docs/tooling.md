@@ -43,6 +43,7 @@ Root scripts map directly onto it:
 | `pnpm lint:check`    | `hub lint`          |
 | `pnpm lint:fix`      | `hub lint --fix`    |
 | `pnpm packages`      | `hub list`          |
+| `pnpm prepare`       | installs git hooks  |
 | `pnpm status:npm`    | `hub status:npm`    |
 | `pnpm status:pack`   | `hub status:pack`   |
 | `pnpm test`          | `hub test`          |
@@ -154,6 +155,29 @@ Tool arguments are not forwarded, because the steps run different executables an
 no argument could mean the same thing to all of them. Selection and every other
 option still apply, so `hub verify error` verifies one package and
 `hub verify --changed` verifies a branch.
+
+## Git hooks
+
+A `pre-commit` hook formats and lints the staged files, fixes what it can, and
+re-stages the result. It runs those two checks and no others: type checking and
+tests take minutes, and a hook that slow gets bypassed until it may as well not
+exist. `pnpm verify` is where the rest belongs.
+
+The hook lives in `.githooks/` and is wired by `core.hooksPath`, which the root
+`prepare` script sets on every install. That is a local git setting rather than
+a tracked one, so a fresh clone runs no hooks until something sets it; doing it
+from `prepare` keeps a hook manager out of the dependency list. The setup step
+never fails an install: a tree without git, or without permission to write its
+config, reports and carries on.
+
+Files are read from the working tree rather than from the index. For a file that
+is only partly staged that matters: the hook never rewrites it, because
+re-staging would sweep in the parts deliberately left out of the commit, and it
+checks the file as it sits on disk. A commit whose staged content is already
+clean can therefore still fail. The alternative — skipping such files — would let
+unformatted code through the one check meant to stop it.
+
+`git commit --no-verify` bypasses the hook when a commit has to land unfixed.
 
 ## Cleaning
 

@@ -1,0 +1,64 @@
+#!/bin/sh
+# Formats and lints what is about to be committed.
+#
+# Only the two mechanical checks run here. Type checking and tests belong to
+# `pnpm verify`: they take minutes, and a hook that slow gets bypassed until it
+# may as well not exist.
+#
+# Files are read from the working tree rather than from the index, which matters
+# for a file that is only partly staged. Such a file is never rewritten, because
+# re-staging it would sweep in the parts deliberately left out of the commit, and
+# it is checked as it sits on disk. That can fail a commit whose staged content
+# is already clean; the alternative is skipping the file, which would let
+# unformatted code through the one check meant to stop it.
+#
+# Bypass with `git commit --no-verify` when a commit has to land unfixed.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+work=$(mktemp -d)
+report() {
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    printf '\npre-commit failed. Run `pnpm format:fix` and `pnpm lint:fix`, or commit with --no-verify.\n' >&2
+  fi
+  rm -rf "$work"
+  exit "$status"
+}
+trap report EXIT
+
+git diff --cached --name-only --diff-filter=ACMR |
+  grep -E '\.(astro|cjs|css|cts|html|js|json|jsx|md|mjs|mts|svelte|ts|tsx)$' >"$work/staged" || true
+
+if [ ! -s "$work/staged" ]; then
+  exit 0
+fi
+
+git diff --name-only >"$work/unstaged" || true
+grep -Fxv -f "$work/unstaged" "$work/staged" >"$work/fixable" || true
+
+# Runs a command over a newline-delimited file list, skipping an empty one.
+run_on() {
+  list=$1
+  shift
+  if [ -s "$list" ]; then
+    tr '\n' '\0' <"$list" | xargs -0 "$@"
+  fi
+}
+
+# oxlint reads code only, and exits non-zero when handed nothing it can parse.
+select_code() {
+  grep -E '\.(cjs|cts|js|jsx|mjs|mts|ts|tsx)$' "$1" >"$2" || true
+}
+
+if [ -s "$work/fixable" ]; then
+  run_on "$work/fixable" pnpm exec oxfmt --
+  select_code "$work/fixable" "$work/fixable-code"
+  run_on "$work/fixable-code" pnpm exec oxlint --fix --
+  run_on "$work/fixable" git add --
+fi
+
+run_on "$work/staged" pnpm exec oxfmt --check --
+select_code "$work/staged" "$work/code"
+run_on "$work/code" pnpm exec oxlint --

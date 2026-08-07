@@ -17,6 +17,7 @@
     "lint:check": "hub lint",
     "lint:fix": "hub lint --fix",
     "packages": "hub list",
+    "prepare": "node .githooks/install.mjs",
     "status:npm": "hub status:npm",
     "status:pack": "hub status:pack",
     "test": "hub test",
