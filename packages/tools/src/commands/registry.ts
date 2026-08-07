@@ -3,6 +3,7 @@ import { createCleanCommand } from "./clean-command.ts";
 import type { CommandDefinition } from "./definition.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
+import { createNewCommand } from "./new-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
 import { createVerifyCommand } from "./verify-command.ts";
@@ -60,6 +61,7 @@ const COMMANDS: readonly CommandDefinition[] = [
   createCheckCommand(),
   createGenerateCommand(),
   createCleanCommand(),
+  createNewCommand(),
   createListCommand(),
 ];
 

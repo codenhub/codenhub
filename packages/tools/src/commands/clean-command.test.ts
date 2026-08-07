@@ -46,6 +46,7 @@ async function runClean(root: string, packages: readonly WorkspacePackage[], arg
       targets: packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
       unownedPaths: [],
     },
+    tokens: [],
     workspace: { packages, root },
   };
 

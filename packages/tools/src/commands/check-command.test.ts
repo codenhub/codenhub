@@ -63,6 +63,7 @@ async function runCheck(packages: readonly WorkspacePackage[], register?: string
       targets: packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
       unownedPaths: [],
     },
+    tokens: [],
     workspace: { packages, root },
   };
 
@@ -182,6 +183,7 @@ describe("hub check", () => {
         targets: packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
         unownedPaths: [],
       },
+      tokens: [],
       workspace: { packages, root },
     };
 

@@ -36,6 +36,7 @@ async function runVerify(failingStep?: string): Promise<RunResult> {
     passthrough: ["--reporter=verbose"],
     reporter: createReporter({ useColor: false, write: (line) => lines.push(line), writeError: () => {} }),
     selection: { isImplicit: true, targets: [], unownedPaths: [] },
+    tokens: [],
     workspace: { packages: [], root: "/repo" },
   };
 

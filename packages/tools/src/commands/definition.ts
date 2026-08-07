@@ -9,6 +9,8 @@ export interface CommandContext {
   workspace: Workspace;
   /** Packages the command should act on. */
   selection: Selection;
+  /** Selectors as typed, before they were resolved to packages. */
+  tokens: readonly string[];
   /** Global options parsed from the command line. */
   options: CliOptions;
   /** Arguments forwarded to the underlying tool. */
@@ -25,6 +27,14 @@ export interface CommandDefinition {
   summary: string;
   /** Usage line shown in help output. */
   usage: string;
+  /**
+   * Whether selectors are resolved to workspace packages before the command runs.
+   *
+   * Defaults to `true`. A command that names something the workspace does not
+   * contain yet sets this to `false` and reads {@link CommandContext.tokens},
+   * because resolution fails on a name it cannot find.
+   */
+  selectsPackages?: boolean;
   /** Runs the command. Resolves to the process exit code. */
   run(context: CommandContext): Promise<number>;
 }

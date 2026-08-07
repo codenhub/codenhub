@@ -71,6 +71,7 @@ async function runGenerate(fixture: WorkspaceFixture, argv: readonly string[] = 
       targets: fixture.packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
       unownedPaths: [],
     },
+    tokens: [],
     workspace: { packages: fixture.packages, root: fixture.root },
   };
 

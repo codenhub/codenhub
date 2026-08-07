@@ -142,6 +142,35 @@ hanging browser-test worker from blocking a whole workspace run.
 resolved paths rather than once per package. Selecting nothing falls back to the
 whole repository, which is why `pnpm cloc` needs no argument.
 
+## Creating a package
+
+`hub new <name>` scaffolds a public package under `packages/<name>`:
+
+```sh
+pnpm hub new store --description="Typed localStorage-backed state stores."
+```
+
+It writes the manifest, `tsconfig.json`, `README.md`, `llms.txt`,
+`docs/index.md`, `docs/.npmignore`, a source entrypoint, and a test, then
+compiles `llms-full.txt` from the surfaces it just wrote. The result passes
+`pnpm verify` and all seven check rules on its first run, so the author edits
+prose instead of hunting for the fields and surfaces a package is required to
+have. Everything a human should write is marked `TODO`.
+
+The scope comes from the workspace rather than a constant, and a new package
+always starts `experimental`: promoting it is a deliberate act that has to
+update the README notice at the same time.
+
+Two things the scaffold deliberately leaves out. It writes no `LICENSE`, because
+a license file is a legal artifact rather than boilerplate — the manifest
+declares Apache-2.0 and the command says to add the file. And it never writes
+into a directory that already exists, because overwriting a package would
+destroy work no check could recover.
+
+`hub new` is the one command that does not resolve its argument to an existing
+package. Selectors are resolved before a command runs, which cannot work for a
+name the workspace does not contain yet, so it reads the raw tokens instead.
+
 ## Verification
 
 `hub verify` runs `format`, `lint`, `typecheck`, `test`, and `check` in that

@@ -66,6 +66,19 @@ async function main(): Promise<number> {
 
   const root = await findWorkspaceRoot(process.cwd());
   const workspace = await discoverWorkspace(root);
+
+  if (command.selectsPackages === false) {
+    const selection = { isImplicit: false, targets: [], unownedPaths: [] };
+    return command.run({
+      options: parsed.options,
+      passthrough: parsed.passthrough,
+      reporter,
+      selection,
+      tokens: parsed.tokens,
+      workspace,
+    });
+  }
+
   const changedPaths = parsed.options.useChangedFilter
     ? await findChangedPaths(root, parsed.options.baseRef)
     : undefined;
@@ -76,7 +89,14 @@ async function main(): Promise<number> {
     return EXIT_SUCCESS;
   }
 
-  return command.run({ options: parsed.options, passthrough: parsed.passthrough, reporter, selection, workspace });
+  return command.run({
+    options: parsed.options,
+    passthrough: parsed.passthrough,
+    reporter,
+    selection,
+    tokens: parsed.tokens,
+    workspace,
+  });
 }
 
 try {

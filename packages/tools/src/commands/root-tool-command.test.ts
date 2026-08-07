@@ -30,6 +30,7 @@ function createContext(selection: Selection): CommandContext {
     passthrough: [],
     reporter: createReporter({ useColor: false, write: () => {}, writeError: () => {} }),
     selection,
+    tokens: [],
     workspace: { packages: [error, kbd], root: "/repo" },
   };
 }
