@@ -129,7 +129,7 @@ One question decides the field: **does a consumer who installs this package need
 
 Three cases the check cannot settle, which reviewers MUST watch for:
 
-- **Type-only imports.** An import erased at build time still ships when the emitted `.d.ts` refers to it. If a published type names a package, that package is a `dependency` or a `peerDependency`, not a `devDependency`.
+- **Type-only imports.** The check ignores them for the runtime question, because a build erases them. It cannot see the other half: an erased import still reaches a consumer when the emitted `.d.ts` refers to the package. If a published type names a package, that package is a `dependency` or a `peerDependency` even though no JavaScript imports it.
 - **Dependencies selected by configuration.** A tool named by an option rather than by an import — a test environment, a coverage provider — is invisible to import analysis. The check treats a name appearing anywhere in the package as used and never reports it, which is the safe direction.
 - **Dynamic and computed specifiers.** A specifier assembled from a variable names no package the check can read. Declare whatever such code loads.
 

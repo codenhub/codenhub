@@ -284,7 +284,11 @@ questions:
   to live beside it, so it is what decides whether a dependency belongs in
   `dependencies` rather than `devDependencies`. Private packages are exempt:
   nothing installs them, so the field changes nothing.
-- `dependencies/undeclared` covers every non-test source file, because importing
+- `dependencies/runtime-declaration` ignores type-only imports, which a build
+  erases. It cannot see whether the emitted `.d.ts` still names the package, so
+  that half stays a review responsibility.
+- `dependencies/undeclared` covers every non-test source file and keeps type-only
+  imports, because a package must be installed to type-check against it. Importing
   something undeclared is a bug wherever it is written — it resolves today only
   by borrowing another package's installation. Test files are excluded: they
   quote example imports freely, and a test that imports something missing fails

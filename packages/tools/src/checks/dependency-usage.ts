@@ -70,6 +70,22 @@ function extensionOf(path: string): string {
   return index === -1 ? "" : path.slice(index);
 }
 
+// A statement that imports or exports only types. TypeScript erases it, so it
+// contributes nothing to what the built file loads at run time.
+const TYPE_ONLY_STATEMENT = /^[^\S\n]*(?:import|export)\s+type\s[^\n]*?["'][^"'\n]+["'][^\n]*$/gm;
+
+/**
+ * Removes the statements a TypeScript build erases.
+ *
+ * A type-only import leaves nothing behind in the emitted JavaScript, so a
+ * package it names is not something a consumer has to install to run the code.
+ * @param source File contents.
+ * @returns The source with type-only import and export statements blanked out.
+ */
+export function stripTypeOnlyStatements(source: string): string {
+  return source.replaceAll(TYPE_ONLY_STATEMENT, "");
+}
+
 /**
  * Reads every module specifier a source file names.
  *
@@ -173,7 +189,10 @@ async function walkFrom(root: string, path: string, seen: Set<string>, imports: 
     return;
   }
   seen.add(path);
-  const source = await readFile(join(root, path), "utf8").catch(() => "");
+  // Type-only statements are dropped before the graph is walked, in both
+  // directions: the package they name does not ship, and neither does a local
+  // file that nothing but a type-only import reaches.
+  const source = stripTypeOnlyStatements(await readFile(join(root, path), "utf8").catch(() => ""));
   const relativeSpecifiers: string[] = [];
   for (const specifier of readSpecifiers(source)) {
     if (specifier.startsWith(".")) {
@@ -226,10 +245,12 @@ async function listOwnFiles(root: string, relativePath = ""): Promise<string[]> 
  * Two scopes are collected because they answer different questions. `shipped`
  * walks the import graph from the published entry points, which is the only way
  * to tell code that reaches a consumer from a test helper that happens to live
- * beside it. `authored` covers every non-test source file, because an import of
- * something undeclared is a bug wherever it is written. Test files are left out
- * of `authored`: they routinely quote example imports, and a test that imports
- * something missing fails the moment it runs.
+ * beside it, and it excludes type-only imports because a build erases them.
+ * `authored` covers every non-test source file and keeps type-only imports,
+ * because a package has to be installed to type-check against it whether or not
+ * it survives the build. Test files are left out of `authored`: they routinely
+ * quote example imports, and a test that imports something missing fails the
+ * moment it runs.
  * @param workspacePackage Package to read.
  * @param scenarioDirectories Absolute scenario directories this package runs, such as a parent package's playground.
  * @returns Imported package names by scope, and the text a mention could appear in.

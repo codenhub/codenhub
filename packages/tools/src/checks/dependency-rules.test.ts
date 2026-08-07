@@ -221,3 +221,25 @@ describe("dependency usage", () => {
     expect(await runRuleForCodes(workspacePackage)).toEqual([]);
   });
 });
+
+describe("type-only imports", () => {
+  it("does not make a type-only import a runtime dependency", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { "left-pad": "1.3.0" }, exports: { ".": "./dist/index.js" } },
+      { "src/index.ts": `import type { Pad } from "left-pad";\n\nexport const a: Pad | undefined = undefined;` },
+    );
+
+    expect(await runRuleForCodes(workspacePackage)).toEqual([]);
+  });
+
+  it("still requires a type-only import to be declared somewhere", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { exports: { ".": "./dist/index.js" } },
+      { "src/index.ts": `import type { Pad } from "left-pad";` },
+    );
+
+    expect(await runRuleForCodes(workspacePackage)).toEqual(["dependencies/undeclared"]);
+  });
+});

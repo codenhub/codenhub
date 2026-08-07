@@ -5,7 +5,13 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { readBinaryNames, readDependencyUsage, readSpecifiers, toPackageName } from "./dependency-usage.ts";
+import {
+  readBinaryNames,
+  readDependencyUsage,
+  readSpecifiers,
+  stripTypeOnlyStatements,
+  toPackageName,
+} from "./dependency-usage.ts";
 
 /** Writes a package tree and returns it as a workspace package. */
 async function createPackageFixture(
@@ -170,5 +176,26 @@ describe("readBinaryNames", () => {
     const workspacePackage = await createPackageFixture({ "src/index.ts": "" });
 
     await expect(readBinaryNames(workspacePackage, "absent")).resolves.toEqual([]);
+  });
+});
+
+describe("stripTypeOnlyStatements", () => {
+  it("erases statements a build erases", () => {
+    const erased = [
+      `import type { A } from "type-import";`,
+      `export type { B } from "type-export";`,
+      `import type C from "default-type";`,
+      `  import type { D } from "indented";`,
+    ].join("\n");
+
+    expect(readSpecifiers(stripTypeOnlyStatements(erased))).toEqual([]);
+  });
+
+  it("keeps a statement that also imports a value", () => {
+    const kept = [`import { type A, b } from "mixed";`, `import { c } from "value";`, `import "side-effect";`].join(
+      "\n",
+    );
+
+    expect(readSpecifiers(stripTypeOnlyStatements(kept)).sort()).toEqual(["mixed", "side-effect", "value"]);
   });
 });

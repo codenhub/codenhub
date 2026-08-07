@@ -187,11 +187,10 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/i18n:
-    dependencies:
+    devDependencies:
       '@codenhub/error':
         specifier: workspace:*
         version: link:../error
-    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
