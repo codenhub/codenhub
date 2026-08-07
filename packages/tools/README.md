@@ -13,8 +13,8 @@ rules, options, and how to add a command.
 ## Development
 
 ```sh
-pnpm --filter=tools test
-pnpm --filter=tools typecheck
+pnpm test packages/tools
+pnpm typecheck packages/tools
 ```
 
 Sources run directly under Node's type stripping, so there is no build step. That

@@ -72,7 +72,7 @@ function extensionOf(path: string): string {
 
 // A statement that imports or exports only types. TypeScript erases it, so it
 // contributes nothing to what the built file loads at run time.
-const TYPE_ONLY_STATEMENT = /^[^\S\n]*(?:import|export)\s+type\s[^\n]*?["'][^"'\n]+["'][^\n]*$/gm;
+const TYPE_ONLY_STATEMENT = /(?:^|[\n;])[^\S\n]*(?:import|export)\s+type\b[\s\S]*?["'][^"'\n]+["'][^\n]*/g;
 
 /**
  * Removes the statements a TypeScript build erases.

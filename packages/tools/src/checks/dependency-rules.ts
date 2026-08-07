@@ -157,6 +157,10 @@ function checkRanges(workspacePackage: WorkspacePackage, context: DependencyCont
   return findings;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Decides whether a declared dependency is mentioned anywhere in a package.
  *
@@ -174,7 +178,7 @@ async function isUnmentioned(workspacePackage: WorkspacePackage, name: string, t
     return false;
   }
   const binaries = await readBinaryNames(workspacePackage, name);
-  return !binaries.some((binary) => new RegExp(`\\b${binary}\\b`).test(text));
+  return !binaries.some((binary) => new RegExp(`\\b${escapeRegExp(binary)}\\b`).test(text));
 }
 
 async function checkUsage(workspacePackage: WorkspacePackage, context: DependencyContext): Promise<Finding[]> {

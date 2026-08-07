@@ -134,7 +134,7 @@ async function findManifestPaths(rootPath: string): Promise<string[]> {
   const entries = await readdir(rootPath, { withFileTypes: true });
   const paths = await Promise.all(
     entries.map(async (entry): Promise<string[]> => {
-      if (!entry.isDirectory() || entry.name === "node_modules") {
+      if (!entry.isDirectory() || IGNORED_DIRECTORIES.has(entry.name)) {
         return [];
       }
       const packagePath = join(rootPath, entry.name);

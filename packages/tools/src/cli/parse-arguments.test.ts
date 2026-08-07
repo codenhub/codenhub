@@ -60,6 +60,16 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "-h"]).options.wantsHelp).toBe(true);
   });
 
+  it("shouldReadShortVersionFlags", () => {
+    expect(parseArguments(["-v"]).options.wantsVersion).toBe(true);
+    expect(parseArguments(["-V"]).options.wantsVersion).toBe(true);
+  });
+
+  it("shouldDefaultParallelToAvailableParallelism", () => {
+    expect(parseArguments(["test", "--parallel"]).options.concurrency).toBeGreaterThan(0);
+    expect(parseArguments(["test", "--parallel=16"]).options.concurrency).toBe(16);
+  });
+
   it("shouldReadVersionFlagWithoutACommand", () => {
     expect(parseArguments(["--version"]).options.wantsVersion).toBe(true);
     expect(parseArguments(["--version"]).commandName).toBe("");

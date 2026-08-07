@@ -1,3 +1,5 @@
+import { availableParallelism } from "node:os";
+
 const DEFAULT_BASE_REF = "main";
 const DEFAULT_TIMEOUT_SECONDS = 600;
 const OPTION_TERMINATOR = "--";
@@ -86,7 +88,7 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
       return true;
     }
     case "parallel": {
-      options.concurrency = readPositiveNumber(name, value, Number.POSITIVE_INFINITY);
+      options.concurrency = readPositiveNumber(name, value, availableParallelism());
       return true;
     }
     case "bail": {
@@ -167,6 +169,10 @@ export function parseArguments(argv: readonly string[]): ParsedArguments {
     }
     if (argument === "-h") {
       options.wantsHelp = true;
+      continue;
+    }
+    if (argument === "-v" || argument === "-V") {
+      options.wantsVersion = true;
       continue;
     }
     const flag = FLAG_PATTERN.exec(argument);

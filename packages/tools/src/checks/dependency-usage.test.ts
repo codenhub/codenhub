@@ -191,6 +191,12 @@ describe("stripTypeOnlyStatements", () => {
     expect(readSpecifiers(stripTypeOnlyStatements(erased))).toEqual([]);
   });
 
+  it("erases multiline type-only imports", () => {
+    const multiline = `import type {\n  A,\n  B,\n} from "multiline-type";`;
+
+    expect(readSpecifiers(stripTypeOnlyStatements(multiline))).toEqual([]);
+  });
+
   it("keeps a statement that also imports a value", () => {
     const kept = [`import { type A, b } from "mixed";`, `import { c } from "value";`, `import "side-effect";`].join(
       "\n",
