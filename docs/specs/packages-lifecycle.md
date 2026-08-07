@@ -125,6 +125,12 @@ Use `devDependencies` for build, test, lint, type, and local-only dependencies.
 
 Workspace-internal dependencies SHOULD use `workspace:*`.
 
+An external dependency that two or more workspace packages install MUST use `catalog:`. Sharing is what the catalog is for: a dependency declared twice can drift to two versions, and two majors of the same library in one install tree is a failure no other check would catch. A dependency only one package installs MAY pin its own range, because it has no second declaration to drift from.
+
+`peerDependencies` are exempt from both rules. A peer range is a contract with the consumer, and a `workspace:` or `catalog:` range would publish it pinned.
+
+Workspace dependencies MUST NOT form a cycle. A cycle has no valid build order, so the tooling falls back to the declaration order and builds something before its own dependency.
+
 Do not add dependencies for simple logic that can be maintained in-house.
 
 ## Publishing

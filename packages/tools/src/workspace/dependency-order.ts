@@ -5,8 +5,8 @@ import type { WorkspacePackage } from "./discover.ts";
  *
  * Only dependencies inside the given set are considered, which keeps a narrowed
  * selection buildable without pulling in the whole workspace. Cycles fall back to
- * the input order rather than failing, because a cycle is a repository problem to
- * report elsewhere, not a reason to block a run.
+ * the input order rather than failing, because a cycle is a repository problem for
+ * {@link findDependencyCycles} to report, not a reason to block a run.
  * @param packages Packages to order.
  * @returns Packages in dependency-first order.
  */
@@ -68,4 +68,49 @@ export function withWorkspaceDependencies(
     collect(workspacePackage);
   }
   return orderByDependencies([...collected.values()]);
+}
+
+/**
+ * Finds workspace dependency cycles.
+ *
+ * A cycle has no valid build order, so `orderByDependencies` can only fall back
+ * to the input order and build something before its dependency. Reporting is
+ * separated from ordering because a run that is already underway should finish
+ * and let the compliance check name the problem.
+ *
+ * Each cycle is returned as its members in traversal order, and a rotation of a
+ * cycle already found is not repeated.
+ * @param packages Packages to inspect.
+ * @returns Cycles as member names in dependency order, or an empty list.
+ */
+export function findDependencyCycles(packages: readonly WorkspacePackage[]): string[][] {
+  const byName = new Map(packages.map((workspacePackage) => [workspacePackage.name, workspacePackage]));
+  const cycles = new Map<string, string[]>();
+  const visiting: string[] = [];
+  const visited = new Set<string>();
+
+  function visit(name: string): void {
+    const entryIndex = visiting.indexOf(name);
+    if (entryIndex !== -1) {
+      const cycle = visiting.slice(entryIndex);
+      cycles.set([...cycle].sort().join(" "), cycle);
+      return;
+    }
+    if (visited.has(name)) {
+      return;
+    }
+    visiting.push(name);
+    for (const dependencyName of byName.get(name)?.workspaceDependencies ?? []) {
+      if (byName.has(dependencyName)) {
+        visit(dependencyName);
+      }
+    }
+    visiting.pop();
+    visited.add(name);
+  }
+
+  for (const { name } of packages) {
+    visit(name);
+  }
+  return [...cycles.values()];
 }

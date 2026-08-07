@@ -15,9 +15,8 @@ import type { CheckRule } from "./rule.ts";
  * @returns Rules in reporting order.
  */
 export function createCheckRules(workspace: Workspace): CheckRule[] {
-  const workspaceNames = new Set(workspace.packages.map(({ name }) => name));
   return [
-    ...createManifestRules(workspaceNames),
+    ...createManifestRules(workspace.packages),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
     ...createReadmeRules(),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { orderByDependencies, withWorkspaceDependencies } from "./dependency-order.ts";
+import { findDependencyCycles, orderByDependencies, withWorkspaceDependencies } from "./dependency-order.ts";
 import type { WorkspacePackage } from "./discover.ts";
 
 function createPackage(name: string, workspaceDependencies: string[] = []): WorkspacePackage {
@@ -52,5 +52,51 @@ describe("withWorkspaceDependencies", () => {
     const expanded = withWorkspaceDependencies([styles, uiKit], [styles, theme, uiKit]);
 
     expect(expanded.filter(({ name }) => name === "styles")).toHaveLength(1);
+  });
+});
+
+describe("findDependencyCycles", () => {
+  it("shouldReportNothingForAnAcyclicGraph", () => {
+    expect(findDependencyCycles([styles, theme, uiKit])).toEqual([]);
+  });
+
+  it("shouldReportADirectCycleWithBothMembers", () => {
+    const first = createPackage("first", ["second"]);
+    const second = createPackage("second", ["first"]);
+
+    expect(findDependencyCycles([first, second])).toEqual([["first", "second"]]);
+  });
+
+  it("shouldReportALongerCycleInDependencyOrder", () => {
+    const first = createPackage("first", ["second"]);
+    const second = createPackage("second", ["third"]);
+    const third = createPackage("third", ["first"]);
+
+    expect(findDependencyCycles([first, second, third])).toEqual([["first", "second", "third"]]);
+  });
+
+  it("shouldReportARotationOfTheSameCycleOnlyOnce", () => {
+    const first = createPackage("first", ["second"]);
+    const second = createPackage("second", ["first"]);
+
+    expect(findDependencyCycles([second, first])).toHaveLength(1);
+  });
+
+  it("shouldIgnoreDependenciesOutsideTheGivenSet", () => {
+    expect(findDependencyCycles([createPackage("first", ["absent"])])).toEqual([]);
+  });
+
+  it("shouldReportSeveralIndependentCycles", () => {
+    const packages = [
+      createPackage("first", ["second"]),
+      createPackage("second", ["first"]),
+      createPackage("third", ["fourth"]),
+      createPackage("fourth", ["third"]),
+    ];
+
+    expect(findDependencyCycles(packages)).toEqual([
+      ["first", "second"],
+      ["third", "fourth"],
+    ]);
   });
 });

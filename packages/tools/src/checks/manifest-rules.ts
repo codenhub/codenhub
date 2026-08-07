@@ -1,3 +1,4 @@
+import { findDependencyCycles } from "../workspace/dependency-order.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
@@ -17,8 +18,13 @@ const REQUIRED_SCRIPTS = [
 const UNCHAINED_SCRIPTS = ["test", "test:coverage", "test:watch", "typecheck", "status:pack"];
 const RECOMMENDED_FIELDS = ["description", "license", "repository"];
 // `peerDependencies` is deliberately absent: a peer range is the consumer's
-// contract, and a workspace range would publish as a pinned version.
+// contract, and a `workspace:` or `catalog:` range would publish it pinned.
 const RESOLVED_DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies"];
+const CATALOG_RANGE = "catalog:";
+const WORKSPACE_RANGE = "workspace:";
+// One package installing a dependency has no version to drift from. Two do, and
+// two majors of the same library in one install tree is what this prevents.
+const SHARED_DEPENDENCY_THRESHOLD = 2;
 // The negative lookahead keeps `pnpm build:styles` from reading as a chained
 // `pnpm build`; only the umbrella script is the one root tooling already runs.
 const BUILD_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?build(?![\w:-])/;
@@ -115,15 +121,80 @@ function checkScripts(workspacePackage: WorkspacePackage): Finding[] {
   return findings;
 }
 
-function checkDependencies(workspacePackage: WorkspacePackage, workspaceNames: ReadonlySet<string>): Finding[] {
-  const findings: Finding[] = [];
-  for (const field of RESOLVED_DEPENDENCY_FIELDS) {
+/** One declared dependency of a package. */
+interface DeclaredDependency {
+  /** Manifest field the entry was declared in. */
+  field: string;
+  /** Dependency package name. */
+  name: string;
+  /** Declared version range. */
+  range: string;
+}
+
+/**
+ * Lists the dependency ranges a package actually installs.
+ *
+ * Only fields that install something are read, because a peer range is a
+ * contract with the consumer rather than an installation.
+ * @param workspacePackage Package to read.
+ * @returns Field, name, and range for each installed dependency.
+ */
+function readInstalledDependencies(workspacePackage: WorkspacePackage): DeclaredDependency[] {
+  return RESOLVED_DEPENDENCY_FIELDS.flatMap((field) => {
     const entries = workspacePackage.manifest[field];
-    if (!isRecord(entries)) {
-      continue;
+    return isRecord(entries)
+      ? Object.entries(entries).flatMap(([name, range]) => (typeof range === "string" ? [{ field, name, range }] : []))
+      : [];
+  });
+}
+
+/**
+ * Finds external dependencies that more than one workspace package installs.
+ *
+ * These are the ones the catalog exists for. A dependency only one package
+ * installs has no second declaration to drift from, so pinning it in place costs
+ * nothing and keeps the catalog to the versions that are actually shared.
+ * @param workspacePackages Every workspace package.
+ * @param workspaceNames Every workspace package name, used to skip internal dependencies.
+ * @returns Names of external dependencies installed by two or more packages.
+ */
+export function findSharedDependencies(
+  workspacePackages: readonly WorkspacePackage[],
+  workspaceNames: ReadonlySet<string>,
+): Set<string> {
+  const consumers = new Map<string, Set<string>>();
+  for (const workspacePackage of workspacePackages) {
+    for (const { name } of readInstalledDependencies(workspacePackage)) {
+      if (workspaceNames.has(name)) {
+        continue;
+      }
+      const known = consumers.get(name) ?? new Set<string>();
+      known.add(workspacePackage.name);
+      consumers.set(name, known);
     }
-    for (const [name, range] of Object.entries(entries)) {
-      if (workspaceNames.has(name) && !(typeof range === "string" && range.startsWith("workspace:"))) {
+  }
+  return new Set(
+    [...consumers.entries()]
+      .filter(([, packageNames]) => packageNames.size >= SHARED_DEPENDENCY_THRESHOLD)
+      .map(([name]) => name),
+  );
+}
+
+/** What the dependency rule needs to know about the rest of the workspace. */
+interface DependencyContext {
+  /** Every workspace package name. */
+  workspaceNames: ReadonlySet<string>;
+  /** External dependencies installed by more than one package. */
+  sharedNames: ReadonlySet<string>;
+  /** One cycle per package that takes part in any. */
+  cyclesByPackage: ReadonlyMap<string, readonly string[]>;
+}
+
+function checkDependencies(workspacePackage: WorkspacePackage, context: DependencyContext): Finding[] {
+  const findings: Finding[] = [];
+  for (const { field, name, range } of readInstalledDependencies(workspacePackage)) {
+    if (context.workspaceNames.has(name)) {
+      if (!range.startsWith(WORKSPACE_RANGE)) {
         findings.push({
           code: "dependencies/workspace-range",
           location: MANIFEST_LOCATION,
@@ -131,17 +202,55 @@ function checkDependencies(workspacePackage: WorkspacePackage, workspaceNames: R
           severity: "warning",
         });
       }
+    } else if (context.sharedNames.has(name) && !range.startsWith(CATALOG_RANGE)) {
+      findings.push({
+        code: "dependencies/catalog",
+        location: MANIFEST_LOCATION,
+        message: `"${field}.${name}" is installed by more than one package and must use "catalog:".`,
+        severity: "error",
+      });
     }
+  }
+
+  const cycle = context.cyclesByPackage.get(workspacePackage.name);
+  if (cycle !== undefined) {
+    findings.push({
+      code: "dependencies/cycle",
+      location: MANIFEST_LOCATION,
+      message: `Workspace dependency cycle: ${[...cycle, cycle[0]].join(" -> ")}.`,
+      severity: "error",
+    });
   }
   return findings;
 }
 
+function mapCyclesByPackage(workspacePackages: readonly WorkspacePackage[]): Map<string, readonly string[]> {
+  const cyclesByPackage = new Map<string, readonly string[]>();
+  for (const cycle of findDependencyCycles(workspacePackages)) {
+    for (const name of cycle) {
+      // A package can sit on several cycles. Naming one is enough to act on, and
+      // breaking it re-runs the check against whatever remains.
+      if (!cyclesByPackage.has(name)) {
+        cyclesByPackage.set(name, cycle);
+      }
+    }
+  }
+  return cyclesByPackage;
+}
+
 /**
  * Creates the rules that check package manifests against the lifecycle spec.
- * @param workspaceNames Every workspace package name, used to spot internal dependencies.
+ * @param workspacePackages Every workspace package, needed by the checks that compare one against the rest.
  * @returns Manifest rules ready for registration.
  */
-export function createManifestRules(workspaceNames: ReadonlySet<string>): CheckRule[] {
+export function createManifestRules(workspacePackages: readonly WorkspacePackage[]): CheckRule[] {
+  const workspaceNames = new Set(workspacePackages.map(({ name }) => name));
+  const dependencyContext: DependencyContext = {
+    cyclesByPackage: mapCyclesByPackage(workspacePackages),
+    sharedNames: findSharedDependencies(workspacePackages, workspaceNames),
+    workspaceNames,
+  };
+
   return [
     {
       appliesTo: (workspacePackage) => !workspacePackage.isPrivate,
@@ -158,8 +267,8 @@ export function createManifestRules(workspaceNames: ReadonlySet<string>): CheckR
     {
       appliesTo: () => true,
       name: "dependencies",
-      run: ({ package: workspacePackage }) => checkDependencies(workspacePackage, workspaceNames),
-      summary: "Workspace-internal dependencies use workspace ranges.",
+      run: ({ package: workspacePackage }) => checkDependencies(workspacePackage, dependencyContext),
+      summary: "Dependencies use workspace and catalog ranges and form no cycles.",
     },
   ];
 }
