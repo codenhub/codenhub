@@ -147,15 +147,22 @@ Do not add dependencies for simple logic that can be maintained in-house.
 
 ## Publishing
 
-Before publishing a public package, run:
+Before publishing a public package, run `pnpm hub release <package>`. It runs
+`pnpm verify` and then reports the preconditions a build and a test run cannot
+answer:
 
-- `pnpm format:check`
-- `pnpm lint:check`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm check --pack`
-- Package `prepublishOnly`
-- Package `status:pack`
+- **version**: the local version is newer than the one already on the registry,
+  or the package has never been published.
+- **worktree**: the package has no uncommitted changes, so the tarball matches a
+  commit.
+- **tarball**: `npm pack --dry-run` includes every file `exports`, `main`,
+  `module`, and `types` point at.
+
+The command writes nothing and publishes nothing. Publishing is irreversible in
+a way no other repository action is — a version can be deprecated but never
+replaced — so the tooling stops at the report and leaves `npm publish` to a
+person. Package `prepublishOnly` still runs the build and typecheck that npm
+requires at publish time.
 
 After publishing a public package, run package `status:npm` to confirm the registry version, dist tags, and package access status. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
 

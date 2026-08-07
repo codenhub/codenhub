@@ -134,7 +134,7 @@ describe("hub new", () => {
     const result = await runNew(["widget", "--description=Widget helpers.", "--dry-run"]);
 
     expect(result.output).toContain("packages/widget/package.json");
-    await expect(readdir(join(result.root, "packages/widget"))).rejects.toThrow();
+    await expect(readdir(join(result.root, "packages/widget"))).rejects.toThrow(/ENOENT/);
   });
 
   it("refuses a name the workspace already uses", async () => {

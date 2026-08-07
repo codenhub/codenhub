@@ -208,6 +208,32 @@ unformatted code through the one check meant to stop it.
 
 `git commit --no-verify` bypasses the hook when a commit has to land unfixed.
 
+## Release preflight
+
+`hub release` reports whether the selected packages could be published. It runs
+`verify` first, then checks the three preconditions a build and a test run
+cannot answer: whether the local version is ahead of the registry, whether the
+package has uncommitted changes, and whether `npm pack --dry-run` includes every
+file the manifest's entry points name.
+
+```sh
+pnpm hub release error
+pnpm hub release --skip-verify
+```
+
+It writes nothing, tags nothing, and publishes nothing. Publishing is
+irreversible in a way no other repository action is — a version can be deprecated
+but never replaced — so the tooling stops at the report and leaves the
+irreversible step to a person.
+
+A precondition that cannot be resolved, such as a tarball npm refused to build,
+is reported as unresolved rather than as ready. A blocker fails the run; an
+unresolved check does not, because "npm is unavailable" is not the same claim as
+"this package must not ship".
+
+`--skip-verify` reports readiness without the verification step, which is what
+you want while fixing one blocker at a time.
+
 ## Cleaning
 
 `hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` from the

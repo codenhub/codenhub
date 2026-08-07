@@ -4,6 +4,7 @@ import type { CommandDefinition } from "./definition.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createNewCommand } from "./new-command.ts";
+import { createReleaseCommand } from "./release-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
 import { createVerifyCommand } from "./verify-command.ts";
@@ -58,6 +59,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     summary: "Count lines of code in the selected paths, or the whole repository.",
   }),
   createVerifyCommand(),
+  createReleaseCommand(),
   createCheckCommand(),
   createGenerateCommand(),
   createCleanCommand(),
