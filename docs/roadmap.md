@@ -19,7 +19,8 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] `hub check`: package lifecycle and documentation compliance
 - [x] `hub generate`: `llms-full.txt` and root README package list
 - [x] Share the `apps/docs` documentation model with `hub`
-- [ ] Organize dependencies, remove unused, ensure all packages are self-contained
+- [x] Organize dependencies, remove unused, ensure all packages are self-contained
+- [x] `hub verify`, `hub clean`, `hub new`, `hub release`, and a pre-commit hook
 
 ### @codenhub/docs
 
