@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-07
+last_updated: 2026-08-09
 scope: repo-wide package progress tracking
 ---
 
@@ -21,10 +21,10 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] Share the `apps/docs` documentation model with `hub`
 - [x] Organize dependencies, remove unused, ensure all packages are self-contained
 - [x] `hub verify`, `hub clean`, `hub new`, `hub release`, and a pre-commit hook
-- [ ] Pin the workspace toolchain so local and CI runs resolve the same Node and pnpm
-- [ ] Separate unit and browser test scripts, with a managed Playwright browser install
-- [ ] Repo-wide CI on pull requests: `pnpm verify --changed` and a generated-file drift gate
-- [ ] Ship license files for every public package and the repository root
+- [x] Pin the workspace toolchain so local and CI runs resolve the same Node and pnpm
+- [x] Separate unit and browser test scripts, with a managed Playwright browser install
+- [x] Repo-wide CI on pull requests: `pnpm verify --changed` and a generated-file drift gate
+- [x] Ship license files for every public package and the repository root
 
 ### @codenhub/docs
 
@@ -109,6 +109,8 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ## Notes & exclusions
 
+- `docs/ci.md` is the entrypoint for the pinned toolchain and what runs on a pull
+  request. Delivery work below builds on it rather than adding a second workflow model.
 - Unlisted packages (`router`, `store`, `theme`, `plugins`, `ui-kit`) are currently internal, WIP, deprecated, or evaluated separately.
 - Continuous delivery is deferred until package adoption justifies it. `hub release` already
   covers the publish preflight, and trusted publishing only pays off once publishing runs from

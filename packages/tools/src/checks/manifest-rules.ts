@@ -1,8 +1,12 @@
+import { stat } from "node:fs/promises";
+import { join } from "node:path";
+
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
+const LICENSE_LOCATION = "LICENSE";
 const REQUIRED_STRING_FIELDS = ["name", "version", "main", "module", "types"];
 const REQUIRED_SCRIPTS = [
   "build",
@@ -15,7 +19,19 @@ const REQUIRED_SCRIPTS = [
   "status:pack",
 ];
 const UNCHAINED_SCRIPTS = ["test", "test:coverage", "test:watch", "typecheck", "status:pack"];
+const UNIT_TEST_SCRIPTS = ["test", "test:coverage", "test:watch"];
+const BROWSER_TEST_SCRIPTS = ["test:browser", "test:browser:watch"];
+const PLAYWRIGHT_CONFIGS = [
+  "playwright.config.ts",
+  "playwright.config.mts",
+  "playwright.config.js",
+  "playwright.config.mjs",
+];
 const RECOMMENDED_FIELDS = ["description", "license", "repository"];
+// A browser suite reached from a unit script is what makes `pnpm test` slow, so
+// both ways of reaching it are read: the runner directly and the script that owns it.
+const PLAYWRIGHT_INVOCATION = /\bplaywright\b/;
+const BROWSER_SCRIPT_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?test:browser(?![\w:-])/;
 // The negative lookahead keeps `pnpm build:styles` from reading as a chained
 // `pnpm build`; only the umbrella script is the one root tooling already runs.
 const BUILD_INVOCATION = /\b(?:pnpm|npm|yarn)\s+(?:run\s+)?build(?![\w:-])/;
@@ -26,7 +42,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function checkMetadata(workspacePackage: WorkspacePackage): Finding[] {
+async function hasFile(workspacePackage: WorkspacePackage, name: string): Promise<boolean> {
+  try {
+    return (await stat(join(workspacePackage.directory, name))).isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Finding[]> {
   const manifest = workspacePackage.manifest;
   const findings: Finding[] = [];
   const fail = (code: string, message: string): void => {
@@ -68,6 +92,16 @@ function checkMetadata(workspacePackage: WorkspacePackage): Finding[] {
         severity: "warning",
       });
     }
+  }
+  // A `license` field names the terms; the file is what a consumer receives, and
+  // npm packs it whether or not `files` lists it.
+  if (!(await hasFile(workspacePackage, LICENSE_LOCATION))) {
+    findings.push({
+      code: "metadata/license-file",
+      location: LICENSE_LOCATION,
+      message: `Should ship a LICENSE file alongside the "license" field.`,
+      severity: "warning",
+    });
   }
   return findings;
 }
@@ -112,6 +146,52 @@ function checkScripts(workspacePackage: WorkspacePackage): Finding[] {
   return findings;
 }
 
+async function hasPlaywrightConfig(workspacePackage: WorkspacePackage): Promise<boolean> {
+  const found = await Promise.all(PLAYWRIGHT_CONFIGS.map(async (config) => hasFile(workspacePackage, config)));
+  return found.includes(true);
+}
+
+/**
+ * Checks that a browser suite is reachable on its own and only on its own.
+ *
+ * The split exists so `pnpm test` stays a fast unit loop that needs no browser,
+ * which only holds while the browser suite has its own script and no unit script
+ * reaches it.
+ * @param workspacePackage Package to inspect.
+ * @returns Findings for a missing or wrongly reached browser suite.
+ */
+async function checkBrowserScripts(workspacePackage: WorkspacePackage): Promise<Finding[]> {
+  const scripts = workspacePackage.scripts;
+  const findings: Finding[] = [];
+
+  for (const name of UNIT_TEST_SCRIPTS) {
+    const script = scripts[name];
+    if (script !== undefined && (PLAYWRIGHT_INVOCATION.test(script) || BROWSER_SCRIPT_INVOCATION.test(script))) {
+      findings.push({
+        code: "scripts/browser-chain",
+        location: MANIFEST_LOCATION,
+        message: `"${name}" must not run browser tests; they belong in "test:browser" so a unit run needs no browser.`,
+        severity: "error",
+      });
+    }
+  }
+
+  if (!(await hasPlaywrightConfig(workspacePackage))) {
+    return findings;
+  }
+  for (const name of BROWSER_TEST_SCRIPTS) {
+    if (scripts[name] === undefined) {
+      findings.push({
+        code: name === "test:browser" ? "scripts/test-browser" : "scripts/test-browser-watch",
+        location: MANIFEST_LOCATION,
+        message: `Declares a Playwright config, so it ${name === "test:browser" ? "must" : "should"} define "${name}".`,
+        severity: name === "test:browser" ? "error" : "warning",
+      });
+    }
+  }
+  return findings;
+}
+
 /**
  * Creates the rules that check package manifests against the lifecycle spec.
  * @returns Manifest rules ready for registration.
@@ -121,14 +201,17 @@ export function createManifestRules(): CheckRule[] {
     {
       appliesTo: (workspacePackage) => !workspacePackage.isPrivate,
       name: "metadata",
-      run: ({ package: workspacePackage }) => checkMetadata(workspacePackage),
+      run: async ({ package: workspacePackage }) => checkMetadata(workspacePackage),
       summary: "Published packages declare the required manifest metadata.",
     },
     {
       appliesTo: () => true,
       name: "scripts",
-      run: ({ package: workspacePackage }) => checkScripts(workspacePackage),
-      summary: "Package scripts exist, stay unchained, and keep publishing self-contained.",
+      run: async ({ package: workspacePackage }) => [
+        ...checkScripts(workspacePackage),
+        ...(await checkBrowserScripts(workspacePackage)),
+      ],
+      summary: "Package scripts exist, stay unchained, and keep browser tests out of the unit loop.",
     },
   ];
 }

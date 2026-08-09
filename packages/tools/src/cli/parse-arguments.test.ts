@@ -51,6 +51,22 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "--no-build"]).options.shouldBuild).toBe(false);
   });
 
+  it("shouldBuildWorkspaceDependenciesByDefault", () => {
+    expect(parseArguments(["test"]).options.shouldBuildDependencies).toBe(true);
+    expect(parseArguments(["test", "--no-deps"]).options.shouldBuildDependencies).toBe(false);
+    expect(parseArguments(["test", "--no-deps", "--deps"]).options.shouldBuildDependencies).toBe(true);
+  });
+
+  it("shouldReadSkippedStepsAsAList", () => {
+    const parsed = parseArguments(["verify", "--skip=test:browser, test"]);
+
+    expect(parsed.options.skippedSteps).toEqual(["test:browser", "test"]);
+  });
+
+  it("shouldRejectASkipWithoutAStepName", () => {
+    expect(() => parseArguments(["verify", "--skip"])).toThrow(/one or more step names/);
+  });
+
   it("shouldRejectNonPositiveNumericOptions", () => {
     expect(() => parseArguments(["test", "--timeout=0"])).toThrow(/positive number/);
     expect(() => parseArguments(["test", "--parallel=abc"])).toThrow(/positive number/);

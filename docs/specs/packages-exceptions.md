@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-06
+last_updated: 2026-08-09
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -51,8 +51,9 @@ entry once the package no longer needs it.
   `packages/styles/package.json`.
 - **Why acceptable:** The package contains only CSS, so JavaScript or TypeScript
   instrumentation cannot produce meaningful code coverage. The script runs the
-  package's actual type, build, and cross-browser visual/computed-style tests
-  instead of reporting a false success or generating an irrelevant report.
+  package's real integration tests instead of reporting a false success or
+  generating an irrelevant report, and its cross-browser visual and
+  computed-style tests run under `pnpm test:browser`.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.
 
 ## `@codenhub/error`: built-in opt-in registry presets

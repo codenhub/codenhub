@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-06
+last_updated: 2026-08-09
 scope: Public workspace packages.
 ---
 
@@ -41,26 +41,37 @@ Public package `package.json` files MUST include:
 
 Public package metadata SHOULD include `description`, `license`, and repository links when package publishing is ready.
 
+Public packages SHOULD also ship a `LICENSE` file at the package root, carrying
+the terms the `license` field names. The field states the terms; the file is what
+a consumer receives, and npm packs it whether or not `files` lists it. The
+repository root ships the same file for the repository itself.
+
 ## Required scripts
 
 Public packages MUST define:
 
 - `build`: produces publishable output.
 - `typecheck`: runs TypeScript without emitting.
-- `test`: runs tests once.
-- `test:coverage`: runs tests once and outputs a coverage report, as required by
-  `docs/specs/tests.md`.
-- `test:watch`: runs tests in watch mode.
+- `test`: runs unit and integration tests once, and nothing that needs a browser.
+- `test:coverage`: runs those tests once and outputs a coverage report, as required
+  by `docs/specs/tests.md`.
+- `test:watch`: runs those tests in watch mode.
 - `prepublishOnly`: runs at least `pnpm build && pnpm typecheck`.
 - `status:npm`: checks published registry metadata, dist tags, and access status for the package.
 - `status:pack`: checks publishable package contents with
   `npm pack --dry-run --ignore-scripts`. Ignoring scripts is required so the dry
   run does not trigger `prepublishOnly` and build the package a second time.
 
+Packages with a browser suite MUST also define `test:browser`, and SHOULD define
+`test:browser:watch`, as required by `docs/specs/tests.md`. Those scripts run
+Playwright directly and MUST NOT install browsers; `hub test:browser` does that
+first, as defined by `docs/tooling.md`.
+
 Packages MAY omit `test`, `test:coverage`, and `test:watch` only when they contain no executable code and the exception is documented.
 
 Package scripts MUST invoke their own tool directly and MUST NOT chain a build
-step into `test`, `test:coverage`, `test:watch`, `typecheck`, or `status:pack`.
+step into `test`, `test:browser`, `test:browser:watch`, `test:coverage`,
+`test:watch`, `typecheck`, or `status:pack`.
 Root tooling runs the build first, as defined by `docs/tooling.md`; chaining it
 again would build twice. `prepublishOnly` is exempt because npm runs it outside
 that tooling and it MUST remain self-contained.
@@ -77,6 +88,7 @@ Root workspace scripts MUST keep supporting:
 - `pnpm status:npm`
 - `pnpm status:pack`
 - `pnpm test`
+- `pnpm test:browser`
 - `pnpm test:coverage`
 - `pnpm test:watch`
 - `pnpm typecheck`

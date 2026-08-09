@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-22
+last_updated: 2026-08-09
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -82,16 +82,28 @@ Default package checks:
 
 ```json
 {
-  "test": "pnpm typecheck && pnpm test:integration && pnpm test:visual:run",
+  "test": "vitest run",
+  "test:browser": "playwright test",
+  "test:browser:watch": "playwright test --ui",
   "test:coverage": "pnpm test",
-  "test:integration": "vitest run",
-  "test:visual": "pnpm build && pnpm test:visual:run",
-  "test:visual:run": "playwright test",
-  "test:visual:watch": "playwright test --ui",
   "test:watch": "vitest --watch",
   "dev": "pnpm --filter=@codenhub/styles-dev dev",
   "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev"
 }
 ```
 
-Because this package has no instrumentable JavaScript or TypeScript, `test:coverage` runs the real package test suite without producing a coverage report. This permanent package exception is recorded in `docs/specs/packages-exceptions.md`.
+`test` covers `tests/integration/` only, and the browser suite runs under
+`test:browser`, which `docs/specs/tests.md` requires so a unit run needs no
+browser. Run both from the repository root:
+
+```sh
+pnpm test styles
+pnpm test:browser styles
+pnpm test:browser:watch styles
+```
+
+`pnpm test:browser` installs the browsers it needs first, and building the
+package before the browser run is the root tooling's job rather than a step
+chained into these scripts.
+
+Because this package has no instrumentable JavaScript or TypeScript, `test:coverage` runs the real integration suite without producing a coverage report. This permanent package exception is recorded in `docs/specs/packages-exceptions.md`.

@@ -17,8 +17,16 @@ export interface CliOptions {
   shouldBail: boolean;
   /** Whether prerequisite build steps run before a script. */
   shouldBuild: boolean;
-  /** Whether prerequisite builds also cover workspace dependencies. */
+  /**
+   * Whether prerequisite builds also cover workspace dependencies.
+   *
+   * On by default: a package that imports another package type-checks against
+   * its built declarations, so skipping them passes on a tree that happens to
+   * hold stale output and fails on a fresh clone.
+   */
   shouldBuildDependencies: boolean;
+  /** Verification steps left out of the run. */
+  skippedSteps: readonly string[];
   /** Milliseconds before a package run is killed, or `undefined` to wait indefinitely. */
   timeoutMs?: number;
   /** Whether commands print what they would run instead of running it. */
@@ -55,8 +63,9 @@ function createDefaultOptions(): CliOptions {
     isDryRun: false,
     shouldBail: false,
     shouldBuild: true,
-    shouldBuildDependencies: false,
+    shouldBuildDependencies: true,
     shouldFix: false,
+    skippedSteps: [],
     timeoutMs: DEFAULT_TIMEOUT_SECONDS * 1000,
     useChangedFilter: false,
     wantsHelp: false,
@@ -101,6 +110,21 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "deps": {
       options.shouldBuildDependencies = true;
+      return true;
+    }
+    case "no-deps": {
+      options.shouldBuildDependencies = false;
+      return true;
+    }
+    case "skip": {
+      const steps = (value ?? "")
+        .split(",")
+        .map((step) => step.trim())
+        .filter((step) => step !== "");
+      if (steps.length === 0) {
+        throw new Error(`Invalid value for --skip: expected one or more step names, received "${value ?? ""}".`);
+      }
+      options.skippedSteps = [...options.skippedSteps, ...steps];
       return true;
     }
     case "timeout": {

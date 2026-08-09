@@ -17,6 +17,8 @@ coverage
 **/coverage
 test-results
 **/test-results
+playwright-report
+**/playwright-report
 **/tests/**/output.css
 
 # AI agents

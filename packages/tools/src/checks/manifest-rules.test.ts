@@ -1,3 +1,7 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -32,6 +36,20 @@ const COMPLIANT_SCRIPTS = {
   typecheck: "tsc --noEmit",
 };
 
+/**
+ * Creates a package directory on disk.
+ *
+ * Two rules read files rather than the manifest — the license file and the
+ * Playwright config — so a fixture needs a real directory to be read from.
+ * @param files Package-relative file names to create.
+ * @returns Absolute package directory.
+ */
+async function createPackageDirectory(files: readonly string[] = ["LICENSE"]): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "codenhub-manifest-"));
+  await Promise.all(files.map(async (file) => writeFile(join(directory, file), "")));
+  return directory;
+}
+
 function createPackage(overrides: Partial<WorkspacePackage> = {}): WorkspacePackage {
   const manifest = { ...COMPLIANT_MANIFEST, scripts: COMPLIANT_SCRIPTS, ...overrides.manifest };
   return {
@@ -48,23 +66,28 @@ function createPackage(overrides: Partial<WorkspacePackage> = {}): WorkspacePack
   };
 }
 
-function runRules(workspacePackage: WorkspacePackage): Finding[] {
-  return createManifestRules()
-    .filter((rule) => rule.appliesTo(workspacePackage))
-    .flatMap((rule) => rule.run({ includePack: false, package: workspacePackage }) as Finding[]);
+async function runRules(workspacePackage: WorkspacePackage): Promise<Finding[]> {
+  const applicable = createManifestRules().filter((rule) => rule.appliesTo(workspacePackage));
+  const findings = await Promise.all(
+    applicable.map(async (rule) => rule.run({ includePack: false, package: workspacePackage })),
+  );
+  return findings.flat();
 }
 
 describe("manifest rules", () => {
-  it("shouldAcceptACompliantPublishedPackage", () => {
-    expect(runRules(createPackage())).toEqual([]);
+  it("shouldAcceptACompliantPublishedPackage", async () => {
+    const directory = await createPackageDirectory();
+
+    await expect(runRules(createPackage({ directory }))).resolves.toEqual([]);
   });
 
-  it("shouldReportEveryMissingRequiredMetadataField", () => {
+  it("shouldReportEveryMissingRequiredMetadataField", async () => {
     const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
       manifest: { name: "@fixture/example", scripts: COMPLIANT_SCRIPTS },
     });
 
-    expect(runRules(workspacePackage).map(({ code }) => code)).toEqual([
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual([
       "metadata/version",
       "metadata/main",
       "metadata/module",
@@ -81,56 +104,138 @@ describe("manifest rules", () => {
     ]);
   });
 
-  it("shouldTreatRecommendedFieldsAsWarnings", () => {
+  it("shouldTreatRecommendedFieldsAsWarnings", async () => {
     const manifest = { ...COMPLIANT_MANIFEST, scripts: COMPLIANT_SCRIPTS, license: undefined };
-    const findings = runRules(createPackage({ manifest }));
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
 
     expect(findings).toEqual([
       { code: "metadata/license", location: "package.json", message: `Should declare "license".`, severity: "warning" },
     ]);
   });
 
-  it("shouldRequirePrivateToBeDeclaredAsFalse", () => {
+  it("shouldReportAMissingLicenseFileAsAWarning", async () => {
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory([]) }));
+
+    expect(findings).toEqual([
+      {
+        code: "metadata/license-file",
+        location: "LICENSE",
+        message: `Should ship a LICENSE file alongside the "license" field.`,
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("shouldRequirePrivateToBeDeclaredAsFalse", async () => {
     const manifest = { ...COMPLIANT_MANIFEST, private: undefined, scripts: COMPLIANT_SCRIPTS };
+    const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));
 
-    expect(runRules(createPackage({ manifest })).map(({ code }) => code)).toEqual(["metadata/private"]);
+    expect(findings.map(({ code }) => code)).toEqual(["metadata/private"]);
   });
 
-  it("shouldRequireACoverageScript", () => {
+  it("shouldRequireACoverageScript", async () => {
     const scripts = { ...COMPLIANT_SCRIPTS, "test:coverage": undefined };
-    const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
 
-    expect(findings.map(({ code }) => code)).toEqual(["scripts/test:coverage"]);
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/test:coverage"]);
   });
 
-  it("shouldRejectAScriptThatChainsABuild", () => {
+  it("shouldRejectAScriptThatChainsABuild", async () => {
     const scripts = { ...COMPLIANT_SCRIPTS, test: "pnpm build && vitest run" };
-    const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
 
-    expect(findings.map(({ code }) => code)).toEqual(["scripts/build-chain"]);
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/build-chain"]);
   });
 
-  it("shouldCheckTheBuildChainRuleForPrivatePackagesToo", () => {
+  it("shouldCheckTheBuildChainRuleForPrivatePackagesToo", async () => {
     const scripts = { typecheck: "pnpm run build && tsc --noEmit" };
-    const findings = runRules(createPackage({ isPrivate: true, manifest: { name: "@fixture/private", scripts } }));
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      isPrivate: true,
+      manifest: { name: "@fixture/private", scripts },
+    });
 
-    expect(findings.map(({ code }) => code)).toEqual(["scripts/build-chain"]);
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/build-chain"]);
   });
 
-  it("shouldNotReadANamespacedBuildScriptAsAChainedBuild", () => {
+  it("shouldNotReadANamespacedBuildScriptAsAChainedBuild", async () => {
     const scripts = { ...COMPLIANT_SCRIPTS, test: "pnpm build:fixtures && vitest run" };
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
 
-    expect(runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }))).toEqual([]);
+    await expect(runRules(workspacePackage)).resolves.toEqual([]);
   });
 
-  it("shouldRequirePrepublishOnlyToStaySelfContained", () => {
+  it("shouldRequirePrepublishOnlyToStaySelfContained", async () => {
     const scripts = { ...COMPLIANT_SCRIPTS, prepublishOnly: "pnpm typecheck" };
-    const findings = runRules(createPackage({ manifest: { ...COMPLIANT_MANIFEST, scripts } }));
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
 
-    expect(findings.map(({ code }) => code)).toEqual(["scripts/prepublish-only"]);
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/prepublish-only"]);
   });
 
-  it("shouldNotRequirePublishedMetadataFromPrivatePackages", () => {
-    expect(runRules(createPackage({ isPrivate: true, manifest: { name: "@fixture/private" } }))).toEqual([]);
+  it("shouldRejectAUnitScriptThatRunsBrowserTests", async () => {
+    const scripts = { ...COMPLIANT_SCRIPTS, test: "vitest run && playwright test" };
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
+
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/browser-chain"]);
+  });
+
+  it("shouldRejectAUnitScriptThatDelegatesToTheBrowserScript", async () => {
+    const scripts = { ...COMPLIANT_SCRIPTS, test: "vitest run && pnpm test:browser" };
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
+
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["scripts/browser-chain"]);
+  });
+
+  it("shouldRequireABrowserScriptWhenAPlaywrightConfigExists", async () => {
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(["LICENSE", "playwright.config.ts"]),
+    });
+
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual([
+      "scripts/test-browser",
+      "scripts/test-browser-watch",
+    ]);
+  });
+
+  it("shouldAcceptAPackageThatSplitsItsBrowserSuiteOut", async () => {
+    const scripts = {
+      ...COMPLIANT_SCRIPTS,
+      "test:browser": "playwright test",
+      "test:browser:watch": "playwright test --ui",
+    };
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(["LICENSE", "playwright.config.ts"]),
+      manifest: { ...COMPLIANT_MANIFEST, scripts },
+    });
+
+    await expect(runRules(workspacePackage)).resolves.toEqual([]);
+  });
+
+  it("shouldNotRequirePublishedMetadataFromPrivatePackages", async () => {
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: { name: "@fixture/private" },
+    });
+
+    await expect(runRules(workspacePackage)).resolves.toEqual([]);
   });
 });

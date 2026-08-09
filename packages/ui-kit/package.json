@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "private": false,
   "description": "Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/ui-kit",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/ui-kit"
+  },
   "files": [
     "dist",
     "README.md",

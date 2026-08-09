@@ -7,8 +7,10 @@ import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition
  * Formatting and linting come first because they are the cheapest and the most
  * likely to fail on a fresh change, and `check` comes last because a compliance
  * report is only worth reading once the code it describes compiles and passes.
+ * Browser tests follow the unit tests for the same reason: they are the slowest
+ * step, and a unit failure answers the same question far sooner.
  */
-const VERIFY_STEPS: readonly string[] = ["format", "lint", "typecheck", "test", "check"];
+const VERIFY_STEPS: readonly string[] = ["format", "lint", "typecheck", "test", "test:browser", "check"];
 
 interface StepOutcome {
   name: string;
@@ -19,11 +21,15 @@ interface StepOutcome {
 /** Resolves a step name to the command that runs it, injected by tests. */
 export type CommandResolver = (name: string) => CommandDefinition;
 
-async function runSteps(context: CommandContext, resolveCommand: CommandResolver): Promise<StepOutcome[]> {
+async function runSteps(
+  context: CommandContext,
+  resolveCommand: CommandResolver,
+  steps: readonly string[],
+): Promise<StepOutcome[]> {
   const outcomes: StepOutcome[] = [];
 
   async function runFrom(index: number): Promise<void> {
-    const name = VERIFY_STEPS[index];
+    const name = steps[index];
     if (name === undefined) {
       return;
     }
@@ -68,19 +74,31 @@ export function createVerifyCommand(resolver?: CommandResolver): CommandDefiniti
       // Importing the registry at module scope would make the two files import
       // each other, and the registry builds its command list while it loads.
       const resolveCommand = resolver ?? (await import("./registry.ts")).resolveCommand;
-      const outcomes = await runSteps(context, resolveCommand);
-      const skipped = VERIFY_STEPS.slice(outcomes.length).map<SummaryRow>((name) => ({
+      const requested = context.options.skippedSteps;
+      for (const name of requested.filter((name) => !VERIFY_STEPS.includes(name))) {
+        context.reporter.warn(`\`--skip=${name}\` names no verification step; steps are ${VERIFY_STEPS.join(", ")}.`);
+      }
+      const steps = VERIFY_STEPS.filter((name) => !requested.includes(name));
+      const outcomes = await runSteps(context, resolveCommand, steps);
+      const unreached = steps.slice(outcomes.length).map<SummaryRow>((name) => ({
         detail: "not reached",
+        label: name,
+        status: "skipped",
+      }));
+      // A step left out by request is still listed, so the summary never reads as
+      // a full verification when it was not one.
+      const excluded = VERIFY_STEPS.filter((name) => requested.includes(name)).map<SummaryRow>((name) => ({
+        detail: "skipped by --skip",
         label: name,
         status: "skipped",
       }));
 
       context.reporter.blank();
       context.reporter.step("verify");
-      context.reporter.summarize([...outcomes.map(toSummaryRow), ...skipped]);
+      context.reporter.summarize([...outcomes.map(toSummaryRow), ...unreached, ...excluded]);
       return outcomes.some(({ exitCode }) => exitCode !== EXIT_SUCCESS) ? EXIT_FAILURE : EXIT_SUCCESS;
     },
-    summary: "Run formatting, linting, type checking, tests, and compliance checks.",
-    usage: "hub verify [targets...] [options]",
+    summary: "Run formatting, linting, type checking, tests, browser tests, and compliance checks.",
+    usage: "hub verify [targets...] [--skip=<step>] [options]",
   };
 }

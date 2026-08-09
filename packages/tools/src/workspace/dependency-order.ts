@@ -40,9 +40,15 @@ export function orderByDependencies(packages: readonly WorkspacePackage[]): Work
 
 /**
  * Expands packages to include their transitive workspace dependencies.
+ *
+ * Packages nested inside a selected one are expanded too, along with what they
+ * depend on. A `dev` or `debug` environment is its own workspace package under the
+ * package it serves, as `docs/specs/packages-development.md` defines it, and a
+ * browser test run starts those servers — so their dependencies have to be built
+ * even though the package under test never imports them.
  * @param packages Packages to expand.
  * @param workspace Every known workspace package.
- * @returns Selected packages plus their workspace dependencies, in dependency-first order.
+ * @returns Selected packages plus everything they need built, in dependency-first order.
  */
 export function withWorkspaceDependencies(
   packages: readonly WorkspacePackage[],
@@ -61,6 +67,11 @@ export function withWorkspaceDependencies(
       if (dependency !== undefined) {
         collect(dependency);
       }
+    }
+    for (const nested of workspace.filter((candidate) =>
+      candidate.location.startsWith(`${workspacePackage.location}/`),
+    )) {
+      collect(nested);
     }
   }
 

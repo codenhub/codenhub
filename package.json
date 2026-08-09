@@ -21,6 +21,8 @@
     "status:npm": "hub status:npm",
     "status:pack": "hub status:pack",
     "test": "hub test",
+    "test:browser": "hub test:browser",
+    "test:browser:watch": "hub test:browser:watch",
     "test:coverage": "hub test:coverage",
     "test:watch": "hub test:watch",
     "typecheck": "hub typecheck",
@@ -34,5 +36,10 @@
     "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "engines": {
+    "node": ">=24.14.1 <25",
+    "pnpm": ">=11.7.0"
+  },
+  "packageManager": "pnpm@11.7.0"
 }

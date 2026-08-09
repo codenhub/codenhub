@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-06
+last_updated: 2026-08-09
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -29,6 +29,10 @@ hub <command> [targets...] [options] [-- tool arguments]
 the repository root by walking up to `pnpm-workspace.yaml`, so it behaves the same
 from any directory.
 
+The Node and pnpm versions it runs under are pinned by `engines`,
+`packageManager`, and `.nvmrc`, and an install outside that range fails rather
+than warns. `docs/ci.md` explains where each version is declared.
+
 Root scripts map directly onto it:
 
 | Root script          | Command             |
@@ -47,10 +51,15 @@ Root scripts map directly onto it:
 | `pnpm status:npm`    | `hub status:npm`    |
 | `pnpm status:pack`   | `hub status:pack`   |
 | `pnpm test`          | `hub test`          |
+| `pnpm test:browser`  | `hub test:browser`  |
 | `pnpm test:coverage` | `hub test:coverage` |
 | `pnpm test:watch`    | `hub test:watch`    |
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
+
+`hub browsers`, `hub new`, and `hub release` have no root script of their own.
+They are occasional commands rather than part of a change loop, and they read as
+what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
@@ -86,8 +95,8 @@ selector that matches several packages at the same rank fails and lists the
 candidates instead of guessing; an unrecognized selector fails with suggestions.
 
 Only file paths are forwarded to the underlying tool, and only for commands that
-accept them (`test`, `test:coverage`, `test:watch`). Other commands treat a path
-as a way to name its package.
+accept them (`test`, `test:browser`, `test:browser:watch`, `test:coverage`,
+`test:watch`). Other commands treat a path as a way to name its package.
 
 `--changed` narrows an explicit selection and replaces an empty one, so
 `hub test --changed` runs changed packages and `hub test error --changed` runs
@@ -101,13 +110,23 @@ change that touched package metadata.
 
 ## Execution order
 
-`hub` owns build ordering. `test`, `test:coverage`, `test:watch`, `typecheck`,
-and `status:pack` build their packages first, which is why package manifests MUST
-NOT chain `pnpm build &&` into those scripts. Chaining it again would double every
-build.
+`hub` owns build ordering. `test`, `test:browser`, `test:browser:watch`,
+`test:coverage`, `test:watch`, `typecheck`, and `status:pack` build their packages
+first, which is why package manifests MUST NOT chain `pnpm build &&` into those
+scripts. Chaining it again would double every build.
 
-Prerequisite builds cover the selected packages only. Pass `--deps` to include
-their workspace dependencies, or `--no-build` to skip the step entirely.
+Prerequisite builds cover the selected packages and their workspace
+dependencies. Depending on a package means type-checking against its built
+declarations, so a run that skipped them would pass on a tree holding stale
+output and fail on a fresh clone — which is exactly the failure CI reports and a
+laptop hides. `--no-deps` narrows the build to the selected packages when their
+dependencies are known to be built, and `--no-build` skips the step entirely.
+`--deps` is still accepted and now asks for the default.
+
+The expansion includes the `dev` and `debug` environments nested inside a selected
+package, and what they depend on. Those are workspace packages of their own, and a
+browser test run starts their servers, so `hub test:browser theme` has to build the
+plugin `theme/dev` imports even though `theme` itself never does.
 
 `prepublishOnly` is exempt: npm runs it outside `hub`, so it MUST remain
 self-contained.
@@ -120,7 +139,8 @@ self-contained.
 | `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one.  |
 | `--bail`              | Stop after the first failing package.                                 |
 | `--no-build`          | Skip prerequisite builds.                                             |
-| `--deps`              | Include workspace dependencies in prerequisite builds.                |
+| `--no-deps`           | Build only the selected packages, not their workspace dependencies.   |
+| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                       |
 | `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                |
 | `--no-timeout`        | Never kill a package run.                                             |
 | `--dry-run`           | Print the commands that would run.                                    |
@@ -141,6 +161,35 @@ hanging browser-test worker from blocking a whole workspace run.
 `lint`, `format`, and `cloc` run their tool once from the repository root with
 resolved paths rather than once per package. Selecting nothing falls back to the
 whole repository, which is why `pnpm cloc` needs no argument.
+
+## Browser tests
+
+`hub test` runs unit tests only. Browser suites live behind `hub test:browser`,
+and `hub test:browser:watch` opens Playwright's UI mode for one package. The split
+is what keeps the common command fast: `pnpm test error` needs no browser, no
+server, and no download, while `pnpm test:browser styles` still runs the real
+thing. `docs/specs/tests.md` owns the rule; `hub check` enforces it, because a
+`test` script that reaches a browser suite quietly makes every unit run slow again.
+
+Browsers are installed by the tooling rather than by each contributor:
+
+```sh
+pnpm hub browsers
+pnpm hub browsers styles
+pnpm hub browsers --with-deps
+```
+
+`hub test:browser` and `hub test:browser:watch` run that install themselves before
+the tests, so a browser test cannot fail on a machine that simply never downloaded
+a browser. Playwright verifies its own cache in well under a second, which is why
+the step runs every time instead of being guarded by a marker file that would
+claim browsers are present after someone cleared the cache.
+
+A package opts in by declaring `@playwright/test`. Browsers are cached per
+Playwright version outside the repository, so packages on the same version share
+one install, and the command only downloads once for all of them. Extra arguments
+reach Playwright, which is how CI asks for the system libraries a headless browser
+needs on a runner with `--with-deps`.
 
 ## Creating a package
 
@@ -163,9 +212,9 @@ update the README notice at the same time.
 
 Two things the scaffold deliberately leaves out. It writes no `LICENSE`, because
 a license file is a legal artifact rather than boilerplate — the manifest
-declares Apache-2.0 and the command says to add the file. And it never writes
-into a directory that already exists, because overwriting a package would
-destroy work no check could recover.
+declares Apache-2.0, the command says to add the file, and `hub check` warns
+until it exists. And it never writes into a directory that already exists,
+because overwriting a package would destroy work no check could recover.
 
 `hub new` is the one command that does not resolve its argument to an existing
 package. Selectors are resolved before a command runs, which cannot work for a
@@ -173,12 +222,22 @@ name the workspace does not contain yet, so it reads the raw tokens instead.
 
 ## Verification
 
-`hub verify` runs `format`, `lint`, `typecheck`, `test`, and `check` in that
-order and stops at the first failure. The order is by cost: the cheapest step
-that is most likely to fail on a fresh change runs first, and a compliance report
-is only worth reading once the code it describes compiles and passes. Steps that
-never ran are reported as skipped rather than omitted, so the summary always
-accounts for all five.
+`hub verify` runs `format`, `lint`, `typecheck`, `test`, `test:browser`, and
+`check` in that order and stops at the first failure. The order is by cost: the
+cheapest step that is most likely to fail on a fresh change runs first, browser
+tests follow the unit tests because a unit failure answers the same question far
+sooner, and a compliance report is only worth reading once the code it describes
+compiles and passes. Steps that never ran are reported as skipped rather than
+omitted, so the summary always accounts for all six.
+
+`--skip=<steps>` leaves steps out, and they are still listed in the summary so a
+partial run never reads as a full one. CI uses it to hand the browser step to the
+job that owns it:
+
+```sh
+pnpm verify --skip=test:browser
+pnpm verify --skip=test:browser,check error
+```
 
 Tool arguments are not forwarded, because the steps run different executables and
 no argument could mean the same thing to all of them. Selection and every other
@@ -254,15 +313,15 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings
 fail the run; `warning` covers SHOULD-level rules such as the recommended
 `license` and `repository` metadata. `pnpm check --json` prints the codes.
 
-| Rule            | Checks                                                                        |
-| --------------- | ----------------------------------------------------------------------------- |
-| `metadata`      | Required and recommended manifest fields of published packages.               |
-| `scripts`       | Required scripts, a self-contained `prepublishOnly`, and no chained builds.   |
-| `dependencies`  | Declared where used, in the right field, with catalog ranges and no cycles.   |
-| `exports`       | Import paths shown in the README and public docs are declared in `exports`.   |
-| `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness. |
-| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                      |
-| `readme`        | README status notices agree with `codenhub.docs.status`.                      |
+| Rule            | Checks                                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `metadata`      | Required and recommended manifest fields, and the LICENSE file, of published packages.                                  |
+| `scripts`       | Required scripts, a self-contained `prepublishOnly`, no chained builds, and browser tests kept out of the unit scripts. |
+| `dependencies`  | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
+| `exports`       | Import paths shown in the README and public docs are declared in `exports`.                                             |
+| `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
+| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                                                                |
+| `readme`        | README status notices agree with `codenhub.docs.status`.                                                                |
 
 The `exports` rule reads import statements, not prose: naming a path in a
 sentence is not a promise that it resolves, but showing it in an `import` is.
@@ -347,7 +406,7 @@ summary a generator cannot write; `hub check` validates it like any other
 documentation surface.
 
 `hub generate --dry-run` lists the files that are out of date and exits non-zero,
-which is what a CI job should run.
+which is what the drift gate in `docs/ci.md` runs.
 
 ## Adding a command
 
