@@ -72,6 +72,12 @@ contributor uses, and adds `--with-deps` for the system libraries a runner lacks
 Playwright artifacts are uploaded only when the job fails, which is the only time
 anyone reads them.
 
+The gate also catches what an install itself writes. A tracked `bin` target has to
+be committed with its executable bit: pnpm chmods the file it links, so a mode
+that disagrees with the index shows up as a modified working tree on Linux and
+nowhere on Windows. `packages/tools/src/cli.ts` is tracked `100755` for that
+reason.
+
 `drift` is a gate rather than a fix: `hub generate --dry-run` lists the files that
 no longer match the READMEs, package docs, and manifests they are derived from and
 exits non-zero without writing any of them. The `git diff --exit-code` step after
