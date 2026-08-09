@@ -6,7 +6,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--parallel[=<n>]", "Run up to <n> packages at the same time (default all)."],
   ["--bail", "Stop after the first failing package."],
   ["--no-build", "Skip prerequisite build steps."],
-  ["--deps", "Include workspace dependencies in prerequisite builds."],
+  ["--no-deps", "Build only the selected packages, not their workspace dependencies."],
   ["--timeout=<seconds>", "Kill a package run after <seconds> (default 600)."],
   ["--no-timeout", "Never kill a package run."],
   ["--skip=<steps>", "Leave verification steps out of a `verify` run."],

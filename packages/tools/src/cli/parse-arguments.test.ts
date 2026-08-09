@@ -51,6 +51,12 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "--no-build"]).options.shouldBuild).toBe(false);
   });
 
+  it("shouldBuildWorkspaceDependenciesByDefault", () => {
+    expect(parseArguments(["test"]).options.shouldBuildDependencies).toBe(true);
+    expect(parseArguments(["test", "--no-deps"]).options.shouldBuildDependencies).toBe(false);
+    expect(parseArguments(["test", "--no-deps", "--deps"]).options.shouldBuildDependencies).toBe(true);
+  });
+
   it("shouldReadSkippedStepsAsAList", () => {
     const parsed = parseArguments(["verify", "--skip=test:browser, test"]);
 

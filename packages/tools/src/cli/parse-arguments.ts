@@ -17,7 +17,13 @@ export interface CliOptions {
   shouldBail: boolean;
   /** Whether prerequisite build steps run before a script. */
   shouldBuild: boolean;
-  /** Whether prerequisite builds also cover workspace dependencies. */
+  /**
+   * Whether prerequisite builds also cover workspace dependencies.
+   *
+   * On by default: a package that imports another package type-checks against
+   * its built declarations, so skipping them passes on a tree that happens to
+   * hold stale output and fails on a fresh clone.
+   */
   shouldBuildDependencies: boolean;
   /** Verification steps left out of the run. */
   skippedSteps: readonly string[];
@@ -57,7 +63,7 @@ function createDefaultOptions(): CliOptions {
     isDryRun: false,
     shouldBail: false,
     shouldBuild: true,
-    shouldBuildDependencies: false,
+    shouldBuildDependencies: true,
     shouldFix: false,
     skippedSteps: [],
     timeoutMs: DEFAULT_TIMEOUT_SECONDS * 1000,
@@ -104,6 +110,10 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "deps": {
       options.shouldBuildDependencies = true;
+      return true;
+    }
+    case "no-deps": {
+      options.shouldBuildDependencies = false;
       return true;
     }
     case "skip": {

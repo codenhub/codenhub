@@ -115,8 +115,13 @@ change that touched package metadata.
 first, which is why package manifests MUST NOT chain `pnpm build &&` into those
 scripts. Chaining it again would double every build.
 
-Prerequisite builds cover the selected packages only. Pass `--deps` to include
-their workspace dependencies, or `--no-build` to skip the step entirely.
+Prerequisite builds cover the selected packages and their workspace
+dependencies. Depending on a package means type-checking against its built
+declarations, so a run that skipped them would pass on a tree holding stale
+output and fail on a fresh clone — which is exactly the failure CI reports and a
+laptop hides. `--no-deps` narrows the build to the selected packages when their
+dependencies are known to be built, and `--no-build` skips the step entirely.
+`--deps` is still accepted and now asks for the default.
 
 `prepublishOnly` is exempt: npm runs it outside `hub`, so it MUST remain
 self-contained.
@@ -129,7 +134,7 @@ self-contained.
 | `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one.  |
 | `--bail`              | Stop after the first failing package.                                 |
 | `--no-build`          | Skip prerequisite builds.                                             |
-| `--deps`              | Include workspace dependencies in prerequisite builds.                |
+| `--no-deps`           | Build only the selected packages, not their workspace dependencies.   |
 | `--skip=<steps>`      | Leave verification steps out of a `verify` run.                       |
 | `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                |
 | `--no-timeout`        | Never kill a package run.                                             |
