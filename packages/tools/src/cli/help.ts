@@ -9,6 +9,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--deps", "Include workspace dependencies in prerequisite builds."],
   ["--timeout=<seconds>", "Kill a package run after <seconds> (default 600)."],
   ["--no-timeout", "Never kill a package run."],
+  ["--skip=<steps>", "Leave verification steps out of a `verify` run."],
   ["--dry-run", "Print the commands that would run."],
   ["--fix", "Apply fixes instead of only reporting."],
   ["--pack", "Let checks run npm pack --dry-run to inspect publishable contents."],

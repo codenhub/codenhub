@@ -22,6 +22,14 @@ export interface ScriptCommandOptions {
   isInteractive?: boolean;
   /** Whether selected paths are forwarded to the script. */
   forwardsPaths?: boolean;
+  /**
+   * Builds commands that must succeed before the script runs.
+   *
+   * It covers what the script needs but must not do itself, such as installing
+   * the managed browsers a browser test run depends on. Specs are returned rather
+   * than executed so `--dry-run` can print them and one runner reports them all.
+   */
+  prepare?(context: CommandContext, packages: readonly WorkspacePackage[]): Promise<readonly CommandSpec[]>;
 }
 
 function buildSpec(workspacePackage: WorkspacePackage, script: string, args: readonly string[]): CommandSpec {
@@ -116,10 +124,21 @@ async function runScriptCommand(
           buildSpec(workspacePackage, options.prerequisite as string, []),
         )
       : [];
+  // Preparation runs ahead of the builds: it is the cheaper of the two, and a
+  // missing browser should not be reported only after a build has finished.
+  const supportingSpecs = [
+    ...(options.prepare === undefined
+      ? []
+      : await options.prepare(
+          context,
+          runnable.map(({ package: workspacePackage }) => workspacePackage),
+        )),
+    ...prerequisiteSpecs,
+  ];
 
   if (context.options.isDryRun) {
     reporter.step(`Would run \`${script}\` in ${runs.length} package(s)`);
-    for (const spec of [...prerequisiteSpecs, ...runs.map(({ spec }) => spec)]) {
+    for (const spec of [...supportingSpecs, ...runs.map(({ spec }) => spec)]) {
       reporter.detail(`  ${spec.cwd}: ${formatCommand(spec)}`);
     }
     return EXIT_SUCCESS;
@@ -130,9 +149,9 @@ async function runScriptCommand(
   const stdio = concurrency === 1 ? "inherit" : "pipe";
   const timeoutMs = isInteractive ? undefined : context.options.timeoutMs;
 
-  const prerequisiteFailure = await runPrerequisites(context, prerequisiteSpecs);
-  if (prerequisiteFailure !== undefined) {
-    reporter.error(prerequisiteFailure);
+  const supportingFailure = await runSupportingCommands(context, supportingSpecs);
+  if (supportingFailure !== undefined) {
+    reporter.error(supportingFailure);
     return EXIT_FAILURE;
   }
 
@@ -165,7 +184,10 @@ async function runScriptCommand(
   return hasFailure ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
-async function runPrerequisites(context: CommandContext, specs: readonly CommandSpec[]): Promise<string | undefined> {
+async function runSupportingCommands(
+  context: CommandContext,
+  specs: readonly CommandSpec[],
+): Promise<string | undefined> {
   const outcomes = await mapConcurrent(specs, 1, async (spec) => {
     const outcome = await execute(spec, { stdio: "pipe", timeoutMs: context.options.timeoutMs });
     return { outcome, spec };
@@ -176,5 +198,5 @@ async function runPrerequisites(context: CommandContext, specs: readonly Command
   }
   context.reporter.blank();
   context.reporter.info(failure.outcome.output?.trimEnd() ?? "");
-  return `Prerequisite \`${formatCommand(failure.spec)}\` failed in ${failure.spec.cwd}.`;
+  return `Required step \`${formatCommand(failure.spec)}\` failed in ${failure.spec.cwd}.`;
 }

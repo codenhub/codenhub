@@ -1,3 +1,5 @@
+import { planBrowserInstalls } from "../browsers/playwright.ts";
+import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
 import { createCleanCommand } from "./clean-command.ts";
 import type { CommandDefinition } from "./definition.ts";
@@ -19,6 +21,21 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "test",
     prerequisite: "build",
     summary: "Run tests, optionally narrowed to files or directories.",
+  }),
+  createScriptCommand({
+    forwardsPaths: true,
+    name: "test:browser",
+    prepare: async (context, packages) => planBrowserInstalls(context.workspace.root, packages),
+    prerequisite: "build",
+    summary: "Run browser tests, installing their browsers first.",
+  }),
+  createScriptCommand({
+    forwardsPaths: true,
+    isInteractive: true,
+    name: "test:browser:watch",
+    prepare: async (context, packages) => planBrowserInstalls(context.workspace.root, packages),
+    prerequisite: "build",
+    summary: "Run browser tests in Playwright's UI mode for one package.",
   }),
   createScriptCommand({
     forwardsPaths: true,
@@ -63,6 +80,7 @@ const COMMANDS: readonly CommandDefinition[] = [
   createCheckCommand(),
   createGenerateCommand(),
   createCleanCommand(),
+  createBrowsersCommand(),
   createNewCommand(),
   createListCommand(),
 ];

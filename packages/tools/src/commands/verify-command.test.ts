@@ -14,9 +14,10 @@ interface RunResult {
 /**
  * Runs a verification with every step stubbed.
  * @param failingStep Step that exits non-zero, or `undefined` for an all-passing run.
+ * @param argv Extra arguments passed to the command line.
  * @returns Exit code, captured output, and the step names that actually ran.
  */
-async function runVerify(failingStep?: string): Promise<RunResult> {
+async function runVerify(failingStep?: string, argv: readonly string[] = []): Promise<RunResult> {
   const lines: string[] = [];
   const ran: string[] = [];
   const resolver = vi.fn(
@@ -32,9 +33,13 @@ async function runVerify(failingStep?: string): Promise<RunResult> {
     }),
   );
   const context: CommandContext = {
-    options: parseArguments(["verify"]).options,
+    options: parseArguments(["verify", ...argv]).options,
     passthrough: ["--reporter=verbose"],
-    reporter: createReporter({ useColor: false, write: (line) => lines.push(line), writeError: () => {} }),
+    reporter: createReporter({
+      useColor: false,
+      write: (line) => lines.push(line),
+      writeError: (line) => lines.push(line),
+    }),
     selection: { isImplicit: true, targets: [], unownedPaths: [] },
     tokens: [],
     workspace: { packages: [], root: "/repo" },
@@ -47,7 +52,7 @@ describe("hub verify", () => {
   it("runs every step in order and succeeds", async () => {
     const result = await runVerify();
 
-    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "check"]);
+    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "test:browser", "check"]);
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
 
@@ -58,11 +63,27 @@ describe("hub verify", () => {
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
 
+  it("leaves out a step named by --skip and still reports it", async () => {
+    const result = await runVerify(undefined, ["--skip=test:browser"]);
+
+    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "check"]);
+    expect(result.output).toContain("SKIP  test:browser skipped by --skip");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("warns when --skip names no step", async () => {
+    const result = await runVerify(undefined, ["--skip=browsers"]);
+
+    expect(result.output).toContain("`--skip=browsers` names no verification step");
+    expect(result.ran).toHaveLength(6);
+  });
+
   it("accounts for the steps it never reached", async () => {
     const result = await runVerify("lint");
 
     expect(result.output).toContain("FAIL  lint");
     expect(result.output).toContain("SKIP  test");
+    expect(result.output).toContain("SKIP  test:browser");
     expect(result.output).toContain("SKIP  check");
   });
 });

@@ -19,6 +19,8 @@ export interface CliOptions {
   shouldBuild: boolean;
   /** Whether prerequisite builds also cover workspace dependencies. */
   shouldBuildDependencies: boolean;
+  /** Verification steps left out of the run. */
+  skippedSteps: readonly string[];
   /** Milliseconds before a package run is killed, or `undefined` to wait indefinitely. */
   timeoutMs?: number;
   /** Whether commands print what they would run instead of running it. */
@@ -57,6 +59,7 @@ function createDefaultOptions(): CliOptions {
     shouldBuild: true,
     shouldBuildDependencies: false,
     shouldFix: false,
+    skippedSteps: [],
     timeoutMs: DEFAULT_TIMEOUT_SECONDS * 1000,
     useChangedFilter: false,
     wantsHelp: false,
@@ -101,6 +104,17 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "deps": {
       options.shouldBuildDependencies = true;
+      return true;
+    }
+    case "skip": {
+      const steps = (value ?? "")
+        .split(",")
+        .map((step) => step.trim())
+        .filter((step) => step !== "");
+      if (steps.length === 0) {
+        throw new Error(`Invalid value for --skip: expected one or more step names, received "${value ?? ""}".`);
+      }
+      options.skippedSteps = [...options.skippedSteps, ...steps];
       return true;
     }
     case "timeout": {

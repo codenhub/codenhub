@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-06
+last_updated: 2026-08-09
 ---
 
 # Testing specification
@@ -50,6 +50,8 @@ E2E tests verify full user journeys, page transitions, rendering, and visual reg
 - **Conventions**:
   - Use visual regression testing for style sheets and components to capture visual changes before merge.
   - Since E2E tests are slower and require browser environments, configure them separately to avoid blocking fast unit test loops.
+  - Browser suites MUST be reachable only through `test:browser`. A package that declares a Playwright config MUST define that script, and `test`, `test:coverage`, and `test:watch` MUST NOT reach a browser suite, directly or through another script. `hub check` reports both.
+  - Browsers are installed by `hub browsers`, which `hub test:browser` runs first. A package MUST NOT install browsers from its own scripts, because two packages doing that would download into one shared cache twice.
 
 ## Configuration Requirements
 
@@ -60,9 +62,12 @@ To maintain clean and explicit testing setups, follow these configuration rules:
   - Do not rely on implicit or undocumented fallback behavior.
 - **Package Scripts**:
   - Every testable package or app `package.json` must expose standard test scripts:
-    - `"test"`: Runs tests once.
-    - `"test:watch"`: Runs tests in interactive watch mode.
-    - `"test:coverage"`: Runs tests and outputs a coverage report.
+    - `"test"`: Runs unit and integration tests once, and nothing that needs a browser.
+    - `"test:watch"`: Runs those tests in interactive watch mode.
+    - `"test:coverage"`: Runs those tests and outputs a coverage report.
+  - A package with a browser suite must also expose:
+    - `"test:browser"`: Runs the browser suite once.
+    - `"test:browser:watch"`: Runs the browser suite in Playwright's UI mode.
 
 ## Code Coverage
 
@@ -79,8 +84,14 @@ tooling instead.
 
 ```sh
 pnpm test
+pnpm test:browser
 pnpm test:coverage
 ```
+
+`pnpm test` covers unit and integration tests, and `pnpm test:browser` covers the
+browser suites of the packages that have one, installing their browsers first.
+`pnpm verify` runs both. Keeping them apart is what lets the loop everyone runs
+constantly stay a few seconds long.
 
 ### Narrowed Checks
 
@@ -92,6 +103,8 @@ pnpm test error
 pnpm test packages/error/src/bucket.test.ts
 pnpm test:watch error
 pnpm test:coverage error
+pnpm test:browser styles
+pnpm test:browser:watch styles
 pnpm test --changed
 ```
 

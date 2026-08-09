@@ -16,8 +16,8 @@ If APPROVED or IMPLEMENTED docs conflict with code, treat code as legacy unless 
 ## Commands
 
 Run `pnpm verify` after changes from the repository root. It runs formatting,
-linting, type checking, tests, and compliance checks in that order and stops at
-the first failure:
+linting, type checking, tests, browser tests, and compliance checks in that order
+and stops at the first failure:
 
 ```sh
 pnpm verify error
@@ -26,7 +26,10 @@ pnpm verify
 ```
 
 Run the individual steps (`pnpm format:check`, `pnpm lint:check`,
-`pnpm typecheck`, `pnpm test`, `pnpm check`) only when you need one of them alone.
+`pnpm typecheck`, `pnpm test`, `pnpm test:browser`, `pnpm check`) only when you
+need one of them alone. `pnpm test` runs unit and integration tests;
+`pnpm test:browser` runs the Playwright suites and installs their browsers first.
+Use `pnpm verify --skip=test:browser` when a change cannot affect them.
 
 `pnpm check` reports packages against the lifecycle and documentation specs.
 After changing a package README or any file under a package's `docs/`, run
@@ -66,6 +69,7 @@ See `docs/tooling.md` for the full command surface, selector rules, and options.
 - Update docs in the same change when behavior, public APIs, package exports, conventions, or lifecycle rules change.
 - Follow `docs/code-guidelines.md` for code style, architecture, TypeScript, testing, and source documentation requirements.
 - Follow `docs/tooling.md` when changing root scripts, package scripts, or repository tooling.
+- Follow `docs/ci.md` when changing the workflows, the pinned toolchain, or anything CI runs.
 - Follow `docs/docs-guidelines.md` when creating, updating, interpreting, or making exceptions to durable documentation.
 - Follow `docs/specs/packages-documentation.md` for package consumer and
   maintainer documentation.
