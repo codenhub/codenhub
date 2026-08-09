@@ -123,6 +123,11 @@ laptop hides. `--no-deps` narrows the build to the selected packages when their
 dependencies are known to be built, and `--no-build` skips the step entirely.
 `--deps` is still accepted and now asks for the default.
 
+The expansion includes the `dev` and `debug` environments nested inside a selected
+package, and what they depend on. Those are workspace packages of their own, and a
+browser test run starts their servers, so `hub test:browser theme` has to build the
+plugin `theme/dev` imports even though `theme` itself never does.
+
 `prepublishOnly` is exempt: npm runs it outside `hub`, so it MUST remain
 self-contained.
 

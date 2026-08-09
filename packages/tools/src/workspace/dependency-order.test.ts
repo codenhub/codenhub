@@ -53,6 +53,22 @@ describe("withWorkspaceDependencies", () => {
 
     expect(expanded.filter(({ name }) => name === "styles")).toHaveLength(1);
   });
+
+  it("shouldAddWhatANestedDevEnvironmentNeedsBuilt", () => {
+    const plugin = createPackage("vite-plugin-icons");
+    const themeDev = { ...createPackage("theme-dev", ["theme", "vite-plugin-icons"]), location: "packages/theme/dev" };
+    const expanded = withWorkspaceDependencies([theme], [plugin, styles, theme, themeDev]).map(({ name }) => name);
+
+    expect(expanded).toContain("vite-plugin-icons");
+    expect(expanded.indexOf("vite-plugin-icons")).toBeLessThan(expanded.indexOf("theme-dev"));
+  });
+
+  it("shouldNotPullInAnUnrelatedPackageThatSharesANamePrefix", () => {
+    const themeDev = { ...createPackage("theme-dev", ["absent"]), location: "packages/theme-dev" };
+    const expanded = withWorkspaceDependencies([theme], [theme, themeDev]).map(({ name }) => name);
+
+    expect(expanded).toEqual(["theme"]);
+  });
 });
 
 describe("findDependencyCycles", () => {
