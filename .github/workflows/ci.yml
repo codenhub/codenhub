@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A pull request that is pushed to again abandons the run it just superseded;
+# `main` keeps every run, because each merge is the authoritative check of a commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # A pull request verifies what it changed against its base branch; a merge into
+  # `main` verifies the whole workspace, so nothing reaches `main` unverified
+  # because it happened to sit outside a changed package.
+  SELECTOR: ${{ github.event_name == 'pull_request' && format('--changed=origin/{0}', github.base_ref) || '' }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Full history: `--changed` compares against a base branch ref, which a
+      # shallow clone does not contain.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # `--changed` falls back to working-tree changes when its base ref is
+      # missing, which in CI would mean verifying nothing and passing. Fail loudly
+      # instead.
+      - name: Assert the base ref is present
+        if: github.event_name == 'pull_request'
+        run: git rev-parse --verify origin/${{ github.base_ref }}
+
+      # Browser tests are skipped here because the browser job owns them; running
+      # them twice would double the slowest step of the run.
+      - name: Verify
+        run: pnpm verify --skip=test:browser $SELECTOR
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      - name: Assert the base ref is present
+        if: github.event_name == 'pull_request'
+        run: git rev-parse --verify origin/${{ github.base_ref }}
+
+      # `--with-deps` adds the system libraries a headless browser needs on a
+      # runner. The install is the same command a contributor runs locally, so the
+      # two resolve the same browser versions.
+      - name: Install browsers
+        run: pnpm hub browsers --with-deps $SELECTOR
+
+      - name: Run browser tests
+        run: pnpm test:browser $SELECTOR
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            packages/*/test-results/**
+            packages/*/playwright-report/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  drift:
+    name: Generated files
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # Generated files are derived from READMEs, package docs, and manifests, so
+      # a change that edits a source without regenerating leaves the repository
+      # describing itself incorrectly. The dry run reports which files are stale
+      # and exits non-zero without writing any of them.
+      - name: Check generated files
+        run: pnpm generate --dry-run
+
+      # A dry run must write nothing; this fails if it ever does.
+      - name: Assert the working tree is unchanged
+        run: git diff --exit-code
