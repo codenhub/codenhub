@@ -34,5 +34,10 @@
     "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "engines": {
+    "node": ">=24.14.1 <25",
+    "pnpm": ">=11.7.0"
+  },
+  "packageManager": "pnpm@11.7.0"
 }
