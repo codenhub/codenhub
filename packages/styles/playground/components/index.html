@@ -92,6 +92,20 @@
           </div>
 
           <div class="stack tight">
+            <h3 class="text-title-sm">Presentation Cascade</h3>
+            <p class="text-body">
+              The container carries the presentation class. Every component below it reads the same inherited tokens,
+              and any element can still declare its own.
+            </p>
+            <div class="cluster soft" data-testid="presentation-cascade-container">
+              <button class="btn primary">Inherited soft</button>
+              <button class="btn success">Inherited soft</button>
+              <span class="badge info">Inherited soft</span>
+              <button class="btn primary out">Overridden outline</button>
+            </div>
+          </div>
+
+          <div class="stack tight">
             <h3 class="text-title-sm">Shapes and Sizes</h3>
             <div class="cluster">
               <button class="btn primary pill" data-testid="primary-pill-button">Primary pill</button>

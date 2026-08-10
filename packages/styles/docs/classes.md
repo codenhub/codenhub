@@ -60,11 +60,52 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 | -------------- | --------------------------------------------- |
 | `.empty-state` | Centered empty-state layout with muted color. |
 
+## Presentation
+
+`.flat`, `.out`, `.ghost`, and `.soft` decide how strongly a component shows its
+intent. They set [presentation tokens](./tokens.md#presentation-tokens) and
+nothing else, so they work on the component itself or on any ancestor:
+
+```html
+<div class="soft">
+  <button class="btn primary">Soft primary button</button>
+  <span class="badge success">Soft success badge</span>
+  <button class="btn primary out">Outlined; the element wins</button>
+</div>
+```
+
+A declaration on the element always beats one inherited from a container, so a
+container sets the default look for its subtree and any element opts out.
+
+| Class    | Look                                                             |
+| -------- | ---------------------------------------------------------------- |
+| `.flat`  | Intent-colored fill with contrast text and a matching border.    |
+| `.out`   | Transparent fill with a doubled intent border and readable text. |
+| `.ghost` | Transparent fill and border with readable text.                  |
+| `.soft`  | Lightly tinted fill, no border, readable text.                   |
+
+Values each class ships:
+
+| Class    | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` | `--ui-border-scale` | `--ui-hover-fill` | `--ui-hover-fg-on-fill` |
+| -------- | ----------- | ----------------- | ------------- | ------------------- | ----------------- | ----------------------- |
+| `.flat`  | `100%`      | `100%`            | `100%`        | `1`                 | `100%`            | `100%`                  |
+| `.out`   | `0%`        | `0%`              | `100%`        | `2`                 | `14%`             | `0%`                    |
+| `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
+| `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
+
+`.btn`, `.alert`, and `.badge` read the contract. With no presentation class in
+scope they keep their own defaults: buttons are filled, alerts and badges are
+tinted. Every other class in this package is unaffected by these tokens.
+
+Intent classes do not cascade. `.primary` and its siblings stay on the element
+that shows the intent, because a container silently recoloring every descendant
+is a trap rather than a feature.
+
 ## Buttons
 
 Use `.btn` with one optional intent class, one optional presentation class, optional size class, and optional state.
 
-Intent classes map color tokens into button tone slots. Presentation classes own how those slots become background, text, border, hover, and spinner styles.
+Intent classes map color tokens into button tone slots. [Presentation](#presentation) decides how much of that intent reaches background, text, border, and hover.
 
 Intent classes:
 
@@ -77,22 +118,19 @@ Intent classes:
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
 
-Presentation and size classes:
+Size and shape classes:
 
-| Class                                                                  | Purpose                                                                       |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `.out`                                                                 | Transparent button with intent readable-tone border and text.                 |
-| `.ghost`                                                               | Transparent button with intent readable-tone text and soft hover.             |
-| `.soft`                                                                | Low-emphasis filled button using intent subtle surface and strong text tones. |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                       |
-| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.                  |
-| `.sm`                                                                  | Smaller button.                                                               |
-| `.lg`                                                                  | Larger button.                                                                |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                                     |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                                      |
-| `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                   |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
+| Class                                                                  | Purpose                                                      |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).      |
+| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text. |
+| `.sm`                                                                  | Smaller button.                                              |
+| `.lg`                                                                  | Larger button.                                               |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                    |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                     |
+| `.icon`                                                                | Square icon button. Use an accessible name in HTML.          |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.  |
+| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                            |
 
 Examples:
 
@@ -223,22 +261,16 @@ they use the text palette.
 the left padding and adds an embedded SVG. Success, warning, and destructive
 intents use corresponding symbols; other intents use the information symbol.
 
-Alerts accept presentation variant classes:
+Alerts and badges read the shared [presentation](#presentation) classes. Without
+one they use a tinted surface, intent-colored text, and a mixed intent border.
+
+`.left-accent` is alert-only and sits outside the presentation contract: it is a
+border-side treatment rather than a strength, so it does not cascade from a
+container.
 
 | Class          | Purpose                                                           |
 | -------------- | ----------------------------------------------------------------- |
-| _(none)_       | Tinted surface, intent-colored text, and mixed intent border.     |
-| `.flat`        | Intent-color fill and border with contrast text.                  |
-| `.soft`        | Tinted surface and intent-colored text with a transparent border. |
 | `.left-accent` | Tinted surface with only a four-pixel intent-colored left border. |
-
-Badges accept presentation variant classes:
-
-| Class    | Purpose                                                                            |
-| -------- | ---------------------------------------------------------------------------------- |
-| _(none)_ | Default. Tinted surface, intent-colored text, subtle intent-tinted border.         |
-| `.flat`  | Filled with the intent color; uses contrast text. Border matches the intent color. |
-| `.soft`  | Tinted surface and intent-colored text with no border (border is transparent).     |
 
 Examples:
 
