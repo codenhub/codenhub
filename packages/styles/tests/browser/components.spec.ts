@@ -376,18 +376,30 @@ test.describe("components", () => {
     await page.goto(COMPONENTS_URL);
 
     const styles = await page.evaluate(() => {
-      const layoutStyles = getComputedStyle(document.querySelector('[data-testid="layout-section"]')!);
+      const section = document.querySelector('[data-testid="layout-section"]')!;
+      const layoutStyles = getComputedStyle(section);
       const clusterStyles = getComputedStyle(document.querySelector('[data-testid="cluster-layout"]')!);
       return {
         clusterDisplay: clusterStyles.display,
         layoutDisplay: layoutStyles.display,
-        layoutMaxWidth: layoutStyles.maxWidth,
+        /* The content width is a grid track on the page rather than a max-width
+           on each section, so a narrow section can share the wide one's left
+           edge instead of centering itself in the viewport. */
+        pageColumns: getComputedStyle(section.parentElement!).gridTemplateColumns,
+        sectionWidth: Math.round(section.getBoundingClientRect().width),
       };
     });
 
     expect(styles.layoutDisplay).toBe("flex");
-    expect(styles.layoutMaxWidth).not.toBe("none");
     expect(styles.clusterDisplay).toBe("flex");
+    /* Chromium and Firefox serialize the line names, WebKit only the widths. */
+    const tracks = [...styles.pageColumns.matchAll(/([\d.]+)px/gu)].map((match) => Number(match[1]));
+
+    expect(tracks).toHaveLength(3);
+    /* Equal side tracks center the content column; a section fills that column
+       or, when narrow, starts at its left edge. */
+    expect(Math.abs(tracks[0]! - tracks[2]!)).toBeLessThan(1);
+    expect(styles.sectionWidth).toBeLessThanOrEqual(Math.round(tracks[1]!));
   });
 
   test("styles invalid fields and success alerts", async ({ page }) => {

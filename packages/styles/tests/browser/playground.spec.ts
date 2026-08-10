@@ -1,15 +1,60 @@
 import { expect, test } from "@playwright/test";
 
 const PLAYGROUND_URL = "http://localhost:5184/";
+const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
 
 test("links to each focused playground route", async ({ page }) => {
   await page.goto(PLAYGROUND_URL);
 
   await expect(page.locator('.playground-route[href="/typography/"]')).toBeVisible();
   await expect(page.locator('.playground-route[href="/layout/"]')).toBeVisible();
+  await expect(page.locator('.playground-route[href="/buttons/"]')).toBeVisible();
   await expect(page.locator('.playground-route[href="/components/"]')).toBeVisible();
   await expect(page.locator('.playground-route[href="/forms/"]')).toBeVisible();
   await expect(page.locator('.playground-route[href="/native/"]')).toBeVisible();
+});
+
+test("puts the chosen aesthetic on the preview root and leaves the chrome alone", async ({ page }) => {
+  await page.goto(`${BUTTONS_URL}&aesthetic=neobrutalism`);
+
+  const root = page.getByTestId("preview-root");
+
+  await expect(root).toHaveClass(/neobrutalism/);
+  /* The nav is not part of what is being previewed: a stepped or translucent
+     chrome makes it harder to read what actually changed. */
+  await expect(page.locator(".playground-nav")).not.toHaveClass(/neobrutalism/);
+
+  await page.getByTestId("aesthetic-select").selectOption("pixel");
+
+  await expect(root).toHaveClass(/pixel/);
+  await expect(root).not.toHaveClass(/neobrutalism/);
+});
+
+test("aligns narrow sections with the left edge every other section shares", async ({ page }) => {
+  await page.goto("http://localhost:5184/components/?env=vanilla");
+
+  const edges = await page.evaluate(() => {
+    const sections = [...document.querySelectorAll(".sect-inn")];
+
+    return {
+      lefts: [...new Set(sections.map((section) => Math.round(section.getBoundingClientRect().left)))],
+      /* A narrow section still has to be narrower, or this passes for the wrong
+         reason. */
+      widths: [...new Set(sections.map((section) => Math.round(section.getBoundingClientRect().width)))],
+    };
+  });
+
+  expect(edges.lefts).toHaveLength(1);
+  expect(edges.widths.length).toBeGreaterThan(1);
+});
+
+test("renders a variant matrix from its spec", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  /* One cell per intent per presentation, each addressable on its own. */
+  await expect(page.getByTestId("btn-plain-primary")).toBeVisible();
+  await expect(page.getByTestId("btn-out-fill-success")).toHaveClass(/btn success out fill/);
+  await expect(page.getByTestId("btn-ghost-destructive-disabled")).toBeDisabled();
 });
 
 test("keeps route cards compact", async ({ page }) => {

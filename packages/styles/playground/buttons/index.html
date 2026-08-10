@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Buttons | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <script src="/shared/matrix.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+  </head>
+  <body>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn stack tight">
+        <p class="text-label">UI fixtures</p>
+        <h1 class="text-title-lg">Buttons</h1>
+        <p class="text-body text-text-secondary">
+          Every intent crossed with every presentation, then the modifiers that sit outside that grid: shape, size,
+          padding, and state.
+        </p>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Intent and presentation</h2>
+          <p class="text-body text-text-secondary">
+            One row per presentation, one column per intent. Hover and focus are live: point at any cell.
+          </p>
+        </div>
+        <div data-matrix="btn" data-matrix-states="rest" data-testid="btn-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Disabled</h2>
+          <p class="text-body text-text-secondary">
+            The same grid with the native attribute. Every presentation has to stay legible and stop reacting.
+          </p>
+        </div>
+        <div data-matrix="btn" data-matrix-states="disabled" data-testid="btn-disabled-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Loading</h2>
+          <p class="text-body text-text-secondary">
+            <code class="code">.loading</code>
+            replaces the label with a spinner and keeps the button's width.
+          </p>
+        </div>
+        <div data-matrix="btn" data-matrix-states="loading" data-testid="btn-loading-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Loader variants</h3>
+          <div class="cluster">
+            <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
+            <button class="btn primary loading" disabled data-testid="loading-button-nested">
+              <span data-testid="loading-nested-text">Invisible Label</span>
+            </button>
+            <button class="btn secondary loading dots-wave" disabled data-testid="loading-button-dots">
+              Loading Dots
+            </button>
+            <button class="btn success loading bars-wave" disabled data-testid="loading-button-bars">
+              Loading Bars
+            </button>
+            <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
+            <button class="btn destructive" disabled>Native Disabled</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Shape and size</h2>
+          <p class="text-body text-text-secondary">
+            Shape and size are separate from the intent grid: any cell above can take any of these.
+          </p>
+        </div>
+        <div class="stack loose">
+          <div class="stack tight">
+            <h3 class="text-title-sm">Sizes</h3>
+            <div class="cluster">
+              <button class="btn primary sm" data-testid="btn-sm">Small</button>
+              <button class="btn primary" data-testid="btn-md">Default</button>
+              <button class="btn primary lg" data-testid="btn-lg">Large</button>
+            </div>
+          </div>
+
+          <div class="stack tight">
+            <h3 class="text-title-sm">Padding</h3>
+            <p class="text-body text-text-secondary">
+              Canonical
+              <code class="code">p-sm</code>
+              and
+              <code class="code">p-lg</code>
+              , with
+              <code class="code">compact</code>
+              and
+              <code class="code">spacious</code>
+              as aliases.
+            </p>
+            <div class="cluster">
+              <button class="btn primary p-sm" data-testid="btn-p-sm">Compact (p-sm)</button>
+              <button class="btn primary" data-testid="btn-default">Default</button>
+              <button class="btn primary p-lg" data-testid="btn-p-lg">Spacious (p-lg)</button>
+              <button class="btn primary compact">Compact (alias)</button>
+              <button class="btn primary spacious">Spacious (alias)</button>
+            </div>
+          </div>
+
+          <div class="stack tight">
+            <h3 class="text-title-sm">Pill and icon</h3>
+            <div class="cluster">
+              <button class="btn primary pill" data-testid="primary-pill-button">Primary pill</button>
+              <button class="btn destructive pill out">Destructive pill</button>
+              <button class="btn icon pill destructive" aria-label="Close">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+              <button class="btn icon primary p-sm" aria-label="Compact Create" data-testid="btn-icon-p-sm">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+              <button class="btn icon primary" aria-label="Default Create" data-testid="btn-icon-default">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+              <button class="btn icon primary p-lg" aria-label="Spacious Create" data-testid="btn-icon-p-lg">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Presentation cascade</h2>
+          <p class="text-body text-text-secondary">
+            The container carries the presentation class. Every component below it reads the same inherited tokens, and
+            any element can still declare its own.
+          </p>
+        </div>
+        <div class="cluster soft" data-testid="presentation-cascade-container">
+          <button class="btn primary">Inherited soft</button>
+          <button class="btn success">Inherited soft</button>
+          <span class="badge info">Inherited soft</span>
+          <button class="btn primary out">Overridden outline</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

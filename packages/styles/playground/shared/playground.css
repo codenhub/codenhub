@@ -83,6 +83,11 @@
   flex-shrink: 0;
 }
 
+.playground-aesthetic {
+  width: auto;
+  min-width: 9rem;
+}
+
 .playground-control {
   display: flex;
   width: 2.5rem;
@@ -108,30 +113,34 @@
   height: 100%;
 }
 
+/* One centered content column, declared once on the page rather than once per
+   section. Centering each section instead put a narrow one in the middle of the
+   viewport, so it drifted off the left edge every other section shares. The
+   track stays a grid column rather than a max-width on `.sect`, so the page box
+   still spans the viewport and a background on it paints edge to edge. */
 .sect {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns:
+    [full-start] 1fr
+    [content-start] min(100% - var(--layout-gutter) * 2, var(--container-max))
+    [content-end] 1fr
+    [full-end];
   gap: 1.25rem;
-  padding: 1.25rem var(--layout-gutter);
+  padding-block: 1.25rem;
+}
+
+.sect > * {
+  grid-column: content;
 }
 
 .sect-inn {
   display: flex;
-  width: 100%;
-  max-width: var(--container-max);
   flex-direction: column;
   gap: 1rem;
-  margin-inline: auto;
 }
 
+/* A grid item that cannot fill its column falls back to start alignment, so this
+   is left-aligned with every other section rather than centered. */
 .sect-inn.narrow {
   max-width: var(--container-narrow);
-  margin-inline: auto;
-}
-
-@media (width < 40rem) {
-  .sect {
-    align-items: stretch;
-  }
 }

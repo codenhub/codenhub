@@ -25,12 +25,51 @@ let isDarkTheme = storedTheme === "dark" || (!storedTheme && window.matchMedia("
 
 setTheme(isDarkTheme);
 
+/* An aesthetic is a cascading class, so the selector only has to put it on the
+   preview root. It stops there rather than going on `<body>` so the playground
+   chrome stays neutral: the nav is not part of what is being previewed, and a
+   stepped or translucent nav makes it harder to read what changed. */
+const AESTHETICS = [
+  { label: "Default", value: "" },
+  { label: "Neobrutalism", value: "neobrutalism" },
+  { label: "Glass", value: "glass" },
+  { label: "Pixel", value: "pixel" },
+];
+
+const aestheticParam = params.get("aesthetic");
+const storedAesthetic = localStorage.getItem("aesthetic");
+const isKnownAesthetic = (value) => AESTHETICS.some((aesthetic) => aesthetic.value === value);
+let currentAesthetic = "";
+
+if (aestheticParam !== null && isKnownAesthetic(aestheticParam)) {
+  currentAesthetic = aestheticParam;
+} else if (storedAesthetic !== null && isKnownAesthetic(storedAesthetic)) {
+  currentAesthetic = storedAesthetic;
+}
+
+const applyAesthetic = (value) => {
+  const root = document.querySelector('[data-testid="preview-root"]');
+
+  if (!root) {
+    return;
+  }
+
+  for (const aesthetic of AESTHETICS) {
+    if (aesthetic.value) {
+      root.classList.toggle(aesthetic.value, aesthetic.value === value);
+    }
+  }
+
+  root.dataset.aesthetic = value || "default";
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const getRouteHref = (pathname) => (environment === "build" ? `${pathname}?env=build` : pathname);
 
   const routes = [
     { text: "Home", path: "/" },
     { text: "Aesthetics", path: "/aesthetics/" },
+    { text: "Buttons", path: "/buttons/" },
     { text: "Components", path: "/components/" },
     { text: "Forms", path: "/forms/" },
     { text: "Layout", path: "/layout/" },
@@ -62,6 +101,12 @@ document.addEventListener("DOMContentLoaded", () => {
             ${linksHtml}
           </div>
           <div class="playground-controls">
+            <select id="aesthetic-select" class="select playground-aesthetic" data-testid="aesthetic-select" aria-label="Aesthetic">
+              ${AESTHETICS.map(
+                (aesthetic) =>
+                  `<option value="${aesthetic.value}"${aesthetic.value === currentAesthetic ? " selected" : ""}>${aesthetic.label}</option>`,
+              ).join("")}
+            </select>
             <button id="environment-toggle" class="tooltip playground-control" data-testid="environment-toggle" data-tooltip-position="bottom">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M22 7.7c0-.6-.4-1.2-.8-1.5l-6.3-3.9a1.72 1.72 0 0 0-1.7 0l-10.3 6c-.5.2-.9.8-.9 1.4v6.6c0 .5.4 1.2.8 1.5l6.3 3.9a1.72 1.72 0 0 0 1.7 0l10.3-6c.5-.3.9-1 .9-1.5Z" />
@@ -93,6 +138,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set("env", nextEnvironment);
     window.location.assign(nextUrl.toString());
+  });
+
+  const aestheticSelect = document.getElementById("aesthetic-select");
+
+  applyAesthetic(currentAesthetic);
+
+  aestheticSelect.addEventListener("change", () => {
+    currentAesthetic = aestheticSelect.value;
+    localStorage.setItem("aesthetic", currentAesthetic);
+    applyAesthetic(currentAesthetic);
   });
 
   themeToggle.setAttribute("aria-label", "Toggle theme");
