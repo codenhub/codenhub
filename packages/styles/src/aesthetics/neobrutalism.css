@@ -32,8 +32,9 @@
    unintented component gets ink. It beats the neutral default in `intent.css`
    only because it is declared later.
 
-   `.kbd` is deliberately absent. A key cap is a content chip rather than
-   structure, and a thick ink edge on one reads as a defect. */
+   `.kbd`, `.code`, and `.pre` are deliberately absent. They are content chips
+   rather than structure, and an ink edge on one reads as a defect: a key cap
+   draws a quiet border by design and a code chip draws none at all. */
 :where(.neobrutalism)
   :where(
     .btn,
@@ -49,8 +50,6 @@
     .checkbox,
     .radio,
     .switch,
-    .code,
-    .pre,
     .tooltip
   ),
 :where(.neobrutalism):where(
@@ -67,8 +66,6 @@
   .checkbox,
   .radio,
   .switch,
-  .code,
-  .pre,
   .tooltip
 ) {
   --intent-border: var(--neo-ink);
@@ -82,6 +79,7 @@
 .neobrutalism :is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
 .neobrutalism:is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
 .neobrutalism .tooltip::after,
+.neobrutalism .progress::after,
 .neobrutalism .switch::after {
   border-radius: 0;
 }

@@ -619,6 +619,35 @@ test.describe("components", () => {
     expect(isTransparent(softBadgeStyles.borderColor)).toBe(true);
   });
 
+  test("lifts a tooltip bubble no higher than a raised surface", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const shadows = await page.evaluate(() => {
+      const probe = document.createElement("span");
+
+      probe.style.boxShadow = "var(--elevation-mid)";
+      document.body.append(probe);
+
+      const mid = getComputedStyle(probe).boxShadow;
+
+      probe.remove();
+
+      const bubble = getComputedStyle(
+        document.querySelector('[data-testid="fallback-tooltip"]') as Element,
+        "::after",
+      ).boxShadow;
+
+      return { bubble, mid };
+    });
+
+    /* A bubble is a small transient popover, not a modal, so it sits at the
+       elevation a hovered card uses. `--elevation-high` stays for full
+       overlays. The bubble also carries Tailwind's empty ring layers, so this
+       asserts the elevation is present rather than that it is the whole
+       value. */
+    expect(shadows.bubble).toContain(shadows.mid);
+  });
+
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
 

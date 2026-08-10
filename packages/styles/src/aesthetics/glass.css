@@ -17,7 +17,13 @@
   --ui-radius-surface: 1.25rem;
   --ui-border-width: 1px;
   --ui-bg-alpha: 0.8;
-  --ui-shadow: 0 8px 32px rgb(0 0 0 / 0.18);
+  --glass-shadow: light-dark(rgb(15 23 42 / 0.1), rgb(0 0 0 / 0.35));
+
+  /* Both layers pull in with a negative spread, so the shadow stays tucked under
+     the surface rather than haloing out from it. A translucent surface shows
+     whatever is behind it, and a shadow that spreads past its edge reads as a
+     smudge on the backdrop instead of as depth. */
+  --ui-shadow: 0 1px 2px -1px var(--glass-shadow), 0 18px 40px -16px var(--glass-shadow);
 }
 
 /* `backdrop-filter` is applied here rather than exposed as a material token: it

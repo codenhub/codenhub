@@ -27,6 +27,17 @@ const readStyles = async (page: Page, testId: string, properties: readonly strin
     return Object.fromEntries(propertyNames.map((name) => [name, styles.getPropertyValue(name)]));
   }, properties);
 
+/* A progress bar draws its fill as a pseudo-element, which `readStyles` cannot
+   reach: squaring the track alone leaves a pill-shaped fill inside it. */
+const readPseudoStyle = (page: Page, testId: string, pseudo: string, property: string) =>
+  page
+    .getByTestId(testId)
+    .evaluate(
+      (element, [name, propertyName]: readonly string[]) =>
+        getComputedStyle(element, name).getPropertyValue(propertyName as string),
+      [pseudo, property] as const,
+    );
+
 /* Reading every element up front keeps the assertion loops free of awaits. */
 const readAll = (page: Page, testIds: readonly string[], properties: readonly string[]) =>
   Promise.all(testIds.map(async (testId) => [testId, await readStyles(page, testId, properties)] as const));
@@ -78,11 +89,17 @@ test.describe("aesthetics", () => {
     test("squares the components that hardcode a radius", async ({ page }) => {
       await page.goto(AESTHETICS_URL);
 
-      const measured = await readAll(page, ["neobrutalism-badge", "neobrutalism-kbd"], ["border-radius"]);
+      const measured = await readAll(
+        page,
+        ["neobrutalism-badge", "neobrutalism-kbd", "neobrutalism-progress"],
+        ["border-radius"],
+      );
 
       for (const [testId, styles] of measured) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
       }
+
+      expect(await readPseudoStyle(page, "neobrutalism-progress", "::after", "border-radius")).toBe("0px");
     });
 
     test("casts the shadow in each component's own intent", async ({ page }) => {
@@ -118,6 +135,19 @@ test.describe("aesthetics", () => {
       expectSameColor(inked, plain, "neobrutalism key cap edge");
     });
 
+    test("leaves a code chip with no edge at all", async ({ page }) => {
+      await page.goto(AESTHETICS_URL);
+
+      const measured = await readAll(page, ["default-code", "neobrutalism-code"], ["border-top-width", "box-shadow"]);
+
+      /* Code is a content chip that draws no edge by design. An ink outline and
+         an offset shadow on one read as a defect, so the aesthetic skips it. */
+      for (const [testId, styles] of measured) {
+        expect(styles["border-top-width"], `${testId} border`).toBe("0px");
+        expect(styles["box-shadow"], `${testId} shadow`).toBe("none");
+      }
+    });
+
     test("supplies the neutral ink without overriding an intent", async ({ page }) => {
       await page.goto(AESTHETICS_URL);
 
@@ -143,22 +173,31 @@ test.describe("aesthetics", () => {
       expectSameColor(tinted, destructive, "neobrutalism intent card border");
     });
 
-    test("moves a hovered button into its own shadow", async ({ page }) => {
+    test("moves a hovered button, and an interactive card, into its own shadow", async ({ page }) => {
       await page.goto(AESTHETICS_URL);
 
-      const button = page.getByTestId("neobrutalism-button");
+      const expectPressed = async (testId: string) => {
+        const element = page.getByTestId(testId);
 
-      await button.hover();
+        await element.hover();
 
-      /* Both the shadow and the transform are transitioned, so these poll for
-         the settled value rather than reading mid-flight. */
-      await expect
-        .poll(() => button.evaluate((element) => getComputedStyle(element).transform))
-        /* translate(4px, 4px) serializes as a matrix with the offsets last. */
-        .toBe("matrix(1, 0, 0, 1, 4, 4)");
-      await expect
-        .poll(() => button.evaluate((element) => getComputedStyle(element).boxShadow))
-        .toMatch(/\b0px 0px 0px 0px\b/);
+        /* Both the shadow and the transform are transitioned, so these poll for
+           the settled value rather than reading mid-flight. */
+        await expect
+          .poll(() => element.evaluate((node) => getComputedStyle(node).transform), testId)
+          /* translate(4px, 4px) serializes as a matrix with the offsets last. */
+          .toBe("matrix(1, 0, 0, 1, 4, 4)");
+        await expect
+          .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), testId)
+          .toMatch(/\b0px 0px 0px 0px\b/);
+      };
+
+      /* Hovering is a pointer position, so only one element can be hovered at a
+         time: these run in sequence rather than together. A card lifts only when
+         it opts in with `.interactive`, the same opt-in the components page
+         uses -- a plain card is a container, not a control. */
+      await expectPressed("neobrutalism-button");
+      await expectPressed("neobrutalism-interactive-card");
     });
 
     test("lets an explicit presentation on the element win over the aesthetic", async ({ page }) => {
@@ -170,6 +209,37 @@ test.describe("aesthetics", () => {
          the axes meet only in `--ui-border-width * --ui-border-scale`. */
       expect(outline["border-top-width"]).toBe("4px");
     });
+  });
+
+  test("shapes the tooltip bubble with the aesthetic in scope", async ({ page }) => {
+    await page.goto(AESTHETICS_URL);
+
+    const readBubble = async (scope: string) => {
+      const host = page.getByTestId(scope).locator(".tooltip-icon").first();
+
+      await host.hover();
+
+      return host.evaluate((element) => {
+        const styles = getComputedStyle(element, "::after");
+
+        return { boxShadow: styles.boxShadow, filter: styles.filter };
+      });
+    };
+
+    const plain = await readBubble("default-sampler");
+    const inked = await readBubble("neobrutalism-scope");
+    const stepped = await readBubble("pixel-scope");
+
+    /* The bubble resolves `--ui-shadow` like every other component, so an
+       aesthetic reaches it too: a blurred drop under a brutalist tooltip was the
+       one place the material stopped at a component boundary. */
+    expect(plain.boxShadow, "default bubble").toMatch(/\b0px 4px 6px -1px\b/);
+    expect(inked.boxShadow, "neobrutalist bubble").toMatch(/\b4px 4px 0px 0px\b/);
+
+    /* Clipping removes an outer shadow, so the stepped bubble casts a filter
+       one: a filter applies after the clip and follows the stepped silhouette. */
+    expect(stepped.boxShadow, "pixel bubble ring").toMatch(/inset/);
+    expect(stepped.filter, "pixel bubble shadow").toMatch(/^drop-shadow\(/);
   });
 
   test.describe("glass", () => {
@@ -252,6 +322,22 @@ test.describe("aesthetics", () => {
       expect(styles["box-shadow"]).toMatch(/\b0px 0px 0px 2px\b/);
     });
 
+    test("steps a code chip's corners without ringing it", async ({ page }) => {
+      await page.goto(AESTHETICS_URL);
+
+      const styles = await readStyles(page, "pixel-code", ["clip-path", "box-shadow", "background-color"]);
+
+      expect(styles["clip-path"]).toContain("polygon(");
+      /* Clipping needs a ring to cover the staircase, but code draws no border,
+         so the ring is its own background: the corners step and nothing rings
+         the chip. */
+      expectSameColor(
+        readShadowColor(styles["box-shadow"] as string),
+        styles["background-color"] as string,
+        "code edge",
+      );
+    });
+
     test("keeps a focus ring that clipping would otherwise remove", async ({ page }) => {
       await page.goto(AESTHETICS_URL);
 
@@ -285,6 +371,8 @@ test.describe("aesthetics", () => {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["clip-path"], `${testId} clip`).toBe("none");
       }
+
+      expect(await readPseudoStyle(page, "pixel-progress", "::after", "border-radius")).toBe("0px");
 
       const radio = await readStyles(page, "pixel-radio", ["border-radius"]);
 

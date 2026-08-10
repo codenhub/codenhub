@@ -22,8 +22,9 @@
    an intent class on the element still wins: an outline two units thick in the
    quiet border gray reads as a mistake rather than as pixel art.
 
-   `.kbd` is deliberately absent. A key cap is a content chip rather than
-   structure, and a thick ink edge on one reads as a defect. */
+   `.kbd`, `.code`, and `.pre` are deliberately absent. They are content chips
+   rather than structure, and an ink edge on one reads as a defect: a key cap
+   draws a quiet border by design and a code chip draws none at all. */
 :where(.pixel)
   :where(
     .btn,
@@ -39,8 +40,6 @@
     .checkbox,
     .radio,
     .switch,
-    .code,
-    .pre,
     .tooltip
   ),
 :where(.pixel):where(
@@ -57,8 +56,6 @@
   .checkbox,
   .radio,
   .switch,
-  .code,
-  .pre,
   .tooltip
 ) {
   --intent-border: var(--pixel-ink);
@@ -111,10 +108,31 @@
   );
 }
 
+/* `clip-path` clips an outer shadow away, so the floating bubble casts its own
+   with a filter instead: a filter applies after clipping and follows the stepped
+   silhouette. Hard and unblurred, in the aesthetic's ink.
+
+   Only the bubble. It is the one clipped component that floats over arbitrary
+   content and needs separating from it; the rest sit inline on the page, where a
+   shadow would break the flat pixel look. A filter also establishes a containing
+   block for positioned descendants, which is harmless on a leaf pseudo-element
+   and would not be on a card. */
+.pixel .tooltip::after {
+  filter: drop-shadow(var(--pixel-unit) var(--pixel-unit) 0 var(--pixel-ink));
+}
+
 /* Chips are small enough that the default unit would be most of their height. */
-.pixel :is(.badge, .kbd),
-.pixel:is(.badge, .kbd) {
+.pixel :is(.badge, .kbd, .code),
+.pixel:is(.badge, .kbd, .code) {
   --pixel-unit: 1px;
+}
+
+/* Code draws no border of any kind, so its edge is its own background: the
+   corners still step, but nothing rings the chip. Every other shaped component
+   either carries a border or fills itself, and blends the two. */
+.pixel :is(.code, .pre),
+.pixel:is(.code, .pre) {
+  --pixel-edge: var(--intent-subtle);
 }
 
 /* The focus ring is stepped too, as a second inset layer inside the border: an
@@ -137,6 +155,7 @@
    carries the stepped shape itself instead. */
 .pixel :is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
 .pixel:is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
+.pixel .progress::after,
 .pixel .switch::after {
   border-radius: 0;
 }

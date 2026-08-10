@@ -228,6 +228,27 @@ Each aesthetic also exposes its own tokens for tuning: `--neo-ink` and
 `--neo-offset`; `--glass-blur`, `--glass-opacity`, `--glass-fill`, and
 `--glass-edge`; `--pixel-unit` and `--pixel-ink`.
 
+### Shadows reach everything that draws one
+
+`--ui-shadow` is the material token for a shadow, so anything that draws one has
+to resolve it or the aesthetic stops at that component's boundary. The tooltip
+bubble was the one holdout: it hardcoded `--elevation-high`, which left a
+blurred drop under a brutalist tooltip and no way for an aesthetic to reach it.
+It now reads `var(--ui-shadow, var(--elevation-mid))`, the elevation a raised
+surface uses, since a bubble is a small transient popover rather than a modal.
+`--elevation-high` remains the token for full overlays.
+
+Two consequences fall out of that for the aesthetics themselves. Glass composes
+its shadow from `--elevation-color` in two layers, a tight contact shadow and a
+wide ambient one: a single wide black blur reads as a smudge under a translucent
+surface and does not follow the theme. And pixel cannot use `--ui-shadow` for
+the bubble at all, because `clip-path` clips an outer shadow away; it casts a
+hard unblurred `drop-shadow()` filter instead, which applies after the clip and
+follows the stepped silhouette. That is deliberately the only shadow in the
+aesthetic. A filter also establishes a containing block for positioned
+descendants, which is harmless on a leaf pseudo-element and would not be on a
+card.
+
 ### Compatibility
 
 Aesthetics and presentations are composable but not universally sensible. Bad
@@ -268,8 +289,9 @@ already-resolved. Declared on the component, it reads that component's own
 `--intent-border` -- the ink when there is no intent, the intent's color when
 there is -- so a success button casts a green shadow.
 
-`.kbd` is excluded from both overrides. A key cap is a content chip rather than
-structure, and a thick ink edge on one reads as a defect.
+`.kbd`, `.code`, and `.pre` are excluded from both overrides. They are content
+rather than structure, and an ink edge on one reads as a defect. A key cap draws
+a quiet border by design; a code chip draws none at all.
 
 A key cap is also the only component that fills from `--intent-color` but lines
 itself from `--intent-border`, so a filled one keeps a stray ring of the other
@@ -313,13 +335,21 @@ Because this consumes no pseudo-element, components that use `::before` or
 `::after` for content need no exception. `.btn.loading`, `.alert.icon`,
 `.checkbox`, `.radio`, and `.switch` all keep their marks inside a clipped box.
 
-Three cases are still squared rather than clipped:
+The ring color is the one place the clip meets a component's own material.
+`--pixel-edge` blends the border toward the fill by however much fill there is,
+so a filled component has a seamless outline rather than a stray ring of another
+color, and `.code` and `.pre` set it to their own background: they draw no border
+of any kind, so the corners step with nothing ringing the chip.
+
+Four cases are still squared rather than clipped:
 
 - `.tooltip-icon` is a tooltip host, and a host's bubble is a pseudo-element
   positioned outside its box, which clipping the host would erase. The bubble
   carries the stepped shape itself instead.
 - `.table` paints cell backgrounds over any inset ring its root could draw.
-- `.progress` and `.skeleton` are thinner than a stepped corner.
+- `.progress` and `.skeleton` are thinner than a stepped corner. A progress bar
+  needs its fill squared too: the fill is a pseudo-element with a radius of its
+  own, and squaring only the track leaves a pill inside a box.
 - `.radio` keeps its circle, the only thing distinguishing it from a checkbox at
   a glance.
 

@@ -167,7 +167,8 @@ from a control and leaves a bottom rule, so the field keeps its affordance.
 
 Tooltips ignore the presentation fill entirely. A transparent or hairline
 tooltip floating over arbitrary content is unreadable, so the bubble stays
-filled and reads only the intent.
+filled and reads only the intent. It does read the material tokens, so an
+[aesthetic](#aesthetics) in scope shapes the bubble like any other component.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
@@ -229,8 +230,13 @@ The shadow is cast in the component's own intent, so a success button throws a
 green shadow and a destructive card a red one. With no intent, both the outline
 and the shadow use the ink, which follows the theme rather than the palette.
 
-Key caps are left alone. A `.kbd` is a content chip rather than structure, and a
-thick ink edge on one reads as a defect, so it keeps the quiet border color.
+Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content rather
+than structure, and an ink edge on one reads as a defect: a key cap keeps the
+quiet border color and a code chip keeps no border at all.
+
+Only `.btn` and `.card.interactive` move on hover. A card lifts when it opts in
+with `.interactive`; a plain card, an alert, or a panel is a container rather
+than a control and stays put.
 
 ### Glass
 
@@ -260,11 +266,15 @@ a container to scale the whole look:
 `--font-pixel` is yours to supply. The package ships no font binary, so the
 aesthetic has no network side effect and falls back to the monospace stack.
 
+Nothing casts a shadow except the tooltip bubble, which needs separating from
+whatever it floats over. The rest sit flat on the page.
+
 Because the stepped shape is a clip, it also clips the border and focus outline,
-which are redrawn inside the element. A few components are squared instead of
-stepped: tables, progress bars, skeletons, tooltip icons, and checkboxes. Radios
-keep their circle, which is the only thing distinguishing them from a checkbox at
-a glance.
+which are redrawn inside the element. `.code` and `.pre` step their corners with
+no visible outline, since code draws no border of its own. A few components are
+squared instead of stepped: tables, progress bars, skeletons, tooltip icons, and
+checkboxes. Radios keep their circle, which is the only thing distinguishing them
+from a checkbox at a glance.
 
 ## Buttons
 

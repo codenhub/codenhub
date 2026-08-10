@@ -447,7 +447,8 @@ from a control and leaves a bottom rule, so the field keeps its affordance.
 
 Tooltips ignore the presentation fill entirely. A transparent or hairline
 tooltip floating over arbitrary content is unreadable, so the bubble stays
-filled and reads only the intent.
+filled and reads only the intent. It does read the material tokens, so an
+[aesthetic](#aesthetics) in scope shapes the bubble like any other component.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
@@ -509,8 +510,13 @@ The shadow is cast in the component's own intent, so a success button throws a
 green shadow and a destructive card a red one. With no intent, both the outline
 and the shadow use the ink, which follows the theme rather than the palette.
 
-Key caps are left alone. A `.kbd` is a content chip rather than structure, and a
-thick ink edge on one reads as a defect, so it keeps the quiet border color.
+Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content rather
+than structure, and an ink edge on one reads as a defect: a key cap keeps the
+quiet border color and a code chip keeps no border at all.
+
+Only `.btn` and `.card.interactive` move on hover. A card lifts when it opts in
+with `.interactive`; a plain card, an alert, or a panel is a container rather
+than a control and stays put.
 
 ### Glass
 
@@ -540,11 +546,15 @@ a container to scale the whole look:
 `--font-pixel` is yours to supply. The package ships no font binary, so the
 aesthetic has no network side effect and falls back to the monospace stack.
 
+Nothing casts a shadow except the tooltip bubble, which needs separating from
+whatever it floats over. The rest sit flat on the page.
+
 Because the stepped shape is a clip, it also clips the border and focus outline,
-which are redrawn inside the element. A few components are squared instead of
-stepped: tables, progress bars, skeletons, tooltip icons, and checkboxes. Radios
-keep their circle, which is the only thing distinguishing them from a checkbox at
-a glance.
+which are redrawn inside the element. `.code` and `.pre` step their corners with
+no visible outline, since code draws no border of its own. A few components are
+squared instead of stepped: tables, progress bars, skeletons, tooltip icons, and
+checkboxes. Radios keep their circle, which is the only thing distinguishing them
+from a checkbox at a glance.
 
 ## Buttons
 
@@ -975,36 +985,36 @@ Set them directly to define an intent this package does not ship:
 
 Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-| Token                       | Purpose                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| `--font-default`            | Default app font family.                                                     |
-| `--container-narrow`        | Narrow content width.                                                        |
-| `--container-max`           | Default content width.                                                       |
-| `--container-wide`          | Wide content width.                                                          |
-| `--layout-gutter`           | Responsive inline page padding.                                              |
-| `--layout-section-block`    | Responsive section vertical padding.                                         |
-| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.              |
-| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
-| `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
-| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
-| `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
-| `--control-height`          | Default minimum height for controls.                                         |
-| `--border-width`            | Default border width.                                                        |
-| `--elevation-color`         | Shadow color the three elevations compose from. Heavier in dark themes.      |
-| `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
-| `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
-| `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
-| `--focus-ring`              | Focus-visible ring color.                                                    |
-| `--focus-ring-offset`       | Focus-visible outline offset.                                                |
-| `--focus-ring-width`        | Focus-visible outline/ring width.                                            |
-| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).                |
-| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                           |
-| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).             |
-| `--motion-ease`             | Default easing curve.                                                        |
-| `--z-popover`               | Popover/tooltip z-index.                                                     |
-| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
-| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
-| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
+| Token                       | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `--font-default`            | Default app font family.                                                   |
+| `--container-narrow`        | Narrow content width.                                                      |
+| `--container-max`           | Default content width.                                                     |
+| `--container-wide`          | Wide content width.                                                        |
+| `--layout-gutter`           | Responsive inline page padding.                                            |
+| `--layout-section-block`    | Responsive section vertical padding.                                       |
+| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.            |
+| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                     |
+| `--radius-small`            | Small radius for compact utility surfaces such as code elements.           |
+| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                      |
+| `--radius-surface`          | Radius for cards, panels, and alerts.                                      |
+| `--control-height`          | Default minimum height for controls.                                       |
+| `--border-width`            | Default border width.                                                      |
+| `--elevation-color`         | Shadow color the three elevations compose from. Heavier in dark themes.    |
+| `--elevation-low`           | Elevation for surface-level components such as cards and panels.           |
+| `--elevation-mid`           | Elevation for raised components such as dropdowns, tooltips, and popovers. |
+| `--elevation-high`          | Elevation for full overlays such as modal dialogs.                         |
+| `--focus-ring`              | Focus-visible ring color.                                                  |
+| `--focus-ring-offset`       | Focus-visible outline offset.                                              |
+| `--focus-ring-width`        | Focus-visible outline/ring width.                                          |
+| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).              |
+| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                         |
+| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).           |
+| `--motion-ease`             | Default easing curve.                                                      |
+| `--z-popover`               | Popover/tooltip z-index.                                                   |
+| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                     |
+| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                |
+| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                             |
 
 ## Presentation Tokens
 
@@ -1050,14 +1060,16 @@ it shows or how strongly. They are lengths and shadows, so like presentation
 tokens they carry no color and inherit safely.
 
 Components read each with a fallback, so leaving them unset produces the default
-look. Setting them on a container restyles the whole subtree.
+look. Setting them on a container restyles the whole subtree. The `--ui-shadow`
+fallback is whatever the component draws on its own: `none` for most, an
+elevation for cards and tooltip bubbles.
 
 | Token                  | Purpose                                                      | Fallback           |
 | ---------------------- | ------------------------------------------------------------ | ------------------ |
 | `--ui-radius`          | Corner radius for controls.                                  | `--radius-control` |
 | `--ui-radius-surface`  | Corner radius for surfaces such as alerts.                   | `--radius-surface` |
 | `--ui-border-width`    | Base border thickness, before `--ui-border-scale`.           | `--border-width`   |
-| `--ui-shadow`          | Complete `box-shadow` value.                                 | `none`             |
+| `--ui-shadow`          | Complete `box-shadow` value.                                 | Per component      |
 | `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
 | `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
 

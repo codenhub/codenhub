@@ -137,36 +137,36 @@ Set them directly to define an intent this package does not ship:
 
 Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-| Token                       | Purpose                                                                      |
-| --------------------------- | ---------------------------------------------------------------------------- |
-| `--font-default`            | Default app font family.                                                     |
-| `--container-narrow`        | Narrow content width.                                                        |
-| `--container-max`           | Default content width.                                                       |
-| `--container-wide`          | Wide content width.                                                          |
-| `--layout-gutter`           | Responsive inline page padding.                                              |
-| `--layout-section-block`    | Responsive section vertical padding.                                         |
-| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.              |
-| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                       |
-| `--radius-small`            | Small radius for compact utility surfaces such as code elements.             |
-| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                        |
-| `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
-| `--control-height`          | Default minimum height for controls.                                         |
-| `--border-width`            | Default border width.                                                        |
-| `--elevation-color`         | Shadow color the three elevations compose from. Heavier in dark themes.      |
-| `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
-| `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
-| `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
-| `--focus-ring`              | Focus-visible ring color.                                                    |
-| `--focus-ring-offset`       | Focus-visible outline offset.                                                |
-| `--focus-ring-width`        | Focus-visible outline/ring width.                                            |
-| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).                |
-| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                           |
-| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).             |
-| `--motion-ease`             | Default easing curve.                                                        |
-| `--z-popover`               | Popover/tooltip z-index.                                                     |
-| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
-| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
-| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
+| Token                       | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `--font-default`            | Default app font family.                                                   |
+| `--container-narrow`        | Narrow content width.                                                      |
+| `--container-max`           | Default content width.                                                     |
+| `--container-wide`          | Wide content width.                                                        |
+| `--layout-gutter`           | Responsive inline page padding.                                            |
+| `--layout-section-block`    | Responsive section vertical padding.                                       |
+| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.            |
+| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                     |
+| `--radius-small`            | Small radius for compact utility surfaces such as code elements.           |
+| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                      |
+| `--radius-surface`          | Radius for cards, panels, and alerts.                                      |
+| `--control-height`          | Default minimum height for controls.                                       |
+| `--border-width`            | Default border width.                                                      |
+| `--elevation-color`         | Shadow color the three elevations compose from. Heavier in dark themes.    |
+| `--elevation-low`           | Elevation for surface-level components such as cards and panels.           |
+| `--elevation-mid`           | Elevation for raised components such as dropdowns, tooltips, and popovers. |
+| `--elevation-high`          | Elevation for full overlays such as modal dialogs.                         |
+| `--focus-ring`              | Focus-visible ring color.                                                  |
+| `--focus-ring-offset`       | Focus-visible outline offset.                                              |
+| `--focus-ring-width`        | Focus-visible outline/ring width.                                          |
+| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).              |
+| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                         |
+| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).           |
+| `--motion-ease`             | Default easing curve.                                                      |
+| `--z-popover`               | Popover/tooltip z-index.                                                   |
+| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                     |
+| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                |
+| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                             |
 
 ## Presentation Tokens
 
@@ -212,14 +212,16 @@ it shows or how strongly. They are lengths and shadows, so like presentation
 tokens they carry no color and inherit safely.
 
 Components read each with a fallback, so leaving them unset produces the default
-look. Setting them on a container restyles the whole subtree.
+look. Setting them on a container restyles the whole subtree. The `--ui-shadow`
+fallback is whatever the component draws on its own: `none` for most, an
+elevation for cards and tooltip bubbles.
 
 | Token                  | Purpose                                                      | Fallback           |
 | ---------------------- | ------------------------------------------------------------ | ------------------ |
 | `--ui-radius`          | Corner radius for controls.                                  | `--radius-control` |
 | `--ui-radius-surface`  | Corner radius for surfaces such as alerts.                   | `--radius-surface` |
 | `--ui-border-width`    | Base border thickness, before `--ui-border-scale`.           | `--border-width`   |
-| `--ui-shadow`          | Complete `box-shadow` value.                                 | `none`             |
+| `--ui-shadow`          | Complete `box-shadow` value.                                 | Per component      |
 | `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
 | `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
 
