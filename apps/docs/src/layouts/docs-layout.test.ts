@@ -87,19 +87,40 @@ describe("documentation chrome", () => {
     expect(css).toMatch(/\.markdown-content hr:has\(\+ h2\)\s*\{[^}]*hidden/s);
   });
 
-  it("constrains minimum height on layout containers to prevent viewport scrolling", async () => {
+  it("leaves the page as the only scroll container", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
-    const railsRule = css.match(/\.left-rail,\s*\.toc-rail\s*\{([^}]*)\}/)?.[1];
     const docColRule = css.match(/\.document-column\s*\{([^}]*)\}/)?.[1];
 
-    expect(railsRule).toContain("min-h-0");
-    expect(docColRule).toContain("min-h-0");
-    expect(css).toMatch(/body\.docs-page\s*\{[^}]*overflow:\s*hidden;/s);
+    // A scrolling document column puts the scrollbar between the rails instead
+    // of at the edge of the window, and hides the page scrollbar to get there.
+    expect(docColRule).not.toContain("overflow");
+    expect(css).not.toMatch(/overflow:\s*hidden/);
   });
 
-  it("adds docs-page class to body on documentation pages", async () => {
-    const html = await readOutput("error/index.html");
+  it("sticks each rail panel below the header without clipping its divider", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const stickyRule = css.match(/\.left-rail > \*,\s*\.toc-rail > \*\s*\{([^}]*)\}/)?.[1];
 
-    expect(html).toContain('<body class="docs-page">');
+    // The divider belongs to the rail itself so it runs the full document, while
+    // the panel inside sticks and scrolls only once it outgrows the viewport.
+    expect(stickyRule).toContain("sticky");
+    expect(stickyRule).toContain("overflow-y-auto");
+    expect(stickyRule).toContain("top: var(--docs-header-height)");
+    expect(css).toMatch(/\.left-rail\s*\{[^}]*border-r/s);
+    expect(css).toMatch(/\.toc-rail\s*\{[^}]*border-l/s);
+  });
+
+  it("offsets heading anchors through scroll padding alone", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const headingRules = css.match(/\.markdown-content h[23]\s*\{[^}]*\}/g) ?? [];
+
+    // `html` reserves the sticky header, so a scroll margin here would stack on
+    // top of it and drop every anchored heading too far down the viewport.
+    expect(headingRules).toHaveLength(2);
+    expect(css).toMatch(/html\s*\{[^}]*scroll-padding-top:/s);
+
+    for (const rule of headingRules) {
+      expect(rule).not.toContain("scroll-mt");
+    }
   });
 });
