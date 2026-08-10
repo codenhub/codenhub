@@ -1,24 +1,10 @@
 {
-  "name": "codenhub-docs",
-  "compatibility_date": "2026-08-10",
-
-  // No `main`: the site is static, so the Worker serves assets directly and
-  // never runs a script. Add `main` here if a request ever needs code.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "codenhub",
+  "compatibility_date": "2026-08-08",
   "assets": {
     "directory": "./dist",
-
-    // Astro builds directory-style routes, so `/styles/tokens/` is
-    // `styles/tokens/index.html`. `auto-trailing-slash` resolves a request
-    // either way rather than only on the exact built path.
     "html_handling": "auto-trailing-slash",
-
-    // Serves the built 404 page instead of a bare status line. Astro renders it
-    // from `src/pages/404.astro`; this is a static site, not a single-page app,
-    // so an unknown path must stay a 404 rather than rewrite to the shell.
     "not_found_handling": "404-page",
   },
-
-  // Deployment lives in the Cloudflare dashboard: the account, the trigger, the
-  // domain, and any secrets. This file only describes what to serve. Future
-  // build-time values belong in `vars`, and secrets never do.
 }

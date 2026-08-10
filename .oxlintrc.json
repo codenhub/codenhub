@@ -3,6 +3,7 @@
   "ignorePatterns": [
     "dist/**",
     "**/.astro/**",
+    "**/.wrangler/**",
     "coverage/**",
     "**/coverage/**",
     "test-results/**",
