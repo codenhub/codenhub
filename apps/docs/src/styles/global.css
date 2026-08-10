@@ -129,8 +129,16 @@ html {
   @apply border-border border-r pr-6;
 }
 
+/* No border and no inline padding of its own. The rule down the left of this
+   rail is drawn by the entries themselves, sitting flush against the document
+   column, so the divider and the current-entry indicator are one line rather
+   than two parallel ones. Inline padding therefore belongs inside each entry. */
 .toc-rail {
-  @apply border-border border-l pl-6;
+  @apply pl-0;
+}
+
+.toc-rail .rail-title {
+  @apply pl-6;
 }
 
 /* The page is the scroll container, so a rail stays a full-height grid item and
@@ -160,7 +168,7 @@ html {
    the section and the current heading is a stronger segment of it rather than a
    mark that appears and disappears. */
 .toc-rail a {
-  @apply text-text-secondary hover:text-text hover:border-border-hover border-border/60 block border-l-2 py-1.5 pl-3 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+  @apply text-text-secondary hover:text-text hover:border-border-hover border-border/60 block border-l-2 py-1.5 pl-6 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
 }
 
 .toc-rail a[aria-current="true"] {
@@ -168,7 +176,7 @@ html {
 }
 
 .toc-rail li.nested a {
-  @apply pl-6;
+  @apply pl-9;
 }
 
 .document-column {

@@ -1,6 +1,8 @@
+/* No border and no 44px floor here, unlike the other header targets: a control
+   as tall as the icon buttons reads as an input field, and an outline is the one
+   thing in this header that would draw a box around itself. */
 .search-trigger {
-  @apply text-text-secondary hover:border-border-hover hover:text-text border-border bg-foreground/60 mr-2 flex items-center gap-2 rounded-(--radius-control) border py-1.5 pr-1.5 pl-3 text-sm transition-colors;
-  min-height: 44px;
+  @apply text-text-secondary hover:bg-surface hover:text-text bg-foreground mr-2 flex items-center gap-2 rounded-(--radius-control) py-1.5 pr-1.5 pl-2.5 text-sm transition-colors;
 }
 
 .search-icon {
@@ -47,9 +49,10 @@
 }
 
 /* Selection follows the keyboard, so the active row has to read as chosen even
-   while the pointer sits somewhere else in the list. */
+   while the pointer sits somewhere else in the list. Fill alone carries that:
+   an accent bar on a row that is already filled is decoration. */
 .search-result[aria-selected="true"] a {
-  @apply bg-foreground border-primary border-l-2;
+  @apply bg-surface;
 }
 
 .search-result-label {

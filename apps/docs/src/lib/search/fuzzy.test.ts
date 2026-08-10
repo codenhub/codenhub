@@ -42,4 +42,14 @@ describe("matchFuzzy", () => {
   it("ranks adjacent characters above the same count spread out", () => {
     expect(scoreOf("abc", "abcxx")).toBeGreaterThan(scoreOf("abc", "axbxc") ?? 0);
   });
+
+  it("scores a match scattered across word starts below a literal one", () => {
+    // Every letter of "soft" starts or sits inside a word of "Supported Format",
+    // which is enough to look like a strong match until skipped characters cost.
+    expect(scoreOf("soft", "Supported Format")).toBeLessThan(scoreOf("soft", "Soft") ?? 0);
+  });
+
+  it("drives a thinly scattered match to the floor rather than ranking it", () => {
+    expect(scoreOf("soft", "Supported Format")).toBeLessThan(12);
+  });
 });

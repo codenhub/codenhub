@@ -28,7 +28,16 @@ const DEFAULT_LIMIT = 8;
 const SECTION_WEIGHT = 0.92;
 const PACKAGE_WEIGHT = 0.8;
 const EXACT_LABEL_BONUS = 20;
-const BODY_SCORE = 6;
+const BODY_SCORE = 12;
+
+/**
+ * Floor a match must clear to be shown at all.
+ *
+ * Set to the body score deliberately: finding the query written out in the
+ * prose is the weakest evidence worth surfacing, so a label a query only
+ * reaches by skipping most of it does not qualify.
+ */
+const MINIMUM_SCORE = BODY_SCORE;
 
 /**
  * Ranks index entries against a query.
@@ -44,6 +53,10 @@ const BODY_SCORE = 6;
  * inside it equally would bury them under their own contents. A query that
  * equals a label outright is a deliberate hit rather than a fuzzy guess, so it
  * takes a bonus that clears near-miss matches elsewhere.
+ *
+ * A literal phrase found in prose outscores a scattered label match, because a
+ * label the query only reaches by skipping most of it is the weaker signal of
+ * the two, and a match weaker than that is dropped rather than ranked last.
  *
  * Results are sorted by score, then alphabetically so equal scores stay stable
  * across builds rather than following index order.
@@ -79,7 +92,7 @@ export function searchDocumentation(
       bodyScore,
     );
 
-    if (score > 0) {
+    if (score >= MINIMUM_SCORE) {
       results.push({ entry, positions: labelMatch?.positions ?? [], score });
     }
   }

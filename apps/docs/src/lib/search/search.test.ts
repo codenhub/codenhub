@@ -71,6 +71,16 @@ describe("searchDocumentation", () => {
     expect(routesFor("browser history")).toEqual(["/router/reference/#navigation"]);
   });
 
+  it("drops a label the query only reaches by skipping most of it", () => {
+    // "soft" is a subsequence of "Supported Format" that lands on word starts,
+    // which is enough to rank it above the real answer without a floor.
+    const scattered: SearchEntry[] = [
+      { packageLabel: "Skills", route: "/skills/", section: "Supported Format", text: "Frontmatter.", title: "Skills" },
+    ];
+
+    expect(searchDocumentation(scattered, "soft")).toEqual([]);
+  });
+
   it("does not match prose through a scattered subsequence", () => {
     // Every one of these letters appears in order somewhere in the Error prose,
     // which is exactly what a fuzzy match over a paragraph would wrongly accept.
