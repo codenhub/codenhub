@@ -77,6 +77,16 @@ describe("documentation chrome", () => {
     expect(activeRule).not.toMatch(/border|\b(?:p|m)l-/);
   });
 
+  it("draws one rule when a section heading follows an authored thematic break", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const html = await readOutput("icons/index.html");
+
+    // The icons overview authors `---` before its `##` headings, which is what
+    // produced a doubled rule against the heading's own border.
+    expect(html).toMatch(/<hr>\s*<h2/);
+    expect(css).toMatch(/\.markdown-content hr:has\(\+ h2\)\s*\{[^}]*hidden/s);
+  });
+
   it("constrains minimum height on layout containers to prevent viewport scrolling", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const railsRule = css.match(/\.left-rail,\s*\.toc-rail\s*\{([^}]*)\}/)?.[1];

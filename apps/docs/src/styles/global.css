@@ -257,6 +257,14 @@ html {
   @apply divider my-10;
 }
 
+/* Package docs commonly author a `---` before a section heading, but `h2` draws
+   its own rule, so the pair renders as two lines a heading apart. The heading's
+   rule wins, because it keeps every section header identical whether or not the
+   author wrote the break. `h3` has no rule of its own, so its break stays. */
+.markdown-content hr:has(+ h2) {
+  @apply hidden;
+}
+
 .mobile-navigation {
   @apply border-border bg-background hidden border-b;
 }
