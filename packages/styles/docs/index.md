@@ -38,10 +38,10 @@ when global rules are not appropriate.
 
 ### Configuration
 
-The root uses light values unless the operating-system preference is dark.
-Apply `.light` or `.dark` to the root or any ancestor to force token values for
-that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-aliases. The [token reference](./tokens.md) documents their precedence.
+The root follows the operating-system preference. Apply `.light` or `.dark` to
+the root or any ancestor to force token values for that subtree.
+`.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases. The
+[token reference](./tokens.md) documents their precedence.
 
 ```html
 <html class="dark">
@@ -85,6 +85,8 @@ theme tokens so their classes can work independently.
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
+- Chrome 123, Safari 17.5, or Firefox 120 and newer. Color tokens are declared
+  with `light-dark()` and selected by `color-scheme`.
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA,
   keyboard behavior, focus management, validation, and announcements.

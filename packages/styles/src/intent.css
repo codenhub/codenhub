@@ -1,0 +1,81 @@
+/* Intent classes map one color family onto five shared slots and do nothing
+   else. Components read the slots, so supporting every intent costs a component
+   nothing and adding an intent costs five declarations.
+
+   Intent does not cascade. These classes set inheritable custom properties, but
+   every component redeclares the neutral defaults at its own root, and a
+   declaration on the element beats an inherited one. A `.success` container
+   therefore cannot silently recolor a destructive button nested inside it,
+   while `.btn.success` still wins over the component's own reset through
+   specificity.
+
+   The reset below carries zero specificity, so an intent class on the element
+   wins over it, while the reset still beats an inherited value -- any
+   declaration on an element beats inheritance regardless of specificity. That
+   single rule is what lets every component drop its own per-intent branches. */
+
+:where(.btn, .alert, .badge, .checkbox, .radio, .switch, .progress) {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-text-subtle);
+}
+
+.neutral {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-text-subtle);
+}
+
+.primary {
+  --intent-color: var(--color-primary);
+  --intent-contrast: var(--color-primary-contrast);
+  --intent-hover: var(--color-primary-hover);
+  --intent-strong: var(--color-primary-strong);
+  --intent-subtle: var(--color-primary-subtle);
+}
+
+.secondary {
+  --intent-color: var(--color-accent);
+  --intent-contrast: var(--color-accent-contrast);
+  --intent-hover: var(--color-accent-hover);
+  --intent-strong: var(--color-accent-strong);
+  --intent-subtle: var(--color-accent-subtle);
+}
+
+.success {
+  --intent-color: var(--color-success);
+  --intent-contrast: var(--color-success-contrast);
+  --intent-hover: var(--color-success-hover);
+  --intent-strong: var(--color-success-strong);
+  --intent-subtle: var(--color-success-subtle);
+}
+
+.warning {
+  --intent-color: var(--color-warning);
+  --intent-contrast: var(--color-warning-contrast);
+  --intent-hover: var(--color-warning-hover);
+  --intent-strong: var(--color-warning-strong);
+  --intent-subtle: var(--color-warning-subtle);
+}
+
+.destructive,
+.danger,
+.error {
+  --intent-color: var(--color-destructive);
+  --intent-contrast: var(--color-destructive-contrast);
+  --intent-hover: var(--color-destructive-hover);
+  --intent-strong: var(--color-destructive-strong);
+  --intent-subtle: var(--color-destructive-subtle);
+}
+
+.info {
+  --intent-color: var(--color-info);
+  --intent-contrast: var(--color-info-contrast);
+  --intent-hover: var(--color-info-hover);
+  --intent-strong: var(--color-info-strong);
+  --intent-subtle: var(--color-info-subtle);
+}

@@ -78,6 +78,7 @@ and any element can still override it.
 | Requirement   | Details                                                                         |
 | ------------- | ------------------------------------------------------------------------------- |
 | CSS imports   | Consumer tooling must resolve package CSS imports.                              |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 120 and newer, for `light-dark()` theming.  |
 | Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.               |
 | Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management. |
 
@@ -132,10 +133,10 @@ when global rules are not appropriate.
 
 ### Configuration
 
-The root uses light values unless the operating-system preference is dark.
-Apply `.light` or `.dark` to the root or any ancestor to force token values for
-that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-aliases. The [token reference](docs/tokens.md) documents their precedence.
+The root follows the operating-system preference. Apply `.light` or `.dark` to
+the root or any ancestor to force token values for that subtree.
+`.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases. The
+[token reference](docs/tokens.md) documents their precedence.
 
 ```html
 <html class="dark">
@@ -179,6 +180,8 @@ theme tokens so their classes can work independently.
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
+- Chrome 123, Safari 17.5, or Firefox 120 and newer. Color tokens are declared
+  with `light-dark()` and selected by `color-scheme`.
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA,
   keyboard behavior, focus management, validation, and announcements.
@@ -352,13 +355,17 @@ Values each class ships:
 | `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
 | `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
 
-`.btn`, `.alert`, and `.badge` read the contract. With no presentation class in
-scope they keep their own defaults: buttons are filled, alerts and badges are
-tinted. Every other class in this package is unaffected by these tokens.
+`.btn`, `.alert`, and `.badge` read the full contract. With no presentation class
+in scope they keep their own defaults: buttons are filled, alerts and badges are
+tinted. Form controls read only the border portion. Every other class in this
+package is unaffected by these tokens.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
-is a trap rather than a feature.
+is a trap rather than a feature. Use `.neutral` to opt an element back out.
+
+Presentation and [material tokens](docs/tokens.md#material-tokens) do cascade, so a
+container can set the look of its whole subtree while any element overrides it.
 
 ## Buttons
 
@@ -370,12 +377,17 @@ Intent classes:
 
 | Class                               | Meaning                        |
 | ----------------------------------- | ------------------------------ |
+| `.neutral` _(default)_              | No specific intent.            |
 | `.primary`                          | Primary action.                |
 | `.secondary`                        | Secondary/accent action.       |
 | `.success`                          | Successful or positive action. |
 | `.warning`                          | Warning/caution action.        |
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
+
+Every component that supports intent accepts the same list and reads the same
+[intent tokens](docs/tokens.md#intent-tokens), so a custom intent class works
+everywhere without touching a component.
 
 Size and shape classes:
 
@@ -428,14 +440,25 @@ Examples:
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
 Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default; `date` and `datetime-local` inputs retain only the browser-native picker icon. Use `.no-icon` or `data-no-icon` to suppress custom icons on the other native inputs.
-Input icons adapt dynamically to theme variables (`--ipt-icon-color` / `--ipt-icon-color-focus`, defaulting to `var(--color-text-secondary)` and `var(--color-text)`). Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
+Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
+
+Input icons are `background-image` data URIs rather than masks, because a text
+input is a replaced element with no pseudo-element to mask, and masking the
+input itself would clip its border, background, and text. A data URI cannot read
+a custom property, so each icon ships light and dark artwork and the theme
+re-points an alias. Input icons therefore follow the theme but not the intent.
+Override one with `--ipt-icon-src` and `--ipt-icon-src-focus`:
+
+```html
+<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
+```
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
 to set the checked color:
 
 | Class                               | Meaning                 |
 | ----------------------------------- | ----------------------- |
-| _(default)_                         | Text color.             |
+| `.neutral` _(default)_              | Text color.             |
 | `.primary`                          | Primary color.          |
 | `.secondary`                        | Secondary/accent color. |
 | `.success`                          | Success color.          |
@@ -621,9 +644,10 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 
 # Design tokens
 
-Tokens are CSS custom properties. The root starts with light values and switches
-to dark values when `prefers-color-scheme: dark` matches. Explicit theme
-selectors can force either palette on the root or any subtree.
+Tokens are CSS custom properties. Each color token holds both of its theme
+values at once through `light-dark()`, and the element's `color-scheme` picks
+one. Explicit theme selectors can force either palette on the root or any
+subtree.
 
 ```html
 <section data-theme="dark">
@@ -638,18 +662,27 @@ selectors can force either palette on the root or any subtree.
 | Light | `.light`, `.theme-light`, `[data-theme="light"]` |
 | Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
 
-- With no explicit selector, `:root` is light unless the system prefers dark.
-- A light selector on `:root` suppresses the system dark fallback. A dark root
-  selector uses dark values regardless of system preference.
-- Every selector can theme a subtree. Normal CSS inheritance means a nested
-  explicit selector overrides inherited values from an outer theme; the nearest
-  themed ancestor therefore controls that subtree.
+- Theme selectors set `color-scheme` and nothing else. Because `color-scheme`
+  inherits, a selector themes its entire subtree.
+- With no explicit selector, `:root` uses `color-scheme: light dark`, so the
+  system preference decides.
+- A theme selector on `:root` overrides the system preference in either
+  direction.
+- A nested explicit selector overrides an inherited theme, so the nearest themed
+  ancestor controls that subtree at any depth.
 - If conflicting light and dark selectors are placed on the same element, the
   dark declaration wins because it appears later with equal specificity. Do not
   rely on this conflict behavior; apply one theme per element.
-- Component colors inherit from tokens or `currentColor`. For example, the
-  select chevron uses `currentColor`, so it follows every explicit selector and
-  the system-preference fallback without a separate dark-variant rule.
+- Component colors resolve from tokens or `currentColor`, so they follow the
+  theme without separate dark-variant rules. Input icons are the one exception:
+  they are `background-image` data URIs, which cannot read a custom property, so
+  they ship a light and a dark artwork and the theme re-points an alias.
+
+Setting `color-scheme` yourself on an element also re-themes the tokens below
+it, because that is the only signal the palette reads. This also themes native
+UI such as scrollbars and form-control internals to match.
+
+This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 
 ## Color Tokens
 
@@ -697,7 +730,42 @@ selectors can force either palette on the root or any subtree.
 | `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                         |
 | `--color-info-strong`          | High-emphasis companion tone for info.                                                                        |
 
-> **Intent token contract**: color intent tokens own meaning and tone variants. Components map an intent palette into scoped component slots, and presentation classes decide which slots to consume. Theme changes belong in token values such as `.dark`, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
+> **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
+
+## Intent Tokens
+
+Intent classes set these five slots; components read them. Because every
+supporting component reads the same five names, an intent works on every
+component that supports intent, and a custom intent needs no component changes.
+
+| Token               | Purpose                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color.                                            |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                 |
+| `--intent-hover`    | The intent's hovered base color.                                    |
+| `--intent-strong`   | High-emphasis tone. Readable text, icon, or border on subtle fills. |
+| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks.                      |
+
+Set them directly to define an intent this package does not ship:
+
+```css
+.brand {
+  --intent-color: var(--color-violet-600);
+  --intent-contrast: var(--color-neutral-50);
+  --intent-hover: var(--color-violet-700);
+  --intent-strong: var(--color-violet-800);
+  --intent-subtle: var(--color-violet-100);
+}
+```
+
+```html
+<button class="btn brand">Custom intent</button>
+<span class="badge brand soft">Works everywhere</span>
+```
+
+> **Intent does not cascade.** Components reset these slots to the text palette
+> at their own root, so a `.success` container never recolors a nested
+> destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation Tokens
 
@@ -718,6 +786,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--radius-surface`          | Radius for cards, panels, and alerts.                                        |
 | `--control-height`          | Default minimum height for controls.                                         |
 | `--border-width`            | Default border width.                                                        |
+| `--elevation-color`         | Shadow color the three elevations compose from. Heavier in dark themes.      |
 | `--elevation-low`           | Elevation for surface-level components such as cards and panels.             |
 | `--elevation-mid`           | Elevation for elevated components such as dropdowns and floating containers. |
 | `--elevation-high`          | Elevation for tooltips and inline overlays.                                  |
@@ -769,6 +838,42 @@ compares computed color strings should compare colors instead.
 > set these tokens; components only read them. Setting a value that no presentation
 > class produces is supported but unvalidated. See
 > [Classes](docs/classes.md#presentation) for the classes that ship these values.
+
+## Material Tokens
+
+Material tokens describe what a component is _made of_ rather than which intent
+it shows or how strongly. They are lengths and shadows, so like presentation
+tokens they carry no color and inherit safely.
+
+Components read each with a fallback, so leaving them unset produces the default
+look. Setting them on a container restyles the whole subtree.
+
+| Token                  | Purpose                                                      | Fallback           |
+| ---------------------- | ------------------------------------------------------------ | ------------------ |
+| `--ui-radius`          | Corner radius for controls.                                  | `--radius-control` |
+| `--ui-radius-surface`  | Corner radius for surfaces such as alerts.                   | `--radius-surface` |
+| `--ui-border-width`    | Base border thickness, before `--ui-border-scale`.           | `--border-width`   |
+| `--ui-shadow`          | Complete `box-shadow` value.                                 | `none`             |
+| `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
+| `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
+
+Presentation and material meet in one place. The aesthetic supplies the base
+thickness and the presentation scales it:
+
+```css
+border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
+```
+
+```html
+<section style="--ui-radius: 0; --ui-border-width: 3px">
+  <button class="btn primary">Square and heavy</button>
+  <input class="ipt" placeholder="Matches" />
+</section>
+```
+
+> **Material token contract**: components read these; aesthetic classes and
+> consumer overrides set them. The named aesthetic classes that ship coordinated
+> values are not part of this release.
 
 ## Component Internals
 

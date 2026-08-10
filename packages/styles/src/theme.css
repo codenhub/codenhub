@@ -1,4 +1,5 @@
 @import "tailwindcss/theme.css";
+@import "./intent.css";
 @import "./presentation.css";
 @source not "../dist";
 @source not "../tests";
@@ -6,58 +7,64 @@
 @source not "../debug";
 @source not "../playground";
 
+/* Color tokens are declared once with `light-dark()`, which resolves at the
+   point of use against the consuming element's computed `color-scheme`. Theme
+   selectors below therefore set `color-scheme` and nothing else. See
+   docs/internal/architecture.md for the verification behind this. */
 @theme {
   --font-default: "Segoe UI", system-ui, sans-serif;
 
-  --color-primary: var(--color-neutral-950);
-  --color-primary-contrast: var(--color-neutral-50);
-  --color-primary-hover: var(--color-neutral-700);
-  --color-primary-subtle: var(--color-neutral-200);
-  --color-primary-strong: var(--color-neutral-900);
-  --color-accent: var(--color-neutral-600);
-  --color-accent-contrast: var(--color-neutral-50);
-  --color-accent-hover: var(--color-neutral-700);
-  --color-accent-subtle: var(--color-neutral-100);
-  --color-accent-strong: var(--color-neutral-800);
-  --color-border: var(--color-neutral-300);
-  --color-border-hover: var(--color-neutral-600);
-  --color-background: var(--color-neutral-50);
-  --color-foreground: var(--color-neutral-100);
-  --color-surface: var(--color-neutral-200);
-  --color-text: var(--color-neutral-950);
-  --color-text-secondary: var(--color-neutral-700);
-  --color-text-contrast: var(--color-neutral-50);
-  --color-text-hover: var(--color-neutral-700);
-  --color-text-subtle: var(--color-neutral-200);
-  --color-text-strong: var(--color-neutral-900);
+  --color-primary: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  --color-primary-contrast: light-dark(var(--color-neutral-50), var(--color-neutral-950));
+  --color-primary-hover: light-dark(var(--color-neutral-700), var(--color-neutral-200));
+  --color-primary-subtle: light-dark(var(--color-neutral-200), var(--color-neutral-900));
+  --color-primary-strong: light-dark(var(--color-neutral-900), var(--color-neutral-100));
+  --color-accent: light-dark(var(--color-neutral-600), var(--color-neutral-400));
+  --color-accent-contrast: light-dark(var(--color-neutral-50), var(--color-neutral-950));
+  --color-accent-hover: light-dark(var(--color-neutral-700), var(--color-neutral-300));
+  --color-accent-subtle: light-dark(var(--color-neutral-100), var(--color-neutral-800));
+  --color-accent-strong: light-dark(var(--color-neutral-800), var(--color-neutral-200));
+  --color-border: light-dark(var(--color-neutral-300), var(--color-neutral-700));
+  --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
+  --color-background: light-dark(var(--color-neutral-50), var(--color-neutral-950));
+  --color-foreground: light-dark(var(--color-neutral-100), var(--color-neutral-900));
+  --color-surface: light-dark(var(--color-neutral-200), var(--color-neutral-800));
+  --color-text: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  --color-text-secondary: light-dark(var(--color-neutral-700), var(--color-neutral-400));
+  --color-text-contrast: light-dark(var(--color-neutral-50), var(--color-neutral-950));
+  --color-text-hover: light-dark(var(--color-neutral-700), var(--color-neutral-200));
+  --color-text-subtle: light-dark(var(--color-neutral-200), var(--color-neutral-900));
+  --color-text-strong: light-dark(var(--color-neutral-900), var(--color-neutral-100));
 
   --color-success: var(--color-emerald-600);
   --color-success-contrast: var(--color-neutral-50);
   --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
-  --color-success-subtle: var(--color-emerald-100);
-  --color-success-strong: var(--color-emerald-800);
+  --color-success-subtle: light-dark(var(--color-emerald-100), var(--color-emerald-800));
+  --color-success-strong: light-dark(var(--color-emerald-800), var(--color-emerald-100));
   --color-warning: var(--color-amber-600);
   --color-warning-contrast: var(--color-neutral-50);
   --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
-  --color-warning-subtle: var(--color-amber-100);
-  --color-warning-strong: var(--color-amber-800);
+  --color-warning-subtle: light-dark(var(--color-amber-100), var(--color-amber-800));
+  --color-warning-strong: light-dark(var(--color-amber-800), var(--color-amber-100));
   --color-destructive: var(--color-rose-700);
   --color-destructive-contrast: var(--color-neutral-50);
   --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
-  --color-destructive-subtle: var(--color-rose-100);
-  --color-destructive-strong: var(--color-rose-800);
+  --color-destructive-subtle: light-dark(var(--color-rose-100), var(--color-rose-800));
+  --color-destructive-strong: light-dark(var(--color-rose-800), var(--color-rose-100));
   --color-info: var(--color-indigo-600);
   --color-info-contrast: var(--color-neutral-50);
   --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
-  --color-info-subtle: var(--color-indigo-100);
-  --color-info-strong: var(--color-indigo-800);
+  --color-info-subtle: light-dark(var(--color-indigo-100), var(--color-indigo-800));
+  --color-info-strong: light-dark(var(--color-indigo-800), var(--color-indigo-100));
 
   --breakpoint-xs: 30rem;
   --breakpoint-2xl: 90rem;
 }
 
 :root {
-  color-scheme: light;
+  /* Both keywords: the system preference decides, and the explicit theme
+     selectors below override it at any depth because `color-scheme` inherits. */
+  color-scheme: light dark;
 
   --container-narrow: 48rem;
   --container-max: 80rem;
@@ -73,9 +80,13 @@
   --control-height: 2.5rem;
   --border-width: 1px;
 
-  --elevation-low: 0 1px 2px rgb(15 23 42 / 0.06), 0 1px 3px rgb(15 23 42 / 0.08);
-  --elevation-mid: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.08);
-  --elevation-high: 0 20px 25px -5px rgb(15 23 42 / 0.1), 0 8px 10px -6px rgb(15 23 42 / 0.1);
+  /* `light-dark()` takes colors only, so the shadow color is the token and the
+     three elevations compose from it. Dark themes need a much heavier color to
+     read at all against a dark background. */
+  --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
+  --elevation-low: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
+  --elevation-mid: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
+  --elevation-high: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
   --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
   --focus-ring-offset: 2px;
@@ -91,159 +102,16 @@
   --surface-hover-transform: translateY(-1px);
 }
 
-/* Intentional duplication of :root tokens. CSS-only tradeoff: .light can be
-   applied to any subtree element (not just :root), so tokens must be re-declared
-   here to cascade correctly into that scope. Sync with :root when changing light
-   mode values. */
 .light,
 .theme-light,
 [data-theme="light"] {
   color-scheme: light;
-
-  --color-primary: var(--color-neutral-950);
-  --color-primary-contrast: var(--color-neutral-50);
-  --color-primary-hover: var(--color-neutral-700);
-  --color-primary-subtle: var(--color-neutral-200);
-  --color-primary-strong: var(--color-neutral-900);
-  --color-accent: var(--color-neutral-600);
-  --color-accent-contrast: var(--color-neutral-50);
-  --color-accent-hover: var(--color-neutral-700);
-  --color-accent-subtle: var(--color-neutral-100);
-  --color-accent-strong: var(--color-neutral-800);
-  --color-border: var(--color-neutral-300);
-  --color-border-hover: var(--color-neutral-600);
-  --color-background: var(--color-neutral-50);
-  --color-foreground: var(--color-neutral-100);
-  --color-surface: var(--color-neutral-200);
-  --color-text: var(--color-neutral-950);
-  --color-text-secondary: var(--color-neutral-700);
-  --color-text-contrast: var(--color-neutral-50);
-  --color-text-hover: var(--color-neutral-700);
-  --color-text-subtle: var(--color-neutral-200);
-  --color-text-strong: var(--color-neutral-900);
-
-  --color-success: var(--color-emerald-600);
-  --color-success-contrast: var(--color-neutral-50);
-  --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
-  --color-success-subtle: var(--color-emerald-100);
-  --color-success-strong: var(--color-emerald-800);
-  --color-warning: var(--color-amber-600);
-  --color-warning-contrast: var(--color-neutral-50);
-  --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
-  --color-warning-subtle: var(--color-amber-100);
-  --color-warning-strong: var(--color-amber-800);
-  --color-destructive: var(--color-rose-700);
-  --color-destructive-contrast: var(--color-neutral-50);
-  --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
-  --color-destructive-subtle: var(--color-rose-100);
-  --color-destructive-strong: var(--color-rose-800);
-  --color-info: var(--color-indigo-600);
-  --color-info-contrast: var(--color-neutral-50);
-  --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
-  --color-info-subtle: var(--color-indigo-100);
-  --color-info-strong: var(--color-indigo-800);
 }
 
 .dark,
 .theme-dark,
 [data-theme="dark"] {
   color-scheme: dark;
-
-  --color-primary: var(--color-neutral-50);
-  --color-primary-contrast: var(--color-neutral-950);
-  --color-primary-hover: var(--color-neutral-200);
-  --color-primary-subtle: var(--color-neutral-900);
-  --color-primary-strong: var(--color-neutral-100);
-  --color-accent: var(--color-neutral-400);
-  --color-accent-contrast: var(--color-neutral-950);
-  --color-accent-hover: var(--color-neutral-300);
-  --color-accent-subtle: var(--color-neutral-800);
-  --color-accent-strong: var(--color-neutral-200);
-  --color-border: var(--color-neutral-700);
-  --color-border-hover: var(--color-neutral-500);
-  --color-background: var(--color-neutral-950);
-  --color-foreground: var(--color-neutral-900);
-  --color-surface: var(--color-neutral-800);
-  --color-text: var(--color-neutral-50);
-  --color-text-secondary: var(--color-neutral-400);
-  --color-text-contrast: var(--color-neutral-950);
-  --color-text-hover: var(--color-neutral-200);
-  --color-text-subtle: var(--color-neutral-900);
-  --color-text-strong: var(--color-neutral-100);
-
-  --color-success: var(--color-emerald-600);
-  --color-success-contrast: var(--color-neutral-50);
-  --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
-  --color-success-subtle: var(--color-emerald-800);
-  --color-success-strong: var(--color-emerald-100);
-  --color-warning: var(--color-amber-600);
-  --color-warning-contrast: var(--color-neutral-50);
-  --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
-  --color-warning-subtle: var(--color-amber-800);
-  --color-warning-strong: var(--color-amber-100);
-  --color-destructive: var(--color-rose-700);
-  --color-destructive-contrast: var(--color-neutral-50);
-  --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
-  --color-destructive-subtle: var(--color-rose-800);
-  --color-destructive-strong: var(--color-rose-100);
-  --color-info: var(--color-indigo-600);
-  --color-info-contrast: var(--color-neutral-50);
-  --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
-  --color-info-subtle: var(--color-indigo-800);
-  --color-info-strong: var(--color-indigo-100);
-}
-
-/* Intentional duplication of .dark tokens. CSS-only tradeoff: @media cannot
-   reference class-based token values directly, so dark-mode values must be
-   re-declared here for the system-preference fallback. Sync with .dark when
-   changing dark mode values. */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light, .theme-light, [data-theme="light"]) {
-    color-scheme: dark;
-
-    --color-primary: var(--color-neutral-50);
-    --color-primary-contrast: var(--color-neutral-950);
-    --color-primary-hover: var(--color-neutral-200);
-    --color-primary-subtle: var(--color-neutral-900);
-    --color-primary-strong: var(--color-neutral-100);
-    --color-accent: var(--color-neutral-400);
-    --color-accent-contrast: var(--color-neutral-950);
-    --color-accent-hover: var(--color-neutral-300);
-    --color-accent-subtle: var(--color-neutral-800);
-    --color-accent-strong: var(--color-neutral-200);
-    --color-border: var(--color-neutral-700);
-    --color-border-hover: var(--color-neutral-500);
-    --color-background: var(--color-neutral-950);
-    --color-foreground: var(--color-neutral-900);
-    --color-surface: var(--color-neutral-800);
-    --color-text: var(--color-neutral-50);
-    --color-text-secondary: var(--color-neutral-400);
-    --color-text-contrast: var(--color-neutral-950);
-    --color-text-hover: var(--color-neutral-200);
-    --color-text-subtle: var(--color-neutral-900);
-    --color-text-strong: var(--color-neutral-100);
-
-    --color-success: var(--color-emerald-600);
-    --color-success-contrast: var(--color-neutral-50);
-    --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
-    --color-success-subtle: var(--color-emerald-800);
-    --color-success-strong: var(--color-emerald-100);
-    --color-warning: var(--color-amber-600);
-    --color-warning-contrast: var(--color-neutral-50);
-    --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
-    --color-warning-subtle: var(--color-amber-800);
-    --color-warning-strong: var(--color-amber-100);
-    --color-destructive: var(--color-rose-700);
-    --color-destructive-contrast: var(--color-neutral-50);
-    --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
-    --color-destructive-subtle: var(--color-rose-800);
-    --color-destructive-strong: var(--color-rose-100);
-    --color-info: var(--color-indigo-600);
-    --color-info-contrast: var(--color-neutral-50);
-    --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
-    --color-info-subtle: var(--color-indigo-800);
-    --color-info-strong: var(--color-indigo-100);
-  }
 }
 
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));

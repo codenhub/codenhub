@@ -3,69 +3,24 @@
 @import "./loader.css";
 
 @utility btn {
-  --button-color: var(--color-text);
-  --button-contrast: var(--color-text-contrast);
-  --button-hover: var(--color-text-hover);
-  --button-strong: var(--color-text-strong);
-
-  /* Presentation tokens are resolved here, against this button's own intent.
-     The fallbacks are the filled default a button keeps when no presentation
-     class is in scope. */
-  --button-bg: color-mix(in oklab, var(--button-color) var(--ui-fill, 100%), transparent);
-  --button-fg: color-mix(in oklab, var(--button-contrast) var(--ui-fg-on-fill, 100%), var(--button-strong));
-  --button-border: color-mix(in oklab, var(--button-color) var(--ui-border, 100%), transparent);
-  --button-border-width: calc(var(--border-width) * var(--ui-border-scale, 1));
-  --button-hover-bg: color-mix(in oklab, var(--button-hover) var(--ui-hover-fill, 100%), transparent);
-  --button-hover-fg: color-mix(in oklab, var(--button-contrast) var(--ui-hover-fg-on-fill, 100%), var(--button-strong));
-  --button-hover-border: color-mix(in oklab, var(--button-hover) var(--ui-border, 100%), transparent);
+  /* Presentation and material tokens are resolved here, against this button's
+     own intent. The fallbacks are the filled default a button keeps when no
+     presentation or aesthetic class is in scope. */
+  --button-fill: calc(var(--ui-fill, 100%) * var(--ui-bg-alpha, 1));
+  --button-hover-fill: calc(var(--ui-hover-fill, 100%) * var(--ui-bg-alpha, 1));
+  --button-bg: color-mix(in oklab, var(--intent-color) var(--button-fill), transparent);
+  --button-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 100%), var(--intent-strong));
+  --button-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 100%), transparent);
+  --button-border-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
+  --button-hover-bg: color-mix(in oklab, var(--intent-hover) var(--button-hover-fill), transparent);
+  --button-hover-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-hover-fg-on-fill, 100%), var(--intent-strong));
+  --button-hover-border: color-mix(in oklab, var(--intent-hover) var(--ui-border, 100%), transparent);
   --button-spinner: var(--button-fg);
 
-  @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit cursor-pointer items-center justify-center gap-2 rounded-(--radius-control) bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none;
+  @apply relative inline-flex min-h-(--control-height,2.5rem) w-fit cursor-pointer items-center justify-center gap-2 bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,box-shadow,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none;
   border: var(--button-border-width) solid var(--button-border);
-
-  &.primary {
-    --button-color: var(--color-primary);
-    --button-contrast: var(--color-primary-contrast);
-    --button-hover: var(--color-primary-hover);
-    --button-strong: var(--color-primary-strong);
-  }
-
-  &.secondary {
-    --button-color: var(--color-accent);
-    --button-contrast: var(--color-accent-contrast);
-    --button-hover: var(--color-accent-hover);
-    --button-strong: var(--color-accent-strong);
-  }
-
-  &.success {
-    --button-color: var(--color-success);
-    --button-contrast: var(--color-success-contrast);
-    --button-hover: var(--color-success-hover);
-    --button-strong: var(--color-success-strong);
-  }
-
-  &.warning {
-    --button-color: var(--color-warning);
-    --button-contrast: var(--color-warning-contrast);
-    --button-hover: var(--color-warning-hover);
-    --button-strong: var(--color-warning-strong);
-  }
-
-  &.destructive,
-  &.danger,
-  &.error {
-    --button-color: var(--color-destructive);
-    --button-contrast: var(--color-destructive-contrast);
-    --button-hover: var(--color-destructive-hover);
-    --button-strong: var(--color-destructive-strong);
-  }
-
-  &.info {
-    --button-color: var(--color-info);
-    --button-contrast: var(--color-info-contrast);
-    --button-hover: var(--color-info-hover);
-    --button-strong: var(--color-info-strong);
-  }
+  border-radius: var(--ui-radius, var(--radius-control));
+  box-shadow: var(--ui-shadow, none);
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;
@@ -103,6 +58,8 @@
 
   &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
     @apply border-(--button-hover-border) bg-(--button-hover-bg) text-(--button-hover-fg);
+
+    transform: var(--ui-hover-transform, none);
   }
 
   &:disabled,

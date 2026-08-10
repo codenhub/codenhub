@@ -93,13 +93,17 @@ Values each class ships:
 | `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
 | `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
 
-`.btn`, `.alert`, and `.badge` read the contract. With no presentation class in
-scope they keep their own defaults: buttons are filled, alerts and badges are
-tinted. Every other class in this package is unaffected by these tokens.
+`.btn`, `.alert`, and `.badge` read the full contract. With no presentation class
+in scope they keep their own defaults: buttons are filled, alerts and badges are
+tinted. Form controls read only the border portion. Every other class in this
+package is unaffected by these tokens.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
-is a trap rather than a feature.
+is a trap rather than a feature. Use `.neutral` to opt an element back out.
+
+Presentation and [material tokens](./tokens.md#material-tokens) do cascade, so a
+container can set the look of its whole subtree while any element overrides it.
 
 ## Buttons
 
@@ -111,12 +115,17 @@ Intent classes:
 
 | Class                               | Meaning                        |
 | ----------------------------------- | ------------------------------ |
+| `.neutral` _(default)_              | No specific intent.            |
 | `.primary`                          | Primary action.                |
 | `.secondary`                        | Secondary/accent action.       |
 | `.success`                          | Successful or positive action. |
 | `.warning`                          | Warning/caution action.        |
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
+
+Every component that supports intent accepts the same list and reads the same
+[intent tokens](./tokens.md#intent-tokens), so a custom intent class works
+everywhere without touching a component.
 
 Size and shape classes:
 
@@ -169,14 +178,25 @@ Examples:
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
 Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default; `date` and `datetime-local` inputs retain only the browser-native picker icon. Use `.no-icon` or `data-no-icon` to suppress custom icons on the other native inputs.
-Input icons adapt dynamically to theme variables (`--ipt-icon-color` / `--ipt-icon-color-focus`, defaulting to `var(--color-text-secondary)` and `var(--color-text)`). Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
+Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
+
+Input icons are `background-image` data URIs rather than masks, because a text
+input is a replaced element with no pseudo-element to mask, and masking the
+input itself would clip its border, background, and text. A data URI cannot read
+a custom property, so each icon ships light and dark artwork and the theme
+re-points an alias. Input icons therefore follow the theme but not the intent.
+Override one with `--ipt-icon-src` and `--ipt-icon-src-focus`:
+
+```html
+<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
+```
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
 to set the checked color:
 
 | Class                               | Meaning                 |
 | ----------------------------------- | ----------------------- |
-| _(default)_                         | Text color.             |
+| `.neutral` _(default)_              | Text color.             |
 | `.primary`                          | Primary color.          |
 | `.secondary`                        | Secondary/accent color. |
 | `.success`                          | Success color.          |

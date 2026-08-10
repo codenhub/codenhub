@@ -828,6 +828,58 @@ test.describe("components", () => {
     expectSameColor(values.progressBg, values.tokenText, "progress fill");
   });
 
+  /* The shared `--intent-*` contract only works because a component's neutral
+     reset carries zero specificity: an intent class on the element must beat it,
+     while an inherited value from a container must not. Both directions are
+     asserted here because breaking either one is silent. */
+  test("applies intent on the element without cascading it from a container", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const values = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      const host = document.createElement("section");
+      host.className = "success";
+      document.body.append(host);
+
+      const inherited = document.createElement("button");
+      inherited.className = "btn";
+      const explicit = document.createElement("button");
+      explicit.className = "btn destructive";
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      host.append(inherited, explicit, badge);
+
+      const results = {
+        // Inside a `.success` container, but carrying no intent of their own.
+        inheritedButtonBg: getComputedStyle(inherited).backgroundColor,
+        inheritedBadgeFg: getComputedStyle(badge).color,
+        // Carrying its own intent, which must win over the container.
+        explicitButtonBg: getComputedStyle(explicit).backgroundColor,
+        tokenDestructive: resolveToken("destructive"),
+        tokenSuccess: resolveToken("success"),
+        tokenText: resolveToken("text"),
+      };
+
+      host.remove();
+
+      return results;
+    });
+
+    expectSameColor(values.inheritedButtonBg, values.tokenText, "button ignores container intent");
+    expectSameColor(values.inheritedBadgeFg, values.tokenText, "badge ignores container intent");
+    expectSameColor(values.explicitButtonBg, values.tokenDestructive, "element intent wins");
+
+    expect(values.tokenSuccess).not.toBe(values.tokenText);
+  });
+
   test("renders active progress bar with skeleton animation on pseudo-element", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
 

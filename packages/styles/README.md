@@ -76,6 +76,7 @@ and any element can still override it.
 | Requirement   | Details                                                                         |
 | ------------- | ------------------------------------------------------------------------------- |
 | CSS imports   | Consumer tooling must resolve package CSS imports.                              |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 120 and newer, for `light-dark()` theming.  |
 | Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.               |
 | Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management. |
 
