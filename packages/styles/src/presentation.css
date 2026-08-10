@@ -1,0 +1,51 @@
+/* Presentation classes declare only unitless numbers and percentages. A custom
+   property's value is resolved on the element that declares it, so anything
+   referencing an intent token here would resolve against the container's intent
+   and inherit down already-resolved. Numbers carry no intent, so they inherit
+   safely and each component mixes them against its own palette.
+
+   A declaration on the element beats an inherited one, which is what lets a
+   container set the look for its subtree while any element still opts out. */
+
+.flat {
+  --ui-fill: 100%;
+  --ui-fg-on-fill: 100%;
+  --ui-border: 100%;
+  --ui-border-scale: 1;
+  --ui-hover-fill: 100%;
+  --ui-hover-fg-on-fill: 100%;
+}
+
+.out {
+  --ui-fill: 0%;
+  --ui-fg-on-fill: 0%;
+  --ui-border: 100%;
+  --ui-border-scale: 2;
+  --ui-hover-fill: 14%;
+  --ui-hover-fg-on-fill: 0%;
+}
+
+.ghost {
+  --ui-fill: 0%;
+  --ui-fg-on-fill: 0%;
+  --ui-border: 0%;
+  --ui-border-scale: 1;
+  --ui-hover-fill: 14%;
+  --ui-hover-fg-on-fill: 0%;
+}
+
+.soft {
+  --ui-fill: 12%;
+  --ui-fg-on-fill: 0%;
+  --ui-border: 0%;
+  --ui-border-scale: 1;
+  --ui-hover-fill: 22%;
+  --ui-hover-fg-on-fill: 0%;
+}
+
+/* Declared last so it wins over the presentation it composes with, such as
+   `.out.fill`, where both selectors carry the same specificity. */
+.fill {
+  --ui-hover-fill: 100%;
+  --ui-hover-fg-on-fill: 100%;
+}

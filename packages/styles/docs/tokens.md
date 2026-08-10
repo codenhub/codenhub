@@ -116,6 +116,43 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
 | `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
 
+## Presentation Tokens
+
+Presentation tokens describe _how much_ of an intent a component shows, never
+_which_ intent it shows. They are unitless numbers and percentages, so they carry
+no color and inherit safely: a container sets them once and every component below
+resolves them against its own intent.
+
+| Token                   | Purpose                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `--ui-fill`             | Percentage of the intent color mixed into the background.                  |
+| `--ui-fg-on-fill`       | Percentage blended from the intent readable tone toward its contrast tone. |
+| `--ui-border`           | Percentage of the intent color mixed into the border color.                |
+| `--ui-border-scale`     | Multiplier applied to `--border-width`.                                    |
+| `--ui-hover-fill`       | Percentage of the intent hover color mixed into the hovered background.    |
+| `--ui-hover-fg-on-fill` | Percentage blended toward the contrast tone while hovered.                 |
+
+A component resolves them with `color-mix`, supplying its own default as the
+`var()` fallback so it keeps its normal look when no presentation is in scope:
+
+```css
+background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
+```
+
+Two choices there are deliberate. Mixing toward `transparent` rather than a
+background token lets a tinted surface adapt to whatever it is placed on. Mixing
+in `oklab` keeps the wide-gamut token palette intact and blends perceptually,
+where `srgb` would clip it.
+
+A computed color therefore reaches the page as a resolved `color-mix` result
+rather than the token's own `oklch` syntax. It is the same color; code that
+compares computed color strings should compare colors instead.
+
+> **Presentation token contract**: only presentation classes and consumer overrides
+> set these tokens; components only read them. Setting a value that no presentation
+> class produces is supported but unvalidated. See
+> [Classes](./classes.md#presentation) for the classes that ship these values.
+
 ## Component Internals
 
 Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.

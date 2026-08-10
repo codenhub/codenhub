@@ -51,6 +51,18 @@ to force a theme for the root or a subtree.
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
 also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
+`.flat`, `.out`, `.ghost`, and `.soft` work the same way. They set how strongly a
+component shows its intent, so a container sets the look for everything below it
+and any element can still override it.
+
+```html
+<div class="soft">
+  <button class="btn primary">Soft</button>
+  <span class="badge success">Soft</span>
+  <button class="btn primary out">Outlined</button>
+</div>
+```
+
 ## Documentation
 
 - [Documentation overview](./docs/index.md): Complete public documentation and

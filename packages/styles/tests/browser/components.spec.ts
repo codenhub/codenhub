@@ -1,6 +1,19 @@
 import { expect, test } from "@playwright/test";
 
-import { BUTTON_INTENT_TOKENS, getContrastRatio, type ButtonIntentToken } from "./test-utils";
+import {
+  BUTTON_INTENT_TOKENS,
+  getColorDistance,
+  getContrastRatio,
+  isTransparent,
+  type ButtonIntentToken,
+} from "./test-utils";
+
+/* Presentation resolves colors through `color-mix`, so a computed value carries
+   the same color as its token in a different syntax, and can land a rounding
+   step away in 8-bit sRGB. Colors are therefore compared by distance. */
+const expectSameColor = (actual: string, expected: string, label: string) => {
+  expect(getColorDistance(actual, expected), `${label}: ${actual} vs ${expected}`).toBeLessThanOrEqual(2);
+};
 
 const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
 
@@ -29,10 +42,12 @@ test.describe("components", () => {
   test("keeps filled semantic button text readable", async ({ page }) => {
     await page.goto(COMPONENTS_URL);
 
+    /* A filled button is one with no presentation in scope, which since
+       presentation cascades means neither on the button nor on an ancestor. */
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ".btn.success:not(.out):not(.ghost):not(.soft), .btn.warning:not(.out):not(.ghost):not(.soft), .btn.destructive:not(.out):not(.ghost):not(.soft), .btn.info:not(.out):not(.ghost):not(.soft)",
+          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.out, .ghost, .soft)):not(:is(.out, .ghost, .soft) *)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -80,13 +95,13 @@ test.describe("components", () => {
       };
     });
 
-    expect(styles.successOutlineBorder).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.successOutlineColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.successOutlineBackground).toBe("rgba(0, 0, 0, 0)");
-    expect(styles.ghostBackground).toBe("rgba(0, 0, 0, 0)");
-    expect(styles.ghostColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.successSoftBackground).not.toBe("rgba(0, 0, 0, 0)");
-    expect(styles.successSoftColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(styles.successOutlineBorder)).toBe(false);
+    expect(isTransparent(styles.successOutlineColor)).toBe(false);
+    expect(isTransparent(styles.successOutlineBackground)).toBe(true);
+    expect(isTransparent(styles.ghostBackground)).toBe(true);
+    expect(isTransparent(styles.ghostColor)).toBe(false);
+    expect(isTransparent(styles.successSoftBackground)).toBe(false);
+    expect(isTransparent(styles.successSoftColor)).toBe(false);
     expect(Number.parseFloat(styles.primaryPillBorderRadius)).toBeGreaterThan(20);
 
     await page.getByTestId("secondary-ghost-button").hover();
@@ -95,7 +110,7 @@ test.describe("components", () => {
       .getByTestId("secondary-ghost-button")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
-    expect(ghostHoverBackground).not.toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(ghostHoverBackground)).toBe(false);
   });
 
   test("centers the loading spinner without transitioning hidden colors", async ({ page }) => {
@@ -185,9 +200,9 @@ test.describe("components", () => {
     await page.goto(COMPONENTS_URL);
 
     const buttonPresentationStyles = await page.evaluate((intents) => {
-      const resolveTokenColor = ({ host, tokenName }: { host: Element; tokenName: string }) => {
+      const resolveColor = ({ host, value }: { host: Element; value: string }) => {
         const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
+        probe.style.color = value;
         host.append(probe);
 
         const color = getComputedStyle(probe).color;
@@ -195,6 +210,9 @@ test.describe("components", () => {
 
         return color;
       };
+
+      const resolveTokenColor = ({ host, tokenName }: { host: Element; tokenName: string }) =>
+        resolveColor({ host, value: `var(--color-${tokenName})` });
 
       const readButtonStyles = ({
         host,
@@ -223,13 +241,15 @@ test.describe("components", () => {
             host,
             tokenName: `${intent.tokenName}-strong`,
           }),
-          expectedOutlineColor: resolveTokenColor({
+          expectedOutlineBorder: resolveTokenColor({
             host,
             tokenName: intent.tokenName,
           }),
-          expectedSoftBackground: resolveTokenColor({
+          /* The same mix `.soft` produces, resolved by the browser so the test
+             states the intended tint rather than a hard-coded color. */
+          expectedSoftBackground: resolveColor({
             host,
-            tokenName: `${intent.tokenName}-subtle`,
+            value: `color-mix(in oklab, var(--color-${intent.tokenName}) 12%, transparent)`,
           }),
           ghostColor: ghostStyles.color,
           intent: intent.className,
@@ -264,12 +284,65 @@ test.describe("components", () => {
     for (const styles of buttonPresentationStyles) {
       const label = `${styles.theme} ${styles.intent}`;
 
-      expect(styles.outlineColor, `${label} outline color`).toBe(styles.expectedOutlineColor);
-      expect(styles.outlineBorderColor, `${label} outline border`).toBe(styles.expectedOutlineColor);
-      expect(styles.ghostColor, `${label} ghost color`).toBe(styles.expectedPresentationText);
-      expect(styles.softColor, `${label} soft color`).toBe(styles.expectedPresentationText);
-      expect(styles.softBackground, `${label} soft background`).toBe(styles.expectedSoftBackground);
+      expectSameColor(styles.outlineColor, styles.expectedPresentationText, `${label} outline color`);
+      expectSameColor(styles.outlineBorderColor, styles.expectedOutlineBorder, `${label} outline border`);
+      expectSameColor(styles.ghostColor, styles.expectedPresentationText, `${label} ghost color`);
+      expectSameColor(styles.softColor, styles.expectedPresentationText, `${label} soft color`);
+      expectSameColor(styles.softBackground, styles.expectedSoftBackground, `${label} soft background`);
     }
+  });
+
+  test("cascades presentation from a container and lets an element override it", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const container = document.createElement("div");
+      container.className = "soft";
+
+      const inheritedButton = document.createElement("button");
+      const overriddenButton = document.createElement("button");
+      const inheritedBadge = document.createElement("span");
+
+      inheritedButton.className = "btn primary";
+      overriddenButton.className = "btn primary out";
+      inheritedBadge.className = "badge success";
+      container.append(inheritedButton, overriddenButton, inheritedBadge);
+      document.body.append(container);
+
+      const soloButton = document.createElement("button");
+      soloButton.className = "btn primary";
+      document.body.append(soloButton);
+
+      const softButton = document.createElement("button");
+      softButton.className = "btn primary soft";
+      document.body.append(softButton);
+
+      const result = {
+        inheritedBadgeBorder: getComputedStyle(inheritedBadge).borderTopColor,
+        inheritedButtonBackground: getComputedStyle(inheritedButton).backgroundColor,
+        overriddenButtonBackground: getComputedStyle(overriddenButton).backgroundColor,
+        overriddenButtonBorderWidth: getComputedStyle(overriddenButton).borderTopWidth,
+        softButtonBackground: getComputedStyle(softButton).backgroundColor,
+        soloButtonBackground: getComputedStyle(soloButton).backgroundColor,
+      };
+
+      container.remove();
+      soloButton.remove();
+      softButton.remove();
+
+      return result;
+    });
+
+    // A container turns its subtree soft, matching an element-level `.soft`.
+    expectSameColor(styles.inheritedButtonBackground, styles.softButtonBackground, "inherited soft button");
+    expect(getColorDistance(styles.inheritedButtonBackground, styles.soloButtonBackground)).toBeGreaterThan(2);
+
+    // The badge is a different component reading the same inherited tokens.
+    expect(isTransparent(styles.inheritedBadgeBorder)).toBe(true);
+
+    // An element declaring its own presentation wins over the container.
+    expect(isTransparent(styles.overriddenButtonBackground)).toBe(true);
+    expect(Number.parseFloat(styles.overriddenButtonBorderWidth)).toBeGreaterThan(1);
   });
 
   test("uses contrast text on filled outline hover", async ({ page }) => {
@@ -289,10 +362,13 @@ test.describe("components", () => {
     await page.getByTestId("success-outline-fill-button").hover();
 
     await expect
-      .poll(() =>
-        page.getByTestId("success-outline-fill-button").evaluate((element) => getComputedStyle(element).color),
+      .poll(async () =>
+        getColorDistance(
+          await page.getByTestId("success-outline-fill-button").evaluate((element) => getComputedStyle(element).color),
+          successContrast,
+        ),
       )
-      .toBe(successContrast);
+      .toBeLessThanOrEqual(2);
   });
 
   test("styles section and cluster layout helpers", async ({ page }) => {
@@ -432,8 +508,8 @@ test.describe("components", () => {
         borderColor: styles.borderColor,
       };
     });
-    expect(flatInfoStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(flatInfoStyles.color).not.toBe(flatInfoStyles.backgroundColor);
+    expect(isTransparent(flatInfoStyles.backgroundColor)).toBe(false);
+    expect(getColorDistance(flatInfoStyles.color, flatInfoStyles.backgroundColor)).toBeGreaterThan(2);
 
     // Left accent success alert
     const leftAccentSuccessStyles = await page.getByTestId("left-accent-success-alert").evaluate((element) => {
@@ -447,8 +523,8 @@ test.describe("components", () => {
       };
     });
     expect(leftAccentSuccessStyles.borderLeftWidth).toBe("4px");
-    expect(leftAccentSuccessStyles.borderTopColor).toBe("rgba(0, 0, 0, 0)");
-    expect(leftAccentSuccessStyles.borderRightColor).toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(leftAccentSuccessStyles.borderTopColor)).toBe(true);
+    expect(isTransparent(leftAccentSuccessStyles.borderRightColor)).toBe(true);
 
     // Soft warning alert
     const softWarningStyles = await page.getByTestId("soft-warning-alert").evaluate((element) => {
@@ -459,9 +535,9 @@ test.describe("components", () => {
         borderColor: styles.borderColor,
       };
     });
-    expect(softWarningStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(softWarningStyles.color).not.toBe(softWarningStyles.backgroundColor);
-    expect(softWarningStyles.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(softWarningStyles.backgroundColor)).toBe(false);
+    expect(getColorDistance(softWarningStyles.color, softWarningStyles.backgroundColor)).toBeGreaterThan(2);
+    expect(isTransparent(softWarningStyles.borderColor)).toBe(true);
   });
 
   test("renders flat and soft badge variants with correct styles", async ({ page }) => {
@@ -476,9 +552,9 @@ test.describe("components", () => {
         borderColor: styles.borderColor,
       };
     });
-    expect(flatBadgeStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(flatBadgeStyles.color).not.toBe(flatBadgeStyles.backgroundColor);
-    expect(flatBadgeStyles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(flatBadgeStyles.backgroundColor)).toBe(false);
+    expect(getColorDistance(flatBadgeStyles.color, flatBadgeStyles.backgroundColor)).toBeGreaterThan(2);
+    expect(isTransparent(flatBadgeStyles.borderColor)).toBe(false);
 
     // Primary flat badge should have background = primary color, color = primary-contrast color
     const flatPrimaryBadgeStyles = await page.getByTestId("badge-flat-primary").evaluate((element) => {
@@ -502,8 +578,8 @@ test.describe("components", () => {
       probeContrast.remove();
       return colors;
     });
-    expect(flatPrimaryBadgeStyles.backgroundColor).toBe(expectedPrimaryColors.primary);
-    expect(flatPrimaryBadgeStyles.color).toBe(expectedPrimaryColors.contrast);
+    expectSameColor(flatPrimaryBadgeStyles.backgroundColor, expectedPrimaryColors.primary, "flat primary badge");
+    expectSameColor(flatPrimaryBadgeStyles.color, expectedPrimaryColors.contrast, "flat primary badge text");
 
     // Secondary flat badge should have background = accent color, color = accent-contrast color
     const flatSecondaryBadgeStyles = await page.getByTestId("badge-flat-secondary").evaluate((element) => {
@@ -527,8 +603,8 @@ test.describe("components", () => {
       probeContrast.remove();
       return colors;
     });
-    expect(flatSecondaryBadgeStyles.backgroundColor).toBe(expectedSecondaryColors.accent);
-    expect(flatSecondaryBadgeStyles.color).toBe(expectedSecondaryColors.contrast);
+    expectSameColor(flatSecondaryBadgeStyles.backgroundColor, expectedSecondaryColors.accent, "flat secondary badge");
+    expectSameColor(flatSecondaryBadgeStyles.color, expectedSecondaryColors.contrast, "flat secondary badge text");
 
     // Soft badge: tinted background, no border
     const softBadgeStyles = await page.getByTestId("badge-soft-success").evaluate((element) => {
@@ -538,8 +614,8 @@ test.describe("components", () => {
         borderColor: styles.borderColor,
       };
     });
-    expect(softBadgeStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(softBadgeStyles.borderColor).toBe("rgba(0, 0, 0, 0)");
+    expect(isTransparent(softBadgeStyles.backgroundColor)).toBe(false);
+    expect(isTransparent(softBadgeStyles.borderColor)).toBe(true);
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
@@ -737,13 +813,13 @@ test.describe("components", () => {
       };
     });
 
-    expect(values.btnBg).toBe(values.tokenText);
-    expect(values.btnFg).toBe(values.tokenTextContrast);
-    expect(values.checkboxBg).toBe(values.tokenText);
-    expect(values.switchBg).toBe(values.tokenText);
-    expect(values.alertFg).toBe(values.tokenText);
-    expect(values.badgeFg).toBe(values.tokenText);
-    expect(values.progressBg).toBe(values.tokenText);
+    expectSameColor(values.btnBg, values.tokenText, "neutral button background");
+    expectSameColor(values.btnFg, values.tokenTextContrast, "neutral button text");
+    expectSameColor(values.checkboxBg, values.tokenText, "checked checkbox background");
+    expectSameColor(values.switchBg, values.tokenText, "checked switch background");
+    expectSameColor(values.alertFg, values.tokenText, "neutral alert text");
+    expectSameColor(values.badgeFg, values.tokenText, "neutral badge text");
+    expectSameColor(values.progressBg, values.tokenText, "progress fill");
   });
 
   test("renders active progress bar with skeleton animation on pseudo-element", async ({ page }) => {
