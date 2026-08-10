@@ -106,11 +106,17 @@ test.describe("components", () => {
 
     await page.getByTestId("secondary-ghost-button").hover();
 
-    const ghostHoverBackground = await page
-      .getByTestId("secondary-ghost-button")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-
-    expect(isTransparent(ghostHoverBackground)).toBe(false);
+    // A ghost button's hover background transitions out of fully transparent, so
+    // a single read can land on the starting value before the transition moves.
+    await expect
+      .poll(async () =>
+        isTransparent(
+          await page
+            .getByTestId("secondary-ghost-button")
+            .evaluate((element) => getComputedStyle(element).backgroundColor),
+        ),
+      )
+      .toBe(false);
   });
 
   test("centers the loading spinner without transitioning hidden colors", async ({ page }) => {
