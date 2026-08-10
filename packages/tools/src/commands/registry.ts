@@ -15,7 +15,7 @@ const CLOC_EXCLUDED_DIRECTORIES = "node_modules,dist,coverage,test-results,.git"
 const CLOC_EXCLUDED_EXTENSIONS = "md,yaml,json";
 
 const COMMANDS: readonly CommandDefinition[] = [
-  createScriptCommand({ name: "build", summary: "Build the selected packages." }),
+  createScriptCommand({ includesDependencies: true, name: "build", summary: "Build the selected packages." }),
   createScriptCommand({
     forwardsPaths: true,
     name: "test",

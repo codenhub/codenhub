@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-09
+last_updated: 2026-08-10
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -123,6 +123,13 @@ laptop hides. `--no-deps` narrows the build to the selected packages when their
 dependencies are known to be built, and `--no-build` skips the step entirely.
 `--deps` is still accepted and now asks for the default.
 
+`hub build` expands and orders the same way, because a dependency has to be built
+before the package that imports it whether the build was asked for directly or
+reached as a prerequisite. `hub build docs` therefore builds what `docs`
+consumes first, and an unnarrowed `hub build` runs dependency-first rather than
+in workspace order. `--parallel` does not apply to it: running a package beside
+its dependency is the race the ordering exists to prevent.
+
 The expansion includes the `dev` and `debug` environments nested inside a selected
 package, and what they depend on. Those are workspace packages of their own, and a
 browser test run starts their servers, so `hub test:browser theme` has to build the
@@ -133,22 +140,22 @@ self-contained.
 
 ## Options
 
-| Option                | Effect                                                                |
-| --------------------- | --------------------------------------------------------------------- |
-| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.       |
-| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one.  |
-| `--bail`              | Stop after the first failing package.                                 |
-| `--no-build`          | Skip prerequisite builds.                                             |
-| `--no-deps`           | Build only the selected packages, not their workspace dependencies.   |
-| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                       |
-| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                |
-| `--no-timeout`        | Never kill a package run.                                             |
-| `--dry-run`           | Print the commands that would run.                                    |
-| `--fix`               | Apply fixes instead of only reporting.                                |
-| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents. |
-| `--json`              | Emit machine-readable output where supported.                         |
-| `-h`, `--help`        | Show usage.                                                           |
-| `--version`           | Print the tooling version.                                            |
+| Option                | Effect                                                                                   |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.                          |
+| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one. Ignored by `build`. |
+| `--bail`              | Stop after the first failing package.                                                    |
+| `--no-build`          | Skip prerequisite builds.                                                                |
+| `--no-deps`           | Build only the selected packages, not their workspace dependencies.                      |
+| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                          |
+| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                                   |
+| `--no-timeout`        | Never kill a package run.                                                                |
+| `--dry-run`           | Print the commands that would run.                                                       |
+| `--fix`               | Apply fixes instead of only reporting.                                                   |
+| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.                    |
+| `--json`              | Emit machine-readable output where supported.                                            |
+| `-h`, `--help`        | Show usage.                                                                              |
+| `--version`           | Print the tooling version.                                                               |
 
 Unrecognized flags and everything after a bare `--` are forwarded to the
 underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.

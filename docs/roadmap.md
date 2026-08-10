@@ -109,6 +109,13 @@ Track high-level progress and milestone status for foundation and utility packag
   else about the deployment lives in the dashboard. That split is deliberate: the
   repository carries build configuration, not delivery plumbing, so there is no
   deploy workflow and no deployment credentials here.
+- That config declares no `main`, because the site is static and the Worker serves
+  its assets without running a script. `html_handling` is explicit so the
+  directory-style routes Astro builds resolve with or without a trailing slash,
+  and `not_found_handling` serves the built 404 page rather than rewriting an
+  unknown path to a shell the site does not have. `pnpm hub preview docs` runs the
+  same config locally through `wrangler dev`, which is why `compatibility_date`
+  tracks a date the installed runtime supports rather than the current one.
 - Unlisted packages (`router`, `store`, `theme`, `plugins`, `ui-kit`) are currently internal, WIP, deprecated, or evaluated separately.
 - Continuous delivery is deferred until package adoption justifies it. `hub release` already
   covers the publish preflight, and trusted publishing only pays off once publishing runs from
