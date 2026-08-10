@@ -95,6 +95,16 @@ every intent is zero.
 must stay the quiet border gray rather than the text color. Without it, every
 component that draws a line would need its own per-intent branch again.
 
+Neutral maps `--intent-subtle` to `--color-surface` rather than
+`--color-text-subtle`. The tinted surface a neutral component sits on is the
+surface token, and tooltips, key caps, code, table heads, and skeletons all read
+that slot for their resting background.
+
+A composed `box-shadow` must not fall back to `none`. `none` is valid only as an
+entire value, so `<shadow>, none` is invalid and drops the whole declaration,
+including the focus ring it was composed with. Composed lists use
+`var(--ui-shadow, 0 0 transparent)` instead.
+
 ### Presentation tokens
 
 Unitless numbers and percentages only. A custom property resolves on the element

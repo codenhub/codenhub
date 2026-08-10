@@ -98,14 +98,14 @@ Intent classes set these five slots; components read them. Because every
 supporting component reads the same five names, an intent works on every
 component that supports intent, and a custom intent needs no component changes.
 
-| Token               | Purpose                                                             |
-| ------------------- | ------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color.                                            |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                 |
-| `--intent-hover`    | The intent's hovered base color.                                    |
-| `--intent-strong`   | High-emphasis tone. Readable text, icon, or border on subtle fills. |
-| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks.                      |
-| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.     |
+| Token               | Purpose                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color.                                                              |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                   |
+| `--intent-hover`    | The intent's hovered base color.                                                      |
+| `--intent-strong`   | High-emphasis tone. Readable text, icon, or border on subtle fills.                   |
+| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`. |
+| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
 
 `--intent-border` exists because a neutral border must stay the quiet border
 gray rather than the text color. Everything that draws a line reads it: control

@@ -87,11 +87,13 @@
 }
 
 @utility control-base {
-  /* A text control caps its fill at the `.soft` tint. `.flat` would otherwise
-     put typed text on a saturated intent background, so a container-level
-     `.flat` would make every field inside it unreadable. Clamping with `min()`
-     resolves that from the value alone, with no per-presentation selector. */
-  --control-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+  /* A text control caps its fill well below the `.soft` tint. `.flat` would
+     otherwise put typed text on a saturated intent background, so a
+     container-level `.flat` would make every field inside it unreadable, and a
+     field needs a far quieter tint than a badge to stay legible while typing.
+     Clamping with `min()` resolves that from the value alone, with no
+     per-presentation selector. */
+  --control-fill: calc(min(var(--ui-fill, 0%), 6%) * var(--ui-bg-alpha, 1));
   --control-bg: color-mix(in oklab, var(--intent-color) var(--control-fill), transparent);
   --control-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
   /* Neutral resolves this to the text color, which is the same value as
@@ -111,15 +113,23 @@
     color: var(--control-placeholder);
   }
 
+  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
+    border-color: color-mix(in oklab, var(--intent-hover) var(--ui-border, 100%), transparent);
+  }
+
   &:focus {
     @apply outline-none;
   }
 
+  /* The aesthetic shadow is carried through so focusing does not drop it. Its
+     fallback is a zero-size transparent shadow rather than `none`, because
+     `none` is only valid as the entire value: a `<shadow>, none` list is invalid
+     and drops the focus ring with it. */
   &:focus-visible {
     border-color: var(--control-border-active);
     box-shadow:
       0 0 0 var(--focus-ring-width) var(--focus-ring),
-      var(--ui-shadow, none);
+      var(--ui-shadow, 0 0 transparent);
   }
 
   &[aria-invalid="true"] {

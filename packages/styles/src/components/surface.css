@@ -46,6 +46,9 @@
       transform: var(--ui-hover-transform, var(--surface-hover-transform));
     }
 
+    /* `none` is only valid as an entire `box-shadow` value, so a `<shadow>, none`
+       list is invalid and would drop the focus ring. The elevation fallback is
+       always a real shadow here, so the list stays valid. */
     &:focus-visible {
       @apply outline-none;
 

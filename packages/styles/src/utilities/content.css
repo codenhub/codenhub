@@ -4,11 +4,15 @@
   @apply w-full overflow-x-auto;
 }
 
-/* Tinted parts read `--intent-subtle`, the slot meant for exactly this. It
-   resolves to the neutral surface tone when no intent is set, so an unintented
-   table keeps its previous look while `.table.success` tints throughout. */
+/* Tinted parts sit on `--intent-subtle`, the slot meant for exactly this, and
+   presentation mixes the intent over it. A fill fallback of 0% means an
+   unintented table with no presentation keeps the plain surface tone, while
+   `.soft` tints it and `.flat` fills it with the intent. */
 @utility table {
+  --table-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
   --table-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
+  --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text));
   --table-row-hover: color-mix(in oklab, var(--intent-color) 8%, var(--color-foreground));
 
   @apply text-body w-full border-separate text-left;
@@ -24,7 +28,8 @@
 
   & thead,
   & tfoot {
-    background-color: var(--intent-subtle);
+    background-color: var(--table-head-bg);
+    color: var(--table-head-fg);
   }
 
   & th,
@@ -55,13 +60,15 @@
 }
 
 @utility kbd {
+  --kbd-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
+
   @apply inline-flex items-center rounded-(--radius-small) px-1.5 py-0.5 font-mono text-xs font-medium;
 
-  background-color: var(--intent-subtle);
+  background-color: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--intent-subtle));
   border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid
     color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
-  box-shadow: inset 0 -1px 0 var(--intent-border);
-  color: var(--intent-strong);
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-strong));
 }
 
 @utility quote {

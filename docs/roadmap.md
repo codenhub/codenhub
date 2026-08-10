@@ -61,6 +61,16 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ## Planned
 
+### @codenhub/tools
+
+- [ ] **Long-running commands are killed after 600 seconds.** `dev`, `debug`,
+      and `preview` have no command definition, so `resolveCommand` falls back to
+      a generic script command that never sets `isInteractive`. Only
+      `test:watch` and `test:browser:watch` set it, and only that flag clears the
+      timeout, so any server started through `hub` dies mid-session. Workaround
+      is `--no-timeout`. Fix by treating the fallback for long-running scripts as
+      interactive, or by registering them. Look into this ASAP.
+
 ### @codenhub
 
 - [ ] Publish public packages from CI with npm trusted publishing (OIDC) and provenance

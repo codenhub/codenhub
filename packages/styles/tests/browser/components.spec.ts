@@ -6,6 +6,7 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  readSrgb,
   type ButtonIntentToken,
 } from "./test-utils";
 
@@ -1188,5 +1189,119 @@ test.describe("stage two coverage", () => {
     expectSameColor(styles.dividerColor, styles.tokenInfo, "divider intent color");
     expectSameColor(styles.kbdDestructive, styles.tokenDestructiveStrong, "kbd intent text");
     expect(getColorDistance(styles.kbdNeutral, styles.kbdDestructive)).toBeGreaterThan(2);
+  });
+});
+
+test.describe("presentation coverage", () => {
+  /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
+     as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
+     the ring silently disappears. Asserted on a real focus because that is the
+     only state where the composed list applies. */
+  test("keeps a focus ring on text controls", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    // Focus moves between controls, so these must be read one at a time.
+    const readFocused = async (testId: string) => {
+      await page.getByTestId(testId).focus();
+
+      return page.getByTestId(testId).evaluate((element) => {
+        const computed = getComputedStyle(element);
+
+        return { borderColor: computed.borderTopColor, boxShadow: computed.boxShadow };
+      });
+    };
+
+    const neutral = await readFocused("ipt-default");
+    const intent = await readFocused("ipt-success");
+
+    for (const [label, styles] of [
+      ["neutral", neutral],
+      ["success", intent],
+    ] as const) {
+      expect(styles.boxShadow, `${label} focus ring`).not.toBe("none");
+      expect(styles.boxShadow, `${label} focus ring`).toContain("px");
+      expect(isTransparent(styles.borderColor), `${label} focus border`).toBe(false);
+    }
+  });
+
+  test("moves the control border on hover", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const resting = await page
+      .getByTestId("ipt-success")
+      .evaluate((element) => getComputedStyle(element).borderTopColor);
+
+    await page.getByTestId("ipt-success").hover();
+
+    await expect
+      .poll(async () =>
+        getColorDistance(
+          await page.getByTestId("ipt-success").evaluate((element) => getComputedStyle(element).borderTopColor),
+          resting,
+        ),
+      )
+      .toBeGreaterThan(2);
+  });
+
+  /* Both tints are mixed toward `transparent`, so their strength is their alpha.
+     Comparing them against an opaque token instead would be dominated by that
+     alpha gap and report every tint as equally distant. */
+  test("keeps the soft control tint quieter than a soft badge", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+      return {
+        softBadge: get("badge-soft-success").backgroundColor,
+        softInput: get("ipt-success-soft").backgroundColor,
+      };
+    });
+
+    const inputAlpha = readSrgb(styles.softInput).alpha;
+    const badgeAlpha = readSrgb(styles.softBadge).alpha;
+
+    // Visible, but markedly quieter than the badge tint.
+    expect(inputAlpha).toBeGreaterThan(0);
+    expect(inputAlpha).toBeLessThan(badgeAlpha / 1.5);
+  });
+
+  test("reads presentation on key caps and tables", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const head = getComputedStyle(document.querySelector('[data-testid="table-success"] thead th')!);
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      return {
+        flatBackground: get("kbd-flat").backgroundColor,
+        flatColor: get("kbd-flat").color,
+        neutralBackground: get("kbd-neutral").backgroundColor,
+        outBorderWidth: get("kbd-out").borderTopWidth,
+        plainBorderWidth: get("kbd-neutral").borderTopWidth,
+        softBackground: get("kbd-soft").backgroundColor,
+        tableHeadBackground: head.backgroundColor,
+        tokenPrimary: resolveToken("primary"),
+        tokenSurface: resolveToken("surface"),
+      };
+    });
+
+    // A plain key cap keeps the neutral surface tone.
+    expectSameColor(styles.neutralBackground, styles.tokenSurface, "neutral kbd surface");
+    // Each presentation moves it somewhere different.
+    expect(getColorDistance(styles.softBackground, styles.neutralBackground)).toBeGreaterThan(2);
+    expectSameColor(styles.flatBackground, styles.tokenPrimary, "flat kbd fill");
+    expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
+    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
+    // A soft table tints its header away from the plain surface tone.
+    expect(getColorDistance(styles.tableHeadBackground, styles.tokenSurface)).toBeGreaterThan(2);
   });
 });

@@ -9,6 +9,10 @@
    while `.btn.success` still wins over the component's own reset through
    specificity.
 
+   Neutral maps `--intent-subtle` to `--color-surface` rather than
+   `--color-text-subtle`: the tinted surface a neutral component sits on is the
+   surface token, and tooltips, key caps, code, and table heads all read it.
+
    The reset below carries zero specificity, so an intent class on the element
    wins over it, while the reset still beats an inherited value -- any
    declaration on an element beats inheritance regardless of specificity. That
@@ -44,7 +48,7 @@
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-text-subtle);
+  --intent-subtle: var(--color-surface);
   --intent-border: var(--color-border);
 }
 
@@ -53,7 +57,7 @@
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-text-subtle);
+  --intent-subtle: var(--color-surface);
   --intent-border: var(--color-border);
 }
 

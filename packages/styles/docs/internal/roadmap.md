@@ -18,11 +18,11 @@ the styling model itself.
 Work is staged. Each stage lands as one reviewable change with `pnpm verify`
 green before the next begins.
 
-- **Stage 1 -- Token contract**: Collapse the duplicated per-component intent
+- **Stage 1 -- Token contract (done)**: Collapse the duplicated per-component intent
   blocks into the shared `--intent-*` contract, add the material token set, and
   declare color tokens once with `light-dark()`. Convert input icons from
   per-theme hardcoded SVG data URIs to masks over `currentColor`.
-- **Stage 2 -- Element coverage**: Extend intent and presentation to form
+- **Stage 2 -- Element coverage (done)**: Extend intent and presentation to form
   controls, content elements, feedback, and the new `.card` and `.panel`
   surfaces. Surfaces activate `--elevation-*` and `--surface-hover-transform`,
   which no component reads today.

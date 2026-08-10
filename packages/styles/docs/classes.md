@@ -53,6 +53,15 @@ A table's rows deliberately inherit its intent instead of resetting it, so
 This is the one place intent cascades, because a table's rows are parts of the
 table rather than independent components.
 
+`.table` and `.kbd` also read [presentation](#presentation). A table applies it
+to its header and border, and a key cap to its whole chip:
+
+```html
+<table class="table success soft">...</table>
+<kbd class="kbd primary flat">Ctrl</kbd>
+<kbd class="kbd primary out">Shift</kbd>
+```
+
 Use `.table-wrap` around `.table` when table width may exceed its container:
 
 ```html
@@ -139,19 +148,22 @@ With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
 neutral and bordered.
 
-| Component                                                     | Reads                                 |
-| ------------------------------------------------------------- | ------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`                 | Fill, text, border, and border width. |
-| `.ipt`, `.textarea`, `.select`, `.control-base`               | Border and a capped fill.             |
-| `.checkbox`, `.radio`, `.switch`                              | Border and a capped unchecked fill.   |
-| `.table`, `.kbd`, `.progress`, `.divider`                     | Border and border width.              |
-| `.code`, `.pre`, `.quote`, `.tooltip`, `.skeleton`, `.loader` | Intent only, not presentation.        |
+| Component                                                     | Reads                                        |
+| ------------------------------------------------------------- | -------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`                 | Fill, text, border, and border width.        |
+| `.kbd`                                                        | Fill, text, border, and border width.        |
+| `.table`                                                      | Header fill and text, border, border width.  |
+| `.ipt`, `.textarea`, `.select`, `.control-base`               | Border, border width, and a capped fill.     |
+| `.checkbox`, `.radio`, `.switch`                              | Border, border width, capped unchecked fill. |
+| `.progress`, `.divider`                                       | Border and border width.                     |
+| `.code`, `.pre`, `.quote`, `.tooltip`, `.skeleton`, `.loader` | Intent only, not presentation.               |
 
-Text controls and toggles cap their fill at the `.soft` tint. `.flat` would
-otherwise put typed text on a saturated background, so a `.flat` container would
-make every field inside it unreadable; on those components `.flat` resolves to
-the same tint as `.soft`. `.ghost` removes the border from a control and leaves
-a bottom rule, so the field keeps its affordance.
+Text controls and toggles cap their fill well below the `.soft` tint. `.flat`
+would otherwise put typed text on a saturated background, so a `.flat` container
+would make every field inside it unreadable; on those components both `.flat` and
+`.soft` resolve to a much quieter tint than they produce elsewhere, because a
+field has to stay legible while being typed into. `.ghost` removes the border
+from a control and leaves a bottom rule, so the field keeps its affordance.
 
 Tooltips ignore the presentation fill entirely. A transparent or hairline
 tooltip floating over arbitrary content is unreadable, so the bubble stays
