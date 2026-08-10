@@ -12,7 +12,10 @@
    Every cell gets `data-testid="<component>-<presentation>-<intent>-<state>"`, so
    a test can address any single variant. */
 
-const INTENTS = ["neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+/* `none` is no intent class at all, which is not the same as `.neutral`: an
+   intent class on the element beats anything inherited or supplied by an
+   aesthetic, so the two differ wherever something else is in scope. */
+const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
 /* A presentation entry may be more than one class: `out fill` is a documented
    combination rather than a presentation of its own. */
 const PRESENTATIONS = ["plain", "fill", "out", "out fill", "soft", "flat", "ghost"];
@@ -23,7 +26,9 @@ const slug = (value) => value.replace(/\s+/gu, "-");
 
 /* `plain` and `rest` are the absence of a class, not classes themselves. */
 const classesFor = (base, intent, presentation, extra) =>
-  [base, intent, presentation === "plain" ? "" : presentation, extra].filter(Boolean).join(" ");
+  [base, intent === "none" ? "" : intent, presentation === "plain" ? "" : presentation, extra]
+    .filter(Boolean)
+    .join(" ");
 
 const COMPONENTS = {
   btn: {

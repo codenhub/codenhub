@@ -22,7 +22,9 @@ packages/styles/
   playground/
     index.html
     shared/
+    buttons/
     components/
+    forms/
     layout/
     native/
     typography/
@@ -35,6 +37,8 @@ packages/styles/
   tests/
     browser/
       accessibility.spec.ts
+      aesthetics.spec.ts
+      buttons.spec.ts
       components.spec.ts
       environment.spec.ts
       layout.spec.ts
@@ -49,7 +53,21 @@ packages/styles/
 
 ## `playground/`
 
-Shared manual and automated preview routes. The root index links to focused component, layout, native, and typography pages; common playground assets live under `shared/`.
+Shared manual and automated preview routes. The root index links to focused
+pages; common playground assets live under `shared/`.
+
+Each fixture exists once. A component belongs to exactly one page, and the
+header's aesthetic selector puts the aesthetic class on the preview root, so
+every page can be read under every aesthetic rather than a separate page
+restating a subset of the components under each one. The aesthetic tests drive
+that selector and read the same fixtures as everything else, which is what keeps
+them from drifting apart.
+
+Variant grids render from the spec in `shared/matrix.js` rather than being spelled
+out in markup: a component crossed with every intent, presentation, and state is
+a few hundred nodes, and a new intent has to reach all of them at once. Cells are
+addressable as `<component>-<presentation>-<intent>[-<state>]`, and the `none`
+intent is a cell with no intent class, which is not the same as `.neutral`.
 
 ## `dev/`
 

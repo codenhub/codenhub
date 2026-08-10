@@ -68,7 +68,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const routes = [
     { text: "Home", path: "/" },
-    { text: "Aesthetics", path: "/aesthetics/" },
     { text: "Buttons", path: "/buttons/" },
     { text: "Components", path: "/components/" },
     { text: "Forms", path: "/forms/" },
@@ -142,7 +141,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const aestheticSelect = document.getElementById("aesthetic-select");
 
+  /* The class lands after the first paint, so every component would animate from
+     the default material to the aesthetic's on load. Suppressing transitions for
+     two frames makes the first render the settled one. Switching later still
+     animates, which is the part worth seeing. */
+  documentRoot.dataset.booting = "true";
   applyAesthetic(currentAesthetic);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      delete documentRoot.dataset.booting;
+    });
+  });
 
   aestheticSelect.addEventListener("change", () => {
     currentAesthetic = aestheticSelect.value;

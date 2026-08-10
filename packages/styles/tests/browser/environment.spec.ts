@@ -44,7 +44,7 @@ test.describe("preview environments", () => {
   test("loads source build correctly and applies classes", async ({ page }) => {
     await page.goto(BUILD_COMPONENTS_URL);
     await expect(page.getByTestId("preview-root")).toBeVisible();
-    await expect(page.getByTestId("primary-button")).toBeVisible();
+    await expect(page.getByTestId("badge-primary")).toBeVisible();
   });
 
   test("builds layout and content utilities from Tailwind source", async ({ page }) => {

@@ -27,6 +27,21 @@
           </p>
         </div>
         <div data-matrix="btn" data-matrix-states="rest" data-testid="btn-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Intent aliases</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">error</code>
+            is an alias of
+            <code class="code">destructive</code>
+            and has to resolve to the same tones.
+          </p>
+          <div
+            data-matrix="btn"
+            data-matrix-intents="destructive,error"
+            data-matrix-presentations="plain,out,soft"
+            data-testid="btn-alias-matrix"
+          ></div>
+        </div>
       </section>
 
       <section class="sect-inn stack loose">
@@ -43,7 +58,7 @@
         <div class="stack tight">
           <h2 class="text-title">Loading</h2>
           <p class="text-body text-text-secondary">
-            <code class="code">.loading</code>
+            <code class="code" data-testid="code-chip">.loading</code>
             replaces the label with a spinner and keeps the button's width.
           </p>
         </div>
