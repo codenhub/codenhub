@@ -1,6 +1,6 @@
-/* Intent classes map one color family onto five shared slots and do nothing
+/* Intent classes map one color family onto six shared slots and do nothing
    else. Components read the slots, so supporting every intent costs a component
-   nothing and adding an intent costs five declarations.
+   nothing and adding an intent costs six declarations.
 
    Intent does not cascade. These classes set inheritable custom properties, but
    every component redeclares the neutral defaults at its own root, and a
@@ -14,12 +14,38 @@
    declaration on an element beats inheritance regardless of specificity. That
    single rule is what lets every component drop its own per-intent branches. */
 
-:where(.btn, .alert, .badge, .checkbox, .radio, .switch, .progress) {
+:where(
+  .btn,
+  .alert,
+  .badge,
+  .card,
+  .panel,
+  .checkbox,
+  .radio,
+  .switch,
+  .progress,
+  .skeleton,
+  .loader,
+  .ai,
+  .control-base,
+  .ipt,
+  .textarea,
+  .select,
+  .table,
+  .kbd,
+  .code,
+  .pre,
+  .quote,
+  .divider,
+  .tooltip,
+  .empty-state
+) {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-text-subtle);
+  --intent-border: var(--color-border);
 }
 
 .neutral {
@@ -28,6 +54,7 @@
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-text-subtle);
+  --intent-border: var(--color-border);
 }
 
 .primary {
@@ -36,6 +63,7 @@
   --intent-hover: var(--color-primary-hover);
   --intent-strong: var(--color-primary-strong);
   --intent-subtle: var(--color-primary-subtle);
+  --intent-border: var(--color-primary);
 }
 
 .secondary {
@@ -44,6 +72,7 @@
   --intent-hover: var(--color-accent-hover);
   --intent-strong: var(--color-accent-strong);
   --intent-subtle: var(--color-accent-subtle);
+  --intent-border: var(--color-accent);
 }
 
 .success {
@@ -52,6 +81,7 @@
   --intent-hover: var(--color-success-hover);
   --intent-strong: var(--color-success-strong);
   --intent-subtle: var(--color-success-subtle);
+  --intent-border: var(--color-success);
 }
 
 .warning {
@@ -60,6 +90,7 @@
   --intent-hover: var(--color-warning-hover);
   --intent-strong: var(--color-warning-strong);
   --intent-subtle: var(--color-warning-subtle);
+  --intent-border: var(--color-warning);
 }
 
 .destructive,
@@ -70,6 +101,7 @@
   --intent-hover: var(--color-destructive-hover);
   --intent-strong: var(--color-destructive-strong);
   --intent-subtle: var(--color-destructive-subtle);
+  --intent-border: var(--color-destructive);
 }
 
 .info {
@@ -78,4 +110,5 @@
   --intent-hover: var(--color-info-hover);
   --intent-strong: var(--color-info-strong);
   --intent-subtle: var(--color-info-subtle);
+  --intent-border: var(--color-info);
 }

@@ -105,6 +105,11 @@ component that supports intent, and a custom intent needs no component changes.
 | `--intent-hover`    | The intent's hovered base color.                                    |
 | `--intent-strong`   | High-emphasis tone. Readable text, icon, or border on subtle fills. |
 | `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks.                      |
+| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.     |
+
+`--intent-border` exists because a neutral border must stay the quiet border
+gray rather than the text color. Everything that draws a line reads it: control
+borders, table rules, dividers, key caps, and quote bars.
 
 Set them directly to define an intent this package does not ship:
 
@@ -115,6 +120,7 @@ Set them directly to define an intent this package does not ship:
   --intent-hover: var(--color-violet-700);
   --intent-strong: var(--color-violet-800);
   --intent-subtle: var(--color-violet-100);
+  --intent-border: var(--color-violet-600);
 }
 ```
 

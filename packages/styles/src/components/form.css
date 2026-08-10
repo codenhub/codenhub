@@ -87,14 +87,21 @@
 }
 
 @utility control-base {
-  --control-bg: transparent;
-  --control-border: var(--color-border);
-  --control-border-active: var(--color-primary);
+  /* A text control caps its fill at the `.soft` tint. `.flat` would otherwise
+     put typed text on a saturated intent background, so a container-level
+     `.flat` would make every field inside it unreadable. Clamping with `min()`
+     resolves that from the value alone, with no per-presentation selector. */
+  --control-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+  --control-bg: color-mix(in oklab, var(--intent-color) var(--control-fill), transparent);
+  --control-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  /* Neutral resolves this to the text color, which is the same value as
+     `--color-primary` in the shipped palette; a custom palette can differ. */
+  --control-border-active: var(--intent-color);
   --control-fg: var(--color-text);
   --control-placeholder: var(--color-text-secondary);
   --control-border-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
 
-  @apply h-(--control-height,2.5rem) min-h-(--control-height,2.5rem) w-full appearance-none bg-(--control-bg) px-3 py-2 text-(--control-fg) transition-[border-color,box-shadow,color,opacity] duration-(--motion-duration-fast) ease-(--motion-ease);
+  @apply h-(--control-height,2.5rem) min-h-(--control-height,2.5rem) w-full appearance-none bg-(--control-bg) px-3 py-2 text-(--control-fg) transition-[background-color,border-color,box-shadow,color,opacity] duration-(--motion-duration-fast) ease-(--motion-ease);
   box-sizing: border-box;
   border: var(--control-border-width) solid var(--control-border);
   border-radius: var(--ui-radius, var(--radius-control));
@@ -142,6 +149,20 @@
     width: 0;
     height: 0;
   }
+}
+
+/* `.ghost` zeroes `--ui-border`, which leaves a text control as a bare box with
+   no edge at all. Keeping the bottom rule preserves the affordance, and needs a
+   selector because a presentation is a set of values, not something a component
+   can branch on. Both forms are matched: on the control itself, and inherited
+   from a container. */
+.ipt.ghost,
+.textarea.ghost,
+.select.ghost,
+.control-base.ghost,
+:where(.ghost) :is(.ipt, .textarea, .select, .control-base) {
+  border-bottom-color: var(--intent-border);
+  border-radius: 0;
 }
 
 @utility ipt {
@@ -293,8 +314,14 @@
 }
 
 @utility checkbox {
-  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm bg-transparent transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--color-border);
+  /* Capped like text controls: an unchecked box must stay distinguishable from
+     a checked one, so `.flat` cannot fill it before it is checked. */
+  --toggle-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+
+  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-sm transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  background-color: color-mix(in oklab, var(--intent-color) var(--toggle-fill), transparent);
+  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid
+    color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
 
   &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :checked) {
     @apply border-(--color-border-hover);
@@ -341,8 +368,12 @@
 }
 
 @utility radio {
-  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-full bg-transparent transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--color-border);
+  --toggle-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+
+  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-full transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  background-color: color-mix(in oklab, var(--intent-color) var(--toggle-fill), transparent);
+  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid
+    color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
 
   &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :checked) {
     @apply border-(--color-border-hover);

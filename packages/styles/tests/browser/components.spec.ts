@@ -2,18 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import {
   BUTTON_INTENT_TOKENS,
+  expectSameColor,
   getColorDistance,
   getContrastRatio,
   isTransparent,
   type ButtonIntentToken,
 } from "./test-utils";
-
-/* Presentation resolves colors through `color-mix`, so a computed value carries
-   the same color as its token in a different syntax, and can land a rounding
-   step away in 8-bit sRGB. Colors are therefore compared by distance. */
-const expectSameColor = (actual: string, expected: string, label: string) => {
-  expect(getColorDistance(actual, expected), `${label}: ${actual} vs ${expected}`).toBeLessThanOrEqual(2);
-};
 
 const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
 
@@ -828,6 +822,72 @@ test.describe("components", () => {
     expectSameColor(values.progressBg, values.tokenText, "progress fill");
   });
 
+  /* A component that reads `--intent-*` without joining the reset list fails
+     silently: the undefined property makes every `color-mix()` referencing it
+     invalid at computed-value time, so the whole declaration is dropped and the
+     element falls back to a preflight value. This asserts the slots resolve on
+     every class that reads them. */
+  test("defines every intent slot on each component that reads them", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const missing = await page.evaluate(() => {
+      const classNames = [
+        "btn",
+        "alert",
+        "badge",
+        "card",
+        "panel",
+        "checkbox",
+        "radio",
+        "switch",
+        "progress",
+        "skeleton",
+        "loader",
+        "control-base",
+        "ipt",
+        "textarea",
+        "select",
+        "table",
+        "kbd",
+        "code",
+        "pre",
+        "quote",
+        "divider",
+        "tooltip",
+        "empty-state",
+      ];
+      const slots = [
+        "--intent-color",
+        "--intent-contrast",
+        "--intent-hover",
+        "--intent-strong",
+        "--intent-subtle",
+        "--intent-border",
+      ];
+
+      const gaps: string[] = [];
+
+      for (const className of classNames) {
+        const element = document.createElement("div");
+        element.className = className;
+        document.body.append(element);
+
+        const styles = getComputedStyle(element);
+        for (const slot of slots) {
+          if (styles.getPropertyValue(slot).trim() === "") {
+            gaps.push(`.${className} is missing ${slot}`);
+          }
+        }
+
+        element.remove();
+      }
+
+      return gaps;
+    });
+
+    expect(missing).toEqual([]);
+  });
+
   /* The shared `--intent-*` contract only works because a component's neutral
      reset carries zero specificity: an intent class on the element must beat it,
      while an inherited value from a container must not. Both directions are
@@ -998,5 +1058,135 @@ test.describe("components", () => {
 
     expect(aliasCompactLeft).toBe("10px");
     expect(aliasSpaciousLeft).toBe("24px");
+  });
+});
+
+test.describe("stage two coverage", () => {
+  test("gives cards elevation and reads intent and presentation", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      const neutral = get("card-neutral");
+      const successSoft = get("card-success-soft");
+      const primaryOut = get("card-primary-out");
+      const panel = get("panel-neutral");
+
+      return {
+        neutralBackground: neutral.backgroundColor,
+        neutralShadow: neutral.boxShadow,
+        outBackground: primaryOut.backgroundColor,
+        outBorder: primaryOut.borderTopColor,
+        outBorderWidth: primaryOut.borderTopWidth,
+        panelShadow: panel.boxShadow,
+        softBackground: successSoft.backgroundColor,
+        tokenBackground: resolveToken("background"),
+        tokenPrimary: resolveToken("primary"),
+      };
+    });
+
+    // The elevation tokens finally have a component that reads them.
+    expect(styles.neutralShadow).not.toBe("none");
+    // A panel is the flush sibling, so it stays unelevated.
+    expect(styles.panelShadow).toBe("none");
+
+    expectSameColor(styles.neutralBackground, styles.tokenBackground, "neutral card background");
+    expect(getColorDistance(styles.softBackground, styles.tokenBackground)).toBeGreaterThan(2);
+    expectSameColor(styles.outBackground, styles.tokenBackground, "outlined card stays unfilled");
+    expectSameColor(styles.outBorder, styles.tokenPrimary, "outlined card border");
+    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(1);
+  });
+
+  test("caps text control fill so a flat container stays readable", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+      return {
+        default: get("ipt-default").backgroundColor,
+        flat: get("ipt-flat").backgroundColor,
+        flatBorderWidth: get("ipt-flat").borderTopWidth,
+        ghostBorder: get("ipt-ghost").borderTopColor,
+        outBorderWidth: get("ipt-out").borderTopWidth,
+        soft: get("ipt-soft").backgroundColor,
+      };
+    });
+
+    // `.flat` resolves to the same tint as `.soft` rather than a solid fill.
+    expectSameColor(styles.flat, styles.soft, "flat input clamps to the soft tint");
+    expect(getColorDistance(styles.flat, styles.default)).toBeGreaterThan(1);
+    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.flatBorderWidth));
+    expect(isTransparent(styles.ghostBorder)).toBe(true);
+  });
+
+  test("lets a table row override the table intent while others inherit it", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const readIntent = (testId: string) =>
+        getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!)
+          .getPropertyValue("--intent-color")
+          .trim();
+
+      return {
+        inheritedRow: readIntent("table-row-inherited"),
+        overriddenRow: readIntent("table-row-destructive"),
+        tokenDestructive: resolveToken("destructive"),
+        tokenSuccess: resolveToken("success"),
+      };
+    });
+
+    // Rows inherit rather than reset, so the table's intent reaches them.
+    expect(styles.inheritedRow).not.toBe("");
+    expect(styles.inheritedRow).not.toBe(styles.overriddenRow);
+  });
+
+  test("colors loaders, dividers, and keyboard keys by intent", async ({ page }) => {
+    await page.goto(COMPONENTS_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      return {
+        dividerColor: get("divider-info").borderTopColor,
+        kbdDestructive: get("kbd-destructive").color,
+        kbdNeutral: get("kbd-neutral").color,
+        loaderColor: get("loader-success").backgroundColor,
+        tokenDestructiveStrong: resolveToken("destructive-strong"),
+        tokenInfo: resolveToken("info"),
+        tokenSuccess: resolveToken("success"),
+      };
+    });
+
+    expectSameColor(styles.loaderColor, styles.tokenSuccess, "loader intent color");
+    expectSameColor(styles.dividerColor, styles.tokenInfo, "divider intent color");
+    expectSameColor(styles.kbdDestructive, styles.tokenDestructiveStrong, "kbd intent text");
+    expect(getColorDistance(styles.kbdNeutral, styles.kbdDestructive)).toBeGreaterThan(2);
   });
 });

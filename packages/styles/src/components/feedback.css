@@ -101,18 +101,24 @@
 }
 
 @utility skeleton {
-  @apply min-h-4 w-full rounded-(--radius-control);
+  --skeleton-base: var(--intent-subtle);
+  --skeleton-sheen: color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground));
+
+  @apply min-h-4 w-full;
 
   animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
-  background: linear-gradient(90deg, var(--color-surface), var(--color-foreground), var(--color-surface));
+  background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
   background-size: 200% 100%;
+  border-radius: var(--ui-radius, var(--radius-control));
 }
 
 @utility progress {
   --progress-color: var(--intent-color);
   --progress-surface: color-mix(in srgb, var(--intent-subtle) 60%, transparent);
+  --progress-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
 
   @apply relative h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
+  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--progress-border);
 
   &::after {
     content: "";

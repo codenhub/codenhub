@@ -45,17 +45,31 @@ button green. So intent classes set `--intent-*`, but every component redeclares
 the neutral defaults at its own root:
 
 ```css
-@utility btn {
+:where(.btn, .alert, .badge, .card, .ipt /* ... */) {
   --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
+  --intent-border: var(--color-border);
   /* ... */
 }
 ```
 
-A declaration on the element beats an inherited one, so the component's own reset
-wins over any ancestor's intent, while `.btn.primary` still wins over the reset
-through selector specificity. This is what makes intent element-scoped without
-requiring `:not()` chains.
+Specificity is the whole mechanism. The reset is `:where()`, so it carries zero
+specificity: an intent class on the element (0-1-0) beats it, while an inherited
+value still loses to it, because any declaration on an element beats
+inheritance regardless of specificity. One rule therefore replaces every
+per-component intent branch, and no `:not()` chains are needed.
+
+That selector list is the registry of components supporting intent. A component
+that reads `--intent-*` without joining it fails silently: the undefined property
+makes every `color-mix()` referencing it invalid at computed-value time, so the
+declaration is dropped entirely and the element falls back to a preflight value.
+A browser test asserts every slot resolves on every component that reads them.
+
+`native.css` carries its own copy of the reset for the bare elements it maps,
+since those carry no class.
+
+One deliberate exception: table rows inherit their table's intent rather than
+resetting it, because a row is part of a table rather than an independent
+component. A row carrying its own intent class still wins.
 
 ## Token contracts
 
@@ -71,10 +85,15 @@ directly to build an intent the package does not ship.
 | `--intent-hover`    | The intent's hovered base color.                      |
 | `--intent-strong`   | High-emphasis tone; readable text on subtle surfaces. |
 | `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.        |
+| `--intent-border`   | Line color; the border gray when no intent is set.    |
 
-Intent classes map a `--color-*` family onto these five slots and do nothing
-else. Adding an intent is five declarations; adding a component that supports
+Intent classes map a `--color-*` family onto these six slots and do nothing
+else. Adding an intent is six declarations; adding a component that supports
 every intent is zero.
+
+`--intent-border` is separate from `--intent-color` because a neutral border
+must stay the quiet border gray rather than the text color. Without it, every
+component that draws a line would need its own per-intent branch again.
 
 ### Presentation tokens
 
@@ -94,22 +113,26 @@ no intent, so they inherit safely.
 
 ### Material tokens
 
-Lengths, shadows, and shapes. Set by aesthetic classes and by `:root` for the
-default aesthetic; read by components.
+Lengths and shadows. Set by aesthetic classes; read by components.
 
-| Token                  | Meaning                                                          |
-| ---------------------- | ---------------------------------------------------------------- |
-| `--ui-radius`          | Corner radius for controls; surfaces scale from it.              |
-| `--ui-border-width`    | Base border thickness before `--ui-border-scale`.                |
-| `--ui-shadow`          | Complete `box-shadow` value, or `none`.                          |
-| `--ui-shadow-offset`   | Offset an aesthetic animates on hover and press.                 |
-| `--ui-blur`            | `backdrop-filter` blur radius, or `0`.                           |
-| `--ui-bg-alpha`        | Opacity applied to a resolved background, for translucent skins. |
-| `--ui-hover-transform` | Transform applied on interactive hover.                          |
-| `--ui-clip`            | `clip-path` applied to the element, or `none`.                   |
+| Token                  | Fallback           | Meaning                                                 |
+| ---------------------- | ------------------ | ------------------------------------------------------- |
+| `--ui-radius`          | `--radius-control` | Corner radius for controls.                             |
+| `--ui-radius-surface`  | `--radius-surface` | Corner radius for surfaces such as cards and alerts.    |
+| `--ui-border-width`    | `--border-width`   | Base border thickness before `--ui-border-scale`.       |
+| `--ui-shadow`          | `none`             | Complete `box-shadow` value.                            |
+| `--ui-bg-alpha`        | `1`                | Unitless multiplier over `--ui-fill`, for translucency. |
+| `--ui-hover-transform` | `none`             | Transform applied on interactive hover.                 |
 
-Components read material tokens with a `var()` fallback matching the default
-aesthetic, so a component keeps its normal look when no aesthetic is in scope.
+The default aesthetic is the _absence_ of these declarations, not a set of root
+values. Components read each with the `var()` fallback above, which is why a
+plain `.card` gets surface radius while a plain `.btn` gets control radius. A
+single `:root` value could not serve both.
+
+`backdrop-filter` and `clip-path` are deliberately not in this contract.
+Applying either unconditionally creates a compositing layer and a containing
+block on every component even at its no-op value, so the aesthetics that need
+them apply them directly to the components they target.
 
 ## Composition rules
 
@@ -118,19 +141,23 @@ component-scoped variables:
 
 ```css
 @utility btn {
-  --intent-color: var(--color-text);
-
-  --btn-bg: color-mix(in oklab, var(--intent-color) var(--ui-fill, 100%), transparent);
-  --btn-border-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
+  --button-bg: color-mix(in oklab, var(--intent-color) var(--ui-fill, 100%), transparent);
+  --button-border-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
 }
 ```
+
+A component may clamp a token it cannot honor. Text controls and toggles cap
+their fill with `min(var(--ui-fill, 0%), 12%)`, so a `.flat` container cannot put
+typed text on a saturated background. Clamping resolves from the value alone and
+needs no per-presentation selector, which keeps the component free of axis
+branching.
 
 Two choices there are deliberate and apply everywhere. Mixing toward
 `transparent` rather than a background token lets a tinted surface adapt to
 whatever it is placed on. Mixing in `oklab` keeps the wide-gamut palette intact
 and blends perceptually, where `srgb` would clip it.
 
-Component-scoped variables such as `--btn-*`, `--control-*`, `--feedback-*`,
+Component-scoped variables such as `--button-*`, `--control-*`, `--feedback-*`,
 `--progress-*`, and `--tooltip-*` are internal wiring, not public contract.
 
 ## Theme values

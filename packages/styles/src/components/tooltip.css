@@ -2,8 +2,11 @@
 @import "../theme.css";
 
 @utility tooltip {
-  --tooltip-bg: var(--color-surface);
-  --tooltip-fg: var(--color-text);
+  /* The bubble is always filled: a transparent or hairline tooltip floating
+     over arbitrary content is unreadable, so it reads intent but not the
+     presentation fill. Neutral resolves to the previous surface tone. */
+  --tooltip-bg: var(--intent-subtle);
+  --tooltip-fg: var(--intent-strong);
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
   --tooltip-right: auto;
@@ -15,7 +18,10 @@
   @apply relative;
 
   &.tooltip-icon {
-    @apply bg-surface text-text inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
+    @apply inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
+
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-fg);
   }
 
   &[data-tooltip-position="bottom"] {

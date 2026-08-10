@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { expectSameColor } from "./test-utils";
+
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 
 test("maps content utilities onto unclassed native elements", async ({ page }) => {
@@ -75,4 +77,52 @@ test("adds default icons and position modifiers to native inputs", async ({ page
   expect(emailBg).toContain("data:image/svg+xml");
   expect(emailRightPos).toContain("100%");
   expect(searchNoIconBg).toBe("none");
+});
+
+/* `native.css` re-declares border and background after `@apply`, which would
+   defeat the intent contract if those declarations outranked the utilities.
+   They sit in the base layer and the utilities win, so intent still reaches
+   classless elements; this pins that ordering down. */
+test("applies intent classes to classless native elements", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const styles = await page.evaluate(() => {
+    const resolveToken = (tokenName: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = `var(--color-${tokenName})`;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    };
+
+    const host = document.createElement("div");
+    host.innerHTML = `
+      <button class="destructive">Delete</button>
+      <button>Plain</button>
+      <input type="text" class="success" />
+      <kbd class="warning">K</kbd>
+    `;
+    document.body.append(host);
+
+    const values = {
+      inputBorder: getComputedStyle(host.querySelector("input")!).borderTopColor,
+      intentButtonBg: getComputedStyle(host.querySelector("button.destructive")!).backgroundColor,
+      keyboardText: getComputedStyle(host.querySelector("kbd")!).color,
+      plainButtonBg: getComputedStyle(host.querySelector("button:not(.destructive)")!).backgroundColor,
+      tokenDestructive: resolveToken("destructive"),
+      tokenSuccess: resolveToken("success"),
+      tokenText: resolveToken("text"),
+      tokenWarningStrong: resolveToken("warning-strong"),
+    };
+
+    host.remove();
+
+    return values;
+  });
+
+  expectSameColor(styles.intentButtonBg, styles.tokenDestructive, "native button intent background");
+  expectSameColor(styles.plainButtonBg, styles.tokenText, "native button neutral background");
+  expectSameColor(styles.inputBorder, styles.tokenSuccess, "native input intent border");
+  expectSameColor(styles.keyboardText, styles.tokenWarningStrong, "native kbd intent text");
 });

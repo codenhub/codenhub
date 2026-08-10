@@ -10,6 +10,21 @@
 @import "./components/index.css";
 @import "./reset.css";
 
+/* The shared intent reset in `intent.css` keys on class names, and these
+   mappings target bare elements. Without a matching reset an element would read
+   an undefined `--intent-*`, which makes any `color-mix()` referencing it
+   invalid at computed-value time and silently drops the whole declaration.
+   Zero specificity for the same reason as the class reset: an intent class on
+   the element must still win, and an inherited value must still lose. */
+:where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-text-subtle);
+  --intent-border: var(--color-border);
+}
+
 @layer base {
   h1,
   h2,
@@ -92,10 +107,6 @@
   input[type="text"],
   input[type="number"] {
     @apply ipt;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
   }
 
   input[type="email"],
@@ -107,10 +118,6 @@
   input[type="week"],
   input[type="time"] {
     @apply ipt icon;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
 
     &.left {
       background-position: 0.75rem center;
@@ -142,18 +149,10 @@
 
   input[type="date"] {
     @apply ipt;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
   }
 
   input[type="datetime-local"] {
     @apply ipt;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
   }
 
   @supports selector(input::-webkit-calendar-picker-indicator) {
@@ -169,18 +168,10 @@
 
   textarea {
     @apply textarea;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
   }
 
   select {
     @apply select;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-border);
   }
 
   input[type="checkbox"] {
@@ -197,11 +188,5 @@
   input[type="submit"],
   input[type="reset"] {
     @apply btn;
-
-    border-width: var(--border-width);
-    border-style: solid;
-    border-color: var(--color-text);
-    background-color: var(--color-text);
-    color: var(--color-text-contrast);
   }
 }

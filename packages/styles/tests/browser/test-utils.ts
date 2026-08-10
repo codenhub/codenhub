@@ -1,3 +1,5 @@
+import { expect } from "@playwright/test";
+
 interface LinearColor {
   alpha: number;
   blue: number;
@@ -157,4 +159,11 @@ export const getContrastRatio = (foreground: string, background: string) => {
   const darker = Math.min(foregroundLuminance, backgroundLuminance);
 
   return (lighter + 0.05) / (darker + 0.05);
+};
+
+/* Presentation and intent resolve colors through `color-mix`, so a computed
+   value carries the same color as its token in a different syntax, and can land
+   a rounding step away in 8-bit sRGB. Colors are compared by distance. */
+export const expectSameColor = (actual: string, expected: string, label: string) => {
+  expect(getColorDistance(actual, expected), `${label}: ${actual} vs ${expected}`).toBeLessThanOrEqual(2);
 };

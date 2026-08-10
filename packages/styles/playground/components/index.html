@@ -265,6 +265,93 @@
         </div>
       </section>
 
+      <section class="sect-inn stack loose" data-testid="surfaces-section">
+        <div class="stack tight">
+          <h2 class="text-title">Surfaces</h2>
+          <p class="text-body text-text-secondary">
+            Cards float above the layout; panels sit flush against it. Both read intent, presentation, and material.
+          </p>
+        </div>
+        <div class="stack loose">
+          <div class="stack tight">
+            <h3 class="text-title-sm">Cards</h3>
+            <div class="auto-grid">
+              <article class="card" data-testid="card-neutral">
+                <h4 class="text-label-lg">Neutral</h4>
+                <p class="text-body text-text-secondary">Bordered container with low elevation.</p>
+              </article>
+              <article class="card success soft" data-testid="card-success-soft">
+                <h4 class="text-label-lg">Success soft</h4>
+                <p class="text-body">Tinted surface.</p>
+              </article>
+              <article class="card primary out" data-testid="card-primary-out">
+                <h4 class="text-label-lg">Primary outline</h4>
+                <p class="text-body">Intent border, no fill.</p>
+              </article>
+              <article class="card interactive" data-testid="card-interactive" tabindex="0">
+                <h4 class="text-label-lg">Interactive</h4>
+                <p class="text-body text-text-secondary">Lifts on hover.</p>
+              </article>
+            </div>
+          </div>
+          <div class="stack tight">
+            <h3 class="text-title-sm">Panels</h3>
+            <div class="auto-grid">
+              <aside class="panel" data-testid="panel-neutral">
+                <p class="text-body">Flush panel with no elevation.</p>
+              </aside>
+              <aside class="panel warning soft" data-testid="panel-warning-soft">
+                <p class="text-body">Tinted warning panel.</p>
+              </aside>
+            </div>
+          </div>
+          <div class="stack tight">
+            <h3 class="text-title-sm">Intent on content</h3>
+            <div class="cluster">
+              <kbd class="kbd" data-testid="kbd-neutral">Ctrl</kbd>
+              <kbd class="kbd destructive" data-testid="kbd-destructive">Del</kbd>
+              <span class="loader success" data-testid="loader-success" aria-hidden="true"></span>
+              <span class="skeleton info" data-testid="skeleton-info" style="width: 8rem"></span>
+            </div>
+            <hr class="divider info" data-testid="divider-info" />
+          </div>
+          <div class="stack tight">
+            <h3 class="text-title-sm">Table intent</h3>
+            <div class="table-wrap">
+              <table class="success table" data-testid="table-success">
+                <thead>
+                  <tr>
+                    <th>Package</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr data-testid="table-row-inherited">
+                    <td>styles</td>
+                    <td>Ready</td>
+                  </tr>
+                  <tr class="destructive" data-testid="table-row-destructive">
+                    <td>legacy</td>
+                    <td>Failing</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="stack tight">
+            <h3 class="text-title-sm">Control presentation</h3>
+            <div class="cluster">
+              <input class="ipt" placeholder="Default" data-testid="ipt-default" />
+              <input class="ipt out" placeholder="Outlined" data-testid="ipt-out" />
+              <input class="ipt soft" placeholder="Soft" data-testid="ipt-soft" />
+              <input class="ipt flat" placeholder="Flat clamps to soft" data-testid="ipt-flat" />
+              <input class="ipt ghost" placeholder="Ghost" data-testid="ipt-ghost" />
+              <input class="ipt success" placeholder="Success" data-testid="ipt-success" />
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="sect-inn stack loose">
         <div class="stack tight">
           <h2 class="text-title">Tooltips</h2>

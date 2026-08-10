@@ -79,10 +79,15 @@
 }
 
 @utility divider {
-  @apply border-border m-0 w-full border-0 border-t;
+  @apply m-0 w-full border-0 border-t;
+
+  border-color: var(--intent-border);
+  border-top-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
 
   &.vertical {
     @apply h-auto w-0 self-stretch border-t-0 border-l;
+
+    border-left-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
   }
 }
 

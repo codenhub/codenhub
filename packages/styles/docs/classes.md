@@ -17,21 +17,41 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
-- `.divider` is horizontal; `.vertical` makes it self-stretch vertically.
+- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It
+  takes intent classes to color the rule and `--ui-border-width` to thicken it.
 
 The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
 ## Content
 
-| Class           | Purpose                                                                     |
-| --------------- | --------------------------------------------------------------------------- |
-| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                     |
-| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows. |
-| `.kbd`          | Inline keyboard-input styling.                                              |
-| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    |
-| `.quote-inline` | Inline quotation styling.                                                   |
-| `.code`         | Inline code formatting.                                                     |
-| `.pre`          | Scrollable block code formatting with larger padding.                       |
+| Class           | Purpose                                                                     | Intent affects         |
+| --------------- | --------------------------------------------------------------------------- | ---------------------- |
+| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                     | Nothing.               |
+| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows. | Head, border, hover.   |
+| `.kbd`          | Inline keyboard-input styling.                                              | Surface, border, text. |
+| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    | Left border.           |
+| `.quote-inline` | Inline quotation styling.                                                   | Nothing.               |
+| `.code`         | Inline code formatting.                                                     | Surface.               |
+| `.pre`          | Scrollable block code formatting with larger padding.                       | Surface.               |
+
+A table's rows deliberately inherit its intent instead of resetting it, so
+`.table.success` tints throughout. A row carrying its own intent still wins:
+
+```html
+<table class="table success">
+  <tbody>
+    <tr>
+      <td>Inherits the table intent</td>
+    </tr>
+    <tr class="destructive">
+      <td>Overrides it for this row</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+This is the one place intent cascades, because a table's rows are parts of the
+table rather than independent components.
 
 Use `.table-wrap` around `.table` when table width may exceed its container:
 
@@ -56,9 +76,31 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 
 ## Surfaces
 
-| Class          | Purpose                                       |
-| -------------- | --------------------------------------------- |
-| `.empty-state` | Centered empty-state layout with muted color. |
+| Class          | Purpose                                                            |
+| -------------- | ------------------------------------------------------------------ |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
+| `.empty-state` | Centered empty-state layout with muted color.                      |
+
+Both read intent, [presentation](#presentation), and
+[material tokens](./tokens.md#material-tokens). A plain `.card` is a neutral
+bordered container; only an explicit presentation tints it.
+
+```html
+<article class="card">Neutral card</article>
+<article class="card success soft">Tinted success card</article>
+<article class="card primary out">Intent border, no fill</article>
+<a class="card interactive" href="/package">Lifts on hover</a>
+<aside class="panel">Flush panel</aside>
+```
+
+`.interactive` is styling only. Use a real interactive element and give it an
+accessible name; a `<div class="card interactive">` is not focusable or
+operable by keyboard.
 
 ## Presentation
 
@@ -93,10 +135,27 @@ Values each class ships:
 | `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
 | `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
 
-`.btn`, `.alert`, and `.badge` read the full contract. With no presentation class
-in scope they keep their own defaults: buttons are filled, alerts and badges are
-tinted. Form controls read only the border portion. Every other class in this
-package is unaffected by these tokens.
+With no presentation class in scope, each component keeps its own default:
+buttons are filled, alerts and badges are tinted, surfaces and controls are
+neutral and bordered.
+
+| Component                                                     | Reads                                 |
+| ------------------------------------------------------------- | ------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`                 | Fill, text, border, and border width. |
+| `.ipt`, `.textarea`, `.select`, `.control-base`               | Border and a capped fill.             |
+| `.checkbox`, `.radio`, `.switch`                              | Border and a capped unchecked fill.   |
+| `.table`, `.kbd`, `.progress`, `.divider`                     | Border and border width.              |
+| `.code`, `.pre`, `.quote`, `.tooltip`, `.skeleton`, `.loader` | Intent only, not presentation.        |
+
+Text controls and toggles cap their fill at the `.soft` tint. `.flat` would
+otherwise put typed text on a saturated background, so a `.flat` container would
+make every field inside it unreadable; on those components `.flat` resolves to
+the same tint as `.soft`. `.ghost` removes the border from a control and leaves
+a bottom rule, so the field keeps its affordance.
+
+Tooltips ignore the presentation fill entirely. A transparent or hairline
+tooltip floating over arbitrary content is unreadable, so the bubble stays
+filled and reads only the intent.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
@@ -204,6 +263,19 @@ to set the checked color:
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
+Text controls also take intent, which colors the resting border and the
+focus-visible border, and presentation, which sets border weight and a capped
+tint:
+
+```html
+<input class="ipt success" placeholder="Valid" />
+<input class="ipt out" placeholder="Heavier border" />
+<input class="ipt ghost" placeholder="Underline only" />
+<div class="soft">
+  <input class="ipt" placeholder="Tinted from the container" />
+</div>
+```
+
 `.control-base` is a public low-level utility from the form entrypoint. It
 provides the shared control dimensions, border, placeholder, focus-visible,
 invalid, and disabled styles composed by `ipt`, `textarea`, and `select`. Use it
@@ -273,9 +345,15 @@ Loader size modifiers:
 | `.sm`    | Small (`1.5rem`). |
 | `.lg`    | Large (`2.5rem`). |
 
-Alerts, badges, and progress bars accept `.primary`, `.secondary`, `.success`,
-`.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent,
-they use the text palette.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`,
+`.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and
+`.info`. Without an intent, they use the text palette, except `.loader`, which
+keeps `currentColor` so it matches whatever content surrounds it.
+
+```html
+<span class="loader success" aria-hidden="true"></span>
+<span class="skeleton info"></span>
+```
 
 `.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases
 the left padding and adds an embedded SVG. Success, warning, and destructive
