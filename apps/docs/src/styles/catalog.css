@@ -2,6 +2,18 @@
   @apply text-text-secondary mt-3 mb-10 max-w-2xl leading-7;
 }
 
+.not-found-status {
+  @apply text-text-secondary text-label font-bold;
+}
+
+.not-found-lede {
+  @apply text-text-secondary mt-3 mb-8 max-w-2xl leading-7;
+}
+
+.not-found-actions {
+  @apply cluster;
+}
+
 .package-grid {
   --layout-grid-min: 20rem;
 }

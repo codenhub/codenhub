@@ -12,11 +12,6 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ## Current focus
 
-### @codenhub
-
-- [x] Deploy `apps/docs` to Cloudflare Workers, connected through the Cloudflare
-      dashboard rather than from this repository
-
 ### @codenhub/styles
 
 - [x] Core CSS design tokens & Tailwind v4 integration
@@ -110,9 +105,10 @@ Track high-level progress and milestone status for foundation and utility packag
 - `docs/ci.md` is the entrypoint for the pinned toolchain and what runs on a pull
   request. Delivery work below builds on it rather than adding a second workflow model.
 - The documentation site deploys from the Cloudflare dashboard, connected to this
-  repository. That is deliberate: the repository carries build configuration and
-  source, not delivery plumbing, so there is no deploy workflow, no `wrangler`
-  configuration, and no deployment credentials here.
+  repository. `apps/docs/wrangler.jsonc` describes what to serve, and everything
+  else about the deployment lives in the dashboard. That split is deliberate: the
+  repository carries build configuration, not delivery plumbing, so there is no
+  deploy workflow and no deployment credentials here.
 - Unlisted packages (`router`, `store`, `theme`, `plugins`, `ui-kit`) are currently internal, WIP, deprecated, or evaluated separately.
 - Continuous delivery is deferred until package adoption justifies it. `hub release` already
   covers the publish preflight, and trusted publishing only pays off once publishing runs from
