@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-09
+last_updated: 2026-08-10
 scope: repo-wide package progress tracking
 ---
 
@@ -21,7 +21,7 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] Core CSS design tokens & Tailwind v4 integration
 - [x] Base component classes (`button`, `form`, `surface`, `feedback`, `loader`)
 - [x] Use `@codenhub/icons` for basic icons after the helper is ready
-- [ ] Cascading presentation tokens: `out`, `soft`, `ghost`, and `flat` set inherited appearance tokens that every component reads, so a container sets the look of its subtree and any element can still override it
+- [x] Cascading presentation tokens: `out`, `soft`, `ghost`, and `flat` set inherited appearance tokens that every component reads, so a container sets the look of its subtree and any element can still override it
 
 ### @codenhub/docs
 

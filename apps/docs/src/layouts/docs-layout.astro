@@ -14,7 +14,6 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
 
 <BaseLayout
   description={document.description ?? currentPackage.description}
-  isDocs={true}
   sectionTitle={currentPackage.label}
   title={document.title}
 >
@@ -58,9 +57,8 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
     import { findActiveHeadingId } from "../lib/toc-highlight";
 
     const toc = document.querySelector("[data-toc]");
-    const column = document.querySelector<HTMLElement>(".document-column");
 
-    if (toc !== null && column !== null) {
+    if (toc !== null) {
       const links = [...toc.querySelectorAll<HTMLAnchorElement>("a[href^='#']")];
       const entries = links.flatMap((link) => {
         const id = decodeURIComponent(link.hash.slice(1));
@@ -69,40 +67,26 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
         return heading === null ? [] : [{ heading, id, link }];
       });
 
-      // The column scrolls on wide viewports and the page scrolls below the
-      // breakpoint that collapses the rails, so whichever is scrolling has to be
-      // measured rather than assumed. Heading offsets come from rects because
-      // `offsetTop` is relative to the nearest positioned ancestor, which is not
-      // the scroll container.
-      const readGeometry = () => {
-        if (column.scrollHeight > column.clientHeight + 1) {
-          const columnTop = column.getBoundingClientRect().top;
+      // The page is the scroll container at every breakpoint, and `html` already
+      // reserves the sticky header through `scroll-padding-top`. Reusing that
+      // value as the activation line makes following a link and reading past a
+      // heading agree on which entry is current.
+      const readActivationOffset = () => {
+        const padding = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop);
 
-          return {
-            measure: (heading: HTMLElement) =>
-              heading.getBoundingClientRect().top - columnTop + column.scrollTop,
-            scrollHeight: column.scrollHeight,
-            scrollTop: column.scrollTop,
-            viewportHeight: column.clientHeight,
-          };
-        }
-
-        return {
-          measure: (heading: HTMLElement) => heading.getBoundingClientRect().top + window.scrollY,
-          scrollHeight: document.documentElement.scrollHeight,
-          scrollTop: window.scrollY,
-          viewportHeight: window.innerHeight,
-        };
+        return Number.isNaN(padding) ? 0 : padding;
       };
 
       const update = () => {
-        const { measure, scrollHeight, scrollTop, viewportHeight } = readGeometry();
         const activeId = findActiveHeadingId({
-          headings: entries.map(({ heading, id }) => ({ id, top: measure(heading) })),
-          offset: viewportHeight * 0.25,
-          scrollHeight,
-          scrollTop,
-          viewportHeight,
+          headings: entries.map(({ heading, id }) => ({
+            id,
+            top: heading.getBoundingClientRect().top + window.scrollY,
+          })),
+          offset: readActivationOffset(),
+          scrollHeight: document.documentElement.scrollHeight,
+          scrollTop: window.scrollY,
+          viewportHeight: window.innerHeight,
         });
 
         for (const { id, link } of entries) {
@@ -128,7 +112,6 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
       };
 
       update();
-      column.addEventListener("scroll", scheduleUpdate, { passive: true });
       window.addEventListener("scroll", scheduleUpdate, { passive: true });
       window.addEventListener("resize", scheduleUpdate, { passive: true });
     }
