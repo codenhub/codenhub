@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const routes = [
     { text: "Home", path: "/" },
+    { text: "Aesthetics", path: "/aesthetics/" },
     { text: "Components", path: "/components/" },
     { text: "Forms", path: "/forms/" },
     { text: "Layout", path: "/layout/" },

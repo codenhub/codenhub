@@ -1,0 +1,64 @@
+/* Glass: translucent surfaces over a blurred backdrop, with a hairline highlight
+   edge. Needs something behind it to blur -- on a flat page background it is
+   just a translucent panel.
+
+   Load after the base stylesheet. Aesthetics override the neutral defaults that
+   `intent.css` declares at zero specificity, so source order decides. */
+.glass {
+  --glass-blur: 14px;
+  --glass-opacity: 45%;
+  --glass-fill: 12%;
+  /* A light hairline in both themes: glass catches light from above regardless
+     of how dark the surface under it is. */
+  --glass-edge: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+  --glass-base: color-mix(in srgb, var(--color-background) var(--glass-opacity), transparent);
+
+  --ui-radius: 0.875rem;
+  --ui-radius-surface: 1.25rem;
+  --ui-border-width: 1px;
+  --ui-bg-alpha: 0.8;
+  --ui-shadow: 0 8px 32px rgb(0 0 0 / 0.18);
+}
+
+/* `backdrop-filter` is applied here rather than exposed as a material token: it
+   creates a compositing layer and a containing block on every element that
+   carries it, even at a no-op value.
+
+   Surfaces and overlays only. A blur under each control of a dense cluster costs
+   a composited layer apiece and reads as noise, so controls stay solid and sit on
+   the glass instead. */
+.glass :is(.card, .panel, .alert),
+.glass:is(.card, .panel, .alert),
+.glass .tooltip::after {
+  /* Surfaces mix their fill toward an opaque background token, which no material
+     token can make translucent, so the background is rebuilt here over a
+     translucent base. */
+  background-color: color-mix(in oklab, var(--intent-color) var(--glass-fill), var(--glass-base));
+  /* Unprefixed only. The build adds `-webkit-backdrop-filter` for the Safari
+     versions in the baseline; writing the prefixed form here by hand makes the
+     minifier collapse the pair down to the prefixed one alone, which leaves
+     Firefox with no blur at all. */
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  /* Enough intent to stay readable as an intent, over the highlight that makes
+     the edge look like glass rather than a border. */
+  border-color: color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
+}
+
+.glass .tooltip::after {
+  border: var(--ui-border-width) solid color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
+  border-radius: var(--ui-radius);
+}
+
+/* Transparency is the whole aesthetic, so honoring the preference means dropping
+   to an opaque surface rather than softening the blur. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    --glass-opacity: 100%;
+  }
+
+  .glass :is(.card, .panel, .alert),
+  .glass:is(.card, .panel, .alert),
+  .glass .tooltip::after {
+    backdrop-filter: none;
+  }
+}

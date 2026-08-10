@@ -238,8 +238,30 @@ border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
 ```
 
 > **Material token contract**: components read these; aesthetic classes and
-> consumer overrides set them. The named aesthetic classes that ship coordinated
-> values are not part of this release.
+> consumer overrides set them.
+
+### Aesthetic Tokens
+
+The shipped [aesthetic classes](./classes.md#aesthetics) set material tokens for
+you. Each also exposes its own tokens so you can tune it without rebuilding it.
+They are available only where that aesthetic's stylesheet is imported.
+
+| Token             | Aesthetic       | Purpose                                                   | Default                                 |
+| ----------------- | --------------- | --------------------------------------------------------- | --------------------------------------- |
+| `--neo-ink`       | `.neobrutalism` | Outline and shadow color.                                 | Near-black on light, near-white on dark |
+| `--neo-offset`    | `.neobrutalism` | Hard shadow offset, and the distance hover travels.       | `4px`                                   |
+| `--glass-blur`    | `.glass`        | Backdrop blur radius.                                     | `14px`                                  |
+| `--glass-opacity` | `.glass`        | Percentage of the background token kept under a surface.  | `45%`                                   |
+| `--glass-fill`    | `.glass`        | Percentage of the intent mixed into a surface.            | `12%`                                   |
+| `--glass-edge`    | `.glass`        | Highlight color the intent border is mixed into.          | Translucent white                       |
+| `--pixel-unit`    | `.pixel`        | One pixel of the grid. Corners step by it; edges are two. | `2px`, and `1px` on chips               |
+| `--pixel-ink`     | `.pixel`        | Outline color.                                            | Near-black on light, near-white on dark |
+| `--font-pixel`    | `.pixel`        | Pixel font stack. Yours to supply; no font binary ships.  | Falls back to the monospace stack       |
+
+`.neobrutalism` and `.pixel` also set `--intent-border`, the one place an
+aesthetic touches the intent axis: a thick outline in the quiet border gray reads
+as a mistake rather than as the aesthetic. They set it at zero specificity, so an
+intent class on the element still wins.
 
 ## Component Internals
 

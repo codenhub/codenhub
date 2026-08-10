@@ -11,6 +11,8 @@ export default defineConfig({
   plugins: [tailwindcss()],
   resolve: {
     alias: {
+      "@codenhub/styles/tw/aesthetics": resolve(__dirname, "../src/aesthetics/index.css"),
+      "@codenhub/styles/aesthetics": resolve(__dirname, "../src/aesthetics/index.css"),
       "@codenhub/styles/components": resolve(__dirname, "../src/components/index.css"),
       "@codenhub/styles/tw/native": resolve(__dirname, "../src/native.css"),
       "@codenhub/styles/tw": resolve(__dirname, "../src/index.css"),

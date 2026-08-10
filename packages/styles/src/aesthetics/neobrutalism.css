@@ -1,0 +1,80 @@
+/* Neobrutalism: thick ink outline, a hard unblurred offset shadow, and a press
+   that moves the element into its own shadow.
+
+   Load after the base stylesheet. Aesthetics override the neutral defaults that
+   `intent.css` declares at zero specificity, so source order decides. */
+.neobrutalism {
+  /* Pure black reads as ink on a light page and disappears on a dark one, so the
+     ink follows the theme rather than the palette. */
+  --neo-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  --neo-offset: 4px;
+
+  --ui-radius: 0.5rem;
+  --ui-radius-surface: 0.5rem;
+  --ui-border-width: 2px;
+  --ui-shadow: var(--neo-offset) var(--neo-offset) 0 0 var(--neo-ink);
+  --ui-hover-transform: translate(var(--neo-offset), var(--neo-offset));
+}
+
+/* The one place an aesthetic touches the intent axis. A thick border in the
+   neutral border gray is a thick gray box, not a brutalist one, so the aesthetic
+   supplies the neutral ink.
+
+   Both selectors are `:where()`, so this carries zero specificity and loses to
+   any intent class on the element: `.destructive` keeps its red edge while an
+   unintented component gets ink. It beats the neutral default in `intent.css`
+   only because it is declared later. */
+:where(.neobrutalism)
+  :where(
+    .btn,
+    .alert,
+    .badge,
+    .card,
+    .panel,
+    .ipt,
+    .textarea,
+    .select,
+    .kbd,
+    .table,
+    .checkbox,
+    .radio,
+    .switch,
+    .code,
+    .pre,
+    .tooltip
+  ),
+:where(.neobrutalism):where(
+  .btn,
+  .alert,
+  .badge,
+  .card,
+  .panel,
+  .ipt,
+  .textarea,
+  .select,
+  .kbd,
+  .table,
+  .checkbox,
+  .radio,
+  .switch,
+  .code,
+  .pre,
+  .tooltip
+) {
+  --intent-border: var(--neo-ink);
+}
+
+/* Hover moves the element by the shadow offset and shrinks the shadow to
+   nothing, so it reads as the element being pressed down onto the page. Only the
+   custom property is reassigned; every component already resolves its
+   `box-shadow` through it, so none of them need a rule here. */
+:where(.neobrutalism)
+  :is(.btn, .card.interactive):hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]),
+:where(.neobrutalism):is(.btn, .card.interactive):hover:not(
+  :disabled,
+  .disabled,
+  [aria-disabled="true"],
+  [data-disabled]
+) {
+  --ui-shadow: 0 0 0 0 var(--neo-ink);
+}

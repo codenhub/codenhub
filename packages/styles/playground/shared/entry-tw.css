@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "@codenhub/styles/tw";
+@import "@codenhub/styles/tw/aesthetics";
 @source "../index.html";
 @source "../typography/index.html";
 @source "../layout/index.html";
 @source "../components/index.html";
+@source "../aesthetics/index.html";

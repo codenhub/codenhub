@@ -49,6 +49,10 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
   "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
   "./tw/utilities": { candidates: "stack table", patterns: [/\.stack\{/, /\.table\{/] },
+  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
+  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow:/] },
+  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /backdrop-filter:/] },
+  "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /clip-path:\s*polygon/] },
 };
 
 test("every declared package export target exists after build", async () => {

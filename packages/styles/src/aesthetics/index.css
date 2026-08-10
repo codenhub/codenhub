@@ -1,0 +1,8 @@
+/* Every shipped aesthetic. Import one file from `./<name>.css` instead to pay
+   for only the one in use: a cascading class has no static call site, so nothing
+   here can be tree-shaken.
+
+   Import after the base stylesheet in either form. */
+@import "./neobrutalism.css";
+@import "./glass.css";
+@import "./pixel.css";

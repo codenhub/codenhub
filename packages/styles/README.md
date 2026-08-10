@@ -63,6 +63,21 @@ and any element can still override it.
 </div>
 ```
 
+Aesthetics decide what a component is made of. They are opt-in, so import the
+stylesheet after the base one to make `.neobrutalism`, `.glass`, and `.pixel`
+available. They cascade to any subtree the same way.
+
+```css
+@import "@codenhub/styles";
+@import "@codenhub/styles/aesthetics";
+```
+
+```html
+<section class="neobrutalism">
+  <button class="btn primary">Thick ink and a hard shadow</button>
+</section>
+```
+
 ## Documentation
 
 - [Documentation overview](./docs/index.md): Complete public documentation and

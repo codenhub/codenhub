@@ -217,12 +217,16 @@ Aesthetics are cascading classes that set material tokens, plus their own
 presentation defaults. An explicit presentation class on the element still wins,
 because it is declared on the element rather than inherited.
 
-| Aesthetic       | Material                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------- |
-| _(default)_     | Foundation tokens: `--radius-control`, `--border-width`, `--elevation-low`, no clip.      |
-| `.neobrutalism` | Thick border, hard unblurred offset shadow, saturated fill, hover translates into shadow. |
-| `.glass`        | Large radius, `backdrop-filter` blur, low background alpha, hairline highlight border.    |
-| `.pixel`        | Stepped `clip-path` corners, pixel border drawn as a layer, `--font-pixel`, no radius.    |
+| Aesthetic       | Material                                                                               |
+| --------------- | -------------------------------------------------------------------------------------- |
+| _(default)_     | Foundation tokens: `--radius-control`, `--border-width`, `--elevation-low`, no clip.   |
+| `.neobrutalism` | Thick ink border, hard unblurred offset shadow, hover translates into the shadow.      |
+| `.glass`        | Large radius, `backdrop-filter` blur, low background alpha, hairline highlight border. |
+| `.pixel`        | Stepped `clip-path` corners, border drawn as an inset ring, `--font-pixel`, no radius. |
+
+Each aesthetic also exposes its own tokens for tuning: `--neo-ink` and
+`--neo-offset`; `--glass-blur`, `--glass-opacity`, `--glass-fill`, and
+`--glass-edge`; `--pixel-unit` and `--pixel-ink`.
 
 ### Compatibility
 
@@ -244,28 +248,75 @@ renders as a plain translucent panel. It is intended for surfaces, overlays, and
 navigation rather than dense control clusters, where nested `backdrop-filter`
 layers are also expensive to composite.
 
+### The neutral ink
+
+`.neobrutalism` and `.pixel` both override `--intent-border`, which is the one
+place an aesthetic reaches into the intent axis. Their defining trait is a hard
+outline, and the neutral `--intent-border` is the quiet border gray: two or more
+pixels of it reads as a mistake rather than as the aesthetic.
+
+Both selectors are `:where()`, so the override carries zero specificity. It beats
+the neutral default in `intent.css` only by being declared later, and loses to
+any intent class on the element, so a `.destructive` card keeps its red edge.
+That ordering is why aesthetics must be imported after the base stylesheet.
+
+`.glass` sets no intent token. Its edge is a highlight rather than an outline, so
+it mixes the intent into a light hairline at the point of use instead.
+
 ### Pixel layering
 
 `clip-path` clips descendants, backgrounds, borders, shadows, and the focus
-outline. `.pixel` therefore cannot use `border` or `outline` and builds both from
-layers behind the element:
+outline, so a clipped element cannot draw its edge with `border` or `outline`.
+Both are rebuilt as inset shadows, which are clipped to the same stepped shape:
 
-```text
-layer 3   focus ring     stepped, --focus-ring, present only on :focus-visible
-layer 2   pixel border   stepped, --intent-color
-layer 1   element        clip-path: polygon(...)
+```css
+box-shadow:
+  inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border),
+  inset 0 0 0 calc(var(--pixel-unit) * 2 + var(--focus-ring-width)) var(--focus-ring);
 ```
 
-Layers 2 and 3 consume `::before` and `::after`. Components that already use a
-pseudo-element for content -- `.btn.loading` (spinner, `::after`), `.alert.icon`
-(glyph, `::before`), `.checkbox` and `.radio` (marks), `.switch` (thumb),
-`.tooltip` (bubble) -- conflict. Those components opt out of pixel layering and
-receive a squared-corner treatment instead; this is a documented limit of the
-aesthetic, not a defect to work around.
+Shadows paint in order, first on top, so the edge stays visible over the wider
+focus ring sitting immediately inside it.
+
+Two constraints fall out of the geometry. The ring must be exactly as thick as
+the depth of the corner cut, or the staircase is left uncovered and the edge
+reads as broken at every corner. And the thickness must be computed at the point
+of use rather than through an intermediate custom property, because a custom
+property resolves on the element that declares it: a component that overrides
+`--pixel-unit`, as the chips do, would otherwise keep the root's ring.
+
+Because this consumes no pseudo-element, components that use `::before` or
+`::after` for content need no exception. `.btn.loading`, `.alert.icon`,
+`.checkbox`, `.radio`, and `.switch` all keep their marks inside a clipped box.
+
+Three cases are still squared rather than clipped:
+
+- `.tooltip-icon` is a tooltip host, and a host's bubble is a pseudo-element
+  positioned outside its box, which clipping the host would erase. The bubble
+  carries the stepped shape itself instead.
+- `.table` paints cell backgrounds over any inset ring its root could draw.
+- `.progress` and `.skeleton` are thinner than a stepped corner.
+- `.radio` keeps its circle, the only thing distinguishing it from a checkbox at
+  a glance.
+
+### Packaging
 
 Aesthetics ship from opt-in entrypoints so consumers that do not use them pay
 nothing. They cannot be tree-shaken, because a cascading class has no static
 call site.
+
+Two build constraints apply to these files specifically:
+
+- They contain no Tailwind directives and must not carry `@reference
+"tailwindcss"`. A `@reference` in a file imported into a full build switches
+  the whole build to reference mode: `@theme` stops emitting `:root` and every
+  theme variable is inlined with a fallback instead. Foundation tokens such as
+  `--border-width` then go undefined, which invalidates the `calc()` around them
+  and drops whole `border` shorthands.
+- `backdrop-filter` is written unprefixed only. The minifier adds
+  `-webkit-backdrop-filter` for the Safari versions in the baseline, but if both
+  are written by hand it collapses the pair to the prefixed one alone, leaving
+  Firefox with no blur.
 
 ## Accessibility constraints
 

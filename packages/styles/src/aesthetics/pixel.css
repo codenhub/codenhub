@@ -1,0 +1,132 @@
+/* Pixel: an 8-bit look built from a stepped `clip-path` corner and a border
+   drawn as an inset shadow.
+
+   Load after the base stylesheet. Aesthetics override the neutral defaults that
+   `intent.css` declares at zero specificity, so source order decides. */
+.pixel {
+  /* One screen pixel of the imaginary low-resolution grid. Corners step by this
+     unit and the border is two units thick. */
+  --pixel-unit: 2px;
+  --pixel-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+
+  --ui-radius: 0;
+  --ui-radius-surface: 0;
+  --ui-border-width: 2px;
+
+  /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
+     network side effect and falls back to the monospace stack. */
+  font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* Same reasoning as the neobrutalist ink, and the same zero-specificity trick so
+   an intent class on the element still wins: an outline two units thick in the
+   quiet border gray reads as a mistake rather than as pixel art. */
+:where(.pixel)
+  :where(
+    .btn,
+    .alert,
+    .badge,
+    .card,
+    .panel,
+    .ipt,
+    .textarea,
+    .select,
+    .kbd,
+    .table,
+    .checkbox,
+    .radio,
+    .switch,
+    .code,
+    .pre,
+    .tooltip
+  ),
+:where(.pixel):where(
+  .btn,
+  .alert,
+  .badge,
+  .card,
+  .panel,
+  .ipt,
+  .textarea,
+  .select,
+  .kbd,
+  .table,
+  .checkbox,
+  .radio,
+  .switch,
+  .code,
+  .pre,
+  .tooltip
+) {
+  --intent-border: var(--pixel-ink);
+}
+
+/* `clip-path` clips the border, the outline, and any outer shadow, so a clipped
+   element cannot draw its edge with `border`. The edge is an inset shadow
+   instead, which is clipped to the same stepped shape.
+
+   Its thickness must equal the depth of the corner cut. A thinner ring leaves the
+   staircase uncovered and the border reads as broken at every corner. The
+   thickness is computed at the point of use rather than through an intermediate
+   custom property, so a component that overrides `--pixel-unit` gets a matching
+   ring: a custom property resolves on the element that declares it. */
+.pixel :is(.btn, .badge, .card, .panel, .alert, .ipt, .textarea, .select, .kbd, .code, .pre),
+.pixel:is(.btn, .badge, .card, .panel, .alert, .ipt, .textarea, .select, .kbd, .code, .pre),
+.pixel .tooltip::after {
+  --ui-border-width: 0px;
+
+  border-radius: 0;
+  box-shadow: inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border);
+  clip-path: polygon(
+    0 calc(var(--pixel-unit) * 2),
+    var(--pixel-unit) calc(var(--pixel-unit) * 2),
+    var(--pixel-unit) var(--pixel-unit),
+    calc(var(--pixel-unit) * 2) var(--pixel-unit),
+    calc(var(--pixel-unit) * 2) 0,
+    calc(100% - var(--pixel-unit) * 2) 0,
+    calc(100% - var(--pixel-unit) * 2) var(--pixel-unit),
+    calc(100% - var(--pixel-unit)) var(--pixel-unit),
+    calc(100% - var(--pixel-unit)) calc(var(--pixel-unit) * 2),
+    100% calc(var(--pixel-unit) * 2),
+    100% calc(100% - var(--pixel-unit) * 2),
+    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit) * 2),
+    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
+    calc(100% - var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
+    calc(100% - var(--pixel-unit) * 2) 100%,
+    calc(var(--pixel-unit) * 2) 100%,
+    calc(var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
+    var(--pixel-unit) calc(100% - var(--pixel-unit)),
+    var(--pixel-unit) calc(100% - var(--pixel-unit) * 2),
+    0 calc(100% - var(--pixel-unit) * 2)
+  );
+}
+
+/* Chips are small enough that the default unit would be most of their height. */
+.pixel :is(.badge, .kbd),
+.pixel:is(.badge, .kbd) {
+  --pixel-unit: 1px;
+}
+
+/* The focus ring is stepped too, as a second inset layer inside the border: an
+   outer ring or an outline would be clipped away entirely. Shadows paint in
+   order, first on top, so the border stays visible over the wider ring. */
+.pixel :is(.btn, .ipt, .textarea, .select, .card.interactive):focus-visible,
+.pixel:is(.btn, .ipt, .textarea, .select, .card.interactive):focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border),
+    inset 0 0 0 calc(var(--pixel-unit) * 2 + var(--focus-ring-width)) var(--focus-ring);
+}
+
+/* Components whose shape carries meaning, or whose box is too thin to hold a
+   stepped corner, are squared rather than clipped. A radio keeps its circle: it
+   is the only thing distinguishing it from a checkbox at a glance.
+
+   `.tooltip-icon` is the tooltip host, and a host's bubble is a pseudo-element
+   positioned outside its box, which clipping the host would erase. The bubble
+   carries the stepped shape itself instead. */
+.pixel :is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
+.pixel:is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
+.pixel .switch::after {
+  border-radius: 0;
+}

@@ -26,8 +26,8 @@ green before the next begins.
   controls, content elements, feedback, and the new `.card` and `.panel`
   surfaces. Surfaces activate `--elevation-*` and `--surface-hover-transform`,
   which no component reads today.
-- **Stage 3 -- Aesthetics**: Ship `.neobrutalism`, `.glass`, and `.pixel` from
-  opt-in entrypoints, with the compatibility matrix and playground coverage.
+- **Stage 3 -- Aesthetics (done)**: Ship `.neobrutalism`, `.glass`, and `.pixel`
+  from opt-in entrypoints, with the compatibility matrix and playground coverage.
 - **Stage 4 -- Documentation**: Split public docs into concepts, reference, and
   guides so the three-axis model is explained before the lookup tables.
 

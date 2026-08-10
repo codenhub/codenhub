@@ -35,6 +35,26 @@
       "import": "./dist/components.css",
       "default": "./dist/components.css"
     },
+    "./aesthetics": {
+      "style": "./dist/aesthetics/index.css",
+      "import": "./dist/aesthetics/index.css",
+      "default": "./dist/aesthetics/index.css"
+    },
+    "./aesthetics/neobrutalism": {
+      "style": "./dist/aesthetics/neobrutalism.css",
+      "import": "./dist/aesthetics/neobrutalism.css",
+      "default": "./dist/aesthetics/neobrutalism.css"
+    },
+    "./aesthetics/glass": {
+      "style": "./dist/aesthetics/glass.css",
+      "import": "./dist/aesthetics/glass.css",
+      "default": "./dist/aesthetics/glass.css"
+    },
+    "./aesthetics/pixel": {
+      "style": "./dist/aesthetics/pixel.css",
+      "import": "./dist/aesthetics/pixel.css",
+      "default": "./dist/aesthetics/pixel.css"
+    },
     "./tw": "./dist/tw/index.css",
     "./tw/theme": "./dist/tw/theme.css",
     "./tw/components": "./dist/tw/components/index.css",
@@ -48,6 +68,10 @@
     "./tw/native": "./dist/tw/native.css",
     "./tw/typography": "./dist/tw/typography.css",
     "./tw/utilities": "./dist/tw/utilities/index.css",
+    "./tw/aesthetics": "./dist/tw/aesthetics/index.css",
+    "./tw/aesthetics/neobrutalism": "./dist/tw/aesthetics/neobrutalism.css",
+    "./tw/aesthetics/glass": "./dist/tw/aesthetics/glass.css",
+    "./tw/aesthetics/pixel": "./dist/tw/aesthetics/pixel.css",
     "./native": {
       "style": "./dist/native.css",
       "import": "./dist/native.css",
@@ -61,8 +85,9 @@
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
-    "build": "pnpm clean && pnpm build:styles && pnpm build:tw",
+    "build": "pnpm clean && pnpm build:styles && pnpm build:aesthetics && pnpm build:tw",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
+    "build:aesthetics": "tailwindcss -i ./src/aesthetics/index.css -o ./dist/aesthetics/index.css --minify && tailwindcss -i ./src/aesthetics/neobrutalism.css -o ./dist/aesthetics/neobrutalism.css --minify && tailwindcss -i ./src/aesthetics/glass.css -o ./dist/aesthetics/glass.css --minify && tailwindcss -i ./src/aesthetics/pixel.css -o ./dist/aesthetics/pixel.css --minify",
     "build:tw": "node -e \"import('node:fs').then(fs => fs.cpSync('src', 'dist/tw', { recursive: true }))\"",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",

@@ -176,6 +176,87 @@ is a trap rather than a feature. Use `.neutral` to opt an element back out.
 Presentation and [material tokens](./tokens.md#material-tokens) do cascade, so a
 container can set the look of its whole subtree while any element overrides it.
 
+## Aesthetics
+
+An aesthetic decides what a component is _made of_: its radius, border
+thickness, shadow, and shape. Aesthetics ship from opt-in entrypoints, so
+importing the stylesheet is what makes the classes available:
+
+```css
+@import "@codenhub/styles";
+@import "@codenhub/styles/aesthetics";
+```
+
+Import them after the base stylesheet. `.neobrutalism` and `.pixel` replace the
+neutral border color, and they do so at zero specificity, so source order is what
+lets them win.
+
+Like presentation, an aesthetic class cascades to any subtree:
+
+```html
+<section class="neobrutalism">
+  <button class="btn primary">Thick ink and a hard shadow</button>
+  <div class="card destructive">The intent still wins over the aesthetic ink</div>
+</section>
+```
+
+| Class           | Look                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `.neobrutalism` | Thick ink outline, hard unblurred offset shadow, and a hover that moves the element into its own shadow.           |
+| `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                       |
+| `.pixel`        | Stepped corners, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
+
+Aesthetics and presentations compose, but not every pair is worth using. Bad
+combinations are documented rather than blocked.
+
+| Aesthetic       | `.flat` | `.out` | `.ghost` | `.soft` |
+| --------------- | ------- | ------ | -------- | ------- |
+| `.neobrutalism` | Yes     | Yes    | Weak     | Yes     |
+| `.glass`        | Yes     | Yes    | Yes      | Yes     |
+| `.pixel`        | Yes     | Yes    | Weak     | Yes     |
+
+"Weak" means the aesthetic's defining trait is the border or shadow that
+`.ghost` removes, which leaves the element nearly unstyled.
+
+An explicit presentation on the element still wins over the aesthetic's
+defaults, and the two meet only in the border: the aesthetic supplies the
+thickness and the presentation scales it, so `.out` under `.neobrutalism` gives a
+4px edge rather than replacing the 2px material.
+
+### Glass
+
+`.glass` needs something behind it to blur. On a flat page background it renders
+as a plain translucent panel.
+
+The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only.
+Controls stay solid and sit on the glass: a blur under every control of a dense
+cluster costs a composited layer apiece and reads as noise. Controls still take
+the aesthetic's radius, border, and shadow.
+
+Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and
+become opaque.
+
+### Pixel
+
+`--pixel-unit` is one pixel of the imaginary low-resolution grid. Corners step by
+that unit and the outline is two units thick; chips use a smaller unit. Set it on
+a container to scale the whole look:
+
+```html
+<section class="pixel" style="--pixel-unit: 3px">
+  <button class="btn primary">Chunkier</button>
+</section>
+```
+
+`--font-pixel` is yours to supply. The package ships no font binary, so the
+aesthetic has no network side effect and falls back to the monospace stack.
+
+Because the stepped shape is a clip, it also clips the border and focus outline,
+which are redrawn inside the element. A few components are squared instead of
+stepped: tables, progress bars, skeletons, tooltip icons, and checkboxes. Radios
+keep their circle, which is the only thing distinguishing them from a checkbox at
+a glance.
+
 ## Buttons
 
 Use `.btn` with one optional intent class, one optional presentation class, optional size class, and optional state.
