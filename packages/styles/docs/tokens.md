@@ -248,7 +248,7 @@ They are available only where that aesthetic's stylesheet is imported.
 
 | Token             | Aesthetic       | Purpose                                                   | Default                                 |
 | ----------------- | --------------- | --------------------------------------------------------- | --------------------------------------- |
-| `--neo-ink`       | `.neobrutalism` | Outline and shadow color.                                 | Near-black on light, near-white on dark |
+| `--neo-ink`       | `.neobrutalism` | Outline and shadow color with no intent set.              | Near-black on light, near-white on dark |
 | `--neo-offset`    | `.neobrutalism` | Hard shadow offset, and the distance hover travels.       | `4px`                                   |
 | `--glass-blur`    | `.glass`        | Backdrop blur radius.                                     | `14px`                                  |
 | `--glass-opacity` | `.glass`        | Percentage of the background token kept under a surface.  | `45%`                                   |
@@ -261,7 +261,9 @@ They are available only where that aesthetic's stylesheet is imported.
 `.neobrutalism` and `.pixel` also set `--intent-border`, the one place an
 aesthetic touches the intent axis: a thick outline in the quiet border gray reads
 as a mistake rather than as the aesthetic. They set it at zero specificity, so an
-intent class on the element still wins.
+intent class on the element still wins, which is also what makes a neobrutalist
+shadow take the component's own intent color. Key caps are excluded from both, so
+a `.kbd` keeps its quiet edge under either aesthetic.
 
 ## Component Internals
 

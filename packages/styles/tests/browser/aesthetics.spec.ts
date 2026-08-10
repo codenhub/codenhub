@@ -71,8 +71,51 @@ test.describe("aesthetics", () => {
            serialized value. A blurred shadow would be an elevation, not ink. */
         expect(styles["box-shadow"], `${testId} shadow`).toMatch(/\b4px 4px 0px\b/);
         expect(styles["border-top-width"], `${testId} border`).toBe("2px");
-        expect(styles["border-radius"], `${testId} radius`).toBe("8px");
+        expect(styles["border-radius"], `${testId} radius`).toBe("0px");
       }
+    });
+
+    test("squares the components that hardcode a radius", async ({ page }) => {
+      await page.goto(AESTHETICS_URL);
+
+      const measured = await readAll(page, ["neobrutalism-badge", "neobrutalism-kbd"], ["border-radius"]);
+
+      for (const [testId, styles] of measured) {
+        expect(styles["border-radius"], `${testId} radius`).toBe("0px");
+      }
+    });
+
+    test("casts the shadow in each component's own intent", async ({ page }) => {
+      await page.goto(AESTHETICS_URL);
+
+      const [neutral, tinted] = await page.evaluate(() =>
+        ["neobrutalism-card", "neobrutalism-intent-card"].map(
+          (testId) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).boxShadow,
+        ),
+      );
+      const destructive = await resolveToken(page, "--color-destructive");
+      const ink = await resolveToken(page, "--color-text");
+
+      /* The shadow is declared on the component rather than on the aesthetic
+         container, so it resolves against the component's own intent: a
+         destructive card casts a red shadow, not the neutral ink. */
+      expectSameColor(readShadowColor(neutral), ink, "neutral shadow");
+      expectSameColor(readShadowColor(tinted), destructive, "destructive shadow");
+    });
+
+    test("leaves a key cap its quiet edge", async ({ page }) => {
+      await page.goto(AESTHETICS_URL);
+
+      const { plain, inked } = await page.evaluate(() => {
+        const read = (testId: string) =>
+          getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).borderTopColor;
+
+        return { inked: read("neobrutalism-kbd"), plain: read("default-kbd") };
+      });
+
+      /* A key cap is a content chip rather than structure, so the ink override
+         skips it and its edge stays the quiet border color the default uses. */
+      expectSameColor(inked, plain, "neobrutalism key cap edge");
     });
 
     test("supplies the neutral ink without overriding an intent", async ({ page }) => {

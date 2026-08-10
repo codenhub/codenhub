@@ -202,7 +202,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 
 | Class           | Look                                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `.neobrutalism` | Thick ink outline, hard unblurred offset shadow, and a hover that moves the element into its own shadow.           |
+| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.        |
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                       |
 | `.pixel`        | Stepped corners, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 
@@ -222,6 +222,15 @@ An explicit presentation on the element still wins over the aesthetic's
 defaults, and the two meet only in the border: the aesthetic supplies the
 thickness and the presentation scales it, so `.out` under `.neobrutalism` gives a
 4px edge rather than replacing the 2px material.
+
+### Neobrutalism
+
+The shadow is cast in the component's own intent, so a success button throws a
+green shadow and a destructive card a red one. With no intent, both the outline
+and the shadow use the ink, which follows the theme rather than the palette.
+
+Key caps are left alone. A `.kbd` is a content chip rather than structure, and a
+thick ink edge on one reads as a defect, so it keeps the quiet border color.
 
 ### Glass
 

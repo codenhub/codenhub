@@ -20,7 +20,10 @@
 
 /* Same reasoning as the neobrutalist ink, and the same zero-specificity trick so
    an intent class on the element still wins: an outline two units thick in the
-   quiet border gray reads as a mistake rather than as pixel art. */
+   quiet border gray reads as a mistake rather than as pixel art.
+
+   `.kbd` is deliberately absent. A key cap is a content chip rather than
+   structure, and a thick ink edge on one reads as a defect. */
 :where(.pixel)
   :where(
     .btn,
@@ -28,10 +31,10 @@
     .badge,
     .card,
     .panel,
+    .control-base,
     .ipt,
     .textarea,
     .select,
-    .kbd,
     .table,
     .checkbox,
     .radio,
@@ -46,10 +49,10 @@
   .badge,
   .card,
   .panel,
+  .control-base,
   .ipt,
   .textarea,
   .select,
-  .kbd,
   .table,
   .checkbox,
   .radio,
@@ -74,9 +77,16 @@
 .pixel:is(.btn, .badge, .card, .panel, .alert, .ipt, .textarea, .select, .kbd, .code, .pre),
 .pixel .tooltip::after {
   --ui-border-width: 0px;
+  /* Blended toward the fill by however much fill there is, so a filled component
+     has a seamless outline rather than a stray ring of another color. Declared
+     here so it resolves against the component's own intent; the focus rule below
+     matches the same elements and reads the value from them. Most components
+     fill and line themselves from the same intent slot and are unaffected. A key
+     cap is the one that does not. */
+  --pixel-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--intent-border));
 
   border-radius: 0;
-  box-shadow: inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border);
+  box-shadow: inset 0 0 0 calc(var(--pixel-unit) * 2) var(--pixel-edge);
   clip-path: polygon(
     0 calc(var(--pixel-unit) * 2),
     var(--pixel-unit) calc(var(--pixel-unit) * 2),
@@ -114,7 +124,7 @@
 .pixel:is(.btn, .ipt, .textarea, .select, .card.interactive):focus-visible {
   outline: none;
   box-shadow:
-    inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border),
+    inset 0 0 0 calc(var(--pixel-unit) * 2) var(--pixel-edge),
     inset 0 0 0 calc(var(--pixel-unit) * 2 + var(--focus-ring-width)) var(--focus-ring);
 }
 

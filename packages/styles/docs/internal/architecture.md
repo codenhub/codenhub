@@ -220,7 +220,7 @@ because it is declared on the element rather than inherited.
 | Aesthetic       | Material                                                                               |
 | --------------- | -------------------------------------------------------------------------------------- |
 | _(default)_     | Foundation tokens: `--radius-control`, `--border-width`, `--elevation-low`, no clip.   |
-| `.neobrutalism` | Thick ink border, hard unblurred offset shadow, hover translates into the shadow.      |
+| `.neobrutalism` | No radius, thick ink border, hard offset shadow in the intent, hover translates in.    |
 | `.glass`        | Large radius, `backdrop-filter` blur, low background alpha, hairline highlight border. |
 | `.pixel`        | Stepped `clip-path` corners, border drawn as an inset ring, `--font-pixel`, no radius. |
 
@@ -259,6 +259,30 @@ Both selectors are `:where()`, so the override carries zero specificity. It beat
 the neutral default in `intent.css` only by being declared later, and loses to
 any intent class on the element, so a `.destructive` card keeps its red edge.
 That ordering is why aesthetics must be imported after the base stylesheet.
+
+`.neobrutalism` declares its `--ui-shadow` in that same component-level rule
+rather than on the container, for the reason presentation classes carry no color:
+a custom property resolves on the element that declares it, so a shadow set on
+the container would resolve against the container's intent and inherit down
+already-resolved. Declared on the component, it reads that component's own
+`--intent-border` -- the ink when there is no intent, the intent's color when
+there is -- so a success button casts a green shadow.
+
+`.kbd` is excluded from both overrides. A key cap is a content chip rather than
+structure, and a thick ink edge on one reads as a defect.
+
+A key cap is also the only component that fills from `--intent-color` but lines
+itself from `--intent-border`, so a filled one keeps a stray ring of the other
+color. Both `.kbd` and the pixel edge resolve that the same way, by blending the
+line toward the fill by however much fill there is:
+
+```css
+color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--intent-border));
+```
+
+With no fill this is the line color untouched; `.flat` fills completely and so
+lands exactly on its own background. Every other component draws both from one
+slot and is unaffected.
 
 `.glass` sets no intent token. Its edge is a highlight rather than an outline, so
 it mixes the intent into a light hairline at the point of use instead.

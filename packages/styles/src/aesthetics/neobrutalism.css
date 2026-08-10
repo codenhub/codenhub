@@ -9,10 +9,9 @@
   --neo-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --neo-offset: 4px;
 
-  --ui-radius: 0.5rem;
-  --ui-radius-surface: 0.5rem;
+  --ui-radius: 0;
+  --ui-radius-surface: 0;
   --ui-border-width: 2px;
-  --ui-shadow: var(--neo-offset) var(--neo-offset) 0 0 var(--neo-ink);
   --ui-hover-transform: translate(var(--neo-offset), var(--neo-offset));
 }
 
@@ -20,10 +19,21 @@
    neutral border gray is a thick gray box, not a brutalist one, so the aesthetic
    supplies the neutral ink.
 
+   The shadow is declared here rather than on `.neobrutalism` for the same reason
+   presentation classes carry no color: a custom property resolves on the element
+   that declares it, so a shadow set on the container would resolve against the
+   container's intent and inherit down already-resolved. Declared on the
+   component, `--intent-border` is that component's own -- ink when it has no
+   intent, and the intent's color when it does, so a success button casts a green
+   shadow.
+
    Both selectors are `:where()`, so this carries zero specificity and loses to
    any intent class on the element: `.destructive` keeps its red edge while an
    unintented component gets ink. It beats the neutral default in `intent.css`
-   only because it is declared later. */
+   only because it is declared later.
+
+   `.kbd` is deliberately absent. A key cap is a content chip rather than
+   structure, and a thick ink edge on one reads as a defect. */
 :where(.neobrutalism)
   :where(
     .btn,
@@ -31,10 +41,10 @@
     .badge,
     .card,
     .panel,
+    .control-base,
     .ipt,
     .textarea,
     .select,
-    .kbd,
     .table,
     .checkbox,
     .radio,
@@ -49,10 +59,10 @@
   .badge,
   .card,
   .panel,
+  .control-base,
   .ipt,
   .textarea,
   .select,
-  .kbd,
   .table,
   .checkbox,
   .radio,
@@ -62,6 +72,18 @@
   .tooltip
 ) {
   --intent-border: var(--neo-ink);
+  --ui-shadow: var(--neo-offset) var(--neo-offset) 0 0 var(--intent-border);
+}
+
+/* `--ui-radius` covers every component that reads it. These hardcode a radius of
+   their own, and an aesthetic that says no radius has to mean it. A radio keeps
+   its circle: it is the only thing distinguishing it from a checkbox at a
+   glance. */
+.neobrutalism :is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
+.neobrutalism:is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
+.neobrutalism .tooltip::after,
+.neobrutalism .switch::after {
+  border-radius: 0;
 }
 
 /* Hover moves the element by the shadow offset and shrinks the shadow to
@@ -76,5 +98,5 @@
   [aria-disabled="true"],
   [data-disabled]
 ) {
-  --ui-shadow: 0 0 0 0 var(--neo-ink);
+  --ui-shadow: 0 0 0 0 var(--intent-border);
 }

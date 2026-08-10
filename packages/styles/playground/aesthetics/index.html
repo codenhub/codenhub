@@ -39,7 +39,7 @@
           </div>
           <div class="cluster">
             <span class="badge info">Badge</span>
-            <kbd class="kbd">Ctrl</kbd>
+            <kbd class="kbd" data-testid="default-kbd">Ctrl</kbd>
             <span class="tooltip tooltip-icon" data-tooltip="Default tooltip" tabindex="0" aria-label="Default tooltip">
               ?
             </span>
@@ -72,8 +72,8 @@
           </div>
           <div class="alert warning icon">A warning worth shouting about.</div>
           <div class="cluster">
-            <span class="badge info">Badge</span>
-            <kbd class="kbd">Ctrl</kbd>
+            <span class="badge info" data-testid="neobrutalism-badge">Badge</span>
+            <kbd class="kbd" data-testid="neobrutalism-kbd">Ctrl</kbd>
             <span
               class="tooltip tooltip-icon"
               data-tooltip="Neobrutalist tooltip"
@@ -113,6 +113,28 @@
               <p class="text-body">Panel</p>
             </div>
             <div class="alert info icon" data-testid="glass-alert">Something worth knowing.</div>
+            <div class="cluster">
+              <span class="badge info" data-testid="glass-badge">Badge</span>
+              <kbd class="kbd" data-testid="glass-kbd">Ctrl</kbd>
+              <span
+                class="tooltip tooltip-icon"
+                data-tooltip="Glass tooltip"
+                data-testid="glass-tooltip"
+                tabindex="0"
+                aria-label="Glass tooltip"
+              >
+                ?
+              </span>
+            </div>
+            <div class="field">
+              <label class="label" for="glass-input">Label</label>
+              <input class="ipt" id="glass-input" type="text" placeholder="Text input" data-testid="glass-input" />
+            </div>
+            <div class="cluster">
+              <input class="checkbox" type="checkbox" checked aria-label="Checkbox" />
+              <input class="radio" type="radio" checked aria-label="Radio" />
+              <input class="switch" type="checkbox" checked aria-label="Switch" />
+            </div>
             <div class="cluster">
               <button class="btn primary" data-testid="glass-button">Primary</button>
               <button class="btn out">Outline</button>

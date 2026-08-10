@@ -1283,12 +1283,16 @@ test.describe("presentation coverage", () => {
 
       return {
         flatBackground: get("kbd-flat").backgroundColor,
+        flatBorderColor: get("kbd-flat").borderTopColor,
         flatColor: get("kbd-flat").color,
         neutralBackground: get("kbd-neutral").backgroundColor,
         outBorderWidth: get("kbd-out").borderTopWidth,
+        plainBorderColor: get("kbd-neutral").borderTopColor,
         plainBorderWidth: get("kbd-neutral").borderTopWidth,
         softBackground: get("kbd-soft").backgroundColor,
+        softBorderColor: get("kbd-soft").borderTopColor,
         tableHeadBackground: head.backgroundColor,
+        tokenBorder: resolveToken("border"),
         tokenPrimary: resolveToken("primary"),
         tokenSurface: resolveToken("surface"),
       };
@@ -1301,6 +1305,12 @@ test.describe("presentation coverage", () => {
     expectSameColor(styles.flatBackground, styles.tokenPrimary, "flat kbd fill");
     expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
     expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
+    /* Only the default draws a visible line, and it is the quiet border color.
+       `.out` keeps that line but doubles it, `.soft` drops it, and `.flat` lands
+       on its own fill so a filled cap has no stray ring around it. */
+    expectSameColor(styles.plainBorderColor, styles.tokenBorder, "plain kbd edge");
+    expect(readSrgb(styles.softBorderColor).alpha, styles.softBorderColor).toBeLessThan(0.2);
+    expectSameColor(styles.flatBorderColor, styles.flatBackground, "flat kbd edge");
     // A soft table tints its header away from the plain surface tone.
     expect(getColorDistance(styles.tableHeadBackground, styles.tokenSurface)).toBeGreaterThan(2);
   });
