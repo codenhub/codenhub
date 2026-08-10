@@ -18,6 +18,15 @@ export interface ScriptCommandOptions {
   script?: string;
   /** Script that must succeed for each package before the main script runs. */
   prerequisite?: string;
+  /**
+   * Whether the selection expands to workspace dependencies and runs
+   * dependency-first.
+   *
+   * It is what `prerequisite` does for every other command, applied to the script
+   * itself: `build` cannot build its own dependencies as a prerequisite without
+   * building each selected package twice.
+   */
+  includesDependencies?: boolean;
   /** Whether the command keeps a terminal attached and refuses multiple packages. */
   isInteractive?: boolean;
   /** Whether selected paths are forwarded to the script. */
@@ -36,16 +45,16 @@ function buildSpec(workspacePackage: WorkspacePackage, script: string, args: rea
   return { args: ["run", script, ...args], command: PACKAGE_MANAGER, cwd: workspacePackage.directory };
 }
 
-function collectPrerequisitePackages(
+function collectScriptPackages(
   context: CommandContext,
   targets: readonly PackageSelection[],
-  prerequisite: string,
+  script: string,
 ): WorkspacePackage[] {
   const packages = targets.map(({ package: workspacePackage }) => workspacePackage);
   const expanded = context.options.shouldBuildDependencies
     ? withWorkspaceDependencies(packages, context.workspace.packages)
     : orderByDependencies(packages);
-  return expanded.filter((workspacePackage) => workspacePackage.scripts[prerequisite] !== undefined);
+  return expanded.filter((workspacePackage) => workspacePackage.scripts[script] !== undefined);
 }
 
 interface PackageRun {
@@ -110,9 +119,14 @@ async function runScriptCommand(
     return EXIT_FAILURE;
   }
 
-  const runs = runnable.map<PackageRun>(({ package: workspacePackage, paths }) => ({
+  const pathsByName = new Map(runnable.map(({ package: workspacePackage, paths }) => [workspacePackage.name, paths]));
+  const runPackages =
+    options.includesDependencies === true
+      ? collectScriptPackages(context, runnable, script)
+      : runnable.map(({ package: workspacePackage }) => workspacePackage);
+  const runs = runPackages.map<PackageRun>((workspacePackage) => ({
     spec: buildSpec(workspacePackage, script, [
-      ...(options.forwardsPaths === true ? paths : []),
+      ...(options.forwardsPaths === true ? (pathsByName.get(workspacePackage.name) ?? []) : []),
       ...context.passthrough,
     ]),
     workspacePackage,
@@ -120,7 +134,7 @@ async function runScriptCommand(
 
   const prerequisiteSpecs =
     options.prerequisite !== undefined && context.options.shouldBuild
-      ? collectPrerequisitePackages(context, runnable, options.prerequisite).map((workspacePackage) =>
+      ? collectScriptPackages(context, runnable, options.prerequisite).map((workspacePackage) =>
           buildSpec(workspacePackage, options.prerequisite as string, []),
         )
       : [];
@@ -145,7 +159,10 @@ async function runScriptCommand(
   }
 
   const isInteractive = options.isInteractive === true;
-  const concurrency = isInteractive ? 1 : Math.min(context.options.concurrency, runs.length);
+  // `--parallel` is ignored once the run is ordered by dependencies: running a
+  // dependent alongside its dependency is the very race the ordering prevents.
+  const isSequential = isInteractive || options.includesDependencies === true;
+  const concurrency = isSequential ? 1 : Math.min(context.options.concurrency, runs.length);
   const stdio = concurrency === 1 ? "inherit" : "pipe";
   const timeoutMs = isInteractive ? undefined : context.options.timeoutMs;
 
