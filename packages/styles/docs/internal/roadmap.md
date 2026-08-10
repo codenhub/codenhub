@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-15
+last_updated: 2026-08-09
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -12,7 +12,8 @@ This roadmap tracks durable direction for `@codenhub/styles`. It captures stylin
 
 ## Planned
 
-- **Aesthetic Themes**: Add aesthetic themes (e.g., glassmorphism, brutalism, glitch) to allow changing the whole look-and-feel of the UI.
+- **Aesthetic Themes**: Add aesthetic themes (e.g., glassmorphism, brutalism, glitch) to allow changing the whole look-and-feel of the UI. They extend the presentation token contract with a further number set rather than adding component branches.
+- **Presentation Contract Coverage**: Form controls, surfaces, tooltips, and progress do not read the presentation tokens yet. Extend coverage once the contract has proven itself on `btn`, `alert`, and `badge`.
 - **Dynamic Tokens & Color Schemes**: Add `@codenhub/theme` as a dev dependency to enable dynamic token changes and color scheme creation.
 - **Button Presentation Classes**: Consider adding more presentation classes for buttons (e.g., loading state enhancements) once component APIs stabilize.
 - **Compatibility Tests**: Add more explicit compatibility tests for intent and presentation combinations when new combinations are supported.

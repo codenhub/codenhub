@@ -28,11 +28,16 @@
 @utility alert {
   --feedback-color: var(--color-text);
   --feedback-contrast: var(--color-text-contrast);
-  --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
-  --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
-  @apply flex rounded-(--radius-surface) bg-(--feedback-surface) p-4 leading-5 text-(--feedback-color);
-  border: var(--border-width) solid var(--feedback-border);
+  /* Fallbacks are the tinted default an alert keeps with no presentation class
+     in scope. Mixing toward `transparent` rather than a background token lets a
+     tinted alert adapt to whatever surface it sits on. */
+  --feedback-surface: color-mix(in oklab, var(--feedback-color) var(--ui-fill, 12%), transparent);
+  --feedback-text: color-mix(in oklab, var(--feedback-contrast) var(--ui-fg-on-fill, 0%), var(--feedback-color));
+  --feedback-border: color-mix(in oklab, var(--feedback-color) var(--ui-border, 42%), transparent);
+
+  @apply flex rounded-(--radius-surface) bg-(--feedback-surface) p-4 leading-5 text-(--feedback-text);
+  border: calc(var(--border-width) * var(--ui-border-scale, 1)) solid var(--feedback-border);
 
   &.primary {
     --feedback-color: var(--color-primary);
@@ -66,17 +71,12 @@
     --feedback-contrast: var(--color-info-contrast);
   }
 
-  &.flat {
-    @apply bg-(--feedback-color) text-(--feedback-contrast);
-    border-color: var(--feedback-color);
-  }
-
-  &.soft {
-    @apply border-transparent bg-(--feedback-surface) text-(--feedback-color);
-  }
-
+  /* A border-side treatment rather than a strength, so it stays an alert
+     modifier and is documented as outside the presentation contract. */
   &.left-accent {
-    @apply border-y-transparent border-r-transparent bg-(--feedback-surface) text-(--feedback-color);
+    @apply border-y-transparent border-r-transparent text-(--feedback-color);
+
+    background-color: color-mix(in oklab, var(--feedback-color) 12%, transparent);
     border-left-width: 4px;
     border-left-color: var(--feedback-color);
   }
@@ -125,11 +125,13 @@
 @utility badge {
   --feedback-color: var(--color-text);
   --feedback-contrast: var(--color-text-contrast);
-  --feedback-surface: color-mix(in srgb, var(--feedback-color) 12%, var(--color-background));
-  --feedback-border: color-mix(in srgb, var(--feedback-color) 42%, var(--color-border));
 
-  @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-color);
-  border: var(--border-width) solid var(--feedback-border);
+  --feedback-surface: color-mix(in oklab, var(--feedback-color) var(--ui-fill, 12%), transparent);
+  --feedback-text: color-mix(in oklab, var(--feedback-contrast) var(--ui-fg-on-fill, 0%), var(--feedback-color));
+  --feedback-border: color-mix(in oklab, var(--feedback-color) var(--ui-border, 42%), transparent);
+
+  @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
+  border: calc(var(--border-width) * var(--ui-border-scale, 1)) solid var(--feedback-border);
 
   &.primary {
     --feedback-color: var(--color-primary);
@@ -161,15 +163,6 @@
   &.info {
     --feedback-color: var(--color-info);
     --feedback-contrast: var(--color-info-contrast);
-  }
-
-  &.flat {
-    @apply bg-(--feedback-color) text-(--feedback-contrast);
-    border-color: var(--feedback-color);
-  }
-
-  &.soft {
-    @apply border-transparent;
   }
 }
 

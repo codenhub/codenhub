@@ -53,6 +53,18 @@ to force a theme for the root or a subtree.
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
 also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
+`.flat`, `.out`, `.ghost`, and `.soft` work the same way. They set how strongly a
+component shows its intent, so a container sets the look for everything below it
+and any element can still override it.
+
+```html
+<div class="soft">
+  <button class="btn primary">Soft</button>
+  <span class="badge success">Soft</span>
+  <button class="btn primary out">Outlined</button>
+</div>
+```
+
 ## Documentation
 
 - [Documentation overview](./docs/index.md): Complete public documentation and
@@ -147,11 +159,11 @@ theme tokens so their classes can work independently.
 | Import path                      | Composition and effects                                                                                                                                                                                           |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                   |
-| `@codenhub/styles/theme`         | Compiled Tailwind theme variables and Codenhub tokens only. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                        |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                  |
 | `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                      |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                |
 | `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                        |
-| `@codenhub/styles/tw/theme`      | Source theme and tokens. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                             |
+| `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                      |
 | `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
 | `@codenhub/styles/tw/surface`    | Source theme plus `.empty-state`.                                                                                                                                                                                 |
 | `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.ai` for loading state.                                                       |
@@ -307,11 +319,52 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 | -------------- | --------------------------------------------- |
 | `.empty-state` | Centered empty-state layout with muted color. |
 
+## Presentation
+
+`.flat`, `.out`, `.ghost`, and `.soft` decide how strongly a component shows its
+intent. They set [presentation tokens](docs/tokens.md#presentation-tokens) and
+nothing else, so they work on the component itself or on any ancestor:
+
+```html
+<div class="soft">
+  <button class="btn primary">Soft primary button</button>
+  <span class="badge success">Soft success badge</span>
+  <button class="btn primary out">Outlined; the element wins</button>
+</div>
+```
+
+A declaration on the element always beats one inherited from a container, so a
+container sets the default look for its subtree and any element opts out.
+
+| Class    | Look                                                             |
+| -------- | ---------------------------------------------------------------- |
+| `.flat`  | Intent-colored fill with contrast text and a matching border.    |
+| `.out`   | Transparent fill with a doubled intent border and readable text. |
+| `.ghost` | Transparent fill and border with readable text.                  |
+| `.soft`  | Lightly tinted fill, no border, readable text.                   |
+
+Values each class ships:
+
+| Class    | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` | `--ui-border-scale` | `--ui-hover-fill` | `--ui-hover-fg-on-fill` |
+| -------- | ----------- | ----------------- | ------------- | ------------------- | ----------------- | ----------------------- |
+| `.flat`  | `100%`      | `100%`            | `100%`        | `1`                 | `100%`            | `100%`                  |
+| `.out`   | `0%`        | `0%`              | `100%`        | `2`                 | `14%`             | `0%`                    |
+| `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
+| `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
+
+`.btn`, `.alert`, and `.badge` read the contract. With no presentation class in
+scope they keep their own defaults: buttons are filled, alerts and badges are
+tinted. Every other class in this package is unaffected by these tokens.
+
+Intent classes do not cascade. `.primary` and its siblings stay on the element
+that shows the intent, because a container silently recoloring every descendant
+is a trap rather than a feature.
+
 ## Buttons
 
 Use `.btn` with one optional intent class, one optional presentation class, optional size class, and optional state.
 
-Intent classes map color tokens into button tone slots. Presentation classes own how those slots become background, text, border, hover, and spinner styles.
+Intent classes map color tokens into button tone slots. [Presentation](#presentation) decides how much of that intent reaches background, text, border, and hover.
 
 Intent classes:
 
@@ -324,22 +377,19 @@ Intent classes:
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
 
-Presentation and size classes:
+Size and shape classes:
 
-| Class                                                                  | Purpose                                                                       |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `.out`                                                                 | Transparent button with intent readable-tone border and text.                 |
-| `.ghost`                                                               | Transparent button with intent readable-tone text and soft hover.             |
-| `.soft`                                                                | Low-emphasis filled button using intent subtle surface and strong text tones. |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                       |
-| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text.                  |
-| `.sm`                                                                  | Smaller button.                                                               |
-| `.lg`                                                                  | Larger button.                                                                |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                                     |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                                      |
-| `.icon`                                                                | Square icon button. Use an accessible name in HTML.                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                   |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                             |
+| Class                                                                  | Purpose                                                      |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).      |
+| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text. |
+| `.sm`                                                                  | Smaller button.                                              |
+| `.lg`                                                                  | Larger button.                                               |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                    |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                     |
+| `.icon`                                                                | Square icon button. Use an accessible name in HTML.          |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.  |
+| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                            |
 
 Examples:
 
@@ -470,22 +520,16 @@ they use the text palette.
 the left padding and adds an embedded SVG. Success, warning, and destructive
 intents use corresponding symbols; other intents use the information symbol.
 
-Alerts accept presentation variant classes:
+Alerts and badges read the shared [presentation](#presentation) classes. Without
+one they use a tinted surface, intent-colored text, and a mixed intent border.
+
+`.left-accent` is alert-only and sits outside the presentation contract: it is a
+border-side treatment rather than a strength, so it does not cascade from a
+container.
 
 | Class          | Purpose                                                           |
 | -------------- | ----------------------------------------------------------------- |
-| _(none)_       | Tinted surface, intent-colored text, and mixed intent border.     |
-| `.flat`        | Intent-color fill and border with contrast text.                  |
-| `.soft`        | Tinted surface and intent-colored text with a transparent border. |
 | `.left-accent` | Tinted surface with only a four-pixel intent-colored left border. |
-
-Badges accept presentation variant classes:
-
-| Class    | Purpose                                                                            |
-| -------- | ---------------------------------------------------------------------------------- |
-| _(none)_ | Default. Tinted surface, intent-colored text, subtle intent-tinted border.         |
-| `.flat`  | Filled with the intent color; uses contrast text. Border matches the intent color. |
-| `.soft`  | Tinted surface and intent-colored text with no border (border is transparent).     |
 
 Examples:
 
@@ -688,6 +732,43 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--surface-hover-transform` | The transform applied on interactive card/panel hover.                       |
 | `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                                  |
 | `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                               |
+
+## Presentation Tokens
+
+Presentation tokens describe _how much_ of an intent a component shows, never
+_which_ intent it shows. They are unitless numbers and percentages, so they carry
+no color and inherit safely: a container sets them once and every component below
+resolves them against its own intent.
+
+| Token                   | Purpose                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `--ui-fill`             | Percentage of the intent color mixed into the background.                  |
+| `--ui-fg-on-fill`       | Percentage blended from the intent readable tone toward its contrast tone. |
+| `--ui-border`           | Percentage of the intent color mixed into the border color.                |
+| `--ui-border-scale`     | Multiplier applied to `--border-width`.                                    |
+| `--ui-hover-fill`       | Percentage of the intent hover color mixed into the hovered background.    |
+| `--ui-hover-fg-on-fill` | Percentage blended toward the contrast tone while hovered.                 |
+
+A component resolves them with `color-mix`, supplying its own default as the
+`var()` fallback so it keeps its normal look when no presentation is in scope:
+
+```css
+background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
+```
+
+Two choices there are deliberate. Mixing toward `transparent` rather than a
+background token lets a tinted surface adapt to whatever it is placed on. Mixing
+in `oklab` keeps the wide-gamut token palette intact and blends perceptually,
+where `srgb` would clip it.
+
+A computed color therefore reaches the page as a resolved `color-mix` result
+rather than the token's own `oklch` syntax. It is the same color; code that
+compares computed color strings should compare colors instead.
+
+> **Presentation token contract**: only presentation classes and consumer overrides
+> set these tokens; components only read them. Setting a value that no presentation
+> class produces is supported but unvalidated. See
+> [Classes](docs/classes.md#presentation) for the classes that ship these values.
 
 ## Component Internals
 
