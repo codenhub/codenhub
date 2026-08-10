@@ -5,583 +5,250 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Forms | @codenhub/styles playground</title>
     <script src="/shared/playground.js"></script>
+    <script src="/shared/matrix.js"></script>
     <link rel="stylesheet" href="/shared/playground.css" />
     <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <main class="sect bg-background text-text font-default" data-testid="preview-root">
+    <main class="sect" data-testid="preview-root">
       <section class="sect-inn stack tight">
-        <header class="stack tight">
-          <p class="text-label">UI fixtures</p>
-          <h1 class="text-title-lg">Forms</h1>
-          <p class="text-body text-text-secondary">Input controls, icon configurations, field states, and options.</p>
-        </header>
+        <p class="text-label">UI fixtures</p>
+        <h1 class="text-title-lg">Forms</h1>
+        <p class="text-body text-text-secondary">
+          Text controls, toggles, and the field parts around them. Controls cap their fill well below the tint the same
+          presentation produces elsewhere, because a field has to stay legible while being typed into.
+        </p>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Email Input</h2>
+          <h2 class="text-title">Text inputs</h2>
           <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for email input types.
+            One row per presentation, one column per intent, starting with a cell that carries no intent class at all.
+            Intent colors the resting and focus border;
+            <code class="code">.ghost</code>
+            drops the border to a bottom rule so the field keeps its affordance.
           </p>
         </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="email" placeholder="you@example.com" data-testid="matrix-email-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="email" placeholder="you@example.com" data-testid="icon-input-email" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="email" placeholder="you@example.com" data-testid="matrix-email-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="email"
-              value="invalid-email"
-              aria-invalid="true"
-              data-testid="matrix-email-invalid"
-            />
-            <span class="error">Please enter a valid email address.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="email"
-              value="disabled@example.com"
-              disabled
-              data-testid="matrix-email-disabled"
-            />
-          </label>
+        <div data-matrix="ipt" data-matrix-states="rest" data-testid="ipt-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Invalid</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">aria-invalid="true"</code>
+            takes the border and the focus color regardless of intent.
+          </p>
+          <div data-matrix="ipt" data-matrix-states="invalid" data-testid="ipt-invalid-matrix"></div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Disabled</h3>
+          <div data-matrix="ipt" data-matrix-states="disabled" data-testid="ipt-disabled-matrix"></div>
         </div>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Password Input</h2>
+          <h2 class="text-title">Selects</h2>
+          <p class="text-body text-text-secondary">The arrow is themed rather than intent-colored.</p>
+        </div>
+        <div data-matrix="select" data-matrix-states="rest" data-testid="select-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Invalid and disabled</h3>
+          <div data-matrix="select" data-matrix-states="invalid,disabled" data-testid="select-state-matrix"></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Text areas</h2>
+        </div>
+        <div data-matrix="textarea" data-matrix-states="rest" data-testid="textarea-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Invalid and disabled</h3>
+          <div data-matrix="textarea" data-matrix-states="invalid,disabled" data-testid="textarea-state-matrix"></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Input types and icons</h2>
           <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for password input types.
+            On
+            <code class="code">.ipt</code>
+            the icon is opt-in through
+            <code class="code">.icon</code>
+            , except on
+            <code class="code">date</code>
+            and
+            <code class="code">datetime-local</code>
+            , which opt themselves in and hide the native picker button.
+            <code class="code">text</code>
+            and
+            <code class="code">number</code>
+            have no icon to show.
+          </p>
+          <p class="text-body text-text-secondary">
+            Icons are background images rather than masks, because an input has no pseudo-element to mask and masking
+            the input would clip its border, background, and text. A data URI cannot read a custom property, so each
+            icon ships light and dark artwork and the theme re-points an alias. Input icons follow the theme, not the
+            intent.
           </p>
         </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="password" placeholder="••••••••" data-testid="matrix-password-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="password" placeholder="••••••••" data-testid="matrix-password-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="password" placeholder="••••••••" data-testid="matrix-password-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="password"
-              value="short"
-              aria-invalid="true"
-              data-testid="matrix-password-invalid"
-            />
-            <span class="error hint">Password is too short.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="password"
-              value="locked-pass"
-              disabled
-              data-testid="matrix-password-disabled"
-            />
-          </label>
+        <div data-fields data-testid="field-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Overrides</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">--ipt-icon-src</code>
+            replaces the artwork;
+            <code class="code">.no-icon</code>
+            suppresses the ones native inputs include by default.
+          </p>
+          <div class="form-grid">
+            <label class="field">
+              <span class="label">Custom icon</span>
+              <input
+                class="ipt icon"
+                type="text"
+                value="Custom artwork"
+                data-testid="field-custom-icon"
+                style="
+                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
+                "
+              />
+            </label>
+            <label class="field">
+              <span class="label">Suppressed icon</span>
+              <input class="ipt email no-icon" type="email" value="you@example.com" data-testid="field-no-icon" />
+            </label>
+          </div>
         </div>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Website URL Input</h2>
+          <h2 class="text-title">Checkboxes</h2>
           <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for URL input types.
+            Intent sets the checked color. Presentation reaches the border and a capped unchecked fill. Hover any cell
+            for its intent.
           </p>
         </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="url" placeholder="https://example.com" data-testid="matrix-url-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="url" placeholder="https://example.com" data-testid="matrix-url-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="url" placeholder="https://example.com" data-testid="matrix-url-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt icon" type="url" value="not-a-url" aria-invalid="true" data-testid="matrix-url-invalid" />
-            <span class="error">Please enter a valid URL.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input class="ipt icon" type="url" value="https://example.com" disabled data-testid="matrix-url-disabled" />
-          </label>
+        <div data-matrix="checkbox" data-matrix-states="rest,checked" data-testid="checkbox-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Disabled</h3>
+          <div
+            data-matrix="checkbox"
+            data-matrix-states="disabled,checked-disabled"
+            data-testid="checkbox-disabled-matrix"
+          ></div>
         </div>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Phone Number Input (tel)</h2>
+          <h2 class="text-title">Radios</h2>
           <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for telephone input types.
+            The same contract as a checkbox, keeping the circle that tells the two apart at a glance.
           </p>
         </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="tel" placeholder="+1 (555) 000-0000" data-testid="matrix-tel-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt icon" type="tel" value="abc-123" aria-invalid="true" data-testid="matrix-tel-invalid" />
-            <span class="error">Please enter a valid phone number.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input class="ipt icon" type="tel" value="+1 (555) 000-0000" disabled data-testid="matrix-tel-disabled" />
-          </label>
+        <div data-matrix="radio" data-matrix-states="rest,checked" data-testid="radio-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Disabled</h3>
+          <div
+            data-matrix="radio"
+            data-matrix-states="disabled,checked-disabled"
+            data-testid="radio-disabled-matrix"
+          ></div>
         </div>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Search Input</h2>
+          <h2 class="text-title">Switches</h2>
+        </div>
+        <div data-matrix="switch" data-matrix-states="rest,checked" data-testid="switch-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Disabled</h3>
+          <div
+            data-matrix="switch"
+            data-matrix-states="disabled,checked-disabled"
+            data-testid="switch-disabled-matrix"
+          ></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose narrow">
+        <div class="stack tight">
+          <h2 class="text-title">Field anatomy</h2>
           <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for search input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="search" placeholder="Search..." data-testid="matrix-search-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="search" placeholder="Search..." data-testid="matrix-search-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="search" placeholder="Search..." data-testid="icon-input-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="search"
-              value="bad-query"
-              aria-invalid="true"
-              data-testid="matrix-search-invalid"
-            />
-            <span class="error">Invalid search query.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input
-              class="ipt icon"
-              type="search"
-              value="search-disabled"
-              disabled
-              data-testid="matrix-search-disabled"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Date Input</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for date input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="date" data-testid="matrix-date-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Native Picker</span>
-            <input class="ipt" type="date" data-testid="matrix-date-left" />
-          </label>
-          <label class="field">
-            <span class="label">Native Picker</span>
-            <input class="ipt" type="date" data-testid="matrix-date-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt" type="date" value="invalid-date" aria-invalid="true" data-testid="matrix-date-invalid" />
-            <span class="error">Please enter a valid date.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Native Picker)</span>
-            <input class="ipt" type="date" disabled data-testid="matrix-date-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Datetime-local Input</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for datetime-local input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="datetime-local" data-testid="matrix-datetime-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Native Picker</span>
-            <input class="ipt" type="datetime-local" data-testid="matrix-datetime-left" />
-          </label>
-          <label class="field">
-            <span class="label">Native Picker</span>
-            <input class="ipt" type="datetime-local" data-testid="matrix-datetime-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Native Picker)</span>
-            <input class="ipt" type="datetime-local" aria-invalid="true" data-testid="matrix-datetime-invalid" />
-            <span class="error">Please enter a valid date and time.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Native Picker)</span>
-            <input class="ipt" type="datetime-local" disabled data-testid="matrix-datetime-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Month Input</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for month input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="month" data-testid="matrix-month-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="month" data-testid="matrix-month-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="month" data-testid="matrix-month-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt icon" type="month" aria-invalid="true" data-testid="matrix-month-invalid" />
-            <span class="error">Please enter a valid month.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input class="ipt icon" type="month" disabled data-testid="matrix-month-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Week Input</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for week input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="week" data-testid="matrix-week-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="week" data-testid="matrix-week-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="week" data-testid="matrix-week-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt icon" type="week" aria-invalid="true" data-testid="matrix-week-invalid" />
-            <span class="error">Please enter a valid week.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input class="ipt icon" type="week" disabled data-testid="matrix-week-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Time Input</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, icon alignments, and validation/disabled states for time input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="time" data-testid="matrix-time-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Left (Default)</span>
-            <input class="ipt icon" type="time" data-testid="matrix-time-left" />
-          </label>
-          <label class="field">
-            <span class="label">Icon Right</span>
-            <input class="ipt icon right" type="time" data-testid="matrix-time-right" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid (Icon Left)</span>
-            <input class="ipt icon" type="time" aria-invalid="true" data-testid="matrix-time-invalid" />
-            <span class="error">Please enter a valid time.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled (Icon Left)</span>
-            <input class="ipt icon" type="time" disabled data-testid="matrix-time-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Text Input (Generic - No Icon support)</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, invalid, and disabled states for generic text input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="text" placeholder="John Doe" data-testid="matrix-text-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid</span>
-            <input class="ipt" type="text" value="invalid text" aria-invalid="true" data-testid="matrix-text-invalid" />
-            <span class="error">Please check the input.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled</span>
-            <input class="ipt" type="text" value="disabled text" disabled data-testid="matrix-text-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Number Input (Generic - No Icon support)</h2>
-          <p class="text-body text-text-secondary">
-            Testing standard, invalid, and disabled states for generic number input types.
-          </p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Standard</span>
-            <input class="ipt" type="number" placeholder="42" data-testid="matrix-number-standard" />
-          </label>
-          <label class="field">
-            <span class="label">Invalid</span>
-            <input
-              class="ipt"
-              type="number"
-              value="not-a-number"
-              aria-invalid="true"
-              data-testid="matrix-number-invalid"
-            />
-            <span class="error">Please enter a valid number.</span>
-          </label>
-          <label class="field">
-            <span class="label">Disabled</span>
-            <input class="ipt" type="number" value="999" disabled data-testid="matrix-number-disabled" />
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Other Form Controls</h2>
-          <p class="text-body text-text-secondary">Textareas, select dropdown menus, and standard container inputs.</p>
-        </div>
-        <div class="form-grid">
-          <label class="field">
-            <span class="label">Textarea</span>
-            <textarea class="textarea" placeholder="Write your message here..."></textarea>
-          </label>
-
-          <label class="field">
-            <span class="label">Select Dropdown</span>
-            <select class="select" aria-label="Department">
-              <option>Engineering</option>
-              <option>Design</option>
-              <option>Product</option>
-            </select>
-          </label>
-        </div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Checkboxes, Switches, & Radios</h2>
-          <p class="text-body text-text-secondary">
-            All semantic variants, selections, themes, and disabled configurations.
+            <code class="code">.field</code>
+            stacks the parts;
+            <code class="code">.label</code>
+            names the control,
+            <code class="code">.hint</code>
+            explains it, and
+            <code class="code">.error</code>
+            inside a field is destructive helper text.
           </p>
         </div>
         <div class="stack loose">
+          <label class="field" data-testid="field-complete">
+            <span class="label">Email</span>
+            <input class="ipt email icon" type="email" value="you@example.com" aria-describedby="field-hint" />
+            <span class="hint" id="field-hint" data-testid="field-hint">We only use this to send build failures.</span>
+          </label>
+          <label class="field" data-testid="field-with-error">
+            <span class="label">Email</span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="not-an-email"
+              aria-invalid="true"
+              aria-describedby="field-error"
+              data-testid="invalid-input"
+            />
+            <span class="error" id="field-error" data-testid="field-error">Enter a valid email.</span>
+          </label>
           <div class="stack tight">
-            <h3 class="text-title-sm">Checkboxes</h3>
-            <div class="cluster">
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox" checked />
-                <span class="text-body font-medium">Default</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox" />
-                <span class="text-body font-medium">Unchecked</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox" disabled checked />
-                <span class="text-body font-medium">Disabled Checked</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox primary" checked />
-                <span class="text-body font-medium">Primary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox secondary" checked />
-                <span class="text-body font-medium">Secondary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox success" checked />
-                <span class="text-body font-medium">Success</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox warning" checked />
-                <span class="text-body font-medium">Warning</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox destructive" checked />
-                <span class="text-body font-medium">Destructive</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="checkbox info" checked />
-                <span class="text-body font-medium">Info</span>
-              </label>
+            <p class="text-body text-text-secondary">
+              <code class="code">.error</code>
+              only claims helper text.
+              <code class="code">.btn.error</code>
+              stays a destructive button.
+            </p>
+            <div class="field">
+              <button class="btn error" type="button" data-testid="field-error-button">Delete</button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div class="stack tight">
-            <h3 class="text-title-sm">Switches</h3>
-            <div class="cluster">
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch" checked />
-                <span class="text-body font-medium">Default</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch" />
-                <span class="text-body font-medium">Unchecked</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch" disabled checked />
-                <span class="text-body font-medium">Disabled Checked</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch primary" checked />
-                <span class="text-body font-medium">Primary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch secondary" checked />
-                <span class="text-body font-medium">Secondary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch success" checked />
-                <span class="text-body font-medium">Success</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch warning" checked />
-                <span class="text-body font-medium">Warning</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch destructive" checked />
-                <span class="text-body font-medium">Destructive</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="checkbox" class="switch info" checked />
-                <span class="text-body font-medium">Info</span>
-              </label>
-            </div>
+      <section class="sect-inn stack loose narrow">
+        <div class="stack tight">
+          <h2 class="text-title">Control base</h2>
+          <p class="text-body text-text-secondary">
+            <code class="code">.control-base</code>
+            is the low-level utility the three text controls compose: dimensions, border, placeholder, focus, invalid,
+            and disabled. Use it for a custom control when none of them fits.
+          </p>
+        </div>
+        <div class="stack tight">
+          <div
+            class="control-base"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Custom control"
+            data-testid="control-base"
+          >
+            Editable custom control
           </div>
-
-          <div class="stack tight">
-            <h3 class="text-title-sm">Radios</h3>
-            <div class="cluster">
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio" class="radio" checked />
-                <span class="text-body font-medium">Radio 1</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio" class="radio" />
-                <span class="text-body font-medium">Radio 2</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-disabled" class="radio" disabled checked />
-                <span class="text-body font-medium">Disabled Checked</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-p" class="radio primary" checked />
-                <span class="text-body font-medium">Primary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-s" class="radio secondary" checked />
-                <span class="text-body font-medium">Secondary</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-su" class="radio success" checked />
-                <span class="text-body font-medium">Success</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-w" class="radio warning" checked />
-                <span class="text-body font-medium">Warning</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-d" class="radio destructive" checked />
-                <span class="text-body font-medium">Destructive</span>
-              </label>
-              <label class="cluster tight component-option">
-                <input type="radio" name="forms-radio-i" class="radio info" checked />
-                <span class="text-body font-medium">Info</span>
-              </label>
-            </div>
+          <div
+            class="control-base"
+            contenteditable="true"
+            role="textbox"
+            aria-label="Invalid custom control"
+            aria-invalid="true"
+            data-testid="control-base-invalid"
+          >
+            Invalid custom control
           </div>
         </div>
       </section>

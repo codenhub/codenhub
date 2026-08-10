@@ -23,10 +23,11 @@ packages/styles/
     index.html
     shared/
     buttons/
-    components/
+    feedback/
     forms/
     layout/
     native/
+    surfaces/
     typography/
   dev/
     package.json
@@ -41,9 +42,12 @@ packages/styles/
       buttons.spec.ts
       components.spec.ts
       environment.spec.ts
+      feedback.spec.ts
+      forms.spec.ts
       layout.spec.ts
       native.spec.ts
       playground.spec.ts
+      surfaces.spec.ts
       test-utils.ts
       theme.spec.ts
       typography.spec.ts
@@ -53,21 +57,36 @@ packages/styles/
 
 ## `playground/`
 
-Shared manual and automated preview routes. The root index links to focused
-pages; common playground assets live under `shared/`.
+Shared manual and automated preview routes, and the reference the package
+documents against. The root index links to focused pages; common playground
+assets live under `shared/`.
+
+Each page is exhaustive for what it holds: every component crossed with every
+intent and every presentation it reads, plus the modifiers that sit outside that
+grid. A page is split by what a component is for -- buttons, forms, feedback,
+surfaces, typography and content, layout, native -- because a single page holding
+every grid is too long to read.
 
 Each fixture exists once. A component belongs to exactly one page, and the
 header's aesthetic selector puts the aesthetic class on the preview root, so
 every page can be read under every aesthetic rather than a separate page
 restating a subset of the components under each one. The aesthetic tests drive
 that selector and read the same fixtures as everything else, which is what keeps
-them from drifting apart.
+them from drifting apart. A spec therefore follows its fixtures: `feedback.spec.ts`
+reads the feedback page, and `components.spec.ts` keeps only the contracts that
+belong to no single component and builds its own elements.
 
 Variant grids render from the spec in `shared/matrix.js` rather than being spelled
 out in markup: a component crossed with every intent, presentation, and state is
 a few hundred nodes, and a new intent has to reach all of them at once. Cells are
 addressable as `<component>-<presentation>-<intent>[-<state>]`, and the `none`
-intent is a cell with no intent class, which is not the same as `.neutral`.
+intent is a cell with no intent class, which is not the same as `.neutral`. A
+component that reads intent but not presentation declares that in the spec, so a
+page cannot claim a variant the component ignores.
+
+Input types are the one axis that is not intent crossed with presentation, so
+they have their own renderer: `data-fields` crosses every input type with the
+icon and state variants that type supports, as `field-<type>-<variant>`.
 
 ## `dev/`
 

@@ -69,11 +69,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const routes = [
     { text: "Home", path: "/" },
     { text: "Buttons", path: "/buttons/" },
-    { text: "Components", path: "/components/" },
     { text: "Forms", path: "/forms/" },
+    { text: "Feedback", path: "/feedback/" },
+    { text: "Surfaces", path: "/surfaces/" },
+    { text: "Typography", path: "/typography/" },
     { text: "Layout", path: "/layout/" },
     { text: "Native", path: "/native/" },
-    { text: "Typography", path: "/typography/" },
   ];
 
   const currentPath = window.location.pathname;

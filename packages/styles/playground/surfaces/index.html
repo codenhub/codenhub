@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Surfaces | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <script src="/shared/matrix.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+  </head>
+  <body>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn stack tight">
+        <p class="text-label">UI fixtures</p>
+        <h1 class="text-title-lg">Surfaces</h1>
+        <p class="text-body text-text-secondary">
+          Containers and the rules between them. Cards float above the layout, panels sit flush against it, and both
+          read intent, presentation, and material. Each grid is one row per presentation and one column per intent,
+          preceded by a cell with no intent class at all.
+        </p>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Cards</h2>
+          <p class="text-body text-text-secondary">
+            A plain card is a neutral bordered container with a low elevation. Only an explicit presentation tints it.
+          </p>
+        </div>
+        <div data-matrix="card" data-matrix-states="rest" data-testid="card-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Interactive</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.interactive</code>
+            adds a pointer, a hover lift, and a focus ring. It is styling only — use a real control and give it a name.
+          </p>
+          <div data-matrix="card" data-matrix-states="interactive" data-testid="card-interactive-matrix"></div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Padding</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.compact</code>
+            ,
+            <code class="code">.spacious</code>
+            , and
+            <code class="code">.flush</code>
+            change padding without touching anything else.
+          </p>
+          <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Compact</p>
+              <article class="card compact" data-testid="card-compact">Reduced padding.</article>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Default</p>
+              <article class="card" data-testid="card-default-padding">Standard padding.</article>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Spacious</p>
+              <article class="card spacious" data-testid="card-spacious">Increased padding.</article>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Flush</p>
+              <article class="card flush" data-testid="card-flush">
+                <div class="skeleton" aria-hidden="true" style="height: 4rem; border-radius: 0"></div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Panels</h2>
+          <p class="text-body text-text-secondary">
+            The same contract as a card with no elevation, for sidebars, toolbars, and wells.
+          </p>
+        </div>
+        <div data-matrix="panel" data-matrix-states="rest" data-testid="panel-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Padding</h3>
+          <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Compact</p>
+              <aside class="panel compact" data-testid="panel-compact">Reduced padding.</aside>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Default</p>
+              <aside class="panel" data-testid="panel-default-padding">Standard padding.</aside>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Spacious</p>
+              <aside class="panel spacious" data-testid="panel-spacious">Increased padding.</aside>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Flush</p>
+              <aside class="panel flush" data-testid="panel-flush">
+                <div class="skeleton" aria-hidden="true" style="height: 4rem; border-radius: 0"></div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Empty states</h2>
+          <p class="text-body text-text-secondary">A centered, muted layout for a container with nothing in it yet.</p>
+        </div>
+        <div
+          data-matrix="empty-state"
+          data-matrix-presentations="plain,flat"
+          data-matrix-states="rest"
+          data-testid="empty-state-matrix"
+        ></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Dividers</h2>
+          <p class="text-body text-text-secondary">
+            Intent colors the rule. A divider reads nothing from presentation but the border width, so only
+            <code class="code">.out</code>
+            changes it, by doubling the scale.
+          </p>
+        </div>
+        <div
+          data-matrix="divider"
+          data-matrix-presentations="plain,out"
+          data-matrix-states="rest"
+          data-testid="divider-matrix"
+        ></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Vertical</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.vertical</code>
+            stretches the rule along the cross axis of its container.
+          </p>
+          <div class="view horizontal">
+            <span>Before</span>
+            <span class="divider vertical" data-testid="divider-vertical"></span>
+            <span>After</span>
+            <span class="divider vertical primary" data-testid="divider-vertical-primary"></span>
+            <span>End</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Presentation cascade</h2>
+          <p class="text-body text-text-secondary">
+            Presentation cascades and intent does not. The container below sets
+            <code class="code">.soft</code>
+            for its whole subtree; the last card opts out on the element, which always wins.
+          </p>
+        </div>
+        <div class="soft auto-grid" data-testid="surface-cascade-container">
+          <article class="card primary" data-testid="cascade-card-inherited">
+            <h4 class="text-title-sm">Inherited soft</h4>
+            <p class="text-body">No presentation class of its own.</p>
+          </article>
+          <aside class="panel success" data-testid="cascade-panel-inherited">Inherited soft panel</aside>
+          <article class="card primary out" data-testid="cascade-card-override">
+            <h4 class="text-title-sm">Overridden</h4>
+            <p class="text-body">Outlined on the element.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

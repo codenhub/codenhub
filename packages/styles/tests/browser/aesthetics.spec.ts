@@ -6,7 +6,10 @@ import { expectSameColor, getColorDistance, readSrgb } from "./test-utils";
    these read the ordinary component fixtures under a chosen aesthetic rather
    than a separate set that could drift from them. */
 const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
-const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
+const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
+const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
+const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
+const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
 
 const withAesthetic = (url: string, aesthetic: string) => `${url}&aesthetic=${aesthetic}`;
 
@@ -64,10 +67,10 @@ const resolveToken = (page: Page, token: string) =>
 
 test.describe("aesthetics", () => {
   test("applies the selected aesthetic to the ordinary fixtures", async ({ page }) => {
-    await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+    await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
     await expect(page.getByTestId("preview-root")).toHaveClass(/neobrutalism/);
-    await expect(page.getByTestId("card-neutral")).toBeVisible();
+    await expect(page.getByTestId("card-plain-none")).toBeVisible();
   });
 
   test.describe("neobrutalism", () => {
@@ -76,9 +79,9 @@ test.describe("aesthetics", () => {
 
       const button = await readStyles(page, "btn-plain-none", ["box-shadow", "border-top-width", "border-radius"]);
 
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
-      const card = await readStyles(page, "card-neutral", ["box-shadow", "border-top-width", "border-radius"]);
+      const card = await readStyles(page, "card-plain-none", ["box-shadow", "border-top-width", "border-radius"]);
 
       for (const [name, styles] of [
         ["button", button],
@@ -93,22 +96,30 @@ test.describe("aesthetics", () => {
     });
 
     test("squares the components that hardcode a radius", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+      await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
 
-      const measured = await readAll(page, ["badge-neutral", "kbd-neutral", "progress-bar"], ["border-radius"]);
+      const measured = await readAll(page, ["badge-plain-none", "progress-plain-none"], ["border-radius"]);
 
-      for (const [testId, styles] of measured) {
+      /* The fill is a pseudo-element, so squaring the track alone would leave a
+         pill inside it. */
+      const fillRadius = await readPseudoStyle(page, "progress-plain-none", "::after", "border-radius");
+
+      await page.goto(withAesthetic(TYPOGRAPHY_URL, "neobrutalism"));
+
+      const keyCap = await readStyles(page, "kbd-plain-none", ["border-radius"]);
+
+      for (const [testId, styles] of [...measured, ["kbd-plain-none", keyCap] as const]) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
       }
 
-      expect(await readPseudoStyle(page, "progress-bar", "::after", "border-radius")).toBe("0px");
+      expect(fillRadius).toBe("0px");
     });
 
     test("casts the shadow in each component's own intent", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
       const [neutral, tinted] = await page.evaluate(() =>
-        ["card-neutral", "card-destructive"].map(
+        ["card-plain-none", "card-plain-destructive"].map(
           (testId) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).boxShadow,
         ),
       );
@@ -123,13 +134,13 @@ test.describe("aesthetics", () => {
     });
 
     test("leaves content chips alone", async ({ page }) => {
-      await page.goto(COMPONENTS_URL);
+      await page.goto(TYPOGRAPHY_URL);
 
-      const plainCap = await readStyles(page, "kbd-neutral", ["border-top-color"]);
+      const plainCap = await readStyles(page, "kbd-plain-none", ["border-top-color"]);
 
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+      await page.goto(withAesthetic(TYPOGRAPHY_URL, "neobrutalism"));
 
-      const inkedCap = await readStyles(page, "kbd-neutral", ["border-top-color"]);
+      const inkedCap = await readStyles(page, "kbd-plain-none", ["border-top-color"]);
 
       /* A key cap is a content chip rather than structure, so the ink override
          skips it and its edge stays the quiet border color the default uses. */
@@ -146,14 +157,14 @@ test.describe("aesthetics", () => {
     });
 
     test("supplies the neutral ink without overriding an intent", async ({ page }) => {
-      await page.goto(COMPONENTS_URL);
+      await page.goto(SURFACES_URL);
 
-      const plain = await readStyles(page, "card-neutral", ["border-top-color"]);
+      const plain = await readStyles(page, "card-plain-none", ["border-top-color"]);
 
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
-      const inked = await readStyles(page, "card-neutral", ["border-top-color"]);
-      const tinted = await readStyles(page, "card-destructive", ["border-top-color"]);
+      const inked = await readStyles(page, "card-plain-none", ["border-top-color"]);
+      const tinted = await readStyles(page, "card-plain-destructive", ["border-top-color"]);
       const destructive = await resolveToken(page, "--color-destructive");
       const gray = await resolveToken(page, "--color-border");
       const ink = await resolveToken(page, "--color-text");
@@ -188,8 +199,8 @@ test.describe("aesthetics", () => {
 
       /* A card lifts only when it opts in with `.interactive`: a plain card is a
          container, not a control. */
-      await page.goto(withAesthetic(COMPONENTS_URL, "neobrutalism"));
-      await expectPressed("card-interactive");
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
+      await expectPressed("card-plain-none-interactive");
     });
 
     test("lets an explicit presentation on the element win over the aesthetic", async ({ page }) => {
@@ -205,7 +216,7 @@ test.describe("aesthetics", () => {
 
   test("shapes the tooltip bubble with the aesthetic in scope", async ({ page }) => {
     const readBubble = async (aesthetic: string) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, aesthetic));
+      await page.goto(withAesthetic(FEEDBACK_URL, aesthetic));
 
       const host = page.getByTestId("fallback-tooltip");
 
@@ -236,7 +247,7 @@ test.describe("aesthetics", () => {
 
   test.describe("glass", () => {
     test("blurs what is behind a surface and stays translucent", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "glass"));
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
       /* Headless Chromium reports `reduce`, which is the branch that drops the
          blur for an opaque surface, so which assertion applies is decided by the
@@ -245,13 +256,14 @@ test.describe("aesthetics", () => {
         () => matchMedia("(prefers-reduced-transparency: reduce)").matches,
       );
 
-      const measured = await readAll(
-        page,
-        ["card-neutral", "panel-neutral", "neutral-alert"],
-        ["backdrop-filter", "-webkit-backdrop-filter", "background-color"],
-      );
+      const properties = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
+      const surfaces = await readAll(page, ["card-plain-none", "panel-plain-none"], properties);
 
-      for (const [testId, styles] of measured) {
+      await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
+
+      const alerts = await readAll(page, ["alert-plain-none"], properties);
+
+      for (const [testId, styles] of [...surfaces, ...alerts]) {
         const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
         const { alpha } = readSrgb(styles["background-color"] as string);
 
@@ -295,15 +307,17 @@ test.describe("aesthetics", () => {
         "border-radius",
       ]);
 
-      await page.goto(withAesthetic(COMPONENTS_URL, "pixel"));
+      const properties = ["clip-path", "border-top-width", "box-shadow", "border-radius"];
 
-      const measured = await readAll(
-        page,
-        ["card-neutral", "ipt-default"],
-        ["clip-path", "border-top-width", "box-shadow", "border-radius"],
-      );
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
-      for (const [testId, styles] of [["btn-plain-none", button] as const, ...measured]) {
+      const card = await readAll(page, ["card-plain-none"], properties);
+
+      await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+      const input = await readAll(page, ["ipt-plain-none"], properties);
+
+      for (const [testId, styles] of [["btn-plain-none", button] as const, ...card, ...input]) {
         expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
         /* `clip-path` clips a border away, so the element must not draw one. */
         expect(styles["border-top-width"], `${testId} border`).toBe("0px");
@@ -316,9 +330,9 @@ test.describe("aesthetics", () => {
     });
 
     test("scales the unit down for chips", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "pixel"));
+      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
-      const styles = await readStyles(page, "badge-neutral", ["box-shadow"]);
+      const styles = await readStyles(page, "badge-plain-none", ["box-shadow"]);
 
       expect(styles["box-shadow"]).toMatch(/\b0px 0px 0px 2px\b/);
     });
@@ -336,9 +350,9 @@ test.describe("aesthetics", () => {
     });
 
     test("keeps a focus ring that clipping would otherwise remove", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "pixel"));
+      await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
-      const input = page.getByTestId("ipt-default");
+      const input = page.getByTestId("ipt-plain-none");
 
       await input.focus();
 
@@ -360,18 +374,23 @@ test.describe("aesthetics", () => {
     });
 
     test("squares the components it does not clip, and keeps a radio round", async ({ page }) => {
-      await page.goto(withAesthetic(COMPONENTS_URL, "pixel"));
+      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
-      const measured = await readAll(page, ["checkbox-test", "progress-bar"], ["border-radius", "clip-path"]);
+      const track = await readAll(page, ["progress-plain-none"], ["border-radius", "clip-path"]);
+      const fillRadius = await readPseudoStyle(page, "progress-plain-none", "::after", "border-radius");
 
-      for (const [testId, styles] of measured) {
+      await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+      const checkbox = await readAll(page, ["checkbox-plain-none"], ["border-radius", "clip-path"]);
+
+      for (const [testId, styles] of [...track, ...checkbox]) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["clip-path"], `${testId} clip`).toBe("none");
       }
 
-      expect(await readPseudoStyle(page, "progress-bar", "::after", "border-radius")).toBe("0px");
+      expect(fillRadius).toBe("0px");
 
-      const radio = await readStyles(page, "radio-test", ["border-radius"]);
+      const radio = await readStyles(page, "radio-plain-none", ["border-radius"]);
 
       /* The circle is the only thing telling a radio from a checkbox at a glance. */
       expect(radio["border-radius"]).not.toBe("0px");

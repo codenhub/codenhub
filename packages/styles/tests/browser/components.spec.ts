@@ -1,956 +1,153 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor } from "./test-utils";
 
-const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
+/* Contracts that belong to no single component, asserted on elements this spec
+   builds itself so it does not depend on which page holds a given fixture. */
+const PLAYGROUND_URL = "http://localhost:5184/?env=vanilla";
 
-test.describe("components", () => {
-  test("loads canonical compiled styles with tokens and components", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
+/* A component that reads `--intent-*` without joining the reset list fails
+   silently: the undefined property makes every `color-mix()` referencing it
+   invalid at computed-value time, so the whole declaration is dropped and the
+   element falls back to a preflight value. This asserts the slots resolve on
+   every class that reads them. */
+test("defines every intent slot on each component that reads them", async ({ page }) => {
+  await page.goto(PLAYGROUND_URL);
 
-    await expect(page.getByTestId("preview-root")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Components" })).toBeVisible();
-
-    const badgeStyles = await page.getByTestId("badge-primary").evaluate((element) => {
-      const styles = getComputedStyle(element);
-
-      return {
-        backgroundColor: styles.backgroundColor,
-        borderRadius: styles.borderRadius,
-        color: styles.color,
-      };
-    });
-
-    expect(badgeStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(badgeStyles.color).not.toBe(badgeStyles.backgroundColor);
-    expect(badgeStyles.borderRadius).not.toBe("0px");
-  });
-
-  test("styles section and cluster layout helpers", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const section = document.querySelector('[data-testid="layout-section"]')!;
-      const layoutStyles = getComputedStyle(section);
-      const clusterStyles = getComputedStyle(document.querySelector('[data-testid="cluster-layout"]')!);
-      return {
-        clusterDisplay: clusterStyles.display,
-        layoutDisplay: layoutStyles.display,
-        /* The content width is a grid track on the page rather than a max-width
-           on each section, so a narrow section can share the wide one's left
-           edge instead of centering itself in the viewport. */
-        pageColumns: getComputedStyle(section.parentElement!).gridTemplateColumns,
-        sectionWidth: Math.round(section.getBoundingClientRect().width),
-      };
-    });
-
-    expect(styles.layoutDisplay).toBe("flex");
-    expect(styles.clusterDisplay).toBe("flex");
-    /* Chromium and Firefox serialize the line names, WebKit only the widths. */
-    const tracks = [...styles.pageColumns.matchAll(/([\d.]+)px/gu)].map((match) => Number(match[1]));
-
-    expect(tracks).toHaveLength(3);
-    /* Equal side tracks center the content column; a section fills that column
-       or, when narrow, starts at its left edge. */
-    expect(Math.abs(tracks[0]! - tracks[2]!)).toBeLessThan(1);
-    expect(styles.sectionWidth).toBeLessThanOrEqual(Math.round(tracks[1]!));
-  });
-
-  test("styles invalid fields and success alerts", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const invalidBorderColor = await page
-      .getByTestId("invalid-input")
-      .evaluate((element) => getComputedStyle(element).borderColor);
-    const alertStyles = await page.getByTestId("default-success-alert").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return { borderWidth: styles.borderWidth, color: styles.color };
-    });
-    const alertIconPaddingLeft = await page
-      .getByTestId("default-success-alert-icon")
-      .evaluate((element) => getComputedStyle(element).paddingLeft);
-
-    expect(invalidBorderColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(alertStyles.borderWidth).not.toBe("0px");
-    expect(alertStyles.color).not.toBe("rgba(0, 0, 0, 0)");
-    expect(alertIconPaddingLeft).toBe("44px");
-  });
-
-  test("animates skeletons and styles progress tracks", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const skeletonAnimationName = await page
-      .getByTestId("skeleton-block")
-      .evaluate((element) => getComputedStyle(element).animationName);
-    const progressStyles = await page.getByTestId("progress-bar").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return { backgroundColor: styles.backgroundColor, overflow: styles.overflow };
-    });
-
-    expect(skeletonAnimationName).not.toBe("none");
-    expect(progressStyles.overflow).toBe("hidden");
-    expect(progressStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-  });
-
-  test("matches the representative primary progress bar", async ({ browserName, page }) => {
-    test.skip(browserName !== "chromium", "The baseline targets the stable Chromium rendering path.");
-    await page.goto(COMPONENTS_URL);
-
-    const progressBar = page.getByTestId("progress-bar-primary");
-    await progressBar.evaluate((element) => {
-      element.style.width = "320px";
-    });
-  });
-
-  test("sizes loaders and renders every loader variant", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const loaderWidths = await Promise.all(
-      ["loader-sm", "loader-default", "loader-lg"].map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).width),
-      ),
-    );
-    const loaderDefaultMask = await page
-      .getByTestId("loader-default")
-      .evaluate(
-        (element) => getComputedStyle(element).maskImage || getComputedStyle(element).webkitMaskImage || "none",
-      );
-    const variantIds = [
-      "loader-dots-wave",
-      "loader-dots-fade",
-      "loader-dots-queue",
-      "loader-dots-rotate",
-      "loader-dots-grow",
-      "loader-dots-grow-alternate",
-      "loader-dot-bounce",
-      "loader-bars-wave",
-      "loader-pulse-ring",
+  const missing = await page.evaluate(() => {
+    const classNames = [
+      "btn",
+      "alert",
+      "badge",
+      "card",
+      "panel",
+      "checkbox",
+      "radio",
+      "switch",
+      "progress",
+      "skeleton",
+      "loader",
+      "control-base",
+      "ipt",
+      "textarea",
+      "select",
+      "table",
+      "kbd",
+      "code",
+      "pre",
+      "quote",
+      "divider",
+      "tooltip",
+      "empty-state",
     ];
-    const variantImages = await Promise.all(
-      variantIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
-      ),
-    );
+    const slots = [
+      "--intent-color",
+      "--intent-contrast",
+      "--intent-hover",
+      "--intent-strong",
+      "--intent-subtle",
+      "--intent-border",
+    ];
 
-    expect(loaderWidths).toEqual(["24px", "32px", "40px"]);
-    expect(loaderDefaultMask).not.toBe("none");
-    for (const [index, image] of variantImages.entries()) {
-      expect(image, variantIds[index]).toContain("data:image/svg+xml");
+    const gaps: string[] = [];
+
+    for (const className of classNames) {
+      const element = document.createElement("div");
+      element.className = className;
+      document.body.append(element);
+
+      const styles = getComputedStyle(element);
+      for (const slot of slots) {
+        if (styles.getPropertyValue(slot).trim() === "") {
+          gaps.push(`.${className} is missing ${slot}`);
+        }
+      }
+
+      element.remove();
     }
+
+    return gaps;
   });
 
-  test("preserves a distinct mask for every loader variant", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
+  expect(missing).toEqual([]);
+});
 
-    const testIds = [
-      "loader-default",
-      "loader-dots-wave",
-      "loader-dots-fade",
-      "loader-dots-queue",
-      "loader-dots-rotate",
-      "loader-dots-grow",
-      "loader-dots-grow-alternate",
-      "loader-dot-bounce",
-      "loader-bars-wave",
-      "loader-pulse-ring",
-    ];
-    const images = await Promise.all(
-      testIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
-      ),
-    );
+/* The shared `--intent-*` contract only works because a component's neutral
+   reset carries zero specificity: an intent class on the element must beat it,
+   while an inherited value from a container must not. Both directions are
+   asserted here because breaking either one is silent. */
+test("applies intent on the element without cascading it from a container", async ({ page }) => {
+  await page.goto(PLAYGROUND_URL);
 
-    expect(new Set(images).size).toBe(testIds.length);
-  });
-
-  test("renders flat, soft, and left-accent alert variants with correct styles", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    // Flat info alert
-    const flatInfoStyles = await page.getByTestId("flat-info-alert").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(flatInfoStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(flatInfoStyles.color, flatInfoStyles.backgroundColor)).toBeGreaterThan(2);
-
-    // Left accent success alert
-    const leftAccentSuccessStyles = await page.getByTestId("left-accent-success-alert").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderLeftWidth: styles.borderLeftWidth,
-        borderTopColor: styles.borderTopColor,
-        borderRightColor: styles.borderRightColor,
-      };
-    });
-    expect(leftAccentSuccessStyles.borderLeftWidth).toBe("4px");
-    expect(isTransparent(leftAccentSuccessStyles.borderTopColor)).toBe(true);
-    expect(isTransparent(leftAccentSuccessStyles.borderRightColor)).toBe(true);
-
-    // Soft warning alert
-    const softWarningStyles = await page.getByTestId("soft-warning-alert").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(softWarningStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(softWarningStyles.color, softWarningStyles.backgroundColor)).toBeGreaterThan(2);
-    expect(isTransparent(softWarningStyles.borderColor)).toBe(true);
-  });
-
-  test("renders flat and soft badge variants with correct styles", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    // Flat badge: background = intent color, border = intent color (non-transparent)
-    const flatBadgeStyles = await page.getByTestId("badge-flat-info").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(flatBadgeStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(flatBadgeStyles.color, flatBadgeStyles.backgroundColor)).toBeGreaterThan(2);
-    expect(isTransparent(flatBadgeStyles.borderColor)).toBe(false);
-
-    // Primary flat badge should have background = primary color, color = primary-contrast color
-    const flatPrimaryBadgeStyles = await page.getByTestId("badge-flat-primary").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-      };
-    });
-    const expectedPrimaryColors = await page.evaluate(() => {
+  const values = await page.evaluate(() => {
+    const resolveToken = (tokenName: string) => {
       const probe = document.createElement("span");
-      probe.style.color = "var(--color-primary)";
-      const probeContrast = document.createElement("span");
-      probeContrast.style.color = "var(--color-primary-contrast)";
-      document.body.append(probe, probeContrast);
-      const colors = {
-        primary: getComputedStyle(probe).color,
-        contrast: getComputedStyle(probeContrast).color,
-      };
-      probe.remove();
-      probeContrast.remove();
-      return colors;
-    });
-    expectSameColor(flatPrimaryBadgeStyles.backgroundColor, expectedPrimaryColors.primary, "flat primary badge");
-    expectSameColor(flatPrimaryBadgeStyles.color, expectedPrimaryColors.contrast, "flat primary badge text");
-
-    // Secondary flat badge should have background = accent color, color = accent-contrast color
-    const flatSecondaryBadgeStyles = await page.getByTestId("badge-flat-secondary").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-      };
-    });
-    const expectedSecondaryColors = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--color-accent)";
-      const probeContrast = document.createElement("span");
-      probeContrast.style.color = "var(--color-accent-contrast)";
-      document.body.append(probe, probeContrast);
-      const colors = {
-        accent: getComputedStyle(probe).color,
-        contrast: getComputedStyle(probeContrast).color,
-      };
-      probe.remove();
-      probeContrast.remove();
-      return colors;
-    });
-    expectSameColor(flatSecondaryBadgeStyles.backgroundColor, expectedSecondaryColors.accent, "flat secondary badge");
-    expectSameColor(flatSecondaryBadgeStyles.color, expectedSecondaryColors.contrast, "flat secondary badge text");
-
-    // Soft badge: tinted background, no border
-    const softBadgeStyles = await page.getByTestId("badge-soft-success").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(softBadgeStyles.backgroundColor)).toBe(false);
-    expect(isTransparent(softBadgeStyles.borderColor)).toBe(true);
-  });
-
-  test("lifts a tooltip bubble no higher than a raised surface", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const shadows = await page.evaluate(() => {
-      const probe = document.createElement("span");
-
-      probe.style.boxShadow = "var(--elevation-mid)";
+      probe.style.color = `var(--color-${tokenName})`;
       document.body.append(probe);
-
-      const mid = getComputedStyle(probe).boxShadow;
-
+      const color = getComputedStyle(probe).color;
       probe.remove();
-
-      const bubble = getComputedStyle(
-        document.querySelector('[data-testid="fallback-tooltip"]') as Element,
-        "::after",
-      ).boxShadow;
-
-      return { bubble, mid };
-    });
-
-    /* A bubble is a small transient popover, not a modal, so it sits at the
-       elevation a hovered card uses. `--elevation-high` stays for full
-       overlays. The bubble also carries Tailwind's empty ring layers, so this
-       asserts the elevation is present rather than that it is the whole
-       value. */
-    expect(shadows.bubble).toContain(shadows.mid);
-  });
-
-  test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const tooltipStyles = await page.getByTestId("fallback-tooltip").evaluate((element) => {
-      const styles = getComputedStyle(element, "::after");
-
-      return {
-        left: styles.left,
-        top: styles.top,
-        transformOrigin: styles.transformOrigin,
-      };
-    });
-
-    expect(tooltipStyles.left).not.toBe("auto");
-    expect(tooltipStyles.top).not.toBe("auto");
-    expect(tooltipStyles.transformOrigin).not.toBe("");
-  });
-
-  test("applies intent classes to checkbox, switch, and progress bar", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const intentStyles = await page.evaluate(() => {
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      const getCheckedBg = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"]`) as HTMLInputElement | null;
-        if (!el) {
-          throw new Error(`Missing fixture: ${testId}`);
-        }
-        return getComputedStyle(el).backgroundColor;
-      };
-
-      const getProgressFill = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"]`) as HTMLElement | null;
-        if (!el) {
-          throw new Error(`Missing fixture: ${testId}`);
-        }
-        return getComputedStyle(el, "::after").backgroundColor;
-      };
-
-      return {
-        checkboxPrimary: getCheckedBg("checkbox-primary"),
-        checkboxSecondary: getCheckedBg("checkbox-secondary"),
-        checkboxSuccess: getCheckedBg("checkbox-success"),
-        checkboxWarning: getCheckedBg("checkbox-warning"),
-        checkboxDestructive: getCheckedBg("checkbox-destructive"),
-        checkboxInfo: getCheckedBg("checkbox-info"),
-        switchPrimary: getCheckedBg("switch-primary"),
-        switchSecondary: getCheckedBg("switch-secondary"),
-        switchSuccess: getCheckedBg("switch-success"),
-        switchWarning: getCheckedBg("switch-warning"),
-        switchDestructive: getCheckedBg("switch-destructive"),
-        switchInfo: getCheckedBg("switch-info"),
-        progressPrimary: getProgressFill("progress-bar-primary"),
-        progressSecondary: getProgressFill("progress-bar-secondary"),
-        progressSuccess: getProgressFill("progress-bar-success"),
-        progressWarning: getProgressFill("progress-bar-warning"),
-        progressDestructive: getProgressFill("progress-bar-destructive"),
-        progressInfo: getProgressFill("progress-bar-info"),
-        tokenPrimary: resolveToken("primary"),
-        tokenSecondary: resolveToken("accent"),
-        tokenSuccess: resolveToken("success"),
-        tokenWarning: resolveToken("warning"),
-        tokenDestructive: resolveToken("destructive"),
-        tokenInfo: resolveToken("info"),
-      };
-    });
-
-    expect(intentStyles.checkboxPrimary).toBe(intentStyles.tokenPrimary);
-    expect(intentStyles.checkboxSecondary).toBe(intentStyles.tokenSecondary);
-    expect(intentStyles.checkboxSuccess).toBe(intentStyles.tokenSuccess);
-    expect(intentStyles.checkboxWarning).toBe(intentStyles.tokenWarning);
-    expect(intentStyles.checkboxDestructive).toBe(intentStyles.tokenDestructive);
-    expect(intentStyles.checkboxInfo).toBe(intentStyles.tokenInfo);
-    expect(intentStyles.switchPrimary).toBe(intentStyles.tokenPrimary);
-    expect(intentStyles.switchSecondary).toBe(intentStyles.tokenSecondary);
-    expect(intentStyles.switchSuccess).toBe(intentStyles.tokenSuccess);
-    expect(intentStyles.switchWarning).toBe(intentStyles.tokenWarning);
-    expect(intentStyles.switchDestructive).toBe(intentStyles.tokenDestructive);
-    expect(intentStyles.switchInfo).toBe(intentStyles.tokenInfo);
-    expect(intentStyles.progressPrimary).toBe(intentStyles.tokenPrimary);
-    expect(intentStyles.progressSecondary).toBe(intentStyles.tokenSecondary);
-    expect(intentStyles.progressSuccess).toBe(intentStyles.tokenSuccess);
-    expect(intentStyles.progressWarning).toBe(intentStyles.tokenWarning);
-    expect(intentStyles.progressDestructive).toBe(intentStyles.tokenDestructive);
-    expect(intentStyles.progressInfo).toBe(intentStyles.tokenInfo);
-  });
-
-  test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const checkbox = page.getByTestId("checkbox-test");
-    const checkboxChecked = page.getByTestId("checkbox-checked-test");
-    const switchElement = page.getByTestId("switch-test");
-    const switchChecked = page.getByTestId("switch-checked-test");
-
-    await expect(checkbox).toBeVisible();
-    await expect(checkboxChecked).toBeVisible();
-    await expect(switchElement).toBeVisible();
-    await expect(switchChecked).toBeVisible();
-
-    const checkboxStyles = await checkbox.evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        appearance: styles.appearance,
-        width: styles.width,
-        height: styles.height,
-        cursor: styles.cursor,
-      };
-    });
-
-    expect(checkboxStyles.appearance).toBe("none");
-    expect(checkboxStyles.width).toBe("16px");
-    expect(checkboxStyles.height).toBe("16px");
-    expect(checkboxStyles.cursor).toBe("pointer");
-
-    const switchStyles = await switchElement.evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        appearance: styles.appearance,
-        width: styles.width,
-        height: styles.height,
-        cursor: styles.cursor,
-      };
-    });
-
-    expect(switchStyles.appearance).toBe("none");
-    expect(switchStyles.width).toBe("40px");
-    expect(switchStyles.height).toBe("20px");
-    expect(switchStyles.cursor).toBe("pointer");
-
-    const checkboxDisabled = page.getByTestId("checkbox-disabled");
-    const switchDisabled = page.getByTestId("switch-disabled");
-    await expect(checkboxDisabled).toBeVisible();
-    await expect(switchDisabled).toBeVisible();
-
-    const checkboxDisabledBorderBeforeHover = await checkboxDisabled.evaluate((el) => getComputedStyle(el).borderColor);
-    await checkboxDisabled.hover();
-    const checkboxDisabledBorderAfterHover = await checkboxDisabled.evaluate((el) => getComputedStyle(el).borderColor);
-    expect(checkboxDisabledBorderAfterHover).toBe(checkboxDisabledBorderBeforeHover);
-
-    const switchDisabledBorderBeforeHover = await switchDisabled.evaluate((el) => getComputedStyle(el).borderColor);
-    await switchDisabled.hover();
-    const switchDisabledBorderAfterHover = await switchDisabled.evaluate((el) => getComputedStyle(el).borderColor);
-    expect(switchDisabledBorderAfterHover).toBe(switchDisabledBorderBeforeHover);
-  });
-
-  test("uses default neutral text tokens when no semantic intent is specified", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const values = await page.evaluate(() => {
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      const getBg = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"]`);
-        return el ? getComputedStyle(el).backgroundColor : "";
-      };
-
-      const getFg = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"]`);
-        return el ? getComputedStyle(el).color : "";
-      };
-
-      const getProgressBg = (testId: string) => {
-        const el = document.querySelector(`[data-testid="${testId}"]`);
-        return el ? getComputedStyle(el, "::after").backgroundColor : "";
-      };
-
-      return {
-        checkboxBg: getBg("checkbox-checked-test"),
-        switchBg: getBg("switch-checked-test"),
-        alertFg: getFg("neutral-alert"),
-        badgeFg: getFg("badge-neutral"),
-        progressBg: getProgressBg("progress-bar"),
-        tokenText: resolveToken("text"),
-      };
-    });
-
-    expectSameColor(values.checkboxBg, values.tokenText, "checked checkbox background");
-    expectSameColor(values.switchBg, values.tokenText, "checked switch background");
-    expectSameColor(values.alertFg, values.tokenText, "neutral alert text");
-    expectSameColor(values.badgeFg, values.tokenText, "neutral badge text");
-    expectSameColor(values.progressBg, values.tokenText, "progress fill");
-  });
-
-  /* A component that reads `--intent-*` without joining the reset list fails
-     silently: the undefined property makes every `color-mix()` referencing it
-     invalid at computed-value time, so the whole declaration is dropped and the
-     element falls back to a preflight value. This asserts the slots resolve on
-     every class that reads them. */
-  test("defines every intent slot on each component that reads them", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const missing = await page.evaluate(() => {
-      const classNames = [
-        "btn",
-        "alert",
-        "badge",
-        "card",
-        "panel",
-        "checkbox",
-        "radio",
-        "switch",
-        "progress",
-        "skeleton",
-        "loader",
-        "control-base",
-        "ipt",
-        "textarea",
-        "select",
-        "table",
-        "kbd",
-        "code",
-        "pre",
-        "quote",
-        "divider",
-        "tooltip",
-        "empty-state",
-      ];
-      const slots = [
-        "--intent-color",
-        "--intent-contrast",
-        "--intent-hover",
-        "--intent-strong",
-        "--intent-subtle",
-        "--intent-border",
-      ];
-
-      const gaps: string[] = [];
-
-      for (const className of classNames) {
-        const element = document.createElement("div");
-        element.className = className;
-        document.body.append(element);
-
-        const styles = getComputedStyle(element);
-        for (const slot of slots) {
-          if (styles.getPropertyValue(slot).trim() === "") {
-            gaps.push(`.${className} is missing ${slot}`);
-          }
-        }
-
-        element.remove();
-      }
-
-      return gaps;
-    });
-
-    expect(missing).toEqual([]);
-  });
-
-  /* The shared `--intent-*` contract only works because a component's neutral
-     reset carries zero specificity: an intent class on the element must beat it,
-     while an inherited value from a container must not. Both directions are
-     asserted here because breaking either one is silent. */
-  test("applies intent on the element without cascading it from a container", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const values = await page.evaluate(() => {
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      const host = document.createElement("section");
-      host.className = "success";
-      document.body.append(host);
-
-      const inherited = document.createElement("button");
-      inherited.className = "btn";
-      const explicit = document.createElement("button");
-      explicit.className = "btn destructive";
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      host.append(inherited, explicit, badge);
-
-      const results = {
-        // Inside a `.success` container, but carrying no intent of their own.
-        inheritedButtonBg: getComputedStyle(inherited).backgroundColor,
-        inheritedBadgeFg: getComputedStyle(badge).color,
-        // Carrying its own intent, which must win over the container.
-        explicitButtonBg: getComputedStyle(explicit).backgroundColor,
-        tokenDestructive: resolveToken("destructive"),
-        tokenSuccess: resolveToken("success"),
-        tokenText: resolveToken("text"),
-      };
-
-      host.remove();
-
-      return results;
-    });
-
-    expectSameColor(values.inheritedButtonBg, values.tokenText, "button ignores container intent");
-    expectSameColor(values.inheritedBadgeFg, values.tokenText, "badge ignores container intent");
-    expectSameColor(values.explicitButtonBg, values.tokenDestructive, "element intent wins");
-
-    expect(values.tokenSuccess).not.toBe(values.tokenText);
-  });
-
-  test("renders active progress bar with skeleton animation on pseudo-element", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const activeProgressStyles = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="progress-bar-active"]');
-      if (!el) {
-        throw new Error("Missing active progress bar fixture");
-      }
-      const beforeStyles = getComputedStyle(el, "::before");
-      return {
-        animationName: beforeStyles.animationName,
-        display: beforeStyles.display,
-        backgroundImage: beforeStyles.backgroundImage,
-      };
-    });
-
-    expect(activeProgressStyles.animationName).toContain("anim-skeleton");
-    expect(activeProgressStyles.display).toBe("block");
-    expect(activeProgressStyles.backgroundImage).toContain("linear-gradient");
-  });
-
-  test("renders indeterminate progress bar with sliding animation", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const indeterminateProgressStyles = await page.evaluate(() => {
-      const el = document.querySelector('[data-testid="progress-bar-indeterminate"]');
-      if (!el) {
-        throw new Error("Missing indeterminate progress bar fixture");
-      }
-      const afterStyles = getComputedStyle(el, "::after");
-      return {
-        animationName: afterStyles.animationName,
-        display: afterStyles.display,
-        width: afterStyles.width,
-      };
-    });
-
-    expect(indeterminateProgressStyles.animationName).toContain("anim-progress-indeterminate");
-    expect(indeterminateProgressStyles.display).toBe("block");
-    expect(indeterminateProgressStyles.width).not.toBe("0px");
-  });
-
-  test("configures input icons with composable classes, position, and theme variables", async ({ page }) => {
-    await page.goto("http://localhost:5184/forms/?env=vanilla");
-
-    const emailInput = page.getByTestId("icon-input-email");
-    const rightInput = page.getByTestId("icon-input-right");
-    const searchStandardInput = page.getByTestId("matrix-search-standard");
-
-    const emailBgBefore = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-    expect(emailBgBefore).toContain("data:image/svg+xml");
-    expect(emailBgBefore).toContain("%23737373");
-
-    await emailInput.focus();
-    const emailBgFocused = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-    expect(emailBgFocused).toContain("data:image/svg+xml");
-    expect(emailBgFocused).toContain("%230a0a0a");
-
-    // Search input without .icon should not have native WebKit search decoration conflict
-    const searchPaddingLeft = await searchStandardInput.evaluate((el) => getComputedStyle(el).paddingLeft);
-    expect(searchPaddingLeft).toBe("12px");
-
-    const rightPadding = await rightInput.evaluate((el) => getComputedStyle(el).paddingRight);
-    const rightPos = await rightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
-
-    expect(rightPadding).not.toBe("0px");
-    expect(rightPos).toContain("100%");
-  });
-});
-
-test.describe("stage two coverage", () => {
-  test("gives cards elevation and reads intent and presentation", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      const neutral = get("card-neutral");
-      const successSoft = get("card-success-soft");
-      const primaryOut = get("card-primary-out");
-      const panel = get("panel-neutral");
-
-      return {
-        neutralBackground: neutral.backgroundColor,
-        neutralShadow: neutral.boxShadow,
-        outBackground: primaryOut.backgroundColor,
-        outBorder: primaryOut.borderTopColor,
-        outBorderWidth: primaryOut.borderTopWidth,
-        panelShadow: panel.boxShadow,
-        softBackground: successSoft.backgroundColor,
-        tokenBackground: resolveToken("background"),
-        tokenPrimary: resolveToken("primary"),
-      };
-    });
-
-    // The elevation tokens finally have a component that reads them.
-    expect(styles.neutralShadow).not.toBe("none");
-    // A panel is the flush sibling, so it stays unelevated.
-    expect(styles.panelShadow).toBe("none");
-
-    expectSameColor(styles.neutralBackground, styles.tokenBackground, "neutral card background");
-    expect(getColorDistance(styles.softBackground, styles.tokenBackground)).toBeGreaterThan(2);
-    expectSameColor(styles.outBackground, styles.tokenBackground, "outlined card stays unfilled");
-    expectSameColor(styles.outBorder, styles.tokenPrimary, "outlined card border");
-    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(1);
-  });
-
-  test("caps text control fill so a flat container stays readable", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-
-      return {
-        default: get("ipt-default").backgroundColor,
-        flat: get("ipt-flat").backgroundColor,
-        flatBorderWidth: get("ipt-flat").borderTopWidth,
-        ghostBorder: get("ipt-ghost").borderTopColor,
-        outBorderWidth: get("ipt-out").borderTopWidth,
-        soft: get("ipt-soft").backgroundColor,
-      };
-    });
-
-    // `.flat` resolves to the same tint as `.soft` rather than a solid fill.
-    expectSameColor(styles.flat, styles.soft, "flat input clamps to the soft tint");
-    expect(getColorDistance(styles.flat, styles.default)).toBeGreaterThan(1);
-    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.flatBorderWidth));
-    expect(isTransparent(styles.ghostBorder)).toBe(true);
-  });
-
-  test("lets a table row override the table intent while others inherit it", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-      const readIntent = (testId: string) =>
-        getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!)
-          .getPropertyValue("--intent-color")
-          .trim();
-
-      return {
-        inheritedRow: readIntent("table-row-inherited"),
-        overriddenRow: readIntent("table-row-destructive"),
-        tokenDestructive: resolveToken("destructive"),
-        tokenSuccess: resolveToken("success"),
-      };
-    });
-
-    // Rows inherit rather than reset, so the table's intent reaches them.
-    expect(styles.inheritedRow).not.toBe("");
-    expect(styles.inheritedRow).not.toBe(styles.overriddenRow);
-  });
-
-  test("colors loaders, dividers, and keyboard keys by intent", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      return {
-        dividerColor: get("divider-info").borderTopColor,
-        kbdDestructive: get("kbd-destructive").color,
-        kbdNeutral: get("kbd-neutral").color,
-        loaderColor: get("loader-success").backgroundColor,
-        tokenDestructiveStrong: resolveToken("destructive-strong"),
-        tokenInfo: resolveToken("info"),
-        tokenSuccess: resolveToken("success"),
-      };
-    });
-
-    expectSameColor(styles.loaderColor, styles.tokenSuccess, "loader intent color");
-    expectSameColor(styles.dividerColor, styles.tokenInfo, "divider intent color");
-    expectSameColor(styles.kbdDestructive, styles.tokenDestructiveStrong, "kbd intent text");
-    expect(getColorDistance(styles.kbdNeutral, styles.kbdDestructive)).toBeGreaterThan(2);
-  });
-});
-
-test.describe("presentation coverage", () => {
-  /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
-     as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
-     the ring silently disappears. Asserted on a real focus because that is the
-     only state where the composed list applies. */
-  test("keeps a focus ring on text controls", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    // Focus moves between controls, so these must be read one at a time.
-    const readFocused = async (testId: string) => {
-      await page.getByTestId(testId).focus();
-
-      return page.getByTestId(testId).evaluate((element) => {
-        const computed = getComputedStyle(element);
-
-        return { borderColor: computed.borderTopColor, boxShadow: computed.boxShadow };
-      });
+      return color;
     };
 
-    const neutral = await readFocused("ipt-default");
-    const intent = await readFocused("ipt-success");
+    const host = document.createElement("section");
+    host.className = "success";
+    document.body.append(host);
 
-    for (const [label, styles] of [
-      ["neutral", neutral],
-      ["success", intent],
-    ] as const) {
-      expect(styles.boxShadow, `${label} focus ring`).not.toBe("none");
-      expect(styles.boxShadow, `${label} focus ring`).toContain("px");
-      expect(isTransparent(styles.borderColor), `${label} focus border`).toBe(false);
-    }
+    const inherited = document.createElement("button");
+    inherited.className = "btn";
+    const explicit = document.createElement("button");
+    explicit.className = "btn destructive";
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    host.append(inherited, explicit, badge);
+
+    const results = {
+      // Inside a `.success` container, but carrying no intent of their own.
+      inheritedButtonBg: getComputedStyle(inherited).backgroundColor,
+      inheritedBadgeFg: getComputedStyle(badge).color,
+      // Carrying its own intent, which must win over the container.
+      explicitButtonBg: getComputedStyle(explicit).backgroundColor,
+      tokenDestructive: resolveToken("destructive"),
+      tokenSuccess: resolveToken("success"),
+      tokenText: resolveToken("text"),
+    };
+
+    host.remove();
+
+    return results;
   });
 
-  test("moves the control border on hover", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
+  expectSameColor(values.inheritedButtonBg, values.tokenText, "button ignores container intent");
+  expectSameColor(values.inheritedBadgeFg, values.tokenText, "badge ignores container intent");
+  expectSameColor(values.explicitButtonBg, values.tokenDestructive, "element intent wins");
 
-    const resting = await page
-      .getByTestId("ipt-success")
-      .evaluate((element) => getComputedStyle(element).borderTopColor);
+  expect(values.tokenSuccess).not.toBe(values.tokenText);
+});
 
-    await page.getByTestId("ipt-success").hover();
+/* An alias has to resolve to exactly the same tones as the intent it aliases,
+   or a component styled with one drifts from a component styled with the
+   other. */
+test("resolves every destructive alias to the same tones", async ({ page }) => {
+  await page.goto(PLAYGROUND_URL);
 
-    await expect
-      .poll(async () =>
-        getColorDistance(
-          await page.getByTestId("ipt-success").evaluate((element) => getComputedStyle(element).borderTopColor),
-          resting,
-        ),
-      )
-      .toBeGreaterThan(2);
-  });
+  const resolved = await page.evaluate(() =>
+    ["destructive", "danger", "error"].map((intent) => {
+      const element = document.createElement("div");
+      element.className = `badge ${intent}`;
+      document.body.append(element);
 
-  /* Both tints are mixed toward `transparent`, so their strength is their alpha.
-     Comparing them against an opaque token instead would be dominated by that
-     alpha gap and report every tint as equally distant. */
-  test("keeps the soft control tint quieter than a soft badge", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
+      const styles = getComputedStyle(element);
+      const value = [
+        styles.getPropertyValue("--intent-color"),
+        styles.getPropertyValue("--intent-contrast"),
+        styles.getPropertyValue("--intent-border"),
+      ].join("|");
 
-    const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      element.remove();
 
-      return {
-        softBadge: get("badge-soft-success").backgroundColor,
-        softInput: get("ipt-success-soft").backgroundColor,
-      };
-    });
+      return value;
+    }),
+  );
 
-    const inputAlpha = readSrgb(styles.softInput).alpha;
-    const badgeAlpha = readSrgb(styles.softBadge).alpha;
-
-    // Visible, but markedly quieter than the badge tint.
-    expect(inputAlpha).toBeGreaterThan(0);
-    expect(inputAlpha).toBeLessThan(badgeAlpha / 1.5);
-  });
-
-  test("reads presentation on key caps and tables", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-      const head = getComputedStyle(document.querySelector('[data-testid="table-success"] thead th')!);
-      const resolveToken = (tokenName: string) => {
-        const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
-        document.body.append(probe);
-        const color = getComputedStyle(probe).color;
-        probe.remove();
-        return color;
-      };
-
-      return {
-        flatBackground: get("kbd-flat").backgroundColor,
-        flatBorderColor: get("kbd-flat").borderTopColor,
-        flatColor: get("kbd-flat").color,
-        neutralBackground: get("kbd-neutral").backgroundColor,
-        outBorderWidth: get("kbd-out").borderTopWidth,
-        plainBorderColor: get("kbd-neutral").borderTopColor,
-        plainBorderWidth: get("kbd-neutral").borderTopWidth,
-        softBackground: get("kbd-soft").backgroundColor,
-        softBorderColor: get("kbd-soft").borderTopColor,
-        tableHeadBackground: head.backgroundColor,
-        tokenBorder: resolveToken("border"),
-        tokenPrimary: resolveToken("primary"),
-        tokenSurface: resolveToken("surface"),
-      };
-    });
-
-    // A plain key cap keeps the neutral surface tone.
-    expectSameColor(styles.neutralBackground, styles.tokenSurface, "neutral kbd surface");
-    // Each presentation moves it somewhere different.
-    expect(getColorDistance(styles.softBackground, styles.neutralBackground)).toBeGreaterThan(2);
-    expectSameColor(styles.flatBackground, styles.tokenPrimary, "flat kbd fill");
-    expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
-    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
-    /* Only the default draws a visible line, and it is the quiet border color.
-       `.out` keeps that line but doubles it, `.soft` drops it, and `.flat` lands
-       on its own fill so a filled cap has no stray ring around it. */
-    expectSameColor(styles.plainBorderColor, styles.tokenBorder, "plain kbd edge");
-    expect(readSrgb(styles.softBorderColor).alpha, styles.softBorderColor).toBeLessThan(0.2);
-    expectSameColor(styles.flatBorderColor, styles.flatBackground, "flat kbd edge");
-    // A soft table tints its header away from the plain surface tone.
-    expect(getColorDistance(styles.tableHeadBackground, styles.tokenSurface)).toBeGreaterThan(2);
-  });
+  expect(new Set(resolved).size).toBe(1);
 });

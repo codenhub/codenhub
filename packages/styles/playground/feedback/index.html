@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Feedback | @codenhub/styles playground</title>
+    <script src="/shared/playground.js"></script>
+    <script src="/shared/matrix.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+  </head>
+  <body>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn stack tight">
+        <p class="text-label">UI fixtures</p>
+        <h1 class="text-title-lg">Feedback</h1>
+        <p class="text-body text-text-secondary">
+          Everything that reports state back: alerts, badges, progress, skeletons, loaders, and tooltips. Each grid is
+          one row per presentation and one column per intent, in the order neutral, primary, secondary, success,
+          warning, destructive, info, preceded by a cell with no intent class at all.
+        </p>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Alerts</h2>
+          <p class="text-body text-text-secondary">
+            Without a presentation an alert is tinted, intent-colored, and softly bordered.
+          </p>
+        </div>
+        <div data-matrix="alert" data-matrix-states="rest" data-testid="alert-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Icon</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.icon</code>
+            adds padding and a symbol. Success, warning, and destructive have their own; everything else uses the
+            information symbol.
+          </p>
+          <div data-matrix="alert" data-matrix-states="icon" data-testid="alert-icon-matrix"></div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Intent aliases</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">danger</code>
+            and
+            <code class="code">error</code>
+            alias
+            <code class="code">destructive</code>
+            , down to the icon.
+          </p>
+          <div
+            data-matrix="alert"
+            data-matrix-intents="destructive,danger,error"
+            data-matrix-presentations="plain"
+            data-matrix-states="icon"
+            data-testid="alert-alias-matrix"
+          ></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Badges</h2>
+          <p class="text-body text-text-secondary">A badge reads the same presentation classes as an alert.</p>
+        </div>
+        <div data-matrix="badge" data-matrix-states="rest" data-testid="badge-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Progress</h2>
+          <p class="text-body text-text-secondary">
+            Presentation reaches the track border and its width; the fill always uses the intent color.
+          </p>
+        </div>
+        <div data-matrix="progress" data-matrix-states="rest" data-testid="progress-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Active</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.active</code>
+            shimmers the track behind the fill.
+          </p>
+          <div
+            data-matrix="progress"
+            data-matrix-presentations="plain"
+            data-matrix-states="active"
+            data-testid="progress-active-matrix"
+          ></div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Indeterminate</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.indeterminate</code>
+            animates a partial fill and ignores
+            <code class="code">--progress-value</code>
+            .
+          </p>
+          <div
+            data-matrix="progress"
+            data-matrix-presentations="plain"
+            data-matrix-states="indeterminate"
+            data-testid="progress-indeterminate-matrix"
+          ></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Skeletons</h2>
+          <p class="text-body text-text-secondary">
+            Intent only. A skeleton is a placeholder for content that has not arrived, so a presentation has nothing to
+            act on.
+          </p>
+        </div>
+        <div data-matrix="skeleton" data-matrix-states="rest" data-testid="skeleton-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Loaders</h2>
+          <p class="text-body text-text-secondary">
+            With no intent a loader keeps
+            <code class="code">currentColor</code>
+            , so it matches whatever text surrounds it.
+          </p>
+        </div>
+        <div data-matrix="loader" data-matrix-states="rest" data-testid="loader-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Sizes</h3>
+          <div class="cluster">
+            <span class="loader sm" data-testid="loader-sm" role="img" aria-label="Small loader"></span>
+            <span class="loader" data-testid="loader-default" role="img" aria-label="Default loader"></span>
+            <span class="loader lg" data-testid="loader-lg" role="img" aria-label="Large loader"></span>
+          </div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Animations</h3>
+          <p class="text-body text-text-secondary">
+            A separate axis from intent: each variant swaps the mask, not the color. Under
+            <code class="code">prefers-reduced-motion</code>
+            every one of them falls back to a static mask.
+          </p>
+          <div class="cluster">
+            <span class="loader lg dots-wave" data-testid="loader-dots-wave" role="img" aria-label="Dots wave"></span>
+            <span class="loader lg dots-fade" data-testid="loader-dots-fade" role="img" aria-label="Dots fade"></span>
+            <span
+              class="loader lg dots-queue"
+              data-testid="loader-dots-queue"
+              role="img"
+              aria-label="Dots queue"
+            ></span>
+            <span
+              class="loader lg dots-rotate"
+              data-testid="loader-dots-rotate"
+              role="img"
+              aria-label="Dots rotate"
+            ></span>
+            <span class="loader lg dots-grow" data-testid="loader-dots-grow" role="img" aria-label="Dots grow"></span>
+            <span
+              class="loader lg dots-grow-alternate"
+              data-testid="loader-dots-grow-alternate"
+              role="img"
+              aria-label="Dots grow alternate"
+            ></span>
+            <span
+              class="loader lg dot-bounce"
+              data-testid="loader-dot-bounce"
+              role="img"
+              aria-label="Dot bounce"
+            ></span>
+            <span class="loader lg bars-wave" data-testid="loader-bars-wave" role="img" aria-label="Bars wave"></span>
+            <span
+              class="loader lg pulse-ring"
+              data-testid="loader-pulse-ring"
+              role="img"
+              aria-label="Pulse ring"
+            ></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Tooltips</h2>
+          <p class="text-body text-text-secondary">
+            The bubble ignores the presentation fill: a transparent tooltip floating over arbitrary content is
+            unreadable. It does read intent and material, so an aesthetic still shapes it. Point at any cell.
+          </p>
+        </div>
+        <div data-matrix="tooltip" data-matrix-states="rest" data-testid="tooltip-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Positions</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">data-tooltip-position</code>
+            places the bubble; with no attribute it goes above the host.
+          </p>
+          <div class="cluster">
+            <span
+              class="tooltip tooltip-icon"
+              data-tooltip="Fallback tooltip"
+              data-testid="fallback-tooltip"
+              tabindex="0"
+              aria-label="Fallback tooltip"
+            >
+              ?
+            </span>
+            <span
+              class="tooltip tooltip-icon"
+              data-tooltip="Top tooltip"
+              data-tooltip-position="top"
+              data-testid="top-tooltip"
+              tabindex="0"
+              aria-label="Top tooltip"
+            >
+              ?
+            </span>
+            <span
+              class="tooltip tooltip-icon"
+              data-tooltip="Right tooltip"
+              data-tooltip-position="right"
+              data-testid="right-tooltip"
+              tabindex="0"
+              aria-label="Right tooltip"
+            >
+              ?
+            </span>
+            <span
+              class="tooltip tooltip-icon"
+              data-tooltip="Bottom tooltip"
+              data-tooltip-position="bottom"
+              data-testid="bottom-tooltip"
+              tabindex="0"
+              aria-label="Bottom tooltip"
+            >
+              ?
+            </span>
+            <span
+              class="tooltip tooltip-icon"
+              data-tooltip="Left tooltip"
+              data-tooltip-position="left"
+              data-testid="left-tooltip"
+              tabindex="0"
+              aria-label="Left tooltip"
+            >
+              ?
+            </span>
+          </div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Any host</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.tooltip</code>
+            is a host, not a shape.
+            <code class="code">.tooltip-icon</code>
+            is the circular chip; without it any element can carry a bubble.
+          </p>
+          <div class="cluster">
+            <button
+              class="btn primary tooltip"
+              data-tooltip="Runs the deploy"
+              data-tooltip-position="bottom"
+              data-testid="tooltip-host-button"
+            >
+              Deploy
+            </button>
+            <span
+              class="badge success tooltip"
+              data-tooltip="Last checked a minute ago"
+              data-testid="tooltip-host-badge"
+            >
+              Live
+            </span>
+            <span
+              class="tooltip"
+              data-tooltip="Shown without hover"
+              data-state="open"
+              data-tooltip-position="right"
+              data-testid="tooltip-open"
+              tabindex="0"
+            >
+              Always open
+            </span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

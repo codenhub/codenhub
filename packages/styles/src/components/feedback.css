@@ -39,16 +39,6 @@
   border-radius: var(--ui-radius-surface, var(--radius-surface));
   box-shadow: var(--ui-shadow, none);
 
-  /* A border-side treatment rather than a strength, so it stays an alert
-     modifier and is documented as outside the presentation contract. */
-  &.left-accent {
-    @apply border-y-transparent border-r-transparent text-(--intent-color);
-
-    background-color: color-mix(in oklab, var(--intent-color) 12%, transparent);
-    border-left-width: 4px;
-    border-left-color: var(--intent-color);
-  }
-
   &.icon {
     @apply relative pl-11;
 

@@ -5,59 +5,105 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Typography | @codenhub/styles playground</title>
     <script src="/shared/playground.js"></script>
+    <script src="/shared/matrix.js"></script>
     <link rel="stylesheet" href="/shared/playground.css" />
-    <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    <main class="section" data-testid="preview-root">
-      <div class="section-content view vertical loose">
-        <header class="stack tight">
-          <p class="text-label">Content utilities</p>
-          <h1 class="text-title-lg">Typography</h1>
-        </header>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn stack tight">
+        <p class="text-label">Content utilities</p>
+        <h1 class="text-title-lg">Typography and content</h1>
+        <p class="text-body text-text-secondary">
+          The type scale, and the content primitives that carry it: tables, key caps, code, and quotations. Key caps and
+          tables read presentation; code, blocks, and quotes read intent only.
+        </p>
+      </section>
 
-        <section class="stack tight">
-          <h2 class="text-title">Type scale</h2>
-          <p class="text-body text-text-secondary">Predefined typographic hierarchy scales and utility elements.</p>
-          <p class="text-display">Display</p>
-          <p class="text-title-lg">Large title</p>
-          <p class="text-title">Title</p>
-          <p class="text-title-sm">Small title</p>
-          <p class="text-label-lg">Large label</p>
-          <p class="text-label">Label</p>
-          <p class="text-body">
-            Body text with
-            <code class="code">inlineCode()</code>
-            .
-          </p>
-          <pre class="pre">const packageName = "@codenhub/styles";</pre>
-          <p>
-            Open search with
-            <kbd class="kbd" data-testid="keyboard">Ctrl</kbd>
-            +
-            <kbd class="kbd">K</kbd>
-            .
-          </p>
-        </section>
+      <section class="sect-inn stack tight narrow">
+        <h2 class="text-title">Type scale</h2>
+        <p class="text-body text-text-secondary">Predefined typographic hierarchy scales and utility elements.</p>
+        <p class="text-display">Display</p>
+        <p class="text-title-lg">Large title</p>
+        <p class="text-title">Title</p>
+        <p class="text-title-sm">Small title</p>
+        <p class="text-label-lg">Large label</p>
+        <p class="text-label">Label</p>
+        <p class="text-body">
+          Body text with
+          <code class="code">inlineCode()</code>
+          and
+          <kbd class="kbd" data-testid="keyboard">Ctrl</kbd>
+          .
+        </p>
+        <p class="selection-contrast text-body" data-testid="selection-contrast">
+          Select this line to see the inverted selection colors.
+        </p>
+      </section>
 
-        <section class="stack tight">
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Key caps</h2>
+          <p class="text-body text-text-secondary">
+            A key cap reads the whole presentation contract: fill, text, border, and border width.
+          </p>
+        </div>
+        <div data-matrix="kbd" data-matrix-states="rest" data-testid="kbd-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Code</h2>
+          <p class="text-body text-text-secondary">
+            Intent tints the surface. Code draws no border of its own, and an aesthetic leaves it alone: a chip is
+            content rather than structure.
+          </p>
+        </div>
+        <div data-matrix="code" data-matrix-states="rest" data-testid="code-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Blocks</h3>
+          <p class="text-body text-text-secondary">
+            <code class="code">.pre</code>
+            is the scrollable block form, with larger padding.
+          </p>
+          <div data-matrix="pre" data-matrix-states="rest" data-testid="pre-matrix"></div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
           <h2 class="text-title">Quotations</h2>
-          <p class="text-body text-text-secondary">Block quotes and inline quote semantics for text content.</p>
-          <blockquote class="quote" data-testid="quote">
-            Small primitives should make simple interfaces faster to build.
-            <cite>Codenhub styles</cite>
-          </blockquote>
-          <p>
+          <p class="text-body text-text-secondary">
+            Intent colors the left rule of a block quote. A nested
+            <code class="code">cite</code>
+            takes attribution styling.
+          </p>
+        </div>
+        <div data-matrix="quote" data-matrix-states="rest" data-testid="quote-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Inline</h3>
+          <p class="text-body">
             Use
             <q class="quote-inline" data-testid="quote-inline">native semantics first</q>
             where possible.
           </p>
-        </section>
+        </div>
+      </section>
 
-        <section class="stack tight">
-          <h2 class="text-title">Quiet table</h2>
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
+          <h2 class="text-title">Tables</h2>
           <p class="text-body text-text-secondary">
-            Unobtrusive borderless data tables with aligned captions and cells.
+            Presentation reaches the header fill and the border; intent reaches the header, the border, and the row
+            hover.
+          </p>
+        </div>
+        <div data-matrix="table" data-matrix-states="rest" data-testid="table-matrix"></div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Full anatomy</h3>
+          <p class="text-body text-text-secondary">
+            Caption, head, body, and foot, wrapped in
+            <code class="code">.table-wrap</code>
+            so a wide table scrolls instead of stretching the page.
           </p>
           <div class="table-wrap">
             <table class="table" data-testid="table">
@@ -86,8 +132,35 @@
               </tfoot>
             </table>
           </div>
-        </section>
-      </div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Row intent</h3>
+          <p class="text-body text-text-secondary">
+            The one place intent cascades: rows are parts of the table rather than independent components, so they
+            inherit its intent. A row carrying its own still wins.
+          </p>
+          <div class="table-wrap">
+            <table class="success soft table" data-testid="table-success">
+              <thead>
+                <tr>
+                  <th scope="col">Package</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-testid="table-row-inherited">
+                  <td>styles</td>
+                  <td>Ready</td>
+                </tr>
+                <tr class="destructive" data-testid="table-row-destructive">
+                  <td>legacy</td>
+                  <td>Failing</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   </body>
 </html>

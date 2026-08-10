@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
+const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
-const COMPONENT_STYLES_URL = "http://localhost:5184/components/entry-components.css";
+const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
 const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
 const CONTROL_CLASSES = ["control-base", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 const LOADER_VARIANTS = [
@@ -31,7 +31,7 @@ test("associates every native form label with its control", async ({ page }) => 
 });
 
 test("gives every loader fixture a unique ID matching its variant", async ({ page }) => {
-  await page.goto(COMPONENTS_URL);
+  await page.goto(FEEDBACK_URL);
 
   const expectedFixtures = [
     { className: "loader", testId: "loader-default" },
@@ -58,10 +58,10 @@ test("gives every loader fixture a unique ID matching its variant", async ({ pag
 });
 
 test("makes tooltip examples keyboard-focusable and accessibly named", async ({ page }) => {
-  await page.goto(COMPONENTS_URL);
+  await page.goto(FEEDBACK_URL);
 
   const tooltips = page.locator(".tooltip-icon");
-  await expect(tooltips).toHaveCount(5);
+  await expect(tooltips.first()).toBeVisible();
   const tooltipAttributes = await tooltips.evaluateAll((elements) =>
     elements.map((tooltip) => ({
       accessibleName: tooltip.getAttribute("aria-label"),
@@ -77,33 +77,36 @@ test("makes tooltip examples keyboard-focusable and accessibly named", async ({ 
 });
 
 test("exposes determinate and indeterminate progress semantics", async ({ page }) => {
-  await page.goto(COMPONENTS_URL);
+  await page.goto(FEEDBACK_URL);
 
   const progressBars = page.getByRole("progressbar");
-  await expect(progressBars).toHaveCount(10);
+  await expect(progressBars.first()).toBeVisible();
 
-  await expect(page.getByTestId("progress-bar")).toHaveAttribute("aria-valuenow", "64");
-  await expect(page.getByTestId("progress-bar-active")).toHaveAttribute("aria-valuenow", "64");
-  await expect(page.getByTestId("progress-bar-primary")).toHaveAttribute("aria-valuenow", "50");
-  await expect(page.getByTestId("progress-bar-secondary")).toHaveAttribute("aria-valuenow", "80");
-  await expect(page.getByTestId("progress-bar-success")).toHaveAttribute("aria-valuenow", "40");
-  await expect(page.getByTestId("progress-bar-success-active")).toHaveAttribute("aria-valuenow", "40");
-  await expect(page.getByTestId("progress-bar-warning")).toHaveAttribute("aria-valuenow", "75");
-  await expect(page.getByTestId("progress-bar-destructive")).toHaveAttribute("aria-valuenow", "90");
-  await expect(page.getByTestId("progress-bar-info")).toHaveAttribute("aria-valuenow", "30");
+  await expect(page.getByTestId("progress-plain-none")).toHaveAttribute("aria-valuenow", "60");
+  await expect(page.getByTestId("progress-plain-success-active")).toHaveAttribute("aria-valuenow", "60");
 
-  const progressRanges = await progressBars.evaluateAll((elements) =>
+  const semantics = await progressBars.evaluateAll((elements) =>
     elements.map((progressBar) => ({
+      determinate: !progressBar.classList.contains("indeterminate"),
+      label: progressBar.getAttribute("aria-label"),
       maximum: progressBar.getAttribute("aria-valuemax"),
       minimum: progressBar.getAttribute("aria-valuemin"),
+      value: progressBar.getAttribute("aria-valuenow"),
     })),
   );
-  for (const range of progressRanges) {
-    expect(range.minimum).toBe("0");
-    expect(range.maximum).toBe("100");
-  }
 
-  await expect(page.getByTestId("progress-bar-indeterminate")).not.toHaveAttribute("aria-valuenow");
+  for (const bar of semantics) {
+    expect(bar.minimum).toBe("0");
+    expect(bar.maximum).toBe("100");
+    expect(bar.label, "every progress bar is named").toBeTruthy();
+    /* An indeterminate bar reports no value at all; reporting one would claim
+       progress it cannot know. */
+    if (bar.determinate) {
+      expect(bar.value, bar.label ?? "").toBe("60");
+    } else {
+      expect(bar.value, bar.label ?? "").toBeNull();
+    }
+  }
 });
 
 test("uses visible system-color outlines for form controls in forced colors", async ({ page }) => {
@@ -201,7 +204,7 @@ test("uses visible system-color outlines for unclassed native controls in forced
 
 test("keeps the select arrow themed for every dark-mode path while light override wins", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
-  await page.goto(COMPONENTS_URL);
+  await page.goto(FEEDBACK_URL);
 
   const explicitThemeImages = await page.evaluate(() => {
     const readArrowImage = ({ className = "", theme }: { className?: string; theme?: "dark" | "light" }) => {
@@ -301,7 +304,7 @@ test("stops every loader variant under reduced motion with the component-only st
 });
 
 test("allows document-level horizontal overflow instead of clipping it", async ({ page }) => {
-  await page.goto(COMPONENTS_URL);
+  await page.goto(FEEDBACK_URL);
 
   const overflow = await page.evaluate(() => ({
     body: getComputedStyle(document.body).overflowX,

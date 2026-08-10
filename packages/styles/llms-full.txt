@@ -754,21 +754,13 @@ intents use corresponding symbols; other intents use the information symbol.
 Alerts and badges read the shared [presentation](#presentation) classes. Without
 one they use a tinted surface, intent-colored text, and a mixed intent border.
 
-`.left-accent` is alert-only and sits outside the presentation contract: it is a
-border-side treatment rather than a strength, so it does not cascade from a
-container.
-
-| Class          | Purpose                                                           |
-| -------------- | ----------------------------------------------------------------- |
-| `.left-accent` | Tinted surface with only a four-pixel intent-colored left border. |
-
 Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
 <div class="alert primary flat" role="status">Deployment started.</div>
 <div class="alert warning soft icon" role="status">Review required.</div>
-<div class="alert destructive left-accent" role="alert">Deployment failed.</div>
+<div class="alert destructive out" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success flat">Live</span>
 <span class="badge info soft">Draft</span>

@@ -6,12 +6,11 @@ const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
 test("links to each focused playground route", async ({ page }) => {
   await page.goto(PLAYGROUND_URL);
 
-  await expect(page.locator('.playground-route[href="/typography/"]')).toBeVisible();
-  await expect(page.locator('.playground-route[href="/layout/"]')).toBeVisible();
-  await expect(page.locator('.playground-route[href="/buttons/"]')).toBeVisible();
-  await expect(page.locator('.playground-route[href="/components/"]')).toBeVisible();
-  await expect(page.locator('.playground-route[href="/forms/"]')).toBeVisible();
-  await expect(page.locator('.playground-route[href="/native/"]')).toBeVisible();
+  const routes = ["/buttons/", "/forms/", "/feedback/", "/surfaces/", "/typography/", "/layout/", "/native/"];
+
+  await Promise.all(
+    routes.map((path) => expect(page.locator(`.playground-route[href="${path}"]`), path).toBeVisible()),
+  );
 });
 
 test("puts the chosen aesthetic on the preview root and leaves the chrome alone", async ({ page }) => {
@@ -31,7 +30,7 @@ test("puts the chosen aesthetic on the preview root and leaves the chrome alone"
 });
 
 test("aligns narrow sections with the left edge every other section shares", async ({ page }) => {
-  await page.goto("http://localhost:5184/components/?env=vanilla");
+  await page.goto("http://localhost:5184/forms/?env=vanilla");
 
   const edges = await page.evaluate(() => {
     const sections = [...document.querySelectorAll(".sect-inn")];
