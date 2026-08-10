@@ -14,29 +14,19 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ### @codenhub
 
-- [x] Enable collocated demo app for each package
-- [x] Workspace-aware root scripts with flexible targets (`docs/tooling.md`)
-- [x] `hub check`: package lifecycle and documentation compliance
-- [x] `hub generate`: `llms-full.txt` and root README package list
-- [x] Share the `apps/docs` documentation model with `hub`
-- [x] Organize dependencies, remove unused, ensure all packages are self-contained
-- [x] `hub verify`, `hub clean`, `hub new`, `hub release`, and a pre-commit hook
-- [x] Pin the workspace toolchain so local and CI runs resolve the same Node and pnpm
-- [x] Separate unit and browser test scripts, with a managed Playwright browser install
-- [x] Repo-wide CI on pull requests: `pnpm verify --changed` and a generated-file drift gate
-- [x] Ship license files for every public package and the repository root
-
-### @codenhub/docs
-
-- [ ] Polish UI/UX and code in general
-- [ ] Add fuzzy search
+- [ ] Deploy `apps/docs` to Cloudflare Workers with pull-request previews
 
 ### @codenhub/styles
 
 - [x] Core CSS design tokens & Tailwind v4 integration
 - [x] Base component classes (`button`, `form`, `surface`, `feedback`, `loader`)
 - [x] Use `@codenhub/icons` for basic icons after the helper is ready
-- [ ] Aesthetic themes (glassmorphism, brutalism, glitch...) + refactor/improve semantics(flat, soft, ghost, outline...)
+- [ ] Cascading presentation tokens: `out`, `soft`, `ghost`, and `flat` set inherited appearance tokens that every component reads, so a container sets the look of its subtree and any element can still override it
+
+### @codenhub/docs
+
+- [ ] Polish UI/UX and code in general
+- [ ] Add fuzzy search
 
 ### @codenhub/icons
 
@@ -79,8 +69,15 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [ ] Publish public packages from CI with npm trusted publishing (OIDC) and provenance
 - [ ] Versioning and changelog workflow, weighing Changesets against `hub release`
-- [ ] Deploy `apps/docs` to Cloudflare Pages with pull-request previews
 - [ ] Documentation MCP server
+
+### @codenhub/styles
+
+- [ ] Aesthetic themes (glassmorphism, brutalism, glitch...) layered on the cascading presentation tokens
+
+### @codenhub/docs
+
+- [ ] Localize the site and package documentation with `@codenhub/i18n`
 
 ### @codenhub/kbd
 
