@@ -1,16 +1,38 @@
 ---
-import type { PackageStatus } from "../lib/catalog-core";
+import type { PackageStatus } from "@codenhub/tools/documentation";
 
 interface Props {
   status: PackageStatus;
 }
 
 const { status } = Astro.props;
-const statusIntent = status === "experimental" ? "warning" : "destructive";
+
+/* `active` is the norm and carries no badge: marking every healthy package
+   makes the two that need attention harder to spot. */
+const badges = {
+  deprecated: { intent: "destructive", label: "Deprecated" },
+  experimental: { intent: "warning", label: "Experimental" },
+} as const;
+
+const badge = status === "active" ? undefined : badges[status];
 ---
 
 {
-  status !== "active" && (
-    <span class:list={["badge", "soft", "capitalize", statusIntent]}>{status}</span>
+  badge !== undefined && (
+    <span class:list={["badge", "soft", "status-badge", badge.intent]} title={badge.label}>
+      {status === "experimental" ? (
+        <svg aria-hidden="true" class="status-badge-icon" viewBox="0 0 24 24">
+          <path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" />
+          <path d="M6.453 15h11.094" />
+          <path d="M8.5 2h7" />
+        </svg>
+      ) : (
+        <svg aria-hidden="true" class="status-badge-icon" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <path d="m4.9 4.9 14.2 14.2" />
+        </svg>
+      )}
+      <span class="sr-only">{badge.label}</span>
+    </span>
   )
 }

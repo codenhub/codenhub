@@ -41,11 +41,14 @@ describe("documentation chrome", () => {
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
     const html = await readOutput("i18n/index.html");
+    // The badge renders as an icon, so its accessible name is what carries the
+    // status to a screen reader and is what this asserts.
     const chromeLabels = html.match(
-      /class="package-navigation-title"[^>]*>.*?Internationalization.*?experimental.*?<\/div>/g,
+      /class="package-navigation-title"[^>]*>.*?Internationalization.*?Experimental.*?<\/div>/g,
     );
 
     expect(chromeLabels).toHaveLength(2);
+    expect(html).toContain('<span class="sr-only">Experimental</span>');
   });
 
   it("gives every header target a 44px minimum hit area", async () => {
@@ -72,6 +75,16 @@ describe("documentation chrome", () => {
     expect(activeRule).toContain("text-text");
     expect(activeRule).toContain("font-semibold");
     expect(activeRule).not.toMatch(/border|\b(?:p|m)l-/);
+  });
+
+  it("draws one rule when a section heading follows an authored thematic break", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const html = await readOutput("icons/index.html");
+
+    // The icons overview authors `---` before its `##` headings, which is what
+    // produced a doubled rule against the heading's own border.
+    expect(html).toMatch(/<hr>\s*<h2/);
+    expect(css).toMatch(/\.markdown-content hr:has\(\+ h2\)\s*\{[^}]*hidden/s);
   });
 
   it("constrains minimum height on layout containers to prevent viewport scrolling", async () => {

@@ -1,9 +1,13 @@
+.catalog-lede {
+  @apply text-text-secondary mt-3 mb-10 max-w-2xl leading-7;
+}
+
 .package-grid {
-  --layout-grid-min: 22rem;
+  --layout-grid-min: 20rem;
 }
 
 .package-card {
-  @apply border-border bg-background flex min-h-64 flex-col rounded-(--radius-surface) border p-6 no-underline shadow-(--elevation-low) transition-[background-color,border-color,transform,box-shadow];
+  @apply border-border bg-background flex flex-col rounded-(--radius-surface) border p-6 no-underline transition-[background-color,border-color,transform,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
 }
 
 .package-card[href]:hover {
@@ -12,8 +16,8 @@
   box-shadow: var(--elevation-mid);
 }
 
-.package-card-topline {
-  @apply text-text-secondary mb-10 flex items-center justify-between font-mono text-xs;
+.package-card-heading {
+  @apply flex items-center justify-between gap-3;
 }
 
 .package-card h2 {
@@ -21,13 +25,52 @@
 }
 
 .package-card p {
-  @apply text-text-secondary mt-3 leading-6;
+  @apply text-text-secondary mt-3 leading-7;
 }
 
 .package-card-pending {
-  @apply border-dashed shadow-none;
+  @apply border-dashed;
 }
 
 .package-card-action {
-  @apply text-label mt-auto flex items-center justify-between pt-8;
+  @apply text-label text-text-secondary mt-auto flex items-center gap-2 pt-6;
+}
+
+.package-card-arrow {
+  @apply size-4 fill-none stroke-current stroke-2 transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.package-card[href]:hover .package-card-action {
+  @apply text-text;
+}
+
+.package-card[href]:hover .package-card-arrow {
+  transform: translateX(0.25rem);
+}
+
+.status-badge {
+  @apply shrink-0 px-1.5;
+}
+
+.status-badge-icon {
+  @apply size-3.5 fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .package-card,
+  .package-card-arrow {
+    transition: none;
+  }
+
+  .package-card[href]:hover {
+    transform: none;
+  }
+
+  .package-card[href]:hover .package-card-arrow {
+    transform: none;
+  }
 }

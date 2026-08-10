@@ -1,58 +1,52 @@
 .landing-hero {
-  @apply border-border flex min-h-[calc(100dvh-var(--docs-header-height))] items-center border-b;
+  @apply border-border border-b py-24 md:py-32;
 }
 
-.landing-hero-copy {
-  @apply flex w-full flex-col justify-center py-20;
-}
-
+/* Sized to read as a documentation entry point rather than a product launch:
+   large enough to lead the page, small enough that the first real content is
+   visible without scrolling. */
 .landing-hero h1 {
-  @apply max-w-5xl text-5xl leading-[0.98] font-bold tracking-[-0.055em] text-balance md:text-7xl xl:text-8xl;
+  @apply max-w-4xl text-4xl leading-[1.05] font-bold tracking-[-0.03em] text-balance md:text-5xl lg:text-6xl;
 }
 
-.landing-hero-copy > p:last-of-type {
-  @apply text-text-secondary mt-8 max-w-2xl text-base leading-7 md:text-lg md:leading-8;
+.landing-lede {
+  @apply text-text-secondary mt-6 max-w-2xl text-base leading-7 md:text-lg md:leading-8;
 }
 
-.landing-hero-copy > p a {
+.landing-lede a {
   @apply text-text decoration-border-hover hover:decoration-primary font-medium underline underline-offset-4;
-  font-size: inherit;
 }
 
 .landing-actions {
-  @apply mt-10 flex flex-wrap items-center gap-3;
+  @apply mt-8 flex flex-wrap items-center gap-3;
+}
+
+.landing-meta {
+  @apply text-text-secondary mt-8 font-mono text-xs;
 }
 
 .landing-toolkit {
-  @apply py-20 md:py-28;
+  @apply py-16 md:py-20;
 }
 
-.landing-section-heading {
-  @apply flex flex-col gap-5 pb-12;
+.landing-toolkit h2 {
+  @apply text-title;
 }
 
-.landing-section-heading h2 {
-  @apply text-title-lg;
+.layer-grid {
+  @apply mt-10 grid gap-px md:grid-cols-3;
 }
 
-.capability-grid {
-  @apply border-border grid border-t md:grid-cols-3;
+.layer-grid article {
+  @apply border-border border-t pt-6 md:pr-8;
 }
 
-.capability-grid article {
-  @apply border-border flex min-h-72 flex-col border-b py-8 md:border-r md:px-7 md:last:border-r-0;
+.layer-grid h3 {
+  @apply text-title-sm;
 }
 
-.capability-grid article > span {
-  @apply text-text-secondary font-mono text-xs;
-}
-
-.capability-grid h3 {
-  @apply text-title-sm mt-auto pt-16;
-}
-
-.capability-grid p {
-  @apply text-text-secondary mt-4 max-w-sm leading-6;
+.layer-grid p {
+  @apply text-text-secondary mt-3 max-w-sm leading-7;
 }
 
 .site-footer {

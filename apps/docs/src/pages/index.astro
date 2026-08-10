@@ -1,67 +1,64 @@
 ---
 import BaseLayout from "../layouts/base-layout.astro";
+import { publicPackages } from "../lib/catalog";
 import { siteConfig } from "../site-config";
+
+const layers = [
+  {
+    description:
+      "State, validation, routing, keyboard input, errors, localization, themes, and notifications for browser apps.",
+    title: "Application primitives",
+  },
+  {
+    description: "Design tokens, composable styles, native web components, and the shared UI foundations built on them.",
+    title: "Interface systems",
+  },
+  {
+    description: "Vite build plugins, Tauri integrations, repository tooling, and reusable agent skills.",
+    title: "Tooling and platform",
+  },
+];
+
+const documentedCount = publicPackages.filter(
+  (packageEntry) => packageEntry.documentationRoute !== undefined,
+).length;
 ---
 
 <BaseLayout>
   <main class="section-content wide px-(--layout-gutter)" id="main-content">
     <section class="landing-hero">
-      <div class="landing-hero-copy">
-        <h1>Shared packages, apps, and project standards.</h1>
-        <p>
-          Built for and by <a href="https://coden.agency">coden.agency</a>. A
-          common foundation for TypeScript, browser, UI, Vite, and Tauri
-          projects.
-        </p>
-        <div class="landing-actions">
-          <a
-            class="btn primary min-h-11 px-5 py-2.5 font-medium"
-            href="/packages/">Browse packages</a
-          >
-          <a
-            class="btn out min-h-11 px-5 py-2.5 font-medium"
-            href={siteConfig.githubUrl}>View GitHub</a
-          >
-        </div>
+      <h1>Shared packages, apps, and project standards.</h1>
+      <p class="landing-lede">
+        Built for and by <a href="https://coden.agency">coden.agency</a>. A common
+        foundation for TypeScript, browser, UI, Vite, and Tauri projects.
+      </p>
+      <div class="landing-actions">
+        <a class="btn primary" href="/packages/">Browse packages</a>
+        <a class="btn out" href={siteConfig.githubUrl}>View on GitHub</a>
       </div>
+      <p class="landing-meta">
+        {documentedCount} documented {documentedCount === 1 ? "package" : "packages"}
+      </p>
     </section>
 
     <section aria-labelledby="toolkit-title" class="landing-toolkit">
-      <div class="landing-section-heading">
-        <p class="catalog-kicker">What lives here</p>
-        <h2 id="toolkit-title">One toolkit, three layers.</h2>
-      </div>
-      <div class="capability-grid">
-        <article>
-          <span>01</span>
-          <h3>Application primitives</h3>
-          <p>
-            State, validation, routing, keyboard input, errors, localization,
-            themes, and notifications.
-          </p>
-        </article>
-        <article>
-          <span>02</span>
-          <h3>Interface systems</h3>
-          <p>
-            Design tokens, composable styles, native components, and shared UI
-            foundations.
-          </p>
-        </article>
-        <article>
-          <span>03</span>
-          <h3>Tooling and platform</h3>
-          <p>
-            Vite build plugins, Tauri integrations, and reusable agent skills.
-          </p>
-        </article>
+      <h2 id="toolkit-title">What lives here</h2>
+      <div class="layer-grid">
+        {
+          layers.map((layer) => (
+            <article>
+              <h3>{layer.title}</h3>
+              <p>{layer.description}</p>
+            </article>
+          ))
+        }
       </div>
     </section>
   </main>
   <footer class="site-footer">
     <div class="site-footer-content section-content wide">
-      <p>&copy; 2026 CodenHub. All rights reserved.</p>
-      <p>Made with ❤️ by <a href="https://coden.agency/">coden</a>.</p>
+      <p>&copy; 2026 CodenHub</p>
+      <p>Built by <a href="https://coden.agency/">coden</a>.</p>
     </div>
   </footer>
 </BaseLayout>

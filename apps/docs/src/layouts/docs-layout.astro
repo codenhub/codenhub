@@ -39,7 +39,7 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
     <aside class="toc-rail">
       {
         tocHeadings.length > 0 && (
-          <nav aria-label="On this page">
+          <nav aria-label="On this page" data-toc>
             <p class="rail-title">On this page</p>
             <ol>
               {tocHeadings.map((heading) => (
@@ -53,4 +53,84 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
       }
     </aside>
   </div>
+
+  <script>
+    import { findActiveHeadingId } from "../lib/toc-highlight";
+
+    const toc = document.querySelector("[data-toc]");
+    const column = document.querySelector<HTMLElement>(".document-column");
+
+    if (toc !== null && column !== null) {
+      const links = [...toc.querySelectorAll<HTMLAnchorElement>("a[href^='#']")];
+      const entries = links.flatMap((link) => {
+        const id = decodeURIComponent(link.hash.slice(1));
+        const heading = document.getElementById(id);
+
+        return heading === null ? [] : [{ heading, id, link }];
+      });
+
+      // The column scrolls on wide viewports and the page scrolls below the
+      // breakpoint that collapses the rails, so whichever is scrolling has to be
+      // measured rather than assumed. Heading offsets come from rects because
+      // `offsetTop` is relative to the nearest positioned ancestor, which is not
+      // the scroll container.
+      const readGeometry = () => {
+        if (column.scrollHeight > column.clientHeight + 1) {
+          const columnTop = column.getBoundingClientRect().top;
+
+          return {
+            measure: (heading: HTMLElement) =>
+              heading.getBoundingClientRect().top - columnTop + column.scrollTop,
+            scrollHeight: column.scrollHeight,
+            scrollTop: column.scrollTop,
+            viewportHeight: column.clientHeight,
+          };
+        }
+
+        return {
+          measure: (heading: HTMLElement) => heading.getBoundingClientRect().top + window.scrollY,
+          scrollHeight: document.documentElement.scrollHeight,
+          scrollTop: window.scrollY,
+          viewportHeight: window.innerHeight,
+        };
+      };
+
+      const update = () => {
+        const { measure, scrollHeight, scrollTop, viewportHeight } = readGeometry();
+        const activeId = findActiveHeadingId({
+          headings: entries.map(({ heading, id }) => ({ id, top: measure(heading) })),
+          offset: viewportHeight * 0.25,
+          scrollHeight,
+          scrollTop,
+          viewportHeight,
+        });
+
+        for (const { id, link } of entries) {
+          if (id === activeId) {
+            link.setAttribute("aria-current", "true");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        }
+      };
+
+      let queued = false;
+      const scheduleUpdate = () => {
+        if (queued) {
+          return;
+        }
+
+        queued = true;
+        requestAnimationFrame(() => {
+          queued = false;
+          update();
+        });
+      };
+
+      update();
+      column.addEventListener("scroll", scheduleUpdate, { passive: true });
+      window.addEventListener("scroll", scheduleUpdate, { passive: true });
+      window.addEventListener("resize", scheduleUpdate, { passive: true });
+    }
+  </script>
 </BaseLayout>
