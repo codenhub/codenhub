@@ -15,6 +15,15 @@ export interface ActiveHeadingInput {
 }
 
 /**
+ * Slack for sub-pixel scroll offsets.
+ *
+ * Following a link parks its heading exactly on the activation line, and a
+ * fractional scroll position is enough to leave it a hair below, which would
+ * highlight the heading before the one the reader just asked for.
+ */
+const TOLERANCE = 2;
+
+/**
  * Resolves which heading a reader is currently under.
  *
  * The last section is a special case: it is usually too short to ever reach the
@@ -32,11 +41,11 @@ export function findActiveHeadingId({
     return undefined;
   }
 
-  if (scrollTop + viewportHeight >= scrollHeight - 2) {
+  if (scrollTop + viewportHeight >= scrollHeight - TOLERANCE) {
     return headings[headings.length - 1]?.id;
   }
 
-  const activationLine = scrollTop + offset;
+  const activationLine = scrollTop + offset + TOLERANCE;
   let activeId = headings[0]?.id;
 
   for (const heading of headings) {

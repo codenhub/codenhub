@@ -107,7 +107,56 @@ describe("documentation chrome", () => {
     expect(stickyRule).toContain("overflow-y-auto");
     expect(stickyRule).toContain("top: var(--docs-header-height)");
     expect(css).toMatch(/\.left-rail\s*\{[^}]*border-r/s);
-    expect(css).toMatch(/\.toc-rail\s*\{[^}]*border-l/s);
+  });
+
+  it("draws the table-of-contents rule and its indicator as one line", async () => {
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+    const railRule = css.match(/\.toc-rail\s*\{([^}]*)\}/)?.[1];
+    const ruleLine = css.match(/\.toc-rail::before\s*\{([^}]*)\}/)?.[1];
+    const alignmentRule = css.match(/\.toc-rail \.rail-title,\s*\.toc-rail a\s*\{([^}]*)\}/)?.[1];
+
+    // The rule spans the rail and every entry reserves its width at the same
+    // edge, so a current entry's segment lands on it rather than beside it as a
+    // second parallel line. A border on the rail instead of a positioned line
+    // would be unreachable: the panel between them clips its own overflow.
+    expect(railRule).toContain("pl-0");
+    expect(railRule).not.toContain("border");
+    expect(ruleLine).toContain("inset-y-0");
+    expect(ruleLine).toContain("left-0");
+    expect(alignmentRule).toContain("border-l-2");
+    expect(alignmentRule).toContain("border-transparent");
+    expect(css).toMatch(/\.toc-rail a\[aria-current="true"\]\s*\{[^}]*border-primary/s);
+  });
+
+  it("keeps the search trigger clear of the header's outlined controls", async () => {
+    const css = await readFile(new URL("../styles/search.css", import.meta.url), "utf8");
+    const triggerRule = css.match(/\.search-trigger\s*\{([^}]*)\}/)?.[1];
+
+    // A border and a 44px floor turn the trigger into a form field sitting in a
+    // header where nothing else is boxed.
+    expect(triggerRule).not.toMatch(/\bborder\b/);
+    expect(triggerRule).not.toContain("44px");
+  });
+
+  it("emits a search index covering package sections", async () => {
+    const entries = JSON.parse(await readOutput("search-index.json")) as {
+      route: string;
+      section?: string;
+      text: string;
+    }[];
+    const presentation = entries.find((entry) => entry.route === "/styles/tokens/#presentation-tokens");
+
+    expect(presentation?.section).toBe("Presentation Tokens");
+    expect(presentation?.text).toContain("Presentation tokens describe");
+    expect(entries.some((entry) => entry.route === "/error/")).toBe(true);
+  });
+
+  it("puts a search trigger with its shortcut in the header", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).toMatch(/<button[^>]*data-search-trigger/);
+    expect(html).toContain('aria-keyshortcuts="Control+K"');
+    expect(html).toMatch(/<dialog[^>]*data-search-dialog/);
   });
 
   it("offsets heading anchors through scroll padding alone", async () => {

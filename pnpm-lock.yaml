@@ -107,6 +107,9 @@ importers:
       '@astrojs/markdown-remark':
         specifier: 7.2.1
         version: 7.2.1
+      '@codenhub/kbd':
+        specifier: workspace:*
+        version: link:../../packages/kbd
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../packages/styles

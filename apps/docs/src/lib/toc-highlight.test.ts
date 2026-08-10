@@ -28,8 +28,14 @@ describe("findActiveHeadingId", () => {
   });
 
   it("activates a heading once it passes the activation line", () => {
-    expect(resolve(319)).toBe("install");
-    expect(resolve(320)).toBe("usage");
+    expect(resolve(317)).toBe("install");
+    expect(resolve(318)).toBe("usage");
+  });
+
+  it("activates the heading a link just scrolled to, despite sub-pixel drift", () => {
+    // Following `#usage` parks it on the activation line at `400 - offset`, and
+    // a fractional scroll position can leave it a hair short of reaching it.
+    expect(resolve(319.4)).toBe("usage");
   });
 
   it("stays on the last passed heading between sections", () => {
