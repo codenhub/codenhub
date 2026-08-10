@@ -112,12 +112,19 @@ describe("documentation chrome", () => {
   it("draws the table-of-contents rule and its indicator as one line", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const railRule = css.match(/\.toc-rail\s*\{([^}]*)\}/)?.[1];
-    const linkRule = css.match(/\.toc-rail a\s*\{([^}]*)\}/)?.[1];
+    const ruleLine = css.match(/\.toc-rail::before\s*\{([^}]*)\}/)?.[1];
+    const alignmentRule = css.match(/\.toc-rail \.rail-title,\s*\.toc-rail a\s*\{([^}]*)\}/)?.[1];
 
-    // A border on the rail as well would sit beside the entries' own rule as a
-    // second parallel line instead of merging with it.
+    // The rule spans the rail and every entry reserves its width at the same
+    // edge, so a current entry's segment lands on it rather than beside it as a
+    // second parallel line. A border on the rail instead of a positioned line
+    // would be unreachable: the panel between them clips its own overflow.
+    expect(railRule).toContain("pl-0");
     expect(railRule).not.toContain("border");
-    expect(linkRule).toContain("border-l-2");
+    expect(ruleLine).toContain("inset-y-0");
+    expect(ruleLine).toContain("left-0");
+    expect(alignmentRule).toContain("border-l-2");
+    expect(alignmentRule).toContain("border-transparent");
     expect(css).toMatch(/\.toc-rail a\[aria-current="true"\]\s*\{[^}]*border-primary/s);
   });
 

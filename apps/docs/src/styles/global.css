@@ -129,16 +129,27 @@ html {
   @apply border-border border-r pr-6;
 }
 
-/* No border and no inline padding of its own. The rule down the left of this
-   rail is drawn by the entries themselves, sitting flush against the document
-   column, so the divider and the current-entry indicator are one line rather
-   than two parallel ones. Inline padding therefore belongs inside each entry. */
+/* The rule runs the full height of the rail, and each entry paints its own
+   segment directly over it, so the divider against the document column and the
+   current-entry indicator are one line rather than two parallel ones.
+
+   It is a positioned line rather than a border because the panel inside this
+   rail scrolls: `overflow-y` clips on both axes, so a segment that overhung its
+   scroll container to reach a border on the rail would be cut off. Nothing
+   overhangs instead — the rail carries no inline padding, so the rule and every
+   segment start at the same edge. */
 .toc-rail {
-  @apply pl-0;
+  @apply relative pl-0;
 }
 
-.toc-rail .rail-title {
-  @apply pl-6;
+.toc-rail::before {
+  @apply bg-border/60 absolute inset-y-0 left-0 w-0.5;
+  content: "";
+}
+
+.toc-rail .rail-title,
+.toc-rail a {
+  @apply border-l-2 border-transparent pl-6;
 }
 
 /* The page is the scroll container, so a rail stays a full-height grid item and
@@ -164,11 +175,11 @@ html {
   @apply text-text font-semibold;
 }
 
-/* Every entry carries the border, so the rail reads as one continuous line down
-   the section and the current heading is a stronger segment of it rather than a
-   mark that appears and disappears. */
+/* Transparent by default so the rail's rule shows through underneath. The
+   current heading is therefore a stronger stretch of one continuous line rather
+   than a mark that appears and disappears. */
 .toc-rail a {
-  @apply text-text-secondary hover:text-text hover:border-border-hover border-border/60 block border-l-2 py-1.5 pl-6 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+  @apply text-text-secondary hover:text-text hover:border-border-hover block py-1.5 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
 }
 
 .toc-rail a[aria-current="true"] {
