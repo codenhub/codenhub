@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../layouts/base-layout.astro";
+---
+
+<BaseLayout description="The requested page could not be found." title="Page not found">
+  <main aria-labelledby="not-found-title" class="section section-content" id="main-content">
+    <p class="not-found-status">404</p>
+    <h1 class="text-title-lg" id="not-found-title">Page not found</h1>
+    <p class="not-found-lede">
+      This page moved or never existed. Package documentation is reorganized as packages change, so a saved link can
+      outlive the page it pointed at.
+    </p>
+    <p class="not-found-actions">
+      <a class="btn primary" href="/packages/">Browse packages</a>
+      <a class="btn out" href="/">Go home</a>
+    </p>
+  </main>
+</BaseLayout>

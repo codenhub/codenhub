@@ -138,6 +138,17 @@ describe("documentation chrome", () => {
     expect(triggerRule).not.toContain("44px");
   });
 
+  it("builds the not-found page the deployment is configured to serve", async () => {
+    const html = await readOutput("404.html");
+    const config = await readFile(new URL("../../wrangler.jsonc", import.meta.url), "utf8");
+
+    // `not_found_handling` names a file rather than pointing at one, so nothing
+    // fails at deploy time if the page stops being built.
+    expect(html).toContain("Page not found");
+    expect(config).toContain('"not_found_handling": "404-page"');
+    expect(config).toContain('"directory": "./dist"');
+  });
+
   it("emits a search index covering package sections", async () => {
     const entries = JSON.parse(await readOutput("search-index.json")) as {
       route: string;
