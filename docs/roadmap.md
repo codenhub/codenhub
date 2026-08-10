@@ -26,7 +26,7 @@ Track high-level progress and milestone status for foundation and utility packag
 ### @codenhub/docs
 
 - [ ] Polish UI/UX and code in general
-- [ ] Add fuzzy search
+- [x] Add fuzzy search
 
 ### @codenhub/icons
 

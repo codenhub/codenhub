@@ -1,4 +1,5 @@
 ---
+import SearchPalette from "../components/search-palette.astro";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -75,6 +76,7 @@ const isHome = Astro.url.pathname === "/";
             <a aria-current={isHome ? "page" : undefined} href="/">Home</a>
             <a aria-current={!isHome ? "page" : undefined} href="/packages/">Packages</a>
           </nav>
+          <SearchPalette />
           <nav aria-label="Site actions" class="header-actions">
             <a aria-label="CodenHub on GitHub" class="header-icon-link" href={siteConfig.githubUrl}>
               <svg aria-hidden="true" viewBox="0 0 16 16">

@@ -110,6 +110,27 @@ describe("documentation chrome", () => {
     expect(css).toMatch(/\.toc-rail\s*\{[^}]*border-l/s);
   });
 
+  it("emits a search index covering package sections", async () => {
+    const entries = JSON.parse(await readOutput("search-index.json")) as {
+      route: string;
+      section?: string;
+      text: string;
+    }[];
+    const presentation = entries.find((entry) => entry.route === "/styles/tokens/#presentation-tokens");
+
+    expect(presentation?.section).toBe("Presentation Tokens");
+    expect(presentation?.text).toContain("Presentation tokens describe");
+    expect(entries.some((entry) => entry.route === "/error/")).toBe(true);
+  });
+
+  it("puts a search trigger with its shortcut in the header", async () => {
+    const html = await readOutput("error/index.html");
+
+    expect(html).toMatch(/<button[^>]*data-search-trigger/);
+    expect(html).toContain('aria-keyshortcuts="Control+K"');
+    expect(html).toMatch(/<dialog[^>]*data-search-dialog/);
+  });
+
   it("offsets heading anchors through scroll padding alone", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const headingRules = css.match(/\.markdown-content h[23]\s*\{[^}]*\}/g) ?? [];

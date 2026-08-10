@@ -2,6 +2,7 @@
 @import "./catalog.css";
 @import "./landing.css";
 @import "./markdown.css";
+@import "./search.css";
 @source "../**/*.{astro,ts}";
 
 :root {

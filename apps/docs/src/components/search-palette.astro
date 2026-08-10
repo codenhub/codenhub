@@ -1,0 +1,207 @@
+<button aria-keyshortcuts="Control+K" class="search-trigger" data-search-trigger type="button">
+  <svg aria-hidden="true" class="search-icon" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7"></circle>
+    <path d="m20 20-3.5-3.5"></path>
+  </svg>
+  <span class="search-trigger-label">Search</span>
+  <kbd class="search-trigger-shortcut" data-search-shortcut>Ctrl K</kbd>
+</button>
+
+<dialog aria-label="Search documentation" class="search-dialog" data-search-dialog>
+  <div class="search-field">
+    <svg aria-hidden="true" class="search-icon" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7"></circle>
+      <path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input
+      aria-autocomplete="list"
+      aria-controls="search-results"
+      aria-expanded="false"
+      autocomplete="off"
+      class="search-input"
+      data-search-input
+      placeholder="Search documentation"
+      role="combobox"
+      spellcheck="false"
+      type="text"
+    />
+  </div>
+
+  <ul aria-label="Search results" class="search-results" data-search-results id="search-results" role="listbox"></ul>
+
+  <p class="search-status" data-search-status role="status">Type to search every package document.</p>
+</dialog>
+
+<script>
+  import { KEYS, keyboard } from "@codenhub/kbd";
+
+  import { toHighlightSegments } from "../lib/search/highlight";
+  import { searchDocumentation, type SearchEntry, type SearchResult } from "../lib/search/search";
+
+  const trigger = document.querySelector<HTMLButtonElement>("[data-search-trigger]");
+  const dialog = document.querySelector<HTMLDialogElement>("[data-search-dialog]");
+  const input = document.querySelector<HTMLInputElement>("[data-search-input]");
+  const list = document.querySelector<HTMLUListElement>("[data-search-results]");
+  const status = document.querySelector<HTMLParagraphElement>("[data-search-status]");
+  const shortcut = document.querySelector<HTMLElement>("[data-search-shortcut]");
+
+  if (trigger !== null && dialog !== null && input !== null && list !== null && status !== null) {
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+
+    if (shortcut !== null) {
+      shortcut.textContent = isMac ? "⌘ K" : "Ctrl K";
+      trigger.setAttribute("aria-keyshortcuts", isMac ? "Meta+K" : "Control+K");
+    }
+
+    let entries: SearchEntry[] | undefined;
+    let results: SearchResult[] = [];
+    let activeIndex = 0;
+    let latestQuery = 0;
+
+    // Fetched on first open so a reader who never searches never downloads it.
+    const loadEntries = async () => {
+      entries ??= (await fetch("/search-index.json").then((response) => response.json())) as SearchEntry[];
+
+      return entries;
+    };
+
+    const renderLabel = (item: HTMLElement, label: string, positions: readonly number[]) => {
+      for (const segment of toHighlightSegments(label, positions)) {
+        const node = document.createElement(segment.matched ? "mark" : "span");
+        node.textContent = segment.text;
+        item.append(node);
+      }
+    };
+
+    const setActive = (index: number) => {
+      const options = [...list.querySelectorAll<HTMLLIElement>("[role='option']")];
+      if (options.length === 0) {
+        input.removeAttribute("aria-activedescendant");
+
+        return;
+      }
+
+      activeIndex = (index + options.length) % options.length;
+
+      for (const [order, option] of options.entries()) {
+        option.setAttribute("aria-selected", String(order === activeIndex));
+      }
+
+      const active = options[activeIndex];
+      if (active !== undefined) {
+        input.setAttribute("aria-activedescendant", active.id);
+        active.scrollIntoView({ block: "nearest" });
+      }
+    };
+
+    const render = () => {
+      list.replaceChildren();
+
+      for (const [order, result] of results.entries()) {
+        const option = document.createElement("li");
+        option.className = "search-result";
+        option.id = `search-result-${order}`;
+        option.setAttribute("role", "option");
+
+        const link = document.createElement("a");
+        link.href = result.entry.route;
+
+        const label = document.createElement("span");
+        label.className = "search-result-label";
+        renderLabel(label, result.entry.section ?? result.entry.title, result.positions);
+
+        const context = document.createElement("span");
+        context.className = "search-result-context";
+        context.textContent =
+          result.entry.section === undefined
+            ? result.entry.packageLabel
+            : `${result.entry.packageLabel} › ${result.entry.title}`;
+
+        link.append(label, context);
+        option.append(link);
+        list.append(option);
+      }
+
+      input.setAttribute("aria-expanded", String(results.length > 0));
+      setActive(0);
+    };
+
+    const update = async () => {
+      const query = input.value;
+      const token = (latestQuery += 1);
+
+      if (query.trim().length === 0) {
+        results = [];
+        render();
+        status.textContent = "Type to search every package document.";
+
+        return;
+      }
+
+      const loaded = await loadEntries();
+
+      // Every keystroke typed before the index arrives is still waiting here,
+      // and they do not resolve in order. Without this the results a reader ends
+      // up looking at are whichever prefix happened to finish last.
+      if (token !== latestQuery) {
+        return;
+      }
+
+      results = searchDocumentation(loaded, query);
+      render();
+      status.textContent =
+        results.length === 0
+          ? `No documentation matches “${query}”.`
+          : `${results.length} ${results.length === 1 ? "result" : "results"}. Use the arrow keys to choose one.`;
+    };
+
+    const open = () => {
+      if (dialog.open) {
+        return;
+      }
+
+      dialog.showModal();
+      input.select();
+      void loadEntries();
+    };
+
+    const openActive = () => {
+      const active = list.querySelectorAll<HTMLLIElement>("[role='option']")[activeIndex];
+      active?.querySelector("a")?.click();
+    };
+
+    trigger.addEventListener("click", open);
+    input.addEventListener("input", () => void update());
+
+    // Most results are a fragment on a page the reader may already be on, which
+    // navigates without a load and would otherwise leave the modal covering it.
+    // Closing here covers the pointer and the keyboard, since both end in this
+    // click, and the link's own navigation still runs.
+    list.addEventListener("click", () => dialog.close());
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === KEYS.arrowDown) {
+        event.preventDefault();
+        setActive(activeIndex + 1);
+      } else if (event.key === KEYS.arrowUp) {
+        event.preventDefault();
+        setActive(activeIndex - 1);
+      } else if (event.key === KEYS.enter) {
+        event.preventDefault();
+        openActive();
+      }
+    });
+
+    // Clicking the backdrop lands on the dialog itself, never on its content.
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) {
+        dialog.close();
+      }
+    });
+
+    keyboard.register({ key: KEYS.k, modifiers: ["cmdOrCtrl"] }, (event) => {
+      event.preventDefault();
+      open();
+    });
+  }
+</script>
