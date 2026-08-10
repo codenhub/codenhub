@@ -108,10 +108,6 @@ html {
   @apply block;
 }
 
-.catalog-kicker {
-  @apply text-text-secondary font-mono text-xs font-semibold tracking-[0.16em] uppercase;
-}
-
 .rail-title {
   @apply text-label text-text mb-3 font-bold;
 }
@@ -157,13 +153,27 @@ html {
   @apply m-0 list-none p-0;
 }
 
-.document-list a,
-.toc-rail a {
+.document-list a {
   @apply text-text-secondary hover:text-text block py-1.5 no-underline transition-colors;
 }
 
 .document-list a[aria-current="page"] {
   @apply text-text font-semibold;
+}
+
+/* Every entry carries the border, so the rail reads as one continuous line down
+   the section and the current heading is a stronger segment of it rather than a
+   mark that appears and disappears. */
+.toc-rail a {
+  @apply text-text-secondary hover:text-text hover:border-border-hover border-border/60 block border-l-2 py-1.5 pl-3 no-underline transition-[color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
+}
+
+.toc-rail a[aria-current="true"] {
+  @apply text-text border-primary font-semibold;
+}
+
+.toc-rail li.nested a {
+  @apply pl-6;
 }
 
 .document-column {
@@ -172,10 +182,6 @@ html {
 
 .toc-rail ol {
   @apply mt-3;
-}
-
-.toc-rail li.nested a {
-  @apply pl-3;
 }
 
 .markdown-content {
@@ -237,8 +243,10 @@ html {
   @apply pre border-border rounded-(--radius-surface) border p-5 text-sm leading-6 shadow-(--elevation-low);
 }
 
+/* A quotation is not a warning. Callouts that mean caution come through
+   `remark-alerts` as `.markdown-alert` and carry their own intent color. */
 .markdown-content blockquote {
-  @apply quote border-warning bg-warning-subtle/35 rounded-r-(--radius-control) py-3 pr-4;
+  @apply quote border-border bg-foreground/60 rounded-r-(--radius-control) py-3 pr-4;
 }
 
 .markdown-content table {

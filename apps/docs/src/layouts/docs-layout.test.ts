@@ -41,11 +41,14 @@ describe("documentation chrome", () => {
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
     const html = await readOutput("i18n/index.html");
+    // The badge renders as an icon, so its accessible name is what carries the
+    // status to a screen reader and is what this asserts.
     const chromeLabels = html.match(
-      /class="package-navigation-title"[^>]*>.*?Internationalization.*?experimental.*?<\/div>/g,
+      /class="package-navigation-title"[^>]*>.*?Internationalization.*?Experimental.*?<\/div>/g,
     );
 
     expect(chromeLabels).toHaveLength(2);
+    expect(html).toContain('<span class="sr-only">Experimental</span>');
   });
 
   it("gives every header target a 44px minimum hit area", async () => {
