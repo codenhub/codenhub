@@ -13,6 +13,11 @@ styling-system improvements that should guide future changes without turning
 this document into a release checklist. [Architecture](./architecture.md) owns
 the styling model itself.
 
+Finished work is not tracked here. The token contract, the element coverage it
+was extended to, and the three shipped aesthetics are the model that Architecture
+now describes, so the record of building them lives there and in the history
+rather than in a list of completed stages.
+
 ## Supported surface
 
 The package supports what it demonstrates and documents. A class combination
@@ -33,86 +38,62 @@ per-component presentation set. The combinations dropped there are recorded in
 alongside why each one is degenerate, so a future change can tell a deliberate
 omission from an oversight.
 
+## Current Focus
+
+**Phase 2 -- Composition contract**. Close the gaps where the three axes meet a
+component that only partly implements them, one reviewable change at a time with
+`pnpm verify` green before the next begins.
+
+The rules came first, because they decide half the answers, and are now
+[Axis rules](./architecture.md#axis-rules). The shape material followed: the
+silhouette, its ring, the border ceiling, and the radius are tokens consumed
+through the `shaped` and `shaped-tight` utilities, so a bare `<button>`,
+`<input>`, `<code>`, or `<kbd>` carries the aesthetic's full silhouette. Then the
+geometry conformance fixes: the progress ceiling and fill blend, the chip border
+ceiling, the control border floor, and `.switch` reading its material.
+
+What the rules recorded and the code has not answered yet:
+
+- `.error` stops being a component. Helper text becomes `.hint` coloured by the
+  intent axis, so `.hint.error`, which deletes the field-scoped reinterpretation
+  and its `:not(.btn)` guard. A breaking class-surface change, which `0.x` is for.
+- `.checkbox` and `.radio` need the border floor the text controls already have
+  under `.soft` and `.ghost`.
+- `--glass-shadow` should compose from `--elevation-color` instead of being a
+  private near-copy of it. The alphas differ, so folding them makes the dark-theme
+  shadow heavier; that is a visible change and belongs in its own slice.
+- A decision for each component that reads one presentation token or none:
+  `.divider` reads `--ui-border-scale`, `.empty-state` reads `--ui-fg-on-fill`,
+  `.skeleton` and `.loader` read neither, and `.quote` hardcodes `border-l-4`.
+  Each either widens or is declared intent-only under the supported-surface rule.
+
 ## Planned
 
-Work is staged. Each stage lands as one reviewable change with `pnpm verify`
-green before the next begins.
+- **Phase 3 -- Documentation and release**: Split public docs into concepts,
+  reference, and guides so the three-axis model is explained before the lookup
+  tables. State the supported-surface rule above, and state per component which
+  axes it reads. `0.2.0` ships from that.
 
-- **Stage 1 -- Token contract (done)**: Collapse the duplicated per-component intent
-  blocks into the shared `--intent-*` contract, add the material token set, and
-  declare color tokens once with `light-dark()`. Convert input icons from
-  per-theme hardcoded SVG data URIs to masks over `currentColor`.
-- **Stage 2 -- Element coverage (done)**: Extend intent and presentation to form
-  controls, content elements, feedback, and the new `.card` and `.panel`
-  surfaces. Surfaces activate `--elevation-*` and `--surface-hover-transform`,
-  which no component reads today.
-- **Stage 3 -- Aesthetics (done)**: Ship `.neobrutalism`, `.glass`, and `.pixel`
-  from opt-in entrypoints, with the compatibility matrix and playground coverage.
-- **Stage 4 -- Composition contract**: Close the gaps where the three axes meet a
-  component that only partly implements them. The stage runs in three changes,
-  because the rules decide half the answers and had to come first.
+## Later / Possible
 
-  The gate is settled. `clip-path: none` and `backdrop-filter: none` cost nothing
-  in any baseline engine -- no compositing layer, no containing block, no stacking
-  context, literal or behind a `var()` fallback. The claim that they did was
-  false, and correcting it is what opened the token route. A second measurement
-  narrowed that route: an indirect token resolves its `var()` references once, on
-  the element that declares it, so one shape token cannot serve components that
-  override the unit it is built from. Both are recorded under
-  [The cost of a no-op](./architecture.md#the-cost-of-a-no-op) and
-  [Indirect tokens resolve once](./architecture.md#indirect-tokens-resolve-once).
-
-  - **Stage 4a -- Axis rules (docs only)**: State what each axis may declare, what
-    a presentation class promises, what a component may clamp and how it must
-    declare the bound, and the precedence when two axes want the same
-    declaration. Record the conformance gaps rather than fixing them. Lands as
-    [Axis rules](./architecture.md#axis-rules) with no behavior change.
-
-  - **Stage 4b -- Shape reaches elements (done)**: The silhouette, its ring, the
-    border ceiling, and the radius are material tokens consumed through the
-    `shaped` and `shaped-tight` utilities, so `native.css` picks them up through
-    the `@apply` it already uses. Bare `<button>`, `<input>`, `<code>`, and
-    `<kbd>` now carry the full stepped silhouette. Deleted the clip, chip-unit,
-    and radius-squashing selector lists from `pixel.css` and the radius list from
-    `neobrutalism.css`.
-
-    Two things stayed deliberately. The ink and the brutalist offset shadow keep
-    their component-scoped lists, because both must resolve against the
-    component's own intent, so a native element gets the silhouette in the
-    neutral border gray rather than the aesthetic's ink. And `--ui-blur` was
-    dropped from the plan: glass applies `backdrop-filter` alongside a background
-    it rebuilds from the component's own intent, so that list stays regardless
-    and tokenizing the blur alone would have deleted nothing.
-
-  - **Stage 4c -- Conformance**: Fix what 4a recorded, in slices. Geometry is
-    done: the progress ceiling and blend, the chip border ceiling, the control
-    border floor, and `.switch` reading its material.
-
-    Still open. `.error` stops being a component: helper text becomes `.hint`
-    coloured by the intent axis, so `.hint.error`, which deletes the field-scoped
-    reinterpretation and its `:not(.btn)` guard. `.checkbox` and `.radio` need the
-    same floor the text controls just got. `--glass-shadow` should compose from
-    `--elevation-color` rather than a private near-copy of it. And a decision for
-    each component that reads one presentation token or none.
-
-    Progress is decided: it keeps a border, clamped to 1px however thick the
-    aesthetic and presentation ask, and blends the line toward its fill per P5.
-    `.out` then reads as a real 1px outline on a 10px track instead of eating 8px
-    of it, and `.flat` blends away as it was always meant to, which makes it
-    degenerate with plain and drops it from the matrix. The alternative -- refusing
-    the border axis outright -- was rejected because a thin outline is legitimate
-    on a low-contrast background.
-
-- **Stage 5 -- Documentation**: Split public docs into concepts, reference, and
-  guides so the three-axis model is explained before the lookup tables. State the
-  supported-surface rule above, and per component which axes it reads.
-
-- **Stage 6 -- Preview split**: Promote the playground to a demo application and
-  leave a minimal fixture playground behind it for tests. Only worth doing once
-  the matrix has stopped moving, because the two would otherwise drift. It depends
-  on Stage 4: a demo must not show combinations the package does not support, and
-  Stage 4 is what decides whether the components under-reading presentation widen
+- **Preview split**: Promote the playground to a demo application and leave a
+  minimal fixture playground behind it for tests. Only worth doing once the
+  matrix has stopped moving, because the two would otherwise drift. It waits on
+  Phase 2: a demo must not show combinations the package does not support, and
+  Phase 2 is what decides whether the components under-reading presentation widen
   or are declared intent-only.
+
+## Notes
+
+Two measurements shaped the material tokens and outlive the change that needed
+them, so both live in Architecture rather than here. A no-op `clip-path` or
+`backdrop-filter` costs nothing in any baseline engine -- no compositing layer, no
+containing block, no stacking context, literal or behind a `var()` fallback --
+which is what made the token route possible at all
+([The cost of a no-op](./architecture.md#the-cost-of-a-no-op)). And an indirect
+token resolves its `var()` references once, on the element that declares it,
+which is why a shape pair needs two token slots rather than one
+([Indirect tokens resolve once](./architecture.md#indirect-tokens-resolve-once)).
 
 ## Versioning
 
