@@ -159,11 +159,20 @@
   }
 }
 
-/* `.ghost` zeroes `--ui-border`, which leaves a text control as a bare box with
-   no edge at all. Keeping the bottom rule preserves the affordance, and needs a
-   selector because a presentation is a set of values, not something a component
-   can branch on. Both forms are matched: on the control itself, and inherited
-   from a container. */
+/* `.soft` and `.ghost` both zero `--ui-border`, which leaves a text control as a
+   bare box with no mark of where it can be typed into. That is the floor P3
+   requires, for the reason in `Accessibility constraints`: a control distinguished
+   by nothing is the same failure whichever axis causes it.
+
+   The bottom rule is that floor. It needs a selector because a presentation is a
+   set of values, not something a component can branch on. Both forms are matched:
+   on the control itself, and inherited from a container. `.soft` keeps its tint
+   over the rule; `.ghost` has no tint to keep. */
+.ipt.soft,
+.textarea.soft,
+.select.soft,
+.control-base.soft,
+:where(.soft) :is(.ipt, .textarea, .select, .control-base),
 .ipt.ghost,
 .textarea.ghost,
 .select.ghost,
@@ -451,19 +460,35 @@
 }
 
 @utility switch {
-  @apply relative h-5 w-10 cursor-pointer appearance-none bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  /* A2: the track reads the aesthetic's border width like every other component.
+     Every dimension is derived from it so the knob cannot drift out of a thicker
+     track -- it used to be a fixed 16px pinned at 1px, which overflowed as soon as
+     an aesthetic asked for 2px. */
+  --switch-height: 1.25rem;
+  --switch-width: 2.5rem;
+  --switch-border-width: var(--ui-border-width, var(--border-width));
+  --switch-gap: 1px;
+  --switch-inset: calc(var(--switch-border-width) + var(--switch-gap));
+  --switch-knob: calc(var(--switch-height) - var(--switch-inset) * 2);
+  --switch-travel: calc(var(--switch-width) - var(--switch-inset) * 2 - var(--switch-knob));
+
+  @apply relative cursor-pointer appearance-none bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
+  height: var(--switch-height);
+  width: var(--switch-width);
   /* Pill by default; a squaring aesthetic reaches the track and the knob together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  border: var(--border-width) solid transparent;
+  border: var(--switch-border-width) solid transparent;
 
   &::after {
-    @apply absolute size-4 bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply absolute bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
 
     content: "";
-    top: 1px;
-    left: 1px;
+    height: var(--switch-knob);
+    width: var(--switch-knob);
+    top: var(--switch-gap);
+    left: var(--switch-gap);
   }
 
   &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
@@ -484,9 +509,8 @@
     background-color: var(--intent-color);
 
     &::after {
-      @apply translate-x-5;
-
       background-color: var(--intent-contrast);
+      translate: var(--switch-travel);
     }
   }
 

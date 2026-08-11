@@ -70,6 +70,9 @@
      untouched. A key cap fills with `--intent-color` but lines itself with
      `--intent-border`, and without this the two never meet. */
   --kbd-edge: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--kbd-line));
+  /* P3 ceiling: the 2x scale `.out` asks for is sized for a control, not a key
+     cap, and a 2px aesthetic would make it 4px. */
+  --shape-border-max: var(--border-width);
 
   @apply shaped-tight inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
 

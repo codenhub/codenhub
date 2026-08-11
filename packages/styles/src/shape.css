@@ -36,7 +36,8 @@
      line beside the ring. */
   --shape-border-width: min(
     calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)),
-    var(--ui-border-max, 100px)
+    var(--ui-border-max, 100px),
+    var(--shape-border-max, 100px)
   );
 
   /* `clip-path` clips a border, an outline, and any outer shadow, so a clipped

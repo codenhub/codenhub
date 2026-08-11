@@ -142,10 +142,15 @@ test("reads presentation on key caps and tables", async ({ page }) => {
   expect(getColorDistance(styles.softBackground, styles.neutralBackground)).toBeGreaterThan(2);
   expectSameColor(styles.flatBackground, styles.tokenPrimary, "flat kbd fill");
   expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
-  expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
+  /* A key cap caps its border at the base width, so `.out` makes the line opaque
+     without thickening it. Two pixels on a chip this size reads as a box with a
+     label in it, and four under a 2px aesthetic. The ceiling is the contract, so
+     it is asserted rather than the doubling it replaces. */
+  expect(Number.parseFloat(styles.outBorderWidth)).toBe(Number.parseFloat(styles.plainBorderWidth));
+  expect(Number.parseFloat(styles.outBorderWidth)).toBeLessThanOrEqual(1);
   /* Only the default draws a visible line, and it is the quiet border color.
-     `.out` keeps that line but doubles it, `.soft` drops it, and `.flat` lands
-     on its own fill so a filled cap has no stray ring around it. */
+     `.out` keeps that line and makes it opaque, `.soft` drops it, and `.flat`
+     lands on its own fill so a filled cap has no stray ring around it. */
   expectSameColor(styles.plainBorderColor, styles.tokenBorder, "plain kbd edge");
   expect(readSrgb(styles.softBorderColor).alpha, styles.softBorderColor).toBeLessThan(0.2);
   expectSameColor(styles.flatBorderColor, styles.flatBackground, "flat kbd edge");

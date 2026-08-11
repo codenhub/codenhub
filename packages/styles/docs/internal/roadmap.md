@@ -84,11 +84,16 @@ green before the next begins.
     it rebuilds from the component's own intent, so that list stays regardless
     and tokenizing the blur alone would have deleted nothing.
 
-  - **Stage 4c -- Conformance**: Fix what 4a recorded, in slices. The chip border
-    ceiling; the control border floor; `.switch` reading its material; `.error`
-    stopping being a component; and a decision for each component that reads one
-    presentation token or none. Each slice widens the playground matrix back or
-    narrows it deliberately.
+  - **Stage 4c -- Conformance**: Fix what 4a recorded, in slices. Geometry is
+    done: the progress ceiling and blend, the chip border ceiling, the control
+    border floor, and `.switch` reading its material.
+
+    Still open. `.error` stops being a component: helper text becomes `.hint`
+    coloured by the intent axis, so `.hint.error`, which deletes the field-scoped
+    reinterpretation and its `:not(.btn)` guard. `.checkbox` and `.radio` need the
+    same floor the text controls just got. `--glass-shadow` should compose from
+    `--elevation-color` rather than a private near-copy of it. And a decision for
+    each component that reads one presentation token or none.
 
     Progress is decided: it keeps a border, clamped to 1px however thick the
     aesthetic and presentation ask, and blends the line toward its fill per P5.

@@ -486,7 +486,6 @@ not render it.
 | `.alert` `.badge` `.card` `.panel` `.kbd` `.table` | plain, out, soft, flat, ghost       | `.fill` sets only `--ui-hover-*`, which none of them read.                                                         |
 | `.ipt` `.textarea` `.select` `.control-base`       | plain, out, soft, flat, ghost       | `.flat` clamps to the same 6% tint as `.soft`.                                                                     |
 | `.checkbox` `.radio`                               | plain, out, flat                    | `.soft` and `.ghost` zero `--ui-border` with no bottom rule to replace it, leaving no visible box while unchecked. |
-| `.switch`                                          | plain                               | Draws its track and knob from theme tokens; reads no presentation token.                                           |
 | `.progress`                                        | plain, flat, out                    | Reads `--ui-border` only, so the tint classes land on plain.                                                       |
 | `.divider`                                         | plain, out                          | Reads `--ui-border-scale` only; the rule keeps its color.                                                          |
 | `.empty-state`                                     | plain, flat                         | Reads `--ui-fg-on-fill` only.                                                                                      |
@@ -503,16 +502,18 @@ only the first. Measured against the [axis rules](#axis-rules), with
 `--border-width: 1px` and `--ui-border-width: 2px` under `.neobrutalism` and
 `.pixel`:
 
-| Component                                                  | Breaks | What happens                                                                                                                                                                                            |
-| ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.progress` under `.out`                                   | P3     | `h-2.5` is a 10px track. `.out` doubles the border to 2px a side, leaving 6px; under a 2px aesthetic it is 4px a side, leaving **2px of 10px**.                                                         |
-| `.progress` under `.flat`                                  | P4, P5 | The track fills from `--intent-subtle` and never reads `--ui-fill`, so the `--ui-border: 100%` that `.flat` sets to make a border vanish has no fill to land on, and appears as an opaque ring instead. |
-| `.badge` `.kbd` under `.out`                               | P3     | 2px of border on a `min-h-6` chip, 4px under a 2px aesthetic. The doubling is sized for a 40px button.                                                                                                  |
-| `.ipt` `.textarea` `.select` `.control-base` under `.soft` | P3     | `--ui-border: 0%` removes the only mark of where the control can be typed into, with no bottom rule to replace it.                                                                                      |
-| `.checkbox` `.radio` under `.soft` `.ghost`                | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                                           |
-| `.switch`                                                  | A2     | Hardcodes `border: var(--border-width)`, so it keeps a 1px edge under an aesthetic that declares 2px.                                                                                                   |
-| `.glass` shadow                                            | A1     | `--glass-shadow` hardcodes a near-copy of `--elevation-color` (`.1`/`.35` against `.08`/`.55`), so a consumer retuning the elevation color is ignored and the two drift.                                |
-| `.error` in a `.field`                                     | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button.                   |
+| Component                                   | Breaks | What happens                                                                                                                                                                          |
+| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.checkbox` `.radio` under `.soft` `.ghost` | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                         |
+| `.glass` shadow                             | A1     | `--glass-shadow` hardcodes a near-copy of `--elevation-color` (`.1`/`.35` against `.08`/`.55`), so a consumer retuning the elevation color is ignored and the two drift.              |
+| `.error` in a `.field`                      | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button. |
+
+Resolved so far: `.progress` caps its border at one pixel and blends the line
+toward its own track, so `.out` is a real outline on a 10px bar and `.flat`
+disappears as it always meant to; `.badge` and `.kbd` declare the same ceiling
+through `--shape-border-max`; text controls keep a bottom rule under `.soft` as
+they already did under `.ghost`; and `.switch` reads the aesthetic's border width
+with its knob geometry derived from it.
 
 Three more read one presentation token or none, which is legal under P2 but has
 never been decided either way: `.divider` (`--ui-border-scale`), `.empty-state`
@@ -663,6 +664,11 @@ Two build constraints apply to these files specifically:
   theme variable is inlined with a fallback instead. Foundation tokens such as
   `--border-width` then go undefined, which invalidates the `calc()` around them
   and drops whole `border` shorthands.
+- A `color-mix()` nested two deep inside another, over a `light-dark()`, crashes
+  the WebKit renderer outright. Reproduced on the surfaces page under `.glass`,
+  where blending a progress border toward `--progress-surface` -- itself a
+  `color-mix` -- took the page down rather than producing a wrong color. Two levels
+  are safe. Blend toward a plain token instead of toward another mix.
 - `backdrop-filter` is written unprefixed only. The minifier adds
   `-webkit-backdrop-filter` for the Safari versions in the baseline, but if both
   are written by hand it collapses the pair to the prefixed one alone, leaving

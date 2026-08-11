@@ -85,6 +85,9 @@
   --feedback-surface: color-mix(in oklab, var(--intent-color) var(--feedback-fill), transparent);
   --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
   --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
+  /* P3 ceiling: 2px of border on a 24px chip, and 4px under a 2px aesthetic,
+     reads as a box with a label in it. */
+  --shape-border-max: var(--border-width);
 
   @apply shaped-tight inline-flex min-h-6 w-fit items-center gap-1 bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
   /* Pill by default, but an aesthetic that declares no radius has to mean it, so
@@ -109,13 +112,26 @@
 @utility progress {
   --progress-color: var(--intent-color);
   --progress-surface: color-mix(in srgb, var(--intent-subtle) 60%, transparent);
-  --progress-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
+  --progress-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
+  /* P5: blended toward this component's own fill, which for a progress bar is its
+     track, so `.flat` lands on the track and disappears instead of ringing it.
+
+     Blended toward `--intent-subtle` rather than toward `--progress-surface`,
+     even though the track is built from the latter. `--progress-surface` is itself
+     a `color-mix`, and nesting one inside another inside a `light-dark()` crashes
+     the WebKit renderer outright -- reproduced on the surfaces page under
+     `.glass`. Two levels are safe; three are not. */
+  --progress-border: color-mix(in oklab, var(--intent-subtle) var(--ui-fill, 0%), var(--progress-line));
 
   @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--progress-border);
+  /* P3 ceiling: the track is 10px tall, so the 2x scale `.out` asks for eats 4px of
+     it a side, and 8px under a 2px aesthetic -- leaving 2px of bar. One pixel is
+     the most this box can spend on an edge. */
+  border: min(calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)), var(--border-width)) solid
+    var(--progress-border);
 
   &::after {
     content: "";
