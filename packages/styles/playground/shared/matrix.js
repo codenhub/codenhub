@@ -16,9 +16,26 @@
    intent class on the element beats anything inherited or supplied by an
    aesthetic, so the two differ wherever something else is in scope. */
 const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
-/* A presentation entry may be more than one class: `out fill` is a documented
-   combination rather than a presentation of its own. */
-const PRESENTATIONS = ["plain", "fill", "out", "out fill", "soft", "flat", "ghost"];
+
+/* Only combinations the package supports are rendered. A presentation whose
+   tokens a component never reads, or reads to the same values as another,
+   produces a row indistinguishable from its neighbour and teaches nothing; the
+   playground is the support surface, so it must not imply otherwise.
+
+   `.fill` is absent from every set but the button's. It declares `--ui-hover-*`
+   and nothing else, and `.btn` is the only component with a fill-based hover, so
+   `.fill` is inert everywhere else. `out fill` is the documented pairing.
+   `.flat` is absent from the button set for the opposite reason: a button's own
+   fallbacks are exactly `.flat`'s values, so the two rows are the same row. */
+const PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
+const BUTTON_PRESENTATIONS = ["plain", "out", "out fill", "soft", "ghost"];
+/* A toggle's box has to stay visible while unchecked, and `.soft` and `.ghost`
+   both zero `--ui-border` without the bottom-rule fallback a text control gets,
+   which leaves nothing to see. */
+const TOGGLE_PRESENTATIONS = ["plain", "out", "flat"];
+/* Components that read only `--ui-border` and `--ui-border-scale`: the tint
+   presentations land on the same values as `plain`. */
+const BORDER_PRESENTATIONS = ["plain", "flat", "out"];
 /* Components that read intent but not presentation. Spelling the axis out per
    component keeps a page from claiming a variant the component ignores. */
 const INTENT_ONLY = ["plain"];
@@ -35,8 +52,9 @@ const classesFor = (base, intent, presentation, extra) =>
 
 /* Toggles share an axis: the same intents, the same states, and the same bare
    cell. Only the input type and the extra states differ. */
-const toggle = (label, type) => ({
+const toggle = (label, type, presentations = TOGGLE_PRESENTATIONS) => ({
   tag: "input",
+  presentations,
   attrs: (intent) => ({ type, "aria-label": `${title(intent)} ${label}` }),
   states: {
     checked: { checked: "" },
@@ -57,6 +75,7 @@ const textControl = (tag, extra) => ({
 const COMPONENTS = {
   btn: {
     tag: "button",
+    presentations: BUTTON_PRESENTATIONS,
     text: (intent) => title(intent),
     states: { disabled: { disabled: "" }, loading: { class: "loading" } },
   },
@@ -112,12 +131,16 @@ const COMPONENTS = {
   divider: {
     tag: "hr",
     layout: "stack",
+    /* A rule reads the border width but not `--ui-border`, so only the doubled
+       width tells a presentation apart. */
+    presentations: ["plain", "out"],
     states: {},
   },
   "empty-state": {
     tag: "div",
     layout: "grid",
-    presentations: INTENT_ONLY,
+    /* Reads `--ui-fg-on-fill` alone, which only `.flat` moves. */
+    presentations: ["plain", "flat"],
     html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
     states: {},
   },
@@ -141,7 +164,9 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  switch: toggle("switch", "checkbox"),
+  /* A switch draws its own track and knob from theme tokens and reads no
+     presentation token at all, so every presentation renders the same control. */
+  switch: toggle("switch", "checkbox", INTENT_ONLY),
   table: {
     tag: "table",
     layout: "grid",
@@ -153,6 +178,7 @@ const COMPONENTS = {
   progress: {
     tag: "div",
     layout: "stack",
+    presentations: BORDER_PRESENTATIONS,
     attrs: (intent) => ({
       style: "--progress-value: 60%",
       role: "progressbar",
@@ -288,26 +314,34 @@ const renderMatrix = (host) => {
 };
 
 /* Input type is a second axis with nothing to do with intent: each type brings
-   its own icon, and `text` and `number` bring none. Date and datetime-local opt
-   themselves into `.icon`, so their standard cell already shows one. Pages
-   declare the axis the same way as a matrix:
+   its own icon, and some bring none. Every cell is a whole field -- label,
+   control, and hint -- because that is the shape the package documents; the
+   invalid cell swaps the hint for an error. Pages declare the axis the same way
+   as a matrix:
 
      <div data-fields="email,password,search"></div>
 
-   Cells are addressable as `field-<type>-<variant>`. */
+   Cells are addressable as `field-<type>-<variant>`.
+
+   `icon: false` drops the icon-left and icon-right cells. `text` and `number`
+   have no artwork to show. Date and datetime-local opt themselves into `.icon`
+   where the native picker button can be hidden and show nothing at all where it
+   cannot, so an explicit alignment cell would be padding around an empty slot in
+   one engine and a second calendar glyph in the other. Their standard cell is
+   the whole supported surface. */
 const FIELD_TYPES = {
-  email: { value: "you@example.com" },
-  password: { value: "correct horse battery" },
-  url: { value: "https://coden.agency" },
-  tel: { value: "+55 11 90000-0000" },
-  search: { value: "styles" },
-  date: { value: "2026-08-10" },
-  "datetime-local": { value: "2026-08-10T09:30" },
-  month: { value: "2026-08" },
-  week: { value: "2026-W33" },
-  time: { value: "09:30" },
-  text: { value: "Plain text", icon: false },
-  number: { value: "42", icon: false },
+  email: { value: "you@example.com", hint: "Used for build notifications." },
+  password: { value: "correct horse battery", hint: "At least twelve characters." },
+  url: { value: "https://coden.agency", hint: "Include the scheme." },
+  tel: { value: "+55 11 90000-0000", hint: "Country code first." },
+  search: { value: "styles", hint: "Matches package names." },
+  date: { value: "2026-08-10", hint: "Native picker button, themed where it can be replaced.", icon: false },
+  "datetime-local": { value: "2026-08-10T09:30", hint: "Local time, no zone.", icon: false },
+  month: { value: "2026-08", hint: "Billing period." },
+  week: { value: "2026-W33", hint: "ISO week number." },
+  time: { value: "09:30", hint: "Twenty-four hour clock." },
+  text: { value: "Plain text", hint: "No icon for this type.", icon: false },
+  number: { value: "42", hint: "No icon for this type.", icon: false },
 };
 
 const FIELD_VARIANTS = {
@@ -324,6 +358,11 @@ const buildField = (type, variant) => {
   const field = document.createElement("label");
   const label = document.createElement("span");
   const input = document.createElement("input");
+  /* One message per cell. A field can carry a hint and an error at once -- the
+     anatomy section shows that -- but here the grid exists to compare types, and
+     a second line in one column only makes the rows harder to scan. */
+  const message = document.createElement("span");
+  const messageId = `field-${type}-${variant}-message`;
 
   field.className = "field";
   label.className = "label";
@@ -333,20 +372,18 @@ const buildField = (type, variant) => {
   input.type = type;
   input.value = spec.value;
   input.dataset.testid = `field-${type}-${variant}`;
+  input.setAttribute("aria-describedby", messageId);
 
   for (const [name, value] of Object.entries(variantSpec.attrs ?? {})) {
     input.setAttribute(name, value);
   }
 
-  field.append(label, input);
+  message.className = variantSpec.error ? "error" : "hint";
+  message.textContent = variantSpec.error ?? spec.hint;
+  message.id = messageId;
+  message.dataset.testid = `${messageId}`;
 
-  if (variantSpec.error) {
-    const error = document.createElement("span");
-
-    error.className = "error";
-    error.textContent = variantSpec.error;
-    field.append(error);
-  }
+  field.append(label, input, message);
 
   return field;
 };

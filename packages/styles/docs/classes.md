@@ -155,7 +155,8 @@ neutral and bordered.
 | `.table`                                                      | Header fill and text, border, border width.  |
 | `.ipt`, `.textarea`, `.select`, `.control-base`               | Border, border width, and a capped fill.     |
 | `.checkbox`, `.radio`, `.switch`                              | Border, border width, capped unchecked fill. |
-| `.progress`, `.divider`                                       | Border and border width.                     |
+| `.progress`                                                   | Border and border width.                     |
+| `.divider`                                                    | Border width only; the rule keeps its color. |
 | `.code`, `.pre`, `.quote`, `.tooltip`, `.skeleton`, `.loader` | Intent only, not presentation.               |
 
 Text controls and toggles cap their fill well below the `.soft` tint. `.flat`
@@ -348,7 +349,9 @@ Examples:
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
-Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default; `date` and `datetime-local` inputs retain only the browser-native picker icon. Use `.no-icon` or `data-no-icon` to suppress custom icons on the other native inputs.
+Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default. Use `.no-icon` or `data-no-icon` to suppress them.
+
+`date` and `datetime-local` depend on the engine, because their picker button is the one browsers do not all let a stylesheet hide. Where it can be hidden, the type opts itself into `.icon` and shows the themed calendar in its place. Where it cannot, the native button stays and no custom icon is drawn, since two calendar glyphs on one field read as a defect. `.icon`, `.left`, and `.right` are inert on these two types in that case rather than reserving space for artwork that never paints.
 Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
 
 Input icons are `background-image` data URIs rather than masks, because a text

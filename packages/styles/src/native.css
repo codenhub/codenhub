@@ -15,13 +15,18 @@
    an undefined `--intent-*`, which makes any `color-mix()` referencing it
    invalid at computed-value time and silently drops the whole declaration.
    Zero specificity for the same reason as the class reset: an intent class on
-   the element must still win, and an inherited value must still lose. */
+   the element must still win, and an inherited value must still lose.
+
+   The values have to match `intent.css` slot for slot. A bare `<code>` and a
+   `.code` chip are the same component reached two ways, so `--intent-subtle`
+   resolves to `--color-surface` here as well: the tinted surface a neutral
+   component sits on is the surface token. */
 :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-text-subtle);
+  --intent-subtle: var(--color-surface);
   --intent-border: var(--color-border);
 }
 
@@ -155,6 +160,10 @@
     @apply ipt;
   }
 
+  /* Mirrors the two branches in `components/form.css`: the themed icon replaces
+     the native picker button where that button can be hidden, and is suppressed
+     where it cannot, so a field never shows two calendar glyphs or padding
+     reserved for artwork that never paints. */
   @supports selector(input::-webkit-calendar-picker-indicator) {
     input[type="date"],
     input[type="datetime-local"] {
@@ -163,6 +172,17 @@
       &::-webkit-calendar-picker-indicator {
         display: none !important;
       }
+    }
+  }
+
+  @supports not selector(input::-webkit-calendar-picker-indicator) {
+    input[type="date"],
+    input[type="datetime-local"] {
+      @apply h-10 py-0;
+
+      background-image: none !important;
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
     }
   }
 

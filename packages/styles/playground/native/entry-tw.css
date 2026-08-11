@@ -1,3 +1,4 @@
 @import "tailwindcss";
 @import "@codenhub/styles/tw/native";
+@import "@codenhub/styles/tw/aesthetics";
 @source "./index.html";

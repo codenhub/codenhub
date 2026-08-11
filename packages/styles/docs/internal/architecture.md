@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-10
+last_updated: 2026-08-11
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -144,6 +144,14 @@ Applying either unconditionally creates a compositing layer and a containing
 block on every component even at its no-op value, so the aesthetics that need
 them apply them directly to the components they target.
 
+That exclusion is the reason an aesthetic's shape does not reach unclassed
+elements, described under
+[Aesthetics reach classes, not elements](#aesthetics-reach-classes-not-elements).
+The two are in tension, and
+[Stage 4](./roadmap.md#planned) opens by measuring whether the no-op cost claimed
+above is real in the baseline engines. Treat this paragraph as unverified until
+it does.
+
 ## Composition rules
 
 Components resolve every axis at their own root and expose the results as
@@ -211,6 +219,27 @@ Three consequences:
 
 This establishes a browser baseline of Chrome 123, Safari 17.5, and Firefox 120.
 
+### Input icons on date and datetime-local
+
+These two types are the one place a component's appearance is decided by the
+engine rather than by a class, because their picker button is the one form control
+part not every engine lets a stylesheet hide.
+`@supports selector(input::-webkit-calendar-picker-indicator)` splits them:
+
+- Supported: the native button is hidden, the type opts itself into `.icon`, and
+  the themed calendar takes its place. Measured `true` in Chromium.
+- Not supported: the native button stays and no custom icon is drawn, because two
+  calendar glyphs on one field read as a defect. Measured `false` in Firefox.
+
+The negative branch has to actively undo `.icon` rather than merely withhold it,
+using `!important` for the same reason `.no-icon` does -- `.icon.right` carries
+equal specificity, so nothing else reliably wins. Without that, an author or a
+fixture putting `.icon` on the field reserves 2.375rem of padding for artwork
+that never paints, which is the shape of the original bug.
+
+Both branches are duplicated in `components/form.css` and in `native.css`,
+because the classed and the unclassed form of the same control have to agree.
+
 ## Aesthetics
 
 Aesthetics are cascading classes that set material tokens, plus their own
@@ -227,6 +256,69 @@ because it is declared on the element rather than inherited.
 Each aesthetic also exposes its own tokens for tuning: `--neo-ink` and
 `--neo-offset`; `--glass-blur`, `--glass-opacity`, `--glass-fill`, and
 `--glass-edge`; `--pixel-unit` and `--pixel-ink`.
+
+### Aesthetics reach classes, not elements
+
+An aesthetic delivers its material two ways, and only one of them survives the
+trip to an unclassed element.
+
+Tokens declared on the aesthetic class itself inherit, so anything inside the
+subtree resolves them. That covers `--ui-radius`, `--ui-border-width`, and
+`--font-pixel`. Rules scoped to a component class list do not, because
+`native.css` maps a bare element with `@apply`, which copies declarations and not
+the class name. A `<button>` styled by the native entrypoint therefore never
+matches `.pixel :is(.btn, ...)`.
+
+Measured on the native playground page against the same component classed:
+
+| Under `.pixel`    | native `<button>`     | classed `.btn`               |
+| ----------------- | --------------------- | ---------------------------- |
+| `clip-path`       | `none`                | stepped 20-point polygon     |
+| `box-shadow`      | `none`                | `inset 0 0 0 4px` ink ring   |
+| `--intent-border` | `oklch(87% 0 0)` gray | `oklch(14.5% 0 0)` pixel ink |
+
+Neobrutalism loses its offset shadow the same way. The result is a native page
+that reads as _partly_ themed -- square corners and a thicker border, no stepped
+silhouette or ink -- which is more misleading than no support would be.
+
+One detail hides the gap and is worth knowing before diagnosing it: `.btn` draws
+its border from `--intent-color`, not `--intent-border`, so a native button's
+border looks correct anyway. The native `<input>` is where the missing ink shows.
+
+Widening the selector lists to name bare elements is the wrong repair. The
+aesthetics ship from their own entrypoints, so a consumer can import one without
+`native.css`; element selectors there would clip and ring bare elements the
+package otherwise leaves alone. The fix is to move the shape into the token
+contract so the component consumes it, which is
+[Stage 4](./roadmap.md#planned).
+
+### Presentation is narrower than its class list
+
+Every presentation class sets the whole token set, but a component only shows the
+tokens it reads. Where two classes resolve to the same values on a component, or
+where a class removes something the component needs, the combination is outside
+the [supported surface](./roadmap.md#supported-surface) and the playground does
+not render it.
+
+| Component                                          | Renders                             | Why the rest are out                                                                                               |
+| -------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `.btn`                                             | plain, out, `out fill`, soft, ghost | Its own fallbacks are `.flat`'s values, so `.flat` repeats plain.                                                  |
+| `.alert` `.badge` `.card` `.panel` `.kbd` `.table` | plain, out, soft, flat, ghost       | `.fill` sets only `--ui-hover-*`, which none of them read.                                                         |
+| `.ipt` `.textarea` `.select` `.control-base`       | plain, out, soft, flat, ghost       | `.flat` clamps to the same 6% tint as `.soft`.                                                                     |
+| `.checkbox` `.radio`                               | plain, out, flat                    | `.soft` and `.ghost` zero `--ui-border` with no bottom rule to replace it, leaving no visible box while unchecked. |
+| `.switch`                                          | plain                               | Draws its track and knob from theme tokens; reads no presentation token.                                           |
+| `.progress`                                        | plain, flat, out                    | Reads `--ui-border` only, so the tint classes land on plain.                                                       |
+| `.divider`                                         | plain, out                          | Reads `--ui-border-scale` only; the rule keeps its color.                                                          |
+| `.empty-state`                                     | plain, flat                         | Reads `--ui-fg-on-fill` only.                                                                                      |
+
+`.fill` deserves stating plainly: it declares nothing but `--ui-hover-*`, and
+`.btn` is the only component with a fill-based hover, so `.fill` is inert on
+everything else. It is a button modifier, not a fourth presentation, and the
+axis table above lists it only because it sets presentation tokens.
+
+The entries that are defects rather than deliberate narrowness -- borderless soft
+controls, and the four components reading one token each -- are Stage 4 work.
+Trimming the playground recorded them; it did not fix them.
 
 ### Shadows reach everything that draws one
 

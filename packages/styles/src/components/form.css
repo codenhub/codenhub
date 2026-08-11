@@ -236,6 +236,17 @@
   }
 }
 
+/* Date and datetime-local are the two types whose picker button cannot be hidden
+   everywhere. Where it can, it is replaced with the themed calendar icon, and the
+   type opts itself in rather than waiting for `.icon`. Where it cannot, the
+   native button stays and the custom icon is suppressed, because two calendar
+   glyphs on one field read as a defect.
+
+   The negative branch has to actively undo `.icon`, not merely withhold it: an
+   author or a fixture can still put `.icon`, `.left`, or `.right` on the field,
+   and those would otherwise reserve padding for artwork that never paints.
+   `!important` for the same reason `.no-icon` uses it -- `.icon.right` carries
+   equal specificity, so nothing but importance reliably wins. */
 @supports selector(input::-webkit-calendar-picker-indicator) {
   .ipt.date,
   .ipt.datetime,
@@ -249,6 +260,19 @@
     &::-webkit-calendar-picker-indicator {
       display: none !important;
     }
+  }
+}
+
+@supports not selector(input::-webkit-calendar-picker-indicator) {
+  .ipt.date,
+  .ipt.datetime,
+  .ipt[type="date"],
+  .ipt[type="datetime-local"] {
+    @apply h-10 py-0;
+
+    background-image: none !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 }
 

@@ -47,8 +47,13 @@ if (aestheticParam !== null && isKnownAesthetic(aestheticParam)) {
   currentAesthetic = storedAesthetic;
 }
 
+/* The native page names its root `native-root` because its tests address it by
+   that id, so both names are accepted rather than renaming a fixture other specs
+   depend on. */
+const PREVIEW_ROOT_SELECTOR = '[data-testid="preview-root"], [data-testid="native-root"]';
+
 const applyAesthetic = (value) => {
-  const root = document.querySelector('[data-testid="preview-root"]');
+  const root = document.querySelector(PREVIEW_ROOT_SELECTOR);
 
   if (!root) {
     return;

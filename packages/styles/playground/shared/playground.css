@@ -1,5 +1,25 @@
 /* Preview-only scaffolding; not part of @codenhub/styles. */
 
+/* `.pixel` reads `--font-pixel` and falls back to the monospace stack, because
+   the package ships no font binary and stays free of network side effects. The
+   aesthetic is drawn for a bitmap face, though, so previewing it against
+   monospace hides whether the shapes and metrics actually work. The playground
+   supplies one from a CDN: preview-only, never part of the package, and the
+   fallback is what consumers who supply nothing still get.
+
+   Pixelify Sans, specifically, for two properties the preview depends on. It
+   draws distinct uppercase and lowercase glyphs, so mixed-case copy still reads
+   as mixed case -- a bitmap face without that renders every heading and label as
+   if it were shouting, which hides real casing bugs. And it carries real 400-700
+   weights, which the components need: `.btn` sets 600, `.label` 500, `.badge`
+   700. A single-weight face gets synthetically emboldened, and a smeared bitmap
+   glyph is not what the aesthetic would actually look like. */
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap");
+
+:root {
+  --font-pixel: "Pixelify Sans", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 .playground-nav {
   position: sticky;
   z-index: var(--z-popover);

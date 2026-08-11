@@ -76,15 +76,20 @@
             <code class="code">.ipt</code>
             the icon is opt-in through
             <code class="code">.icon</code>
-            , except on
-            <code class="code">date</code>
-            and
-            <code class="code">datetime-local</code>
-            , which opt themselves in and hide the native picker button.
+            .
             <code class="code">text</code>
             and
             <code class="code">number</code>
             have no icon to show.
+          </p>
+          <p class="text-body text-text-secondary">
+            <code class="code">date</code>
+            and
+            <code class="code">datetime-local</code>
+            depend on the engine. Where the native picker button can be hidden they opt themselves in and show the
+            themed calendar in its place; where it cannot, the native button stays and no custom icon is drawn, because
+            two calendar glyphs on one field read as a defect. They show no alignment cells for that reason: the
+            standard cell is the whole supported surface.
           </p>
           <p class="text-body text-text-secondary">
             Icons are background images rather than masks, because an input has no pseudo-element to mask and masking
@@ -190,6 +195,10 @@
           </p>
         </div>
         <div class="stack loose">
+          <label class="field" data-testid="field-label-only">
+            <span class="label">Name</span>
+            <input class="ipt" type="text" value="Codenhub" />
+          </label>
           <label class="field" data-testid="field-complete">
             <span class="label">Email</span>
             <input class="ipt email icon" type="email" value="you@example.com" aria-describedby="field-hint" />
@@ -207,16 +216,95 @@
             />
             <span class="error" id="field-error" data-testid="field-error">Enter a valid email.</span>
           </label>
+          <label class="field" data-testid="field-hint-and-error">
+            <span class="label">Email</span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="not-an-email"
+              aria-invalid="true"
+              aria-describedby="field-both-hint field-both-error"
+            />
+            <span class="hint" id="field-both-hint">We only use this to send build failures.</span>
+            <span class="error" id="field-both-error">Enter a valid email.</span>
+          </label>
+          <label class="field" data-testid="field-disabled">
+            <span class="label">Email</span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="you@example.com"
+              disabled
+              aria-describedby="field-disabled-hint"
+            />
+            <span class="hint" id="field-disabled-hint">
+              A disabled control dims itself; the label and hint keep full contrast so the field stays readable.
+            </span>
+          </label>
+        </div>
+        <div class="stack loose">
           <div class="stack tight">
+            <h3 class="text-title-sm">The other controls</h3>
             <p class="text-body text-text-secondary">
-              <code class="code">.error</code>
-              only claims helper text.
-              <code class="code">.btn.error</code>
-              stays a destructive button.
+              <code class="code">.field</code>
+              wraps any control, not only
+              <code class="code">.ipt</code>
+              . A toggle sits beside its label instead of under it, so it takes a
+              <code class="code">.cluster</code>
+              rather than the field's own stack.
             </p>
-            <div class="field">
-              <button class="btn error" type="button" data-testid="field-error-button">Delete</button>
-            </div>
+          </div>
+          <label class="field" data-testid="field-select">
+            <span class="label">Environment</span>
+            <select class="select" aria-describedby="field-select-hint">
+              <option>Vanilla</option>
+              <option>Build</option>
+            </select>
+            <span class="hint" id="field-select-hint">Which stylesheet the preview loads.</span>
+          </label>
+          <label class="field" data-testid="field-textarea">
+            <span class="label">Release notes</span>
+            <textarea class="textarea" rows="3" aria-describedby="field-textarea-hint">
+Collapsed the per-component intent blocks.</textarea
+            >
+            <span class="hint" id="field-textarea-hint">Markdown is not rendered.</span>
+          </label>
+          <div class="field" data-testid="field-checkbox">
+            <label class="cluster tight">
+              <input class="checkbox" type="checkbox" checked aria-describedby="field-checkbox-hint" />
+              <span class="label">Run browser tests</span>
+            </label>
+            <span class="hint" id="field-checkbox-hint">Installs the Playwright browsers on first run.</span>
+          </div>
+          <div class="field" data-testid="field-radio">
+            <span class="label">Aesthetic</span>
+            <label class="cluster tight">
+              <input class="radio" type="radio" name="field-aesthetic" checked />
+              <span class="text-body">Default</span>
+            </label>
+            <label class="cluster tight">
+              <input class="radio" type="radio" name="field-aesthetic" />
+              <span class="text-body">Neobrutalism</span>
+            </label>
+            <span class="hint">One group label, one hint, one line per option.</span>
+          </div>
+          <div class="field" data-testid="field-switch">
+            <label class="cluster tight">
+              <input class="switch primary" type="checkbox" checked aria-describedby="field-switch-hint" />
+              <span class="label">Defer stylesheets</span>
+            </label>
+            <span class="hint" id="field-switch-hint">Keeps CSS off the critical path.</span>
+          </div>
+        </div>
+        <div class="stack tight">
+          <p class="text-body text-text-secondary">
+            <code class="code">.error</code>
+            only claims helper text.
+            <code class="code">.btn.error</code>
+            stays a destructive button.
+          </p>
+          <div class="field">
+            <button class="btn error" type="button" data-testid="field-error-button">Delete</button>
           </div>
         </div>
       </section>
