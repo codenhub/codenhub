@@ -72,17 +72,11 @@
   --ui-shadow: var(--neo-offset) var(--neo-offset) 0 0 var(--intent-border);
 }
 
-/* `--ui-radius` covers every component that reads it. These hardcode a radius of
-   their own, and an aesthetic that says no radius has to mean it. A radio keeps
-   its circle: it is the only thing distinguishing it from a checkbox at a
-   glance. */
-.neobrutalism :is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
-.neobrutalism:is(.badge, .kbd, .progress, .checkbox, .switch, .tooltip-icon),
-.neobrutalism .tooltip::after,
-.neobrutalism .progress::after,
-.neobrutalism .switch::after {
-  border-radius: 0;
-}
+/* `--ui-radius: 0` above now covers every component, including the ones that used
+   to hardcode a radius of their own: they read it with their own value as the
+   fallback, so an aesthetic that says no radius is obeyed without naming them.
+   A radio keeps its circle, which is the only thing distinguishing it from a
+   checkbox at a glance, so it reads no radius token at all. */
 
 /* Hover moves the element by the shadow offset and shrinks the shadow to
    nothing, so it reads as the element being pressed down onto the page. Only the

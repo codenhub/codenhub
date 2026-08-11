@@ -11,11 +11,11 @@
   --surface-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
   --surface-elevation: var(--elevation-low);
 
-  @apply block p-(--surface-padding,1.25rem) text-(--surface-fg);
+  @apply shaped block p-(--surface-padding,1.25rem) text-(--surface-fg);
   background-color: var(--surface-bg);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--surface-border);
+  border: var(--shape-border-width) solid var(--surface-border);
   border-radius: var(--ui-radius-surface, var(--radius-surface));
-  box-shadow: var(--ui-shadow, var(--surface-elevation));
+  box-shadow: var(--shape-ring, var(--ui-shadow, var(--surface-elevation)));
   transition:
     background-color var(--motion-duration-normal) var(--motion-ease),
     border-color var(--motion-duration-normal) var(--motion-ease),
@@ -48,12 +48,16 @@
 
     /* `none` is only valid as an entire `box-shadow` value, so a `<shadow>, none`
        list is invalid and would drop the focus ring. The elevation fallback is
-       always a real shadow here, so the list stays valid. */
+       always a real shadow here, so the list stays valid.
+
+       The outer ring is what a card normally focuses with. `--shape-focus-stack`
+       replaces it under a clipping aesthetic, which would clip an outer ring away;
+       with no such aesthetic it is undefined and the fallback applies. */
     &:focus-visible {
       @apply outline-none;
 
       box-shadow:
-        0 0 0 var(--focus-ring-width) var(--focus-ring),
+        var(--shape-focus-stack, 0 0 0 var(--focus-ring-width) var(--focus-ring)),
         var(--ui-shadow, var(--surface-elevation));
     }
   }
@@ -67,10 +71,14 @@
   --surface-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text));
   --surface-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
 
-  @apply block p-(--surface-padding,1rem) text-(--surface-fg);
+  @apply shaped block p-(--surface-padding,1rem) text-(--surface-fg);
   background-color: var(--surface-bg);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--surface-border);
+  border: var(--shape-border-width) solid var(--surface-border);
   border-radius: var(--ui-radius-surface, var(--radius-surface));
+  /* The ring only, deliberately: a panel is the unelevated sibling and does not
+     read `--ui-shadow`. It still needs the edge, because a clipping aesthetic
+     removes its border, and resolves to `none` when there is no such aesthetic. */
+  box-shadow: var(--shape-ring, none);
 
   &.compact {
     --surface-padding: 0.5rem;

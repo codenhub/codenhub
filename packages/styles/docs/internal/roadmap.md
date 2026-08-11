@@ -68,13 +68,21 @@ green before the next begins.
     declaration. Record the conformance gaps rather than fixing them. Lands as
     [Axis rules](./architecture.md#axis-rules) with no behavior change.
 
-  - **Stage 4b -- Shape reaches elements**: Make aesthetic shape a token the
-    component consumes rather than a rule the aesthetic applies, per A4. One token
-    slot per unit, since a chip overrides the unit its shape is built from.
-    `native.css` picks the shape up for free, because `@apply` copies the
-    component's own declarations. The ink and the brutalist shadow keep their
-    component-scoped selector lists: those must resolve against the component's
-    own intent, which the second measurement above makes non-negotiable.
+  - **Stage 4b -- Shape reaches elements (done)**: The silhouette, its ring, the
+    border ceiling, and the radius are material tokens consumed through the
+    `shaped` and `shaped-tight` utilities, so `native.css` picks them up through
+    the `@apply` it already uses. Bare `<button>`, `<input>`, `<code>`, and
+    `<kbd>` now carry the full stepped silhouette. Deleted the clip, chip-unit,
+    and radius-squashing selector lists from `pixel.css` and the radius list from
+    `neobrutalism.css`.
+
+    Two things stayed deliberately. The ink and the brutalist offset shadow keep
+    their component-scoped lists, because both must resolve against the
+    component's own intent, so a native element gets the silhouette in the
+    neutral border gray rather than the aesthetic's ink. And `--ui-blur` was
+    dropped from the plan: glass applies `backdrop-filter` alongside a background
+    it rebuilds from the component's own intent, so that list stays regardless
+    and tokenizing the blur alone would have deleted nothing.
 
   - **Stage 4c -- Conformance**: Fix what 4a recorded, in slices. The chip border
     ceiling; the control border floor; `.switch` reading its material; `.error`

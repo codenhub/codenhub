@@ -10,6 +10,7 @@ const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
+const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 
 const withAesthetic = (url: string, aesthetic: string) => `${url}&aesthetic=${aesthetic}`;
 
@@ -411,6 +412,49 @@ test.describe("aesthetics", () => {
          resolves against the component it is declared on. */
       expectSameColor(readShadowColor(neutralShadow!), ink, "no-intent ring");
       expect(getColorDistance(readShadowColor(tintedShadow!), destructive)).toBeLessThan(0.4);
+    });
+
+    /* The silhouette is a material token, so it travels through the `@apply` that
+       `native.css` uses to map a bare element onto a component utility. A rule
+       keyed on a class list could never reach these. */
+    test("reaches unclassed native elements", async ({ page }) => {
+      await page.goto(withAesthetic(NATIVE_URL, "pixel"));
+
+      /* Scoped to the preview root: the playground chrome sits outside it and is
+         deliberately left unstyled by the aesthetic. */
+      const shapes = await page.evaluate(() =>
+        [
+          '[data-testid="native-root"] button',
+          '[data-testid="native-root"] input[type="text"]',
+          '[data-testid="native-root"] code',
+        ].map((selector) => {
+          const styles = getComputedStyle(document.querySelector(selector) as Element);
+
+          return {
+            selector,
+            clipped: styles.clipPath.startsWith("polygon("),
+            ring: styles.boxShadow,
+            borderTopWidth: styles.borderTopWidth,
+            borderTopLeftRadius: styles.borderTopLeftRadius,
+          };
+        }),
+      );
+
+      for (const shape of shapes) {
+        expect(shape.clipped, `${shape.selector} clip`).toBe(true);
+        /* A clip removes a border, so the edge has to be the inset ring instead or
+           the element loses its outline entirely. */
+        expect(shape.ring, `${shape.selector} ring`).toContain("inset");
+        expect(shape.borderTopWidth, `${shape.selector} border`).toBe("0px");
+        expect(shape.borderTopLeftRadius, `${shape.selector} radius`).toBe("0px");
+      }
+
+      /* A chip reads the tight slots, so its step and ring stay one unit deep
+         where a structural component uses two. */
+      const [button, , code] = shapes;
+
+      expect(button!.ring).toContain("4px");
+      expect(code!.ring).toContain("2px");
     });
   });
 });

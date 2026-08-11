@@ -239,6 +239,19 @@ Lengths and shadows. Set by aesthetic classes; read by components.
 | `--ui-shadow`          | `none`             | Complete `box-shadow` value.                            |
 | `--ui-bg-alpha`        | `1`                | Unitless multiplier over `--ui-fill`, for translucency. |
 | `--ui-hover-transform` | `none`             | Transform applied on interactive hover.                 |
+| `--ui-clip`            | `none`             | Silhouette for structural components.                   |
+| `--ui-clip-tight`      | `--ui-clip`        | Silhouette for chips.                                   |
+| `--ui-edge`            | _undefined_        | Inset ring width, when the edge is not a border.        |
+| `--ui-edge-tight`      | `--ui-edge`        | Inset ring width for chips.                             |
+| `--ui-border-max`      | `100px`            | Ceiling on the computed border width.                   |
+| `--ui-focus-inset`     | `0px`              | Focus layer depth inside the ring.                      |
+
+The shape tokens are consumed through the `shaped` and `shaped-tight` utilities in
+`shape.css` rather than by each component separately, because every value has to be
+composed at the point of use. `--ui-edge` alone has no fallback, deliberately: with
+no aesthetic in scope it leaves the ring invalid at computed-value time, so a
+component falls through to its own `box-shadow` fallback and keeps reporting
+`none`. A zero-width ring would paint nothing but would still report a shadow.
 
 The default aesthetic is the _absence_ of these declarations, not a set of root
 values. Components read each with the `var()` fallback above, which is why a
@@ -414,42 +427,50 @@ Each aesthetic also exposes its own tokens for tuning: `--neo-ink` and
 `--neo-offset`; `--glass-blur`, `--glass-opacity`, `--glass-fill`, and
 `--glass-edge`; `--pixel-unit` and `--pixel-ink`.
 
-### Aesthetics reach classes, not elements
+`.pixel` writes its silhouette into `--ui-clip` and `--ui-clip-tight` as two
+complete polygons rather than one scaled by a unit, because a shape token cannot
+reference a length the component overrides. `--pixel-unit` still tunes the
+structural polygon, since that one resolves on `.pixel` itself; the chip polygon is
+written at one unit directly.
+
+### What reaches an unclassed element, and what cannot
 
 An aesthetic delivers its material two ways, and only one of them survives the
 trip to an unclassed element.
 
-Tokens declared on the aesthetic class itself inherit, so anything inside the
-subtree resolves them. That covers `--ui-radius`, `--ui-border-width`, and
-`--font-pixel`. Rules scoped to a component class list do not, because
-`native.css` maps a bare element with `@apply`, which copies declarations and not
-the class name. A `<button>` styled by the native entrypoint therefore never
-matches `.pixel :is(.btn, ...)`.
+Anything a component declares travels, because `native.css` maps a bare element
+with `@apply`, which copies declarations. That covers every material token,
+including the silhouette, because the silhouette is consumed inside the `shaped`
+utility the component composes rather than by a rule keyed on the component's
+class. Rules scoped to a class list do not travel: a `<button>` styled by the
+native entrypoint never matches `.pixel :is(.btn, ...)`.
 
 Measured on the native playground page against the same component classed:
 
-| Under `.pixel`    | native `<button>`     | classed `.btn`               |
-| ----------------- | --------------------- | ---------------------------- |
-| `clip-path`       | `none`                | stepped 20-point polygon     |
-| `box-shadow`      | `none`                | `inset 0 0 0 4px` ink ring   |
-| `--intent-border` | `oklch(87% 0 0)` gray | `oklch(14.5% 0 0)` pixel ink |
+| Under `.pixel`    | native `<button>`        | classed `.btn`               |
+| ----------------- | ------------------------ | ---------------------------- |
+| `clip-path`       | stepped 20-point polygon | stepped 20-point polygon     |
+| `box-shadow`      | `inset 0 0 0 4px` ring   | `inset 0 0 0 4px` ring       |
+| `border-width`    | `0px`                    | `0px`                        |
+| `--intent-border` | `oklch(87% 0 0)` gray    | `oklch(14.5% 0 0)` pixel ink |
 
-Neobrutalism loses its offset shadow the same way. The result is a native page
-that reads as _partly_ themed -- square corners and a thicker border, no stepped
-silhouette or ink -- which is more misleading than no support would be.
+The silhouette, the ring, the border ceiling, and the radius all arrive. The ink
+does not, and neither does neobrutalism's offset shadow, because both must resolve
+against the component's own intent and so are declared per component under A4 --
+a container-level token would resolve the container's intent and inherit down
+already-resolved. That is the residual gap, and it is deliberate rather than
+outstanding: a native element under `.pixel` gets the full stepped silhouette in
+the neutral border gray instead of the aesthetic's ink.
 
-One detail hides the gap and is worth knowing before diagnosing it: `.btn` draws
-its border from `--intent-color`, not `--intent-border`, so a native button's
-border looks correct anyway. The native `<input>` is where the missing ink shows.
+One detail hides it and is worth knowing before diagnosing it: `.btn` draws its
+border from `--intent-color`, not `--intent-border`, so a native button looks
+correct anyway. The native `<input>` is where the missing ink shows.
 
-Widening the selector lists to name bare elements is the wrong repair. The
-aesthetics ship from their own entrypoints, so a consumer can import one without
-`native.css`; element selectors there would clip and ring bare elements the
-package otherwise leaves alone. A4 gives the repair instead: the shape carries no
-intent, so it must reach the component through a token, and `native.css` picks it
-up for free because `@apply` copies the component's own declarations. The ink and
-the brutalist shadow keep their selector lists, because those must resolve against
-the component's own intent.
+Widening the selector lists to name bare elements would have been the wrong
+repair. The aesthetics ship from their own entrypoints, so a consumer can import
+one without `native.css`; element selectors there would clip and ring bare elements
+the package otherwise leaves alone. A4 gave the repair instead, and the table above
+is the result.
 
 ### Presentation is narrower than its class list
 
@@ -490,6 +511,7 @@ only the first. Measured against the [axis rules](#axis-rules), with
 | `.ipt` `.textarea` `.select` `.control-base` under `.soft` | P3     | `--ui-border: 0%` removes the only mark of where the control can be typed into, with no bottom rule to replace it.                                                                                      |
 | `.checkbox` `.radio` under `.soft` `.ghost`                | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                                           |
 | `.switch`                                                  | A2     | Hardcodes `border: var(--border-width)`, so it keeps a 1px edge under an aesthetic that declares 2px.                                                                                                   |
+| `.glass` shadow                                            | A1     | `--glass-shadow` hardcodes a near-copy of `--elevation-color` (`.1`/`.35` against `.08`/`.55`), so a consumer retuning the elevation color is ignored and the two drift.                                |
 | `.error` in a `.field`                                     | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button.                   |
 
 Three more read one presentation token or none, which is legal under P2 but has
@@ -588,19 +610,22 @@ Both are rebuilt as inset shadows, which are clipped to the same stepped shape:
 
 ```css
 box-shadow:
-  inset 0 0 0 calc(var(--pixel-unit) * 2) var(--intent-border),
-  inset 0 0 0 calc(var(--pixel-unit) * 2 + var(--focus-ring-width)) var(--focus-ring);
+  inset 0 0 0 var(--ui-edge) var(--shape-edge),
+  inset 0 0 0 calc(var(--ui-edge) + var(--ui-focus-inset, 0px)) var(--focus-ring);
 ```
 
 Shadows paint in order, first on top, so the edge stays visible over the wider
-focus ring sitting immediately inside it.
+focus ring sitting immediately inside it. Both layers live in `shape.css` as
+`--shape-focus-stack`, declared as one value so a component substitutes both or
+neither.
 
 Two constraints fall out of the geometry. The ring must be exactly as thick as
 the depth of the corner cut, or the staircase is left uncovered and the edge
-reads as broken at every corner. And the thickness must be computed at the point
-of use rather than through an intermediate custom property, because a custom
-property resolves on the element that declares it: a component that overrides
-`--pixel-unit`, as the chips do, would otherwise keep the root's ring.
+reads as broken at every corner -- which is why `--ui-edge` and `--ui-clip` are set
+in pairs, and why the chip slots exist rather than a scaled version of one shape.
+And the ring's color must be composed at the point of use, because a custom
+property resolves on the element that declares it: composed on the aesthetic, every
+component would share whichever intent the aesthetic's root happened to have.
 
 Because this consumes no pseudo-element, components that use `::before` or
 `::after` for content need no exception. `.btn.loading`, `.alert.icon`,

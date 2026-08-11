@@ -52,7 +52,9 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /backdrop-filter:/] },
-  "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /clip-path:\s*polygon/] },
+  /* The aesthetic publishes the silhouette as a material token; the `clip-path`
+     declaration that consumes it belongs to the components. */
+  "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/] },
 };
 
 test("every declared package export target exists after build", async () => {

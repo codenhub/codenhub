@@ -1,6 +1,7 @@
 @import "tailwindcss/theme.css";
 @import "./intent.css";
 @import "./presentation.css";
+@import "./shape.css";
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";

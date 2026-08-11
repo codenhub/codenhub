@@ -71,11 +71,14 @@
      `--intent-border`, and without this the two never meet. */
   --kbd-edge: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--kbd-line));
 
-  @apply inline-flex items-center rounded-(--radius-small) px-1.5 py-0.5 font-mono text-xs font-medium;
+  @apply shaped-tight inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
 
+  /* Capped at its own radius: a control radius is sized for a control, and a key
+     cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
+  border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
   background-color: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--intent-subtle));
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--kbd-edge);
-  box-shadow: inset 0 -1px 0 var(--kbd-edge);
+  border: var(--shape-border-width) solid var(--kbd-edge);
+  box-shadow: var(--shape-ring, inset 0 -1px 0 var(--kbd-edge));
   color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-strong));
 }
 
@@ -93,14 +96,25 @@
   @apply text-text-secondary italic;
 }
 
+/* Code draws no border of any kind, so its edge is its own background: a clipping
+   aesthetic still steps the corners, but nothing rings the chip. Every other
+   shaped component either carries a border or fills itself, and blends the two. */
 @utility code {
-  @apply rounded-(--radius-small) px-1.25 py-0.75 font-mono;
+  @apply shaped-tight px-1.25 py-0.75 font-mono;
 
+  --shape-edge: var(--intent-subtle);
+
+  border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
   background-color: var(--intent-subtle);
+  box-shadow: var(--shape-ring, none);
 }
 
 @utility pre {
-  @apply overflow-x-auto rounded-(--radius-control) px-2.5 py-1.5 font-mono;
+  @apply shaped-tight overflow-x-auto px-2.5 py-1.5 font-mono;
 
+  --shape-edge: var(--intent-subtle);
+
+  border-radius: var(--ui-radius, var(--radius-control));
   background-color: var(--intent-subtle);
+  box-shadow: var(--shape-ring, none);
 }

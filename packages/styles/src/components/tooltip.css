@@ -17,9 +17,13 @@
 
   @apply relative;
 
+  /* The host is deliberately not shaped. Its bubble is a pseudo-element positioned
+     outside its box, which clipping the host would erase, so the bubble carries the
+     silhouette itself. Only the radius follows the aesthetic. */
   &.tooltip-icon {
-    @apply inline-flex size-5 cursor-default items-center justify-center rounded-full text-sm font-bold;
+    @apply inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
 
+    border-radius: var(--ui-radius, calc(infinity * 1px));
     background-color: var(--tooltip-bg);
     color: var(--tooltip-fg);
   }
@@ -51,7 +55,10 @@
      is the elevation a raised surface uses: a bubble is a small transient
      popover, not a modal. */
   &::after {
-    @apply pointer-events-none absolute z-(--z-popover) w-max max-w-72 rounded-(--radius-control) bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 shadow-(--ui-shadow,var(--elevation-mid)) transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply shaped pointer-events-none absolute z-(--z-popover) w-max max-w-72 bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+
+    border-radius: var(--ui-radius, var(--radius-control));
+    box-shadow: var(--shape-ring, var(--ui-shadow, var(--elevation-mid)));
     content: attr(data-tooltip);
     left: var(--tooltip-left);
     right: var(--tooltip-right);

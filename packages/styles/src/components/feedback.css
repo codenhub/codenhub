@@ -34,10 +34,10 @@
   --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
   --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
 
-  @apply flex bg-(--feedback-surface) p-4 leading-5 text-(--feedback-text);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--feedback-border);
+  @apply shaped flex bg-(--feedback-surface) p-4 leading-5 text-(--feedback-text);
+  border: var(--shape-border-width) solid var(--feedback-border);
   border-radius: var(--ui-radius-surface, var(--radius-surface));
-  box-shadow: var(--ui-shadow, none);
+  box-shadow: var(--shape-ring, var(--ui-shadow, none));
 
   &.icon {
     @apply relative pl-11;
@@ -86,8 +86,12 @@
   --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
   --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
 
-  @apply inline-flex min-h-6 w-fit items-center gap-1 rounded-full bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--feedback-border);
+  @apply shaped-tight inline-flex min-h-6 w-fit items-center gap-1 bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
+  /* Pill by default, but an aesthetic that declares no radius has to mean it, so
+     the round corner is this component's fallback rather than a hardcoded value. */
+  border-radius: var(--ui-radius, calc(infinity * 1px));
+  border: var(--shape-border-width) solid var(--feedback-border);
+  box-shadow: var(--shape-ring, none);
 }
 
 @utility skeleton {
@@ -107,12 +111,17 @@
   --progress-surface: color-mix(in srgb, var(--intent-subtle) 60%, transparent);
   --progress-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
 
-  @apply relative h-2.5 w-full overflow-hidden rounded-full bg-(--progress-surface);
+  @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
+  /* Round by default; an aesthetic that declares no radius squares the track and
+     its fill together. */
+  border-radius: var(--ui-radius, calc(infinity * 1px));
   border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--progress-border);
 
   &::after {
     content: "";
-    @apply absolute top-0 bottom-0 left-0 block h-full rounded-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+    @apply absolute top-0 bottom-0 left-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+
+    border-radius: var(--ui-radius, calc(infinity * 1px));
     background-color: var(--progress-color);
     width: var(--progress-value, 0%);
     z-index: 2;

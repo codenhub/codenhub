@@ -1,0 +1,80 @@
+/* Shape is the aesthetic axis's material for a component's silhouette and edge.
+
+   This file carries no `@reference "tailwindcss"` on purpose. `theme.css` imports
+   it, and `theme.css` is imported into the full build, where a `@reference`
+   switches the whole build to reference mode: `@theme` stops emitting `:root` and
+   every foundation token resolves to nothing. See the packaging notes in the
+   architecture document.
+
+   It exists as a utility rather than as per-aesthetic selector lists because of
+   A4: the silhouette carries no intent, so it must reach a component through a
+   token. That is also what closes the native gap -- `native.css` maps a bare
+   element with `@apply`, which copies declarations rather than the class name, so
+   a rule keyed on `.pixel .btn` can never match a bare `<button>` while a
+   declaration inside the `btn` utility always travels with it.
+
+   Every value below is composed here, inside the utility, so each `var()`
+   resolves on the component that composes it. A token declared on the aesthetic
+   would resolve its references against the aesthetic and inherit down
+   already-resolved, which is measured under "Indirect tokens resolve once" in
+   the architecture document. That is the whole reason the tokens carry lengths
+   and the colors are built here.
+
+   Every default is inert: no clip, a zero-width ring, no border ceiling, and a
+   zero-width focus layer. A no-op `clip-path: none` costs nothing measurable in
+   any baseline engine -- not a compositing layer, not a containing block, not a
+   stacking context -- which is what makes an unconditional declaration safe. */
+@utility shaped {
+  /* Blended toward the fill by however much fill there is, so a filled component
+     has a seamless edge instead of a stray ring of another color. With no fill
+     this is the line color untouched. Required by P5. */
+  --shape-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--intent-border));
+
+  /* The aesthetic's thickness scaled by the presentation, then capped. An
+     aesthetic that draws its edge some other way sets `--ui-border-max` to `0px`,
+     because a border would be clipped at the straight edges and paint a second
+     line beside the ring. */
+  --shape-border-width: min(
+    calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)),
+    var(--ui-border-max, 100px)
+  );
+
+  /* `clip-path` clips a border, an outline, and any outer shadow, so a clipped
+     component cannot draw its edge with `border`. The edge becomes an inset
+     shadow, which is clipped to the same silhouette.
+
+     `--ui-edge` deliberately carries no fallback. With no aesthetic in scope it is
+     undefined, which makes these two values invalid at computed-value time, and a
+     component referencing them falls through to its own `var()` fallback -- so its
+     `box-shadow` stays exactly what it was, `none` included. A zero-width ring
+     would paint nothing but would still report a shadow. Measured in all three
+     baseline engines. */
+  --shape-ring: inset 0 0 0 var(--ui-edge) var(--shape-edge);
+
+  /* The focus ring sits immediately inside the edge as a second inset layer,
+     because the global `outline` is clipped away with everything else. Shadows
+     paint first-on-top, so the edge stays visible over the wider focus layer.
+     Declared as the whole stack so it is one substitution: either both layers
+     apply or the component keeps the focus treatment it already had. */
+  --shape-focus-stack:
+    inset 0 0 0 var(--ui-edge) var(--shape-edge),
+    inset 0 0 0 calc(var(--ui-edge) + var(--ui-focus-inset, 0px)) var(--focus-ring);
+
+  clip-path: var(--ui-clip, none);
+}
+
+/* Chips are small enough that a structural silhouette would be most of their
+   height, so they read their own token slots first and fall back to the
+   structural ones. Two slots rather than one scalable shape because a shape token
+   cannot reference a unit the component overrides -- the same measurement that
+   forces the composition above. */
+@utility shaped-tight {
+  @apply shaped;
+
+  --shape-ring: inset 0 0 0 var(--ui-edge-tight, var(--ui-edge)) var(--shape-edge);
+  --shape-focus-stack:
+    inset 0 0 0 var(--ui-edge-tight, var(--ui-edge)) var(--shape-edge),
+    inset 0 0 0 calc(var(--ui-edge-tight, var(--ui-edge)) + var(--ui-focus-inset, 0px)) var(--focus-ring);
+
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+}

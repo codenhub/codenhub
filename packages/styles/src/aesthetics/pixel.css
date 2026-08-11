@@ -13,6 +13,71 @@
   --ui-radius-surface: 0;
   --ui-border-width: 2px;
 
+  /* The silhouette and its edge, as material tokens the components resolve. A
+     stepped corner cannot be drawn with `border-radius`, and `clip-path` clips a
+     border away, so the edge is an inset ring of the same depth as the cut: a
+     thinner ring leaves the staircase uncovered and the border reads as broken at
+     every corner.
+
+     Two slots because a shape token cannot reference a unit the component
+     overrides -- the polygon below resolves `--pixel-unit` here, on `.pixel`, not
+     on whichever component reads it. Chips get their own polygon at one unit
+     rather than a scaled version of this one. */
+  --ui-edge: calc(var(--pixel-unit) * 2);
+  --ui-edge-tight: 2px;
+  --ui-clip: polygon(
+    0 calc(var(--pixel-unit) * 2),
+    var(--pixel-unit) calc(var(--pixel-unit) * 2),
+    var(--pixel-unit) var(--pixel-unit),
+    calc(var(--pixel-unit) * 2) var(--pixel-unit),
+    calc(var(--pixel-unit) * 2) 0,
+    calc(100% - var(--pixel-unit) * 2) 0,
+    calc(100% - var(--pixel-unit) * 2) var(--pixel-unit),
+    calc(100% - var(--pixel-unit)) var(--pixel-unit),
+    calc(100% - var(--pixel-unit)) calc(var(--pixel-unit) * 2),
+    100% calc(var(--pixel-unit) * 2),
+    100% calc(100% - var(--pixel-unit) * 2),
+    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit) * 2),
+    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
+    calc(100% - var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
+    calc(100% - var(--pixel-unit) * 2) 100%,
+    calc(var(--pixel-unit) * 2) 100%,
+    calc(var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
+    var(--pixel-unit) calc(100% - var(--pixel-unit)),
+    var(--pixel-unit) calc(100% - var(--pixel-unit) * 2),
+    0 calc(100% - var(--pixel-unit) * 2)
+  );
+  --ui-clip-tight: polygon(
+    0 2px,
+    1px 2px,
+    1px 1px,
+    2px 1px,
+    2px 0,
+    calc(100% - 2px) 0,
+    calc(100% - 2px) 1px,
+    calc(100% - 1px) 1px,
+    calc(100% - 1px) 2px,
+    100% 2px,
+    100% calc(100% - 2px),
+    calc(100% - 1px) calc(100% - 2px),
+    calc(100% - 1px) calc(100% - 1px),
+    calc(100% - 2px) calc(100% - 1px),
+    calc(100% - 2px) 100%,
+    2px 100%,
+    2px calc(100% - 1px),
+    1px calc(100% - 1px),
+    1px calc(100% - 2px),
+    0 calc(100% - 2px)
+  );
+
+  /* The edge is a ring, so a border would be clipped at the straight sides and
+     paint a second line beside it. */
+  --ui-border-max: 0px;
+
+  /* The focus ring is a second inset layer inside the edge, because `clip-path`
+     clips an outline away entirely. */
+  --ui-focus-inset: var(--focus-ring-width);
+
   /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
      network side effect and falls back to the monospace stack. */
   font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
@@ -61,53 +126,6 @@
   --intent-border: var(--pixel-ink);
 }
 
-/* `clip-path` clips the border, the outline, and any outer shadow, so a clipped
-   element cannot draw its edge with `border`. The edge is an inset shadow
-   instead, which is clipped to the same stepped shape.
-
-   Its thickness must equal the depth of the corner cut. A thinner ring leaves the
-   staircase uncovered and the border reads as broken at every corner. The
-   thickness is computed at the point of use rather than through an intermediate
-   custom property, so a component that overrides `--pixel-unit` gets a matching
-   ring: a custom property resolves on the element that declares it. */
-.pixel :is(.btn, .badge, .card, .panel, .alert, .ipt, .textarea, .select, .kbd, .code, .pre),
-.pixel:is(.btn, .badge, .card, .panel, .alert, .ipt, .textarea, .select, .kbd, .code, .pre),
-.pixel .tooltip::after {
-  --ui-border-width: 0px;
-  /* Blended toward the fill by however much fill there is, so a filled component
-     has a seamless outline rather than a stray ring of another color. Declared
-     here so it resolves against the component's own intent; the focus rule below
-     matches the same elements and reads the value from them. Most components
-     fill and line themselves from the same intent slot and are unaffected. A key
-     cap is the one that does not. */
-  --pixel-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--intent-border));
-
-  border-radius: 0;
-  box-shadow: inset 0 0 0 calc(var(--pixel-unit) * 2) var(--pixel-edge);
-  clip-path: polygon(
-    0 calc(var(--pixel-unit) * 2),
-    var(--pixel-unit) calc(var(--pixel-unit) * 2),
-    var(--pixel-unit) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) var(--pixel-unit),
-    calc(100% - var(--pixel-unit)) var(--pixel-unit),
-    calc(100% - var(--pixel-unit)) calc(var(--pixel-unit) * 2),
-    100% calc(var(--pixel-unit) * 2),
-    100% calc(100% - var(--pixel-unit) * 2),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit) * 2),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
-    var(--pixel-unit) calc(100% - var(--pixel-unit)),
-    var(--pixel-unit) calc(100% - var(--pixel-unit) * 2),
-    0 calc(100% - var(--pixel-unit) * 2)
-  );
-}
-
 /* `clip-path` clips an outer shadow away, so the floating bubble casts its own
    with a filter instead: a filter applies after clipping and follows the stepped
    silhouette. Hard and unblurred, in the aesthetic's ink.
@@ -121,41 +139,13 @@
   filter: drop-shadow(var(--pixel-unit) var(--pixel-unit) 0 var(--pixel-ink));
 }
 
-/* Chips are small enough that the default unit would be most of their height. */
-.pixel :is(.badge, .kbd, .code),
-.pixel:is(.badge, .kbd, .code) {
-  --pixel-unit: 1px;
-}
-
-/* Code draws no border of any kind, so its edge is its own background: the
-   corners still step, but nothing rings the chip. Every other shaped component
-   either carries a border or fills itself, and blends the two. */
-.pixel :is(.code, .pre),
-.pixel:is(.code, .pre) {
-  --pixel-edge: var(--intent-subtle);
-}
-
-/* The focus ring is stepped too, as a second inset layer inside the border: an
-   outer ring or an outline would be clipped away entirely. Shadows paint in
-   order, first on top, so the border stays visible over the wider ring. */
-.pixel :is(.btn, .ipt, .textarea, .select, .card.interactive):focus-visible,
-.pixel:is(.btn, .ipt, .textarea, .select, .card.interactive):focus-visible {
-  outline: none;
-  box-shadow:
-    inset 0 0 0 calc(var(--pixel-unit) * 2) var(--pixel-edge),
-    inset 0 0 0 calc(var(--pixel-unit) * 2 + var(--focus-ring-width)) var(--focus-ring);
-}
-
 /* Components whose shape carries meaning, or whose box is too thin to hold a
-   stepped corner, are squared rather than clipped. A radio keeps its circle: it
-   is the only thing distinguishing it from a checkbox at a glance.
+   stepped corner, compose no shape utility and square themselves from
+   `--ui-radius` instead: `.table`, `.progress`, `.skeleton`, `.checkbox`,
+   `.switch`, and the tooltip host. A radio keeps its circle, which is the only
+   thing distinguishing it from a checkbox at a glance, so it reads no radius
+   token at all.
 
-   `.tooltip-icon` is the tooltip host, and a host's bubble is a pseudo-element
-   positioned outside its box, which clipping the host would erase. The bubble
-   carries the stepped shape itself instead. */
-.pixel :is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
-.pixel:is(.table, .progress, .skeleton, .checkbox, .switch, .tooltip-icon),
-.pixel .progress::after,
-.pixel .switch::after {
-  border-radius: 0;
-}
+   `.checkbox` and `.kbd` cap `--ui-radius` at their own, because a control radius
+   on a 16px box renders as a circle. `0` is below every cap, so this aesthetic
+   still reaches them. */
