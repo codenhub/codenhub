@@ -25,13 +25,119 @@ The axes are orthogonal by construction: intent carries only hue, presentation
 only unitless ratios, aesthetic only lengths, shadows, and shapes. A component
 resolves all three at its own root and never branches on a combination.
 
-The axes meet in exactly one place, deliberately:
+The axes meet in one declaration, deliberately:
 
 ```css
 border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
 ```
 
 The aesthetic supplies the base material thickness; the presentation scales it.
+A component may then clamp the result, which is the fourth and last step of
+[precedence](#precedence).
+
+### Intent holds two vocabularies, not two axes
+
+Intent answers "which color", but authors reach for it to say two different
+things:
+
+| Vocabulary   | Classes                                                         | Says                                            |
+| ------------ | --------------------------------------------------------------- | ----------------------------------------------- |
+| **Semantic** | `.success` `.warning` `.destructive` `.danger` `.error` `.info` | What is true of this thing.                     |
+| **Emphasis** | `.primary` `.secondary`                                         | How much it matters on this page.               |
+| _Neutral_    | `.neutral`, or no class                                         | Neither; the default every component resets to. |
+
+They are one axis rather than two because they write the same six slots, so
+exactly one of them can apply. That is worth stating plainly, because the
+boundary reads as blurry until you notice it is a single slot: there is no way to
+express "the primary action, which is also destructive". You pick.
+
+The rule for picking is that **semantic outranks emphasis**. A delete
+confirmation's main button is `.destructive`, not `.primary`, because losing the
+warning costs more than losing the emphasis.
+
+## Axis rules
+
+What each axis may do, and what a component may do about it. These are normative:
+a component that breaks one is a defect even when it looks fine, because the next
+component to copy it will not.
+
+### Intent
+
+- **I1.** Intent declares color and nothing else. No intent class may set a
+  length, a ratio, a shadow, or a shape.
+- **I2.** Exactly one intent applies, and semantic outranks emphasis.
+- **I3.** Intent does not cascade. Every component redeclares the neutral
+  defaults at its own root, at zero specificity, so an element's own intent class
+  wins and an inherited one loses. See
+  [Why intent does not cascade](#why-intent-does-not-cascade).
+- **I4.** An intent class is never also a component. `.error` says destructive; it
+  must not additionally mean "helper text". Where a component needs both, the
+  component carries its own class and takes the intent alongside it.
+
+### Presentation
+
+- **P1.** Presentation declares only unitless numbers and percentages, so it
+  inherits without carrying a resolved color. See
+  [Presentation tokens](#presentation-tokens).
+- **P2.** A presentation class states a target, not a guarantee. Every class sets
+  the whole token set; a component renders only the tokens it reads.
+- **P3.** A component MAY clamp a presentation token it cannot honor, as a ceiling
+  or a floor, and MUST declare the bound in source with its reason. A clamp is a
+  documented property of that component, not an escape hatch: a consumer has to be
+  able to predict the result. "A chip's border never exceeds 1px" is a contract.
+  "A chip ignores `.out`" is a surprise. Floors exist for the same reason ceilings
+  do -- a text control whose border a presentation class zeroes has lost the only
+  mark of where it can be typed into, which
+  [Accessibility constraints](#accessibility-constraints) does not allow.
+- **P4.** Presentation modulates what a component already draws. It MUST NOT give
+  a component a part it does not otherwise have. A progress bar with no border by
+  default must not acquire one from `.flat`.
+- **P5.** Any component that draws a line MUST blend it toward its own fill by
+  the fill amount, so a filled component has a seamless edge instead of a stray
+  ring of another color:
+
+  ```css
+  color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--intent-border))
+  ```
+
+  This is what makes `--ui-border: 100%` invisible under `.flat`, which is the
+  whole reason `.flat` sets it. A component that skips the blend turns `.flat`
+  into a border-adding class and breaks P4 as a side effect.
+
+### Aesthetic
+
+- **A1.** Aesthetic declares only material: lengths, shadows, shapes, and font
+  family. See [Material tokens](#material-tokens).
+- **A2.** Aesthetic tokens cascade, and a component resolves them at its own root
+  with the `var()` fallback that is its default.
+- **A3.** An aesthetic MAY override `--intent-border`, at zero specificity. This
+  is the one sanctioned reach across axes, because a thick border in the neutral
+  border gray is a gray box rather than an aesthetic. See
+  [The neutral ink](#the-neutral-ink).
+- **A4.** An aesthetic MUST reach a component through a token wherever the value
+  carries no intent, and MAY use a component-scoped selector list only where the
+  value must resolve against the component's own intent. The second case is not a
+  shortcut: a token declared on the container resolves its `var()` references
+  against the container and inherits down already-resolved, which is measured
+  under [Indirect tokens resolve once](#indirect-tokens-resolve-once).
+- **A5.** A component MAY resolve a material token unconditionally, because a
+  no-op material value is free. Measured under
+  [The cost of a no-op](#the-cost-of-a-no-op).
+
+### Precedence
+
+When more than one axis has an opinion about the same declaration, they apply in
+this order:
+
+1. **Aesthetic** supplies the base material.
+2. **Presentation** scales and modulates it.
+3. **Intent** colors it.
+4. **Component** clamps the result, under P3.
+
+State sits above all four: a control that is `:disabled` or `aria-invalid` must
+read as such regardless of the intent, presentation, and aesthetic applied to it.
+State is not a fourth axis, because it is a condition rather than a choice, but it
+wins when it collides with one.
 
 ## Why intent does not cascade
 
@@ -139,18 +245,59 @@ values. Components read each with the `var()` fallback above, which is why a
 plain `.card` gets surface radius while a plain `.btn` gets control radius. A
 single `:root` value could not serve both.
 
-`backdrop-filter` and `clip-path` are deliberately not in this contract.
-Applying either unconditionally creates a compositing layer and a containing
-block on every component even at its no-op value, so the aesthetics that need
-them apply them directly to the components they target.
+### The cost of a no-op
 
-That exclusion is the reason an aesthetic's shape does not reach unclassed
-elements, described under
-[Aesthetics reach classes, not elements](#aesthetics-reach-classes-not-elements).
-The two are in tension, and
-[Stage 4](./roadmap.md#planned) opens by measuring whether the no-op cost claimed
-above is real in the baseline engines. Treat this paragraph as unverified until
-it does.
+`clip-path` and `backdrop-filter` were once excluded from the contract above on
+the grounds that applying either unconditionally costs a compositing layer and a
+containing block on every component, even at its no-op value. That is false.
+Measured in all three baseline engines, literal and behind a `var()` fallback:
+
+| Declaration on the host                 | Containing block | Stacking context | Chromium layers, 400 hosts |
+| --------------------------------------- | ---------------- | ---------------- | -------------------------- |
+| _(none)_                                | no               | no               | 4                          |
+| `clip-path: none`                       | no               | no               | 4                          |
+| `clip-path: var(--ui-clip, none)`       | no               | no               | 4                          |
+| `backdrop-filter: none`                 | no               | no               | 4                          |
+| `backdrop-filter: var(--ui-blur, none)` | no               | no               | 4                          |
+| `clip-path: inset(4px)`                 | no               | **yes**          | 4                          |
+| `backdrop-filter: blur(2px)`            | **yes**          | **yes**          | **119**                    |
+
+The last two rows are controls: without them the probe would report "no cost" for
+a broken measurement. Chromium, Firefox, and WebKit agreed on every row.
+
+Two details the original claim had backwards. `clip-path` never establishes a
+containing block, even when active -- only a stacking context. `backdrop-filter`
+is the property that does both, and the only one that costs layers. So a
+component may resolve either token unconditionally (A5), and the reason to keep an
+_active_ clip off every component is different and still real: it establishes a
+stacking context in all three engines and clips descendants, backgrounds,
+borders, shadows, and the focus outline. See
+[Pixel layering](#pixel-layering).
+
+### Indirect tokens resolve once
+
+A `var()` reference inside a custom property value resolves against the element
+that **declares** the custom property, not against the element that uses it. A
+child overriding the referenced token is ignored. Measured identically in all
+three engines, with `--unit: 8px` on the parent and `--unit: 1px` on the child:
+
+| Declaration                                                   | Child override honored? | Result |
+| ------------------------------------------------------------- | ----------------------- | ------ |
+| `--shape: inset(var(--unit))`, then `clip-path: var(--shape)` | no                      | `8px`  |
+| `clip-path: inset(var(--unit))` directly                      | **yes**                 | `1px`  |
+
+This is the mechanism behind three decisions that otherwise look like
+duplication, and it is why A4 permits a component-scoped selector list in exactly
+one case:
+
+- `.neobrutalism` declares `--ui-shadow` per component rather than on the
+  container, so the shadow reads that component's own `--intent-border` and a
+  success button casts a green shadow.
+- `.pixel` computes its ring thickness at the point of use, so a component that
+  overrides `--pixel-unit` gets a matching ring.
+- An aesthetic's shape cannot live in one token that references a tunable unit,
+  because chips override that unit. The shape needs one token slot per unit
+  instead.
 
 ## Composition rules
 
@@ -164,11 +311,21 @@ component-scoped variables:
 }
 ```
 
-A component may clamp a token it cannot honor. Text controls and toggles cap
-their fill with `min(var(--ui-fill, 0%), 12%)`, so a `.flat` container cannot put
-typed text on a saturated background. Clamping resolves from the value alone and
-needs no per-presentation selector, which keeps the component free of axis
+A component may clamp a token it cannot honor, under P3. Text controls and toggles
+cap their fill with `min(var(--ui-fill, 0%), 12%)`, so a `.flat` container cannot
+put typed text on a saturated background. Clamping resolves from the value alone
+and needs no per-presentation selector, which keeps the component free of axis
 branching.
+
+The ceiling belongs on the computed result rather than on the token, whenever what
+the component cannot afford is a length. A chip cannot afford four pixels of
+border; it has no opinion about `--ui-border-scale` itself, and clamping the scale
+would leave the aesthetic's own thickness unbounded:
+
+```css
+/* Clamps what the box cannot afford, not the request that produced it. */
+border-width: min(calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)), 1px);
+```
 
 Two choices there are deliberate and apply everywhere. Mixing toward
 `transparent` rather than a background token lets a tinted surface adapt to
@@ -288,9 +445,11 @@ border looks correct anyway. The native `<input>` is where the missing ink shows
 Widening the selector lists to name bare elements is the wrong repair. The
 aesthetics ship from their own entrypoints, so a consumer can import one without
 `native.css`; element selectors there would clip and ring bare elements the
-package otherwise leaves alone. The fix is to move the shape into the token
-contract so the component consumes it, which is
-[Stage 4](./roadmap.md#planned).
+package otherwise leaves alone. A4 gives the repair instead: the shape carries no
+intent, so it must reach the component through a token, and `native.css` picks it
+up for free because `@apply` copies the component's own declarations. The ink and
+the brutalist shadow keep their selector lists, because those must resolve against
+the component's own intent.
 
 ### Presentation is narrower than its class list
 
@@ -316,9 +475,29 @@ not render it.
 everything else. It is a button modifier, not a fourth presentation, and the
 axis table above lists it only because it sets presentation tokens.
 
-The entries that are defects rather than deliberate narrowness -- borderless soft
-controls, and the four components reading one token each -- are Stage 4 work.
-Trimming the playground recorded them; it did not fix them.
+### Conformance
+
+Narrowness and non-compliance are different things, and the table above records
+only the first. Measured against the [axis rules](#axis-rules), with
+`--border-width: 1px` and `--ui-border-width: 2px` under `.neobrutalism` and
+`.pixel`:
+
+| Component                                                  | Breaks | What happens                                                                                                                                                                                            |
+| ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.progress` under `.out`                                   | P3     | `h-2.5` is a 10px track. `.out` doubles the border to 2px a side, leaving 6px; under a 2px aesthetic it is 4px a side, leaving **2px of 10px**.                                                         |
+| `.progress` under `.flat`                                  | P4, P5 | The track fills from `--intent-subtle` and never reads `--ui-fill`, so the `--ui-border: 100%` that `.flat` sets to make a border vanish has no fill to land on, and appears as an opaque ring instead. |
+| `.badge` `.kbd` under `.out`                               | P3     | 2px of border on a `min-h-6` chip, 4px under a 2px aesthetic. The doubling is sized for a 40px button.                                                                                                  |
+| `.ipt` `.textarea` `.select` `.control-base` under `.soft` | P3     | `--ui-border: 0%` removes the only mark of where the control can be typed into, with no bottom rule to replace it.                                                                                      |
+| `.checkbox` `.radio` under `.soft` `.ghost`                | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                                           |
+| `.switch`                                                  | A2     | Hardcodes `border: var(--border-width)`, so it keeps a 1px edge under an aesthetic that declares 2px.                                                                                                   |
+| `.error` in a `.field`                                     | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button.                   |
+
+Three more read one presentation token or none, which is legal under P2 but has
+never been decided either way: `.divider` (`--ui-border-scale`), `.empty-state`
+(`--ui-fg-on-fill`), and `.skeleton` with `.loader` (neither, though both sit in
+intent.css's reset list). `.quote` draws a line and hardcodes `border-l-4`, so it
+reads no material token either. Each needs to widen to the axis or be documented
+as intent-only, per P2 -- but as a decision, not an accident.
 
 ### Shadows reach everything that draws one
 
@@ -468,9 +647,12 @@ Two build constraints apply to these files specifically:
 
 - Focus must remain visible under every aesthetic. `.pixel` restores it as a
   layer; `.glass` and `.neobrutalism` keep the standard outline.
-- Aesthetics must not reduce non-text contrast below WCAG 1.4.11. This is why
+- No axis may reduce non-text contrast below WCAG 1.4.11. This is why
   neumorphism is not shipped: its defining trait is a borderless control
-  distinguished only by low-contrast shadow.
+  distinguished only by low-contrast shadow. It binds presentation the same way,
+  which is the floor P3 requires: a class that zeroes a control's border leaves
+  the same failing control by a different route, so the component clamps rather
+  than complies.
 - `--font-pixel` falls back to the monospace stack. The package ships no font
   binary, so `.pixel` has no network side effect.
 - Aesthetic hover and press motion respects `prefers-reduced-motion` through the

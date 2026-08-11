@@ -26,13 +26,14 @@
   --ui-shadow: 0 1px 2px -1px var(--glass-shadow), 0 18px 40px -16px var(--glass-shadow);
 }
 
-/* `backdrop-filter` is applied here rather than exposed as a material token: it
-   creates a compositing layer and a containing block on every element that
-   carries it, even at a no-op value.
+/* `backdrop-filter` is applied here rather than exposed as a material token, but
+   not for the reason this comment used to give: a no-op `backdrop-filter: none`
+   costs nothing measurable in any baseline engine, layer or containing block
+   included.
 
-   Surfaces and overlays only. A blur under each control of a dense cluster costs
-   a composited layer apiece and reads as noise, so controls stay solid and sit on
-   the glass instead. */
+   The real reason is scope. Surfaces and overlays only -- an *active* blur does
+   cost a composited layer apiece, and one under every control of a dense cluster
+   reads as noise besides, so controls stay solid and sit on the glass instead. */
 .glass :is(.card, .panel, .alert),
 .glass:is(.card, .panel, .alert),
 .glass .tooltip::after {

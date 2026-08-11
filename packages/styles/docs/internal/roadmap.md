@@ -48,41 +48,47 @@ green before the next begins.
   which no component reads today.
 - **Stage 3 -- Aesthetics (done)**: Ship `.neobrutalism`, `.glass`, and `.pixel`
   from opt-in entrypoints, with the compatibility matrix and playground coverage.
-- **Stage 4 -- Composition contract**: Close the gaps where the three axes meet
-  a component that only partly implements them. Two changes carry the stage.
+- **Stage 4 -- Composition contract**: Close the gaps where the three axes meet a
+  component that only partly implements them. The stage runs in three changes,
+  because the rules decide half the answers and had to come first.
 
-  The chosen direction for aesthetic shape is to make it a token the component
-  consumes rather than a rule the aesthetic applies. Components would resolve it
-  the way they already resolve `--ui-radius` and `--ui-shadow`, the per-aesthetic
-  selector lists would go away with their duplication, and the shape would reach
-  native elements for free, because the declaration would live in the utility
-  `native.css` applies. See
-  [Architecture](./architecture.md#aesthetics-reach-classes-not-elements) for what
-  is measurably missing today.
+  The gate is settled. `clip-path: none` and `backdrop-filter: none` cost nothing
+  in any baseline engine -- no compositing layer, no containing block, no stacking
+  context, literal or behind a `var()` fallback. The claim that they did was
+  false, and correcting it is what opened the token route. A second measurement
+  narrowed that route: an indirect token resolves its `var()` references once, on
+  the element that declares it, so one shape token cannot serve components that
+  override the unit it is built from. Both are recorded under
+  [The cost of a no-op](./architecture.md#the-cost-of-a-no-op) and
+  [Indirect tokens resolve once](./architecture.md#indirect-tokens-resolve-once).
 
-  That direction has one obstacle to clear first, and the stage cannot land until
-  it does.
-  [Material tokens](./architecture.md#material-tokens) records that `clip-path`
-  and `backdrop-filter` are kept out of the contract on purpose, because applying
-  either unconditionally was held to create a compositing layer and a containing
-  block on every component even at its no-op value. A `--ui-clip` every component
-  resolves is exactly the unconditional application that reasoning rejects.
+  - **Stage 4a -- Axis rules (docs only)**: State what each axis may declare, what
+    a presentation class promises, what a component may clamp and how it must
+    declare the bound, and the precedence when two axes want the same
+    declaration. Record the conformance gaps rather than fixing them. Lands as
+    [Axis rules](./architecture.md#axis-rules) with no behavior change.
 
-  So the stage opens by settling that empirically rather than by assuming either
-  side: measure whether `clip-path: none` and `backdrop-filter: none` actually
-  cost a layer or a containing block in the baseline engines. If they do not, the
-  material-token note is what needs correcting and the token route proceeds. If
-  they do, the shape has to reach components some other way -- an opt-in utility
-  the aesthetics compose, or a shape token only the components that can afford it
-  resolve -- and the native gap is closed by whichever of those survives. Either
-  outcome updates one of these two documents, so they stop disagreeing.
+  - **Stage 4b -- Shape reaches elements**: Make aesthetic shape a token the
+    component consumes rather than a rule the aesthetic applies, per A4. One token
+    slot per unit, since a chip overrides the unit its shape is built from.
+    `native.css` picks the shape up for free, because `@apply` copies the
+    component's own declarations. The ink and the brutalist shadow keep their
+    component-scoped selector lists: those must resolve against the component's
+    own intent, which the second measurement above makes non-negotiable.
 
-  Presentation gets honest on the components that under-read it. A text control
-  under `.soft` loses its border with no bottom rule to replace it; `.switch`
-  reads no presentation token at all; `.progress`, `.divider`, and
-  `.empty-state` each read one. Whether a component widens to the full contract
-  or is documented as intent-only is a per-component decision, but it must be a
-  decision rather than an accident.
+  - **Stage 4c -- Conformance**: Fix what 4a recorded, in slices. The chip border
+    ceiling; the control border floor; `.switch` reading its material; `.error`
+    stopping being a component; and a decision for each component that reads one
+    presentation token or none. Each slice widens the playground matrix back or
+    narrows it deliberately.
+
+    Progress is decided: it keeps a border, clamped to 1px however thick the
+    aesthetic and presentation ask, and blends the line toward its fill per P5.
+    `.out` then reads as a real 1px outline on a 10px track instead of eating 8px
+    of it, and `.flat` blends away as it was always meant to, which makes it
+    degenerate with plain and drops it from the matrix. The alternative -- refusing
+    the border axis outright -- was rejected because a thin outline is legitimate
+    on a low-contrast background.
 
 - **Stage 5 -- Documentation**: Split public docs into concepts, reference, and
   guides so the three-axis model is explained before the lookup tables. State the
