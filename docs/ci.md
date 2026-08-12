@@ -1,7 +1,7 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-09
-scope: Continuous integration workflows and the pinned workspace toolchain.
+last_updated: 2026-08-12
+scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
 # Continuous integration
@@ -97,9 +97,73 @@ CI can run is a step no one can reproduce before pushing; `hub verify`,
 what keeps CI from becoming a separate build system. See `docs/tooling.md` for the
 command surface.
 
+## The documentation deployment check
+
+A second check reports on pull requests without living in this repository. The
+documentation site deploys through Cloudflare Workers Builds, connected to the
+repository from the Cloudflare dashboard; `apps/docs/wrangler.jsonc` describes
+what to serve and the rest of the deployment is dashboard state. `docs/roadmap.md`
+records why that split exists.
+
+Because the trigger is dashboard state, a build fires for every push unless the
+project's build watch paths exclude the change. The excluded paths are recorded
+here so the reasoning is reviewable even though the setting is not:
+
+```
+.github/*
+.githooks/*
+docs/*
+apps/debug/*
+AGENTS.md
+CLAUDE.md
+README.md
+LICENSE
+.oxlintrc.json
+.oxfmtrc.json
+.editorconfig
+.gitattributes
+.gitignore
+packages/*/docs/internal/*
+packages/*/tests/*
+packages/*/dev/*
+packages/*/debug/*
+packages/*/demo/*
+```
+
+The list excludes rather than includes, and that direction is the point. An
+include list that misses a path publishes a stale site and says nothing; an
+exclude list that misses one costs a build nobody needed. Only the second failure
+is visible, so the filter is built to fail that way.
+
+Each entry is excluded because the site provably cannot read it. The site's
+content comes from `packages/` alone: `apps/docs/astro.config.ts` points the
+documentation integration at that root, and `src/lib/catalog.ts` globs
+`packages/**/package.json` and public `packages/**/docs/**/*.md` from it. Root
+`docs/` and the root `README.md` are repository governance, not site content.
+`docs/internal/**` is already outside the catalog glob. The `dev`, `debug`, and
+`demo` workspaces are `private: true`, and private manifests are filtered out of
+the public package summaries.
+
+Package `src/` directories are deliberately absent from the list. Most of them
+cannot affect the site, but `@codenhub/tools`, `@codenhub/styles`, and
+`@codenhub/kbd` are build inputs to it — the integration imports
+`@codenhub/tools/documentation` — so excluding `src/` wholesale would ship a
+stale site, and excluding it per package would leave a trap for the first change
+that adds an import. Measured against the history at the time of writing, adding
+them would have skipped two more builds out of a hundred. That is not worth a
+silent staleness failure.
+
+Expect the filter to skip roughly a sixth of pushes, not most of them. This
+repository is docs-first and `pnpm generate` rewrites `llms-full.txt` whenever a
+document changes, so the majority of commits touch a surface the site publishes
+and genuinely need a rebuild. Path filtering cannot change that; the number of
+branches built is the larger lever, and it is a dashboard setting too.
+
 ## Not covered yet
 
-Publishing and deployment are deliberately absent. `docs/roadmap.md` tracks
-trusted publishing and documentation previews, and
-`docs/specs/packages-lifecycle.md` keeps `npm publish` a human action, so delivery
-work must stay a maintainer-triggered workflow rather than publish-on-merge.
+Package publishing is deliberately absent, and so is any deployment the
+repository would own. `docs/roadmap.md` tracks trusted publishing and
+documentation previews, and `docs/specs/packages-lifecycle.md` keeps `npm publish`
+a human action, so delivery work must stay a maintainer-triggered workflow rather
+than publish-on-merge. The documentation deployment above is not an exception to
+that: it carries no credentials and runs no workflow here.
