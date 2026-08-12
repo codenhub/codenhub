@@ -57,9 +57,9 @@ Root scripts map directly onto it:
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
 
-`hub browsers`, `hub new`, and `hub release` have no root script of their own.
-They are occasional commands rather than part of a change loop, and they read as
-what they are through `pnpm hub <command>`.
+`hub browsers`, `hub new`, `hub release`, and `hub preview:deploy` have no root
+script of their own. They are occasional commands rather than part of a change
+loop, and they read as what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
@@ -111,9 +111,9 @@ change that touched package metadata.
 ## Execution order
 
 `hub` owns build ordering. `test`, `test:browser`, `test:browser:watch`,
-`test:coverage`, `test:watch`, `typecheck`, and `status:pack` build their packages
-first, which is why package manifests MUST NOT chain `pnpm build &&` into those
-scripts. Chaining it again would double every build.
+`test:coverage`, `test:watch`, `typecheck`, `status:pack`, and `preview:deploy`
+build their packages first, which is why package manifests MUST NOT chain
+`pnpm build &&` into those scripts. Chaining it again would double every build.
 
 Prerequisite builds cover the selected packages and their workspace
 dependencies. Depending on a package means type-checking against its built
@@ -273,6 +273,32 @@ clean can therefore still fail. The alternative — skipping such files — woul
 unformatted code through the one check meant to stop it.
 
 `git commit --no-verify` bypasses the hook when a commit has to land unfixed.
+
+## Hosted previews
+
+`hub preview:deploy docs` builds the documentation site and uploads it as a new
+Worker version without deploying it, printing a preview URL for that version.
+Pass an alias to get a stable readable URL instead of a per-version one:
+
+```sh
+pnpm hub preview:deploy docs
+pnpm hub preview:deploy docs -- --preview-alias staging
+```
+
+The alias needs the `--` separator. A value after a bare flag would otherwise be
+read as a target, since that is what a bare word after the command name means
+everywhere else.
+
+It exists because the documentation deployment no longer builds branches. The
+Cloudflare project builds the production branch only, so a preview is something a
+maintainer asks for rather than something every push produces. `docs/ci.md`
+covers that side. The upload runs from the maintainer's machine against their own
+`wrangler` login, which is why it stays out of CI and needs no repository
+credentials.
+
+`preview` and `preview:deploy` are different things: `preview` runs `wrangler dev`
+locally against the built output, while `preview:deploy` puts a version on
+Cloudflare that other people can open.
 
 ## Release preflight
 
