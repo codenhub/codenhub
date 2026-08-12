@@ -29,7 +29,7 @@ describe("resolveInvocation", () => {
 
     expect(invocation.args[3]).not.toContain("a b");
     expect(invocation.args[3]).not.toContain("^");
-    expect(Object.values(invocation.env ?? {})).toContain('"a b"');
+    expect(Object.values(invocation.env ?? {})).toContain('^"a^ b^"');
   });
 
   it.runIf(isWindows)("shouldKeepPercentDelimitedArgumentsOutOfTheCommandString", () => {
@@ -37,7 +37,7 @@ describe("resolveInvocation", () => {
 
     expect(invocation.args[3]).not.toContain("%TEMP%");
     expect(invocation.args[3]).not.toContain("^");
-    expect(Object.values(invocation.env ?? {})).toContain('"%TEMP%"');
+    expect(Object.values(invocation.env ?? {})).toContain('^"^%TEMP^%^"');
   });
 
   it.skipIf(isWindows)("shouldRunTheExecutableDirectlyElsewhere", () => {
@@ -93,6 +93,20 @@ describe("execute", () => {
     );
 
     expect(outcome.stdout).toBe("%TEMP%");
+  });
+
+  it.runIf(isWindows)("shouldPreserveQuotesAndCommandOperatorsWithoutExecutingThemOnWindows", async () => {
+    const argument = 'a" & echo injected & "';
+    const outcome = await execute(
+      {
+        args: ["-e", "process.stdout.write(process.argv[1])", argument],
+        command: process.execPath,
+        cwd: process.cwd(),
+      },
+      { stdio: "pipe" },
+    );
+
+    expect(outcome.stdout).toBe(argument);
   });
 
   // Windows routes commands through the interpreter, which reports a missing

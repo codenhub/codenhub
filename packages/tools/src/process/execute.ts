@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 
 const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
 const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
+const CMD_ESCAPE = /[\s"&()<>^|%]/g;
 const WINDOWS_COMMAND_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
 const WINDOWS_INVOCATION_VARIABLE = "CODENHUB_INVOCATION";
 const FORCE_KILL_GRACE_MS = 5000;
@@ -79,6 +80,14 @@ export function quoteForWindows(argument: string): string {
   return `"${escaped}"`;
 }
 
+function quoteForCmd(argument: string): string {
+  const escaped = argument
+    .replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"')
+    .replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1")
+    .replaceAll(CMD_ESCAPE, "^$&");
+  return `^"${escaped}^"`;
+}
+
 /**
  * Places command parts in the child environment so `cmd.exe` expands each part
  * once without interpreting percent sequences introduced by its value.
@@ -98,7 +107,7 @@ function transportWindowsCommandParts(
       name = `_${name}`;
     }
     usedNames.add(name);
-    env[name] = quoteForWindows(part);
+    env[name] = quoteForCmd(part);
     return `%${name}%`;
   });
   return { env, references };
