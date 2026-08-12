@@ -403,7 +403,7 @@ async function runSupportingCommands(
     }
     const outcome = await execute(spec, {
       stdio: settings.streams ? "inherit" : "pipe",
-      timeoutMs: context.options.timeoutMs,
+      timeoutMs: settings.timeoutMs,
     });
     // A supporting step is reported on the same terms as the packages it runs
     // for: silent when it worked and nobody asked, printed when it did not.

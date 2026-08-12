@@ -2,7 +2,8 @@ import { spawn } from "node:child_process";
 
 const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
 const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
-const WINDOWS_QUOTING_REQUIRED = /[\s"&()<>^|]/;
+const CMD_ESCAPE = /[\s"&()<>^|%]/g;
+const CMD_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
 const FORCE_KILL_GRACE_MS = 5000;
 
 /** A resolved child process invocation. */
@@ -70,8 +71,6 @@ export interface CommandOutcome {
  *
  * Backslashes are literal unless they precede a quote or close the argument,
  * which is the escaping the runtime applies when it parses a command line. It is
- * shared because a shell command line and a `spawn` argument list are unwrapped
- * by the same code, and two copies of the rule would eventually disagree.
  * @param argument Argument to quote.
  * @returns Argument wrapped in quotes, with its backslashes and quotes escaped.
  */
@@ -80,11 +79,20 @@ export function quoteForWindows(argument: string): string {
   return `"${escaped}"`;
 }
 
-function quoteWindowsArgument(argument: string): string {
-  if (argument !== "" && !WINDOWS_QUOTING_REQUIRED.test(argument)) {
+/**
+ * Quotes an argument for `cmd.exe`, then for the Windows C runtime it invokes.
+ * @param argument Argument to quote.
+ * @returns Argument escaped for both command-line parsers.
+ */
+export function quoteForCmd(argument: string): string {
+  if (argument !== "" && !CMD_QUOTING_REQUIRED.test(argument)) {
     return argument;
   }
-  return quoteForWindows(argument);
+  const escaped = argument
+    .replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"')
+    .replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1")
+    .replaceAll(CMD_ESCAPE, "^$&");
+  return `^"${escaped}^"`;
 }
 
 /**
@@ -117,7 +125,7 @@ export function resolveInvocation(spec: CommandSpec): {
 
   // The interpreter strips the outermost quotes, so the whole command line is
   // wrapped to survive an executable path that contains spaces.
-  const commandLine = [spec.command, ...spec.args].map(quoteWindowsArgument).join(" ");
+  const commandLine = [spec.command, ...spec.args].map(quoteForCmd).join(" ");
   return {
     args: ["/d", "/s", "/c", `"${commandLine}"`],
     file: process.env.ComSpec ?? "cmd.exe",

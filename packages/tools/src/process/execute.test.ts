@@ -25,7 +25,7 @@ describe("resolveInvocation", () => {
   it.runIf(isWindows)("shouldQuoteWindowsArgumentsContainingSpaces", () => {
     const invocation = resolveInvocation({ args: ["a b"], command: "tool", cwd: "/repo" });
 
-    expect(invocation.args[3]).toBe('"tool "a b""');
+    expect(invocation.args[3]).toBe('"tool ^"a^ b^""');
   });
 
   it.skipIf(isWindows)("shouldRunTheExecutableDirectlyElsewhere", () => {
@@ -67,6 +67,20 @@ describe("execute", () => {
 
     expect(outcome.didTimeOut).toBe(true);
     expect(outcome.isSuccess).toBe(false);
+  });
+
+  it("shouldPreservePercentDelimitedArguments", async () => {
+    const outcome = await execute(
+      {
+        args: ["-e", "process.stdout.write(process.argv[1])", "%TEMP%"],
+        command: process.execPath,
+        cwd: process.cwd(),
+        env: { ...process.env, TEMP: "expanded" },
+      },
+      { stdio: "pipe" },
+    );
+
+    expect(outcome.stdout).toBe("%TEMP%");
   });
 
   // Windows routes commands through the interpreter, which reports a missing

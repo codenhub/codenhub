@@ -67,7 +67,6 @@ describe("quoteShellArgument", () => {
   });
 
   it("shouldQuoteAnArgumentContainingSpaces", () => {
-    expect(quoteShellArgument("two words")).toContain("two words");
     expect(quoteShellArgument("two words")).not.toBe("two words");
   });
 });
@@ -96,6 +95,17 @@ describe("buildScriptSpec", () => {
     const spec = buildScriptSpec(createPackage({ test: "vitest run" }), "test", ["src/a.test.ts"], "/repo");
 
     expect(spec.command).toBe("vitest run src/a.test.ts");
+  });
+
+  it("shouldPreservePercentDelimitedForwardedArguments", async () => {
+    const script = `"${process.execPath}" -e "process.stdout.write(process.argv[1])"`;
+    const workspacePackage = { ...createPackage({ test: script }), directory: process.cwd() };
+    const builtSpec = buildScriptSpec(workspacePackage, "test", ["%TEMP%"], process.cwd());
+    const spec = { ...builtSpec, env: { ...builtSpec.env, TEMP: "expanded" } };
+
+    const outcome = await execute(spec, { stdio: "pipe" });
+
+    expect(outcome.stdout).toBe("%TEMP%");
   });
 
   it("shouldPutThePackageBinDirectoriesOnThePath", () => {

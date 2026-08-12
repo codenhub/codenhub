@@ -1,7 +1,7 @@
 import { delimiter, dirname, join, resolve } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { quoteForWindows, type CommandSpec } from "./execute.ts";
+import { quoteForCmd, type CommandSpec } from "./execute.ts";
 
 const PACKAGE_MANAGER = "pnpm";
 const BIN_DIRECTORY = join("node_modules", ".bin");
@@ -75,7 +75,7 @@ export function quoteShellArgument(argument: string): string {
   if (process.platform !== "win32") {
     return `'${argument.replaceAll(POSIX_SINGLE_QUOTE, String.raw`'\''`)}'`;
   }
-  return quoteForWindows(argument);
+  return quoteForCmd(argument);
 }
 
 /**
