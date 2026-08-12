@@ -42,13 +42,10 @@ pnpm verify --changed
 pnpm verify
 ```
 
-Run the individual steps (`pnpm format:check`, `pnpm lint:check`,
-`pnpm typecheck`, `pnpm test`, `pnpm test:browser`, `pnpm check`) only when you
-need one of them alone. `pnpm test` runs unit and integration tests;
-`pnpm test:browser` runs the Playwright suites and installs their browsers first.
-Use `pnpm verify --skip=test:browser` when a change cannot affect them.
+Run an individual step only when you need it alone. Use
+`pnpm verify --skip=test:browser` when a change cannot affect the browser
+suites.
 
-`pnpm check` reports packages against the lifecycle and documentation specs.
 After changing a package README or any file under a package's `docs/`, run
 `pnpm generate` to rewrite the files derived from them; never edit a generated
 file by hand.
@@ -72,10 +69,6 @@ Always pass a target when working on a package. Every command narrows to one,
 including `check` and `generate`, so there is no reason to run the workspace to
 exercise a single package. Run the unfiltered form only for final verification
 before delivering a change, and for commands that are repo-wide by nature.
-
-Package runs are killed after 600 seconds, so a hanging browser-test worker no
-longer blocks a workspace run. Use `--timeout=<seconds>` or `--no-timeout` to
-change that.
 
 See `docs/tooling.md` for the full command surface, selector rules, and options.
 
