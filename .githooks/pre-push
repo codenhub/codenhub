@@ -1,0 +1,30 @@
+#!/bin/sh
+# Refuses a push that would write to `main`.
+#
+# `main` is verified in full by CI and deployed from, so a commit that arrives
+# there without a pull request is one nobody reviewed and one that publishes
+# itself. The rule is in CONTRIBUTING.md; this is what makes it more than advice.
+#
+# The destination ref is what matters, not the branch you are standing on. A
+# push is rejected whether it comes from `main`, from a branch pushed with an
+# explicit refspec, or from a `--delete`.
+#
+# Bypass with `git push --no-verify` when the exception is a deliberate one.
+set -eu
+
+PROTECTED=refs/heads/main
+
+# `<local ref> <local sha> <remote ref> <remote sha>` per ref being pushed.
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "$PROTECTED" ]; then
+    printf '\npre-push: refusing to push to `main`.\n\n' >&2
+    printf 'Open a pull request instead:\n\n' >&2
+    printf '  git switch -c <type>/<slug>\n' >&2
+    printf '  git push -u origin <type>/<slug>\n\n' >&2
+    printf 'See CONTRIBUTING.md, or push with --no-verify if this is the\n' >&2
+    printf 'exception a maintainer asked for.\n' >&2
+    exit 1
+  fi
+done
+
+exit 0

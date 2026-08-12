@@ -258,21 +258,46 @@ re-stages the result. It runs those two checks and no others: type checking and
 tests take minutes, and a hook that slow gets bypassed until it may as well not
 exist. `pnpm verify` is where the rest belongs.
 
-The hook lives in `.githooks/` and is wired by `core.hooksPath`, which the root
+`pre-commit` reads files from the working tree rather than from the index. For a
+file that is only partly staged that matters: the hook never rewrites it, because
+re-staging would sweep in the parts deliberately left out of the commit, and it
+checks the file as it sits on disk. A commit whose staged content is already
+clean can therefore still fail. The alternative — skipping such files — would let
+unformatted code through the one check meant to stop it.
+
+A `commit-msg` hook checks the subject line against the Conventional Commits
+shape `CONTRIBUTING.md` describes: a known type, an optional lowercase scope, an
+imperative lowercase subject, no trailing period, and 72 characters at most. It
+checks the subject and nothing else. A body is optional, and no hook can tell
+whether a message describes the commit honestly, so the mechanical half is
+automated and the rest stays with review.
+
+Merges, reverts, and `fixup!` markers pass unchecked. Git composes those
+subjects, and rejecting a message nobody wrote would only train people to reach
+for `--no-verify` out of habit, which costs the checks that do matter.
+
+72 characters is where the repository already sits rather than a number picked
+from a style guide: replaying the 200 commits before the hook, it rejects six.
+Three of those are merely long, and the other three join two changes with "and"
+or "+", which is the split the convention asks for anyway.
+
+The hooks live in `.githooks/` and are wired by `core.hooksPath`, which the root
 `prepare` script sets on every install. That is a local git setting rather than
 a tracked one, so a fresh clone runs no hooks until something sets it; doing it
 from `prepare` keeps a hook manager out of the dependency list. The setup step
 never fails an install: a tree without git, or without permission to write its
 config, reports and carries on.
 
-Files are read from the working tree rather than from the index. For a file that
-is only partly staged that matters: the hook never rewrites it, because
-re-staging would sweep in the parts deliberately left out of the commit, and it
-checks the file as it sits on disk. A commit whose staged content is already
-clean can therefore still fail. The alternative — skipping such files — would let
-unformatted code through the one check meant to stop it.
+A `pre-push` hook refuses a push whose destination is `refs/heads/main`. What it
+reads is the destination ref rather than the branch you are standing on, so it
+holds for a push from `main`, for an explicit refspec that targets it from
+somewhere else, and for a `--delete`. `CONTRIBUTING.md` states the rule and why
+`main` is the branch that gets one; this is what makes it more than advice.
 
-`git commit --no-verify` bypasses the hook when a commit has to land unfixed.
+`--no-verify` bypasses these: on `git commit` for the first two, on `git push`
+for the last. It is for the change that genuinely has to land unfixed, and it is
+worth saying out loud when it is used, since the whole point of a hook is that
+skipping one is visible.
 
 ## Hosted previews
 

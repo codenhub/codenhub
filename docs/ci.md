@@ -116,6 +116,7 @@ docs/*
 apps/debug/*
 AGENTS.md
 CLAUDE.md
+CONTRIBUTING.md
 README.md
 LICENSE
 .oxlintrc.json
@@ -139,7 +140,8 @@ Each entry is excluded because the site provably cannot read it. The site's
 content comes from `packages/` alone: `apps/docs/astro.config.ts` points the
 documentation integration at that root, and `src/lib/catalog.ts` globs
 `packages/**/package.json` and public `packages/**/docs/**/*.md` from it. Root
-`docs/` and the root `README.md` are repository governance, not site content.
+`docs/`, `README.md`, and `CONTRIBUTING.md` are repository governance, not site
+content.
 `docs/internal/**` is already outside the catalog glob. The `dev`, `debug`, and
 `demo` workspaces are `private: true`, and private manifests are filtered out of
 the public package summaries.
