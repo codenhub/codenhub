@@ -30,6 +30,24 @@ Follow instructions in this order:
 
 If APPROVED or IMPLEMENTED docs conflict with code, treat code as legacy unless the doc is clearly outdated.
 
+## Working agreement
+
+Do not assume. When a request has two readings that lead to different work, ask
+before starting; a reading picked silently is one nobody can review, because it
+never appears in the diff.
+
+Ask at the point the answer is needed, not at the end. Do everything that does
+not depend on it first, then stop and ask, even mid-implementation. A wrong
+assumption found at the end costs more than a question asked in the middle.
+
+Close by listing the judgment calls you made and the assumptions you worked
+under, so each can be confirmed or reversed. A decision recorded in the final
+message is reviewable; the same decision left implicit is not.
+
+Report what happened. A failing check, a skipped step, or a partially finished
+task is stated plainly, with the output that shows it. Never describe work as
+done when it is not.
+
 ## Commands
 
 Run `pnpm verify` after changes from the repository root. It runs formatting,
