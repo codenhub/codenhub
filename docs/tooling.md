@@ -158,6 +158,36 @@ script that invokes `pnpm` itself, such as one chaining `pnpm build:styles`, pay
 for that call as written; splitting such a chain into separate scripts is the way
 to avoid it.
 
+## Type checking
+
+`hub typecheck` does not run one compiler per package. Every package whose
+`typecheck` script is a bare `tsc -b` is checked in build mode, several projects
+to a process, spread over as many processes as `--parallel` allows. Most of what
+a project costs is loading the compiler and its libraries, and a batch pays that
+once instead of once per package.
+
+Build mode is also what makes a second run cheap. Each project records what it
+checked in a `tsconfig.tsbuildinfo` beside its config, and a project whose inputs
+have not changed since is skipped rather than re-checked. A workspace that has
+just been checked answers in well under a second; `hub clean` removes those
+records along with the rest of the build output.
+
+This is why `docs/specs/packages-lifecycle.md` requires `composite` and `noEmit`
+in a package `tsconfig.json`: `composite` is what build mode needs to track a
+project, and `noEmit` keeps a type-check from writing declarations the build
+already produces.
+
+A package whose `typecheck` script is anything else runs as its own script, in
+its own process, beside the batches. `apps/docs` is the one that does, because
+`astro sync` has to regenerate its types before the compiler sees them. Such a
+package takes a slot of its own and starts first, since nothing else in the run
+gets shorter by waiting for it.
+
+Diagnostics name the file they came from, so a batch that fails is reported
+against the packages the diagnostics belong to rather than against everything it
+covered. A failure with no file in it — a missing type library, say — is reported
+against every package in the batch, because nothing narrows it.
+
 ## Options
 
 | Option                | Effect                                                                              |
@@ -400,9 +430,11 @@ you want while fixing one blocker at a time.
 
 ## Cleaning
 
-`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` from the
-selected packages, descending below each package root so playgrounds and nested
-workspaces are covered too. It stops at each artifact it finds rather than
+`hub clean` removes `dist`, `coverage`, `test-results`, `.astro`, and every
+`*.tsbuildinfo` from the selected packages, descending below each package root so
+playgrounds and nested workspaces are covered too. The compiler's records go with
+the output they describe: left behind, they would tell the next type-check that
+projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than
 descending into it, and it never touches `node_modules`: dependencies belong to
 the package manager, and removing them turns a seconds-long cleanup into a
 reinstall.

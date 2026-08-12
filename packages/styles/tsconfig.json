@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "ESNext"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "ESNext"],
+    "noEmit": true,
     "types": ["node"]
   },
+  "exclude": ["dist", "node_modules", "test-results"],
   "extends": "../../tsconfig.json",
-  "include": ["playwright.config.ts", "vitest.config.ts", "tests/**/*.ts", "dev/**/*.ts", "debug/**/*.ts"],
-  "exclude": ["dist", "node_modules", "test-results"]
+  "include": ["playwright.config.ts", "vitest.config.ts", "tests/**/*.ts", "dev/**/*.ts", "debug/**/*.ts"]
 }

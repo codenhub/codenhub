@@ -56,13 +56,14 @@ function collectScriptPackages(
   return expanded.filter((workspacePackage) => workspacePackage.scripts[script] !== undefined);
 }
 
-interface PackageRun {
+/** One package and the command that runs its script. */
+export interface PackageRun {
   workspacePackage: WorkspacePackage;
   spec: CommandSpec;
 }
 
 /** How a batch of package runs should be started and reported. */
-interface RunSettings {
+export interface RunSettings {
   /** Packages started at the same time. */
   concurrency: number;
   /** Whether dependents wait for their dependencies rather than only for a free slot. */
@@ -101,7 +102,7 @@ function toSummaryRow(workspacePackage: WorkspacePackage, outcome: Awaited<Retur
  * @param settings Concurrency, ordering, and output behavior.
  * @returns One summary row per run, in input order.
  */
-async function runPackageBatch(
+export async function runPackageBatch(
   context: CommandContext,
   script: string,
   runs: readonly PackageRun[],
@@ -153,6 +154,88 @@ async function runPackageBatch(
   }
 
   return runs.map(({ workspacePackage }) => rows.get(workspacePackage.name) as SummaryRow);
+}
+
+/**
+ * Builds the runs that produce what a command's script needs before it starts.
+ *
+ * The selection is expanded to the workspace dependencies of the packages that
+ * were asked for, because a package cannot type-check or test against a
+ * dependency that has not been built.
+ * @param context Command invocation.
+ * @param prerequisite Script that must succeed first, normally `build`.
+ * @param targets Packages the command was asked to act on.
+ * @param root Absolute repository root.
+ * @returns Runs in dependency order, empty when `--no-build` was passed.
+ */
+export function buildPrerequisiteRuns(
+  context: CommandContext,
+  prerequisite: string,
+  targets: readonly PackageSelection[],
+  root: string,
+): PackageRun[] {
+  if (!context.options.shouldBuild) {
+    return [];
+  }
+  return collectScriptPackages(context, targets, prerequisite).map<PackageRun>((workspacePackage) => ({
+    spec: buildScriptSpec(workspacePackage, prerequisite, [], root),
+    workspacePackage,
+  }));
+}
+
+/**
+ * Runs a prerequisite batch and reports it when it fails.
+ *
+ * A failure ends the command: the script the prerequisite feeds would run
+ * against missing or stale output, and reporting that as a second failure only
+ * hides the first one.
+ * @param context Command invocation.
+ * @param prerequisite Script being run, used in headings and messages.
+ * @param script Script the prerequisite was run for, named in the failure message.
+ * @param runs Prerequisite runs, normally from {@link buildPrerequisiteRuns}.
+ * @param settings Concurrency and output behavior of the surrounding command.
+ * @returns `true` when every run passed or there was nothing to run.
+ */
+export async function runPrerequisiteRuns(
+  context: CommandContext,
+  prerequisite: string,
+  script: string,
+  runs: readonly PackageRun[],
+  settings: RunSettings,
+): Promise<boolean> {
+  const { reporter } = context;
+
+  if (runs.length === 0) {
+    return true;
+  }
+  // A captured build says nothing until it ends, and a workspace build is the
+  // longest silence in a run. Naming the step keeps it legible while it lasts.
+  if (!settings.streams) {
+    reporter.blank();
+    reporter.step(`${prerequisite} › ${runs.length} package(s)`);
+  }
+  const rows = await runPackageBatch(context, prerequisite, runs, {
+    ...settings,
+    // A build feeds every run after it, so there is nothing to gain from
+    // starting the rest once one has failed.
+    bails: true,
+    respectsDependencies: true,
+  });
+  if (!rows.some(({ status }) => status !== "passed" && status !== "skipped")) {
+    return true;
+  }
+
+  reporter.blank();
+  // Only what broke is named. The packages the failure stopped are counted
+  // rather than listed: there is one line per package and none of them says
+  // anything the count does not.
+  reporter.summarize(
+    context.options.isVerbose ? rows : rows.filter(({ status }) => status !== "passed" && status !== "skipped"),
+  );
+  reporter.tally(rows);
+  reporter.blank();
+  reporter.error(`\`${prerequisite}\` failed; \`${script}\` did not run.`);
+  return false;
 }
 
 /**
@@ -222,12 +305,7 @@ async function runScriptCommand(
 
   const prerequisite = options.prerequisite;
   const prerequisiteRuns =
-    prerequisite !== undefined && context.options.shouldBuild
-      ? collectScriptPackages(context, runnable, prerequisite).map<PackageRun>((workspacePackage) => ({
-          spec: buildScriptSpec(workspacePackage, prerequisite, [], root),
-          workspacePackage,
-        }))
-      : [];
+    prerequisite === undefined ? [] : buildPrerequisiteRuns(context, prerequisite, runnable, root);
   // Preparation runs ahead of the builds: it is the cheaper of the two, and a
   // missing browser should not be reported only after a build has finished.
   const prepareSpecs =
@@ -277,33 +355,8 @@ async function runScriptCommand(
     return EXIT_FAILURE;
   }
 
-  if (prerequisiteRuns.length > 0) {
-    // A captured build says nothing until it ends, and a workspace build is the
-    // longest silence in a run. Naming the step keeps it legible while it lasts.
-    if (!settings.streams) {
-      reporter.blank();
-      reporter.step(`${prerequisite as string} › ${prerequisiteRuns.length} package(s)`);
-    }
-    const buildRows = await runPackageBatch(context, prerequisite as string, prerequisiteRuns, {
-      ...settings,
-      // A build feeds every run after it, so there is nothing to gain from
-      // starting the rest once one has failed.
-      bails: true,
-      respectsDependencies: true,
-    });
-    if (buildRows.some(({ status }) => status !== "passed" && status !== "skipped")) {
-      reporter.blank();
-      // Only what broke is named. The packages the failure stopped are counted
-      // rather than listed: there is one line per package and none of them says
-      // anything the count does not.
-      reporter.summarize(
-        isVerbose ? buildRows : buildRows.filter(({ status }) => status !== "passed" && status !== "skipped"),
-      );
-      reporter.tally(buildRows);
-      reporter.blank();
-      reporter.error(`\`${prerequisite as string}\` failed; \`${script}\` did not run.`);
-      return EXIT_FAILURE;
-    }
+  if (!(await runPrerequisiteRuns(context, prerequisite ?? "", script, prerequisiteRuns, settings))) {
+    return EXIT_FAILURE;
   }
 
   if (!settings.streams) {

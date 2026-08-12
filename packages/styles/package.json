@@ -97,7 +97,7 @@
     "test:browser:watch": "playwright test --ui",
     "test:coverage": "pnpm test",
     "test:watch": "vitest --watch",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "typecheck": "tsc -b"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
