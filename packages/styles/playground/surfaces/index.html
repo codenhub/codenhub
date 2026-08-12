@@ -107,29 +107,15 @@
           <h2 class="text-title">Empty states</h2>
           <p class="text-body text-text-secondary">A centered, muted layout for a container with nothing in it yet.</p>
         </div>
-        <div
-          data-matrix="empty-state"
-          data-matrix-presentations="plain,flat"
-          data-matrix-states="rest"
-          data-testid="empty-state-matrix"
-        ></div>
+        <div data-matrix="empty-state" data-matrix-states="rest" data-testid="empty-state-matrix"></div>
       </section>
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
           <h2 class="text-title">Dividers</h2>
-          <p class="text-body text-text-secondary">
-            Intent colors the rule. A divider reads nothing from presentation but the border width, so only
-            <code class="code">.out</code>
-            changes it, by doubling the scale.
-          </p>
+          <p class="text-body text-text-secondary">Presentation changes rule strength or width; ghost removes it.</p>
         </div>
-        <div
-          data-matrix="divider"
-          data-matrix-presentations="plain,out"
-          data-matrix-states="rest"
-          data-testid="divider-matrix"
-        ></div>
+        <div data-matrix="divider" data-matrix-states="rest" data-testid="divider-matrix"></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Vertical</h3>
           <p class="text-body text-text-secondary">

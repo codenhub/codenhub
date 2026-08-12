@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
 
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 
@@ -91,6 +91,42 @@ test.describe("surfaces", () => {
     expectSameColor(styles.infoColor, styles.tokenInfo, "divider intent color");
     expect(Number.parseFloat(styles.outWidth)).toBeGreaterThan(Number.parseFloat(styles.plainWidth));
     expect(styles.verticalWidth).not.toBe("0px");
+  });
+
+  test("renders every divider and empty-state presentation", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+      return {
+        dividerFlat: get("divider-flat-primary").borderTopColor,
+        dividerGhost: get("divider-ghost-primary").borderTopColor,
+        dividerOutWidth: get("divider-out-primary").borderTopWidth,
+        dividerPlainWidth: get("divider-plain-primary").borderTopWidth,
+        dividerSoft: get("divider-soft-primary").borderTopColor,
+        emptyFlatBackground: get("empty-state-flat-primary").backgroundColor,
+        emptyFlatColor: get("empty-state-flat-primary").color,
+        emptyGhostBackground: get("empty-state-ghost-primary").backgroundColor,
+        emptyOutBorderWidth: get("empty-state-out-primary").borderTopWidth,
+        emptyPlainBorderWidth: get("empty-state-plain-primary").borderTopWidth,
+        emptySoftBackground: get("empty-state-soft-primary").backgroundColor,
+      };
+    });
+
+    expect(isTransparent(styles.dividerGhost)).toBe(true);
+    expect(isTransparent(styles.dividerSoft)).toBe(false);
+    expect(getColorDistance(styles.dividerSoft, styles.dividerFlat)).toBeGreaterThan(2);
+    expect(Number.parseFloat(styles.dividerPlainWidth)).toBeGreaterThanOrEqual(1);
+    expect(Number.parseFloat(styles.dividerOutWidth)).toBeLessThanOrEqual(2);
+    expect(Number.parseFloat(styles.dividerOutWidth)).toBeGreaterThan(Number.parseFloat(styles.dividerPlainWidth));
+
+    expect(isTransparent(styles.emptyGhostBackground)).toBe(true);
+    expect(isTransparent(styles.emptySoftBackground)).toBe(false);
+    expect(isTransparent(styles.emptyFlatBackground)).toBe(false);
+    expect(getColorDistance(styles.emptyFlatColor, styles.emptyFlatBackground)).toBeGreaterThan(2);
+    expect(Number.parseFloat(styles.emptyPlainBorderWidth)).toBeGreaterThanOrEqual(1);
+    expect(Number.parseFloat(styles.emptyOutBorderWidth)).toBeLessThanOrEqual(2);
   });
 
   /* Presentation cascades and intent does not, so a container sets the look of

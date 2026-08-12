@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-11
+last_updated: 2026-08-12
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -53,41 +53,9 @@ through the `shaped` and `shaped-tight` utilities, so a bare `<button>`,
 geometry conformance fixes: the progress ceiling and fill blend, the chip border
 ceiling, the control border floor, and `.switch` reading its material.
 
-What the rules recorded and the code has not answered yet:
-
-- `.error` stops being a component. Helper text becomes `.hint` coloured by the
-  intent axis, so `.hint.error`, which deletes the field-scoped reinterpretation
-  and its `:not(.btn)` guard. A breaking class-surface change, which `0.x` is for.
-- `.checkbox` and `.radio` need the border floor the text controls already have
-  under `.soft` and `.ghost`.
-- A decision for each component that reads one presentation token or none:
-  `.divider` reads `--ui-border-scale`, `.empty-state` reads `--ui-fg-on-fill`,
-  `.skeleton` and `.loader` read neither, and `.quote` hardcodes `border-l-4`.
-  Widen each to presentation rather than declaring it intent-only. Define the
-  visible meaning, clamps, and accessibility floors per component before changing
-  source; presentation classes must remain distinct where the component can
-  express them.
-- Same-element aesthetics are supported and outrank an inherited aesthetic. Fix
-  tooltip-specific glass and pixel rules so `.tooltip.glass` and
-  `.tooltip.pixel` receive the complete aesthetic, including when an ancestor
-  selects another aesthetic.
-
 ## Planned
 
-- **Phase 3 -- Documentation and release**: Split public docs into concepts,
-  reference, and guides so the three-axis model is explained before the lookup
-  tables. State the supported-surface rule above, and state per component which
-  axes it reads.
-- Publish the shape and ring material tokens as a paired contract. Define which
-  components consume structural and tight variants, required clip/edge pairing,
-  border replacement, focus restoration, and component clamps before presenting
-  them as independently safe customization knobs. Keep `--shape-*` composition
-  variables internal.
-- Add reviewed Chromium visual baselines for representative component matrices,
-  themes, and aesthetics, plus targeted cross-browser snapshots where engine
-  rendering differs. Computed-style tests remain the precise behavioral layer.
-- Give every compiled entrypoint a standalone representative contract and make
-  both reduced-transparency branches deterministic.
+No further work is currently planned for `0.1.0` stabilization.
 
 ## Later / Possible
 

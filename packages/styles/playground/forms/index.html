@@ -190,8 +190,8 @@
             names the control,
             <code class="code">.hint</code>
             explains it, and
-            <code class="code">.error</code>
-            inside a field is destructive helper text.
+            <code class="code">.hint.error</code>
+            is destructive helper text.
           </p>
         </div>
         <div class="stack loose">
@@ -214,7 +214,7 @@
               aria-describedby="field-error"
               data-testid="invalid-input"
             />
-            <span class="error" id="field-error" data-testid="field-error">Enter a valid email.</span>
+            <span class="hint error" id="field-error" data-testid="field-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-hint-and-error">
             <span class="label">Email</span>
@@ -226,7 +226,7 @@
               aria-describedby="field-both-hint field-both-error"
             />
             <span class="hint" id="field-both-hint">We only use this to send build failures.</span>
-            <span class="error" id="field-both-error">Enter a valid email.</span>
+            <span class="hint error" id="field-both-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-disabled">
             <span class="label">Email</span>
@@ -298,8 +298,10 @@ Collapsed the per-component intent blocks.</textarea
         </div>
         <div class="stack tight">
           <p class="text-body text-text-secondary">
+            <code class="code">.hint</code>
+            claims helper typography while
             <code class="code">.error</code>
-            only claims helper text.
+            supplies destructive intent.
             <code class="code">.btn.error</code>
             stays a destructive button.
           </p>

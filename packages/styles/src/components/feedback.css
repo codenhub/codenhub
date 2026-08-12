@@ -98,14 +98,18 @@
 }
 
 @utility skeleton {
-  --skeleton-base: var(--intent-subtle);
+  --skeleton-fill: max(var(--ui-fill, 0%), calc((100% - var(--ui-border, 100%)) * 0.06));
+  --skeleton-base: color-mix(in oklab, var(--intent-color) var(--skeleton-fill), var(--intent-subtle));
   --skeleton-sheen: color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground));
+  --skeleton-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
 
   @apply min-h-4 w-full;
 
   animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
   background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
   background-size: 200% 100%;
+  border: min(calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)), 1px) solid
+    var(--skeleton-line);
   border-radius: var(--ui-radius, var(--radius-control));
 }
 

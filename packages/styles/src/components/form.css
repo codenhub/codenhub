@@ -331,13 +331,6 @@
   --field-gap: 0.35rem;
 
   @apply flex w-full flex-col gap-(--field-gap);
-
-  & > .error:not(.btn) {
-    color: var(--color-destructive);
-    font-size: 0.875rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-  }
 }
 
 @utility label {
@@ -352,6 +345,10 @@
   font-weight: 400;
   letter-spacing: 0.05em;
   line-height: 100%;
+
+  &.error {
+    color: var(--intent-color);
+  }
 }
 
 @utility textarea {
@@ -476,6 +473,18 @@
   &[data-disabled] {
     @apply cursor-not-allowed opacity-[0.58];
   }
+}
+
+/* Tint presentations remove the general edge color. Toggles need the full edge,
+   rather than the bottom-rule floor used by text controls, because their closed
+   silhouette is the only visible unchecked affordance. */
+.checkbox.soft,
+.radio.soft,
+:where(.soft) :is(.checkbox, .radio),
+.checkbox.ghost,
+.radio.ghost,
+:where(.ghost) :is(.checkbox, .radio) {
+  border-color: var(--intent-border);
 }
 
 @utility switch {

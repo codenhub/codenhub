@@ -181,6 +181,50 @@ test.describe("forms", () => {
     expectSameColor(values.switch, values.tokenText, "checked switch background");
   });
 
+  test("keeps unchecked toggle boundaries under direct and inherited tint presentations", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const boundaries = await page.evaluate(() => {
+      const results: { borderColor: string; borderWidth: string; label: string }[] = [];
+
+      for (const component of ["checkbox", "radio"]) {
+        for (const presentation of ["soft", "ghost"]) {
+          const direct = document.querySelector(`[data-testid="${component}-${presentation}-none"]`)!;
+          const inheritedHost = document.createElement("div");
+          const inherited = document.createElement("input");
+
+          inheritedHost.className = presentation;
+          inherited.className = component;
+          inherited.type = component;
+          inheritedHost.append(inherited);
+          document.body.append(inheritedHost);
+
+          for (const [mode, element] of [
+            ["direct", direct],
+            ["inherited", inherited],
+          ] as const) {
+            const styles = getComputedStyle(element);
+
+            results.push({
+              borderColor: styles.borderTopColor,
+              borderWidth: styles.borderTopWidth,
+              label: `${component} ${mode} ${presentation}`,
+            });
+          }
+
+          inheritedHost.remove();
+        }
+      }
+
+      return results;
+    });
+
+    for (const boundary of boundaries) {
+      expect(Number.parseFloat(boundary.borderWidth), `${boundary.label} width`).toBeGreaterThan(0);
+      expect(isTransparent(boundary.borderColor), `${boundary.label} color`).toBe(false);
+    }
+  });
+
   test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -288,21 +332,34 @@ test.describe("forms", () => {
     expect(artwork).not.toContain("%23a3a3a3");
   });
 
-  /* `.error` claims helper text inside a field, which would swallow a
-     destructive button if the selector were not narrowed. */
-  test("keeps a destructive button out of the field error rule", async ({ page }) => {
+  test("styles only hint error messages as field helper text", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const styles = await page.evaluate(() => {
       const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const field = document.querySelector('[data-testid="field-error"]')!.parentElement!;
+      const bareError = document.createElement("span");
+
+      bareError.className = "error";
+      bareError.textContent = "Bare error intent";
+      field.append(bareError);
+
+      const hintError = get("field-error");
+      const bare = getComputedStyle(bareError);
 
       return {
+        bareFontSize: bare.fontSize,
         buttonBackground: get("field-error-button").backgroundColor,
-        errorColor: get("field-error").color,
+        errorColor: hintError.color,
+        errorFontSize: hintError.fontSize,
+        errorFontWeight: hintError.fontWeight,
       };
     });
 
     expect(isTransparent(styles.buttonBackground)).toBe(false);
     expect(isTransparent(styles.errorColor)).toBe(false);
+    expect(styles.errorFontSize).toBe("14px");
+    expect(styles.errorFontWeight).toBe("400");
+    expect(styles.errorFontSize).not.toBe(styles.bareFontSize);
   });
 });

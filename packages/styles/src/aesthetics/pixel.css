@@ -135,7 +135,12 @@
    shadow would break the flat pixel look. A filter also establishes a containing
    block for positioned descendants, which is harmless on a leaf pseudo-element
    and would not be on a card. */
-.pixel .tooltip::after {
+.tooltip.pixel::after,
+:where(.pixel) .tooltip::after {
+  backdrop-filter: none;
+  background-color: var(--tooltip-bg);
+  border: 0;
+  border-radius: 0;
   filter: drop-shadow(var(--pixel-unit) var(--pixel-unit) 0 var(--pixel-ink));
 }
 

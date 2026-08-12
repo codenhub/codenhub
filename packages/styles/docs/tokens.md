@@ -224,6 +224,12 @@ elevation for cards and tooltip bubbles.
 | `--ui-shadow`          | Complete `box-shadow` value.                                 | Per component      |
 | `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
 | `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
+| `--ui-clip`            | Structural component silhouette.                             | `none`             |
+| `--ui-clip-tight`      | Compact component silhouette.                                | `--ui-clip`        |
+| `--ui-edge`            | Structural inset edge width.                                 | Unset              |
+| `--ui-edge-tight`      | Compact inset edge width.                                    | `--ui-edge`        |
+| `--ui-border-max`      | Ceiling on the component's computed border width.            | `100px`            |
+| `--ui-focus-inset`     | Focus layer depth immediately inside an inset edge.          | `0px`              |
 
 Glass composes its two shadow layers from `--elevation-color`. Set that token on
 the `.glass` element when tuning the aesthetic; a custom property referenced by
@@ -246,6 +252,40 @@ border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
 
 > **Material token contract**: components read these; aesthetic classes and
 > consumer overrides set them.
+
+### Shape and ring pairs
+
+Shape customization is a paired contract. Set `--ui-clip` and `--ui-edge`
+together, with matching corner-cut and edge depths. Buttons, text controls,
+surfaces, alerts, loaders, and tooltip bubbles consume this structural pair.
+Badges, key caps, inline code, and preformatted blocks consume
+`--ui-clip-tight` and `--ui-edge-tight`; either tight token falls back to its
+structural counterpart when omitted.
+
+Clipping removes borders, outlines, and outer shadows. A clipped component
+therefore draws `--ui-edge` as an inset ring. Set `--ui-border-max: 0px` when the
+ring replaces the component border, or choose another ceiling when both are
+deliberate. Focusable components restore the clipped focus outline as a second
+inset layer whose total depth is the edge plus `--ui-focus-inset`.
+
+```css
+.stepped {
+  --ui-clip: polygon(/* structural silhouette */);
+  --ui-edge: 4px;
+  --ui-clip-tight: polygon(/* compact silhouette */);
+  --ui-edge-tight: 2px;
+  --ui-border-max: 0px;
+  --ui-focus-inset: var(--focus-ring-width);
+}
+```
+
+The pair requirement is visual rather than a validation mechanism. A clip alone
+clips the component without drawing a replacement edge. An edge alone draws an
+inset ring without changing the silhouette. Both values are valid CSS, but those
+one-sided results are not a complete shape customization.
+
+Variables named `--shape-*` are internal composition outputs. Do not set or read
+them; only the `--ui-*` inputs above are public.
 
 ### Aesthetic Tokens
 

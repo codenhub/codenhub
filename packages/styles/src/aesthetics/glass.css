@@ -17,6 +17,14 @@
   --ui-radius-surface: 1.25rem;
   --ui-border-width: 1px;
   --ui-bg-alpha: 0.8;
+  /* A direct glass choice replaces inherited shape material from another
+     aesthetic rather than combining with it. */
+  --ui-clip: none;
+  --ui-clip-tight: none;
+  --ui-edge: initial;
+  --ui-edge-tight: initial;
+  --ui-border-max: 100px;
+  --ui-focus-inset: 0px;
   /* Both layers pull in with a negative spread, so the shadow stays tucked under
      the surface rather than haloing out from it. A translucent surface shows
      whatever is behind it, and a shadow that spreads past its edge reads as a
@@ -34,7 +42,8 @@
    reads as noise besides, so controls stay solid and sit on the glass instead. */
 .glass :is(.card, .panel, .alert),
 .glass:is(.card, .panel, .alert),
-.glass .tooltip::after {
+:where(.glass) .tooltip::after,
+.tooltip.glass::after {
   /* Surfaces mix their fill toward an opaque background token, which no material
      token can make translucent, so the background is rebuilt here over a
      translucent base. */
@@ -49,9 +58,11 @@
   border-color: color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
 }
 
-.glass .tooltip::after {
+.tooltip.glass::after,
+:where(.glass) .tooltip::after {
   border: var(--ui-border-width) solid color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
   border-radius: var(--ui-radius);
+  filter: none;
 }
 
 /* Transparency is the whole aesthetic, so honoring the preference means dropping
@@ -63,7 +74,8 @@
 
   .glass :is(.card, .panel, .alert),
   .glass:is(.card, .panel, .alert),
-  .glass .tooltip::after {
+  :where(.glass) .tooltip::after,
+  .tooltip.glass::after {
     backdrop-filter: none;
   }
 }
