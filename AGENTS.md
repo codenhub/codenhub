@@ -62,6 +62,23 @@ change that.
 
 See `docs/tooling.md` for the full command surface, selector rules, and options.
 
+## Workflow
+
+`CONTRIBUTING.md` governs how a change lands, and it binds agents exactly as it
+binds people. In short:
+
+- Work on a branch named `<type>/<slug>`. Never commit to `main` without being
+  asked to, for that commit, in the moment.
+- Write Conventional Commits, one intent per commit.
+- Co-author the model that wrote the change, not the harness it ran in:
+  `Co-authored-by: Claude Opus 5 <noreply@anthropic.com>`.
+- Run `pnpm verify --changed` before opening a pull request.
+- Ask before pushing a branch or opening a pull request. Both are
+  outward-facing, and neither is yours to start.
+
+Read `CONTRIBUTING.md` before your first commit in a session. The summary above
+is a reminder for an agent that has already read it, not a substitute.
+
 ## Change rules
 
 - Prefer small, targeted changes.
