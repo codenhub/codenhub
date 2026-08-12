@@ -153,6 +153,16 @@ that adds an import. Replaying the 108 commits that preceded this document,
 adding them would have skipped 2 more builds. That is not worth a silent
 staleness failure.
 
+The list is configured but not yet confirmed to suppress anything. Cloudflare
+documents excludes as applied first, with a build triggered only if a changed
+path survives them and then matches an include, and it documents `*` as matching
+across `/`. Under those rules a push touching only `docs/ci.md` should not build;
+three such pushes on the branch that introduced this section built anyway.
+Neither the Workers nor the Pages page states whether patterns resolve against
+the repository root or the configured root directory, which here is `/apps/docs`,
+and that is the leading suspect. Until a push is observed to skip, treat the
+filter as recorded intent rather than working configuration.
+
 Expect the filter to skip roughly a sixth of pushes, not most of them. Over that
 same window it skips 16 of 108, because 72 of those commits touch a surface the
 site publishes and genuinely need the rebuild they get. This repository is
