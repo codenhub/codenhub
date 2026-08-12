@@ -149,15 +149,17 @@ cannot affect the site, but `@codenhub/tools`, `@codenhub/styles`, and
 `@codenhub/kbd` are build inputs to it — the integration imports
 `@codenhub/tools/documentation` — so excluding `src/` wholesale would ship a
 stale site, and excluding it per package would leave a trap for the first change
-that adds an import. Measured against the history at the time of writing, adding
-them would have skipped two more builds out of a hundred. That is not worth a
-silent staleness failure.
+that adds an import. Replaying the 108 commits that preceded this document,
+adding them would have skipped 2 more builds. That is not worth a silent
+staleness failure.
 
-Expect the filter to skip roughly a sixth of pushes, not most of them. This
-repository is docs-first and `pnpm generate` rewrites `llms-full.txt` whenever a
-document changes, so the majority of commits touch a surface the site publishes
-and genuinely need a rebuild. Path filtering cannot change that; the number of
-branches built is the larger lever, and it is a dashboard setting too.
+Expect the filter to skip roughly a sixth of pushes, not most of them. Over that
+same window it skips 16 of 108, because 72 of those commits touch a surface the
+site publishes and genuinely need the rebuild they get. This repository is
+docs-first and `pnpm generate` rewrites `llms-full.txt` whenever a document
+changes, so most commits reach a published surface whatever else they touch. Path
+filtering cannot change that; the number of branches built is the larger lever,
+and it is a dashboard setting too.
 
 ## Not covered yet
 
