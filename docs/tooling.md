@@ -63,6 +63,10 @@ loop, and they read as what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
+Package scripts also accept the package-first form, such as `hub styles dev`,
+when the first token identifies one package and the second names one of its
+scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal,
+stream output as it arrives, and run without the default timeout.
 
 ## Targets
 
@@ -198,7 +202,7 @@ against every package in the batch, because nothing narrows it.
 | `--no-build`          | Skip prerequisite builds.                                                           |
 | `--no-deps`           | Build only the selected packages, not their workspace dependencies.                 |
 | `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                     |
-| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                              |
+| `--timeout=<seconds>` | Kill a finite package run after `<seconds>`. Defaults to 600.                       |
 | `--no-timeout`        | Never kill a package run.                                                           |
 | `--dry-run`           | Print the commands that would run.                                                  |
 | `--fix`               | Apply fixes instead of only reporting.                                              |
@@ -229,7 +233,9 @@ reports warnings and still exits zero, and keying their output off the exit code
 would drop the findings the run existed to surface.
 
 Package runs are killed when they exceed `--timeout`. This is what keeps one
-hanging browser-test worker from blocking a whole workspace run.
+hanging browser-test worker from blocking a whole workspace run. Interactive
+`dev`, `debug`, `preview`, and watch commands stream through one attached terminal
+and have no timeout.
 
 ## Repository-wide tools
 
