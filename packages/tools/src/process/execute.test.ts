@@ -18,14 +18,26 @@ describe("resolveInvocation", () => {
   it.runIf(isWindows)("shouldRouteThroughTheCommandInterpreterOnWindows", () => {
     const invocation = resolveInvocation({ args: ["run", "test"], command: "pnpm", cwd: "/repo" });
 
-    expect(invocation.args).toEqual(["/d", "/s", "/c", '"pnpm run test"']);
+    expect(invocation.args.slice(0, 3)).toEqual(["/d", "/s", "/c"]);
+    expect(invocation.args[3]).toContain("pnpm");
+    expect(invocation.args[3]).not.toContain("run test");
     expect(invocation.useWindowsVerbatimArguments).toBe(true);
   });
 
   it.runIf(isWindows)("shouldQuoteWindowsArgumentsContainingSpaces", () => {
     const invocation = resolveInvocation({ args: ["a b"], command: "tool", cwd: "/repo" });
 
-    expect(invocation.args[3]).toBe('"tool ^"a^ b^""');
+    expect(invocation.args[3]).not.toContain("a b");
+    expect(invocation.args[3]).not.toContain("^");
+    expect(Object.values(invocation.env ?? {})).toContain('"a b"');
+  });
+
+  it.runIf(isWindows)("shouldKeepPercentDelimitedArgumentsOutOfTheCommandString", () => {
+    const invocation = resolveInvocation({ args: ["%TEMP%"], command: "tool", cwd: "/repo" });
+
+    expect(invocation.args[3]).not.toContain("%TEMP%");
+    expect(invocation.args[3]).not.toContain("^");
+    expect(Object.values(invocation.env ?? {})).toContain('"%TEMP%"');
   });
 
   it.skipIf(isWindows)("shouldRunTheExecutableDirectlyElsewhere", () => {
@@ -115,6 +127,10 @@ describe("shell invocations", () => {
 
   it("shouldRenderAShellSpecAsItsOwnLine", () => {
     expect(formatCommand({ args: [], command: "a && b", cwd: "/repo", shell: true })).toBe("a && b");
+  });
+
+  it("shouldRenderArgumentsAfterAShellLine", () => {
+    expect(formatCommand({ args: ["two words"], command: "tool", cwd: "/repo", shell: true })).toBe('tool "two words"');
   });
 
   it("shouldRunWithTheEnvironmentItWasGiven", async () => {

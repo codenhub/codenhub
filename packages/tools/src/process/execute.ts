@@ -2,8 +2,8 @@ import { spawn } from "node:child_process";
 
 const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
 const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
-const CMD_ESCAPE = /[\s"&()<>^|%]/g;
-const CMD_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
+const WINDOWS_COMMAND_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
+const WINDOWS_INVOCATION_VARIABLE = "CODENHUB_INVOCATION";
 const FORCE_KILL_GRACE_MS = 5000;
 
 /** A resolved child process invocation. */
@@ -11,11 +11,11 @@ export interface CommandSpec {
   /**
    * Executable name resolved through `PATH`, such as `pnpm` or `oxlint`.
    *
-   * When {@link CommandSpec.shell} is set, this holds the whole command line
-   * instead, arguments included.
+   * When {@link CommandSpec.shell} is set, this holds the shell command line;
+   * {@link CommandSpec.args} are appended without reparsing their values.
    */
   command: string;
-  /** Arguments passed to the executable. Empty when {@link CommandSpec.shell} is set. */
+  /** Arguments passed to the executable or appended to the shell command line. */
   args: readonly string[];
   /** Absolute working directory for the child process. */
   cwd: string;
@@ -70,7 +70,7 @@ export interface CommandOutcome {
  * Wraps an argument in double quotes the way the Windows C runtime unwraps them.
  *
  * Backslashes are literal unless they precede a quote or close the argument,
- * which is the escaping the runtime applies when it parses a command line. It is
+ * which is the escaping the runtime applies when it parses a command line.
  * @param argument Argument to quote.
  * @returns Argument wrapped in quotes, with its backslashes and quotes escaped.
  */
@@ -80,19 +80,32 @@ export function quoteForWindows(argument: string): string {
 }
 
 /**
- * Quotes an argument for `cmd.exe`, then for the Windows C runtime it invokes.
- * @param argument Argument to quote.
- * @returns Argument escaped for both command-line parsers.
+ * Places command parts in the child environment so `cmd.exe` expands each part
+ * once without interpreting percent sequences introduced by its value.
+ * @param parts Command and arguments to transport.
+ * @param baseEnvironment Environment inherited by the invocation.
+ * @returns Environment and references safe to place in a `/c` command string.
  */
-export function quoteForCmd(argument: string): string {
-  if (argument !== "" && !CMD_QUOTING_REQUIRED.test(argument)) {
-    return argument;
-  }
-  const escaped = argument
-    .replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"')
-    .replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1")
-    .replaceAll(CMD_ESCAPE, "^$&");
-  return `^"${escaped}^"`;
+function transportWindowsCommandParts(
+  parts: readonly string[],
+  baseEnvironment: Readonly<Record<string, string | undefined>> | undefined,
+): { env: NodeJS.ProcessEnv; references: string[] } {
+  const env = { ...(baseEnvironment ?? process.env) } as NodeJS.ProcessEnv;
+  const usedNames = new Set(Object.keys(env).map((name) => name.toUpperCase()));
+  const references = parts.map((part, index) => {
+    let name = `${WINDOWS_INVOCATION_VARIABLE}_${index}`;
+    while (usedNames.has(name)) {
+      name = `_${name}`;
+    }
+    usedNames.add(name);
+    env[name] = quoteForWindows(part);
+    return `%${name}%`;
+  });
+  return { env, references };
+}
+
+function quoteWindowsCommand(command: string): string {
+  return WINDOWS_COMMAND_QUOTING_REQUIRED.test(command) ? quoteForWindows(command) : command;
 }
 
 /**
@@ -106,28 +119,45 @@ export function quoteForCmd(argument: string): string {
 export function resolveInvocation(spec: CommandSpec): {
   file: string;
   args: string[];
+  env?: NodeJS.ProcessEnv;
   useWindowsVerbatimArguments: boolean;
 } {
   if (spec.shell === true) {
     // `/s` makes the interpreter strip only the outermost quotes and take the
     // rest verbatim, which is what lets a script body keep its own quoting.
-    return process.platform === "win32"
-      ? {
-          args: ["/d", "/s", "/c", `"${spec.command}"`],
-          file: process.env.ComSpec ?? "cmd.exe",
-          useWindowsVerbatimArguments: true,
-        }
-      : { args: ["-c", spec.command], file: "/bin/sh", useWindowsVerbatimArguments: false };
+    if (process.platform === "win32") {
+      const transported = transportWindowsCommandParts(spec.args, spec.env);
+      const commandLine = [spec.command, ...transported.references].join(" ");
+      return {
+        args: ["/d", "/s", "/c", `"${commandLine}"`],
+        env: transported.env,
+        file: process.env.ComSpec ?? "cmd.exe",
+        useWindowsVerbatimArguments: true,
+      };
+    }
+    return {
+      args: ["-c", `${spec.command} "$@"`, "--", ...spec.args],
+      env: spec.env as NodeJS.ProcessEnv | undefined,
+      file: "/bin/sh",
+      useWindowsVerbatimArguments: false,
+    };
   }
   if (process.platform !== "win32") {
-    return { args: [...spec.args], file: spec.command, useWindowsVerbatimArguments: false };
+    return {
+      args: [...spec.args],
+      env: spec.env as NodeJS.ProcessEnv | undefined,
+      file: spec.command,
+      useWindowsVerbatimArguments: false,
+    };
   }
 
   // The interpreter strips the outermost quotes, so the whole command line is
   // wrapped to survive an executable path that contains spaces.
-  const commandLine = [spec.command, ...spec.args].map(quoteForCmd).join(" ");
+  const transported = transportWindowsCommandParts(spec.args, spec.env);
+  const commandLine = [quoteWindowsCommand(spec.command), ...transported.references].join(" ");
   return {
     args: ["/d", "/s", "/c", `"${commandLine}"`],
+    env: transported.env,
     file: process.env.ComSpec ?? "cmd.exe",
     useWindowsVerbatimArguments: true,
   };
@@ -140,7 +170,10 @@ export function resolveInvocation(spec: CommandSpec): {
  */
 export function formatCommand(spec: CommandSpec): string {
   if (spec.shell === true) {
-    return spec.command;
+    return [
+      spec.command,
+      ...spec.args.map((argument) => (/[\s"]/u.test(argument) ? quoteForWindows(argument) : argument)),
+    ].join(" ");
   }
   return [spec.command, ...spec.args].map((part) => (/\s/.test(part) ? `"${part}"` : part)).join(" ");
 }
@@ -171,7 +204,7 @@ export async function execute(spec: CommandSpec, options: ExecuteOptions): Promi
   return new Promise<CommandOutcome>((resolve, reject) => {
     const child = spawn(invocation.file, invocation.args, {
       cwd: spec.cwd,
-      env: spec.env as NodeJS.ProcessEnv | undefined,
+      env: invocation.env,
       stdio: options.stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
       windowsVerbatimArguments: invocation.useWindowsVerbatimArguments,
     });

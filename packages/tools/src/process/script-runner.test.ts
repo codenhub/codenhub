@@ -4,13 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { execute } from "./execute.ts";
-import {
-  buildScriptSpec,
-  needsPackageManager,
-  quoteShellArgument,
-  resolveBinDirectories,
-  withBinPath,
-} from "./script-runner.ts";
+import { buildScriptSpec, needsPackageManager, resolveBinDirectories, withBinPath } from "./script-runner.ts";
 
 function createPackage(scripts: Readonly<Record<string, string>>): WorkspacePackage {
   return {
@@ -61,16 +55,6 @@ describe("withBinPath", () => {
   });
 });
 
-describe("quoteShellArgument", () => {
-  it("shouldLeaveAPlainArgumentAlone", () => {
-    expect(quoteShellArgument("src/index.test.ts")).toBe("src/index.test.ts");
-  });
-
-  it("shouldQuoteAnArgumentContainingSpaces", () => {
-    expect(quoteShellArgument("two words")).not.toBe("two words");
-  });
-});
-
 describe("needsPackageManager", () => {
   it("shouldDeferToThePackageManagerForAScriptWithHooks", () => {
     expect(needsPackageManager(createPackage({ pretest: "echo", test: "vitest run" }), "test")).toBe(true);
@@ -94,7 +78,8 @@ describe("buildScriptSpec", () => {
   it("shouldAppendForwardedArgumentsToTheScriptBody", () => {
     const spec = buildScriptSpec(createPackage({ test: "vitest run" }), "test", ["src/a.test.ts"], "/repo");
 
-    expect(spec.command).toBe("vitest run src/a.test.ts");
+    expect(spec.command).toBe("vitest run");
+    expect(spec.args).toEqual(["src/a.test.ts"]);
   });
 
   it("shouldPreservePercentDelimitedForwardedArguments", async () => {

@@ -1,13 +1,11 @@
 import { delimiter, dirname, join, resolve } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { quoteForCmd, type CommandSpec } from "./execute.ts";
+import type { CommandSpec } from "./execute.ts";
 
 const PACKAGE_MANAGER = "pnpm";
 const BIN_DIRECTORY = join("node_modules", ".bin");
 const PATH_VARIABLE = "PATH";
-const POSIX_SINGLE_QUOTE = /'/g;
-const SHELL_QUOTING_REQUIRED = /[^\w./:=@-]/;
 
 /**
  * Lists the `node_modules/.bin` directories a package script may resolve from.
@@ -64,21 +62,6 @@ export function withBinPath(
 }
 
 /**
- * Quotes one argument for the platform shell.
- * @param argument Argument to quote.
- * @returns Argument safe to append to a shell command line.
- */
-export function quoteShellArgument(argument: string): string {
-  if (argument !== "" && !SHELL_QUOTING_REQUIRED.test(argument)) {
-    return argument;
-  }
-  if (process.platform !== "win32") {
-    return `'${argument.replaceAll(POSIX_SINGLE_QUOTE, String.raw`'\''`)}'`;
-  }
-  return quoteForCmd(argument);
-}
-
-/**
  * Reports whether a script has to be run through the package manager.
  *
  * The package manager owns `pre` and `post` hooks, so a script that has one is
@@ -122,10 +105,9 @@ export function buildScriptSpec(
   }
 
   const body = workspacePackage.scripts[script] as string;
-  const line = [body, ...args.map((argument) => quoteShellArgument(argument))].join(" ");
   return {
-    args: [],
-    command: line,
+    args,
+    command: body,
     cwd: workspacePackage.directory,
     env: withBinPath(resolveBinDirectories(workspacePackage.directory, root)),
     shell: true,
