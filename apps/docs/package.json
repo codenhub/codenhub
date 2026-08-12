@@ -8,6 +8,7 @@
     "build": "astro build",
     "dev": "astro dev",
     "preview": "wrangler dev",
+    "preview:deploy": "wrangler versions upload",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "astro sync && tsc --noEmit"

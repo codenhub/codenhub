@@ -57,6 +57,11 @@ const COMMANDS: readonly CommandDefinition[] = [
     prerequisite: "build",
     summary: "Report publishable package contents.",
   }),
+  createScriptCommand({
+    name: "preview:deploy",
+    prerequisite: "build",
+    summary: "Upload a package as a preview version and print its URL.",
+  }),
   createRootToolCommand({
     command: "oxlint",
     fixArgs: ["--fix"],

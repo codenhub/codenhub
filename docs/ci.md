@@ -153,29 +153,51 @@ that adds an import. Replaying the 108 commits that preceded this document,
 adding them would have skipped 2 more builds. That is not worth a silent
 staleness failure.
 
-The list is configured but not yet confirmed to suppress anything. Cloudflare
-documents excludes as applied first, with a build triggered only if a changed
-path survives them and then matches an include, and it documents `*` as matching
-across `/`. Under those rules a push touching only `docs/ci.md` should not build;
-three such pushes on the branch that introduced this section built anyway.
-Neither the Workers nor the Pages page states whether patterns resolve against
-the repository root or the configured root directory, which here is `/apps/docs`,
-and that is the leading suspect. Until a push is observed to skip, treat the
-filter as recorded intent rather than working configuration.
+Watch paths apply to the production branch only. Cloudflare documents excludes as
+applied first, with a build triggered only if a changed path survives them and
+then matches an include, and documents `*` as matching across `/` — so a push
+touching only `docs/ci.md` should not build. Three such pushes on a pull request
+branch built anyway, and the merge of the same change into `main` skipped. Read
+the filter as governing merges, not pull requests; nothing it lists will spare a
+build on a branch.
 
-Expect the filter to skip roughly a sixth of pushes, not most of them. Over that
+Expect the filter to skip roughly a sixth of merges, not most of them. Over that
 same window it skips 16 of 108, because 72 of those commits touch a surface the
 site publishes and genuinely need the rebuild they get. This repository is
 docs-first and `pnpm generate` rewrites `llms-full.txt` whenever a document
 changes, so most commits reach a published surface whatever else they touch. Path
-filtering cannot change that; the number of branches built is the larger lever,
-and it is a dashboard setting too.
+filtering cannot change that, which is why the larger saving came from not
+building branches at all.
+
+## Previews
+
+The Cloudflare project builds the production branch only; builds for
+non-production branches are off. That is where the build minutes went — a pull
+request pushed six times built the site six times, and watch paths would not have
+stopped any of them. Pull requests are now checked by the workflow above and
+nothing else.
+
+A preview is therefore something a maintainer asks for:
+
+```sh
+pnpm hub preview:deploy docs
+```
+
+That builds the site and uploads it as a new Worker version without deploying it,
+printing a preview URL. It runs from the maintainer's machine against their own
+`wrangler` login, so it consumes no build minutes and needs no credentials in this
+repository, which keeps the split that the rest of this section describes.
+`docs/tooling.md` documents the command and its alias flag.
+
+Previewing the merge rather than a working tree is the one thing it does not do.
+A version uploaded from a laptop is built from whatever is checked out there.
 
 ## Not covered yet
 
 Package publishing is deliberately absent, and so is any deployment the
-repository would own. `docs/roadmap.md` tracks trusted publishing and
-documentation previews, and `docs/specs/packages-lifecycle.md` keeps `npm publish`
-a human action, so delivery work must stay a maintainer-triggered workflow rather
-than publish-on-merge. The documentation deployment above is not an exception to
-that: it carries no credentials and runs no workflow here.
+repository would own. `docs/roadmap.md` tracks trusted publishing, and
+`docs/specs/packages-lifecycle.md` keeps `npm publish` a human action, so delivery
+work must stay a maintainer-triggered workflow rather than publish-on-merge.
+Neither the documentation deployment nor its previews are an exception: one runs
+from dashboard state and the other from a maintainer's machine, and neither
+carries a credential here.
