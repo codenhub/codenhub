@@ -202,6 +202,64 @@ test("uses visible system-color outlines for unclassed native controls in forced
   }
 });
 
+test("uses system colors to distinguish checked custom toggles in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  const expectSystemToggleColors = async (fixture: {
+    checkboxClass: string;
+    radioClass: string;
+    stylesUrl: string;
+  }) => {
+    await page.setContent(`
+      <!doctype html>
+      <html>
+        <body>
+          <input class="${fixture.checkboxClass}" data-testid="checkbox" type="checkbox" checked>
+          <input class="${fixture.radioClass}" data-testid="radio" type="radio" checked>
+        </body>
+      </html>
+    `);
+    await page.addStyleTag({ url: fixture.stylesUrl });
+
+    const colors = await page.evaluate(() => {
+      const resolveColor = (color: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = color;
+        document.body.append(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved;
+      };
+      const checkbox = document.querySelector('[data-testid="checkbox"]')!;
+      const radio = document.querySelector('[data-testid="radio"]')!;
+
+      return {
+        checkboxBackground: getComputedStyle(checkbox).backgroundColor,
+        checkboxMark: getComputedStyle(checkbox, "::after").backgroundColor,
+        expectedCanvas: resolveColor("Canvas"),
+        expectedHighlight: resolveColor("Highlight"),
+        expectedHighlightText: resolveColor("HighlightText"),
+        radioBackground: getComputedStyle(radio).backgroundColor,
+        radioBorder: getComputedStyle(radio).borderTopColor,
+        radioMark: getComputedStyle(radio, "::after").backgroundColor,
+      };
+    });
+
+    expect(colors.checkboxBackground).toBe(colors.expectedHighlight);
+    expect(colors.checkboxMark).toBe(colors.expectedHighlightText);
+    expect(colors.radioBackground).toBe(colors.expectedCanvas);
+    expect(colors.radioBorder).toBe(colors.expectedHighlight);
+    expect(colors.radioMark).toBe(colors.expectedHighlight);
+  };
+
+  await expectSystemToggleColors({
+    checkboxClass: "checkbox",
+    radioClass: "radio",
+    stylesUrl: COMPONENT_STYLES_URL,
+  });
+  await expectSystemToggleColors({ checkboxClass: "", radioClass: "", stylesUrl: NATIVE_STYLES_URL });
+});
+
 test("keeps the select arrow themed for every dark-mode path while light override wins", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto(FEEDBACK_URL);

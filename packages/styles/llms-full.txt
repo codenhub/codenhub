@@ -260,7 +260,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Open state              | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
 | Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.       |
 | Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.        |
-| Forced colors           | `forced-colors: active` preserves visible borders on key helpers.                                                         |
+| Forced colors           | `forced-colors: active` preserves visible borders and checked states using system colors.                                 |
 
 The loader fallback is embedded in loader CSS, so focused imports that include
 loaders honor reduced motion without the reset. This includes
@@ -273,6 +273,10 @@ In forced colors, class-based form controls including `.control-base` receive a
 2px `Highlight` system-color focus outline. The native entrypoint provides the
 same visible system outline for unclassed text inputs, selects, textareas,
 checkboxes, and radios.
+
+Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
+and `HighlightText` colors in forced-colors mode so checked and unchecked states
+remain distinct. Shape, size, and spacing remain unchanged.
 
 ## Required Outside CSS
 
