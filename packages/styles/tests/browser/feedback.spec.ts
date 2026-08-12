@@ -58,6 +58,41 @@ test.describe("feedback", () => {
     expect(progressStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   });
 
+  test("renders every skeleton and loader presentation", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const styles = await page.evaluate(() => {
+      const read = (testId: string, pseudo?: string) =>
+        getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, pseudo);
+
+      return {
+        loaderFlatBackground: read("loader-flat-primary").backgroundColor,
+        loaderFlatGlyph: read("loader-flat-primary", "::before").backgroundColor,
+        loaderGhostBackground: read("loader-ghost-primary").backgroundColor,
+        loaderOutBorderWidth: read("loader-out-primary").borderTopWidth,
+        loaderPlainBorderWidth: read("loader-plain-primary").borderTopWidth,
+        loaderSoftBackground: read("loader-soft-primary").backgroundColor,
+        skeletonFlat: read("skeleton-flat-primary").backgroundImage,
+        skeletonGhost: read("skeleton-ghost-primary").backgroundImage,
+        skeletonOutBorderWidth: read("skeleton-out-primary").borderTopWidth,
+        skeletonPlain: read("skeleton-plain-primary").backgroundImage,
+        skeletonSoft: read("skeleton-soft-primary").backgroundImage,
+      };
+    });
+
+    expect(styles.skeletonGhost).not.toBe("none");
+    expect(styles.skeletonSoft).not.toBe(styles.skeletonPlain);
+    expect(styles.skeletonFlat).not.toBe(styles.skeletonSoft);
+    expect(Number.parseFloat(styles.skeletonOutBorderWidth)).toBeLessThanOrEqual(1);
+
+    expect(Number.parseFloat(styles.loaderPlainBorderWidth)).toBeGreaterThanOrEqual(1);
+    expect(Number.parseFloat(styles.loaderOutBorderWidth)).toBeLessThanOrEqual(2);
+    expect(isTransparent(styles.loaderGhostBackground)).toBe(true);
+    expect(isTransparent(styles.loaderSoftBackground)).toBe(false);
+    expect(isTransparent(styles.loaderFlatBackground)).toBe(false);
+    expect(getColorDistance(styles.loaderFlatGlyph, styles.loaderFlatBackground)).toBeGreaterThan(2);
+  });
+
   test("sizes loaders and renders every loader variant", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
@@ -66,11 +101,11 @@ test.describe("feedback", () => {
         page.getByTestId(testId).evaluate((element) => getComputedStyle(element).width),
       ),
     );
-    const loaderDefaultMask = await page
-      .getByTestId("loader-default")
-      .evaluate(
-        (element) => getComputedStyle(element).maskImage || getComputedStyle(element).webkitMaskImage || "none",
-      );
+    const loaderDefaultMask = await page.getByTestId("loader-default").evaluate((element) => {
+      const styles = getComputedStyle(element, "::before");
+
+      return styles.maskImage || styles.webkitMaskImage || "none";
+    });
     const variantIds = [
       "loader-dots-wave",
       "loader-dots-fade",
@@ -265,7 +300,8 @@ test.describe("feedback", () => {
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, "::after").backgroundColor;
 
       return {
-        loader: getComputedStyle(document.querySelector('[data-testid="loader-plain-success"]')!).backgroundColor,
+        loader: getComputedStyle(document.querySelector('[data-testid="loader-plain-success"]')!, "::before")
+          .backgroundColor,
         progressDestructive: fill("progress-plain-destructive"),
         progressInfo: fill("progress-plain-info"),
         progressPrimary: fill("progress-plain-primary"),

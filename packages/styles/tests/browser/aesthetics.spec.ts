@@ -246,16 +246,75 @@ test.describe("aesthetics", () => {
     expect(stepped.filter, "pixel bubble shadow").toMatch(/^drop-shadow\(/);
   });
 
-  test.describe("glass", () => {
-    test("blurs what is behind a surface and stays translucent", async ({ page }) => {
-      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+  test("lets a tooltip's direct aesthetic outrank an inherited aesthetic", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
 
-      /* Headless Chromium reports `reduce`, which is the branch that drops the
-         blur for an opaque surface, so which assertion applies is decided by the
-         engine rather than assumed. */
-      const prefersReducedTransparency = await page.evaluate(
-        () => matchMedia("(prefers-reduced-transparency: reduce)").matches,
-      );
+    const bubbles = await page.evaluate(() => {
+      const root = document.querySelector('[data-testid="preview-root"]')!;
+      const read = (ancestorClass: string, directClass: string) => {
+        const ancestor = document.createElement("div");
+        const tooltip = document.createElement("span");
+
+        ancestor.className = ancestorClass;
+        tooltip.className = `tooltip ${directClass}`;
+        tooltip.dataset.state = "open";
+        tooltip.dataset.tooltip = `${directClass} tooltip`;
+        ancestor.append(tooltip);
+        root.append(ancestor);
+
+        const styles = getComputedStyle(tooltip, "::after");
+        const result = {
+          backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
+          borderRadius: styles.borderRadius,
+          borderWidth: styles.borderTopWidth,
+          boxShadow: styles.boxShadow,
+          clipPath: styles.clipPath,
+          filter: styles.filter,
+        };
+
+        ancestor.remove();
+        return result;
+      };
+
+      return {
+        directGlass: read("", "glass"),
+        directPixel: read("", "pixel"),
+        glassOverPixel: read("glass", "pixel"),
+        pixelOverGlass: read("pixel", "glass"),
+      };
+    });
+
+    for (const [label, styles] of [
+      ["direct pixel", bubbles.directPixel],
+      ["glass ancestor, pixel tooltip", bubbles.glassOverPixel],
+    ] as const) {
+      expect(styles.clipPath, `${label} clip`).toContain("polygon(");
+      expect(styles.boxShadow, `${label} ring`).toContain("inset");
+      expect(styles.filter, `${label} filter`).toMatch(/^drop-shadow\(/);
+      expect(styles.borderWidth, `${label} border`).toBe("0px");
+      expect(styles.borderRadius, `${label} radius`).toBe("0px");
+      expect(styles.backdrop === "" || styles.backdrop === "none", `${label} backdrop`).toBe(true);
+    }
+
+    for (const [label, styles] of [
+      ["direct glass", bubbles.directGlass],
+      ["pixel ancestor, glass tooltip", bubbles.pixelOverGlass],
+    ] as const) {
+      expect(styles.clipPath, `${label} clip`).toBe("none");
+      expect(styles.filter, `${label} filter`).toBe("none");
+      expect(styles.borderWidth, `${label} border`).toBe("1px");
+      expect(styles.borderRadius, `${label} radius`).toBe("14px");
+    }
+  });
+
+  test.describe("glass", () => {
+    test("blurs translucent surfaces when transparency is allowed", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "Transparency media emulation runs once in Chromium");
+      const session = await page.context().newCDPSession(page);
+      await session.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-transparency", value: "no-preference" }],
+      });
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
       const properties = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
       const surfaces = await readAll(page, ["card-plain-none", "panel-plain-none"], properties);
@@ -263,20 +322,61 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
 
       const alerts = await readAll(page, ["alert-plain-none"], properties);
+      const tooltip = page.getByTestId("tooltip-open");
+
+      await tooltip.hover();
+      const tooltipBackdrop = await tooltip.evaluate(
+        (element) =>
+          getComputedStyle(element, "::after").backdropFilter ||
+          getComputedStyle(element, "::after").getPropertyValue("-webkit-backdrop-filter"),
+      );
 
       for (const [testId, styles] of [...surfaces, ...alerts]) {
         const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
         const { alpha } = readSrgb(styles["background-color"] as string);
 
-        if (prefersReducedTransparency) {
-          expect(backdrop, `${testId} backdrop`).toBe("none");
-          expect(alpha, `${testId} alpha`).toBe(1);
-          continue;
-        }
-
         expect(backdrop, `${testId} backdrop`).toContain("blur(14px)");
         expect(alpha, `${testId} alpha`).toBeLessThan(1);
       }
+
+      expect(tooltipBackdrop).toContain("blur(14px)");
+    });
+
+    test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "Transparency media emulation runs once in Chromium");
+      const session = await page.context().newCDPSession(page);
+      await session.send("Emulation.setEmulatedMedia", {
+        features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+      });
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+      const properties = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
+      const surfaces = await readAll(page, ["card-plain-none", "panel-plain-none"], properties);
+
+      await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
+
+      const alerts = await readAll(page, ["alert-plain-none"], properties);
+      const tooltip = page.getByTestId("tooltip-open");
+
+      await tooltip.hover();
+      const tooltipStyles = await tooltip.evaluate((element) => {
+        const styles = getComputedStyle(element, "::after");
+
+        return {
+          backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
+          background: styles.backgroundColor,
+        };
+      });
+
+      for (const [testId, styles] of [...surfaces, ...alerts]) {
+        const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
+
+        expect(backdrop, `${testId} backdrop`).toBe("none");
+        expect(readSrgb(styles["background-color"] as string).alpha, `${testId} alpha`).toBe(1);
+      }
+
+      expect(tooltipStyles.backdrop).toBe("none");
+      expect(readSrgb(tooltipStyles.background).alpha).toBe(1);
     });
 
     test("leaves controls solid rather than giving each one its own blur", async ({ page }) => {
@@ -311,6 +411,72 @@ test.describe("aesthetics", () => {
   });
 
   test.describe("pixel", () => {
+    test("honors the public shape and ring material contract", async ({ page }) => {
+      await page.goto(BUTTONS_URL);
+
+      const values = await page.evaluate(() => {
+        const host = document.createElement("div");
+        const createButton = (style: string) => {
+          const button = document.createElement("button");
+
+          button.className = "btn";
+          button.textContent = "Shape";
+          button.setAttribute("style", style);
+          host.append(button);
+          return button;
+        };
+        const complete = createButton(
+          "--ui-clip: inset(3px); --ui-edge: 3px; --ui-border-max: 0px; --ui-focus-inset: 2px; transition: none",
+        );
+        const clipOnly = createButton("--ui-clip: inset(3px)");
+        const edgeOnly = createButton("--ui-edge: 3px");
+        const tightFallback = document.createElement("code");
+
+        tightFallback.className = "code";
+        tightFallback.textContent = "tight";
+        tightFallback.setAttribute("style", "--ui-clip: inset(4px); --ui-edge: 4px");
+        host.append(tightFallback);
+        document.body.append(host);
+
+        const read = (element: Element) => {
+          const styles = getComputedStyle(element);
+
+          return {
+            borderWidth: styles.borderTopWidth,
+            boxShadow: styles.boxShadow,
+            clipPath: styles.clipPath,
+          };
+        };
+        const resting = read(complete);
+
+        complete.focus();
+        const focused = read(complete);
+        const result = {
+          clipOnly: read(clipOnly),
+          complete: resting,
+          edgeOnly: read(edgeOnly),
+          focused,
+          tightFallback: read(tightFallback),
+        };
+
+        host.remove();
+        return result;
+      });
+
+      expect(values.complete.clipPath).toBe("inset(3px)");
+      expect(values.complete.borderWidth).toBe("0px");
+      expect(values.complete.boxShadow).toMatch(/0px 0px 0px 3px inset/);
+      expect(values.focused.boxShadow).toMatch(/0px 0px 0px 5px inset/);
+
+      expect(values.clipOnly.clipPath).toBe("inset(3px)");
+      expect(values.clipOnly.boxShadow).toBe("none");
+      expect(values.edgeOnly.clipPath).toBe("none");
+      expect(values.edgeOnly.boxShadow).toMatch(/0px 0px 0px 3px inset/);
+
+      expect(values.tightFallback.clipPath).toBe("inset(4px)");
+      expect(values.tightFallback.boxShadow).toMatch(/0px 0px 0px 4px inset/);
+    });
+
     test("cuts stepped corners and draws the edge as an inset ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 

@@ -16,6 +16,11 @@ interface TailwindExportContract {
   patterns: RegExp[];
 }
 
+interface CompiledExportContract {
+  target: string;
+  patterns: RegExp[];
+}
+
 const executeFile = promisify(execFile);
 const packagePath = fileURLToPath(new URL("../../package.json", import.meta.url));
 const packageRoot = path.dirname(packagePath);
@@ -56,6 +61,31 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      declaration that consumes it belongs to the components. */
   "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/] },
 };
+const compiledExportContracts: Record<string, CompiledExportContract> = {
+  ".": { target: "dist/index.css", patterns: [/--color-primary:/, /\.btn\{/, /\.stack\{/] },
+  "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
+  "./components": {
+    target: "dist/components.css",
+    patterns: [/.alert\{/, /.btn\{/, /.empty-state\{/, /.field\{/, /.loader\{/, /.text-title\{/, /.tooltip\{/],
+  },
+  "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
+  "./aesthetics": {
+    target: "dist/aesthetics/index.css",
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/],
+  },
+  "./aesthetics/neobrutalism": {
+    target: "dist/aesthetics/neobrutalism.css",
+    patterns: [/\.neobrutalism\{/, /--ui-shadow:/],
+  },
+  "./aesthetics/glass": {
+    target: "dist/aesthetics/glass.css",
+    patterns: [/\.glass\{/, /backdrop-filter:/, /prefers-reduced-transparency/],
+  },
+  "./aesthetics/pixel": {
+    target: "dist/aesthetics/pixel.css",
+    patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-edge:/],
+  },
+};
 
 test("every declared package export target exists after build", async () => {
   await Promise.all(
@@ -68,15 +98,15 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
-test("compiled components expose every documented class group", async () => {
-  const componentsCss = await readFile(path.resolve(packageRoot, "dist/components.css"), "utf8");
+for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
+  test(`${exportName} compiled export contains its representative public surface`, async () => {
+    const output = await readFile(path.resolve(packageRoot, contract.target), "utf8");
 
-  for (const className of ["alert", "btn", "empty-state", "field", "loader", "text-title", "tooltip"]) {
-    expect(componentsCss, `expected .${className} in compiled components`).toMatch(
-      new RegExp(String.raw`\.${className}\{`),
-    );
-  }
-});
+    for (const pattern of contract.patterns) {
+      expect(output, `${exportName} should contain ${pattern}`).toMatch(pattern);
+    }
+  });
+}
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {

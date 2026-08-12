@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
 
@@ -102,6 +102,31 @@ test("colors key caps and quotes by intent", async ({ page }) => {
   expectSameColor(styles.kbdDestructive, styles.tokenDestructiveStrong, "kbd intent text");
   expect(getColorDistance(styles.kbdNeutral, styles.kbdDestructive)).toBeGreaterThan(2);
   expectSameColor(styles.quoteInfo, styles.tokenInfo, "quote intent rule");
+});
+
+test("renders every block quote presentation", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const styles = await page.evaluate(() => {
+    const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+    return {
+      flatBackground: get("quote-flat-primary").backgroundColor,
+      flatColor: get("quote-flat-primary").color,
+      ghostBorder: get("quote-ghost-primary").borderLeftColor,
+      outBorderWidth: get("quote-out-primary").borderLeftWidth,
+      plainBorderWidth: get("quote-plain-primary").borderLeftWidth,
+      softBackground: get("quote-soft-primary").backgroundColor,
+    };
+  });
+
+  expect(isTransparent(styles.ghostBorder)).toBe(true);
+  expect(isTransparent(styles.softBackground)).toBe(false);
+  expect(isTransparent(styles.flatBackground)).toBe(false);
+  expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
+  expect(Number.parseFloat(styles.plainBorderWidth)).toBeGreaterThanOrEqual(1);
+  expect(Number.parseFloat(styles.outBorderWidth)).toBeLessThanOrEqual(4);
+  expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
 });
 
 test("reads presentation on key caps and tables", async ({ page }) => {

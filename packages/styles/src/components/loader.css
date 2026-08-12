@@ -1,4 +1,5 @@
 @reference "tailwindcss";
+@reference "../shape.css";
 @source inline("ai loader dots-wave dots-fade dots-queue dots-rotate dots-grow dots-grow-alternate dot-bounce bars-wave pulse-ring");
 
 @utility ai {
@@ -99,10 +100,26 @@
 }
 
 @utility loader {
-  @apply ai inline-block size-8 bg-current [&.lg]:size-10 [&.sm]:size-6;
+  --loader-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
+  --loader-bg: color-mix(in oklab, var(--intent-color) var(--loader-fill), transparent);
+  --loader-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  --loader-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--loader-line));
+  --loader-glyph: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
 
+  @apply shaped relative inline-block size-8 [&.lg]:size-10 [&.sm]:size-6;
+
+  background-color: var(--loader-bg);
+  border: min(var(--shape-border-width), 2px) solid var(--loader-edge);
+  border-radius: var(--ui-radius, var(--radius-control));
+  box-shadow: var(--shape-ring, none);
   color: var(--intent-color);
   content: "";
+
+  &::before {
+    @apply ai absolute inset-[18.75%] block bg-(--loader-glyph);
+
+    content: "";
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

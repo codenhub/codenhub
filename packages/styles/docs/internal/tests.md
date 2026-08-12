@@ -106,17 +106,29 @@ runs use the `dev` server and live `src/` aliases for synchronized iteration.
 
 - Focused specs execute accessibility, component, environment, layout, native,
   route, theme, and typography assertions.
+- Form regressions assert visible unchecked checkbox and radio boundaries for
+  direct and inherited `.soft` and `.ghost` in Chromium, Firefox, and WebKit.
+- Surface, feedback, and typography regressions cover every supported
+  presentation on dividers, empty states, skeletons, loaders, and block quotes,
+  including their width clamps, visibility floors, and filled contrast.
+- Aesthetic regressions cover direct glass and pixel tooltips plus both mixed
+  ancestor/direct orders, including complete pseudo-element resets.
+- Glass regressions deterministically emulate both transparency preferences in
+  Chromium and cover cards, panels, alerts, and tooltip bubbles in each branch.
+- Form regressions assert `.hint.error` composes helper typography with
+  destructive intent while bare `.error` remains an intent class.
 - `test-utils.ts`: Shared Playwright test setup and helpers.
-- The `0.1.0` release gate adds reviewed Chromium screenshots for representative
-  matrices, themes, and aesthetics. Targeted Firefox and WebKit snapshots cover
-  rendering that differs by engine. Computed-style assertions remain the primary
-  contract checks; visual snapshots catch clipping, overlap, and composition
-  defects those values miss.
+- Reviewed Chromium screenshots cover the button matrix in both themes and the
+  card matrix under every shipped aesthetic. No current rendering difference
+  requires a Firefox or WebKit baseline. Computed-style assertions remain the
+  primary contract checks; visual snapshots catch clipping, overlap, and
+  composition defects those values miss.
 
 ## `tests/integration/`
 
-Node-based Vitest checks validate every published target and process each
-Tailwind entrypoint independently against representative public selectors.
+Node-based Vitest checks validate every published target. Every compiled export
+contains representative public output, and every Tailwind entrypoint is
+processed independently against representative public selectors.
 
 ## Scripts
 

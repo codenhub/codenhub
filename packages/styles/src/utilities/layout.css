@@ -79,15 +79,23 @@
 }
 
 @utility divider {
+  --divider-strength: max(var(--ui-fill, 100%), var(--ui-border, 100%));
+  --divider-color: color-mix(in oklab, var(--intent-color) var(--divider-strength), transparent);
+  --divider-width: clamp(
+    var(--border-width),
+    calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)),
+    2px
+  );
+
   @apply m-0 w-full border-0 border-t;
 
-  border-color: var(--intent-border);
-  border-top-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
+  border-color: var(--divider-color);
+  border-top-width: var(--divider-width);
 
   &.vertical {
     @apply h-auto w-0 self-stretch border-t-0 border-l;
 
-    border-left-width: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1));
+    border-left-width: var(--divider-width);
   }
 }
 

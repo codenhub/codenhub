@@ -14,6 +14,33 @@ undemonstrated combinations may still produce CSS, but are not maintained
 behavior. Playground variant matrices are the exhaustive demonstrations; small
 examples elsewhere illustrate usage without widening that contract.
 
+## Component axis reference
+
+This table is the authoritative axis map for demonstrated components. "Shape"
+means the component reads applicable radius, border-width, shadow, hover, or
+clip/edge material tokens; an aesthetic may intentionally affect only the
+materials that component draws.
+
+| Components                                                | Intent | Presentation | Aesthetic material |
+| --------------------------------------------------------- | ------ | ------------ | ------------------ |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes          | Shape              |
+| `.empty-state`, `.loader`                                 | Yes    | Yes          | Shape              |
+| `.kbd`, `.table`                                          | Yes    | Yes          | Radius and edge    |
+| `.quote`, `.divider`                                      | Yes    | Yes          | Edge width         |
+| `.skeleton`                                               | Yes    | Yes          | Radius and edge    |
+| `.ipt`, `.textarea`, `.select`, `.control-base`           | Yes    | Yes          | Shape              |
+| `.checkbox`, `.radio`                                     | Yes    | Yes          | Radius and edge    |
+| `.switch`                                                 | Yes    | No           | Radius and edge    |
+| `.progress`                                               | Yes    | Yes          | Radius and edge    |
+| `.code`, `.pre`                                           | Yes    | No           | Radius and clip    |
+| `.tooltip`                                                | Yes    | No           | Shape and overlay  |
+| `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No           | No                 |
+
+Intent aliases such as `.danger` and `.error` occupy the same intent axis as
+`.destructive`; they do not add component behavior. State and modifier classes
+such as `.interactive`, `.loading`, `.invalid`, `.compact`, and `.vertical` sit
+above this map and are documented with their component.
+
 ## Layout
 
 Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.
@@ -26,7 +53,8 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
 - `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It
-  takes intent classes to color the rule and `--ui-border-width` to thicken it.
+  takes intent and presentation classes, with line width clamped from `1px` to
+  `2px`; `.ghost` removes it.
 
 The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
@@ -37,7 +65,7 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 | `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                     | Nothing.               |
 | `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows. | Head, border, hover.   |
 | `.kbd`          | Inline keyboard-input styling.                                              | Surface, border, text. |
-| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    | Left border.           |
+| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    | Bar, surface, text.    |
 | `.quote-inline` | Inline quotation styling.                                                   | Nothing.               |
 | `.code`         | Inline code formatting.                                                     | Surface.               |
 | `.pre`          | Scrollable block code formatting with larger padding.                       | Surface.               |
@@ -93,15 +121,15 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 
 ## Surfaces
 
-| Class          | Purpose                                                            |
-| -------------- | ------------------------------------------------------------------ |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
-| `.empty-state` | Centered empty-state layout with muted color.                      |
+| Class          | Purpose                                                             |
+| -------------- | ------------------------------------------------------------------- |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded.  |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.    |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                            |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                          |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
+| `.empty-state` | Centered empty-state surface with presentation-aware fill and edge. |
 
 Both read intent, [presentation](#presentation), and
 [material tokens](./tokens.md#material-tokens). A plain `.card` is a neutral
@@ -156,23 +184,29 @@ With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
 neutral and bordered.
 
-| Component                                                     | Reads                                        |
-| ------------------------------------------------------------- | -------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`                 | Fill, text, border, and border width.        |
-| `.kbd`                                                        | Fill, text, border, and border width.        |
-| `.table`                                                      | Header fill and text, border, border width.  |
-| `.ipt`, `.textarea`, `.select`, `.control-base`               | Border, border width, and a capped fill.     |
-| `.checkbox`, `.radio`, `.switch`                              | Border, border width, capped unchecked fill. |
-| `.progress`                                                   | Border and border width.                     |
-| `.divider`                                                    | Border width only; the rule keeps its color. |
-| `.code`, `.pre`, `.quote`, `.tooltip`, `.skeleton`, `.loader` | Intent only, not presentation.               |
+| Component                                       | Reads                                        |
+| ----------------------------------------------- | -------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.        |
+| `.kbd`                                          | Fill, text, border, and border width.        |
+| `.table`                                        | Header fill and text, border, border width.  |
+| `.ipt`, `.textarea`, `.select`, `.control-base` | Border, border width, and a capped fill.     |
+| `.checkbox`, `.radio`                           | Border, border width, capped unchecked fill. |
+| `.switch`                                       | Intent only, not presentation.               |
+| `.progress`                                     | Border and border width.                     |
+| `.divider`                                      | Line strength and clamped width.             |
+| `.empty-state`, `.quote`, `.loader`             | Fill, text/artwork, border, and width.       |
+| `.skeleton`                                     | Fill and a one-pixel border ceiling.         |
+| `.code`, `.pre`, `.tooltip`                     | Intent only, not presentation.               |
 
 Text controls and toggles cap their fill well below the `.soft` tint. `.flat`
 would otherwise put typed text on a saturated background, so a `.flat` container
 would make every field inside it unreadable; on those components both `.flat` and
 `.soft` resolve to a much quieter tint than they produce elsewhere, because a
 field has to stay legible while being typed into. `.ghost` removes the border
-from a control and leaves a bottom rule, so the field keeps its affordance.
+from a text control and leaves a bottom rule, so the field keeps its affordance.
+Unchecked checkboxes and radios restore their full edge under `.soft` and
+`.ghost`. Skeletons retain a six-percent fill floor under `.ghost` so a loading
+placeholder never disappears.
 
 Tooltips ignore the presentation fill entirely. A transparent or hairline
 tooltip floating over arbitrary content is unreadable, so the bubble stays
@@ -232,6 +266,11 @@ An explicit presentation on the element still wins over the aesthetic's
 defaults, and the two meet only in the border: the aesthetic supplies the
 thickness and the presentation scales it, so `.out` under `.neobrutalism` gives a
 4px edge rather than replacing the 2px material.
+
+An aesthetic directly on a component likewise wins over an inherited aesthetic.
+This includes tooltip pseudo-elements: `.tooltip.glass` gets the complete glass
+bubble under a pixel ancestor, and `.tooltip.pixel` gets the complete stepped
+bubble under a glass ancestor.
 
 ### Neobrutalism
 
@@ -341,7 +380,7 @@ Examples:
 | `.field`                                                              | Vertical field wrapper.                                         |
 | `.label`                                                              | Form label text.                                                |
 | `.hint`                                                               | Secondary helper text.                                          |
-| `.error` inside `.field` except `.btn.error`                          | Destructive helper text.                                        |
+| `.hint.error`                                                         | Helper text with destructive intent.                            |
 | `.control-base`                                                       | Shared public text-control styling.                             |
 | `.ipt`                                                                | Input control styling.                                          |
 | `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
@@ -410,7 +449,7 @@ Example:
 <label class="field">
   <span class="label">Email</span>
   <input class="ipt email icon" type="email" aria-invalid="true" aria-describedby="email-error" />
-  <span class="error" id="email-error">Enter a valid email.</span>
+  <span class="hint error" id="email-error">Enter a valid email.</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="checkbox success" />
@@ -434,8 +473,8 @@ Example:
 | `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
 | `.badge`         | Compact status pill.                                                         |
 | `.ai`            | Low-level activity indicator base. Applies CSS mask to show a spinner SVG.   |
-| `.loader`        | Standalone inline loader. Composes `.ai` with size and color styles.         |
-| `.skeleton`      | Ambient loading placeholder.                                                 |
+| `.loader`        | Standalone inline loader tile with presentation-aware surface and artwork.   |
+| `.skeleton`      | Presentation-aware ambient loading placeholder.                              |
 | `.progress`      | Progress track. Uses `--progress-value` variable.                            |
 | `.active`        | Optional on `.progress` to add a track shimmer.                              |
 | `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
@@ -472,6 +511,11 @@ Alerts, badges, progress bars, skeletons, and loaders accept `.primary`,
 `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and
 `.info`. Without an intent, they use the text palette, except `.loader`, which
 keeps `currentColor` so it matches whatever content surrounds it.
+
+Skeletons and loaders read every presentation. A flat loader uses contrast
+artwork over its intent fill; a ghost loader removes its tile and keeps bare
+intent artwork. Skeleton edges never exceed `1px`, and ghost skeletons retain a
+minimum visible fill.
 
 ```html
 <span class="loader success" aria-hidden="true"></span>

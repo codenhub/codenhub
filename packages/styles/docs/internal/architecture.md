@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-11
+last_updated: 2026-08-12
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -253,6 +253,22 @@ no aesthetic in scope it leaves the ring invalid at computed-value time, so a
 component falls through to its own `box-shadow` fallback and keeps reporting
 `none`. A zero-width ring would paint nothing but would still report a shadow.
 
+`--ui-clip` and `--ui-edge` are one public structural pair. Buttons, text
+controls, surfaces, alerts, loaders, and tooltip bubbles consume it.
+`--ui-clip-tight` and `--ui-edge-tight` are the compact pair for badges, key
+caps, inline code, and preformatted blocks; each tight slot falls back to its
+structural counterpart. A complete customization sets both members with matching
+depths. A clip alone clips without replacing the edge, while an edge alone draws
+an inset ring on the unchanged silhouette. These deterministic one-sided results
+are supported CSS behavior but incomplete material customization.
+
+Clipping removes the component border and global focus outline from view. An
+aesthetic replacing them sets `--ui-border-max: 0px`, supplies the inset edge,
+and uses `--ui-focus-inset` to extend a second inset layer immediately inside
+that edge. Component ceilings still participate through `--shape-border-max`.
+All `--shape-*` values are internal composition outputs; the public contract is
+only the six `--ui-*` inputs in the table.
+
 The default aesthetic is the _absence_ of these declarations, not a set of root
 values. Components read each with the `var()` fallback above, which is why a
 plain `.card` gets surface radius while a plain `.btn` gets control radius. A
@@ -420,7 +436,11 @@ An aesthetic may likewise be inherited from an ancestor or applied directly to
 the component. A directly applied aesthetic is the more specific choice and must
 win when an ancestor selects another aesthetic. Component-specific aesthetic
 selectors must support both forms; generic inherited material tokens alone are
-not enough when the aesthetic also styles a pseudo-element.
+not enough when the aesthetic also styles a pseudo-element. Glass and pixel
+tooltip rules therefore define a complete bubble: `.tooltip.glass` clears an
+inherited clip, ring, and pixel drop shadow before adding glass blur and edge;
+`.tooltip.pixel` clears inherited glass blur, border, radius, and background
+before adding the stepped ring and hard drop shadow.
 
 | Aesthetic       | Material                                                                               |
 | --------------- | -------------------------------------------------------------------------------------- |
@@ -486,15 +506,14 @@ where a class removes something the component needs, the combination is outside
 the [supported surface](./roadmap.md#supported-surface) and the playground does
 not render it.
 
-| Component                                          | Renders                             | Why the rest are out                                                                                               |
-| -------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `.btn`                                             | plain, out, `out fill`, soft, ghost | Its own fallbacks are `.flat`'s values, so `.flat` repeats plain.                                                  |
-| `.alert` `.badge` `.card` `.panel` `.kbd` `.table` | plain, out, soft, flat, ghost       | `.fill` sets only `--ui-hover-*`, which none of them read.                                                         |
-| `.ipt` `.textarea` `.select` `.control-base`       | plain, out, soft, flat, ghost       | `.flat` clamps to the same 6% tint as `.soft`.                                                                     |
-| `.checkbox` `.radio`                               | plain, out, flat                    | `.soft` and `.ghost` zero `--ui-border` with no bottom rule to replace it, leaving no visible box while unchecked. |
-| `.progress`                                        | plain, flat, out                    | Reads `--ui-border` only, so the tint classes land on plain.                                                       |
-| `.divider`                                         | plain, out                          | Reads `--ui-border-scale` only; the rule keeps its color.                                                          |
-| `.empty-state`                                     | plain, flat                         | Reads `--ui-fg-on-fill` only.                                                                                      |
+| Component                                                | Renders                             | Why the rest are out                                                                  |
+| -------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `.btn`                                                   | plain, out, `out fill`, soft, ghost | Its own fallbacks are `.flat`'s values, so `.flat` repeats plain.                     |
+| `.alert` `.badge` `.card` `.panel` `.kbd` `.table`       | plain, out, soft, flat, ghost       | `.fill` sets only `--ui-hover-*`, which none of them read.                            |
+| `.ipt` `.textarea` `.select` `.control-base`             | plain, out, soft, flat, ghost       | `.flat` clamps to the same 6% tint as `.soft`.                                        |
+| `.checkbox` `.radio`                                     | plain, out, soft, flat, ghost       | `.soft` and `.ghost` restore the full edge as an accessibility floor while unchecked. |
+| `.progress`                                              | plain, flat, out                    | Reads `--ui-border` only, so the tint classes land on plain.                          |
+| `.divider` `.empty-state` `.quote` `.skeleton` `.loader` | plain, out, soft, flat, ghost       | Read every presentation they can visibly express, with component clamps and floors.   |
 
 `.fill` deserves stating plainly: it declares nothing but `--ui-hover-*`, and
 `.btn` is the only component with a fill-based hover, so `.fill` is inert on
@@ -508,25 +527,28 @@ only the first. Measured against the [axis rules](#axis-rules), with
 `--border-width: 1px` and `--ui-border-width: 2px` under `.neobrutalism` and
 `.pixel`:
 
-| Component                                   | Breaks | What happens                                                                                                                                                                          |
-| ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.checkbox` `.radio` under `.soft` `.ghost` | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                         |
-| `.error` in a `.field`                      | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button. |
+No known component currently breaks the axis rules.
 
 Resolved so far: `.progress` caps its border at one pixel and blends the line
 toward its own track, so `.out` is a real outline on a 10px bar and `.flat`
 disappears as it always meant to; `.badge` and `.kbd` declare the same ceiling
 through `--shape-border-max`; text controls keep a bottom rule under `.soft` as
-they already did under `.ghost`; and `.switch` reads the aesthetic's border width
-with its knob geometry derived from it. Glass composes both shadow layers from
-`--elevation-color`, so consumer elevation tuning reaches the aesthetic.
+they already did under `.ghost`; unchecked checkboxes and radios restore their
+full edge under both tint presentations; and `.switch` reads the aesthetic's
+border width with its knob geometry derived from it. Glass composes both shadow
+layers from `--elevation-color`, so consumer elevation tuning reaches the
+aesthetic. Helper text uses `.hint` for component typography and `.error` only
+for destructive intent, so `.hint.error` composes without reinterpreting an
+intent class.
 
-Three more read one presentation token or none, which is legal under P2 but has
-never been decided either way: `.divider` (`--ui-border-scale`), `.empty-state`
-(`--ui-fg-on-fill`), and `.skeleton` with `.loader` (neither, though both sit in
-intent.css's reset list). `.quote` draws a line and hardcodes `border-l-4`, so it
-reads no material token either. Each needs to widen to the axis or be documented
-as intent-only, per P2 -- but as a decision, not an accident.
+`.divider`, `.empty-state`, `.skeleton`, `.loader`, and `.quote` read presentation
+through component-owned formulas. Dividers clamp their line to one through two
+pixels and let ghost remove it. Empty states are bounded surfaces with a two-pixel
+border ceiling. Skeletons keep at least a six-percent fill and cap their edge at
+one pixel. Loaders render their mask on `::before`, allowing the host to express
+surface presentation while preserving size and reduced-motion masks. Quotes clamp
+their bar from one through four pixels. Filled empty states, loaders, and quotes
+use contrast text or artwork.
 
 ### Shadows reach everything that draws one
 

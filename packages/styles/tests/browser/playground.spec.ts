@@ -84,13 +84,14 @@ test("centers navbar content with the playground sections", async ({ page }) => 
 
   const styles = await page.locator(".playground-nav-content").evaluate((element) => {
     const bounds = element.getBoundingClientRect();
+    const sectionBounds = document.querySelector(".sect-inn")!.getBoundingClientRect();
 
     return {
       inlineOffsetDifference: Math.abs(bounds.left - (window.innerWidth - bounds.right)),
-      maxWidth: getComputedStyle(element).maxWidth,
+      widthDifference: Math.abs(bounds.width - sectionBounds.width),
     };
   });
 
   expect(styles.inlineOffsetDifference).toBeLessThan(1);
-  expect(styles.maxWidth).not.toBe("none");
+  expect(styles.widthDifference).toBeLessThan(1);
 });

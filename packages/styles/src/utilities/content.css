@@ -86,9 +86,22 @@
 }
 
 @utility quote {
-  @apply text-text-secondary my-0 border-l-4 pl-4 italic;
+  --quote-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
+  --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
+  --quote-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  --quote-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--quote-line));
+  --quote-width: clamp(
+    var(--border-width),
+    calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1) * 2),
+    4px
+  );
 
-  border-left-color: var(--intent-border);
+  @apply my-0 border-l pl-4 italic;
+
+  background-color: var(--quote-bg);
+  border-left-color: var(--quote-edge);
+  border-left-width: var(--quote-width);
+  color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text-secondary));
 
   & cite {
     @apply text-body text-text-secondary mt-2 block not-italic;

@@ -7,6 +7,35 @@ title: Overview
 `@codenhub/styles` provides CSS-only design tokens, base styles, typography and
 layout utilities, and composable classes for common UI elements.
 
+## Compose the three axes
+
+Components separate color, presentation, and material so each choice can change
+without a component-specific variant:
+
+| Axis         | Question        | Classes                                                                   | Inheritance  |
+| ------------ | --------------- | ------------------------------------------------------------------------- | ------------ |
+| Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info` | Element only |
+| Presentation | How much of it? | `.flat`, `.out`, `.soft`, `.ghost`                                        | Cascades     |
+| Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel` from an optional aesthetic stylesheet | Cascades     |
+
+```html
+<section class="soft pixel">
+  <button class="btn primary">Soft primary pixel button</button>
+  <button class="btn destructive out">Outlined destructive override</button>
+</section>
+```
+
+Intent stays on the component so a semantic container cannot accidentally
+recolor nested controls. Presentation and aesthetic cascade from a container;
+putting either class directly on a component overrides the inherited choice.
+Components apply documented clamps when an axis would remove an essential edge
+or overwhelm compact geometry.
+
+The maintained contract is the intersection of the combinations described in
+the [class reference](./classes.md#component-axis-reference) and demonstrated by
+the playground. Undocumented and undemonstrated combinations may produce CSS but
+are not supported behavior.
+
 ## Setup
 
 ### Installation
@@ -54,7 +83,7 @@ the root or any ancestor to force token values for that subtree.
 Customize the public CSS properties documented in [Tokens](./tokens.md). Do not
 depend on component-scoped implementation variables.
 
-## Import paths
+## Reference: import paths
 
 Compiled entrypoints are ready-to-import CSS and require only tooling that can
 resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source
@@ -96,11 +125,12 @@ theme tokens so their classes can work independently.
 - Focused entrypoints compose as documented above; avoid importing overlapping
   entrypoints unless duplicate generated CSS is acceptable in your build.
 
-## Next steps
+## Guides and reference
 
-- [Tokens](./tokens.md) explains theme values, dark mode, and the public
-  customization contract.
-- [Classes](./classes.md) covers helper classes, component states, and
-  composition rules.
-- [Accessibility](./accessibility.md) separates the hooks supplied by CSS from
-  the semantics and behavior an application must provide.
+- **Concepts and setup:** this overview explains installation, the three-axis
+  model, theming, and entrypoint selection.
+- **Reference:** [Tokens](./tokens.md) defines public custom properties, while
+  [Classes](./classes.md) lists helper classes, component states, supported axes,
+  and composition rules.
+- **Guide:** [Accessibility](./accessibility.md) separates CSS hooks from the
+  semantics and behavior an application must provide.

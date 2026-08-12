@@ -29,10 +29,7 @@ const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning"
    fallbacks are exactly `.flat`'s values, so the two rows are the same row. */
 const PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
 const BUTTON_PRESENTATIONS = ["plain", "out", "out fill", "soft", "ghost"];
-/* A toggle's box has to stay visible while unchecked, and `.soft` and `.ghost`
-   both zero `--ui-border` without the bottom-rule fallback a text control gets,
-   which leaves nothing to see. */
-const TOGGLE_PRESENTATIONS = ["plain", "out", "flat"];
+const TOGGLE_PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
 /* Components that read only `--ui-border` and `--ui-border-scale`: the tint
    presentations land on the same values as `plain`. */
 const BORDER_PRESENTATIONS = ["plain", "flat", "out"];
@@ -105,7 +102,6 @@ const COMPONENTS = {
   quote: {
     tag: "blockquote",
     layout: "grid",
-    presentations: INTENT_ONLY,
     html: (intent) => `${title(intent)} quotation.<cite>Codenhub styles</cite>`,
     states: {},
   },
@@ -131,16 +127,11 @@ const COMPONENTS = {
   divider: {
     tag: "hr",
     layout: "stack",
-    /* A rule reads the border width but not `--ui-border`, so only the doubled
-       width tells a presentation apart. */
-    presentations: ["plain", "out"],
     states: {},
   },
   "empty-state": {
     tag: "div",
     layout: "grid",
-    /* Reads `--ui-fg-on-fill` alone, which only `.flat` moves. */
-    presentations: ["plain", "flat"],
     html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
     states: {},
   },
@@ -197,13 +188,11 @@ const COMPONENTS = {
   skeleton: {
     tag: "div",
     layout: "stack",
-    presentations: INTENT_ONLY,
     attrs: () => ({ "aria-hidden": "true" }),
     states: {},
   },
   loader: {
     tag: "span",
-    presentations: INTENT_ONLY,
     attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
     states: {},
   },
@@ -378,7 +367,7 @@ const buildField = (type, variant) => {
     input.setAttribute(name, value);
   }
 
-  message.className = variantSpec.error ? "error" : "hint";
+  message.className = variantSpec.error ? "hint error" : "hint";
   message.textContent = variantSpec.error ?? spec.hint;
   message.id = messageId;
   message.dataset.testid = `${messageId}`;
