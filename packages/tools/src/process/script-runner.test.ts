@@ -12,8 +12,6 @@ import {
   withBinPath,
 } from "./script-runner.ts";
 
-const isWindows = process.platform === "win32";
-
 function createPackage(scripts: Readonly<Record<string, string>>): WorkspacePackage {
   return {
     directory: join("/repo", "packages", "error"),
@@ -117,7 +115,7 @@ describe("buildScriptSpec", () => {
   });
 
   it("shouldRunAChainedScriptBodyToCompletion", async () => {
-    const script = isWindows ? "echo first && echo second" : "echo first && echo second";
+    const script = "echo first && echo second";
     const outcome = await execute({ args: [], command: script, cwd: process.cwd(), shell: true }, { stdio: "pipe" });
 
     expect(outcome.isSuccess).toBe(true);

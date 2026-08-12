@@ -133,12 +133,26 @@ async function runUnits(
 ): Promise<SummaryRow[]> {
   const { reporter } = context;
   const rows = new Map<string, SummaryRow>();
+  let hasFailure = false;
 
   await mapConcurrent(units, Math.max(1, Math.min(settings.concurrency, units.length)), async (unit) => {
+    if (hasFailure && settings.bails) {
+      for (const workspacePackage of unit.packages) {
+        rows.set(workspacePackage.name, {
+          detail: "not reached",
+          label: workspacePackage.name,
+          status: "skipped",
+        });
+      }
+      return;
+    }
     const outcome = await execute(unit.spec, {
       stdio: settings.streams ? "inherit" : "pipe",
       timeoutMs: settings.timeoutMs,
     });
+    if (!outcome.isSuccess) {
+      hasFailure = true;
+    }
     const output = outcome.output?.trimEnd() ?? "";
     if (!settings.streams && output !== "" && (settings.showsPassing || !outcome.isSuccess)) {
       reporter.blank();

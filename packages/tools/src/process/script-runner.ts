@@ -1,14 +1,12 @@
 import { delimiter, dirname, join, resolve } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import type { CommandSpec } from "./execute.ts";
+import { quoteForWindows, type CommandSpec } from "./execute.ts";
 
 const PACKAGE_MANAGER = "pnpm";
 const BIN_DIRECTORY = join("node_modules", ".bin");
 const PATH_VARIABLE = "PATH";
 const POSIX_SINGLE_QUOTE = /'/g;
-const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
-const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
 const SHELL_QUOTING_REQUIRED = /[^\w./:=@-]/;
 
 /**
@@ -77,8 +75,7 @@ export function quoteShellArgument(argument: string): string {
   if (process.platform !== "win32") {
     return `'${argument.replaceAll(POSIX_SINGLE_QUOTE, String.raw`'\''`)}'`;
   }
-  const escaped = argument.replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"').replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1");
-  return `"${escaped}"`;
+  return quoteForWindows(argument);
 }
 
 /**

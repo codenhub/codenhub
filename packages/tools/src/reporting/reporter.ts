@@ -51,7 +51,20 @@ export interface ReporterOptions {
   useColor?: boolean;
 }
 
-const TALLY_ORDER: readonly SummaryStatus[] = ["failed", "timed-out", "warned", "passed", "skipped"];
+/**
+ * Where each outcome sits in a tally, lowest first.
+ *
+ * It is a record rather than a list so the type checker requires an entry for
+ * every status: a status missing from a list would simply never be counted, and
+ * nothing would say so.
+ */
+const TALLY_RANK: Record<SummaryStatus, number> = {
+  failed: 0,
+  passed: 3,
+  skipped: 4,
+  "timed-out": 1,
+  warned: 2,
+};
 
 const TALLY_WORDS: Record<SummaryStatus, string> = {
   failed: "failed",
@@ -116,10 +129,13 @@ export function createReporter(options: ReporterOptions = {}): Reporter {
       if (rows.length === 0) {
         return;
       }
-      const counted = TALLY_ORDER.filter((status) => rows.some((row) => row.status === status)).map((status) => {
-        const count = rows.filter((row) => row.status === status).length;
-        return paint(STATUS_LABELS[status].color, `${count} ${TALLY_WORDS[status]}`);
-      });
+      const counted = (Object.keys(TALLY_WORDS) as SummaryStatus[])
+        .toSorted((left, right) => TALLY_RANK[left] - TALLY_RANK[right])
+        .filter((status) => rows.some((row) => row.status === status))
+        .map((status) => {
+          const count = rows.filter((row) => row.status === status).length;
+          return paint(STATUS_LABELS[status].color, `${count} ${TALLY_WORDS[status]}`);
+        });
       const duration = durationMs === undefined ? "" : paint("dim", ` in ${formatDuration(durationMs)}`);
       write(`  ${counted.join(paint("dim", ", "))}${duration}`);
     },

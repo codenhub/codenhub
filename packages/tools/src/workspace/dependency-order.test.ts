@@ -173,6 +173,9 @@ describe("groupByDependencyLevel", () => {
     const second = createPackage("second", ["first"]);
     const levels = groupByDependencyLevel([first, second]);
 
+    // A cycle has no order to respect, so the survivors go out together rather
+    // than being spread over levels that would each wait on the next.
+    expect(levels).toHaveLength(1);
     expect(
       levels
         .flat()

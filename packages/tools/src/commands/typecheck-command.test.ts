@@ -154,6 +154,33 @@ describe("createTypecheckCommand", () => {
     expect(lines.join("\n")).toContain("tsc -b packages/error/tsconfig.json --listFiles");
   });
 
+  it("shouldLeaveTheQueuedUnitsUnstartedAfterAFailureWithBail", async () => {
+    // The scripts run for real, so the packages point at a directory that exists.
+    const runnable = (name: string, script: string): WorkspacePackage => ({
+      ...createPackage(name, `packages/${name}`, script),
+      directory: process.cwd(),
+    });
+    const lines: string[] = [];
+    const targets = [runnable("broken", "exit 1"), runnable("second", "exit 0"), runnable("third", "exit 0")].map(
+      (workspacePackage) => ({ package: workspacePackage, paths: [] }),
+    );
+    const context: CommandContext = {
+      options: parseArguments(["typecheck", "--no-build", "--bail", "--parallel=1"]).options,
+      passthrough: [],
+      reporter: createReporter({
+        useColor: false,
+        write: (message) => lines.push(message),
+        writeError: (message) => lines.push(message),
+      }),
+      selection: { isImplicit: false, targets, unownedPaths: [] },
+      tokens: [],
+      workspace: { packages: targets.map(({ package: workspacePackage }) => workspacePackage), root: "/repo" },
+    };
+
+    expect(await createTypecheckCommand().run(context)).toBe(1);
+    expect(lines.join("\n")).toContain("1 failed, 2 skipped");
+  });
+
   it("shouldReportNothingToDoWhenNoPackageTypeChecks", async () => {
     const lines: string[] = [];
     const withoutScript: WorkspacePackage = { ...error, scripts: { build: "vite build" } };

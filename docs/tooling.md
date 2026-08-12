@@ -204,7 +204,7 @@ against every package in the batch, because nothing narrows it.
 | `--fix`               | Apply fixes instead of only reporting.                                              |
 | `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.               |
 | `--json`              | Emit machine-readable output where supported.                                       |
-| `--verbose`           | Stream every command's output instead of reporting only what failed.                |
+| `--verbose`           | Report every command's output, not only the output of what failed.                  |
 | `-h`, `--help`        | Show usage.                                                                         |
 | `--version`           | Print the tooling version.                                                          |
 
@@ -219,12 +219,14 @@ package that failed prints its whole output under its own heading. A green
 workspace run is a handful of lines, which is what makes the one red package in it
 findable.
 
-`--verbose` streams everything instead, which is the way to watch a run in progress
-or to read output a passing command produced. Repository-wide tools are the
-exception to the rule above: `lint`, `format`, and `cloc` repeat whatever they
-wrote, pass or fail, because a linter reports warnings and still exits zero, and
-keying their output off the exit code would drop the findings the run existed to
-surface.
+`--verbose` reports what passed as well, which is the way to read output a
+successful command produced. It streams that output live only when one command
+holds the terminal; several packages running at once would interleave into a
+transcript nobody can read, so their output is captured and printed as each one
+finishes. Repository-wide tools are the exception to the rule above: `lint`,
+`format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter
+reports warnings and still exits zero, and keying their output off the exit code
+would drop the findings the run existed to surface.
 
 Package runs are killed when they exceed `--timeout`. This is what keeps one
 hanging browser-test worker from blocking a whole workspace run.

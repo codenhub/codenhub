@@ -95,9 +95,11 @@ describe("parseArguments", () => {
     expect(parseArguments([]).commandName).toBe("");
   });
 
-  it("shouldRunSeveralPackagesAtOnceByDefault", () => {
+  it("shouldDefaultToACappedShareOfTheMachine", () => {
     expect(parseArguments(["test"]).options.concurrency).toBe(defaultConcurrency());
-    expect(parseArguments(["test"]).options.concurrency).toBeGreaterThan(1);
+    // A one-core machine is a valid one, so only the cap and the floor are fixed.
+    expect(defaultConcurrency()).toBeGreaterThanOrEqual(1);
+    expect(defaultConcurrency()).toBeLessThanOrEqual(6);
   });
 
   it("shouldReadAnExplicitParallelWidth", () => {
@@ -110,6 +112,12 @@ describe("parseArguments", () => {
 
   it("shouldRejectATimeoutThatIsNotAFiniteNumber", () => {
     expect(() => parseArguments(["test", "--timeout=Infinity"])).toThrow(/expected a positive number/);
+  });
+
+  it("shouldRejectATimeoutThatOverflowsTheConversionToMilliseconds", () => {
+    // A timer set to `Infinity` fires at once, so a value that only overflows on
+    // the way to milliseconds would kill every run instead of never killing one.
+    expect(() => parseArguments(["test", "--timeout=1e308"])).toThrow(/expected a positive number/);
   });
 
   it("shouldReportOnlyFailuresUnlessVerboseIsRequested", () => {

@@ -71,6 +71,14 @@ describe("tally", () => {
 
     expect(lines).toEqual([]);
   });
+
+  it("shouldWordATimedOutRunAsProseRatherThanAsItsKey", () => {
+    const { lines, reporter } = capture();
+    reporter.tally([{ label: "a", status: "timed-out" }]);
+
+    expect(lines[0]).toContain("1 timed out");
+    expect(lines[0]).not.toContain("timed-out");
+  });
 });
 
 describe("summarize", () => {

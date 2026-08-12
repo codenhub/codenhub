@@ -349,7 +349,7 @@ async function runScriptCommand(
     reporter.blank();
     reporter.step(`preparing › ${prepareSpecs.length} step(s)`);
   }
-  const prepareFailure = await runSupportingCommands(context, prepareSpecs);
+  const prepareFailure = await runSupportingCommands(context, prepareSpecs, settings);
   if (prepareFailure !== undefined) {
     reporter.error(prepareFailure);
     return EXIT_FAILURE;
@@ -393,6 +393,7 @@ async function runScriptCommand(
 async function runSupportingCommands(
   context: CommandContext,
   specs: readonly CommandSpec[],
+  settings: RunSettings,
 ): Promise<string | undefined> {
   let failure: string | undefined;
 
@@ -400,10 +401,17 @@ async function runSupportingCommands(
     if (failure !== undefined) {
       return;
     }
-    const outcome = await execute(spec, { stdio: "pipe", timeoutMs: context.options.timeoutMs });
-    if (!outcome.isSuccess) {
+    const outcome = await execute(spec, {
+      stdio: settings.streams ? "inherit" : "pipe",
+      timeoutMs: context.options.timeoutMs,
+    });
+    // A supporting step is reported on the same terms as the packages it runs
+    // for: silent when it worked and nobody asked, printed when it did not.
+    if (!settings.streams && (settings.showsPassing || !outcome.isSuccess)) {
       context.reporter.blank();
       context.reporter.info(outcome.output?.trimEnd() ?? "");
+    }
+    if (!outcome.isSuccess) {
       failure = `Required step \`${formatCommand(spec)}\` failed in ${spec.cwd}.`;
     }
   });

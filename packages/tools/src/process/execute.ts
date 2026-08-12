@@ -65,14 +65,26 @@ export interface CommandOutcome {
   stdout?: string;
 }
 
+/**
+ * Wraps an argument in double quotes the way the Windows C runtime unwraps them.
+ *
+ * Backslashes are literal unless they precede a quote or close the argument,
+ * which is the escaping the runtime applies when it parses a command line. It is
+ * shared because a shell command line and a `spawn` argument list are unwrapped
+ * by the same code, and two copies of the rule would eventually disagree.
+ * @param argument Argument to quote.
+ * @returns Argument wrapped in quotes, with its backslashes and quotes escaped.
+ */
+export function quoteForWindows(argument: string): string {
+  const escaped = argument.replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"').replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1");
+  return `"${escaped}"`;
+}
+
 function quoteWindowsArgument(argument: string): string {
   if (argument !== "" && !WINDOWS_QUOTING_REQUIRED.test(argument)) {
     return argument;
   }
-  // Backslashes are literal unless they precede a quote or close the argument,
-  // which is the escaping the C runtime applies when it parses a command line.
-  const escaped = argument.replaceAll(WINDOWS_QUOTE_ESCAPE, '$1$1\\"').replaceAll(WINDOWS_TRAILING_BACKSLASHES, "$1$1");
-  return `"${escaped}"`;
+  return quoteForWindows(argument);
 }
 
 /**

@@ -98,13 +98,23 @@ function createDefaultOptions(): CliOptions {
   };
 }
 
-function readPositiveNumber(name: string, value: string | undefined, fallback: number): number {
-  if (value === undefined || value === "") {
-    return fallback;
-  }
-  const parsed = Number(value);
+/**
+ * Reads a positive number and scales it to the unit the option is stored in.
+ *
+ * The scaled result is what gets validated, not the number as it was typed: a
+ * value large enough to overflow the conversion would otherwise be stored as
+ * `Infinity`, and a timer set to that fires immediately rather than never.
+ * @param name Flag name, used in the error message.
+ * @param value Value as typed, or `undefined` for a bare flag.
+ * @param fallback Value used when the flag carried none, in the typed unit.
+ * @param scale Factor applied to reach the stored unit.
+ * @returns The scaled value.
+ * @throws When the value is not a positive, finite number once scaled.
+ */
+function readPositiveNumber(name: string, value: string | undefined, fallback: number, scale = 1): number {
+  const parsed = value === undefined || value === "" ? fallback * scale : Number(value) * scale;
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`Invalid value for --${name}: expected a positive number, received "${value}".`);
+    throw new Error(`Invalid value for --${name}: expected a positive number, received "${value ?? ""}".`);
   }
   return parsed;
 }
@@ -162,7 +172,7 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     case "timeout": {
       // An unbounded run is asked for with `--no-timeout`; this only ever reads a
       // finite number of seconds.
-      options.timeoutMs = readPositiveNumber(name, value, DEFAULT_TIMEOUT_SECONDS) * 1000;
+      options.timeoutMs = readPositiveNumber(name, value, DEFAULT_TIMEOUT_SECONDS, 1000);
       return true;
     }
     case "no-timeout": {

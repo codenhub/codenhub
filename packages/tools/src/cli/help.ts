@@ -14,7 +14,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--fix", "Apply fixes instead of only reporting."],
   ["--pack", "Let checks run npm pack --dry-run to inspect publishable contents."],
   ["--json", "Emit machine-readable output where supported."],
-  ["--verbose", "Stream every command's output instead of only reporting failures."],
+  ["--verbose", "Report every command's output, not only the output of what failed."],
   ["-h, --help", "Show this help."],
   ["--skip-verify", "Let `release` report readiness without running `verify` first."],
   ["--version", "Print the tooling version."],
