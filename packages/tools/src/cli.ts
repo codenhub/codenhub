@@ -4,9 +4,10 @@ import { dirname, resolve } from "node:path";
 
 import { renderCommandHelp, renderHelp } from "./cli/help.ts";
 import { parseArguments } from "./cli/parse-arguments.ts";
+import { resolveCommandLine } from "./cli/resolve-command-line.ts";
 import { readToolVersion } from "./cli/version.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS } from "./commands/definition.ts";
-import { resolveCommand } from "./commands/registry.ts";
+import { listCommands, resolveCommand } from "./commands/registry.ts";
 import { createReporter } from "./reporting/reporter.ts";
 import { findChangedPaths } from "./workspace/changed-packages.ts";
 import { discoverWorkspace } from "./workspace/discover.ts";
@@ -47,25 +48,38 @@ export async function findWorkspaceRoot(startDirectory: string): Promise<string>
 
 async function main(): Promise<number> {
   const reporter = createReporter();
-  const parsed = parseArguments(process.argv.slice(2));
+  const initial = parseArguments(process.argv.slice(2));
 
-  if (parsed.options.wantsVersion || parsed.commandName === "version") {
+  if (initial.options.wantsVersion || initial.commandName === "version") {
     reporter.info(await readToolVersion());
     return EXIT_SUCCESS;
   }
-  if (parsed.commandName === "" || parsed.commandName === "help") {
+  if (initial.commandName === "" || initial.commandName === "help") {
     reporter.info(renderHelp());
     return EXIT_SUCCESS;
   }
-
+  const registeredCommand = listCommands().find(({ name }) => name === initial.commandName);
+  if (initial.options.wantsHelp && registeredCommand !== undefined) {
+    reporter.info(renderCommandHelp(registeredCommand));
+    return EXIT_SUCCESS;
+  }
+  let root: string;
+  try {
+    root = await findWorkspaceRoot(process.cwd());
+  } catch (error) {
+    if (initial.options.wantsHelp) {
+      reporter.info(renderCommandHelp(resolveCommand(initial.commandName)));
+      return EXIT_SUCCESS;
+    }
+    throw error;
+  }
+  const workspace = await discoverWorkspace(root);
+  const parsed = resolveCommandLine(initial, workspace);
   const command = resolveCommand(parsed.commandName);
   if (parsed.options.wantsHelp) {
     reporter.info(renderCommandHelp(command));
     return EXIT_SUCCESS;
   }
-
-  const root = await findWorkspaceRoot(process.cwd());
-  const workspace = await discoverWorkspace(root);
 
   if (command.selectsPackages === false) {
     const selection = { isImplicit: false, targets: [], unownedPaths: [] };

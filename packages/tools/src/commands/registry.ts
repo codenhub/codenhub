@@ -14,6 +14,7 @@ import { createVerifyCommand } from "./verify-command.ts";
 
 const CLOC_EXCLUDED_DIRECTORIES = "node_modules,dist,coverage,test-results,.git";
 const CLOC_EXCLUDED_EXTENSIONS = "md,yaml,json";
+const INTERACTIVE_PACKAGE_SCRIPTS = new Set(["debug", "dev", "preview"]);
 
 const COMMANDS: readonly CommandDefinition[] = [
   createScriptCommand({ includesDependencies: true, name: "build", summary: "Build the selected packages." }),
@@ -111,6 +112,10 @@ export function listCommands(): readonly CommandDefinition[] {
 export function resolveCommand(name: string): CommandDefinition {
   return (
     COMMANDS.find((command) => command.name === name) ??
-    createScriptCommand({ name, summary: `Run the "${name}" package script.` })
+    createScriptCommand({
+      isInteractive: INTERACTIVE_PACKAGE_SCRIPTS.has(name),
+      name,
+      summary: `Run the "${name}" package script.`,
+    })
   );
 }
