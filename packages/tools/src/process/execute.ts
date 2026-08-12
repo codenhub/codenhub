@@ -7,12 +7,29 @@ const FORCE_KILL_GRACE_MS = 5000;
 
 /** A resolved child process invocation. */
 export interface CommandSpec {
-  /** Executable name resolved through `PATH`, such as `pnpm` or `oxlint`. */
+  /**
+   * Executable name resolved through `PATH`, such as `pnpm` or `oxlint`.
+   *
+   * When {@link CommandSpec.shell} is set, this holds the whole command line
+   * instead, arguments included.
+   */
   command: string;
-  /** Arguments passed to the executable. */
+  /** Arguments passed to the executable. Empty when {@link CommandSpec.shell} is set. */
   args: readonly string[];
   /** Absolute working directory for the child process. */
   cwd: string;
+  /**
+   * Whether {@link CommandSpec.command} is a shell command line rather than an
+   * executable.
+   *
+   * Package scripts are shell lines: they chain with `&&`, quote their own
+   * arguments, and are written against a shell rather than against `spawn`.
+   * Running one without a shell would need the tooling to reimplement that
+   * parsing, so the platform interpreter is handed the line as written.
+   */
+  shell?: boolean;
+  /** Environment for the child process. Defaults to this process's environment. */
+  env?: Readonly<Record<string, string | undefined>>;
 }
 
 /** How a child process should be started and observed. */
@@ -71,6 +88,17 @@ export function resolveInvocation(spec: CommandSpec): {
   args: string[];
   useWindowsVerbatimArguments: boolean;
 } {
+  if (spec.shell === true) {
+    // `/s` makes the interpreter strip only the outermost quotes and take the
+    // rest verbatim, which is what lets a script body keep its own quoting.
+    return process.platform === "win32"
+      ? {
+          args: ["/d", "/s", "/c", `"${spec.command}"`],
+          file: process.env.ComSpec ?? "cmd.exe",
+          useWindowsVerbatimArguments: true,
+        }
+      : { args: ["-c", spec.command], file: "/bin/sh", useWindowsVerbatimArguments: false };
+  }
   if (process.platform !== "win32") {
     return { args: [...spec.args], file: spec.command, useWindowsVerbatimArguments: false };
   }
@@ -91,6 +119,9 @@ export function resolveInvocation(spec: CommandSpec): {
  * @returns Human-readable command line.
  */
 export function formatCommand(spec: CommandSpec): string {
+  if (spec.shell === true) {
+    return spec.command;
+  }
   return [spec.command, ...spec.args].map((part) => (/\s/.test(part) ? `"${part}"` : part)).join(" ");
 }
 
@@ -120,6 +151,7 @@ export async function execute(spec: CommandSpec, options: ExecuteOptions): Promi
   return new Promise<CommandOutcome>((resolve, reject) => {
     const child = spawn(invocation.file, invocation.args, {
       cwd: spec.cwd,
+      env: spec.env as NodeJS.ProcessEnv | undefined,
       stdio: options.stdio === "inherit" ? "inherit" : ["ignore", "pipe", "pipe"],
       windowsVerbatimArguments: invocation.useWindowsVerbatimArguments,
     });

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { findDependencyCycles, orderByDependencies, withWorkspaceDependencies } from "./dependency-order.ts";
+import {
+  findDependencyCycles,
+  groupByDependencyLevel,
+  orderByDependencies,
+  withWorkspaceDependencies,
+} from "./dependency-order.ts";
 import type { WorkspacePackage } from "./discover.ts";
 
 function createPackage(name: string, workspaceDependencies: string[] = []): WorkspacePackage {
@@ -114,5 +119,65 @@ describe("findDependencyCycles", () => {
       ["first", "second"],
       ["third", "fourth"],
     ]);
+  });
+});
+
+describe("groupByDependencyLevel", () => {
+  it("shouldPutIndependentPackagesInOneLevel", () => {
+    const levels = groupByDependencyLevel([createPackage("a"), createPackage("b"), createPackage("c")]);
+
+    expect(levels).toHaveLength(1);
+    expect(levels[0]?.map(({ name }) => name)).toEqual(["a", "b", "c"]);
+  });
+
+  it("shouldHoldADependentBackUntilItsDependencyLevelIsDone", () => {
+    const base = createPackage("base");
+    const middle = createPackage("middle", ["base"]);
+    const top = createPackage("top", ["middle"]);
+
+    expect(groupByDependencyLevel([top, middle, base]).map((level) => level.map(({ name }) => name))).toEqual([
+      ["base"],
+      ["middle"],
+      ["top"],
+    ]);
+  });
+
+  it("shouldWidenALevelWithEverySiblingThatIsReady", () => {
+    const base = createPackage("base");
+    const left = createPackage("left", ["base"]);
+    const right = createPackage("right", ["base"]);
+
+    expect(groupByDependencyLevel([base, left, right]).map((level) => level.map(({ name }) => name))).toEqual([
+      ["base"],
+      ["left", "right"],
+    ]);
+  });
+
+  it("shouldIgnoreDependenciesOutsideTheGivenSet", () => {
+    expect(groupByDependencyLevel([createPackage("only", ["absent"])])).toHaveLength(1);
+  });
+
+  it("shouldCoverEveryPackageExactlyOnce", () => {
+    const base = createPackage("base");
+    const middle = createPackage("middle", ["base"]);
+    const top = createPackage("top", ["middle", "base"]);
+    const names = groupByDependencyLevel([top, middle, base])
+      .flat()
+      .map(({ name }) => name);
+
+    expect(names.toSorted()).toEqual(["base", "middle", "top"]);
+  });
+
+  it("shouldFallBackToOneLevelForACycle", () => {
+    const first = createPackage("first", ["second"]);
+    const second = createPackage("second", ["first"]);
+    const levels = groupByDependencyLevel([first, second]);
+
+    expect(
+      levels
+        .flat()
+        .map(({ name }) => name)
+        .toSorted(),
+    ).toEqual(["first", "second"]);
   });
 });

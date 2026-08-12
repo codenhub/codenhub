@@ -3,7 +3,7 @@ import { listCommands } from "../commands/registry.ts";
 
 const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--changed[=<ref>]", "Narrow the selection to packages changed against <ref> (default main)."],
-  ["--parallel[=<n>]", "Run up to <n> packages at the same time (default all)."],
+  ["--parallel[=<n>]", "Run up to <n> packages at the same time (default 6, or all with a bare flag)."],
   ["--bail", "Stop after the first failing package."],
   ["--no-build", "Skip prerequisite build steps."],
   ["--no-deps", "Build only the selected packages, not their workspace dependencies."],
@@ -14,6 +14,7 @@ const GLOBAL_OPTIONS: readonly (readonly [string, string])[] = [
   ["--fix", "Apply fixes instead of only reporting."],
   ["--pack", "Let checks run npm pack --dry-run to inspect publishable contents."],
   ["--json", "Emit machine-readable output where supported."],
+  ["--verbose", "Stream every command's output instead of only reporting failures."],
   ["-h, --help", "Show this help."],
   ["--skip-verify", "Let `release` report readiness without running `verify` first."],
   ["--version", "Print the tooling version."],

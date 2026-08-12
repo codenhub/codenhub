@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseArguments } from "./parse-arguments.ts";
+import { defaultConcurrency, parseArguments } from "./parse-arguments.ts";
 
 describe("parseArguments", () => {
   it("shouldReadCommandAndTargets", () => {
@@ -93,5 +93,27 @@ describe("parseArguments", () => {
 
   it("shouldReportAnEmptyCommandWhenNothingWasTyped", () => {
     expect(parseArguments([]).commandName).toBe("");
+  });
+
+  it("shouldRunSeveralPackagesAtOnceByDefault", () => {
+    expect(parseArguments(["test"]).options.concurrency).toBe(defaultConcurrency());
+    expect(parseArguments(["test"]).options.concurrency).toBeGreaterThan(1);
+  });
+
+  it("shouldReadAnExplicitParallelWidth", () => {
+    expect(parseArguments(["test", "--parallel=3"]).options.concurrency).toBe(3);
+  });
+
+  it("shouldRejectAFractionalParallelWidth", () => {
+    expect(() => parseArguments(["test", "--parallel=2.5"])).toThrow(/expected a whole number/);
+  });
+
+  it("shouldRejectATimeoutThatIsNotAFiniteNumber", () => {
+    expect(() => parseArguments(["test", "--timeout=Infinity"])).toThrow(/expected a positive number/);
+  });
+
+  it("shouldReportOnlyFailuresUnlessVerboseIsRequested", () => {
+    expect(parseArguments(["test"]).options.isVerbose).toBe(false);
+    expect(parseArguments(["test", "--verbose"]).options.isVerbose).toBe(true);
   });
 });

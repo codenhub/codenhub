@@ -72,7 +72,20 @@ export function createRootToolCommand(options: RootToolCommandOptions): CommandD
         return EXIT_SUCCESS;
       }
 
-      const outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });
+      // A repository-wide tool is one process, so holding its output loses no
+      // ordering. `--fix` streams instead: what it rewrote is why it was run.
+      const streams = context.options.isVerbose || context.options.shouldFix;
+      const outcome = await execute(spec, {
+        stdio: streams ? "inherit" : "pipe",
+        timeoutMs: context.options.timeoutMs,
+      });
+      // Everything the tool said is repeated, not just what failed. A linter
+      // reports warnings and still exits zero, so keying this on the exit code
+      // would drop the findings the run existed to surface.
+      const captured = outcome.output?.trimEnd() ?? "";
+      if (!streams && captured !== "") {
+        context.reporter.info(captured);
+      }
       return outcome.isSuccess ? EXIT_SUCCESS : EXIT_FAILURE;
     },
     summary: options.summary,

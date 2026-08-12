@@ -60,7 +60,9 @@ export function createGenerateCommand(): CommandDefinition {
         label: file.path,
         status: hasDrift ? "passed" : "skipped",
       }));
-      context.reporter.summarize(rows);
+      // Only what changed is news; an unchanged generated file is the normal case
+      // and there is one of them per package.
+      context.reporter.summarize(context.options.isVerbose ? rows : rows.filter(({ status }) => status === "passed"));
       context.reporter.blank();
       context.reporter.detail(`  ${stale.length} of ${outcomes.length} file(s) written`);
       return EXIT_SUCCESS;

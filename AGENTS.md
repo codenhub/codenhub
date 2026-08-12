@@ -51,8 +51,8 @@ done when it is not.
 ## Commands
 
 Run `pnpm verify` after changes from the repository root. It runs formatting,
-linting, type checking, tests, browser tests, and compliance checks in that order
-and stops at the first failure:
+linting, building, type checking, tests, browser tests, and compliance checks in
+that order and stops at the first failure:
 
 ```sh
 pnpm verify error

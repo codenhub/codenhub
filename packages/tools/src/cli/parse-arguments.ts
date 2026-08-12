@@ -2,6 +2,14 @@ import { availableParallelism } from "node:os";
 
 const DEFAULT_BASE_REF = "main";
 const DEFAULT_TIMEOUT_SECONDS = 600;
+/**
+ * Packages processed at the same time when `--parallel` is not given.
+ *
+ * Capped well below the core count because a package run is not one process: a
+ * test runner sizes its own worker pool from the same cores, so a cap of one per
+ * core multiplies rather than saturates.
+ */
+const DEFAULT_CONCURRENCY_CAP = 6;
 const OPTION_TERMINATOR = "--";
 const FLAG_PATTERN = /^--(?<name>[^=]+)(?:=(?<value>.*))?$/;
 
@@ -37,6 +45,13 @@ export interface CliOptions {
   includePack: boolean;
   /** Whether machine-readable output is requested. */
   wantsJson: boolean;
+  /**
+   * Whether every child process streams its output.
+   *
+   * Off by default: a passing run says nothing beyond its summary, so the output
+   * that survives is the output that needs reading.
+   */
+  isVerbose: boolean;
   /** Whether usage information is requested. */
   wantsHelp: boolean;
   /** Whether the tooling version is requested. */
@@ -55,12 +70,21 @@ export interface ParsedArguments {
   options: CliOptions;
 }
 
+/**
+ * Packages processed at the same time when nothing was requested.
+ * @returns Default concurrency for this machine.
+ */
+export function defaultConcurrency(): number {
+  return Math.max(1, Math.min(availableParallelism(), DEFAULT_CONCURRENCY_CAP));
+}
+
 function createDefaultOptions(): CliOptions {
   return {
     baseRef: DEFAULT_BASE_REF,
-    concurrency: 1,
+    concurrency: defaultConcurrency(),
     includePack: false,
     isDryRun: false,
+    isVerbose: false,
     shouldBail: false,
     shouldBuild: true,
     shouldBuildDependencies: true,
@@ -85,6 +109,14 @@ function readPositiveNumber(name: string, value: string | undefined, fallback: n
   return parsed;
 }
 
+function readPositiveInteger(name: string, value: string | undefined, fallback: number): number {
+  const parsed = readPositiveNumber(name, value, fallback);
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`Invalid value for --${name}: expected a whole number, received "${value ?? ""}".`);
+  }
+  return parsed;
+}
+
 function applyFlag(options: CliOptions, name: string, value: string | undefined): boolean {
   switch (name) {
     case "changed": {
@@ -97,7 +129,7 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
       return true;
     }
     case "parallel": {
-      options.concurrency = readPositiveNumber(name, value, availableParallelism());
+      options.concurrency = readPositiveInteger(name, value, availableParallelism());
       return true;
     }
     case "bail": {
@@ -128,8 +160,9 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
       return true;
     }
     case "timeout": {
-      const seconds = readPositiveNumber(name, value, DEFAULT_TIMEOUT_SECONDS);
-      options.timeoutMs = seconds === Number.POSITIVE_INFINITY ? undefined : seconds * 1000;
+      // An unbounded run is asked for with `--no-timeout`; this only ever reads a
+      // finite number of seconds.
+      options.timeoutMs = readPositiveNumber(name, value, DEFAULT_TIMEOUT_SECONDS) * 1000;
       return true;
     }
     case "no-timeout": {
@@ -150,6 +183,10 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     }
     case "json": {
       options.wantsJson = true;
+      return true;
+    }
+    case "verbose": {
+      options.isVerbose = true;
       return true;
     }
     case "help": {

@@ -57,7 +57,7 @@ async function planBuild({ flags = [], includesDependencies = true, targets }: R
   );
 
   return lines
-    .filter((line) => line.includes("pnpm run build"))
+    .filter((line) => line.includes("vite build"))
     .map((line) => line.trim().split(":")[0] as string)
     .map((directory) => directory.replace("/repo/", ""));
 }

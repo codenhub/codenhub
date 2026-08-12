@@ -86,8 +86,9 @@ pnpm test --changed
 Unrecognized flags reach the underlying tool, so `pnpm test error --reporter=verbose` works. Run `pnpm hub --help` for the full surface, or `pnpm packages` to see what a target resolves to.
 
 Before publishing or merging package behavior changes, run `pnpm verify`. It runs
-formatting, linting, type checking, tests, browser tests, and compliance checks in
-that order and stops at the first failure, so a whole branch is one command:
+formatting, linting, building, type checking, tests, browser tests, and compliance
+checks in that order and stops at the first failure, so a whole branch is one
+command:
 
 ```sh
 pnpm verify

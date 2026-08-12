@@ -125,3 +125,41 @@ export function findDependencyCycles(packages: readonly WorkspacePackage[]): str
   }
   return [...cycles.values()];
 }
+
+/**
+ * Groups packages into levels that can each be processed in parallel.
+ *
+ * A package joins the first level that comes after every workspace dependency it
+ * has inside the set, so nothing in a level depends on anything else in it.
+ * Ordering alone forces a whole workspace through one package at a time even
+ * though most packages depend on nothing, which is the cost this removes while
+ * keeping the guarantee the ordering exists for.
+ *
+ * Packages left unplaceable by a cycle are appended as a final level, matching
+ * how {@link orderByDependencies} falls back rather than failing.
+ * @param packages Packages to group.
+ * @returns Levels in dependency-first order, each safe to run concurrently.
+ */
+export function groupByDependencyLevel(packages: readonly WorkspacePackage[]): WorkspacePackage[][] {
+  const selected = new Set(packages.map(({ name }) => name));
+  const placed = new Set<string>();
+  const levels: WorkspacePackage[][] = [];
+  let remaining = orderByDependencies(packages);
+
+  while (remaining.length > 0) {
+    const ready = remaining.filter((workspacePackage) =>
+      workspacePackage.workspaceDependencies.every((dependency) => !selected.has(dependency) || placed.has(dependency)),
+    );
+    if (ready.length === 0) {
+      // A cycle leaves every survivor waiting on another survivor.
+      levels.push(remaining);
+      break;
+    }
+    for (const { name } of ready) {
+      placed.add(name);
+    }
+    levels.push(ready);
+    remaining = remaining.filter(({ name }) => !placed.has(name));
+  }
+  return levels;
+}

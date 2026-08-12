@@ -37,6 +37,8 @@ export interface Reporter {
   blank(): void;
   /** Writes a table of run outcomes. */
   summarize(rows: readonly SummaryRow[]): void;
+  /** Writes a one-line count of run outcomes. */
+  tally(rows: readonly SummaryRow[], durationMs?: number): void;
 }
 
 /** Behavior overrides for a reporter, used by tests and non-terminal output. */
@@ -48,6 +50,16 @@ export interface ReporterOptions {
   /** Whether ANSI styling is applied. Defaults to terminal and `NO_COLOR` detection. */
   useColor?: boolean;
 }
+
+const TALLY_ORDER: readonly SummaryStatus[] = ["failed", "timed-out", "warned", "passed", "skipped"];
+
+const TALLY_WORDS: Record<SummaryStatus, string> = {
+  failed: "failed",
+  passed: "passed",
+  skipped: "skipped",
+  "timed-out": "timed out",
+  warned: "warned",
+};
 
 const STATUS_LABELS: Record<SummaryStatus, { text: string; color: keyof typeof STYLES }> = {
   failed: { color: "red", text: "FAIL" },
@@ -99,6 +111,17 @@ export function createReporter(options: ReporterOptions = {}): Reporter {
         const detail = row.detail === undefined ? "" : ` ${paint("dim", row.detail)}`;
         write(`  ${paint(status.color, status.text)}  ${row.label.padEnd(width)}${detail}`);
       }
+    },
+    tally: (rows, durationMs) => {
+      if (rows.length === 0) {
+        return;
+      }
+      const counted = TALLY_ORDER.filter((status) => rows.some((row) => row.status === status)).map((status) => {
+        const count = rows.filter((row) => row.status === status).length;
+        return paint(STATUS_LABELS[status].color, `${count} ${TALLY_WORDS[status]}`);
+      });
+      const duration = durationMs === undefined ? "" : paint("dim", ` in ${formatDuration(durationMs)}`);
+      write(`  ${counted.join(paint("dim", ", "))}${duration}`);
     },
     warn: (message) => writeError(`${paint("yellow", "warn")} ${message}`),
   };

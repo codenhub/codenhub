@@ -77,3 +77,43 @@ describe("execute", () => {
     ).rejects.toThrow(/Failed to run/);
   });
 });
+
+describe("shell invocations", () => {
+  it("shouldHandTheWholeLineToTheInterpreter", () => {
+    const invocation = resolveInvocation({ args: [], command: "tsc --noEmit", cwd: "/repo", shell: true });
+
+    expect(invocation.args.at(-1)).toContain("tsc --noEmit");
+  });
+
+  it.runIf(isWindows)("shouldRouteAShellLineThroughTheInterpreterOnWindows", () => {
+    const invocation = resolveInvocation({ args: [], command: "tsc --noEmit", cwd: "/repo", shell: true });
+
+    expect(invocation.args.slice(0, 3)).toEqual(["/d", "/s", "/c"]);
+    expect(invocation.useWindowsVerbatimArguments).toBe(true);
+  });
+
+  it.skipIf(isWindows)("shouldRouteAShellLineThroughTheShellElsewhere", () => {
+    const invocation = resolveInvocation({ args: [], command: "tsc --noEmit", cwd: "/repo", shell: true });
+
+    expect(invocation.file).toBe("/bin/sh");
+    expect(invocation.args[0]).toBe("-c");
+  });
+
+  it("shouldRenderAShellSpecAsItsOwnLine", () => {
+    expect(formatCommand({ args: [], command: "a && b", cwd: "/repo", shell: true })).toBe("a && b");
+  });
+
+  it("shouldRunWithTheEnvironmentItWasGiven", async () => {
+    const outcome = await execute(
+      {
+        args: ["-e", "process.stdout.write(process.env.CODENHUB_PROBE ?? '')"],
+        command: process.execPath,
+        cwd: process.cwd(),
+        env: { ...process.env, CODENHUB_PROBE: "present" },
+      },
+      { stdio: "pipe" },
+    );
+
+    expect(outcome.output).toContain("present");
+  });
+});
