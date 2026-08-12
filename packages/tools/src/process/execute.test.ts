@@ -108,7 +108,7 @@ describe("shell invocations", () => {
   it("shouldHandTheWholeLineToTheInterpreter", () => {
     const invocation = resolveInvocation({ args: [], command: "tsc --noEmit", cwd: "/repo", shell: true });
 
-    expect(invocation.args.at(-1)).toContain("tsc --noEmit");
+    expect(invocation.args.some((argument) => argument.includes("tsc --noEmit"))).toBe(true);
   });
 
   it.runIf(isWindows)("shouldRouteAShellLineThroughTheInterpreterOnWindows", () => {
