@@ -9,6 +9,8 @@ interface RunResult {
   exitCode: number;
   output: string;
   ran: string[];
+  /** Whether each step was told a build had already run for it. */
+  builtBySelf: Record<string, boolean>;
 }
 
 /**
@@ -20,11 +22,13 @@ interface RunResult {
 async function runVerify(failingStep?: string, argv: readonly string[] = []): Promise<RunResult> {
   const lines: string[] = [];
   const ran: string[] = [];
+  const builtBySelf: Record<string, boolean> = {};
   const resolver = vi.fn(
     (name: string): CommandDefinition => ({
       name,
       run: async (stepContext) => {
         ran.push(name);
+        builtBySelf[name] = stepContext.options.shouldBuild;
         expect(stepContext.passthrough).toEqual([]);
         return name === failingStep ? EXIT_FAILURE : EXIT_SUCCESS;
       },
@@ -45,28 +49,30 @@ async function runVerify(failingStep?: string, argv: readonly string[] = []): Pr
     workspace: { packages: [], root: "/repo" },
   };
 
-  return { exitCode: await createVerifyCommand(resolver).run(context), output: lines.join("\n"), ran };
+  const exitCode = await createVerifyCommand(resolver).run(context);
+
+  return { builtBySelf, exitCode, output: lines.join("\n"), ran };
 }
 
 describe("hub verify", () => {
   it("runs every step in order and succeeds", async () => {
     const result = await runVerify();
 
-    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "test:browser", "check"]);
+    expect(result.ran).toEqual(["format", "lint", "build", "typecheck", "test", "test:browser", "check"]);
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
 
   it("stops at the first failing step", async () => {
     const result = await runVerify("typecheck");
 
-    expect(result.ran).toEqual(["format", "lint", "typecheck"]);
+    expect(result.ran).toEqual(["format", "lint", "build", "typecheck"]);
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
 
   it("leaves out a step named by --skip and still reports it", async () => {
     const result = await runVerify(undefined, ["--skip=test:browser"]);
 
-    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "check"]);
+    expect(result.ran).toEqual(["format", "lint", "build", "typecheck", "test", "check"]);
     expect(result.output).toContain("SKIP  test:browser skipped by --skip");
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
@@ -75,7 +81,7 @@ describe("hub verify", () => {
     const result = await runVerify(undefined, ["--skip=browsers"]);
 
     expect(result.output).toContain("`--skip=browsers` names no verification step");
-    expect(result.ran).toHaveLength(6);
+    expect(result.ran).toHaveLength(7);
   });
 
   it("accounts for the steps it never reached", async () => {
@@ -85,5 +91,36 @@ describe("hub verify", () => {
     expect(result.output).toContain("SKIP  test");
     expect(result.output).toContain("SKIP  test:browser");
     expect(result.output).toContain("SKIP  check");
+  });
+
+  it("builds once and leaves the later steps nothing to rebuild", async () => {
+    const result = await runVerify();
+
+    expect(result.builtBySelf.build).toBe(true);
+    expect(result.builtBySelf.typecheck).toBe(false);
+    expect(result.builtBySelf.test).toBe(false);
+    expect(result.builtBySelf["test:browser"]).toBe(false);
+  });
+
+  it("keeps the build for the steps that run before it", async () => {
+    const result = await runVerify();
+
+    expect(result.builtBySelf.format).toBe(true);
+    expect(result.builtBySelf.lint).toBe(true);
+  });
+
+  it("leaves the build step out entirely under --no-build", async () => {
+    const result = await runVerify(undefined, ["--no-build"]);
+
+    expect(result.ran).toEqual(["format", "lint", "typecheck", "test", "test:browser", "check"]);
+    expect(result.output).toContain("SKIP  build");
+    expect(result.output).toContain("skipped by --no-build");
+  });
+
+  it("leaves the build step out when --skip names it", async () => {
+    const result = await runVerify(undefined, ["--skip=build"]);
+
+    expect(result.ran).not.toContain("build");
+    expect(result.builtBySelf.typecheck).toBe(true);
   });
 });

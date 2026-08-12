@@ -16,6 +16,8 @@ dist
 .wrangler
 coverage
 **/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
 test-results
 **/test-results
 playwright-report

@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2024"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["ES2024"],
+    "noEmit": true,
     "types": ["node"]
   },
   "extends": "../../tsconfig.json",

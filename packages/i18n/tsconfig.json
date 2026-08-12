@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "noEmit": true,
     "types": ["node"]
   },
   "extends": "../../tsconfig.json",

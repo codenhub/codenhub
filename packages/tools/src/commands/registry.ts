@@ -9,6 +9,7 @@ import { createNewCommand } from "./new-command.ts";
 import { createReleaseCommand } from "./release-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
+import { createTypecheckCommand } from "./typecheck-command.ts";
 import { createVerifyCommand } from "./verify-command.ts";
 
 const CLOC_EXCLUDED_DIRECTORIES = "node_modules,dist,coverage,test-results,.git";
@@ -50,7 +51,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     prerequisite: "build",
     summary: "Run tests in watch mode for one package.",
   }),
-  createScriptCommand({ name: "typecheck", prerequisite: "build", summary: "Type-check the selected packages." }),
+  createTypecheckCommand(),
   createScriptCommand({ name: "status:npm", summary: "Report published registry metadata." }),
   createScriptCommand({
     name: "status:pack",

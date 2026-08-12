@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-10
+last_updated: 2026-08-12
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -127,8 +127,14 @@ dependencies are known to be built, and `--no-build` skips the step entirely.
 before the package that imports it whether the build was asked for directly or
 reached as a prerequisite. `hub build docs` therefore builds what `docs`
 consumes first, and an unnarrowed `hub build` runs dependency-first rather than
-in workspace order. `--parallel` does not apply to it: running a package beside
-its dependency is the race the ordering exists to prevent.
+in workspace order.
+
+A build runs in dependency levels: everything with no unbuilt dependency left in
+the selection starts together, and the next level waits for that one to finish.
+Only a dependent has to wait for a dependency, and most packages depend on nothing,
+so ordering the whole workspace into a single file would idle every core but one.
+`--parallel` sets how wide a level may run; it never lets a package start beside
+its own dependency.
 
 The expansion includes the `dev` and `debug` environments nested inside a selected
 package, and what they depend on. Those are workspace packages of their own, and a
@@ -138,27 +144,89 @@ plugin `theme/dev` imports even though `theme` itself never does.
 `prepublishOnly` is exempt: npm runs it outside `hub`, so it MUST remain
 self-contained.
 
+## How a package script is run
+
+`hub` runs a package script by handing its body to the platform shell with the
+package's `node_modules/.bin` directories on `PATH`, which is what `pnpm run`
+would have set up. The shim is skipped for its cost: starting `pnpm` takes on the
+order of a second, and a workspace run pays that once per package per script, so
+it can outweigh several of the scripts it starts.
+
+A script with a `pre` or `post` hook is still run through `pnpm run`, because the
+package manager owns those hooks and skipping it would silently drop a step. A
+script that invokes `pnpm` itself, such as one chaining `pnpm build:styles`, pays
+for that call as written; splitting such a chain into separate scripts is the way
+to avoid it.
+
+## Type checking
+
+`hub typecheck` does not run one compiler per package. Every package whose
+`typecheck` script is a bare `tsc -b` is checked in build mode, several projects
+to a process, spread over as many processes as `--parallel` allows. Most of what
+a project costs is loading the compiler and its libraries, and a batch pays that
+once instead of once per package.
+
+Build mode is also what makes a second run cheap. Each project records what it
+checked in a `tsconfig.tsbuildinfo` beside its config, and a project whose inputs
+have not changed since is skipped rather than re-checked. A workspace that has
+just been checked answers in well under a second; `hub clean` removes those
+records along with the rest of the build output.
+
+This is why `docs/specs/packages-lifecycle.md` requires `composite` and `noEmit`
+in a package `tsconfig.json`: `composite` is what build mode needs to track a
+project, and `noEmit` keeps a type-check from writing declarations the build
+already produces.
+
+A package whose `typecheck` script is anything else runs as its own script, in
+its own process, beside the batches. `apps/docs` is the one that does, because
+`astro sync` has to regenerate its types before the compiler sees them. Such a
+package takes a slot of its own and starts first, since nothing else in the run
+gets shorter by waiting for it.
+
+Diagnostics name the file they came from, so a batch that fails is reported
+against the packages the diagnostics belong to rather than against everything it
+covered. A failure with no file in it — a missing type library, say — is reported
+against every package in the batch, because nothing narrows it.
+
 ## Options
 
-| Option                | Effect                                                                                   |
-| --------------------- | ---------------------------------------------------------------------------------------- |
-| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.                          |
-| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Output is buffered when above one. Ignored by `build`. |
-| `--bail`              | Stop after the first failing package.                                                    |
-| `--no-build`          | Skip prerequisite builds.                                                                |
-| `--no-deps`           | Build only the selected packages, not their workspace dependencies.                      |
-| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                          |
-| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                                   |
-| `--no-timeout`        | Never kill a package run.                                                                |
-| `--dry-run`           | Print the commands that would run.                                                       |
-| `--fix`               | Apply fixes instead of only reporting.                                                   |
-| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.                    |
-| `--json`              | Emit machine-readable output where supported.                                            |
-| `-h`, `--help`        | Show usage.                                                                              |
-| `--version`           | Print the tooling version.                                                               |
+| Option                | Effect                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `--changed[=<ref>]`   | Narrow to packages changed against `<ref>`. Defaults to `main`.                     |
+| `--parallel[=<n>]`    | Run up to `<n>` packages at once. Defaults to 6; a bare flag asks for one per core. |
+| `--bail`              | Stop after the first failing package.                                               |
+| `--no-build`          | Skip prerequisite builds.                                                           |
+| `--no-deps`           | Build only the selected packages, not their workspace dependencies.                 |
+| `--skip=<steps>`      | Leave verification steps out of a `verify` run.                                     |
+| `--timeout=<seconds>` | Kill a package run after `<seconds>`. Defaults to 600.                              |
+| `--no-timeout`        | Never kill a package run.                                                           |
+| `--dry-run`           | Print the commands that would run.                                                  |
+| `--fix`               | Apply fixes instead of only reporting.                                              |
+| `--pack`              | Let `check` run `npm pack --dry-run` to inspect publishable contents.               |
+| `--json`              | Emit machine-readable output where supported.                                       |
+| `--verbose`           | Report every command's output, not only the output of what failed.                  |
+| `-h`, `--help`        | Show usage.                                                                         |
+| `--version`           | Print the tooling version.                                                          |
 
 Unrecognized flags and everything after a bare `--` are forwarded to the
 underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
+
+## Reporting
+
+A run reports what failed. Child output is captured rather than streamed, and a
+package that passed prints nothing beyond its place in the closing count; a
+package that failed prints its whole output under its own heading. A green
+workspace run is a handful of lines, which is what makes the one red package in it
+findable.
+
+`--verbose` reports what passed as well, which is the way to read output a
+successful command produced. It streams that output live only when one command
+holds the terminal; several packages running at once would interleave into a
+transcript nobody can read, so their output is captured and printed as each one
+finishes. Repository-wide tools are the exception to the rule above: `lint`,
+`format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter
+reports warnings and still exits zero, and keying their output off the exit code
+would drop the findings the run existed to surface.
 
 Package runs are killed when they exceed `--timeout`. This is what keeps one
 hanging browser-test worker from blocking a whole workspace run.
@@ -191,6 +259,10 @@ the tests, so a browser test cannot fail on a machine that simply never download
 a browser. Playwright verifies its own cache in well under a second, which is why
 the step runs every time instead of being guarded by a marker file that would
 claim browsers are present after someone cleared the cache.
+
+Browser suites run several packages at a time like any other script, so a package
+that starts a server MUST bind a port no other package uses. Two suites sharing a
+port passed only because the runs were once serialized, and would now race.
 
 A package opts in by declaring `@playwright/test`. Browsers are cached per
 Playwright version outside the repository, so packages on the same version share
@@ -229,13 +301,20 @@ name the workspace does not contain yet, so it reads the raw tokens instead.
 
 ## Verification
 
-`hub verify` runs `format`, `lint`, `typecheck`, `test`, `test:browser`, and
-`check` in that order and stops at the first failure. The order is by cost: the
+`hub verify` runs `format`, `lint`, `build`, `typecheck`, `test`, `test:browser`,
+and `check` in that order and stops at the first failure. The order is by cost: the
 cheapest step that is most likely to fail on a fresh change runs first, browser
 tests follow the unit tests because a unit failure answers the same question far
 sooner, and a compliance report is only worth reading once the code it describes
 compiles and passes. Steps that never ran are reported as skipped rather than
-omitted, so the summary always accounts for all six.
+omitted, so the summary always accounts for all seven.
+
+`build` is a step of the run rather than a prerequisite of the three steps that
+need one. Left to each of them it builds the same packages three times, because no
+later step can tell that an earlier one already produced what it needs. Running it
+once and telling the rest the output is there is the same work done once.
+`--no-build` drops the step and leaves every other step to find its own build
+output, and `--skip=build` does the same.
 
 `--skip=<steps>` leaves steps out, and they are still listed in the summary so a
 partial run never reads as a full one. CI uses it to hand the browser step to the
@@ -353,9 +432,11 @@ you want while fixing one blocker at a time.
 
 ## Cleaning
 
-`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` from the
-selected packages, descending below each package root so playgrounds and nested
-workspaces are covered too. It stops at each artifact it finds rather than
+`hub clean` removes `dist`, `coverage`, `test-results`, `.astro`, and every
+`*.tsbuildinfo` from the selected packages, descending below each package root so
+playgrounds and nested workspaces are covered too. The compiler's records go with
+the output they describe: left behind, they would tell the next type-check that
+projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than
 descending into it, and it never touches `node_modules`: dependencies belong to
 the package manager, and removing them turns a seconds-long cleanup into a
 reinstall.

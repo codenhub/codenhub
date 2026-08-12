@@ -1,9 +1,11 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "ES2024"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["DOM", "ES2024"]
+    "noEmit": true
   },
+  "extends": "../../tsconfig.json",
   "include": ["src/**/*"]
 }

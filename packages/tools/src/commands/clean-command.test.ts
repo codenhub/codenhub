@@ -75,6 +75,17 @@ describe("findArtifactDirectories", () => {
     expect(found[0]?.endsWith("dist")).toBe(true);
   });
 
+  it("reports the record the compiler keeps of a project it checked", async () => {
+    const root = await createWorkspaceFixture(["packages/error/src"]);
+    await writeFile(join(root, "packages/error/tsconfig.tsbuildinfo"), "");
+
+    const found = await findArtifactDirectories(join(root, "packages/error"));
+
+    expect(found.map((path) => path.slice(root.length + 1).replaceAll("\\", "/"))).toEqual([
+      "packages/error/tsconfig.tsbuildinfo",
+    ]);
+  });
+
   it("never reports dependencies", async () => {
     const root = await createWorkspaceFixture(["packages/error/node_modules/left-pad/dist"]);
 
@@ -106,7 +117,7 @@ describe("hub clean", () => {
 
     const output = await runClean(root, packages, ["--dry-run"]);
 
-    expect(output).toContain("Would remove 2 artifact directory(ies)");
+    expect(output).toContain("Would remove 2 artifact(s)");
   });
 
   it("reports nothing to clean on a fresh tree", async () => {

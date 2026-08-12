@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
+    "composite": true,
     "module": "Preserve",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "noEmit": true
   },
   "extends": "../../../../tsconfig.json",
   "include": ["src/**/*"]

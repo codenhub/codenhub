@@ -158,8 +158,16 @@ function reportRun(context: CommandContext, report: CheckReport): void {
     reportFindings(context, packageReport);
   }
   reportDeadWaivers(context, report);
+  const rows = report.packages.map(describeStatus);
   context.reporter.blank();
-  context.reporter.summarize(report.packages.map(describeStatus));
+  // The findings above are the report; a table repeating that everything else
+  // complied is the part nobody reads.
+  if (context.options.isVerbose) {
+    context.reporter.summarize(rows);
+  } else {
+    context.reporter.summarize(rows.filter(({ status }) => status === "failed" || status === "warned"));
+  }
+  context.reporter.tally(rows);
 }
 
 /**

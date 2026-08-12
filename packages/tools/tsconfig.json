@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "allowImportingTsExtensions": true,
+    "composite": true,
     "lib": ["ESNext"],
     "noEmit": true,
     "types": ["node"]

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseArguments } from "./parse-arguments.ts";
+import { defaultConcurrency, parseArguments } from "./parse-arguments.ts";
 
 describe("parseArguments", () => {
   it("shouldReadCommandAndTargets", () => {
@@ -93,5 +93,35 @@ describe("parseArguments", () => {
 
   it("shouldReportAnEmptyCommandWhenNothingWasTyped", () => {
     expect(parseArguments([]).commandName).toBe("");
+  });
+
+  it("shouldDefaultToACappedShareOfTheMachine", () => {
+    expect(parseArguments(["test"]).options.concurrency).toBe(defaultConcurrency());
+    // A one-core machine is a valid one, so only the cap and the floor are fixed.
+    expect(defaultConcurrency()).toBeGreaterThanOrEqual(1);
+    expect(defaultConcurrency()).toBeLessThanOrEqual(6);
+  });
+
+  it("shouldReadAnExplicitParallelWidth", () => {
+    expect(parseArguments(["test", "--parallel=3"]).options.concurrency).toBe(3);
+  });
+
+  it("shouldRejectAFractionalParallelWidth", () => {
+    expect(() => parseArguments(["test", "--parallel=2.5"])).toThrow(/expected a whole number/);
+  });
+
+  it("shouldRejectATimeoutThatIsNotAFiniteNumber", () => {
+    expect(() => parseArguments(["test", "--timeout=Infinity"])).toThrow(/expected a positive number/);
+  });
+
+  it("shouldRejectATimeoutThatOverflowsTheConversionToMilliseconds", () => {
+    // A timer set to `Infinity` fires at once, so a value that only overflows on
+    // the way to milliseconds would kill every run instead of never killing one.
+    expect(() => parseArguments(["test", "--timeout=1e308"])).toThrow(/expected a positive number/);
+  });
+
+  it("shouldReportOnlyFailuresUnlessVerboseIsRequested", () => {
+    expect(parseArguments(["test"]).options.isVerbose).toBe(false);
+    expect(parseArguments(["test", "--verbose"]).options.isVerbose).toBe(true);
   });
 });

@@ -46,7 +46,11 @@ interface RunResult {
   output: string;
 }
 
-async function runCheck(packages: readonly WorkspacePackage[], register?: string): Promise<RunResult> {
+async function runCheck(
+  packages: readonly WorkspacePackage[],
+  register?: string,
+  flags: readonly string[] = [],
+): Promise<RunResult> {
   const root = await mkdtemp(join(tmpdir(), "codenhub-check-"));
   if (register !== undefined) {
     await mkdir(join(root, REGISTER_DIRECTORY), { recursive: true });
@@ -55,7 +59,7 @@ async function runCheck(packages: readonly WorkspacePackage[], register?: string
 
   const lines: string[] = [];
   const context: CommandContext = {
-    options: parseArguments(["check"]).options,
+    options: parseArguments(["check", ...flags]).options,
     passthrough: [],
     reporter: createReporter({ useColor: false, write: (line) => lines.push(line), writeError: () => {} }),
     selection: {
@@ -77,10 +81,18 @@ function createWaiver(name: string, codes: readonly string[]): string {
 
 describe("hub check", () => {
   it("passes a compliant package", async () => {
-    const result = await runCheck([createPackage("@codenhub/tools")]);
+    const result = await runCheck([createPackage("@codenhub/tools")], undefined, ["--verbose"]);
 
     expect(result.exitCode).toBe(EXIT_SUCCESS);
     expect(result.output).toContain("PASS");
+  });
+
+  it("reports a compliant package as a count rather than a table", async () => {
+    const result = await runCheck([createPackage("@codenhub/tools")]);
+
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+    expect(result.output).toContain("1 passed");
+    expect(result.output).not.toContain("PASS");
   });
 
   it("fails the run when a package has an error finding", async () => {
@@ -115,6 +127,7 @@ describe("hub check", () => {
     const result = await runCheck(
       [createChainedBuildPackage("@codenhub/error")],
       createWaiver("@codenhub/error", ["scripts/build-chain"]),
+      ["--verbose"],
     );
 
     expect(result.exitCode).toBe(EXIT_SUCCESS);

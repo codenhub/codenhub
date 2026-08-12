@@ -57,7 +57,7 @@ async function planBuild({ flags = [], includesDependencies = true, targets }: R
   );
 
   return lines
-    .filter((line) => line.includes("pnpm run build"))
+    .filter((line) => line.includes("vite build"))
     .map((line) => line.trim().split(":")[0] as string)
     .map((directory) => directory.replace("/repo/", ""));
 }
@@ -98,5 +98,31 @@ describe("createScriptCommand", () => {
     });
 
     expect(locations).toEqual(["apps/docs", "packages/styles"]);
+  });
+
+  it("shouldNotTimeOutPreparationForAnInteractiveCommand", async () => {
+    const interactivePackage: WorkspacePackage = {
+      ...styles,
+      directory: process.cwd(),
+      scripts: { debug: `"${process.execPath}" -e ""` },
+    };
+    const context: CommandContext = {
+      options: parseArguments(["debug", "--timeout=0.001"]).options,
+      passthrough: [],
+      reporter: createReporter({ useColor: false, write: () => undefined, writeError: () => undefined }),
+      selection: { isImplicit: false, targets: [{ package: interactivePackage, paths: [] }], unownedPaths: [] },
+      tokens: [],
+      workspace: { packages: [interactivePackage], root: process.cwd() },
+    };
+    const command = createScriptCommand({
+      isInteractive: true,
+      name: "debug",
+      prepare: async () => [
+        { args: ["-e", "setTimeout(() => {}, 50)"], command: process.execPath, cwd: process.cwd() },
+      ],
+      summary: "Debug the selected package.",
+    });
+
+    await expect(command.run(context)).resolves.toBe(0);
   });
 });

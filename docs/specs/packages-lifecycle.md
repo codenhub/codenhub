@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-09
+last_updated: 2026-08-12
 scope: Public workspace packages.
 ---
 
@@ -51,7 +51,11 @@ repository root ships the same file for the repository itself.
 Public packages MUST define:
 
 - `build`: produces publishable output.
-- `typecheck`: runs TypeScript without emitting.
+- `typecheck`: runs TypeScript without emitting, as `tsc -b`. The package
+  `tsconfig.json` MUST set `composite` and `noEmit`, which is what lets root
+  tooling check several packages in one compiler process and skip the ones
+  whose inputs have not changed. A package that needs a step of its own before
+  the compiler MAY use a different script and is then checked on its own.
 - `test`: runs unit and integration tests once, and nothing that needs a browser.
 - `test:coverage`: runs those tests once and outputs a coverage report, as required
   by `docs/specs/tests.md`.

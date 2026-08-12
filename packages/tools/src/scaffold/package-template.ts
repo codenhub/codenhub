@@ -80,7 +80,7 @@ function createManifest(options: PackageTemplateOptions, fullName: string): stri
       test: "vitest run",
       "test:coverage": "vitest run --coverage",
       "test:watch": "vitest",
-      typecheck: "tsc --noEmit",
+      typecheck: "tsc -b",
     },
     devDependencies: {
       "@vitest/coverage-v8": "catalog:",
@@ -123,9 +123,13 @@ export function createPackageFiles(options: PackageTemplateOptions): TemplateFil
       contents: [
         "{",
         `  "compilerOptions": {`,
+        // `composite` and `noEmit` are what let `hub typecheck` check this
+        // package beside the others and skip it when nothing changed.
+        `    "composite": true,`,
+        `    "lib": ["DOM", "ES2024"],`,
         `    "module": "Preserve",`,
         `    "moduleResolution": "bundler",`,
-        `    "lib": ["DOM", "ES2024"]`,
+        `    "noEmit": true`,
         "  },",
         `  "extends": "../../tsconfig.json",`,
         `  "include": ["src/**/*"]`,
