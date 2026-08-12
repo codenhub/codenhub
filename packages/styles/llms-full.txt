@@ -4,9 +4,6 @@
 
 CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 
-> **Experimental:** Public tokens, class names, and import-path composition may
-> change while the styling system is stabilized.
-
 ## Installation
 
 ```sh
@@ -285,6 +282,14 @@ Use ARIA or data attributes when native attributes are not available for the ele
 # CSS classes
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
+
+## Supported surface
+
+A class, component, and axis combination is supported when this documentation
+describes it and the package playground demonstrates it. Undocumented and
+undemonstrated combinations may still produce CSS, but are not maintained
+behavior. Playground variant matrices are the exhaustive demonstrations; small
+examples elsewhere illustrate usage without widening that contract.
 
 ## Layout
 
@@ -1067,6 +1072,11 @@ elevation for cards and tooltip bubbles.
 | `--ui-shadow`          | Complete `box-shadow` value.                                 | Per component      |
 | `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
 | `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
+
+Glass composes its two shadow layers from `--elevation-color`. Set that token on
+the `.glass` element when tuning the aesthetic; a custom property referenced by
+an inherited `--ui-shadow` resolves where the shadow is declared, not later on a
+descendant component.
 
 Presentation and material meet in one place. The aesthetic supplies the base
 thickness and the presentation scales it:

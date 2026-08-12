@@ -40,9 +40,10 @@ omission from an oversight.
 
 ## Current Focus
 
-**Phase 2 -- Composition contract**. Close the gaps where the three axes meet a
+**Phase 2 -- `0.1.0` stabilization**. Close the gaps where the three axes meet a
 component that only partly implements them, one reviewable change at a time with
-`pnpm verify` green before the next begins.
+`pnpm verify` green before the next begins. `0.1.0` is the first release of the
+current three-axis contract; the already-published `0.0.x` versions predate it.
 
 The rules came first, because they decide half the answers, and are now
 [Axis rules](./architecture.md#axis-rules). The shape material followed: the
@@ -59,20 +60,34 @@ What the rules recorded and the code has not answered yet:
   and its `:not(.btn)` guard. A breaking class-surface change, which `0.x` is for.
 - `.checkbox` and `.radio` need the border floor the text controls already have
   under `.soft` and `.ghost`.
-- `--glass-shadow` should compose from `--elevation-color` instead of being a
-  private near-copy of it. The alphas differ, so folding them makes the dark-theme
-  shadow heavier; that is a visible change and belongs in its own slice.
 - A decision for each component that reads one presentation token or none:
   `.divider` reads `--ui-border-scale`, `.empty-state` reads `--ui-fg-on-fill`,
   `.skeleton` and `.loader` read neither, and `.quote` hardcodes `border-l-4`.
-  Each either widens or is declared intent-only under the supported-surface rule.
+  Widen each to presentation rather than declaring it intent-only. Define the
+  visible meaning, clamps, and accessibility floors per component before changing
+  source; presentation classes must remain distinct where the component can
+  express them.
+- Same-element aesthetics are supported and outrank an inherited aesthetic. Fix
+  tooltip-specific glass and pixel rules so `.tooltip.glass` and
+  `.tooltip.pixel` receive the complete aesthetic, including when an ancestor
+  selects another aesthetic.
 
 ## Planned
 
 - **Phase 3 -- Documentation and release**: Split public docs into concepts,
   reference, and guides so the three-axis model is explained before the lookup
   tables. State the supported-surface rule above, and state per component which
-  axes it reads. `0.2.0` ships from that.
+  axes it reads.
+- Publish the shape and ring material tokens as a paired contract. Define which
+  components consume structural and tight variants, required clip/edge pairing,
+  border replacement, focus restoration, and component clamps before presenting
+  them as independently safe customization knobs. Keep `--shape-*` composition
+  variables internal.
+- Add reviewed Chromium visual baselines for representative component matrices,
+  themes, and aesthetics, plus targeted cross-browser snapshots where engine
+  rendering differs. Computed-style tests remain the precise behavioral layer.
+- Give every compiled entrypoint a standalone representative contract and make
+  both reduced-transparency branches deterministic.
 
 ## Later / Possible
 
@@ -97,11 +112,11 @@ which is why a shape pair needs two token slots rather than one
 
 ## Versioning
 
-`0.2.0` is the next release. The package stays on `0.x` until it is genuinely
-depended on by another package and has held still under that use. Reaching `1.0.0`
-earlier would only buy a stream of major versions, because every correction to a
-contract this young is a breaking change; staying on `0.x` keeps those honest and
-cheap.
+`0.1.0` is the next release. Package consumers do not gate its stability: they
+may change while this package settles. The package stays on `0.x` while the public
+contract remains young, so necessary breaking corrections stay explicit and
+cheap. Documentation status is `active`: package is supported for normal
+consumer use, not frozen against future semver-major changes.
 
 ## Not Planned
 

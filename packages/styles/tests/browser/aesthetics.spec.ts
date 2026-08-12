@@ -295,6 +295,19 @@ test.describe("aesthetics", () => {
 
       expect(styles["border-radius"]).toBe("14px");
     });
+
+    test("composes its shadow from the public elevation color", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+      const card = page.getByTestId("card-plain-none");
+      await page
+        .getByTestId("preview-root")
+        .evaluate((element) => element.style.setProperty("--elevation-color", "rgb(255 0 255)"));
+
+      await expect
+        .poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow))
+        .toContain("rgb(255, 0, 255)");
+    });
   });
 
   test.describe("pixel", () => {

@@ -2,9 +2,6 @@
 
 CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 
-> **Experimental:** Public tokens, class names, and import-path composition may
-> change while the styling system is stabilized.
-
 ## Installation
 
 ```sh

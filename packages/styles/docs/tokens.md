@@ -225,6 +225,11 @@ elevation for cards and tooltip bubbles.
 | `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
 | `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
 
+Glass composes its two shadow layers from `--elevation-color`. Set that token on
+the `.glass` element when tuning the aesthetic; a custom property referenced by
+an inherited `--ui-shadow` resolves where the shadow is declared, not later on a
+descendant component.
+
 Presentation and material meet in one place. The aesthetic supplies the base
 thickness and the presentation scales it:
 

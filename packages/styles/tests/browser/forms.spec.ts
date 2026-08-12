@@ -266,6 +266,28 @@ test.describe("forms", () => {
     expect(rightPos).toContain("100%");
   });
 
+  test("uses light input artwork inside a light subtree of a dark theme", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const artwork = await page.evaluate(() => {
+      const dark = document.createElement("div");
+      const light = document.createElement("div");
+      const input = document.createElement("input");
+
+      dark.className = "dark";
+      light.className = "light";
+      input.className = "ipt email icon";
+      light.append(input);
+      dark.append(light);
+      document.body.append(dark);
+
+      return getComputedStyle(input).backgroundImage;
+    });
+
+    expect(artwork).toContain("%23737373");
+    expect(artwork).not.toContain("%23a3a3a3");
+  });
+
   /* `.error` claims helper text inside a field, which would swallow a
      destructive button if the selector were not narrowed. */
   test("keeps a destructive button out of the field error rule", async ({ page }) => {

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-09
+last_updated: 2026-08-11
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -107,6 +107,11 @@ runs use the `dev` server and live `src/` aliases for synchronized iteration.
 - Focused specs execute accessibility, component, environment, layout, native,
   route, theme, and typography assertions.
 - `test-utils.ts`: Shared Playwright test setup and helpers.
+- The `0.1.0` release gate adds reviewed Chromium screenshots for representative
+  matrices, themes, and aesthetics. Targeted Firefox and WebKit snapshots cover
+  rendering that differs by engine. Computed-style assertions remain the primary
+  contract checks; visual snapshots catch clipping, overlap, and composition
+  defects those values miss.
 
 ## `tests/integration/`
 
@@ -142,5 +147,9 @@ pnpm test:browser:watch styles
 `pnpm test:browser` installs the browsers it needs first, and building the
 package before the browser run is the root tooling's job rather than a step
 chained into these scripts.
+
+Vitest likewise reads the output built by root tooling. Its configuration must
+not invoke `pnpm build` through setup hooks; direct package-script runs that skip
+root prerequisites require an existing `dist` tree.
 
 Because this package has no instrumentable JavaScript or TypeScript, `test:coverage` runs the real integration suite without producing a coverage report. This permanent package exception is recorded in `docs/specs/packages-exceptions.md`.

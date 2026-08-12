@@ -46,8 +46,27 @@
   --ipt-icon-clock-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
 }
 
-/* Only dark contexts re-point the aliases; light is the `var()` fallback at the
-   point of use, so there is no third copy of this list. */
+/* Explicit aliases make nested theme selectors reversible. A fallback handles
+   an unset alias, but cannot override a dark value inherited by a light subtree. */
+.light,
+.theme-light,
+[data-theme="light"] {
+  --ipt-icon-email: var(--ipt-icon-email-light);
+  --ipt-icon-email-focus: var(--ipt-icon-email-focus-light);
+  --ipt-icon-password: var(--ipt-icon-password-light);
+  --ipt-icon-password-focus: var(--ipt-icon-password-focus-light);
+  --ipt-icon-url: var(--ipt-icon-url-light);
+  --ipt-icon-url-focus: var(--ipt-icon-url-focus-light);
+  --ipt-icon-tel: var(--ipt-icon-tel-light);
+  --ipt-icon-tel-focus: var(--ipt-icon-tel-focus-light);
+  --ipt-icon-search: var(--ipt-icon-search-light);
+  --ipt-icon-search-focus: var(--ipt-icon-search-focus-light);
+  --ipt-icon-calendar: var(--ipt-icon-calendar-light);
+  --ipt-icon-calendar-focus: var(--ipt-icon-calendar-focus-light);
+  --ipt-icon-clock: var(--ipt-icon-clock-light);
+  --ipt-icon-clock-focus: var(--ipt-icon-clock-focus-light);
+}
+
 .dark,
 .theme-dark,
 [data-theme="dark"] {

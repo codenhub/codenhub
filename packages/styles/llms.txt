@@ -2,10 +2,9 @@
 
 > CSS-only Codenhub design tokens, reset, typography, layout and content utilities, component classes, native-element styling, and Tailwind CSS v4 source entrypoints.
 
-This package is experimental: public tokens, class names, and import-path
-composition may change. Use compiled entrypoints for ready-to-import CSS or
-`/tw` entrypoints in a Tailwind CSS v4 build. The package has no JavaScript
-behavior.
+Use compiled entrypoints for ready-to-import CSS or `/tw` entrypoints in a
+Tailwind CSS v4 build. The package has no JavaScript behavior. Supported behavior
+is the surface documented in public docs and demonstrated by the playground.
 
 ## Documentation
 

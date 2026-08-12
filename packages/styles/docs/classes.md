@@ -6,6 +6,14 @@ title: Classes
 
 Helper classes are CSS-only. They provide presentation and state styling, not semantics or behavior.
 
+## Supported surface
+
+A class, component, and axis combination is supported when this documentation
+describes it and the package playground demonstrates it. Undocumented and
+undemonstrated combinations may still produce CSS, but are not maintained
+behavior. Playground variant matrices are the exhaustive demonstrations; small
+examples elsewhere illustrate usage without widening that contract.
+
 ## Layout
 
 Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.

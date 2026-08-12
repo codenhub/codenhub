@@ -416,6 +416,12 @@ Aesthetics are cascading classes that set material tokens, plus their own
 presentation defaults. An explicit presentation class on the element still wins,
 because it is declared on the element rather than inherited.
 
+An aesthetic may likewise be inherited from an ancestor or applied directly to
+the component. A directly applied aesthetic is the more specific choice and must
+win when an ancestor selects another aesthetic. Component-specific aesthetic
+selectors must support both forms; generic inherited material tokens alone are
+not enough when the aesthetic also styles a pseudo-element.
+
 | Aesthetic       | Material                                                                               |
 | --------------- | -------------------------------------------------------------------------------------- |
 | _(default)_     | Foundation tokens: `--radius-control`, `--border-width`, `--elevation-low`, no clip.   |
@@ -505,7 +511,6 @@ only the first. Measured against the [axis rules](#axis-rules), with
 | Component                                   | Breaks | What happens                                                                                                                                                                          |
 | ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `.checkbox` `.radio` under `.soft` `.ghost` | P3     | Same, and an unchecked box becomes invisible.                                                                                                                                         |
-| `.glass` shadow                             | A1     | `--glass-shadow` hardcodes a near-copy of `--elevation-color` (`.1`/`.35` against `.08`/`.55`), so a consumer retuning the elevation color is ignored and the two drift.              |
 | `.error` in a `.field`                      | I4     | `form.css` reinterprets an intent class as a component with `& > .error:not(.btn)`. The `:not(.btn)` guard exists only to stop the reinterpretation from eating a destructive button. |
 
 Resolved so far: `.progress` caps its border at one pixel and blends the line
@@ -513,7 +518,8 @@ toward its own track, so `.out` is a real outline on a 10px bar and `.flat`
 disappears as it always meant to; `.badge` and `.kbd` declare the same ceiling
 through `--shape-border-max`; text controls keep a bottom rule under `.soft` as
 they already did under `.ghost`; and `.switch` reads the aesthetic's border width
-with its knob geometry derived from it.
+with its knob geometry derived from it. Glass composes both shadow layers from
+`--elevation-color`, so consumer elevation tuning reaches the aesthetic.
 
 Three more read one presentation token or none, which is legal under P2 but has
 never been decided either way: `.divider` (`--ui-border-scale`), `.empty-state`
@@ -532,11 +538,12 @@ It now reads `var(--ui-shadow, var(--elevation-mid))`, the elevation a raised
 surface uses, since a bubble is a small transient popover rather than a modal.
 `--elevation-high` remains the token for full overlays.
 
-Two consequences fall out of that for the aesthetics themselves. Glass composes
-its shadow from `--elevation-color` in two layers, a tight contact shadow and a
-wide ambient one: a single wide black blur reads as a smudge under a translucent
-surface and does not follow the theme. And pixel cannot use `--ui-shadow` for
-the bubble at all, because `clip-path` clips an outer shadow away; it casts a
+Two consequences fall out of that for the aesthetics themselves. Glass must
+compose its shadow from `--elevation-color` in two layers, a tight contact shadow
+and a wide ambient one: a single wide black blur reads as a smudge under a
+translucent surface and does not follow consumer elevation tuning. Pixel cannot
+use `--ui-shadow` for the bubble at all, because `clip-path` clips an outer shadow
+away; it casts a
 hard unblurred `drop-shadow()` filter instead, which applies after the clip and
 follows the stepped silhouette. That is deliberately the only shadow in the
 aesthetic. A filter also establishes a containing block for positioned
