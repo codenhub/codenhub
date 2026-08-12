@@ -288,7 +288,16 @@ from `prepare` keeps a hook manager out of the dependency list. The setup step
 never fails an install: a tree without git, or without permission to write its
 config, reports and carries on.
 
-`git commit --no-verify` bypasses both hooks when a commit has to land unfixed.
+A `pre-push` hook refuses a push whose destination is `refs/heads/main`. What it
+reads is the destination ref rather than the branch you are standing on, so it
+holds for a push from `main`, for an explicit refspec that targets it from
+somewhere else, and for a `--delete`. `CONTRIBUTING.md` states the rule and why
+`main` is the branch that gets one; this is what makes it more than advice.
+
+`--no-verify` bypasses these: on `git commit` for the first two, on `git push`
+for the last. It is for the change that genuinely has to land unfixed, and it is
+worth saying out loud when it is used, since the whole point of a hook is that
+skipping one is visible.
 
 ## Hosted previews
 
