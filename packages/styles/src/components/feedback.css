@@ -1,6 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../roles/index.css";
+@import "../box.css";
 
 @keyframes anim-skeleton {
   0% {
@@ -81,12 +81,20 @@
   }
 }
 
+/* A soft, edgeless chip. Small enough that a structural silhouette would be most
+   of its height, so it reads the tight shape slot first. */
 @utility badge {
-  @apply min-h-6 w-fit gap-1 px-2.5 text-xs font-bold;
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
+
+  @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs font-bold;
 
   /* Pill by default, but an aesthetic that declares no radius has to mean it, so
      the round corner is this component's fallback rather than a hardcoded value. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
 
 @utility skeleton {

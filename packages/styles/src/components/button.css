@@ -1,17 +1,31 @@
 @reference "tailwindcss";
 @import "../theme.css";
 @import "./loader.css";
-@import "../roles/index.css";
+@import "../box.css";
 
-/* Geometry only. Everything a button shares with every other box -- fill, edge,
-   text colour, depth, hover, press, disabled -- comes from the action role, and
-   the registry is what says a button has that role. A bare `<button>` gets the
-   same composition through `roles/native.css`, so this utility carries what is
-   specific to a button and nothing more. */
+/* A filled, edgeless, raised box you can press. `box` paints it; everything
+   here is what makes it a button rather than some other box.
+
+   The resting values are the published default: a button with no presentation
+   class is solid and edgeless, and that is a decision written on three lines
+   rather than a `var()` fallback buried in an expression. */
 @utility btn {
-  @apply relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 font-semibold whitespace-nowrap no-underline select-none;
+  --_d-fill: 100%;
+  --_d-fg-on-fill: 100%;
+  --_d-border: 0%;
+  --_d-elevation: 1;
+
+  @apply box box-hover relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 font-semibold whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
+
+  /* Pressing moves the element into its own shadow, when the aesthetic has one. */
+  &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
+    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+
+    transform: var(--ui-active-transform, none);
+  }
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;

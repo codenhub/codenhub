@@ -3,30 +3,71 @@
   "version": 1,
   "presentation": {
     "fill": {
-      "solid": { "ui-fill": "100%", "ui-fg-on-fill": "100%" },
-      "soft": { "ui-fill": "12%", "ui-fg-on-fill": "0%" },
-      "bare": { "ui-fill": "0%", "ui-fg-on-fill": "0%" }
+      "solid": {
+        "ui-fill": "100%",
+        "ui-fg-on-fill": "100%"
+      },
+      "soft": {
+        "ui-fill": "12%",
+        "ui-fg-on-fill": "0%"
+      },
+      "bare": {
+        "ui-fill": "0%",
+        "ui-fg-on-fill": "0%"
+      }
     },
     "edge": {
-      "edged": { "ui-border": "100%" },
-      "edgeless": { "ui-border": "0%" }
+      "edged": {
+        "ui-border": "100%"
+      },
+      "edgeless": {
+        "ui-border": "0%"
+      }
     },
     "hoverStep": "14%"
   },
   "intents": {
-    "neutral": { "family": "text", "vocabulary": "neutral" },
-    "primary": { "family": "primary", "vocabulary": "emphasis" },
-    "secondary": { "family": "accent", "vocabulary": "emphasis" },
-    "success": { "family": "success", "vocabulary": "semantic" },
-    "warning": { "family": "warning", "vocabulary": "semantic" },
-    "destructive": { "family": "destructive", "vocabulary": "semantic", "aliases": ["danger", "error"] },
-    "info": { "family": "info", "vocabulary": "semantic" }
+    "neutral": {
+      "family": "text",
+      "vocabulary": "neutral"
+    },
+    "primary": {
+      "family": "primary",
+      "vocabulary": "emphasis"
+    },
+    "secondary": {
+      "family": "accent",
+      "vocabulary": "emphasis"
+    },
+    "success": {
+      "family": "success",
+      "vocabulary": "semantic"
+    },
+    "warning": {
+      "family": "warning",
+      "vocabulary": "semantic"
+    },
+    "destructive": {
+      "family": "destructive",
+      "vocabulary": "semantic",
+      "aliases": ["danger", "error"]
+    },
+    "info": {
+      "family": "info",
+      "vocabulary": "semantic"
+    }
   },
   "modifiers": {
     "elevation": {
-      "flat": { "ui-elevation": "0" },
-      "raised": { "ui-elevation": "1" },
-      "floating": { "ui-elevation": "2" }
+      "flat": {
+        "ui-elevation": "0"
+      },
+      "raised": {
+        "ui-elevation": "1"
+      },
+      "floating": {
+        "ui-elevation": "2"
+      }
     },
     "size": ["sm", "lg"],
     "padding": ["compact", "spacious", "flush"],
@@ -34,45 +75,24 @@
     "state": ["loading", "disabled", "interactive", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"]
   },
-  "roles": {
-    "action": {
-      "fill": ["solid", "soft", "bare"],
-      "edge": ["edged", "edgeless"],
-      "invariant": null
-    },
-    "field": {
-      "fill": ["soft", "bare"],
-      "edge": ["edged"],
-      "invariant": "A field always draws its edge and never fills past the soft tint, so it keeps a visible mark of where input goes (WCAG 1.4.11)."
-    },
-    "surface": {
-      "fill": ["solid", "soft", "bare"],
-      "edge": ["edged", "edgeless"],
-      "invariant": null
-    },
-    "chip": {
-      "fill": ["solid", "soft", "bare"],
-      "edge": ["edged", "edgeless"],
-      "invariant": "Edge width never exceeds 1px, because a thicker line on a 24px chip reads as a box with a label in it."
-    },
-    "indicator": {
-      "fill": [],
-      "edge": [],
-      "invariant": "Neither presentation sub-axis applies. An indicator takes a color and its own geometry, and nothing else."
-    }
-  },
   "components": [
     {
       "class": "btn",
-      "role": "action",
-      "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
+      "default": {
+        "fill": "solid",
+        "edge": "edgeless",
+        "elevation": 1
+      },
       "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]", "input[type=\"button\"]"],
       "wave": 1
     },
     {
       "class": "ipt",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": [
         "input:not([type=\"checkbox\"], [type=\"radio\"], [type=\"submit\"], [type=\"reset\"], [type=\"button\"])"
       ],
@@ -80,22 +100,29 @@
     },
     {
       "class": "card",
-      "role": "surface",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 1 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 1
+      },
       "native": [],
       "wave": 1
     },
     {
       "class": "badge",
-      "role": "chip",
-      "default": { "fill": "soft", "edge": "edgeless", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
       "native": [],
       "wave": 1
     },
     {
       "class": "loader",
-      "role": "indicator",
-      "default": { "elevation": 0 },
+      "default": {
+        "elevation": 0
+      },
       "art": [
         "dots-wave",
         "dots-fade",
@@ -112,57 +139,81 @@
     },
     {
       "class": "textarea",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["textarea"],
       "wave": 2
     },
     {
       "class": "select",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["select"],
       "wave": 2
     },
     {
       "class": "checkbox",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["input[type=\"checkbox\"]"],
       "wave": 2
     },
     {
       "class": "radio",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["input[type=\"radio\"]"],
       "wave": 2
     },
     {
       "class": "switch",
-      "role": "field",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "panel",
-      "role": "surface",
-      "default": { "fill": "soft", "edge": "edgeless", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "alert",
-      "role": "surface",
-      "default": { "fill": "soft", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "data-table",
-      "role": "surface",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["table"],
       "renamedFrom": "table",
       "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
@@ -170,106 +221,214 @@
     },
     {
       "class": "empty-state",
-      "role": "surface",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "pre",
-      "role": "surface",
-      "default": { "fill": "soft", "edge": "edgeless", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
       "native": ["pre"],
       "wave": 2
     },
     {
       "class": "quote",
-      "role": "surface",
-      "default": { "fill": "bare", "edge": "edged", "elevation": 0 },
+      "default": {
+        "fill": "bare",
+        "edge": "edged",
+        "elevation": 0
+      },
       "native": ["blockquote"],
       "wave": 2
     },
     {
       "class": "tooltip",
-      "role": "surface",
-      "default": { "fill": "solid", "edge": "edgeless", "elevation": 2 },
+      "default": {
+        "fill": "solid",
+        "edge": "edgeless",
+        "elevation": 2
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "kbd",
-      "role": "chip",
-      "default": { "fill": "soft", "edge": "edgeless", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
       "native": ["kbd"],
       "wave": 2
     },
     {
       "class": "code",
-      "role": "chip",
-      "default": { "fill": "soft", "edge": "edgeless", "elevation": 0 },
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
       "native": ["code"],
       "wave": 2
     },
     {
       "class": "skeleton",
-      "role": "indicator",
-      "default": { "elevation": 0 },
+      "default": {
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "progress",
-      "role": "indicator",
-      "default": { "elevation": 0 },
+      "default": {
+        "elevation": 0
+      },
       "native": [],
       "wave": 2
     },
     {
       "class": "divider",
-      "role": "indicator",
-      "default": { "elevation": 0 },
+      "default": {
+        "elevation": 0
+      },
       "native": ["hr"],
       "wave": 2
     }
   ],
   "helpers": [
-    { "class": "field", "purpose": "Wraps label, control, and hint." },
-    { "class": "control", "purpose": "Wraps a control alone, so an icon can be a masked pseudo-element over it." },
-    { "class": "label", "purpose": "Form label typography." },
-    { "class": "hint", "purpose": "Helper text under a control." },
-    { "class": "icon", "purpose": "Marks a control or button as carrying an icon." },
-    { "class": "table-wrap", "purpose": "Horizontal overflow wrapper for wide tables." },
-    { "class": "quote-inline", "purpose": "Inline quotation." },
-    { "class": "view", "purpose": "Flex container." },
-    { "class": "stack", "purpose": "Vertical flex stack." },
-    { "class": "cluster", "purpose": "Wrapping horizontal row." },
-    { "class": "auto-grid", "purpose": "Responsive auto-fit grid." },
-    { "class": "section", "purpose": "Responsive block padding and inline gutter." },
-    { "class": "section-content", "purpose": "Centered container." },
-    { "class": "text-display", "purpose": "Typography scale." },
-    { "class": "text-title-lg", "purpose": "Typography scale." },
-    { "class": "text-title", "purpose": "Typography scale." },
-    { "class": "text-title-sm", "purpose": "Typography scale." },
-    { "class": "text-label-lg", "purpose": "Typography scale." },
-    { "class": "text-label", "purpose": "Typography scale." },
-    { "class": "text-body", "purpose": "Typography scale." }
+    {
+      "class": "field",
+      "purpose": "Wraps label, control, and hint."
+    },
+    {
+      "class": "control",
+      "purpose": "Wraps a control alone, so an icon can be a masked pseudo-element over it."
+    },
+    {
+      "class": "label",
+      "purpose": "Form label typography."
+    },
+    {
+      "class": "hint",
+      "purpose": "Helper text under a control."
+    },
+    {
+      "class": "icon",
+      "purpose": "Marks a control or button as carrying an icon."
+    },
+    {
+      "class": "table-wrap",
+      "purpose": "Horizontal overflow wrapper for wide tables."
+    },
+    {
+      "class": "quote-inline",
+      "purpose": "Inline quotation."
+    },
+    {
+      "class": "view",
+      "purpose": "Flex container."
+    },
+    {
+      "class": "stack",
+      "purpose": "Vertical flex stack."
+    },
+    {
+      "class": "cluster",
+      "purpose": "Wrapping horizontal row."
+    },
+    {
+      "class": "auto-grid",
+      "purpose": "Responsive auto-fit grid."
+    },
+    {
+      "class": "section",
+      "purpose": "Responsive block padding and inline gutter."
+    },
+    {
+      "class": "section-content",
+      "purpose": "Centered container."
+    },
+    {
+      "class": "text-display",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-title-lg",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-title",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-title-sm",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-label-lg",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-label",
+      "purpose": "Typography scale."
+    },
+    {
+      "class": "text-body",
+      "purpose": "Typography scale."
+    }
   ],
   "aesthetics": [
-    { "class": "neobrutalism", "roleBlocks": [], "completeShadow": false },
+    {
+      "class": "neobrutalism",
+      "completeShadow": false
+    },
     {
       "class": "glass",
-      "roleBlocks": [],
       "completeShadow": true,
       "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface role's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
     },
-    { "class": "pixel", "roleBlocks": [], "completeShadow": false }
+    {
+      "class": "pixel",
+      "completeShadow": false
+    }
   ],
   "removed": [
-    { "class": "flat", "replacedBy": "solid", "note": "`.flat` returns as an elevation modifier meaning no depth." },
-    { "class": "out", "replacedBy": "bare edged" },
-    { "class": "ghost", "replacedBy": "bare" },
-    { "class": "fill", "replacedBy": null, "note": "Hover is derived. `.out.fill` has no replacement." },
-    { "class": "control-base", "replacedBy": null, "note": "Became the field role; it was never a component." },
-    { "class": "ai", "replacedBy": "loader", "note": "Loader artwork is an art variant, not a separate class." }
+    {
+      "class": "flat",
+      "replacedBy": "solid",
+      "note": "`.flat` returns as an elevation modifier meaning no depth."
+    },
+    {
+      "class": "out",
+      "replacedBy": "bare edged"
+    },
+    {
+      "class": "ghost",
+      "replacedBy": "bare"
+    },
+    {
+      "class": "fill",
+      "replacedBy": null,
+      "note": "Hover is derived. `.out.fill` has no replacement."
+    },
+    {
+      "class": "control-base",
+      "replacedBy": null,
+      "note": "Became the field role; it was never a component."
+    },
+    {
+      "class": "ai",
+      "replacedBy": "loader",
+      "note": "Loader artwork is an art variant, not a separate class."
+    }
   ]
 }

@@ -4,11 +4,16 @@
   "title": "Codenhub styles registry",
   "description": "The source of truth for what @codenhub/styles supports. Feeds pnpm generate, the preview matrix, and the browser conformance tests.",
   "type": "object",
-  "required": ["version", "presentation", "intents", "modifiers", "roles", "components"],
+  "required": ["version", "presentation", "intents", "modifiers", "components"],
   "additionalProperties": false,
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "type": "integer", "minimum": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
     "presentation": {
       "type": "object",
       "required": ["fill", "edge", "hoverStep"],
@@ -22,8 +27,14 @@
             "required": ["ui-fill", "ui-fg-on-fill"],
             "additionalProperties": false,
             "properties": {
-              "ui-fill": { "type": "string", "pattern": "^\\d+%$" },
-              "ui-fg-on-fill": { "type": "string", "pattern": "^\\d+%$" }
+              "ui-fill": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              },
+              "ui-fg-on-fill": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              }
             }
           }
         },
@@ -34,7 +45,12 @@
             "type": "object",
             "required": ["ui-border"],
             "additionalProperties": false,
-            "properties": { "ui-border": { "type": "string", "pattern": "^\\d+%$" } }
+            "properties": {
+              "ui-border": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              }
+            }
           }
         },
         "hoverStep": {
@@ -51,9 +67,19 @@
         "required": ["family", "vocabulary"],
         "additionalProperties": false,
         "properties": {
-          "family": { "type": "string", "description": "The --color-* family this intent maps onto." },
-          "vocabulary": { "enum": ["semantic", "emphasis", "neutral"] },
-          "aliases": { "type": "array", "items": { "type": "string" } }
+          "family": {
+            "type": "string",
+            "description": "The --color-* family this intent maps onto."
+          },
+          "vocabulary": {
+            "enum": ["semantic", "emphasis", "neutral"]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -67,26 +93,19 @@
             "type": "object",
             "required": ["ui-elevation"],
             "additionalProperties": false,
-            "properties": { "ui-elevation": { "type": "string", "pattern": "^\\d+$" } }
+            "properties": {
+              "ui-elevation": {
+                "type": "string",
+                "pattern": "^\\d+$"
+              }
+            }
           }
         }
       },
-      "additionalProperties": { "type": "array", "items": { "type": "string" } }
-    },
-    "roles": {
-      "type": "object",
-      "description": "A role decides which axes reach a component and carries the invariant that replaces per-component clamps.",
       "additionalProperties": {
-        "type": "object",
-        "required": ["fill", "edge", "invariant"],
-        "additionalProperties": false,
-        "properties": {
-          "fill": { "type": "array", "items": { "type": "string" } },
-          "edge": { "type": "array", "items": { "type": "string" } },
-          "invariant": {
-            "type": ["string", "null"],
-            "description": "Null means the role bounds nothing. Any bound stated here is published, and no component may add one of its own."
-          }
+        "type": "array",
+        "items": {
+          "type": "string"
         }
       }
     },
@@ -94,34 +113,55 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "role", "default", "native", "wave"],
+        "required": ["class", "default", "native", "wave"],
         "additionalProperties": false,
         "properties": {
-          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-          "role": { "type": "string" },
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
           "default": {
             "type": "object",
             "required": ["elevation"],
             "additionalProperties": false,
             "properties": {
-              "fill": { "type": "string" },
-              "edge": { "type": "string" },
-              "elevation": { "type": "integer", "minimum": 0 }
+              "fill": {
+                "type": "string"
+              },
+              "edge": {
+                "type": "string"
+              },
+              "elevation": {
+                "type": "integer",
+                "minimum": 0
+              }
             }
           },
           "art": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Indicator artwork variants, which are not a presentation."
           },
           "native": {
             "type": "array",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "description": "Bare element selectors this component maps. Also what each role's generated selector list is built from."
           },
-          "renamedFrom": { "type": "string" },
-          "renameReason": { "type": "string" },
-          "wave": { "type": "integer", "minimum": 1, "maximum": 2 }
+          "renamedFrom": {
+            "type": "string"
+          },
+          "renameReason": {
+            "type": "string"
+          },
+          "wave": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2
+          }
         }
       }
     },
@@ -133,8 +173,13 @@
         "required": ["class", "purpose"],
         "additionalProperties": false,
         "properties": {
-          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-          "purpose": { "type": "string" }
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "purpose": {
+            "type": "string"
+          }
         }
       }
     },
@@ -142,20 +187,20 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "roleBlocks", "completeShadow"],
+        "required": ["class", "completeShadow"],
         "additionalProperties": false,
         "properties": {
-          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-          "roleBlocks": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Roles this aesthetic declares an @role block for (R5). A block not listed here is a defect."
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
           },
           "completeShadow": {
             "type": "boolean",
             "description": "True when the aesthetic sets --ui-shadow as a complete value, which opts it out of the elevation multiplier."
           },
-          "completeShadowReason": { "type": "string" }
+          "completeShadowReason": {
+            "type": "string"
+          }
         }
       }
     },
@@ -166,9 +211,15 @@
         "required": ["class", "replacedBy"],
         "additionalProperties": false,
         "properties": {
-          "class": { "type": "string" },
-          "replacedBy": { "type": ["string", "null"] },
-          "note": { "type": "string" }
+          "class": {
+            "type": "string"
+          },
+          "replacedBy": {
+            "type": ["string", "null"]
+          },
+          "note": {
+            "type": "string"
+          }
         }
       }
     }

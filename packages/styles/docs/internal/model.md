@@ -91,8 +91,10 @@ container saying "everything below me is a success" is a trap: it would turn a
 nested destructive button green. So presentation and aesthetic inherit, and
 intent is redeclared by every component at its own root.
 
-What changes from the current model is presentation's shape, and the addition of
-a role layer that decides which axes reach which component.
+What changes from the current model is presentation's shape. Nothing is added:
+there is no fourth layer deciding which axes reach which component, and
+[the attempt to add one](#shared-composition-not-a-taxonomy) is recorded below
+along with why it was removed.
 
 ## Presentation
 
@@ -165,20 +167,18 @@ token and five documented exceptions gone for a change nobody will see.
 - **P3.** Any component that draws a line blends it toward its own fill by the
   fill amount, so a filled component has a seamless edge rather than a stray ring
   of another color.
-- **P4.** A component never clamps a presentation token. Where a bound is needed,
-  it belongs to the role, not to the component. See [Roles](#roles).
-
-P4 is the rule that did not exist before, and it is the one that keeps the model
-predictable. A clamp on a component is invisible until you hit it. A bound on a
-role applies to a named group and can be learned once.
+- **P4.** A component bounds a presentation token only when the composition
+  itself produces a broken result -- not to protect a consumer from a combination
+  they chose. Any bound that survives that test is published. See
+  [the one bound that survives](#the-one-bound-that-survives-and-the-test-for-keeping-one).
 
 ## Elevation
 
 Depth is not uniform within an aesthetic. In the chunky-tile look, white option
 cards sit on a darker slab while the blue promo panel beside them is flat, the
 word-bank chips are raised, and the disabled submit button is flat. Same
-aesthetic, same roles, different depth -- decided per element by whoever builds
-the screen.
+aesthetic, same components, different depth -- decided per element by whoever
+builds the screen.
 
 So elevation is a **modifier**, not a fourth axis. It sits with size, above the
 three axes:
@@ -228,76 +228,66 @@ the complete-value form stays an escape hatch for shadows that genuinely cannot 
 described as one layer. An aesthetic taking the escape hatch declares it in the
 registry, so `.flat` not working on it is documented rather than discovered.
 
-## Roles
+## Shared composition, not a taxonomy
 
-A role answers "what kind of thing is this", and the role decides which axes
-reach the component and what invariant it holds. Every component has exactly one.
+An earlier draft of this model had a fourth layer: five roles -- action, field,
+surface, chip, indicator -- that every component belonged to, with membership in
+the registry and an invariant per role. It was built, measured, and removed. The
+reasoning is kept here because the question will come back.
 
-| Role        | Members                                                                      | Fill       | Edge         | Invariant                              |
-| ----------- | ---------------------------------------------------------------------------- | ---------- | ------------ | -------------------------------------- |
-| `action`    | `.btn`                                                                       | all three  | both         | None. All six combinations.            |
-| `field`     | `.ipt` `.textarea` `.select` `.checkbox` `.radio` `.switch`                  | bare, soft | always edged | A field always shows where input goes. |
-| `surface`   | `.card` `.panel` `.alert` `.table` `.empty-state` `.pre` `.quote` `.tooltip` | all three  | both         | None. All six combinations.            |
-| `chip`      | `.badge` `.kbd` `.code`                                                      | all three  | both         | Edge width never exceeds 1px.          |
-| `indicator` | `.loader` `.skeleton` `.progress` `.divider`                                 | —          | —            | Neither sub-axis applies. Color only.  |
+**What was right.** Twenty-two components paint a box the same way, so the five
+expressions that mix intent x presentation x aesthetic live in exactly one place:
+`@utility box`. Components that share more than that share more: the six text
+controls share `@utility text-control`, the eight surfaces share
+`@utility surface`. Those are shared code, named for what they are.
 
-Four invariants, replacing every per-component clamp in the current model:
+**What was wrong.** Naming those groups "roles" turned shared code into a
+taxonomy, and a taxonomy has to be complete: every component needed a role, the
+roles needed membership, membership needed generating, and an aesthetic reached
+components through roles instead of through tokens. Measured at the end, three of
+the five roles held one to three declarations, and blanket membership actively
+broke two components -- `.tooltip` is a positioning wrapper whose bubble is a
+pseudo-element, and `.quote` is a left bar, and the surface role painted both as
+bordered boxes because the registry said they were surfaces.
 
-| Current clamp                                     | Becomes                             |
-| ------------------------------------------------- | ----------------------------------- |
-| Progress caps its border at 1px                   | Indicator: no edge at all           |
-| Badge and key cap cap their border at 1px         | Chip invariant                      |
-| Skeleton keeps a 6% fill floor                    | Indicator: fill is not presentation |
-| Text controls keep a bottom rule under soft/ghost | Field invariant                     |
-| Unchecked toggles restore their full edge         | Field invariant                     |
-| Empty state caps its border at 2px                | Unnecessary once the scale is gone  |
-| Quote clamps its bar to 1-4px                     | Unnecessary once the scale is gone  |
+**What replaced the invariants.** The seven per-component clamps the roles were
+invented to absorb:
 
-### Why `indicator` exists
+| Clamp                                             | What actually removed it        |
+| ------------------------------------------------- | ------------------------------- |
+| Progress caps its border at 1px                   | Deleting `--ui-border-scale`    |
+| Empty state caps its border at 2px                | Deleting `--ui-border-scale`    |
+| Quote clamps its bar to 1-4px                     | Deleting `--ui-border-scale`    |
+| Badge and key cap cap their border at 1px         | Nothing. See below.             |
+| Skeleton keeps a 6% fill floor                    | Indicators read no presentation |
+| Unchecked toggles restore their full edge         | `text-control` draws its edge   |
+| Text controls keep a bottom rule under soft/ghost | `text-control` draws its edge   |
 
-A loader is an animated SVG. A skeleton is a shimmering block. A progress bar is
-a track and a fill. A divider is a line. None of them has a "background tinted by
-intent, bordered by intent, silhouetted by the aesthetic" reading that means
-anything, and every attempt to give them one produced a clamp.
+Fixing presentation did most of it. The edge scale was what made small components
+need ceilings, and with it gone they do not.
 
-Under this role they take a color and their own geometry, and nothing else. A
-loader is a mask over `currentColor`; an intent class colors it, and that is the
-whole contract.
+### The one bound that survives, and the test for keeping one
 
-One implementation detail decides whether that works, and the spike got it wrong
-first: the `currentColor` default belongs in the zero-specificity reset next to the
-other intent defaults, not in the role's own block. Declared in the block it
-carries 0-1-0 and, being later in the stylesheet, beats `.success` -- which makes
-every indicator silently ignore every intent class. This is the same defect as the input icons in
-[the token inventory](./tokens-inventory.md#the-input-icons): artwork carrying
-baked-in presentation instead of taking color from its host.
+`.badge.edged` under `.neobrutalism` now draws the aesthetic's 2px edge. It looks
+worse than a capped 1px edge would. It is also two documented features combined
+exactly as documented, and the package does not degrade its own code to save a
+consumer from a combination they chose. Document it; do not clamp it.
 
-### Why `field` is separate from `action`
+`text-control` caps its fill at the soft tint, and that one stays, because it is
+not the same situation:
 
-Both are interactive, and their affordances are opposites. A button may be quiet
--- a toolbar full of ghost buttons is a normal design. A text input may not: a
-control with no fill and no border has lost the only mark of where typing goes,
-which WCAG 1.4.11 does not allow. Splitting them lets `action` carry no invariant
-at all rather than carrying a bound that only fields need.
-
-Fields therefore support two of the six combinations, `bare edged` and
-`soft edged`, and the registry says so. A consumer writing `.ipt.solid` gets
-`soft edged`, predictably, because the role's ceiling is published.
-
-### Roles are the aesthetic's targeting mechanism
-
-An aesthetic that must reach some components and not others selects a token that
-only those components resolve, rather than naming them:
-
-```css
-/* Only the surface role composes `--ui-backdrop`. */
-backdrop-filter: var(--ui-backdrop, none);
+```html
+<div class="solid"><input class="ipt" /></div>
 ```
 
-Glass sets `--ui-backdrop` at container level and gets blur on cards, panels,
-alerts, and tooltip bubbles while controls stay solid -- the scope it wants
-today, achieved with two 4-selector lists. This is what makes
-[R3](#rules-for-aesthetics) enforceable rather than aspirational.
+Nobody combined anything here. Presentation cascades **by design** -- that is how
+a container sets the look of a subtree -- so `.solid` reaches the input, and an
+input filled 100% with the text color has text the same color as its background.
+Our own cascade produced it, so our own `min()` answers it.
+
+That is the test. **A bound is justified when our own composition produces the
+broken result, and unjustified when a consumer's own combination does.** The
+first is a bug we shipped; the second is a decision they made.
 
 ## Intent
 
@@ -359,10 +349,10 @@ with the `var()` fallback that is its default.
 | `--ui-shadow-tint-amount` | `0%`                 | How much of that tint.                                |
 | `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.         |
 | `--ui-shadow`             | _unset_              | Complete multi-layer value; overrides the parts.      |
-| `--ui-surface-shadow`     | _unset_              | Complete value for the surface role alone.            |
+| `--ui-surface-shadow`     | _unset_              | Complete value; resolved by surfaces only.            |
 | `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent. |
 | `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.               |
-| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by the surface role only.   |
+| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by surfaces only.           |
 | `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.               |
 | `--ui-clip`               | `none`               | Silhouette for structural components.                 |
 | `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                 |
@@ -384,7 +374,7 @@ box-shadow: var(--ui-shadow-x, 0) var(--ui-shadow-y, 0) var(--ui-shadow-blur, 0)
 
 `--ui-shadow` remains as a complete-value override for the multi-layer case glass
 needs, where the color is fixed rather than intent-derived, and
-`--ui-surface-shadow` is the same slot narrowed to the surface role. Glass takes
+`--ui-surface-shadow` is the same slot narrowed to surfaces. Glass takes
 the narrow one: given through `--ui-shadow` its 18px drop shadow would land under
 every button and chip on the page as well, which is the same
 reach-one-kind-of-component problem `--ui-backdrop` solves, solved the same way.
@@ -404,20 +394,27 @@ behind it.
   presentation token or an intent slot other than `--ui-ink`.
 - **R2.** A component resolves a material token unconditionally. A no-op material
   value is free, which Architecture measured in all three baseline engines.
-- **R3.** An aesthetic never names a component. It sets tokens, or it targets a
-  role. See [Adding an aesthetic](#adding-an-aesthetic).
+- **R3.** An aesthetic never names a component. It sets tokens.
 
 R3 is new, and it is what the material additions above exist to make possible:
 without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would
-be a rule the shipped aesthetics immediately break. Where a token genuinely cannot
-express a component-kind-specific treatment, a role block can, under R4 and R5.
+be a rule the shipped aesthetics immediately break. All three now keep it, and
+between them they deleted two fourteen-selector lists, a nine-selector hover
+rule, and every component name an aesthetic used to have to know.
+
+Where an aesthetic must reach one kind of component and not another, the way to
+say so is a token only that kind resolves. A surface resolves `--ui-backdrop` and
+`--ui-surface-shadow`; nothing else does. That is why glass blurs cards and
+panels while controls stay solid, and why its two-layer drop shadow does not land
+under every button on the page. Adding such a slot costs one line in the
+components that accept it, and it is visible in those components rather than
+inferred from a table somewhere else.
 
 ## Precedence
 
 1. **Aesthetic** supplies the base material.
 2. **Presentation** decides how much fill and whether there is an edge.
 3. **Intent** colors both.
-4. **Role** bounds the result.
 
 Modifiers -- size, and [elevation](#elevation) -- sit above the four, being
 per-element choices rather than axis membership. State sits above the modifiers: a
@@ -425,8 +422,9 @@ control that is `:disabled` or `aria-invalid` reads as such regardless of every
 axis and modifier applied to it. State is a condition rather than
 a choice, so it is not an axis, but it wins when it collides with one.
 
-Note the change from the current order, where the fourth step was "component
-clamps the result". A role bounds; a component does not.
+Three steps, and there is no fourth. The current model's fourth step was
+"component clamps the result"; the clamps are gone with the edge scale that
+forced them, and the one bound left is stated where it applies.
 
 ## Defaults
 
@@ -463,48 +461,50 @@ lets them drift.
 
 It carries the closed sets first -- the fill and edge classes with the tokens each
 declares, the hover step, the intents and their color families, the modifiers --
-then the roles with their allowed sub-axis values and their invariant, then every
-component, helper, and aesthetic.
+then every component, helper, and aesthetic.
 
-Per component: class name, role, default fill/edge/elevation, native element
-selectors, implementation wave, and a rename with its reason where one applies.
+Per component: class name, default fill/edge/elevation, native element selectors,
+implementation wave, and a rename with its reason where one applies.
 
 ```json
 {
   "class": "btn",
-  "role": "action",
   "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
   "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"],
   "wave": 1
 }
 ```
 
-Four consumers, which is the point of it being data:
+**It describes the stylesheet; it does not produce it.** An earlier draft
+generated selector lists from it, which made the CSS a build artifact and put a
+CSS generator inside `packages/tools`. Both are gone. The registry is read by
+things that need the list and checked against the CSS that is written by hand:
 
 - `pnpm generate` writes the public class and token tables and the LLM files.
-- `@role` expansion reads it: each role's selector list is generated from its
-  members and their native element mappings, so a Tier 2 role block never names a
-  component and never falls behind when one joins a role.
 - The preview builds its matrix from it, so an unsupported combination cannot be
   rendered.
 - Browser tests assert every declared combination resolves, and that nothing
   undeclared is claimed.
+- The integration tests check the registry against the stylesheet, which is what
+  keeps hand-writing safe.
 
 ### What validation enforces
 
-Seven checks, all of which fail the build:
+Six checks, all of which fail the build:
 
 1. No duplicate class name anywhere in the package.
 2. No collision with a Tailwind static utility.
-3. Every component's default fill and edge is one its role allows.
-4. An indicator declares no default fill or edge.
-5. Every role has at least one member.
-6. Every role has a wave 1 component, or wave 1 would not prove the model.
-7. A rename carries its reason.
+3. Every component's default names a fill and an edge that exist, or neither.
+4. A rename carries its reason.
+5. Every component appears in one of the two hand-maintained intent resets. A
+   component missing from one reads an undefined `--intent-*`, which makes every
+   `color-mix()` referencing it invalid and drops the declaration -- so it renders
+   as nothing rather than as an error.
+6. Every implemented component declares the resting values the registry
+   publishes for it.
 
-Run against the registry as written: 89 class names across 22 components, clean.
-Run against a copy with `.table` restored and `.ipt` defaulted to `solid`, it
-reports both.
+Checks 5 and 6 are what a generator would have made unnecessary, and they cost
+sixty lines instead of four hundred.
 
 ### The one rename
 
@@ -515,8 +515,8 @@ a defect nobody had noticed and check 2 now makes impossible to reintroduce.
 ### What leaves the public surface
 
 `.control-base` is gone. It was the shared composition every text control
-applied, which is exactly what the field role now is; it was never a component
-and should never have had a name consumers could type. `.ai` is gone as a
+applied, and it still is -- as `@utility text-control`, which is shared code
+rather than a component with a name consumers could type. `.ai` is gone as a
 separate class: loader artwork is an art variant of `.loader`, listed on the
 component.
 
@@ -532,7 +532,7 @@ absence of material declarations, not a set of root values -- which is why a car
 gets surface radius and a button gets control radius from the same unset token.
 
 The card's depth is the one thing the absence of material cannot supply, so the
-surface role carries a structural shadow _geometry_ -- `--_d-shadow-y: 1px`,
+`surface` utility carries a structural shadow _geometry_ -- `--_d-shadow-y: 1px`,
 `--_d-shadow-blur: 3px` -- behind the aesthetic's own. It is geometry only: the
 colour is still the component's own line colour, so nothing about the intent model
 changes, and any aesthetic that sets offsets of its own replaces it. Scaled by the
@@ -545,7 +545,7 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge.
 Needs something behind it to blur; on a flat page background it is a translucent
 panel and nothing more.
 
-- Blur and saturation reach the surface role only, through `--ui-backdrop`.
+- Blur and saturation reach surfaces only, through `--ui-backdrop`.
   Controls stay solid: an active blur costs a compositing layer apiece, and one
   under every control of a dense cluster reads as noise.
 - The edge is a light hairline in both themes, because glass catches light from
@@ -591,7 +591,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 | `--ui-border-scale`      | Nothing. The aesthetic owns edge width.        |
 | `--ui-hover-fill`        | Derived hover.                                 |
 | `--ui-hover-fg-on-fill`  | Derived hover.                                 |
-| Per-component clamps     | Role invariants.                               |
+| Per-component clamps     | Deleting the edge scale. One bound survives.   |
 | Aesthetic selector lists | `--ui-ink`, shadow parts, `--ui-backdrop`.     |
 | "Plain"                  | A published default pair per component.        |
 
@@ -608,7 +608,7 @@ three material slots and one specificity rule were added because of what it foun
 | --- | ---------------------------------------------- | ---------------------------------------------------------------- |
 | Q1  | Does `--ui-ink` reach a bare element?          | **Yes**, all three engines, identically to a classed component.  |
 | Q2  | Do colorless shadow parts take the own intent? | **Yes**, and the chip's 1px cap holds under a 2px aesthetic.     |
-| Q3  | Does `--ui-backdrop` scope blur to a role?     | **Yes**, with no component selector -- but see the ground token. |
+| Q3  | Does `--ui-backdrop` scope blur to surfaces?   | **Yes**, with no component selector -- but see the ground token. |
 | Q4  | Is a 14% hover step visible?                   | **Yes**, comfortably. Smallest separation measured is 31.        |
 | Q5  | Is `bare edged` distinct from `soft edged`?    | **Yes**, at 1px. Separation is 48-52 in both themes.             |
 | Q6  | Does anything fail to resolve in WebKit?       | **No**. Every composed value resolves in all three engines.      |
@@ -655,7 +655,7 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
 4. The indicator specificity rule under [Roles](#why-indicator-exists).
 5. `--ui-shadow-tint`, the `--ui-active-*` slots, and `--ui-elevation`, added when
    an aesthetic the model had never seen was built against it as a test. See
-   [Adding an aesthetic](#adding-an-aesthetic): eight tokens and one role block
+   [Adding an aesthetic](#adding-an-aesthetic): eight tokens and one two-selector rule
    reproduced a chunky-tile look end to end, across intents, with no component
    touched.
 
@@ -684,47 +684,26 @@ Set tokens, touch nothing else. This tier cascades, needs no knowledge of any
 component, and reaches bare `<button>` and `<input>` elements carrying no class at
 all. Most of an aesthetic lives here.
 
-### Tier 2 -- role blocks
+### Tier 2 -- a slot, or a selector list you own
 
-Arbitrary declarations, scoped to a role rather than to a component. The registry
-generates the selector list for each role, native element mappings included, so an
-aesthetic never writes a component name and never falls behind when a component
-joins a role.
+Some aesthetics want a treatment that is not a value: a specular highlight on
+surfaces, a scanline background, uppercase actions. Two ways to get one, in this
+order.
 
-```css
-/* The author writes the role. */
-.chunky-tile {
-  @variant role-action {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 800;
-  }
-}
-```
+**Add a slot.** If several components should accept the treatment, give them a
+token to resolve, the way surfaces resolve `--ui-backdrop`. One line in each
+component that accepts it, visible in that component, and every aesthetic gets the
+capability rather than just the one that asked.
 
-The at-rule is Tailwind's `@variant`, applied to a `@custom-variant role-<name>`
-the registry generates -- one per role, expanding to that role's full selector
-list, native elements included. Spelling it this way rather than inventing `@role`
-buys the whole tier for free: no preprocessor stands between the source and the
-build, the `/tw` entrypoints a consumer compiles themselves work identically, and
-an aesthetic that adds a role block needs no tooling that does not already ship.
+**Write the selector list.** If it really is "buttons in this aesthetic are
+uppercase", write `.chunky-tile :is(.btn, button)`. It is a rule an aesthetic
+should have to spell out, because it is the thing R3 exists to discourage, and
+spelling it out is how a reviewer sees it.
 
-Three rules govern this tier, and they are what keep it from becoming the
-selector-list sprawl it replaces:
-
-- **R3.** An aesthetic never names a component. It sets tokens, or it targets a
-  role.
-- **R4.** A role block declares material only. No color literal encoding an
-  intent, and no presentation ratio. A role block may say "actions in this
-  aesthetic are uppercase"; it may not say "actions in this aesthetic are green".
-- **R5.** Every role block an aesthetic declares is listed in the registry, so the
-  conformance tests know to check it and the docs know to describe it. A role
-  block nobody registered is a defect even when it renders correctly.
-
-R4 is the load-bearing one. A color depending on the component's own intent cannot
-be written in a role block correctly anyway -- it would resolve against whatever
-the block matched -- so the rule forbids what is already broken, and pushes the
-author back to a token, where the composition happens at the component.
+An earlier draft generated a `@custom-variant role-action` per role so an
+aesthetic could write `@variant role-action { ... }` without naming components.
+It was removed with the roles: no shipped aesthetic used it, and a targeting
+mechanism with no users is a mechanism that will be wrong when it finally has one.
 
 ### Worked example: the chunky-tile look
 
@@ -753,16 +732,14 @@ learns about it.
 ```
 
 ```css
-.duolingo {
-  @variant role-action {
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
+.duolingo :is(.btn, button) {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 ```
 
-Eight tokens and one role block. No component named, none modified, and the result
+Eight tokens and one two-selector rule. Nothing modified, and the result
 holds across intents: a success button sits on a dark green edge, a neutral card
 on a dark gray one, a selected `.soft.edged.info` card on a dark blue one --
 because the tint composes against each component's own intent at the component,
@@ -777,24 +754,27 @@ where the intent lives.
 
 Checked against the model rather than promised:
 
-| Aesthetic    | Tier 1 covers                                     | Needs a role block for             |
+| Aesthetic    | Tier 1 covers                                     | Needs Tier 2 for                   |
 | ------------ | ------------------------------------------------- | ---------------------------------- |
 | Liquid glass | Blur, translucent ground, radius, hairline edge   | Specular highlight on surfaces     |
 | Cyberpunk    | Clipped corners, edge width, glow via shadow tint | Scanline background on surfaces    |
 | Synthwave    | Radius, glow, gradient ground                     | Gradient text or chrome on actions |
 | Chunky tile  | Everything above                                  | Uppercase actions                  |
 
+Three of the four want a treatment on _surfaces_, which is a slot. Only the fourth
+wants one on actions, and `.btn` is the only action there is.
+
 The pattern holds in each case: shape, color, and depth come from tokens, and only
-a genuinely component-kind-specific treatment reaches for a role block. That is
-the line the tiers are drawn on.
+a genuinely component-kind-specific treatment reaches past them. That is the line
+the tiers are drawn on.
 
 ### Where this leaves native elements
 
-Tier 1 reaches a bare `<button>` because tokens travel through the cascade. Tier 2
-reaches it too, because the registry generates each role's selector list from the
-same native element mapping `native.css` uses. An aesthetic staying in Tier 1
-works everywhere; an aesthetic using Tier 2 works everywhere the registry says the
-role lives.
+Tier 1 reaches a bare `<button>` because tokens travel through the cascade, and
+because `native.css` maps the element to the same utility the class carries. An
+aesthetic staying in Tier 1 works everywhere. An aesthetic writing its own
+selector list works wherever it remembered to look, which is the cost of writing
+one and the reason to prefer a slot.
 
 ## References
 

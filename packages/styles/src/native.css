@@ -8,8 +8,30 @@
 @import "./typography.css";
 @import "./utilities/index.css";
 @import "./components/index.css";
-@import "./roles/native.css";
 @import "./reset.css";
+
+/* The intent reset in `intent.css` keys on class names, and these mappings
+   target bare elements. Without a matching reset an element would read an
+   undefined `--intent-*`, which makes any `color-mix()` referencing it invalid
+   at computed-value time and silently drops the whole declaration. Zero
+   specificity for the same reason as the class reset: an intent class on the
+   element must still win, and an inherited value must still lose.
+
+   The values match `intent.css` slot for slot. A bare `<code>` and a `.code`
+   chip are the same component reached two ways. */
+:where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-surface);
+  --intent-border: var(--ui-ink, var(--color-border));
+}
+
+:where(hr) {
+  --intent-color: currentColor;
+  --intent-border: currentColor;
+}
 
 @layer base {
   h1,

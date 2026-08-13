@@ -7,7 +7,7 @@
 @source not "../../playground";
 @import "../theme.css";
 @import "../typography.css";
-@import "../roles/index.css";
+@import "../box.css";
 @import "./button.css";
 @import "./feedback.css";
 @import "./form.css";

@@ -1,6 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../roles/index.css";
+@import "../box.css";
 
 @utility tooltip {
   /* The bubble is always filled: a transparent or hairline tooltip floating

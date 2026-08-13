@@ -1,12 +1,45 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../roles/index.css";
+@import "../box.css";
 
-/* Geometry only. The surface role paints the box, resolves the backdrop, and
-   carries the structural depth the registry scales by each component's own
-   elevation, so a card is what a surface looks like at padding and elevation 1. */
+/* What every surface shares. Two slots exist here and nowhere else, and that is
+   how an aesthetic reaches surfaces without naming one: only a surface resolves
+   `--ui-backdrop`, so glass blurs cards and panels while controls stay solid,
+   and only a surface resolves `--ui-surface-shadow`, so a two-layer drop shadow
+   does not land under every button on the page. */
+@utility surface {
+  @apply box block;
+
+  --_d-ground: var(--ui-surface-ground, var(--color-background));
+  /* The structural depth a surface has with no aesthetic in scope, which is what
+     makes a card read as raised and a panel as flat with no material declared
+     anywhere. It is the shadow *geometry* only: the colour is still the
+     component's own line colour, so an aesthetic that sets its own offsets keeps
+     the intent-derived shadow the rest of the model gives it. Scaled by the
+     registry's per-component elevation, so a tooltip at 2 gets twice a card's. */
+  --_d-shadow-y: 1px;
+  --_d-shadow-blur: 3px;
+
+  /* The surface's own complete-shadow slot. A shadow that cannot be described as
+     one layer -- glass tucks two under the surface with negative spread -- has to
+     be given whole, and giving it through `--ui-shadow` would put an 18px drop
+     shadow under every button and chip on the page as well. Only this role reads
+     it, the same way only this role reads the backdrop. */
+  --_shadow: var(--ui-surface-shadow, var(--_shadow-parts));
+
+  border-radius: var(--ui-radius-surface, var(--radius-surface));
+  backdrop-filter: var(--ui-backdrop, none);
+  -webkit-backdrop-filter: var(--ui-backdrop, none);
+}
+
+/* A bare, edged, raised container. */
 @utility card {
-  @apply p-(--surface-padding,1.25rem);
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 1;
+
+  @apply surface p-(--surface-padding,1.25rem);
 
   &.compact {
     --surface-padding: 0.75rem;
@@ -24,7 +57,7 @@
      it a real interactive element and an accessible name. Hover is the derived
      one every other pressable box gets; there is nothing card-specific about it. */
   &.interactive {
-    @apply role-box-hover cursor-pointer;
+    @apply box-hover cursor-pointer;
   }
 }
 

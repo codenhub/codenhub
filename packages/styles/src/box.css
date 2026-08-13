@@ -1,17 +1,19 @@
 @reference "tailwindcss";
-@import "../theme.css";
+@import "./theme.css";
 
-/* The four box roles paint the same way, so they compose it once here.
+/* How a box is painted, in one place. Intent supplies the colour, presentation
+   how much of it, the aesthetic the material, and this composes the three.
 
    Every value is composed inside the utility rather than declared on a
    container, because a custom property resolves its `var()` references on the
    element that declares it: a token referencing an intent would resolve against
-   the container's intent and inherit down already-resolved. That is why the
-   aesthetic ships colorless geometry and the colour is mixed at the component.
+   the container's intent and inherit down already-resolved. That is why an
+   aesthetic ships colourless geometry and the colour is mixed here.
 
-   Defaults come from the registry as `--_d-*` and are the only per-component
-   input this file takes. */
-@utility role-box {
+   A component's own resting values arrive as `--_d-*`, declared in that
+   component's file next to its geometry. They are the only per-component input
+   this file takes; everything else is the three axes. */
+@utility box {
   /* Presentation, resolved against this component's own registry default. */
   --_fill: calc(var(--ui-fill, var(--_d-fill)) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--ui-fill, var(--_d-fill)) + var(--hover-step)) * var(--ui-bg-alpha, 1));
@@ -84,8 +86,11 @@
 
 /* Hover is derived from the resting fill rather than declared: one formula, no
    tokens, no branches. `bare` picks up a tint, `soft` deepens, `solid` stays
-   full and darkens because the colour changed. */
-@utility role-box-hover {
+   full and darkens because the colour changed.
+
+   Separate from `box` because tinting on hover is right for something you press
+   and wrong for something you type into, so a component opts in. */
+@utility box-hover {
   &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
     --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_d-ground, transparent));
     --_line: color-mix(in oklab, var(--intent-hover) var(--ui-border, var(--_d-border)), transparent);

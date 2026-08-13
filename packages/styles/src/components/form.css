@@ -1,6 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../roles/index.css";
+@import "../box.css";
 
 /* Seven pictures, seven tokens. They used to be forty-four: a data URI cannot
    read `currentColor` or a custom property, so every icon shipped a light, a
@@ -98,12 +98,79 @@
   background-color: currentColor;
 }
 
-/* Geometry only. The field role paints the box and carries both of a field's
-   invariants: the fill is capped at the soft tint and the edge is always drawn,
-   so `.ipt.solid` is predictable rather than surprising and no text control
-   carries a clamp of its own. */
+/* What every text control shares: the box, the chrome, and one bound.
+
+   The bound is the fill cap, and it is not there to stop a consumer combining
+   classes we never documented. Presentation cascades on purpose -- that is how a
+   container sets the look of a subtree -- so `.solid` on a toolbar reaches the
+   inputs inside it, and an input filled 100% with the text colour has text the
+   same colour as its background. Our own cascade produced that, so our own
+   `min()` answers it. Everything else here is chrome, not policy.
+
+   The edge is drawn whatever the presentation says, for the same reason: a
+   container's `.edgeless` would otherwise leave a control with no mark of where
+   typing goes (WCAG 1.4.11).
+
+   No derived hover. Tinting the box on hover is right for something you press
+   and wrong for something you type into, so only the line responds. */
+@utility text-control {
+  @apply box;
+
+  --_fill: calc(min(var(--ui-fill, var(--_d-fill)), 12%) * var(--ui-bg-alpha, 1));
+  --_line: color-mix(in oklab, var(--intent-border) 100%, transparent);
+  --_edge: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line));
+  --_fg: var(--intent-color);
+
+  @apply w-full appearance-none;
+
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: var(--color-text-secondary);
+  }
+
+  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
+    --_line: color-mix(in oklab, var(--intent-hover) 100%, transparent);
+  }
+
+  &:focus {
+    @apply outline-none;
+  }
+
+  &:focus-visible {
+    --_line: var(--intent-color);
+  }
+
+  &[aria-invalid="true"] {
+    --intent-border: var(--color-destructive);
+    --intent-color: var(--color-destructive);
+  }
+
+  /* Native decorations a field replaces with its own artwork. */
+  &::-webkit-search-decoration,
+  &::-webkit-search-cancel-button,
+  &::-webkit-search-results-button,
+  &::-webkit-search-results-decoration,
+  &::-webkit-calendar-picker-indicator,
+  &::-webkit-inner-spin-button,
+  &::-webkit-clear-button {
+    -webkit-appearance: none;
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+/* A bare, edged, unelevated text control. */
 @utility ipt {
-  @apply h-(--control-height,2.5rem) px-3 py-2;
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  @apply text-control h-(--control-height,2.5rem) px-3 py-2;
 
   min-height: var(--control-height);
 
