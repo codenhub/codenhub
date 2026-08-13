@@ -1,0 +1,15 @@
+@reference "tailwindcss";
+@import "./box.css";
+
+/* A chip's edge never exceeds one pixel, because a thicker line on a 24px chip
+   reads as a box with a label in it rather than as a chip. A chip is also small
+   enough that a structural silhouette would be most of its height, so it reads
+   the tight shape slots first. */
+@utility role-chip {
+  @apply role-box inline-flex items-center;
+
+  --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px), 1px);
+
+  border-radius: var(--ui-radius, var(--radius-small));
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+}

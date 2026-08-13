@@ -1,0 +1,33 @@
+/* Elevation is a modifier, not an axis. Depth is not uniform within an
+   aesthetic: the same aesthetic wants raised option tiles beside a flat promo
+   panel, and that is a per-element decision made by whoever builds the screen,
+   not a property of what kind of thing the element is.
+
+   The division of labour is the point. The aesthetic decides what depth looks
+   like -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
+   elevation decides how much of it this element gets. Neither needs to know the
+   other, so `.flat` removes a slab under one aesthetic, a blur under another,
+   and nothing at all under none, without a single conditional.
+
+   One unitless number, multiplied into the aesthetic's shadow geometry where the
+   component composes it. Being unitless is also what makes it safe to inherit, so
+   a container can flatten a whole toolbar and any element inside can opt back in.
+
+   Each component's resting level comes from the registry, so "a card is raised
+   and an input is not" is a published fact rather than an accident of which
+   aesthetic happens to be loaded. */
+
+/* No depth, whatever the aesthetic draws. */
+.flat {
+  --ui-elevation: 0;
+}
+
+/* The aesthetic's depth as authored, said explicitly. */
+.raised {
+  --ui-elevation: 1;
+}
+
+/* Twice it, for menus and popovers. */
+.floating {
+  --ui-elevation: 2;
+}

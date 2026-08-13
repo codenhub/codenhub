@@ -1,51 +1,47 @@
-/* Presentation classes declare only unitless numbers and percentages. A custom
+/* Presentation answers two independent questions, and each is its own closed
+   set: how much of the intent color fills the box, and whether the box draws a
+   line at its boundary. Exactly one value from each set applies, so the six
+   combinations are the whole vocabulary and none of them is degenerate.
+
+   Presentation declares only unitless numbers and percentages. A custom
    property's value is resolved on the element that declares it, so anything
    referencing an intent token here would resolve against the container's intent
    and inherit down already-resolved. Numbers carry no intent, so they inherit
    safely and each component mixes them against its own palette.
 
    A declaration on the element beats an inherited one, which is what lets a
-   container set the look for its subtree while any element still opts out. */
+   container set the look for its subtree while any element still opts out.
 
-.flat {
+   Hover is derived from these values rather than declared beside them:
+   `min(100%, resting fill + --hover-step)`, always in `--intent-hover`. There is
+   no hover token and no per-presentation branch. */
+
+/* Filled with the intent color. Text is the contrast tone. */
+.solid {
   --ui-fill: 100%;
   --ui-fg-on-fill: 100%;
-  --ui-border: 100%;
-  --ui-border-scale: 1;
-  --ui-hover-fill: 100%;
-  --ui-hover-fg-on-fill: 100%;
 }
 
-.out {
-  --ui-fill: 0%;
-  --ui-fg-on-fill: 0%;
-  --ui-border: 100%;
-  --ui-border-scale: 2;
-  --ui-hover-fill: 14%;
-  --ui-hover-fg-on-fill: 0%;
-}
-
-.ghost {
-  --ui-fill: 0%;
-  --ui-fg-on-fill: 0%;
-  --ui-border: 0%;
-  --ui-border-scale: 1;
-  --ui-hover-fill: 14%;
-  --ui-hover-fg-on-fill: 0%;
-}
-
+/* Tinted with the intent color. Text is the intent color. */
 .soft {
   --ui-fill: 12%;
   --ui-fg-on-fill: 0%;
-  --ui-border: 0%;
-  --ui-border-scale: 1;
-  --ui-hover-fill: 22%;
-  --ui-hover-fg-on-fill: 0%;
 }
 
-/* Declared last so it wins over the presentation it composes with, such as
-   `.out.fill`, where both selectors carry the same specificity. */
-.fill {
-  --ui-hover-fill: 100%;
-  --ui-hover-fg-on-fill: 100%;
+/* No fill at all. Text is the intent color. */
+.bare {
+  --ui-fill: 0%;
+  --ui-fg-on-fill: 0%;
+}
+
+/* A line in the intent color, at the aesthetic's material width. The width comes
+   from the aesthetic and nothing else: there is no presentation scale on it, so
+   small components need no ceilings to survive a thick one. */
+.edged {
+  --ui-border: 100%;
+}
+
+/* No line. */
+.edgeless {
+  --ui-border: 0%;
 }

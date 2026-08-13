@@ -1,0 +1,97 @@
+@reference "tailwindcss";
+@import "../theme.css";
+
+/* The four box roles paint the same way, so they compose it once here.
+
+   Every value is composed inside the utility rather than declared on a
+   container, because a custom property resolves its `var()` references on the
+   element that declares it: a token referencing an intent would resolve against
+   the container's intent and inherit down already-resolved. That is why the
+   aesthetic ships colorless geometry and the colour is mixed at the component.
+
+   Defaults come from the registry as `--_d-*` and are the only per-component
+   input this file takes. */
+@utility role-box {
+  /* Presentation, resolved against this component's own registry default. */
+  --_fill: calc(var(--ui-fill, var(--_d-fill)) * var(--ui-bg-alpha, 1));
+  --_hover-fill: calc(min(100%, var(--ui-fill, var(--_d-fill)) + var(--hover-step)) * var(--ui-bg-alpha, 1));
+
+  --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-color));
+  --_line: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
+  /* P3: the line blends toward the fill by the fill amount, so a filled box has
+     a seamless edge instead of a stray ring of another colour. */
+  --_edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, var(--_d-fill)), var(--_line));
+  --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
+
+  /* Elevation is a unitless multiplier over the aesthetic's shadow geometry, so
+     one number turns a raised element flat without knowing what the aesthetic
+     draws. Zero lengths are written `0px` because `calc(0 * 1)` yields a number
+     and a shadow position needs a length. */
+  --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
+  --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_elevation));
+  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, 0px)) * var(--_elevation));
+  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, 0px)) * var(--_elevation));
+  /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
+     inset ring spends spread on it, and scaling that by elevation would erase
+     the edge of every component the registry rests at zero. Elevation is depth:
+     offset and blur. */
+  --_ss: var(--ui-shadow-spread, var(--_d-shadow-spread, 0px));
+  /* "A shade of whatever this thing already is": a tint and an amount are both
+     free of intent, so they inherit safely and the mix happens where the intent
+     lives. */
+  --_shadow-color: color-mix(
+    in oklab,
+    var(--ui-shadow-tint, transparent) var(--ui-shadow-tint-amount, 0%),
+    var(--intent-border)
+  );
+  --_shadow: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
+
+  background-color: var(--_bg);
+  color: var(--_fg);
+  border: var(--_width) solid var(--_edge);
+  border-radius: var(--ui-radius, var(--radius-control));
+  box-shadow: var(--ui-shadow, var(--_shadow));
+  clip-path: var(--ui-clip, none);
+  transition:
+    background-color var(--motion-duration-normal) var(--motion-ease),
+    border-color var(--motion-duration-normal) var(--motion-ease),
+    box-shadow var(--motion-duration-normal) var(--motion-ease),
+    color var(--motion-duration-normal) var(--motion-ease),
+    opacity var(--motion-duration-normal) var(--motion-ease),
+    transform var(--motion-duration-normal) var(--motion-ease);
+
+  /* An aesthetic that clips cannot show the global focus outline, so it declares
+     `--ui-focus-inset` and gets an inset layer instead. With no such aesthetic
+     the token is undefined, which makes this declaration invalid at
+     computed-value time: the box keeps the shadow it already had and the
+     outline from `reset.css` does the work. */
+  &:focus-visible {
+    box-shadow:
+      var(--ui-shadow, var(--_shadow)),
+      inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
+  }
+
+  &:disabled,
+  &.disabled,
+  &[aria-disabled="true"],
+  &[data-disabled] {
+    @apply cursor-not-allowed;
+
+    opacity: 0.58;
+  }
+}
+
+/* Hover is derived from the resting fill rather than declared: one formula, no
+   tokens, no branches. `bare` picks up a tint, `soft` deepens, `solid` stays
+   full and darkens because the colour changed. */
+@utility role-box-hover {
+  &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
+    --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_d-ground, transparent));
+    --_line: color-mix(in oklab, var(--intent-hover) var(--ui-border, var(--_d-border)), transparent);
+    --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
+    --_sy: calc(var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+
+    transform: var(--ui-hover-transform, none);
+  }
+}
