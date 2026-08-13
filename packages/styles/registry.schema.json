@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codenhub.dev/styles/registry.schema.json",
+  "title": "Codenhub styles registry",
+  "description": "The source of truth for what @codenhub/styles supports. Feeds pnpm generate, the preview matrix, and the browser conformance tests.",
+  "type": "object",
+  "required": ["version", "presentation", "intents", "modifiers", "roles", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "presentation": {
+      "type": "object",
+      "required": ["fill", "edge", "hoverStep"],
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "type": "object",
+          "description": "Fill sub-axis. Keys are class names, values the presentation tokens they declare.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-fill", "ui-fg-on-fill"],
+            "additionalProperties": false,
+            "properties": {
+              "ui-fill": { "type": "string", "pattern": "^\\d+%$" },
+              "ui-fg-on-fill": { "type": "string", "pattern": "^\\d+%$" }
+            }
+          }
+        },
+        "edge": {
+          "type": "object",
+          "description": "Edge sub-axis.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-border"],
+            "additionalProperties": false,
+            "properties": { "ui-border": { "type": "string", "pattern": "^\\d+%$" } }
+          }
+        },
+        "hoverStep": {
+          "type": "string",
+          "pattern": "^\\d+%$",
+          "description": "How much fill a hover adds. Hover is derived from this, never declared per class."
+        }
+      }
+    },
+    "intents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["family", "vocabulary"],
+        "additionalProperties": false,
+        "properties": {
+          "family": { "type": "string", "description": "The --color-* family this intent maps onto." },
+          "vocabulary": { "enum": ["semantic", "emphasis", "neutral"] },
+          "aliases": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "modifiers": {
+      "type": "object",
+      "required": ["elevation"],
+      "properties": {
+        "elevation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-elevation"],
+            "additionalProperties": false,
+            "properties": { "ui-elevation": { "type": "string", "pattern": "^\\d+$" } }
+          }
+        }
+      },
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "roles": {
+      "type": "object",
+      "description": "A role decides which axes reach a component and carries the invariant that replaces per-component clamps.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["fill", "edge", "invariant"],
+        "additionalProperties": false,
+        "properties": {
+          "fill": { "type": "array", "items": { "type": "string" } },
+          "edge": { "type": "array", "items": { "type": "string" } },
+          "invariant": {
+            "type": ["string", "null"],
+            "description": "Null means the role bounds nothing. Any bound stated here is published, and no component may add one of its own."
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "role", "default", "native", "wave"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "role": { "type": "string" },
+          "default": {
+            "type": "object",
+            "required": ["elevation"],
+            "additionalProperties": false,
+            "properties": {
+              "fill": { "type": "string" },
+              "edge": { "type": "string" },
+              "elevation": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "art": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Indicator artwork variants, which are not a presentation."
+          },
+          "native": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Bare element selectors this component maps. Also what each role's generated selector list is built from."
+          },
+          "renamedFrom": { "type": "string" },
+          "renameReason": { "type": "string" },
+          "wave": { "type": "integer", "minimum": 1, "maximum": 2 }
+        }
+      }
+    },
+    "helpers": {
+      "type": "array",
+      "description": "Classes that carry no axis. Listed so collision checking and docs cover them.",
+      "items": {
+        "type": "object",
+        "required": ["class", "purpose"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "purpose": { "type": "string" }
+        }
+      }
+    },
+    "aesthetics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "roleBlocks", "completeShadow"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "roleBlocks": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Roles this aesthetic declares an @role block for (R5). A block not listed here is a defect."
+          },
+          "completeShadow": {
+            "type": "boolean",
+            "description": "True when the aesthetic sets --ui-shadow as a complete value, which opts it out of the elevation multiplier."
+          },
+          "completeShadowReason": { "type": "string" }
+        }
+      }
+    },
+    "removed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "replacedBy"],
+        "additionalProperties": false,
+        "properties": {
+          "class": { "type": "string" },
+          "replacedBy": { "type": ["string", "null"] },
+          "note": { "type": "string" }
+        }
+      }
+    }
+  }
+}

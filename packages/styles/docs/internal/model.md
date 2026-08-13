@@ -446,21 +446,69 @@ rather than a `var()` fallback in the middle of a component.
 
 ## The registry
 
-`registry.json` is the source of truth for what the package supports. Per
-component: name, role, default pair, allowed pairs, allowed intents, native
-element mapping, aesthetic participation, and implementation wave.
+`registry.json` at the package root is the source of truth for what the package
+supports, with `registry.schema.json` beside it. It exists as data rather than
+prose because four separate things have to agree about the same facts, and prose
+lets them drift.
 
-It feeds three consumers, which is the point of it being data:
+It carries the closed sets first -- the fill and edge classes with the tokens each
+declares, the hover step, the intents and their color families, the modifiers --
+then the roles with their allowed sub-axis values and their invariant, then every
+component, helper, and aesthetic.
+
+Per component: class name, role, default fill/edge/elevation, native element
+selectors, implementation wave, and a rename with its reason where one applies.
+
+```json
+{
+  "class": "btn",
+  "role": "action",
+  "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
+  "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"],
+  "wave": 1
+}
+```
+
+Four consumers, which is the point of it being data:
 
 - `pnpm generate` writes the public class and token tables and the LLM files.
-- The playground builds its matrix from it, so a combination that is not
-  supported cannot be rendered.
-- Browser tests assert every declared combination resolves, and that no
-  undeclared one is claimed.
+- `@role` expansion reads it: each role's selector list is generated from its
+  members and their native element mappings, so a Tier 2 role block never names a
+  component and never falls behind when one joins a role.
+- The preview builds its matrix from it, so an unsupported combination cannot be
+  rendered.
+- Browser tests assert every declared combination resolves, and that nothing
+  undeclared is claimed.
 
-It also validates every class name against Tailwind's static utility list and
-fails the build on a collision. `.table` collides today: the package's `@utility
-table` replaces Tailwind's `display: table` utility for every consumer.
+### What validation enforces
+
+Seven checks, all of which fail the build:
+
+1. No duplicate class name anywhere in the package.
+2. No collision with a Tailwind static utility.
+3. Every component's default fill and edge is one its role allows.
+4. An indicator declares no default fill or edge.
+5. Every role has at least one member.
+6. Every role has a wave 1 component, or wave 1 would not prove the model.
+7. A rename carries its reason.
+
+Run against the registry as written: 89 class names across 22 components, clean.
+Run against a copy with `.table` restored and `.ipt` defaulted to `solid`, it
+reports both.
+
+### The one rename
+
+`.table` becomes `.data-table`. The package's `@utility table` replaces
+Tailwind's `display: table` utility for every consumer that imports it, which is
+a defect nobody had noticed and check 2 now makes impossible to reintroduce.
+
+### What leaves the public surface
+
+`.control-base` is gone. It was the shared composition every text control
+applied, which is exactly what the field role now is; it was never a component
+and should never have had a name consumers could type. `.ai` is gone as a
+separate class: loader artwork is an art variant of `.loader`, listed on the
+component.
 
 ## Variant specs
 
