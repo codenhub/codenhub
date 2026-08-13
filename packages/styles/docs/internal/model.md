@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-08-13
 scope: The styling model proposed for `@codenhub/styles` 0.1.0.
 ---
@@ -44,16 +44,55 @@ The fix is not more rules. It is fewer decisions, each made explicitly.
 
 ## The axes
 
-| Axis         | Question        | Cascades | Classes                                                                         |
-| ------------ | --------------- | -------- | ------------------------------------------------------------------------------- |
-| Intent       | Which color?    | No       | `.neutral` `.primary` `.secondary` `.success` `.warning` `.destructive` `.info` |
-| Presentation | How much of it? | Yes      | `.solid` `.soft` `.bare` and `.edged` `.edgeless`                               |
-| Aesthetic    | Made of what?   | Yes      | `.neobrutalism` `.glass` `.pixel`                                               |
+Three questions, asked in plain language before any CSS is involved:
 
-Unchanged from the current model in framing, and unchanged in mechanism: intent
-carries only hue, presentation only unitless ratios, aesthetic only lengths,
-shadows, and shapes. What changes is presentation's shape, and the addition of a
-role layer that decides which axes reach which component.
+**What does this thing mean?** A delete button and a save button are the same
+control doing opposite things, and a reader has to know which is which before
+reading a word of the label. That is **intent**. It is a meaning, not a color --
+the color is downstream of the meaning, which is why `.destructive` is the name
+and `.red` is not. Intent holds two vocabularies that share one slot: semantic
+(`.success` `.warning` `.destructive` `.info`) says what is _true_ of the thing,
+and emphasis (`.primary` `.secondary`) says how much it _matters here_. Exactly
+one applies, and semantic outranks emphasis: a delete confirmation's main button
+is `.destructive`, because losing the warning costs more than losing the
+emphasis.
+
+**How much of that meaning does it show?** The same destructive action is a
+filled red slab in a confirmation dialog and a quiet red word in a settings row.
+Nothing about the meaning changed; the composition did. That is
+**presentation**: how much of the intent fills the element, and whether it draws
+an edge. It is the volume knob, not the message.
+
+**What is it made of?** A button is a rounded slab, or a thick-inked box with a
+hard shadow, or a stepped 8-bit rectangle, or a chunky tile sitting on a darker
+shade of itself. Radius, edge thickness, shadow, silhouette, typography, motion:
+the style language everything is built from. That is **aesthetic**. Swap it and
+the same markup, with the same intents and the same presentations, becomes a
+visibly different product.
+
+Put shortly: intent is _what it says_, presentation is _how loudly_, aesthetic is
+_in what voice_.
+
+| Axis         | Answers                      | Owns                           | Cascades | Classes                                                                         |
+| ------------ | ---------------------------- | ------------------------------ | -------- | ------------------------------------------------------------------------------- |
+| Intent       | What does this mean?         | Hue only                       | No       | `.neutral` `.primary` `.secondary` `.success` `.warning` `.destructive` `.info` |
+| Presentation | How much of it does it show? | Unitless ratios only           | Yes      | `.solid` `.soft` `.bare` and `.edged` `.edgeless`                               |
+| Aesthetic    | What is it made of?          | Lengths, shadows, shapes, type | Yes      | `.neobrutalism` `.glass` `.pixel`                                               |
+
+The three are orthogonal by construction, and the "Owns" column is what enforces
+it. Intent may only produce color, so it can never change a shape. Presentation
+may only produce unitless numbers, so it inherits down a subtree without dragging
+a resolved color with it. Aesthetic may only produce material, so it can restyle
+a whole page without knowing what anything means.
+
+Two of them cascade and one does not, and that is the same rule seen from two
+sides. A container saying "everything below me is quiet and glassy" is useful. A
+container saying "everything below me is a success" is a trap: it would turn a
+nested destructive button green. So presentation and aesthetic inherit, and
+intent is redeclared by every component at its own root.
+
+What changes from the current model is presentation's shape, and the addition of
+a role layer that decides which axes reach which component.
 
 ## Presentation
 
@@ -132,6 +171,57 @@ token and five documented exceptions gone for a change nobody will see.
 P4 is the rule that did not exist before, and it is the one that keeps the model
 predictable. A clamp on a component is invisible until you hit it. A bound on a
 role applies to a named group and can be learned once.
+
+## Elevation
+
+Depth is not uniform within an aesthetic. In the chunky-tile look, white option
+cards sit on a darker slab while the blue promo panel beside them is flat, the
+word-bank chips are raised, and the disabled submit button is flat. Same
+aesthetic, same roles, different depth -- decided per element by whoever builds
+the screen.
+
+So elevation is a **modifier**, not a fourth axis. It sits with size, above the
+three axes:
+
+| Class       | `--ui-elevation` | Means                                   |
+| ----------- | ---------------- | --------------------------------------- |
+| `.flat`     | `0`              | No depth, whatever the aesthetic draws. |
+| _(default)_ | `1`              | The aesthetic's depth as authored.      |
+| `.raised`   | `1`              | The same, said explicitly.              |
+| `.floating` | `2`              | Twice it, for menus and popovers.       |
+
+One unitless number, multiplied into the aesthetic's shadow geometry where the
+component composes it:
+
+```css
+--_sy: calc(var(--ui-shadow-y, 0px) * var(--ui-elevation, 1));
+```
+
+The division of labor is the point. **The aesthetic decides what depth looks
+like** -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
+**elevation decides how much of it this element gets**. Neither needs to know the
+other. `.flat` on a chunky-tile card removes a 4px slab; on a glass card it would
+remove a soft shadow; under no aesthetic at all it removes nothing, because there
+was nothing.
+
+Being unitless is what makes it safe to inherit, so a container can flatten a
+whole toolbar with one class and any element inside can opt back in.
+
+Zero lengths are written `0px` rather than `0` in the fallbacks, because
+`calc(0 * 1)` produces a number and a shadow position requires a length.
+
+The registry gives each component its default level, so "a card is raised and an
+input is not" is a published fact rather than an accident of which aesthetic
+happens to be loaded.
+
+### The one limitation
+
+An aesthetic setting `--ui-shadow` as a complete multi-layer value opts out of the
+elevation scale, because there is nothing for the multiplier to reach. That hole
+is kept small deliberately: shipped aesthetics express depth with the parts, and
+the complete-value form stays an escape hatch for shadows that genuinely cannot be
+described as one layer. An aesthetic taking the escape hatch declares it in the
+registry, so `.flat` not working on it is documented rather than discovered.
 
 ## Roles
 
@@ -243,30 +333,36 @@ with the `var()` fallback that is its default.
 
 ### Material tokens
 
-| Token                  | Fallback             | Meaning                                               |
-| ---------------------- | -------------------- | ----------------------------------------------------- |
-| `--ui-radius`          | `--radius-control`   | Corner radius for controls.                           |
-| `--ui-radius-surface`  | `--radius-surface`   | Corner radius for surfaces.                           |
-| `--ui-border-width`    | `--border-width`     | Edge thickness.                                       |
-| `--ui-border-max`      | `100px`              | Ceiling on the computed edge width.                   |
-| `--ui-ink`             | `--color-border`     | Neutral line color when no intent is set.             |
-| `--ui-shadow-x`        | `0`                  | Shadow offset, colorless so it inherits safely.       |
-| `--ui-shadow-y`        | `0`                  | Shadow offset.                                        |
-| `--ui-shadow-blur`     | `0`                  | Shadow blur.                                          |
-| `--ui-shadow-spread`   | `0`                  | Shadow spread.                                        |
-| `--ui-shadow-inset`    | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
-| `--ui-hover-shadow-x`  | `--ui-shadow-x`      | Shadow offset while hovered.                          |
-| `--ui-hover-shadow-y`  | `--ui-shadow-y`      | Shadow offset while hovered.                          |
-| `--ui-shadow`          | _unset_              | Complete multi-layer value; overrides the parts.      |
-| `--ui-surface-ground`  | `--color-background` | Ground a surface sits on; how glass goes translucent. |
-| `--ui-bg-alpha`        | `1`                  | Multiplier over fill, for translucency.               |
-| `--ui-backdrop`        | `none`               | Backdrop filter; resolved by the surface role only.   |
-| `--ui-hover-transform` | `none`               | Transform applied on interactive hover.               |
-| `--ui-clip`            | `none`               | Silhouette for structural components.                 |
-| `--ui-clip-tight`      | `--ui-clip`          | Silhouette for chips.                                 |
-| `--ui-edge`            | _undefined_          | Inset ring width when the edge is not a border.       |
-| `--ui-edge-tight`      | `--ui-edge`          | Inset ring width for chips.                           |
-| `--ui-focus-inset`     | `0px`                | Focus layer depth inside the ring.                    |
+| Token                     | Fallback             | Meaning                                               |
+| ------------------------- | -------------------- | ----------------------------------------------------- |
+| `--ui-radius`             | `--radius-control`   | Corner radius for controls.                           |
+| `--ui-radius-surface`     | `--radius-surface`   | Corner radius for surfaces.                           |
+| `--ui-border-width`       | `--border-width`     | Edge thickness.                                       |
+| `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                   |
+| `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.             |
+| `--ui-shadow-x`           | `0`                  | Shadow offset, colorless so it inherits safely.       |
+| `--ui-shadow-y`           | `0`                  | Shadow offset.                                        |
+| `--ui-shadow-blur`        | `0`                  | Shadow blur.                                          |
+| `--ui-shadow-spread`      | `0`                  | Shadow spread.                                        |
+| `--ui-shadow-inset`       | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
+| `--ui-hover-shadow-x`     | `--ui-shadow-x`      | Shadow offset while hovered.                          |
+| `--ui-hover-shadow-y`     | `--ui-shadow-y`      | Shadow offset while hovered.                          |
+| `--ui-active-shadow-x`    | `--ui-shadow-x`      | Shadow offset while pressed.                          |
+| `--ui-active-shadow-y`    | `--ui-shadow-y`      | Shadow offset while pressed.                          |
+| `--ui-active-transform`   | `none`               | Transform applied while pressed.                      |
+| `--ui-shadow-tint`        | `transparent`        | Color mixed into the shadow, over its own intent.     |
+| `--ui-shadow-tint-amount` | `0%`                 | How much of that tint.                                |
+| `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.         |
+| `--ui-shadow`             | _unset_              | Complete multi-layer value; overrides the parts.      |
+| `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent. |
+| `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.               |
+| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by the surface role only.   |
+| `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.               |
+| `--ui-clip`               | `none`               | Silhouette for structural components.                 |
+| `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                 |
+| `--ui-edge`               | _undefined_          | Inset ring width when the edge is not a border.       |
+| `--ui-edge-tight`         | `--ui-edge`          | Inset ring width for chips.                           |
+| `--ui-focus-inset`        | `0px`                | Focus layer depth inside the ring.                    |
 
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
@@ -298,12 +394,13 @@ behind it.
   presentation token or an intent slot other than `--ui-ink`.
 - **R2.** A component resolves a material token unconditionally. A no-op material
   value is free, which Architecture measured in all three baseline engines.
-- **R3.** An aesthetic never uses a component-scoped selector. To reach a subset
-  of components it picks a token only that role resolves.
+- **R3.** An aesthetic never names a component. It sets tokens, or it targets a
+  role. See [Adding an aesthetic](#adding-an-aesthetic).
 
-R3 is new and is the strictest rule in the document. It is achievable only
-because of `--ui-ink`, the shadow parts, and `--ui-backdrop`; without those three
-it would be a rule the shipped aesthetics immediately break.
+R3 is new, and it is what the material additions above exist to make possible:
+without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would
+be a rule the shipped aesthetics immediately break. Where a token genuinely cannot
+express a component-kind-specific treatment, a role block can, under R4 and R5.
 
 ## Precedence
 
@@ -312,8 +409,10 @@ it would be a rule the shipped aesthetics immediately break.
 3. **Intent** colors both.
 4. **Role** bounds the result.
 
-State sits above all four: a control that is `:disabled` or `aria-invalid` reads
-as such regardless of every axis applied to it. State is a condition rather than
+Modifiers -- size, and [elevation](#elevation) -- sit above the four, being
+per-element choices rather than axis membership. State sits above the modifiers: a
+control that is `:disabled` or `aria-invalid` reads as such regardless of every
+axis and modifier applied to it. State is a condition rather than
 a choice, so it is not an axis, but it wins when it collides with one.
 
 Note the change from the current order, where the fourth step was "component
@@ -488,6 +587,11 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
    solid background. This is the one finding that would have shipped as a visible
    defect.
 4. The indicator specificity rule under [Roles](#why-indicator-exists).
+5. `--ui-shadow-tint`, the `--ui-active-*` slots, and `--ui-elevation`, added when
+   an aesthetic the model had never seen was built against it as a test. See
+   [Adding an aesthetic](#adding-an-aesthetic): eight tokens and one role block
+   reproduced a chunky-tile look end to end, across intents, with no component
+   touched.
 
 ### One thing to know before writing the tests
 
@@ -497,6 +601,123 @@ unblurred in Chromium and translucent in the other two, from the same stylesheet
 -- which is the degradation working correctly, and it got exercised by accident.
 Visual snapshots of any glass surface must pin the media state or they will differ
 per machine and per engine.
+
+## Adding an aesthetic
+
+Aesthetic is the axis most likely to grow, so it gets the most deliberate
+extension story. Liquid glass, cyberpunk, synthwave, and the chunky-tile look
+Duolingo uses are all aesthetics, and each wants something material tokens alone
+do not offer: a button that behaves differently from a card.
+
+Two tiers, and an aesthetic reaches for the second only when the first genuinely
+cannot express it.
+
+### Tier 1 -- material tokens
+
+Set tokens, touch nothing else. This tier cascades, needs no knowledge of any
+component, and reaches bare `<button>` and `<input>` elements carrying no class at
+all. Most of an aesthetic lives here.
+
+### Tier 2 -- role blocks
+
+Arbitrary declarations, scoped to a role rather than to a component. The registry
+generates the selector list for each role, native element mappings included, so an
+aesthetic never writes a component name and never falls behind when a component
+joins a role.
+
+```css
+/* The author writes the role. */
+@role action {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 800;
+}
+```
+
+Three rules govern this tier, and they are what keep it from becoming the
+selector-list sprawl it replaces:
+
+- **R3.** An aesthetic never names a component. It sets tokens, or it targets a
+  role.
+- **R4.** A role block declares material only. No color literal encoding an
+  intent, and no presentation ratio. A role block may say "actions in this
+  aesthetic are uppercase"; it may not say "actions in this aesthetic are green".
+- **R5.** Every role block an aesthetic declares is listed in the registry, so the
+  conformance tests know to check it and the docs know to describe it. A role
+  block nobody registered is a defect even when it renders correctly.
+
+R4 is the load-bearing one. A color depending on the component's own intent cannot
+be written in a role block correctly anyway -- it would resolve against whatever
+the block matched -- so the rule forbids what is already broken, and pushes the
+author back to a token, where the composition happens at the component.
+
+### Worked example: the chunky-tile look
+
+Rounded slabs sitting on a darker shade of themselves, pressed flat on click, with
+uppercase actions. Built in the spike against a real screenshot:
+
+```css
+.duolingo {
+  --ui-radius: 1rem;
+  --ui-radius-surface: 1rem;
+  --ui-border-width: 2px;
+  --ui-shadow-y: 4px;
+  --ui-shadow-tint: #000;
+  --ui-shadow-tint-amount: 26%;
+  --ui-active-shadow-y: 0;
+  --ui-active-transform: translateY(4px);
+}
+```
+
+Depth in that aesthetic is not uniform, and it does not have to be: the promo
+panel that should not sit on a slab carries `.flat`, and the aesthetic never
+learns about it.
+
+```html
+<div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
+```
+
+```css
+@role action {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+```
+
+Eight tokens and one role block. No component named, none modified, and the result
+holds across intents: a success button sits on a dark green edge, a neutral card
+on a dark gray one, a selected `.soft.edged.info` card on a dark blue one --
+because the tint composes against each component's own intent at the component,
+not at the container.
+
+`--ui-shadow-tint` is what makes that work, and it generalizes to "a shade of
+whatever this thing already is". A tint is a plain color and an amount is a plain
+percentage; neither carries intent, so both inherit safely, and the mix happens
+where the intent lives.
+
+### What the other aesthetics on the list will need
+
+Checked against the model rather than promised:
+
+| Aesthetic    | Tier 1 covers                                     | Needs a role block for             |
+| ------------ | ------------------------------------------------- | ---------------------------------- |
+| Liquid glass | Blur, translucent ground, radius, hairline edge   | Specular highlight on surfaces     |
+| Cyberpunk    | Clipped corners, edge width, glow via shadow tint | Scanline background on surfaces    |
+| Synthwave    | Radius, glow, gradient ground                     | Gradient text or chrome on actions |
+| Chunky tile  | Everything above                                  | Uppercase actions                  |
+
+The pattern holds in each case: shape, color, and depth come from tokens, and only
+a genuinely component-kind-specific treatment reaches for a role block. That is
+the line the tiers are drawn on.
+
+### Where this leaves native elements
+
+Tier 1 reaches a bare `<button>` because tokens travel through the cascade. Tier 2
+reaches it too, because the registry generates each role's selector list from the
+same native element mapping `native.css` uses. An aesthetic staying in Tier 1
+works everywhere; an aesthetic using Tier 2 works everywhere the registry says the
+role lives.
 
 ## References
 
