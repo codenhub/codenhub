@@ -215,7 +215,9 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
       <html>
         <body>
           <input class="${fixture.checkboxClass}" data-testid="checkbox" type="checkbox" checked>
+          <input class="${fixture.checkboxClass}" data-testid="unchecked-checkbox" type="checkbox">
           <input class="${fixture.radioClass}" data-testid="radio" type="radio" checked>
+          <input class="${fixture.radioClass}" data-testid="unchecked-radio" type="radio">
         </body>
       </html>
     `);
@@ -231,17 +233,24 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
         return resolved;
       };
       const checkbox = document.querySelector('[data-testid="checkbox"]')!;
+      const uncheckedCheckbox = document.querySelector('[data-testid="unchecked-checkbox"]')!;
       const radio = document.querySelector('[data-testid="radio"]')!;
+      const uncheckedRadio = document.querySelector('[data-testid="unchecked-radio"]')!;
 
       return {
         checkboxBackground: getComputedStyle(checkbox).backgroundColor,
         checkboxMark: getComputedStyle(checkbox, "::after").backgroundColor,
         expectedCanvas: resolveColor("Canvas"),
+        expectedCanvasText: resolveColor("CanvasText"),
         expectedHighlight: resolveColor("Highlight"),
         expectedHighlightText: resolveColor("HighlightText"),
         radioBackground: getComputedStyle(radio).backgroundColor,
         radioBorder: getComputedStyle(radio).borderTopColor,
         radioMark: getComputedStyle(radio, "::after").backgroundColor,
+        uncheckedCheckboxBackground: getComputedStyle(uncheckedCheckbox).backgroundColor,
+        uncheckedCheckboxBorder: getComputedStyle(uncheckedCheckbox).borderTopColor,
+        uncheckedRadioBackground: getComputedStyle(uncheckedRadio).backgroundColor,
+        uncheckedRadioBorder: getComputedStyle(uncheckedRadio).borderTopColor,
       };
     });
 
@@ -250,6 +259,10 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
     expect(colors.radioBackground).toBe(colors.expectedCanvas);
     expect(colors.radioBorder).toBe(colors.expectedHighlight);
     expect(colors.radioMark).toBe(colors.expectedHighlight);
+    expect(colors.uncheckedCheckboxBackground).toBe(colors.expectedCanvas);
+    expect(colors.uncheckedCheckboxBorder).toBe(colors.expectedCanvasText);
+    expect(colors.uncheckedRadioBackground).toBe(colors.expectedCanvas);
+    expect(colors.uncheckedRadioBorder).toBe(colors.expectedCanvasText);
   };
 
   await expectSystemToggleColors({
