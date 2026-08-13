@@ -59,6 +59,10 @@ No further work is currently planned for `0.1.0` stabilization.
 
 ## Later / Possible
 
+- **WCAG AA text contrast**: Raise filled success and warning component text
+  contrast to WCAG 1.4.3's 4.5:1 threshold for normal text. Their current
+  neutral-50 foreground over emerald-600 and amber-600 backgrounds reaches only
+  about 3.5:1 and 3.1:1; the browser test currently enforces 3:1.
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
   matrix has stopped moving, because the two would otherwise drift. It waits on

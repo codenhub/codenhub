@@ -554,6 +554,33 @@
 }
 
 @media (forced-colors: active) {
+  .checkbox,
+  .radio {
+    /* Keep these explicit system colors from being forced back to transparent. */
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+  }
+
+  .checkbox:checked {
+    background-color: Highlight;
+    border-color: Highlight;
+
+    &::after {
+      background-color: HighlightText;
+    }
+  }
+
+  .radio:checked {
+    background-color: Canvas;
+    border-color: Highlight;
+
+    &::after {
+      background-color: Highlight;
+    }
+  }
+
   .control-base:focus-visible,
   .ipt:focus-visible,
   .textarea:focus-visible,

@@ -210,3 +210,32 @@
     @apply btn;
   }
 }
+
+@media (forced-colors: active) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    /* Keep these explicit system colors from being forced back to transparent. */
+    forced-color-adjust: none;
+    background-color: Canvas;
+    border-color: CanvasText;
+    transition: none;
+  }
+
+  input[type="checkbox"]:checked {
+    background-color: Highlight;
+    border-color: Highlight;
+
+    &::after {
+      background-color: HighlightText;
+    }
+  }
+
+  input[type="radio"]:checked {
+    background-color: Canvas;
+    border-color: Highlight;
+
+    &::after {
+      background-color: Highlight;
+    }
+  }
+}
