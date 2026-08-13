@@ -167,7 +167,13 @@ anything, and every attempt to give them one produced a clamp.
 
 Under this role they take a color and their own geometry, and nothing else. A
 loader is a mask over `currentColor`; an intent class colors it, and that is the
-whole contract. This is the same defect as the input icons in
+whole contract.
+
+One implementation detail decides whether that works, and the spike got it wrong
+first: the `currentColor` default belongs in the zero-specificity reset next to the
+other intent defaults, not in the role's own block. Declared in the block it
+carries 0-1-0 and, being later in the stylesheet, beats `.success` -- which makes
+every indicator silently ignore every intent class. This is the same defect as the input icons in
 [the token inventory](./tokens-inventory.md#the-input-icons): artwork carrying
 baked-in presentation instead of taking color from its host.
 
@@ -237,26 +243,30 @@ with the `var()` fallback that is its default.
 
 ### Material tokens
 
-| Token                  | Fallback           | Meaning                                             |
-| ---------------------- | ------------------ | --------------------------------------------------- |
-| `--ui-radius`          | `--radius-control` | Corner radius for controls.                         |
-| `--ui-radius-surface`  | `--radius-surface` | Corner radius for surfaces.                         |
-| `--ui-border-width`    | `--border-width`   | Edge thickness.                                     |
-| `--ui-border-max`      | `100px`            | Ceiling on the computed edge width.                 |
-| `--ui-ink`             | `--color-border`   | Neutral line color when no intent is set.           |
-| `--ui-shadow-x`        | `0`                | Shadow offset, colorless so it inherits safely.     |
-| `--ui-shadow-y`        | `0`                | Shadow offset.                                      |
-| `--ui-shadow-blur`     | `0`                | Shadow blur.                                        |
-| `--ui-shadow-spread`   | `0`                | Shadow spread.                                      |
-| `--ui-shadow`          | _unset_            | Complete multi-layer value; overrides the parts.    |
-| `--ui-bg-alpha`        | `1`                | Multiplier over fill, for translucency.             |
-| `--ui-backdrop`        | `none`             | Backdrop filter; resolved by the surface role only. |
-| `--ui-hover-transform` | `none`             | Transform applied on interactive hover.             |
-| `--ui-clip`            | `none`             | Silhouette for structural components.               |
-| `--ui-clip-tight`      | `--ui-clip`        | Silhouette for chips.                               |
-| `--ui-edge`            | _undefined_        | Inset ring width when the edge is not a border.     |
-| `--ui-edge-tight`      | `--ui-edge`        | Inset ring width for chips.                         |
-| `--ui-focus-inset`     | `0px`              | Focus layer depth inside the ring.                  |
+| Token                  | Fallback             | Meaning                                               |
+| ---------------------- | -------------------- | ----------------------------------------------------- |
+| `--ui-radius`          | `--radius-control`   | Corner radius for controls.                           |
+| `--ui-radius-surface`  | `--radius-surface`   | Corner radius for surfaces.                           |
+| `--ui-border-width`    | `--border-width`     | Edge thickness.                                       |
+| `--ui-border-max`      | `100px`              | Ceiling on the computed edge width.                   |
+| `--ui-ink`             | `--color-border`     | Neutral line color when no intent is set.             |
+| `--ui-shadow-x`        | `0`                  | Shadow offset, colorless so it inherits safely.       |
+| `--ui-shadow-y`        | `0`                  | Shadow offset.                                        |
+| `--ui-shadow-blur`     | `0`                  | Shadow blur.                                          |
+| `--ui-shadow-spread`   | `0`                  | Shadow spread.                                        |
+| `--ui-shadow-inset`    | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
+| `--ui-hover-shadow-x`  | `--ui-shadow-x`      | Shadow offset while hovered.                          |
+| `--ui-hover-shadow-y`  | `--ui-shadow-y`      | Shadow offset while hovered.                          |
+| `--ui-shadow`          | _unset_              | Complete multi-layer value; overrides the parts.      |
+| `--ui-surface-ground`  | `--color-background` | Ground a surface sits on; how glass goes translucent. |
+| `--ui-bg-alpha`        | `1`                  | Multiplier over fill, for translucency.               |
+| `--ui-backdrop`        | `none`               | Backdrop filter; resolved by the surface role only.   |
+| `--ui-hover-transform` | `none`               | Transform applied on interactive hover.               |
+| `--ui-clip`            | `none`               | Silhouette for structural components.                 |
+| `--ui-clip-tight`      | `--ui-clip`          | Silhouette for chips.                                 |
+| `--ui-edge`            | _undefined_          | Inset ring width when the edge is not a border.       |
+| `--ui-edge-tight`      | `--ui-edge`          | Inset ring width for chips.                           |
+| `--ui-focus-inset`     | `0px`                | Focus layer depth inside the ring.                    |
 
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
@@ -272,6 +282,15 @@ box-shadow: var(--ui-shadow-x, 0) var(--ui-shadow-y, 0) var(--ui-shadow-blur, 0)
 
 `--ui-shadow` remains as a complete-value override for the multi-layer case glass
 needs, where the color is fixed rather than intent-derived.
+
+Three of those slots exist because the spike found the first four insufficient.
+`--ui-shadow-inset` carries the `inset` keyword, without which pixel's ring has to
+be written as a complete value and loses the component's own intent.
+`--ui-hover-shadow-*` lets neobrutalism collapse its shadow on hover without the
+`:hover` selector R3 forbids. `--ui-surface-ground` exists because
+`--ui-bg-alpha` multiplies the _fill_, and a surface's default fill is 0%: with no
+ground token a glass card keeps an opaque background and its own blur is invisible
+behind it.
 
 ### Rules for aesthetics
 
@@ -414,24 +433,70 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 `.soft` keeps its name and changes meaning slightly: it is now fill only, and an
 author who wants the old bordered-soft look writes `.soft.edged`.
 
-## Open questions for the spike
+## Spike results
 
-The [spike](./roadmap.md) has to answer these before this document can be
-approved. Each is a place where the design is reasoned but not measured.
+A throwaway implementation of this model -- plain CSS, no build -- was measured in
+Chromium, Firefox, and WebKit. All six questions are answered. The model stands;
+three material slots and one specificity rule were added because of what it found.
 
-1. Does `--ui-ink` through the shared reset actually deliver neobrutalism's ink
-   to a bare `<input>` mapped by `native.css`, where the selector-list approach
-   cannot?
-2. Do the colorless shadow parts compose correctly on a component whose intent
-   comes from its own class, across all three aesthetics?
-3. Does `--ui-backdrop` scope the blur to the surface role without a single
-   component selector, and does the reduced-transparency override still reach it?
-4. Is a 14% hover step visible enough on `bare` and distinguishable enough on
-   `soft`, in both themes, for all seven intents?
-5. Does removing `--ui-border-scale` leave outline buttons visually distinct
-   enough from bordered soft ones at 1px?
-6. Does the fill/edge split survive `color-mix()` nesting depth in WebKit? Three
-   levels crash the renderer, which is already recorded in Architecture.
+| #   | Question                                       | Answer                                                           |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| Q1  | Does `--ui-ink` reach a bare element?          | **Yes**, all three engines, identically to a classed component.  |
+| Q2  | Do colorless shadow parts take the own intent? | **Yes**, and the chip's 1px cap holds under a 2px aesthetic.     |
+| Q3  | Does `--ui-backdrop` scope blur to a role?     | **Yes**, with no component selector -- but see the ground token. |
+| Q4  | Is a 14% hover step visible?                   | **Yes**, comfortably. Smallest separation measured is 31.        |
+| Q5  | Is `bare edged` distinct from `soft edged`?    | **Yes**, at 1px. Separation is 48-52 in both themes.             |
+| Q6  | Does anything fail to resolve in WebKit?       | **No**. Every composed value resolves in all three engines.      |
+
+Q1 is the one worth stating loudly. Architecture records the missing ink on bare
+elements as a residual gap A4 could not close, because the value has to resolve
+against the component's own intent and a container-level token cannot. Routing it
+through `--ui-ink` in the shared reset closes it: a bare `<button>` and a bare
+`<input>` under `.neobrutalism` and `.pixel` report exactly the ink, border width,
+ring, and silhouette the classed component reports, and a `.destructive` component
+still keeps its red edge and casts a red shadow.
+
+Q4 and Q5 were measured on composited pixels rather than on computed strings,
+because a computed `color-mix()` carrying alpha says nothing about what the eye
+gets. Distances are sRGB, where roughly 20 is a clearly visible step:
+
+| Fill level     | Resting -> hover | Separation |
+| -------------- | ---------------- | ---------: |
+| `bare`, light  | 250 -> 223       |         47 |
+| `soft`, light  | 220 -> 202       |         31 |
+| `solid`, light | 10 -> 64         |         94 |
+| `bare`, dark   | 10 -> 40         |         52 |
+| `soft`, dark   | 38 -> 66         |         48 |
+| `solid`, dark  | 250 -> 229       |         36 |
+
+`soft` in light mode is the tightest at 31, still half again the visibility
+threshold. 14% stands.
+
+`bare edged` and `soft edged` separate by 48 to 52 in both themes at a single
+pixel of border, so dropping `--ui-border-scale` costs nothing legible.
+
+### What the spike changed
+
+1. `--ui-shadow-inset`, because pixel's inset ring cannot be expressed by offset,
+   blur, and spread alone, and writing it as a complete value costs the
+   component's own intent.
+2. `--ui-hover-shadow-x` and `-y`, because neobrutalism's press-into-the-shadow
+   hover otherwise needs a `:hover` selector inside the aesthetic, which R3
+   forbids.
+3. `--ui-surface-ground`, because a glass card rendered opaque: `--ui-bg-alpha`
+   multiplies the fill, a surface's default fill is 0%, and the blur sat behind a
+   solid background. This is the one finding that would have shipped as a visible
+   defect.
+4. The indicator specificity rule under [Roles](#why-indicator-exists).
+
+### One thing to know before writing the tests
+
+Chromium in this environment reports `prefers-reduced-transparency: reduce`, where
+Firefox and WebKit report no preference. Glass therefore renders opaque and
+unblurred in Chromium and translucent in the other two, from the same stylesheet
+-- which is the degradation working correctly, and it got exercised by accident.
+Visual snapshots of any glass surface must pin the media state or they will differ
+per machine and per engine.
 
 ## References
 
