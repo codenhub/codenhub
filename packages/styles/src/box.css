@@ -47,7 +47,11 @@
     var(--ui-shadow-tint, transparent) var(--ui-shadow-tint-amount, 0%),
     var(--intent-border)
   );
-  --_shadow: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
+  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
+  /* Indirection so a component can substitute a complete value of its own
+     without restating the parts -- `surface` does, for the multi-layer case.
+     `--ui-shadow` stays the escape hatch that overrides every component. */
+  --_shadow: var(--_shadow-parts);
 
   background-color: var(--_bg);
   color: var(--_fg);

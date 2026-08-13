@@ -189,3 +189,24 @@ test("the package publishes an entrypoint for every aesthetic in the registry", 
     expect(manifest.exports, `./aesthetics/${aesthetic.class}`).toHaveProperty(`./aesthetics/${aesthetic.class}`);
   }
 });
+
+/* Shadow parts fall back individually, so an aesthetic that sets an offset but
+   not a blur inherits the structural blur a surface carries and gets a shape it
+   never asked for. Declaring the whole geometry is the contract; a complete
+   value satisfies it too, since it replaces every part at once. */
+test("every aesthetic declares a whole shadow geometry", async () => {
+  const parts = ["--ui-shadow-x", "--ui-shadow-y", "--ui-shadow-blur", "--ui-shadow-spread"];
+  const sources = await Promise.all(
+    (registry.aesthetics ?? []).map(async (aesthetic) => ({
+      name: aesthetic.class,
+      source: await read(`src/aesthetics/${aesthetic.class}.css`),
+    })),
+  );
+  const problems = sources
+    .filter(({ source }) => !source.includes("--ui-shadow:") && !source.includes("--ui-surface-shadow:"))
+    .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
+    .filter(({ missing }) => missing.length > 0)
+    .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);
+
+  expect(problems).toEqual([]);
+});

@@ -395,6 +395,12 @@ behind it.
 - **R2.** A component resolves a material token unconditionally. A no-op material
   value is free, which Architecture measured in all three baseline engines.
 - **R3.** An aesthetic never names a component. It sets tokens.
+- **R6.** An aesthetic declares the whole shadow geometry -- all four parts, or a
+  complete value. The parts fall back individually, so an aesthetic that sets an
+  offset but not a blur inherits the structural blur a surface carries and gets a
+  shape it never asked for. Measured: a chunky-tile aesthetic setting only
+  `--ui-shadow-y` drew a 4px slab with a 3px blur on cards and a hard slab on
+  buttons.
 
 R3 is new, and it is what the material additions above exist to make possible:
 without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would
