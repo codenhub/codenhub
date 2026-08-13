@@ -70,7 +70,7 @@
       opacity: 0 !important;
     }
 
-    /* The spinner takes the label's colour, which the role already resolved
+    /* The spinner takes the label's colour, which `box` already resolved
        against this button's own intent and presentation. */
     &::after {
       @apply loader-mask absolute block size-4 -translate-x-1/2 -translate-y-1/2 bg-current;

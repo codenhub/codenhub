@@ -394,7 +394,7 @@
     {
       "class": "glass",
       "completeShadow": true,
-      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface role's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
+      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
     },
     {
       "class": "pixel",
@@ -423,7 +423,7 @@
     {
       "class": "control-base",
       "replacedBy": null,
-      "note": "Became the field role; it was never a component."
+      "note": "Became the `text-control` utility; it was never a component."
     },
     {
       "class": "ai",

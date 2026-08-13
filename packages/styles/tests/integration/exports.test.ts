@@ -58,7 +58,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/] },
   /* The aesthetic publishes the silhouette and the inset edge as material
-     tokens; the declarations that consume them belong to the roles. */
+     tokens; the declarations that consume them belong to `box` and `surface`. */
   "./tw/aesthetics/pixel": {
     patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/, /--ui-shadow-inset:/],
   },

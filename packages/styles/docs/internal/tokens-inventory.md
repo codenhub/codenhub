@@ -319,8 +319,8 @@ against that component's intent. None are contract. All become `--_`-prefixed.
 
 The repetition is the signal. Eleven components independently declare a `fill`, a
 `bg`, a `line`, and an `edge` computed by the same four `color-mix()` expressions
-with different fallbacks. That is the arithmetic the role layer is meant to own:
-a `surface` role computes those four once, and `.card`, `.panel`, `.alert`,
+with different fallbacks. That is the arithmetic one shared composition is meant
+to own: `box` computes those four once, and `.card`, `.panel`, `.alert`,
 `.table`, and `.empty-state` stop carrying private copies of the formula. The
 count should fall well below a hundred without a single component losing a
 capability.

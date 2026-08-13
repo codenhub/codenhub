@@ -3,7 +3,7 @@
    translucent panel and nothing more.
 
    Tier 1 only. The scope that used to take a hand-written selector list is now a
-   token: only the surface role resolves `--ui-backdrop`, so blur reaches cards,
+   token: only `surface` resolves `--ui-backdrop`, so blur reaches cards,
    panels, alerts and tooltips while controls stay solid. An active blur costs a
    compositing layer apiece, and one under every control of a dense cluster reads
    as noise. */
@@ -26,7 +26,7 @@
 
   /* Two layers pulling in with negative spread, so the shadow tucks under the
      surface instead of haloing onto the backdrop. It is the one shipped aesthetic
-     that cannot be described with the parts, so it takes the surface role's
+     that cannot be described with the parts, so it takes `surface`'s
      complete-value slot -- which is also what keeps it off buttons and chips --
      and the registry records that `.flat` does not reach it. */
   --ui-surface-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);

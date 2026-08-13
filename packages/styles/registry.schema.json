@@ -149,7 +149,7 @@
             "items": {
               "type": "string"
             },
-            "description": "Bare element selectors this component maps. Also what each role's generated selector list is built from."
+            "description": "Bare element selectors this component maps."
           },
           "renamedFrom": {
             "type": "string"

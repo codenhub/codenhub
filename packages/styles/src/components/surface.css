@@ -23,8 +23,8 @@
   /* The surface's own complete-shadow slot. A shadow that cannot be described as
      one layer -- glass tucks two under the surface with negative spread -- has to
      be given whole, and giving it through `--ui-shadow` would put an 18px drop
-     shadow under every button and chip on the page as well. Only this role reads
-     it, the same way only this role reads the backdrop. */
+     shadow under every button and chip on the page as well. Only `surface` reads
+     it, the same way only it reads the backdrop. */
   --_shadow: var(--ui-surface-shadow, var(--_shadow-parts));
 
   border-radius: var(--ui-radius-surface, var(--radius-surface));
