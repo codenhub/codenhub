@@ -8,27 +8,8 @@
 @import "./typography.css";
 @import "./utilities/index.css";
 @import "./components/index.css";
+@import "./roles/native.css";
 @import "./reset.css";
-
-/* The shared intent reset in `intent.css` keys on class names, and these
-   mappings target bare elements. Without a matching reset an element would read
-   an undefined `--intent-*`, which makes any `color-mix()` referencing it
-   invalid at computed-value time and silently drops the whole declaration.
-   Zero specificity for the same reason as the class reset: an intent class on
-   the element must still win, and an inherited value must still lose.
-
-   The values have to match `intent.css` slot for slot. A bare `<code>` and a
-   `.code` chip are the same component reached two ways, so `--intent-subtle`
-   resolves to `--color-surface` here as well: the tinted surface a neutral
-   component sits on is the surface token. */
-:where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
-  --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
-  --intent-hover: var(--color-text-hover);
-  --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-surface);
-  --intent-border: var(--color-border);
-}
 
 @layer base {
   h1,
@@ -114,6 +95,9 @@
     @apply ipt;
   }
 
+  /* An icon needs a `.control` wrapper to paint into, and a bare element has no
+     wrapper by definition, so a native mapping gives the control and stops
+     there. Authors opt in by wrapping and writing `.icon`. */
   input[type="email"],
   input[type="password"],
   input[type="url"],
@@ -121,69 +105,10 @@
   input[type="search"],
   input[type="month"],
   input[type="week"],
-  input[type="time"] {
-    @apply ipt icon;
-
-    &.left {
-      background-position: 0.75rem center;
-      padding-left: 2.375rem;
-      padding-right: 0.75rem;
-    }
-
-    &.right {
-      background-position: calc(100% - 0.75rem) center;
-      padding-left: 0.75rem;
-      padding-right: 2.375rem;
-    }
-
-    &::-webkit-calendar-picker-indicator,
-    &::-webkit-inner-spin-button,
-    &::-webkit-clear-button {
-      -webkit-appearance: none;
-      display: none !important;
-      opacity: 0;
-    }
-
-    &.no-icon,
-    &[data-no-icon] {
-      background-image: none !important;
-      padding-left: 0.75rem !important;
-      padding-right: 0.75rem !important;
-    }
-  }
-
-  input[type="date"] {
-    @apply ipt;
-  }
-
+  input[type="time"],
+  input[type="date"],
   input[type="datetime-local"] {
     @apply ipt;
-  }
-
-  /* Mirrors the two branches in `components/form.css`: the themed icon replaces
-     the native picker button where that button can be hidden, and is suppressed
-     where it cannot, so a field never shows two calendar glyphs or padding
-     reserved for artwork that never paints. */
-  @supports selector(input::-webkit-calendar-picker-indicator) {
-    input[type="date"],
-    input[type="datetime-local"] {
-      @apply icon h-10 py-0;
-
-      &::-webkit-calendar-picker-indicator {
-        display: none !important;
-      }
-    }
-  }
-
-  @supports not selector(input::-webkit-calendar-picker-indicator) {
-    input[type="date"],
-    input[type="datetime-local"] {
-      @apply h-10 py-0;
-
-      background-image: none !important;
-      padding-left: 0.75rem !important;
-      padding-right: 0.75rem !important;
-    }
   }
 
   textarea {

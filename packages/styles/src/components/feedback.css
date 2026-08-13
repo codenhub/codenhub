@@ -1,5 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
+@import "../roles/index.css";
 
 @keyframes anim-skeleton {
   0% {
@@ -81,20 +82,11 @@
 }
 
 @utility badge {
-  --feedback-fill: calc(var(--ui-fill, 12%) * var(--ui-bg-alpha, 1));
-  --feedback-surface: color-mix(in oklab, var(--intent-color) var(--feedback-fill), transparent);
-  --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
-  --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
-  /* P3 ceiling: 2px of border on a 24px chip, and 4px under a 2px aesthetic,
-     reads as a box with a label in it. */
-  --shape-border-max: var(--border-width);
+  @apply min-h-6 w-fit gap-1 px-2.5 text-xs font-bold;
 
-  @apply shaped-tight inline-flex min-h-6 w-fit items-center gap-1 bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
   /* Pill by default, but an aesthetic that declares no radius has to mean it, so
      the round corner is this component's fallback rather than a hardcoded value. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  border: var(--shape-border-width) solid var(--feedback-border);
-  box-shadow: var(--shape-ring, none);
 }
 
 @utility skeleton {

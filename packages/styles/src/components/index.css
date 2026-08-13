@@ -7,6 +7,7 @@
 @source not "../../playground";
 @import "../theme.css";
 @import "../typography.css";
+@import "../roles/index.css";
 @import "./button.css";
 @import "./feedback.css";
 @import "./form.css";
@@ -14,4 +15,4 @@
 @import "./surface.css";
 @import "./tooltip.css";
 
-@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint control-base ipt email password url tel search date datetime month week time icon left right no-icon textarea select checkbox radio switch alert badge skeleton progress empty-state tooltip card panel interactive flush compact spacious neutral");
+@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right no-icon textarea select checkbox radio switch alert badge skeleton progress empty-state tooltip card panel interactive flush compact spacious neutral solid soft bare edged edgeless flat raised floating control loader");

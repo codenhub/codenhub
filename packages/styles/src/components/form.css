@@ -1,107 +1,122 @@
 @reference "tailwindcss";
 @import "../theme.css";
+@import "../roles/index.css";
 
-/* Input icons are `background-image` data URIs, not masks. A text input is a
-   replaced element and generates no pseudo-element to mask, and masking the
-   input itself would clip its border, background, and typed text. A data URI
-   cannot read `currentColor` or a custom property either, so each icon ships a
-   light and a dark variant and the theme picks one.
+/* Seven pictures, seven tokens. They used to be forty-four: a data URI cannot
+   read `currentColor` or a custom property, so every icon shipped a light, a
+   dark, a focused-light and a focused-dark copy of the same paths, and three
+   theme blocks re-pointed the aliases between them.
 
-   Each URL is declared exactly once here. Theme blocks below only re-point the
-   aliases, so an icon's artwork never has to be kept in sync across themes. */
+   A mask has no such problem, because it carries no colour at all -- the element
+   behind it does. What blocked masking before was the element: a text input is
+   replaced content and generates no pseudo-element, and masking the input itself
+   would clip its border, its background and the typed text with it. So the mask
+   goes on a wrapper around the control alone.
+
+   `.field` cannot be that wrapper. It is a flex column holding a label and a
+   hint, and anything positioned against it lands beside the label rather than
+   inside the control. `.control` wraps the control and nothing else. */
 :root {
-  --ipt-icon-email-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-  --ipt-icon-email-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-  --ipt-icon-email-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-  --ipt-icon-email-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-
-  --ipt-icon-password-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-  --ipt-icon-password-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-  --ipt-icon-password-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-  --ipt-icon-password-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-
-  --ipt-icon-url-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-  --ipt-icon-url-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-  --ipt-icon-url-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-  --ipt-icon-url-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-
-  --ipt-icon-tel-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-  --ipt-icon-tel-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-  --ipt-icon-tel-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-  --ipt-icon-tel-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-
-  --ipt-icon-search-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-  --ipt-icon-search-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-  --ipt-icon-search-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-  --ipt-icon-search-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-
-  --ipt-icon-calendar-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-  --ipt-icon-calendar-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-  --ipt-icon-calendar-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-  --ipt-icon-calendar-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-
-  --ipt-icon-clock-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
-  --ipt-icon-clock-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
-  --ipt-icon-clock-focus-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
-  --ipt-icon-clock-focus-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fafafa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
+  --ipt-icon-email: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
+  --ipt-icon-password: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
+  --ipt-icon-url: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
+  --ipt-icon-tel: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
+  --ipt-icon-search: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
+  --ipt-icon-calendar: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
+  --ipt-icon-clock: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
 }
 
-/* Explicit aliases make nested theme selectors reversible. A fallback handles
-   an unset alias, but cannot override a dark value inherited by a light subtree. */
-.light,
-.theme-light,
-[data-theme="light"] {
-  --ipt-icon-email: var(--ipt-icon-email-light);
-  --ipt-icon-email-focus: var(--ipt-icon-email-focus-light);
-  --ipt-icon-password: var(--ipt-icon-password-light);
-  --ipt-icon-password-focus: var(--ipt-icon-password-focus-light);
-  --ipt-icon-url: var(--ipt-icon-url-light);
-  --ipt-icon-url-focus: var(--ipt-icon-url-focus-light);
-  --ipt-icon-tel: var(--ipt-icon-tel-light);
-  --ipt-icon-tel-focus: var(--ipt-icon-tel-focus-light);
-  --ipt-icon-search: var(--ipt-icon-search-light);
-  --ipt-icon-search-focus: var(--ipt-icon-search-focus-light);
-  --ipt-icon-calendar: var(--ipt-icon-calendar-light);
-  --ipt-icon-calendar-focus: var(--ipt-icon-calendar-focus-light);
-  --ipt-icon-clock: var(--ipt-icon-clock-light);
-  --ipt-icon-clock-focus: var(--ipt-icon-clock-focus-light);
+/* The wrapper that makes an icon possible. It wraps the control alone, so its
+   pseudo-element sits over the control's box and its `:focus-within` is the
+   control's own focus. */
+@utility control {
+  @apply relative block;
 }
 
-.dark,
-.theme-dark,
-[data-theme="dark"] {
-  --ipt-icon-email: var(--ipt-icon-email-dark);
-  --ipt-icon-email-focus: var(--ipt-icon-email-focus-dark);
-  --ipt-icon-password: var(--ipt-icon-password-dark);
-  --ipt-icon-password-focus: var(--ipt-icon-password-focus-dark);
-  --ipt-icon-url: var(--ipt-icon-url-dark);
-  --ipt-icon-url-focus: var(--ipt-icon-url-focus-dark);
-  --ipt-icon-tel: var(--ipt-icon-tel-dark);
-  --ipt-icon-tel-focus: var(--ipt-icon-tel-focus-dark);
-  --ipt-icon-search: var(--ipt-icon-search-dark);
-  --ipt-icon-search-focus: var(--ipt-icon-search-focus-dark);
-  --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
-  --ipt-icon-calendar-focus: var(--ipt-icon-calendar-focus-dark);
-  --ipt-icon-clock: var(--ipt-icon-clock-dark);
-  --ipt-icon-clock-focus: var(--ipt-icon-clock-focus-dark);
+/* The artwork is chosen by what the wrapper contains, because a custom property
+   set on the input cannot travel up to the wrapper that paints it. */
+.control:has(> :is([type="email"], .email)) {
+  --ipt-icon-src: var(--ipt-icon-email);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light, .theme-light, [data-theme="light"]) {
-    --ipt-icon-email: var(--ipt-icon-email-dark);
-    --ipt-icon-email-focus: var(--ipt-icon-email-focus-dark);
-    --ipt-icon-password: var(--ipt-icon-password-dark);
-    --ipt-icon-password-focus: var(--ipt-icon-password-focus-dark);
-    --ipt-icon-url: var(--ipt-icon-url-dark);
-    --ipt-icon-url-focus: var(--ipt-icon-url-focus-dark);
-    --ipt-icon-tel: var(--ipt-icon-tel-dark);
-    --ipt-icon-tel-focus: var(--ipt-icon-tel-focus-dark);
-    --ipt-icon-search: var(--ipt-icon-search-dark);
-    --ipt-icon-search-focus: var(--ipt-icon-search-focus-dark);
-    --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
-    --ipt-icon-calendar-focus: var(--ipt-icon-calendar-focus-dark);
-    --ipt-icon-clock: var(--ipt-icon-clock-dark);
-    --ipt-icon-clock-focus: var(--ipt-icon-clock-focus-dark);
+.control:has(> :is([type="password"], .password)) {
+  --ipt-icon-src: var(--ipt-icon-password);
+}
+
+.control:has(> :is([type="url"], .url)) {
+  --ipt-icon-src: var(--ipt-icon-url);
+}
+
+.control:has(> :is([type="tel"], .tel)) {
+  --ipt-icon-src: var(--ipt-icon-tel);
+}
+
+.control:has(> :is([type="search"], .search)) {
+  --ipt-icon-src: var(--ipt-icon-search);
+}
+
+.control:has(
+  > :is([type="date"], [type="datetime-local"], [type="month"], [type="week"], .date, .datetime, .month, .week)
+) {
+  --ipt-icon-src: var(--ipt-icon-calendar);
+}
+
+.control:has(> :is([type="time"], .time)) {
+  --ipt-icon-src: var(--ipt-icon-clock);
+}
+
+/* The icon itself: one rule, both themes, every intent. It takes the surrounding
+   text colour at a fixed remove and goes to full strength while the control is
+   focused, which is what the four baked-in variants were approximating. */
+.control:has(> .icon)::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  inset-inline-start: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  translate: 0 -50%;
+  pointer-events: none;
+  background-color: color-mix(in oklab, currentColor 55%, transparent);
+  mask-image: var(--ipt-icon-src);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: var(--ipt-icon-src);
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  transition: background-color var(--motion-duration-fast) var(--motion-ease);
+}
+
+.control:has(> .icon.right)::before {
+  inset-inline-start: auto;
+  inset-inline-end: 0.75rem;
+}
+
+.control:focus-within::before {
+  background-color: currentColor;
+}
+
+/* Geometry only. The field role paints the box and carries both of a field's
+   invariants: the fill is capped at the soft tint and the edge is always drawn,
+   so `.ipt.solid` is predictable rather than surprising and no text control
+   carries a clamp of its own. */
+@utility ipt {
+  @apply h-(--control-height,2.5rem) px-3 py-2;
+
+  min-height: var(--control-height);
+
+  /* Reserves the room the wrapper's icon paints into. An icon with no `.control`
+     around it reserves space and shows nothing, which is why the class is opt-in
+     rather than implied by the input's type. */
+  &.icon {
+    padding-left: 2.375rem;
+
+    &.right {
+      padding-left: 0.75rem;
+      padding-right: 2.375rem;
+    }
   }
 }
 
@@ -175,155 +190,6 @@
     pointer-events: none;
     width: 0;
     height: 0;
-  }
-}
-
-/* `.soft` and `.ghost` both zero `--ui-border`, which leaves a text control as a
-   bare box with no mark of where it can be typed into. That is the floor P3
-   requires, for the reason in `Accessibility constraints`: a control distinguished
-   by nothing is the same failure whichever axis causes it.
-
-   The bottom rule is that floor. It needs a selector because a presentation is a
-   set of values, not something a component can branch on. Both forms are matched:
-   on the control itself, and inherited from a container. `.soft` keeps its tint
-   over the rule; `.ghost` has no tint to keep. */
-.ipt.soft,
-.textarea.soft,
-.select.soft,
-.control-base.soft,
-:where(.soft) :is(.ipt, .textarea, .select, .control-base),
-.ipt.ghost,
-.textarea.ghost,
-.select.ghost,
-.control-base.ghost,
-:where(.ghost) :is(.ipt, .textarea, .select, .control-base) {
-  border-bottom-color: var(--intent-border);
-  border-radius: 0;
-}
-
-@utility ipt {
-  @apply control-base;
-
-  &.email,
-  &[type="email"] {
-    --ipt-icon-src: var(--ipt-icon-email, var(--ipt-icon-email-light));
-    --ipt-icon-src-focus: var(--ipt-icon-email-focus, var(--ipt-icon-email-focus-light));
-  }
-
-  &.password,
-  &[type="password"] {
-    --ipt-icon-src: var(--ipt-icon-password, var(--ipt-icon-password-light));
-    --ipt-icon-src-focus: var(--ipt-icon-password-focus, var(--ipt-icon-password-focus-light));
-  }
-
-  &.url,
-  &[type="url"] {
-    --ipt-icon-src: var(--ipt-icon-url, var(--ipt-icon-url-light));
-    --ipt-icon-src-focus: var(--ipt-icon-url-focus, var(--ipt-icon-url-focus-light));
-  }
-
-  &.tel,
-  &[type="tel"] {
-    --ipt-icon-src: var(--ipt-icon-tel, var(--ipt-icon-tel-light));
-    --ipt-icon-src-focus: var(--ipt-icon-tel-focus, var(--ipt-icon-tel-focus-light));
-  }
-
-  &.search,
-  &[type="search"] {
-    --ipt-icon-src: var(--ipt-icon-search, var(--ipt-icon-search-light));
-    --ipt-icon-src-focus: var(--ipt-icon-search-focus, var(--ipt-icon-search-focus-light));
-  }
-
-  &.month,
-  &.week,
-  &[type="month"],
-  &[type="week"] {
-    --ipt-icon-src: var(--ipt-icon-calendar, var(--ipt-icon-calendar-light));
-    --ipt-icon-src-focus: var(--ipt-icon-calendar-focus, var(--ipt-icon-calendar-focus-light));
-  }
-
-  &.time,
-  &[type="time"] {
-    --ipt-icon-src: var(--ipt-icon-clock, var(--ipt-icon-clock-light));
-    --ipt-icon-src-focus: var(--ipt-icon-clock-focus, var(--ipt-icon-clock-focus-light));
-  }
-
-  &.month,
-  &.week,
-  &.time,
-  &[type="month"],
-  &[type="week"],
-  &[type="time"] {
-    @apply h-10 py-0;
-
-    &::-webkit-calendar-picker-indicator {
-      display: none !important;
-    }
-  }
-}
-
-/* Date and datetime-local are the two types whose picker button cannot be hidden
-   everywhere. Where it can, it is replaced with the themed calendar icon, and the
-   type opts itself in rather than waiting for `.icon`. Where it cannot, the
-   native button stays and the custom icon is suppressed, because two calendar
-   glyphs on one field read as a defect.
-
-   The negative branch has to actively undo `.icon`, not merely withhold it: an
-   author or a fixture can still put `.icon`, `.left`, or `.right` on the field,
-   and those would otherwise reserve padding for artwork that never paints.
-   `!important` for the same reason `.no-icon` uses it -- `.icon.right` carries
-   equal specificity, so nothing but importance reliably wins. */
-@supports selector(input::-webkit-calendar-picker-indicator) {
-  .ipt.date,
-  .ipt.datetime,
-  .ipt[type="date"],
-  .ipt[type="datetime-local"] {
-    --ipt-icon-src: var(--ipt-icon-calendar, var(--ipt-icon-calendar-light));
-    --ipt-icon-src-focus: var(--ipt-icon-calendar-focus, var(--ipt-icon-calendar-focus-light));
-
-    @apply icon h-10 py-0;
-
-    &::-webkit-calendar-picker-indicator {
-      display: none !important;
-    }
-  }
-}
-
-@supports not selector(input::-webkit-calendar-picker-indicator) {
-  .ipt.date,
-  .ipt.datetime,
-  .ipt[type="date"],
-  .ipt[type="datetime-local"] {
-    @apply h-10 py-0;
-
-    background-image: none !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-}
-
-@utility icon {
-  background-image: var(--ipt-icon-src);
-  background-position: 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1rem 1rem;
-  padding-left: 2.375rem;
-
-  &:focus,
-  &:focus-visible {
-    background-image: var(--ipt-icon-src-focus, var(--ipt-icon-src));
-  }
-
-  &.left {
-    background-position: 0.75rem center;
-    padding-left: 2.375rem;
-    padding-right: 0.75rem;
-  }
-
-  &.right {
-    background-position: calc(100% - 0.75rem) center;
-    padding-left: 0.75rem;
-    padding-right: 2.375rem;
   }
 }
 
@@ -478,15 +344,6 @@
 /* Tint presentations remove the general edge color. Toggles need the full edge,
    rather than the bottom-rule floor used by text controls, because their closed
    silhouette is the only visible unchecked affordance. */
-.checkbox.soft,
-.radio.soft,
-:where(.soft) :is(.checkbox, .radio),
-.checkbox.ghost,
-.radio.ghost,
-:where(.ghost) :is(.checkbox, .radio) {
-  border-color: var(--intent-border);
-}
-
 @utility switch {
   /* A2: the track reads the aesthetic's border width like every other component.
      Every dimension is derived from it so the knob cannot drift out of a thicker
