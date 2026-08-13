@@ -25,11 +25,11 @@
   --ui-surface-ground: color-mix(in srgb, var(--color-background) 45%, transparent);
 
   /* Two layers pulling in with negative spread, so the shadow tucks under the
-     surface instead of haloing onto the backdrop. It is the one shipped
-     aesthetic that cannot be described with the parts, so it takes the
-     complete-value escape hatch and the registry records that `.flat` does not
-     reach it. */
-  --ui-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
+     surface instead of haloing onto the backdrop. It is the one shipped aesthetic
+     that cannot be described with the parts, so it takes the surface role's
+     complete-value slot -- which is also what keeps it off buttons and chips --
+     and the registry records that `.flat` does not reach it. */
+  --ui-surface-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
 
   --ui-clip: none;
   --ui-clip-tight: none;

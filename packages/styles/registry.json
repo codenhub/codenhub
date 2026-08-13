@@ -260,7 +260,7 @@
       "class": "glass",
       "roleBlocks": [],
       "completeShadow": true,
-      "completeShadowReason": "Two shadow layers with negative spread. Opts out of the elevation multiplier until expressed as parts."
+      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface role's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
     },
     { "class": "pixel", "roleBlocks": [], "completeShadow": false }
   ],

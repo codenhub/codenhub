@@ -359,6 +359,7 @@ with the `var()` fallback that is its default.
 | `--ui-shadow-tint-amount` | `0%`                 | How much of that tint.                                |
 | `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.         |
 | `--ui-shadow`             | _unset_              | Complete multi-layer value; overrides the parts.      |
+| `--ui-surface-shadow`     | _unset_              | Complete value for the surface role alone.            |
 | `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent. |
 | `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.               |
 | `--ui-backdrop`           | `none`               | Backdrop filter; resolved by the surface role only.   |
@@ -382,7 +383,11 @@ box-shadow: var(--ui-shadow-x, 0) var(--ui-shadow-y, 0) var(--ui-shadow-blur, 0)
 ```
 
 `--ui-shadow` remains as a complete-value override for the multi-layer case glass
-needs, where the color is fixed rather than intent-derived.
+needs, where the color is fixed rather than intent-derived, and
+`--ui-surface-shadow` is the same slot narrowed to the surface role. Glass takes
+the narrow one: given through `--ui-shadow` its 18px drop shadow would land under
+every button and chip on the page as well, which is the same
+reach-one-kind-of-component problem `--ui-backdrop` solves, solved the same way.
 
 Three of those slots exist because the spike found the first four insufficient.
 `--ui-shadow-inset` carries the `inset` keyword, without which pixel's ring has to
