@@ -150,7 +150,14 @@ async function readPackage(root: string, manifestPath: string): Promise<Workspac
 export async function discoverWorkspace(root: string): Promise<Workspace> {
   const patterns = parseWorkspacePatterns(await readFile(resolve(root, WORKSPACE_MANIFEST), "utf8"));
   const matches = await Promise.all(
-    patterns.map(async (pattern) => Array.fromAsync(glob(`${pattern}/package.json`, { cwd: root }))),
+    patterns.map(async (pattern) =>
+      Array.fromAsync(
+        glob(`${pattern}/package.json`, {
+          cwd: root,
+          exclude: (path) => path.split(/[\\/]/u).includes("node_modules"),
+        }),
+      ),
+    ),
   );
   const manifestPaths = [...new Set(matches.flat().map(toPosix))].sort();
   const packages = await Promise.all(manifestPaths.map(async (path) => readPackage(root, path)));
