@@ -55,11 +55,13 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
   "./tw/utilities": { candidates: "stack table", patterns: [/\.stack\{/, /\.table\{/] },
   "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
-  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /backdrop-filter:/] },
-  /* The aesthetic publishes the silhouette as a material token; the `clip-path`
-     declaration that consumes it belongs to the components. */
-  "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/] },
+  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
+  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/] },
+  /* The aesthetic publishes the silhouette and the inset edge as material
+     tokens; the declarations that consume them belong to the roles. */
+  "./tw/aesthetics/pixel": {
+    patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/, /--ui-shadow-inset:/],
+  },
 };
 const compiledExportContracts: Record<string, CompiledExportContract> = {
   ".": { target: "dist/index.css", patterns: [/--color-primary:/, /\.btn\{/, /\.stack\{/] },
@@ -75,15 +77,15 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   },
   "./aesthetics/neobrutalism": {
     target: "dist/aesthetics/neobrutalism.css",
-    patterns: [/\.neobrutalism\{/, /--ui-shadow:/],
+    patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/],
   },
   "./aesthetics/glass": {
     target: "dist/aesthetics/glass.css",
-    patterns: [/\.glass\{/, /backdrop-filter:/, /prefers-reduced-transparency/],
+    patterns: [/\.glass\{/, /--ui-backdrop:/, /prefers-reduced-transparency/],
   },
   "./aesthetics/pixel": {
     target: "dist/aesthetics/pixel.css",
-    patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-edge:/],
+    patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-shadow-inset:/],
   },
 };
 

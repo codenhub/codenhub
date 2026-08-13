@@ -194,8 +194,13 @@ One unitless number, multiplied into the aesthetic's shadow geometry where the
 component composes it:
 
 ```css
---_sy: calc(var(--ui-shadow-y, 0px) * var(--ui-elevation, 1));
+--_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, 0px)) * var(--ui-elevation, var(--_d-elevation, 1)));
 ```
+
+Offset and blur are scaled; **spread is not**. An aesthetic that draws its edge as
+an inset ring spends spread on it -- `.pixel` does -- and scaling that would erase
+the edge of every component the registry rests at zero. Elevation is depth, and
+spread is not depth.
 
 The division of labor is the point. **The aesthetic decides what depth looks
 like** -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
@@ -362,7 +367,7 @@ with the `var()` fallback that is its default.
 | `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                 |
 | `--ui-edge`               | _undefined_          | Inset ring width when the edge is not a border.       |
 | `--ui-edge-tight`         | `--ui-edge`          | Inset ring width for chips.                           |
-| `--ui-focus-inset`        | `0px`                | Focus layer depth inside the ring.                    |
+| `--ui-focus-inset`        | _undefined_          | Inset focus layer width. Undefined means no layer.    |
 
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
@@ -521,6 +526,14 @@ radius, no silhouette, no shadow except the card's elevation. The default is the
 absence of material declarations, not a set of root values -- which is why a card
 gets surface radius and a button gets control radius from the same unset token.
 
+The card's depth is the one thing the absence of material cannot supply, so the
+surface role carries a structural shadow _geometry_ -- `--_d-shadow-y: 1px`,
+`--_d-shadow-blur: 3px` -- behind the aesthetic's own. It is geometry only: the
+colour is still the component's own line colour, so nothing about the intent model
+changes, and any aesthetic that sets offsets of its own replaces it. Scaled by the
+registry's per-component elevation, it is also what makes a panel flat, a card
+raised, and a tooltip twice a card, with no per-component shadow anywhere.
+
 ### `.glass`
 
 Translucent surfaces over a blurred backdrop with a hairline highlight edge.
@@ -675,12 +688,21 @@ joins a role.
 
 ```css
 /* The author writes the role. */
-@role action {
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 800;
+.chunky-tile {
+  @variant role-action {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+  }
 }
 ```
+
+The at-rule is Tailwind's `@variant`, applied to a `@custom-variant role-<name>`
+the registry generates -- one per role, expanding to that role's full selector
+list, native elements included. Spelling it this way rather than inventing `@role`
+buys the whole tier for free: no preprocessor stands between the source and the
+build, the `/tw` entrypoints a consumer compiles themselves work identically, and
+an aesthetic that adds a role block needs no tooling that does not already ship.
 
 Three rules govern this tier, and they are what keep it from becoming the
 selector-list sprawl it replaces:
@@ -726,10 +748,12 @@ learns about it.
 ```
 
 ```css
-@role action {
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.duolingo {
+  @variant role-action {
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 }
 ```
 
