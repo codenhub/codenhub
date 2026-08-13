@@ -335,10 +335,10 @@ with the `var()` fallback that is its default.
 | `--ui-border-width`       | `--border-width`     | Edge thickness.                                       |
 | `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                   |
 | `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.             |
-| `--ui-shadow-x`           | `0`                  | Shadow offset, colorless so it inherits safely.       |
-| `--ui-shadow-y`           | `0`                  | Shadow offset.                                        |
-| `--ui-shadow-blur`        | `0`                  | Shadow blur.                                          |
-| `--ui-shadow-spread`      | `0`                  | Shadow spread.                                        |
+| `--ui-shadow-x`           | `0px`                | Shadow offset, colorless so it inherits safely.       |
+| `--ui-shadow-y`           | `0px`                | Shadow offset.                                        |
+| `--ui-shadow-blur`        | `0px`                | Shadow blur.                                          |
+| `--ui-shadow-spread`      | `0px`                | Shadow spread.                                        |
 | `--ui-shadow-inset`       | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
 | `--ui-hover-shadow-x`     | `--ui-shadow-x`      | Shadow offset while hovered.                          |
 | `--ui-hover-shadow-y`     | `--ui-shadow-y`      | Shadow offset while hovered.                          |
@@ -368,7 +368,7 @@ component today. Colorless geometry inherits safely, and the component supplies
 the color:
 
 ```css
-box-shadow: var(--ui-shadow-x, 0) var(--ui-shadow-y, 0) var(--ui-shadow-blur, 0) var(--ui-shadow-spread, 0)
+box-shadow: var(--ui-shadow-x, 0px) var(--ui-shadow-y, 0px) var(--ui-shadow-blur, 0px) var(--ui-shadow-spread, 0px)
   var(--intent-border);
 ```
 
@@ -402,6 +402,12 @@ behind it.
   `--ui-shadow-y` drew a 4px slab with a 3px blur on cards and a hard slab on
   buttons.
 
+- **R7.** A shadow length is written with a unit, `0px` and not `0`. Elevation
+  multiplies each part, and `calc(0 * 1)` is a number where a length is required:
+  the whole `box-shadow` becomes invalid at computed-value time, which for a
+  non-inherited property means `none`. One unitless zero in an aesthetic removes
+  every shadow it reaches.
+
 R3 is new, and it is what the material additions above exist to make possible:
 without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would
 be a rule the shipped aesthetics immediately break. All three now keep it, and
@@ -427,6 +433,25 @@ per-element choices rather than axis membership. State sits above the modifiers:
 control that is `:disabled` or `aria-invalid` reads as such regardless of every
 axis and modifier applied to it. State is a condition rather than
 a choice, so it is not an axis, but it wins when it collides with one.
+
+**R8. A state re-declares an input, never a painted property.** It sets
+`--ui-fill`, `--ui-border`, or an intent slot, and lets `box` paint. It does not
+write `background-color`, `border-color`, or `box-shadow` of its own.
+
+This is the rule with the most leverage left in the model, because state is where
+a design system usually grows its escape hatches. Wave 2 adds `:checked`,
+`:indeterminate`, `.active`, `[data-state]` and selected rows, and each one has an
+obvious wrong answer -- paint the property directly -- that works in isolation and
+then ignores the aesthetic, ignores elevation, and loses the hover derivation.
+Wave 1 already spells the same idea two ways: `text-control` overwrites the intent
+slots on `aria-invalid`, which is R8, while `.checkbox` and `.switch` overwrite
+`border-color` on `:checked`, which is not. Both look fine today; only the first
+still looks fine under an aesthetic that draws its edge as an inset ring.
+
+The cost of the rule is that a state can only express itself in the vocabulary
+the axes already have. That is the point: if a state needs something the
+vocabulary cannot say, the vocabulary is missing a slot, and adding the slot
+fixes it for every state at once rather than for that one.
 
 Three steps, and there is no fourth. The current model's fourth step was
 "component clamps the result"; the clamps are gone with the edge scale that
@@ -724,7 +749,7 @@ uppercase actions. Built in the spike against a real screenshot:
   --ui-shadow-y: 4px;
   --ui-shadow-tint: #000;
   --ui-shadow-tint-amount: 26%;
-  --ui-active-shadow-y: 0;
+  --ui-active-shadow-y: 0px;
   --ui-active-transform: translateY(4px);
 }
 ```

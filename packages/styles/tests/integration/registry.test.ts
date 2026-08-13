@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,7 +29,11 @@ interface ComponentEntry {
 }
 
 interface Registry {
-  presentation: { fill: Record<string, FillPresentation>; edge: Record<string, unknown>; hoverStep: string };
+  presentation: {
+    fill: Record<string, FillPresentation>;
+    edge: Record<string, { "ui-border": string }>;
+    hoverStep: string;
+  };
   intents: Record<string, { family: string; aliases?: string[] }>;
   modifiers: Record<string, unknown>;
   components: ComponentEntry[];
@@ -41,6 +45,18 @@ const executeFile = promisify(execFile);
 const packageRoot = path.dirname(fileURLToPath(new URL("../../package.json", import.meta.url)));
 const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as Registry;
 const read = async (file: string): Promise<string> => readFile(path.join(packageRoot, file), "utf8");
+
+/* Every stylesheet the package ships, so a check covers what is there rather
+   than a list someone has to remember to extend. */
+async function sourceFiles(): Promise<{ file: string; source: string }[]> {
+  const entries = await readdir(path.join(packageRoot, "src"), { recursive: true });
+  return Promise.all(
+    entries
+      .filter((entry) => entry.endsWith(".css"))
+      .map((entry) => entry.split(path.sep).join("/"))
+      .map(async (file) => ({ file, source: await read(path.posix.join("src", file)) })),
+  );
+}
 
 function shippedClassNames(): string[] {
   const modifiers = Object.entries(registry.modifiers).flatMap(([group, value]) =>
@@ -152,17 +168,61 @@ test("every component is in an intent reset", async () => {
   expect(problems).toEqual([]);
 });
 
+/* Every `@utility <name> { ... }` in `src/`, keyed by name, so a check can ask
+   what one component declares instead of whether a string appears somewhere in
+   five concatenated files. */
+async function shippedUtilities(): Promise<Map<string, string>> {
+  const files = await sourceFiles();
+  const blocks = new Map<string, string>();
+
+  for (const { source } of files) {
+    for (const match of source.matchAll(/@utility\s+([a-z0-9-]+)\s*\{/g)) {
+      let depth = 0;
+      let index = match.index + match[0].length - 1;
+      const start = index;
+      do {
+        depth += source[index] === "{" ? 1 : source[index] === "}" ? -1 : 0;
+        index += 1;
+      } while (depth > 0 && index < source.length);
+      blocks.set(match[1], source.slice(start, index));
+    }
+  }
+  return blocks;
+}
+
+/* Shared composition rather than components: they are `@utility` so `@apply` can
+   reach them, which also makes them class names a consumer could type. They are
+   deliberately undocumented, and the registry does not list them. */
+const composition = new Set([
+  "box",
+  "box-hover",
+  "surface",
+  "text-control",
+  "control-base",
+  "shaped",
+  "shaped-tight",
+  "loader-mask",
+]);
+
+/* The registry is the list of what the package supports, so a utility it does
+   not name is either drift or an accidental part of the public surface. `.table`
+   shipped for months this way. */
+test("every shipped utility is in the registry", async () => {
+  const known = new Set([
+    ...registry.components.map((component) => component.class),
+    ...registry.components.flatMap((component) => component.art ?? []),
+    ...(registry.helpers ?? []).map((helper) => helper.class),
+    ...composition,
+  ]);
+  expect([...(await shippedUtilities()).keys()].filter((name) => !known.has(name))).toEqual([]);
+});
+
 /* A published default is a promise about what a component looks like with no
    presentation class on it, so it has to be the number the component actually
-   declares. Wave 1 only: the rest still carry their pre-refactor composition. */
+   declares -- in its own block, not somewhere in the package. Wave 1 only: the
+   rest still carry their pre-refactor composition. */
 test("every implemented component declares its published default", async () => {
-  const sources = (
-    await Promise.all(
-      ["button.css", "form.css", "surface.css", "feedback.css", "loader.css"].map(async (file) =>
-        read(`src/components/${file}`),
-      ),
-    )
-  ).join("\n");
+  const utilities = await shippedUtilities();
   const problems: string[] = [];
 
   for (const component of registry.components.filter(({ wave }) => wave === 1)) {
@@ -170,17 +230,49 @@ test("every implemented component declares its published default", async () => {
     if (fill === undefined || edge === undefined) {
       continue;
     }
+    const block = utilities.get(component.class);
+    if (block === undefined) {
+      problems.push(`${component.class} ships no @utility`);
+      continue;
+    }
+    /* All four, every time. A missing `--_d-fg-on-fill` silently inherits a
+       colour and a missing `--_d-border` silently drops the border, because an
+       undefined `var()` inside `color-mix()` invalidates the declaration rather
+       than reporting anything. */
     for (const declaration of [
       `--_d-fill: ${registry.presentation.fill[fill]["ui-fill"]};`,
       `--_d-fg-on-fill: ${registry.presentation.fill[fill]["ui-fg-on-fill"]};`,
+      `--_d-border: ${registry.presentation.edge[edge]["ui-border"]};`,
       `--_d-elevation: ${elevation};`,
     ]) {
-      if (!sources.includes(declaration)) {
+      if (!block.includes(declaration)) {
         problems.push(`${component.class} should declare ${declaration}`);
       }
     }
   }
   expect(problems).toEqual([]);
+});
+
+/* R7. Elevation multiplies every shadow length, and `calc(0 * 1)` is a number
+   where a length is required: the whole `box-shadow` becomes invalid at
+   computed-value time, which for a non-inherited property means `none`. One
+   unitless zero removes every shadow the aesthetic reaches. */
+test("every shadow length carries a unit", async () => {
+  const files = await sourceFiles();
+  const problems: string[] = [];
+
+  for (const { file, source } of files) {
+    for (const match of source.matchAll(/(--ui-[a-z-]*shadow-(?:x|y|blur|spread))\s*:\s*([^;]+);/g)) {
+      if (/^-?\d+(?:\.\d+)?$/.test(match[2].trim())) {
+        problems.push(`src/${file}: ${match[1]} is unitless (${match[2].trim()})`);
+      }
+    }
+  }
+  expect(problems).toEqual([]);
+});
+
+test("the published hover step is the one the theme declares", async () => {
+  expect(await read("src/theme.css")).toContain(`--hover-step: ${registry.presentation.hoverStep};`);
 });
 
 test("the package publishes an entrypoint for every aesthetic in the registry", async () => {
@@ -192,8 +284,10 @@ test("the package publishes an entrypoint for every aesthetic in the registry", 
 
 /* Shadow parts fall back individually, so an aesthetic that sets an offset but
    not a blur inherits the structural blur a surface carries and gets a shape it
-   never asked for. Declaring the whole geometry is the contract; a complete
-   value satisfies it too, since it replaces every part at once. */
+   never asked for. Declaring the whole geometry is the contract; `--ui-shadow`
+   satisfies it too, since it replaces every part on every component at once.
+   `--ui-surface-shadow` does not: it replaces the shadow of surfaces only, and
+   the parts still paint every button, chip and control on the page. */
 test("every aesthetic declares a whole shadow geometry", async () => {
   const parts = ["--ui-shadow-x", "--ui-shadow-y", "--ui-shadow-blur", "--ui-shadow-spread"];
   const sources = await Promise.all(
@@ -203,7 +297,7 @@ test("every aesthetic declares a whole shadow geometry", async () => {
     })),
   );
   const problems = sources
-    .filter(({ source }) => !source.includes("--ui-shadow:") && !source.includes("--ui-surface-shadow:"))
+    .filter(({ source }) => !source.includes("--ui-shadow:"))
     .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
     .filter(({ missing }) => missing.length > 0)
     .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);

@@ -80,7 +80,7 @@
 
   /* Content */
   table {
-    @apply table;
+    @apply data-table;
   }
 
   kbd {

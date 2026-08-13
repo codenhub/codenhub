@@ -19,6 +19,17 @@
 
   --ui-bg-alpha: 0.8;
   --ui-backdrop: blur(14px) saturate(1.6);
+
+  /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
+     the blur, and a drop shadow under a translucent button reads as grime. That
+     has to be said in parts rather than left unsaid: the parts fall back
+     individually, so silence here would let a surface's structural 1px/3px
+     inherit onto every button and chip on the page. `--ui-surface-shadow` below
+     replaces the shadow of surfaces only. */
+  --ui-shadow-x: 0px;
+  --ui-shadow-y: 0px;
+  --ui-shadow-blur: 0px;
+  --ui-shadow-spread: 0px;
   /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
      without a translucent ground the blur ends up behind an opaque background
      and nothing shows through. */

@@ -384,6 +384,10 @@
     {
       "class": "text-body",
       "purpose": "Typography scale."
+    },
+    {
+      "class": "selection-contrast",
+      "purpose": "Flips the selection colours inside a filled region so selected text stays readable."
     }
   ],
   "aesthetics": [

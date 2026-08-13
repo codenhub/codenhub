@@ -8,7 +8,7 @@
    presentation mixes the intent over it. A fill fallback of 0% means an
    unintented table with no presentation keeps the plain surface tone, while
    `.soft` tints it and `.flat` fills it with the intent. */
-@utility table {
+@utility data-table {
   --table-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
   --table-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
@@ -44,7 +44,7 @@
   }
 
   /* Rows deliberately inherit the table's intent instead of resetting it, so a
-     `.table.success` tints its own rows. A `<tr class="warning">` still wins,
+     `.data-table.success` tints its own rows. A `<tr class="warning">` still wins,
      because an intent class on the element beats an inherited value. */
   & tbody tr {
     transition: background-color var(--motion-duration-fast) var(--motion-ease);

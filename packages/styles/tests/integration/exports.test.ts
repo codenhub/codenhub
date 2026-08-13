@@ -53,7 +53,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/reset": { candidates: "text-body", patterns: [/:focus-visible\{/] },
   "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
   "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
-  "./tw/utilities": { candidates: "stack table", patterns: [/\.stack\{/, /\.table\{/] },
+  "./tw/utilities": { candidates: "stack data-table", patterns: [/\.stack\{/, /\.data-table\{/] },
   "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/] },
