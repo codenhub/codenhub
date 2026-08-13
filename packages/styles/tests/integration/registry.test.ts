@@ -28,6 +28,12 @@ interface ComponentEntry {
   wave: number;
 }
 
+interface AestheticEntry {
+  class: string;
+  selectorReason?: string;
+  selectors?: string[];
+}
+
 interface Registry {
   presentation: {
     fill: Record<string, FillPresentation>;
@@ -38,7 +44,7 @@ interface Registry {
   modifiers: Record<string, unknown>;
   components: ComponentEntry[];
   helpers?: { class: string }[];
-  aesthetics?: { class: string }[];
+  aesthetics?: AestheticEntry[];
 }
 
 const executeFile = promisify(execFile);
@@ -74,6 +80,22 @@ function shippedClassNames(): string[] {
     ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.class),
   ];
 }
+
+/* Every aesthetic paired with its registry entry, so a check can hold the two
+   against each other. */
+async function aestheticSources(): Promise<{ aesthetic: AestheticEntry; name: string; source: string }[]> {
+  return Promise.all(
+    (registry.aesthetics ?? []).map(async (aesthetic) => ({
+      aesthetic,
+      name: aesthetic.class,
+      source: await read(`src/aesthetics/${aesthetic.class}.css`),
+    })),
+  );
+}
+
+/* Comments name components constantly and legitimately -- they explain what a
+   token reaches. Only selectors are the violation. */
+const withoutComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, "");
 
 test("no class name is claimed twice", () => {
   const seen = new Map<string, number>();
@@ -273,6 +295,59 @@ test("every shadow length carries a unit", async () => {
 
 test("the published hover step is the one the theme declares", async () => {
   expect(await read("src/theme.css")).toContain(`--hover-step: ${registry.presentation.hoverStep};`);
+});
+
+/* R1. An aesthetic sets material, not amount and not hue. A presentation token
+   here would pin every component to one fill regardless of the class on it; an
+   intent slot would repaint components the aesthetic never meant to reach,
+   because unlike material, hue is not supposed to cascade. `--ui-ink` is the one
+   intent-adjacent token an aesthetic owns, which is how it restates the neutral
+   line without naming anything. */
+test("no aesthetic sets a presentation token or an intent slot", async () => {
+  const forbidden = new Set(["--ui-border", "--ui-elevation", "--ui-fg-on-fill", "--ui-fill"]);
+  const problems = (await aestheticSources()).flatMap(({ name, source }) =>
+    [...withoutComments(source).matchAll(/(--[a-z-]+)\s*:/g)]
+      .map((match) => match[1])
+      .filter((property) => forbidden.has(property) || property.startsWith("--intent-"))
+      .map((property) => `${name} sets ${property}`),
+  );
+
+  expect([...new Set(problems)]).toEqual([]);
+});
+
+/* R3. An aesthetic reaches a component through tokens, so it never has to know
+   the component exists -- which is what lets a new aesthetic work on a component
+   written after it, and a component get every aesthetic for free. Before this
+   rule the three shipped aesthetics named 4, 17 and 19 components, each list
+   written twice, once for the ancestor case and once for the self-applied one.
+
+   Not a ban. A treatment that genuinely cannot be a token -- an extra painted
+   layer, a text transform -- is a selector list the aesthetic owns. This is a
+   receipt: the registry records which components an aesthetic names and why, the
+   same way it records a rename, so the cost stays countable instead of
+   accumulating one reasonable exception at a time. */
+test("an aesthetic names a component only with a recorded reason", async () => {
+  const components = registry.components.map((component) => component.class);
+  const problems: string[] = [];
+
+  for (const { aesthetic, name, source } of await aestheticSources()) {
+    const recorded = new Set(aesthetic.selectors ?? []);
+    const selectors = withoutComments(source);
+    const named = components.filter((component) => selectors.includes(`.${component}`));
+
+    if (recorded.size > 0 && aesthetic.selectorReason === undefined) {
+      problems.push(`${name}: selectors without selectorReason`);
+    }
+    problems.push(
+      ...named
+        .filter((component) => !recorded.has(component))
+        .map((component) => `${name} names .${component}, and the registry does not record it`),
+      ...[...recorded]
+        .filter((component) => !named.includes(component))
+        .map((component) => `${name} records .${component}, which it no longer names`),
+    );
+  }
+  expect(problems).toEqual([]);
 });
 
 test("the package publishes an entrypoint for every aesthetic in the registry", async () => {

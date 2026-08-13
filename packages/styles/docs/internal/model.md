@@ -394,7 +394,10 @@ behind it.
   presentation token or an intent slot other than `--ui-ink`.
 - **R2.** A component resolves a material token unconditionally. A no-op material
   value is free, which Architecture measured in all three baseline engines.
-- **R3.** An aesthetic never names a component. It sets tokens.
+- **R3.** An aesthetic never names a component. It sets tokens. A treatment that
+  genuinely cannot be a token -- an extra painted layer, a text transform -- is a
+  selector list the aesthetic owns, recorded in the registry as `selectors` with
+  a `selectorReason`, so the exception is countable rather than invisible.
 - **R6.** An aesthetic declares the whole shadow geometry -- all four parts, or a
   complete value. The parts fall back individually, so an aesthetic that sets an
   offset but not a blur inherits the structural blur a surface carries and gets a

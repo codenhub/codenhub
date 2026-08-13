@@ -200,7 +200,22 @@
           },
           "completeShadowReason": {
             "type": "string"
+          },
+          "selectors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "description": "Components this aesthetic names in a selector because the treatment cannot be a token. R3 keeps this empty; every entry is a cost the registry makes countable."
+          },
+          "selectorReason": {
+            "type": "string",
+            "description": "Why each named component cannot be reached through a token. Required when `selectors` is non-empty."
           }
+        },
+        "dependentRequired": {
+          "selectors": ["selectorReason"]
         }
       }
     },
