@@ -8,7 +8,6 @@ export default defineConfig({
   fullyParallel: true,
   workers: process.env.CI ? 2 : process.env.PLAYWRIGHT_WORKERS ? Number(process.env.PLAYWRIGHT_WORKERS) : 2,
   reporter: "list",
-  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}{ext}",
   webServer: [
     {
       command: isSourceMode

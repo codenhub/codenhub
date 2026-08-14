@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-09
+last_updated: 2026-08-14
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -52,9 +52,27 @@ entry once the package no longer needs it.
 - **Why acceptable:** The package contains only CSS, so JavaScript or TypeScript
   instrumentation cannot produce meaningful code coverage. The script runs the
   package's real integration tests instead of reporting a false success or
-  generating an irrelevant report, and its cross-browser visual and
-  computed-style tests run under `pnpm test:browser`.
+  generating an irrelevant report, and its cross-browser computed-style tests
+  run under `pnpm test:browser`.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.
+
+## `@codenhub/styles`: no visual regression baselines during `0.1.0`
+
+- **Rules bypassed:** `docs/specs/tests.md` (use visual regression testing for
+  style sheets and components to capture visual changes before merge).
+- **Where it applies:** `packages/styles/tests/browser/`.
+- **Why acceptable:** A baseline catches an unintended rendering change, and the
+  three-axis contract this package is being rebuilt on has not stopped moving:
+  every rendering difference through `0.1.0` has been a deliberate one, so a
+  baseline reported that the requested change happened and cost a regeneration
+  cycle to say it. The 123 computed-style assertions the browser suite runs in
+  Chromium, Firefox, and WebKit are the contract checks, and they state the
+  guarantee rather than the rendering, so a deliberate change leaves them
+  standing. Keeping the superseded baselines instead would leave a gate that is
+  red for a known reason, which trains a reviewer to wave the next one through.
+- **Temporary or permanent:** Temporary. Ends when the variant matrix settles,
+  and before the first release on the three-axis contract; the terms are in
+  `packages/styles/docs/internal/roadmap.md`.
 
 ## `@codenhub/error`: built-in opt-in registry presets
 

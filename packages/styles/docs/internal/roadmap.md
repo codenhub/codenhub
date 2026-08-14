@@ -53,14 +53,35 @@ What is left is the consumer-facing half. The public documents under `docs/`
 still describe the model 0.1.0 replaced -- `.flat`, `.out` and `.ghost` as
 presentation, an edge with a scale, and the `--ui-edge` pair that the shadow
 parts now draw -- so they have to be rewritten against [Model](./model.md) before
-the release is honest. The visual baselines are wave-1 renderings and need
-regenerating on CI.
+the release is honest. The visual baselines are gone for the duration; see below
+for the terms on which they return.
 
 ## Planned
 
 - **Rewrite the public documents**: `docs/classes.md` and `docs/tokens.md`
   against the shipped model, then `pnpm generate` for the derived files.
-- **Regenerate the visual baselines** on CI, once the matrix has settled.
+- **Restore the visual baselines**, once the matrix has settled and before the
+  first release on the three-axis contract. They were deleted rather than left
+  stale, and the condition for bringing them back is the point: a pixel baseline
+  earns its cost by catching an _unintended_ rendering change, and through 0.1.0
+  every rendering change has been an intended one. Kept as wave-1 renderings they
+  were a permanently red gate, which is how a real failure later gets waved
+  through.
+
+  Two things the deleted suite had already settled, so restoring it does not
+  relearn them. One environment holds the baselines and it is the one that gates
+  a merge: a per-platform set means a contributor records a set nobody else runs,
+  and no two operating systems' fonts and antialiasing compare. That is why the
+  config carried a `snapshotPathTemplate` dropping `{platform}`, removed with the
+  suite. And headless Chromium reports `prefers-reduced-transparency: reduce`
+  where other machines do not, which renders glass opaque and unblurred from the
+  same stylesheet, so every snapshot has to pin the preference through CDP
+  `Emulation.setEmulatedMedia` or it differs per machine.
+
+  Restoring them also needs a write-back path that does not exist: the CI
+  workflow holds `contents: read` and uploads artifacts only on failure, so
+  recording a set means a run with `--update-snapshots`, a way to get the files
+  back, and a second run to confirm they pass.
 
 ## Later / Possible
 

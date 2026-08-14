@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-11
+last_updated: 2026-08-14
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -13,7 +13,7 @@ Validate `@codenhub/styles` before publishing changes across both supported cons
 - Ready-to-import compiled CSS.
 - Tailwind CSS build-time source CSS.
 
-Keep tests package-local and focused on visual confidence.
+Keep tests package-local and focused on the contract each consumer path publishes.
 
 ## Structure
 
@@ -100,7 +100,7 @@ Starts on http://localhost:5184.
 
 ## `tests/browser/`
 
-Automated cross-browser testing for visual and computed-style confidence.
+Automated cross-browser testing for computed-style confidence.
 One-shot runs use the `debug` server and built public exports; UI/source-mode
 runs use the `dev` server and live `src/` aliases for synchronized iteration.
 
@@ -109,7 +109,7 @@ runs use the `dev` server and live `src/` aliases for synchronized iteration.
 - Form regressions assert visible unchecked checkbox and radio boundaries for
   direct and inherited `.soft` and `.ghost` in Chromium, Firefox, and WebKit.
 - Surface, feedback, and typography regressions cover every supported
-  presentation on dividers, empty states, skeletons, loaders, and block quotes,
+  presentation on dividers, cards, skeletons, loaders, and block quotes,
   including their width clamps, visibility floors, and filled contrast.
 - Aesthetic regressions cover direct glass and pixel tooltips plus both mixed
   ancestor/direct orders, including complete pseudo-element resets.
@@ -118,11 +118,20 @@ runs use the `dev` server and live `src/` aliases for synchronized iteration.
 - Form regressions assert `.hint.error` composes helper typography with
   destructive intent while bare `.error` remains an intent class.
 - `test-utils.ts`: Shared Playwright test setup and helpers.
-- Reviewed Chromium screenshots cover the button matrix in both themes and the
-  card matrix under every shipped aesthetic. No current rendering difference
-  requires a Firefox or WebKit baseline. Computed-style assertions remain the
-  primary contract checks; visual snapshots catch clipping, overlap, and
-  composition defects those values miss.
+
+Every assertion here is a computed style, and there are no screenshot baselines
+while the model is still moving. A pixel baseline detects a regression on a
+surface that has stopped changing; through 0.1.0 every rendering difference has
+been a deliberate one, so a baseline reported only that the change asked for
+happened, and each one cost a regeneration on the one environment allowed to
+record it. Recorded in [Roadmap](./roadmap.md), which owns the terms for
+bringing them back, and waived against `docs/specs/tests.md` in
+`docs/specs/packages-exceptions.md`.
+
+A computed style is also the more durable assertion of the two. It states the
+guarantee -- this edge is transparent, this bubble sits at twice a raised card's
+depth -- so a deliberate change to how the value is reached leaves it standing,
+and only a change to what the package promises turns it red.
 
 ## `tests/integration/`
 
