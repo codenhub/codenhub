@@ -8,10 +8,10 @@ test("styles complete quiet tables while preserving table layout", async ({ page
   await page.goto(TYPOGRAPHY_URL);
 
   const styles = await page.evaluate(() => {
-    const table = getComputedStyle(document.querySelector('[data-testid="table"]')!);
-    const caption = getComputedStyle(document.querySelector('[data-testid="table-caption"]')!);
-    const heading = getComputedStyle(document.querySelector('[data-testid="table-heading"]')!);
-    const cell = getComputedStyle(document.querySelector('[data-testid="table-cell"]')!);
+    const table = getComputedStyle(document.querySelector('[data-testid="data-table"]')!);
+    const caption = getComputedStyle(document.querySelector('[data-testid="data-table-caption"]')!);
+    const heading = getComputedStyle(document.querySelector('[data-testid="data-table-heading"]')!);
+    const cell = getComputedStyle(document.querySelector('[data-testid="data-table-cell"]')!);
 
     return {
       borderCollapse: table.borderCollapse,
@@ -38,7 +38,7 @@ test("styles keyboard and quotation content", async ({ page }) => {
 
   const styles = await page.evaluate(() => {
     const keyboard = getComputedStyle(document.querySelector('[data-testid="keyboard"]')!);
-    const quote = getComputedStyle(document.querySelector('[data-testid="quote-plain-none"]')!);
+    const quote = getComputedStyle(document.querySelector('[data-testid="quote-default-none"]')!);
     const inlineQuote = getComputedStyle(document.querySelector('[data-testid="quote-inline"]')!);
 
     return {
@@ -67,8 +67,8 @@ test("lets a table row override the table intent while others inherit it", async
         .trim();
 
     return {
-      inheritedRow: readIntent("table-row-inherited"),
-      overriddenRow: readIntent("table-row-destructive"),
+      inheritedRow: readIntent("data-table-row-inherited"),
+      overriddenRow: readIntent("data-table-row-destructive"),
     };
   });
 
@@ -91,9 +91,9 @@ test("colors key caps and quotes by intent", async ({ page }) => {
     };
 
     return {
-      kbdDestructive: get("kbd-plain-destructive").color,
-      kbdNeutral: get("kbd-plain-neutral").color,
-      quoteInfo: get("quote-plain-info").borderLeftColor,
+      kbdDestructive: get("kbd-default-destructive").color,
+      kbdNeutral: get("kbd-default-neutral").color,
+      quoteInfo: get("quote-default-info").borderLeftColor,
       tokenDestructiveStrong: resolveToken("destructive-strong"),
       tokenInfo: resolveToken("info"),
     };
@@ -104,6 +104,9 @@ test("colors key caps and quotes by intent", async ({ page }) => {
   expectSameColor(styles.quoteInfo, styles.tokenInfo, "quote intent rule");
 });
 
+/* A quote is still wave 2: it draws a left bar rather than a box, composing
+   `--ui-fill` and `--ui-border` itself, and clamps the bar between one and four
+   pixels. */
 test("renders every block quote presentation", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 
@@ -111,22 +114,24 @@ test("renders every block quote presentation", async ({ page }) => {
     const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
 
     return {
-      flatBackground: get("quote-flat-primary").backgroundColor,
-      flatColor: get("quote-flat-primary").color,
-      ghostBorder: get("quote-ghost-primary").borderLeftColor,
-      outBorderWidth: get("quote-out-primary").borderLeftWidth,
-      plainBorderWidth: get("quote-plain-primary").borderLeftWidth,
-      softBackground: get("quote-soft-primary").backgroundColor,
+      bareEdgelessBorder: get("quote-bare-edgeless-primary").borderLeftColor,
+      defaultBorderWidth: get("quote-default-primary").borderLeftWidth,
+      edgedBorderWidth: get("quote-bare-edged-primary").borderLeftWidth,
+      softBackground: get("quote-soft-edged-primary").backgroundColor,
+      solidBackground: get("quote-solid-edged-primary").backgroundColor,
+      solidColor: get("quote-solid-edged-primary").color,
     };
   });
 
-  expect(isTransparent(styles.ghostBorder)).toBe(true);
+  expect(isTransparent(styles.bareEdgelessBorder)).toBe(true);
   expect(isTransparent(styles.softBackground)).toBe(false);
-  expect(isTransparent(styles.flatBackground)).toBe(false);
-  expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
-  expect(Number.parseFloat(styles.plainBorderWidth)).toBeGreaterThanOrEqual(1);
-  expect(Number.parseFloat(styles.outBorderWidth)).toBeLessThanOrEqual(4);
-  expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.plainBorderWidth));
+  expect(isTransparent(styles.solidBackground)).toBe(false);
+  expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
+  /* The bar is clamped between one and four pixels, and no presentation scales
+     it: `.edged` decides whether the bar reads, never how wide it is. */
+  expect(Number.parseFloat(styles.defaultBorderWidth)).toBeGreaterThanOrEqual(1);
+  expect(Number.parseFloat(styles.edgedBorderWidth)).toBeLessThanOrEqual(4);
+  expect(styles.edgedBorderWidth).toBe(styles.defaultBorderWidth);
 });
 
 test("reads presentation on key caps and tables", async ({ page }) => {
@@ -134,7 +139,7 @@ test("reads presentation on key caps and tables", async ({ page }) => {
 
   const styles = await page.evaluate(() => {
     const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-    const head = getComputedStyle(document.querySelector('[data-testid="table-success"] thead th')!);
+    const head = getComputedStyle(document.querySelector('[data-testid="data-table-success"] thead th')!);
     const resolveToken = (tokenName: string) => {
       const probe = document.createElement("span");
       probe.style.color = `var(--color-${tokenName})`;
@@ -145,15 +150,15 @@ test("reads presentation on key caps and tables", async ({ page }) => {
     };
 
     return {
-      flatBackground: get("kbd-flat-primary").backgroundColor,
-      flatBorderColor: get("kbd-flat-primary").borderTopColor,
-      flatColor: get("kbd-flat-primary").color,
-      neutralBackground: get("kbd-plain-neutral").backgroundColor,
-      outBorderWidth: get("kbd-out-primary").borderTopWidth,
-      plainBorderColor: get("kbd-plain-neutral").borderTopColor,
-      plainBorderWidth: get("kbd-plain-neutral").borderTopWidth,
-      softBackground: get("kbd-soft-primary").backgroundColor,
-      softBorderColor: get("kbd-soft-primary").borderTopColor,
+      defaultBorderColor: get("kbd-default-neutral").borderTopColor,
+      defaultBorderWidth: get("kbd-default-neutral").borderTopWidth,
+      edgedBorderWidth: get("kbd-bare-edged-primary").borderTopWidth,
+      neutralBackground: get("kbd-default-neutral").backgroundColor,
+      softBackground: get("kbd-soft-edgeless-primary").backgroundColor,
+      softBorderColor: get("kbd-soft-edgeless-primary").borderTopColor,
+      solidBackground: get("kbd-solid-edged-primary").backgroundColor,
+      solidBorderColor: get("kbd-solid-edged-primary").borderTopColor,
+      solidColor: get("kbd-solid-edged-primary").color,
       tableHeadBackground: head.backgroundColor,
       tokenBorder: resolveToken("border"),
       tokenPrimary: resolveToken("primary"),
@@ -161,24 +166,22 @@ test("reads presentation on key caps and tables", async ({ page }) => {
     };
   });
 
-  // A plain key cap keeps the neutral surface tone.
+  // A key cap with no presentation class keeps the neutral surface tone.
   expectSameColor(styles.neutralBackground, styles.tokenSurface, "neutral kbd surface");
-  // Each presentation moves it somewhere different.
+  // Each fill moves it somewhere different.
   expect(getColorDistance(styles.softBackground, styles.neutralBackground)).toBeGreaterThan(2);
-  expectSameColor(styles.flatBackground, styles.tokenPrimary, "flat kbd fill");
-  expect(getColorDistance(styles.flatColor, styles.flatBackground)).toBeGreaterThan(2);
-  /* A key cap caps its border at the base width, so `.out` makes the line opaque
-     without thickening it. Two pixels on a chip this size reads as a box with a
-     label in it, and four under a 2px aesthetic. The ceiling is the contract, so
-     it is asserted rather than the doubling it replaces. */
-  expect(Number.parseFloat(styles.outBorderWidth)).toBe(Number.parseFloat(styles.plainBorderWidth));
-  expect(Number.parseFloat(styles.outBorderWidth)).toBeLessThanOrEqual(1);
-  /* Only the default draws a visible line, and it is the quiet border color.
-     `.out` keeps that line and makes it opaque, `.soft` drops it, and `.flat`
-     lands on its own fill so a filled cap has no stray ring around it. */
-  expectSameColor(styles.plainBorderColor, styles.tokenBorder, "plain kbd edge");
+  expectSameColor(styles.solidBackground, styles.tokenPrimary, "solid kbd fill");
+  expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
+  /* A key cap caps its border at the base width, so a thicker aesthetic cannot
+     turn a chip into a box with a label in it. No presentation scales it either,
+     so `.edged` matches the default rather than doubling it. */
+  expect(Number.parseFloat(styles.edgedBorderWidth)).toBe(Number.parseFloat(styles.defaultBorderWidth));
+  expect(Number.parseFloat(styles.edgedBorderWidth)).toBeLessThanOrEqual(1);
+  /* The default draws the quiet border colour; `.edgeless` drops the line, and a
+     filled cap lands on its own fill so nothing rings it. */
+  expectSameColor(styles.defaultBorderColor, styles.tokenBorder, "default kbd edge");
   expect(readSrgb(styles.softBorderColor).alpha, styles.softBorderColor).toBeLessThan(0.2);
-  expectSameColor(styles.flatBorderColor, styles.flatBackground, "flat kbd edge");
+  expectSameColor(styles.solidBorderColor, styles.solidBackground, "solid kbd edge");
   // A soft table tints its header away from the plain surface tone.
   expect(getColorDistance(styles.tableHeadBackground, styles.tokenSurface)).toBeGreaterThan(2);
 });

@@ -62,21 +62,39 @@ test("styles native forms and buttons without utility classes", async ({ page })
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
 
-test("adds default icons and position modifiers to native inputs", async ({ page }) => {
+/* A native mapping gives the control and stops there. An icon needs a `.control`
+   wrapper to paint into and a bare element has no wrapper by definition, so the
+   artwork is opt-in: wrap the control and write `.icon`. A mapping that guessed
+   would reserve space on every typed input on the page. */
+test("paints a native input icon only where the author opted in", async ({ page }) => {
   await page.goto(NATIVE_URL);
 
-  const emailInput = page.locator("#native-email");
-  const emailRightInput = page.locator("#native-email-right");
-  const searchNoIconInput = page.locator("#native-search-noicon");
+  const icons = await page.evaluate(() => {
+    const readWrapper = (id: string) => {
+      const styles = getComputedStyle(document.querySelector(`#${id}`)!.closest(".control")!, "::before");
 
-  const emailBg = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-  const emailRightPos = await emailRightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
-  const searchNoIconBg = await searchNoIconInput.evaluate((el) => getComputedStyle(el).backgroundImage);
+      return {
+        content: styles.content,
+        inlineEnd: styles.insetInlineEnd,
+        inlineStart: styles.insetInlineStart,
+        mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
+      };
+    };
 
-  expect(emailBg).not.toBe("none");
-  expect(emailBg).toContain("data:image/svg+xml");
-  expect(emailRightPos).toContain("100%");
-  expect(searchNoIconBg).toBe("none");
+    return {
+      bare: getComputedStyle(document.querySelector("#native-search-noicon")!).backgroundImage,
+      left: readWrapper("native-email"),
+      right: readWrapper("native-email-right"),
+      wrapped: document.querySelector("#native-search-noicon")!.closest(".control"),
+    };
+  });
+
+  expect(icons.wrapped, "the opt-out input has no wrapper").toBeNull();
+  expect(icons.bare, "an unwrapped input paints no artwork").toBe("none");
+  expect(icons.left.mask, "wrapped artwork").toContain("data:image/svg+xml");
+  expect(icons.left.inlineStart, "left position").not.toBe("auto");
+  expect(icons.right.inlineEnd, "right position").not.toBe("auto");
+  expect(icons.right.mask, "right artwork is the same picture moved").toBe(icons.left.mask);
 });
 
 /* `native.css` re-declares border and background after `@apply`, which would

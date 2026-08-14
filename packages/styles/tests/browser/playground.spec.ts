@@ -50,10 +50,11 @@ test("aligns narrow sections with the left edge every other section shares", asy
 test("renders a variant matrix from its spec", async ({ page }) => {
   await page.goto(BUTTONS_URL);
 
-  /* One cell per intent per presentation, each addressable on its own. */
-  await expect(page.getByTestId("btn-plain-primary")).toBeVisible();
-  await expect(page.getByTestId("btn-out-fill-success")).toHaveClass(/btn success out fill/);
-  await expect(page.getByTestId("btn-ghost-destructive-disabled")).toBeDisabled();
+  /* One cell per intent per presentation, each addressable on its own, and every
+     row names both halves of the presentation pair. */
+  await expect(page.getByTestId("btn-default-primary")).toBeVisible();
+  await expect(page.getByTestId("btn-bare-edged-success")).toHaveClass(/btn success bare edged/);
+  await expect(page.getByTestId("btn-bare-edgeless-destructive-disabled")).toBeDisabled();
 });
 
 test("keeps route cards compact", async ({ page }) => {

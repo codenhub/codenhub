@@ -38,7 +38,7 @@
           <div
             data-matrix="btn"
             data-matrix-intents="destructive,error"
-            data-matrix-presentations="plain,out,soft"
+            data-matrix-presentations="default,bare edged,soft edged"
             data-testid="btn-alias-matrix"
           ></div>
         </div>
@@ -102,22 +102,15 @@
           <div class="stack tight">
             <h3 class="text-title-sm">Padding</h3>
             <p class="text-body text-text-secondary">
-              Canonical
-              <code class="code">p-sm</code>
-              and
-              <code class="code">p-lg</code>
-              , with
               <code class="code">compact</code>
               and
               <code class="code">spacious</code>
-              as aliases.
+              , the padding modifiers the registry publishes.
             </p>
             <div class="cluster">
-              <button class="btn primary p-sm" data-testid="btn-p-sm">Compact (p-sm)</button>
-              <button class="btn primary" data-testid="btn-default">Default</button>
-              <button class="btn primary p-lg" data-testid="btn-p-lg">Spacious (p-lg)</button>
-              <button class="btn primary compact">Compact (alias)</button>
-              <button class="btn primary spacious">Spacious (alias)</button>
+              <button class="btn primary compact" data-testid="btn-compact">Compact</button>
+              <button class="btn primary" data-testid="btn-default-padding">Default</button>
+              <button class="btn primary spacious" data-testid="btn-spacious">Spacious</button>
             </div>
           </div>
 
@@ -125,7 +118,7 @@
             <h3 class="text-title-sm">Pill and icon</h3>
             <div class="cluster">
               <button class="btn primary pill" data-testid="primary-pill-button">Primary pill</button>
-              <button class="btn destructive pill out">Destructive pill</button>
+              <button class="btn destructive pill bare edged">Destructive pill</button>
               <button class="btn icon pill destructive" aria-label="Close">
                 <svg
                   viewBox="0 0 24 24"
@@ -139,7 +132,7 @@
                   <path d="m6 6 12 12" />
                 </svg>
               </button>
-              <button class="btn icon primary p-sm" aria-label="Compact Create" data-testid="btn-icon-p-sm">
+              <button class="btn icon primary compact" aria-label="Compact Create" data-testid="btn-icon-compact">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -165,7 +158,7 @@
                   <path d="M12 5v14" />
                 </svg>
               </button>
-              <button class="btn icon primary p-lg" aria-label="Spacious Create" data-testid="btn-icon-p-lg">
+              <button class="btn icon primary spacious" aria-label="Spacious Create" data-testid="btn-icon-spacious">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -195,7 +188,7 @@
           <button class="btn primary">Inherited soft</button>
           <button class="btn success">Inherited soft</button>
           <span class="badge info">Inherited soft</span>
-          <button class="btn primary out">Overridden outline</button>
+          <button class="btn primary bare edged">Overridden outline</button>
         </div>
       </section>
     </main>

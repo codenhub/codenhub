@@ -71,9 +71,14 @@
     }
 
     /* The spinner takes the label's colour, which `box` already resolved
-       against this button's own intent and presentation. */
+       against this button's own intent and presentation. It reads `--_fg`
+       rather than `currentColor`: the rule above forces `color` to transparent
+       to hide the label, and a spinner painted in `currentColor` inherits that
+       and paints nothing at all. */
     &::after {
-      @apply loader-mask absolute block size-4 -translate-x-1/2 -translate-y-1/2 bg-current;
+      @apply loader-mask absolute block size-4 -translate-x-1/2 -translate-y-1/2;
+
+      background-color: var(--_fg);
 
       top: calc(50% + var(--border-width));
       left: calc(50% + var(--border-width));

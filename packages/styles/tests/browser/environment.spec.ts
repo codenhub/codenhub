@@ -44,7 +44,7 @@ test.describe("preview environments", () => {
   test("loads source build correctly and applies classes", async ({ page }) => {
     await page.goto(BUILD_FEEDBACK_URL);
     await expect(page.getByTestId("preview-root")).toBeVisible();
-    await expect(page.getByTestId("badge-plain-primary")).toBeVisible();
+    await expect(page.getByTestId("badge-default-primary")).toBeVisible();
   });
 
   test("builds layout and content utilities from Tailwind source", async ({ page }) => {
@@ -53,7 +53,7 @@ test.describe("preview environments", () => {
     await expect(page.getByTestId("divider-vertical")).not.toHaveCSS("border-left-width", "0px");
 
     await page.goto(BUILD_TYPOGRAPHY_URL);
-    await expect(page.getByTestId("table")).toHaveCSS("border-collapse", "separate");
+    await expect(page.getByTestId("data-table")).toHaveCSS("border-collapse", "separate");
     await expect(page.getByTestId("keyboard")).not.toHaveCSS("border-top-width", "0px");
   });
 

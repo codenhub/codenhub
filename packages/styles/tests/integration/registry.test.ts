@@ -9,9 +9,11 @@ import { expect, test } from "vitest";
 
 /* `registry.json` is the list of what the package supports. It does not produce
    the stylesheet -- the stylesheet is hand-written -- so its job is to be
-   checked against it, and against itself. The docs, the preview matrix and the
-   browser suite all read it, so a registry that disagrees with the CSS
-   disagrees in three more places downstream. */
+   checked against it, and against itself.
+
+   This file is its only reader. Every field the registry carries is therefore
+   either checked here or documentation, and the schema beside it is enforced by
+   the first test below rather than by a validator nobody runs. */
 
 interface FillPresentation {
   "ui-fill": string;
@@ -30,6 +32,8 @@ interface ComponentEntry {
 
 interface AestheticEntry {
   class: string;
+  completeShadow: boolean;
+  completeShadowReason?: string;
   selectorReason?: string;
   selectors?: string[];
 }
@@ -43,7 +47,7 @@ interface Registry {
   intents: Record<string, { family: string; aliases?: string[] }>;
   modifiers: Record<string, unknown>;
   components: ComponentEntry[];
-  helpers?: { class: string }[];
+  helpers?: string[];
   aesthetics?: AestheticEntry[];
 }
 
@@ -76,7 +80,7 @@ function shippedClassNames(): string[] {
     ...modifiers,
     ...registry.components.map((component) => component.class),
     ...registry.components.flatMap((component) => component.art ?? []),
-    ...(registry.helpers ?? []).map((helper) => helper.class),
+    ...(registry.helpers ?? []),
     ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.class),
   ];
 }
@@ -96,6 +100,129 @@ async function aestheticSources(): Promise<{ aesthetic: AestheticEntry; name: st
 /* Comments name components constantly and legitimately -- they explain what a
    token reaches. Only selectors are the violation. */
 const withoutComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, "");
+
+/* The schema documents the registry's shape, and a schema nothing runs is a
+   comment with punctuation. This walks the two together rather than pulling in a
+   validator: the registry uses one small corner of JSON Schema -- type, required,
+   properties, additionalProperties, items, pattern, enum, minimum, maximum,
+   dependentRequired -- and covering exactly that corner costs less than the
+   dependency would. Anything the schema grows beyond it fails loudly below. */
+const SUPPORTED_KEYWORDS = new Set([
+  "$id",
+  "$schema",
+  "additionalProperties",
+  "dependentRequired",
+  "description",
+  "enum",
+  "items",
+  "maximum",
+  "minimum",
+  "pattern",
+  "properties",
+  "propertyNames",
+  "required",
+  "title",
+  "type",
+]);
+
+interface Schema {
+  additionalProperties?: boolean | Schema;
+  dependentRequired?: Record<string, string[]>;
+  enum?: unknown[];
+  items?: Schema;
+  maximum?: number;
+  minimum?: number;
+  pattern?: string;
+  properties?: Record<string, Schema>;
+  propertyNames?: Schema;
+  required?: string[];
+  type?: string | string[];
+  [keyword: string]: unknown;
+}
+
+function validate(value: unknown, schema: Schema, path: string, problems: string[]): void {
+  for (const keyword of Object.keys(schema)) {
+    if (!SUPPORTED_KEYWORDS.has(keyword)) {
+      problems.push(`${path}: schema uses unsupported keyword "${keyword}"`);
+    }
+  }
+
+  const types = schema.type === undefined ? [] : [schema.type].flat();
+  const actual = value === null ? "null" : Array.isArray(value) ? "array" : typeof value;
+  const matches = actual === "number" && Number.isInteger(value) ? [actual, "integer"] : [actual];
+
+  if (types.length > 0 && !types.some((type: string) => matches.includes(type))) {
+    problems.push(`${path}: expected ${types.join(" or ")}, got ${actual}`);
+    return;
+  }
+
+  if (schema.enum !== undefined && !schema.enum.includes(value)) {
+    problems.push(`${path}: ${JSON.stringify(value)} is not one of ${schema.enum.join(", ")}`);
+  }
+
+  if (typeof value === "string" && schema.pattern !== undefined && !new RegExp(schema.pattern).test(value)) {
+    problems.push(`${path}: ${JSON.stringify(value)} does not match ${schema.pattern}`);
+  }
+
+  if (typeof value === "number") {
+    if (schema.minimum !== undefined && value < schema.minimum) {
+      problems.push(`${path}: ${value} is below ${schema.minimum}`);
+    }
+    if (schema.maximum !== undefined && value > schema.maximum) {
+      problems.push(`${path}: ${value} is above ${schema.maximum}`);
+    }
+  }
+
+  if (Array.isArray(value) && schema.items !== undefined) {
+    const items = schema.items;
+
+    value.forEach((entry, index) => validate(entry, items, `${path}[${index}]`, problems));
+    return;
+  }
+
+  if (actual !== "object") {
+    return;
+  }
+
+  const entries = value as Record<string, unknown>;
+
+  for (const key of schema.required ?? []) {
+    if (!(key in entries)) {
+      problems.push(`${path}: missing required "${key}"`);
+    }
+  }
+
+  for (const [key, dependents] of Object.entries(schema.dependentRequired ?? {})) {
+    if (key in entries) {
+      for (const dependent of dependents as string[]) {
+        if (!(dependent in entries)) {
+          problems.push(`${path}: "${key}" requires "${dependent}"`);
+        }
+      }
+    }
+  }
+
+  for (const [key, entry] of Object.entries(entries)) {
+    const property = schema.properties?.[key];
+
+    if (property !== undefined) {
+      validate(entry, property, `${path}.${key}`, problems);
+    } else if (schema.additionalProperties === false) {
+      problems.push(`${path}: unexpected property "${key}"`);
+    } else if (typeof schema.additionalProperties === "object") {
+      validate(entry, schema.additionalProperties, `${path}.${key}`, problems);
+    }
+  }
+}
+
+test("the registry matches the schema beside it", async () => {
+  const schema = JSON.parse(await read("registry.schema.json")) as Schema;
+  const problems: string[] = [];
+
+  validate(registry, schema, "registry", problems);
+
+  expect(problems).toEqual([]);
+});
 
 test("no class name is claimed twice", () => {
   const seen = new Map<string, number>();
@@ -233,7 +360,7 @@ test("every shipped utility is in the registry", async () => {
   const known = new Set([
     ...registry.components.map((component) => component.class),
     ...registry.components.flatMap((component) => component.art ?? []),
-    ...(registry.helpers ?? []).map((helper) => helper.class),
+    ...(registry.helpers ?? []),
     ...composition,
   ]);
   expect([...(await shippedUtilities()).keys()].filter((name) => !known.has(name))).toEqual([]);
@@ -376,6 +503,50 @@ test("every aesthetic declares a whole shadow geometry", async () => {
     .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
     .filter(({ missing }) => missing.length > 0)
     .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);
+
+  expect(problems).toEqual([]);
+});
+
+/* `family` is the only record that `.secondary` maps onto the accent palette
+   rather than a `--color-secondary-*` family that does not exist, and the
+   browser suite hard-codes the same mapping. Held against the stylesheet so the
+   registry cannot drift from the six slots an intent actually declares. */
+test("every intent maps onto the color family the registry names", async () => {
+  const intent = await read("src/intent.css");
+  const problems: string[] = [];
+
+  for (const [name, { family }] of Object.entries(registry.intents)) {
+    const block = intent.match(new RegExp(String.raw`(^|\n)\.${name}[^{]*` + `{([^}]*)}`));
+
+    if (block === null) {
+      problems.push(`.${name} has no block in intent.css`);
+      continue;
+    }
+    if (!block[2].includes(`--intent-color: var(--color-${family})`)) {
+      problems.push(`.${name} should map --intent-color onto --color-${family}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* An aesthetic that gives a shadow whole rather than as parts opts out of the
+   elevation multiplier, because there is nothing left for the number to reach.
+   `.flat` silently doing nothing is the kind of hole that has to be published
+   rather than discovered, so the flag is held against the stylesheet and the
+   schema requires a reason beside it. */
+test("every aesthetic's complete-shadow flag matches its stylesheet", async () => {
+  const problems = (await aestheticSources())
+    .map(({ aesthetic, name, source }) => ({
+      complete: /--ui-(surface-)?shadow:/.test(withoutComments(source)),
+      declared: aesthetic.completeShadow,
+      name,
+    }))
+    .filter(({ complete, declared }) => complete !== declared)
+    .map(
+      ({ complete, name }) =>
+        `${name} ${complete ? "gives a shadow whole but declares completeShadow: false" : "declares completeShadow: true but gives its shadow as parts"}`,
+    );
 
   expect(problems).toEqual([]);
 });

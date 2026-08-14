@@ -19,17 +19,17 @@ test.describe("surfaces", () => {
         return color;
       };
 
-      const neutral = get("card-plain-none");
-      const successSoft = get("card-soft-success");
-      const primaryOut = get("card-out-primary");
-      const panel = get("panel-plain-none");
+      const neutral = get("card-default-none");
+      const successSoft = get("card-soft-edged-success");
+      const primaryOutline = get("card-bare-edged-primary");
+      const panel = get("panel-default-none");
 
       return {
         neutralBackground: neutral.backgroundColor,
         neutralShadow: neutral.boxShadow,
-        outBackground: primaryOut.backgroundColor,
-        outBorder: primaryOut.borderTopColor,
-        outBorderWidth: primaryOut.borderTopWidth,
+        outlineBackground: primaryOutline.backgroundColor,
+        outlineBorder: primaryOutline.borderTopColor,
+        outlineBorderWidth: primaryOutline.borderTopWidth,
         panelShadow: panel.boxShadow,
         softBackground: successSoft.backgroundColor,
         tokenBackground: resolveToken("background"),
@@ -37,16 +37,19 @@ test.describe("surfaces", () => {
       };
     });
 
-    // A card is the elevated sibling.
+    /* A card is the elevated sibling, and its depth comes from the structural
+       geometry `surface` carries scaled by the registry's elevation of 1. */
     expect(styles.neutralShadow).not.toBe("none");
     // A panel is the flush one, so it stays unelevated.
     expect(styles.panelShadow).toBe("none");
 
     expectSameColor(styles.neutralBackground, styles.tokenBackground, "neutral card background");
     expect(getColorDistance(styles.softBackground, styles.tokenBackground)).toBeGreaterThan(2);
-    expectSameColor(styles.outBackground, styles.tokenBackground, "outlined card stays unfilled");
-    expectSameColor(styles.outBorder, styles.tokenPrimary, "outlined card border");
-    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(1);
+    expectSameColor(styles.outlineBackground, styles.tokenBackground, "outlined card stays unfilled");
+    expectSameColor(styles.outlineBorder, styles.tokenPrimary, "outlined card border");
+    /* The edge width is the aesthetic's material alone: no presentation scales
+       it, so a default card is one pixel however it is presented. */
+    expect(styles.outlineBorderWidth).toBe("1px");
   });
 
   test("changes only padding for the density modifiers", async ({ page }) => {
@@ -65,7 +68,10 @@ test.describe("surfaces", () => {
     expect(spacious).toBeGreaterThan(base);
   });
 
-  test("colors a divider by intent and doubles it for an outlined presentation", async ({ page }) => {
+  /* A divider is a rule, not a box: it has one line and no interior, so it takes
+     the stronger of the two presentation amounts rather than reading them
+     separately. Every combination but the fully bare one therefore draws. */
+  test("colors a divider by intent and takes the stronger presentation amount", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
@@ -78,55 +84,74 @@ test.describe("surfaces", () => {
         probe.remove();
         return color;
       };
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const read = (presentation: string) => {
+        const divider = document.createElement("hr");
+
+        divider.className = `divider primary ${presentation}`.trim();
+        host.append(divider);
+
+        const computed = getComputedStyle(divider);
+        const result = {
+          color: computed.borderTopColor,
+          presentation: presentation || "default",
+          width: computed.borderTopWidth,
+        };
+
+        divider.remove();
+
+        return result;
+      };
 
       return {
-        infoColor: get("divider-plain-info").borderTopColor,
-        outWidth: get("divider-out-info").borderTopWidth,
-        plainWidth: get("divider-plain-info").borderTopWidth,
+        infoColor: get("divider-default-info").borderTopColor,
         tokenInfo: resolveToken("info"),
+        variants: ["", "solid edged", "soft edgeless", "bare edged", "edgeless", "bare edgeless"].map(read),
         verticalWidth: get("divider-vertical-primary").borderLeftWidth,
       };
     });
 
     expectSameColor(styles.infoColor, styles.tokenInfo, "divider intent color");
-    expect(Number.parseFloat(styles.outWidth)).toBeGreaterThan(Number.parseFloat(styles.plainWidth));
     expect(styles.verticalWidth).not.toBe("0px");
+
+    for (const variant of styles.variants) {
+      /* The rule keeps its width whatever the presentation: the width is the
+         aesthetic's material, clamped, and no presentation scales it. */
+      expect(variant.width, `${variant.presentation} width`).toBe("1px");
+
+      if (variant.presentation === "bare edgeless") {
+        /* Both amounts at zero is the one way to turn a rule off. */
+        expect(isTransparent(variant.color), "bare edgeless divider").toBe(true);
+      } else {
+        expect(isTransparent(variant.color), `${variant.presentation} divider`).toBe(false);
+      }
+    }
   });
 
-  test("renders every divider and empty-state presentation", async ({ page }) => {
+  /* An empty state is still wave 2: it composes `--ui-fill`, `--ui-fg-on-fill`
+     and `--ui-border` itself, behind a two-pixel edge ceiling. */
+  test("renders every empty-state fill", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
       const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
 
       return {
-        dividerFlat: get("divider-flat-primary").borderTopColor,
-        dividerGhost: get("divider-ghost-primary").borderTopColor,
-        dividerOutWidth: get("divider-out-primary").borderTopWidth,
-        dividerPlainWidth: get("divider-plain-primary").borderTopWidth,
-        dividerSoft: get("divider-soft-primary").borderTopColor,
-        emptyFlatBackground: get("empty-state-flat-primary").backgroundColor,
-        emptyFlatColor: get("empty-state-flat-primary").color,
-        emptyGhostBackground: get("empty-state-ghost-primary").backgroundColor,
-        emptyOutBorderWidth: get("empty-state-out-primary").borderTopWidth,
-        emptyPlainBorderWidth: get("empty-state-plain-primary").borderTopWidth,
-        emptySoftBackground: get("empty-state-soft-primary").backgroundColor,
+        bareEdgeless: get("empty-state-bare-edgeless-primary").backgroundColor,
+        bareEdgedBorderWidth: get("empty-state-bare-edged-primary").borderTopWidth,
+        defaultBorderWidth: get("empty-state-default-primary").borderTopWidth,
+        softBackground: get("empty-state-soft-edged-primary").backgroundColor,
+        solidBackground: get("empty-state-solid-edged-primary").backgroundColor,
+        solidColor: get("empty-state-solid-edged-primary").color,
       };
     });
 
-    expect(isTransparent(styles.dividerGhost)).toBe(true);
-    expect(isTransparent(styles.dividerSoft)).toBe(false);
-    expect(getColorDistance(styles.dividerSoft, styles.dividerFlat)).toBeGreaterThan(2);
-    expect(Number.parseFloat(styles.dividerPlainWidth)).toBeGreaterThanOrEqual(1);
-    expect(Number.parseFloat(styles.dividerOutWidth)).toBeLessThanOrEqual(2);
-    expect(Number.parseFloat(styles.dividerOutWidth)).toBeGreaterThan(Number.parseFloat(styles.dividerPlainWidth));
-
-    expect(isTransparent(styles.emptyGhostBackground)).toBe(true);
-    expect(isTransparent(styles.emptySoftBackground)).toBe(false);
-    expect(isTransparent(styles.emptyFlatBackground)).toBe(false);
-    expect(getColorDistance(styles.emptyFlatColor, styles.emptyFlatBackground)).toBeGreaterThan(2);
-    expect(Number.parseFloat(styles.emptyPlainBorderWidth)).toBeGreaterThanOrEqual(1);
-    expect(Number.parseFloat(styles.emptyOutBorderWidth)).toBeLessThanOrEqual(2);
+    expect(isTransparent(styles.bareEdgeless)).toBe(true);
+    expect(isTransparent(styles.softBackground)).toBe(false);
+    expect(isTransparent(styles.solidBackground)).toBe(false);
+    expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
+    expect(Number.parseFloat(styles.defaultBorderWidth)).toBeGreaterThanOrEqual(1);
+    expect(Number.parseFloat(styles.bareEdgedBorderWidth)).toBeLessThanOrEqual(2);
   });
 
   /* Presentation cascades and intent does not, so a container sets the look of

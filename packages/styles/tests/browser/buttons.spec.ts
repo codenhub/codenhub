@@ -15,12 +15,14 @@ test.describe("buttons", () => {
   test("keeps filled semantic button text readable", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    /* A filled button is one with no presentation in scope, which since
-       presentation cascades means neither on the button nor on an ancestor. */
+    /* A filled button is one whose fill resolves to `.solid`, which since
+       presentation cascades means no quieter fill on the button or on an
+       ancestor. `.btn`'s published default is solid, so the absence of a fill
+       class is the filled case. */
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.out, .ghost, .soft)):not(:is(.out, .ghost, .soft) *)",
+          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .bare)):not(:is(.soft, .bare) *)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -42,87 +44,108 @@ test.describe("buttons", () => {
     await page.goto(BUTTONS_URL);
 
     const styles = await page.evaluate(() => {
-      const successOutlineButton = document.querySelector('[data-testid="btn-out-success"]');
-      const successSoftButton = document.querySelector('[data-testid="btn-soft-success"]');
-      const primaryPillButton = document.querySelector('[data-testid="primary-pill-button"]');
-      const secondaryGhostButton = document.querySelector('[data-testid="btn-ghost-secondary"]');
+      const read = (testId: string) => {
+        const element = document.querySelector(`[data-testid="${testId}"]`);
 
-      if (!successOutlineButton || !successSoftButton || !primaryPillButton || !secondaryGhostButton) {
-        throw new Error("Expected button composition fixtures to exist.");
-      }
+        if (!element) {
+          throw new Error(`Expected button composition fixture ${testId} to exist.`);
+        }
 
-      const successOutlineStyles = getComputedStyle(successOutlineButton);
-      const successSoftStyles = getComputedStyle(successSoftButton);
-      const primaryPillStyles = getComputedStyle(primaryPillButton);
-      const secondaryGhostStyles = getComputedStyle(secondaryGhostButton);
+        return getComputedStyle(element);
+      };
+      const outline = read("btn-bare-edged-success");
+      const soft = read("btn-soft-edgeless-success");
+      const pill = read("primary-pill-button");
+      const ghost = read("btn-bare-edgeless-secondary");
 
       return {
-        ghostBackground: secondaryGhostStyles.backgroundColor,
-        ghostColor: secondaryGhostStyles.color,
-        successOutlineBackground: successOutlineStyles.backgroundColor,
-        successOutlineBorder: successOutlineStyles.borderColor,
-        successOutlineColor: successOutlineStyles.color,
-        successSoftBackground: successSoftStyles.backgroundColor,
-        successSoftColor: successSoftStyles.color,
-        primaryPillBorderRadius: primaryPillStyles.borderRadius,
+        ghostBackground: ghost.backgroundColor,
+        ghostBorderColor: ghost.borderTopColor,
+        ghostColor: ghost.color,
+        primaryPillBorderRadius: pill.borderRadius,
+        successOutlineBackground: outline.backgroundColor,
+        successOutlineBorder: outline.borderColor,
+        successOutlineColor: outline.color,
+        successSoftBackground: soft.backgroundColor,
+        successSoftColor: soft.color,
       };
     });
 
+    /* `bare edged` is the outline button: no fill, a line in the intent. */
     expect(isTransparent(styles.successOutlineBorder)).toBe(false);
     expect(isTransparent(styles.successOutlineColor)).toBe(false);
     expect(isTransparent(styles.successOutlineBackground)).toBe(true);
+    /* `bare edgeless` is the ghost: no fill and no line at all. The line goes in
+       the colour rather than the width, so the box geometry stays identical
+       across the edge classes and nothing shifts when one is applied. */
     expect(isTransparent(styles.ghostBackground)).toBe(true);
+    expect(isTransparent(styles.ghostBorderColor)).toBe(true);
     expect(isTransparent(styles.ghostColor)).toBe(false);
     expect(isTransparent(styles.successSoftBackground)).toBe(false);
     expect(isTransparent(styles.successSoftColor)).toBe(false);
     expect(Number.parseFloat(styles.primaryPillBorderRadius)).toBeGreaterThan(20);
 
-    await page.getByTestId("btn-ghost-secondary").hover();
+    await page.getByTestId("btn-bare-edgeless-secondary").hover();
 
-    // A ghost button's hover background transitions out of fully transparent, so
-    // a single read can land on the starting value before the transition moves.
+    /* Hover is derived rather than declared: `bare` picks up the hover step, so
+       a ghost button's background transitions out of fully transparent. A single
+       read can land on the starting value before the transition moves. */
     await expect
       .poll(async () =>
         isTransparent(
           await page
-            .getByTestId("btn-ghost-secondary")
+            .getByTestId("btn-bare-edgeless-secondary")
             .evaluate((element) => getComputedStyle(element).backgroundColor),
         ),
       )
       .toBe(false);
   });
 
-  test("centers the loading spinner without transitioning hidden colors", async ({ page }) => {
+  /* `.loading` hides the label by forcing `color` to transparent, so the spinner
+     cannot paint in `currentColor`: it has to read the foreground `box`
+     resolved. A spinner painted in the hidden colour is invisible, which looks
+     exactly like a button that never entered the loading state. */
+  test("centers a visible loading spinner in the label's own color", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    const styles = await page.getByTestId("loading-button").evaluate((button) => {
-      const rootStyles = getComputedStyle(button);
-      const spinnerStyles = getComputedStyle(button, "::after");
+    const styles = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const button = document.querySelector(`[data-testid="${testId}"]`)!;
+        const spinner = getComputedStyle(button, "::after");
 
-      return {
-        buttonHeight: button.getBoundingClientRect().height,
-        buttonWidth: button.getBoundingClientRect().width,
-        spinnerAnimation:
-          spinnerStyles.animationName !== "none"
-            ? spinnerStyles.animationName
-            : spinnerStyles.maskImage || spinnerStyles.webkitMaskImage || "none",
-        spinnerHeight: spinnerStyles.height,
-        spinnerLeft: spinnerStyles.left,
-        spinnerTop: spinnerStyles.top,
-        spinnerTranslate: spinnerStyles.translate,
-        spinnerWidth: spinnerStyles.width,
-        transitionProperty: rootStyles.transitionProperty,
+        return {
+          buttonHeight: button.getBoundingClientRect().height,
+          buttonWidth: button.getBoundingClientRect().width,
+          labelColor: getComputedStyle(button).color,
+          spinnerColor: spinner.backgroundColor,
+          spinnerHeight: spinner.height,
+          spinnerLeft: spinner.left,
+          spinnerMask: spinner.maskImage || spinner.webkitMaskImage || "none",
+          spinnerTop: spinner.top,
+          spinnerTranslate: spinner.translate,
+          spinnerWidth: spinner.width,
+        };
       };
+
+      return { soft: read("btn-soft-edged-primary-loading"), solid: read("loading-button") };
     });
 
-    expect(styles.spinnerAnimation).not.toBe("none");
-    expect(Number.parseFloat(styles.spinnerTop)).toBeCloseTo(styles.buttonHeight / 2, 1);
-    expect(Number.parseFloat(styles.spinnerLeft)).toBeCloseTo(styles.buttonWidth / 2, 1);
-    expect(styles.spinnerTranslate).toBe("-50% -50%");
-    expect(styles.transitionProperty).not.toContain("background-color");
-    expect(styles.transitionProperty).not.toContain("color");
-    expect(styles.spinnerWidth).not.toBe("0px");
-    expect(styles.spinnerHeight).not.toBe("0px");
+    for (const [label, measured] of Object.entries(styles)) {
+      expect(measured.spinnerMask, `${label} artwork`).not.toBe("none");
+      expect(Number.parseFloat(measured.spinnerTop), `${label} top`).toBeCloseTo(measured.buttonHeight / 2, 1);
+      expect(Number.parseFloat(measured.spinnerLeft), `${label} left`).toBeCloseTo(measured.buttonWidth / 2, 1);
+      expect(measured.spinnerTranslate, `${label} translate`).toBe("-50% -50%");
+      expect(measured.spinnerWidth, `${label} width`).not.toBe("0px");
+      expect(measured.spinnerHeight, `${label} height`).not.toBe("0px");
+      /* The label is hidden and the spinner is not. */
+      expect(isTransparent(measured.labelColor), `${label} label`).toBe(true);
+      expect(isTransparent(measured.spinnerColor), `${label} spinner`).toBe(false);
+    }
+
+    /* A solid button's spinner is the contrast tone and a soft one's is the
+       intent tone, so reading `--_fg` rather than a fixed colour is what makes
+       both legible. */
+    expect(getColorDistance(styles.solid.spinnerColor, styles.soft.spinnerColor)).toBeGreaterThan(2);
   });
 
   test("uses loader variants on loading buttons", async ({ page }) => {
@@ -132,10 +155,13 @@ test.describe("buttons", () => {
       ["loading-button", "loading-button-dots", "loading-button-bars"].map((testId) =>
         page
           .getByTestId(testId)
-          .evaluate((button) => getComputedStyle(button, "::after").getPropertyValue("--ai-image")),
+          .evaluate((button) => getComputedStyle(button, "::after").getPropertyValue("--loader-art")),
       ),
     );
 
+    for (const [index, image] of images.entries()) {
+      expect(image, `${index}`).toContain("data:image/svg+xml");
+    }
     expect(new Set(images).size).toBe(images.length);
   });
 
@@ -144,7 +170,7 @@ test.describe("buttons", () => {
 
     const styles = await page.evaluate(() => {
       const disabledStyles = getComputedStyle(document.querySelector('[data-testid="aria-disabled-button"]')!);
-      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-plain-error"]')!);
+      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-default-error"]')!);
 
       return {
         disabledCursor: disabledStyles.cursor,
@@ -171,7 +197,7 @@ test.describe("buttons", () => {
         probe.remove();
         return color;
       };
-      const styles = getComputedStyle(document.querySelector('[data-testid="btn-plain-none"]')!);
+      const styles = getComputedStyle(document.querySelector('[data-testid="btn-default-none"]')!);
 
       return {
         background: styles.backgroundColor,
@@ -228,9 +254,9 @@ test.describe("buttons", () => {
         const ghostButton = document.createElement("button");
         const softButton = document.createElement("button");
 
-        outlineButton.className = `btn ${intent.className} out`;
-        ghostButton.className = `btn ${intent.className} ghost`;
-        softButton.className = `btn ${intent.className} soft`;
+        outlineButton.className = `btn ${intent.className} bare edged`;
+        ghostButton.className = `btn ${intent.className} bare edgeless`;
+        softButton.className = `btn ${intent.className} soft edgeless`;
         host.append(outlineButton, ghostButton, softButton);
 
         const outlineStyles = getComputedStyle(outlineButton);
@@ -238,11 +264,14 @@ test.describe("buttons", () => {
         const softStyles = getComputedStyle(softButton);
 
         const styles = {
-          expectedPresentationText: resolveTokenColor({
-            host,
-            tokenName: `${intent.tokenName}-strong`,
-          }),
           expectedOutlineBorder: resolveTokenColor({
+            host,
+            tokenName: intent.tokenName,
+          }),
+          /* An unfilled button's text is the intent colour itself, not a
+             separate emphasis tone: `--ui-fg-on-fill` is 0%, so `box` mixes the
+             contrast tone in at zero strength and lands on `--intent-color`. */
+          expectedPresentationText: resolveTokenColor({
             host,
             tokenName: intent.tokenName,
           }),
@@ -305,7 +334,7 @@ test.describe("buttons", () => {
       const inheritedBadge = document.createElement("span");
 
       inheritedButton.className = "btn primary";
-      overriddenButton.className = "btn primary out";
+      overriddenButton.className = "btn primary bare edged";
       inheritedBadge.className = "badge success";
       container.append(inheritedButton, overriddenButton, inheritedBadge);
       document.body.append(container);
@@ -319,10 +348,11 @@ test.describe("buttons", () => {
       document.body.append(softButton);
 
       const result = {
+        inheritedBadgeBackground: getComputedStyle(inheritedBadge).backgroundColor,
         inheritedBadgeBorder: getComputedStyle(inheritedBadge).borderTopColor,
         inheritedButtonBackground: getComputedStyle(inheritedButton).backgroundColor,
         overriddenButtonBackground: getComputedStyle(overriddenButton).backgroundColor,
-        overriddenButtonBorderWidth: getComputedStyle(overriddenButton).borderTopWidth,
+        overriddenButtonBorderColor: getComputedStyle(overriddenButton).borderTopColor,
         softButtonBackground: getComputedStyle(softButton).backgroundColor,
         soloButtonBackground: getComputedStyle(soloButton).backgroundColor,
       };
@@ -338,88 +368,159 @@ test.describe("buttons", () => {
     expectSameColor(styles.inheritedButtonBackground, styles.softButtonBackground, "inherited soft button");
     expect(getColorDistance(styles.inheritedButtonBackground, styles.soloButtonBackground)).toBeGreaterThan(2);
 
-    // The badge is a different component reading the same inherited tokens.
-    expect(isTransparent(styles.inheritedBadgeBorder)).toBe(true);
+    /* The badge is a different component reading the same inherited tokens. It
+       rests edgeless, so P3 blends its edge to the inherited fill and the
+       boundary is the tint rather than a gap. */
+    expectSameColor(styles.inheritedBadgeBorder, styles.inheritedBadgeBackground, "inherited badge edge");
+    expect(isTransparent(styles.inheritedBadgeBackground)).toBe(false);
 
-    // An element declaring its own presentation wins over the container.
+    /* An element declaring its own presentation wins over the container: the
+       button drops the inherited tint and draws the line the container's fill
+       classes never asked for. */
     expect(isTransparent(styles.overriddenButtonBackground)).toBe(true);
-    expect(Number.parseFloat(styles.overriddenButtonBorderWidth)).toBeGreaterThan(1);
+    expect(isTransparent(styles.overriddenButtonBorderColor)).toBe(false);
   });
 
-  test("uses contrast text on filled outline hover", async ({ page }) => {
+  /* Replaces the `.out.fill` coverage this suite used to carry. `.fill` is gone
+     and has no replacement spelling: hover is derived from the resting fill by
+     one published step, so an outline button tints rather than filling, and its
+     text stays the intent tone instead of flipping to the contrast one. */
+  test("tints an outline button on hover by the published step", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    const successContrast = await page.evaluate(() => {
+    const expected = await page.evaluate(() => {
       const probe = document.createElement("span");
-      probe.style.color = "var(--color-success-contrast)";
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const step = getComputedStyle(document.documentElement).getPropertyValue("--hover-step").trim();
+
+      probe.style.backgroundColor = `color-mix(in oklab, var(--color-primary-hover) ${step}, transparent)`;
+      probe.style.color = "var(--color-primary)";
+      host.append(probe);
+
+      const values = {
+        hoverTint: getComputedStyle(probe).backgroundColor,
+        intent: getComputedStyle(probe).color,
+        step,
+      };
+
+      probe.remove();
+
+      return values;
+    });
+
+    expect(expected.step).toBe("14%");
+
+    const outline = page.getByTestId("btn-bare-edged-primary");
+
+    await outline.hover();
+
+    /* Background and colour are both transitioned, so these poll for the settled
+       value rather than reading mid-flight. */
+    await expect
+      .poll(async () =>
+        getColorDistance(
+          await outline.evaluate((element) => getComputedStyle(element).backgroundColor),
+          expected.hoverTint,
+        ),
+      )
+      .toBeLessThanOrEqual(2);
+
+    expectSameColor(
+      await outline.evaluate((element) => getComputedStyle(element).color),
+      expected.intent,
+      "hovered outline text",
+    );
+  });
+
+  /* A hovered `.solid` box mixes its edge toward `--intent-hover`, not toward
+     the resting `--intent-color`. Without that the edge blends to the resting
+     colour exactly, and a hovered solid button wears a ring of the colour it
+     just left -- visible only as a hairline, and invisible to any assertion that
+     reads the background alone. */
+  test("moves a hovered solid button's edge to the hover tone", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const solid = page.getByTestId("btn-solid-edged-primary");
+    const resting = await solid.evaluate((element) => getComputedStyle(element).borderTopColor);
+    const hoverToken = await page.evaluate(() => {
+      const probe = document.createElement("span");
+
+      probe.style.color = "var(--color-primary-hover)";
       document.body.append(probe);
 
       const color = getComputedStyle(probe).color;
+
       probe.remove();
 
       return color;
     });
 
-    await page.getByTestId("btn-out-fill-success").hover();
+    expect(getColorDistance(resting, hoverToken), "resting edge is not already the hover tone").toBeGreaterThan(2);
+
+    await solid.hover();
 
     await expect
       .poll(async () =>
-        getColorDistance(
-          await page.getByTestId("btn-out-fill-success").evaluate((element) => getComputedStyle(element).color),
-          successContrast,
-        ),
+        getColorDistance(await solid.evaluate((element) => getComputedStyle(element).borderTopColor), hoverToken),
       )
       .toBeLessThanOrEqual(2);
   });
 
-  test("configures button padding options with p-sm/compact and p-lg/spacious modifier classes", async ({ page }) => {
+  /* The two intents whose hover token is itself a `color-mix()` rather than a
+     `light-dark()` pair, which is what makes them the interesting case: `box`
+     nests that token two levels deeper to blend the edge toward the fill, and
+     three levels of `color-mix()` over a `light-dark()` crashes the WebKit
+     renderer outright -- the same limit `progress` is written around. Asserted
+     where it can be, and skipped where the engine cannot survive the hover. */
+  test("derives the hover tint for the semantic intents", async ({ browserName, page }) => {
+    test.skip(
+      browserName === "webkit",
+      "WebKit crashes hovering `.success`/`.warning`: their hover token is a color-mix, and box nests it two deeper",
+    );
     await page.goto(BUTTONS_URL);
 
-    const btnPSm = page.getByTestId("btn-p-sm");
-    const btnDefault = page.getByTestId("btn-default");
-    const btnPLg = page.getByTestId("btn-p-lg");
-    const btnIconPSm = page.getByTestId("btn-icon-p-sm");
-    const btnIconDefault = page.getByTestId("btn-icon-default");
-    const btnIconPLg = page.getByTestId("btn-icon-p-lg");
+    /* oxlint-disable no-await-in-loop -- one page, hovered in turn: hover is a
+       single pointer, so the intents cannot be probed in parallel. */
+    for (const intent of ["success", "warning"] as const) {
+      const expected = await page.evaluate((name) => {
+        const probe = document.createElement("span");
+        const step = getComputedStyle(document.documentElement).getPropertyValue("--hover-step").trim();
 
-    // Standard Buttons Horizontal Padding
-    const pSmLeft = await btnPSm.evaluate((el) => getComputedStyle(el).paddingLeft);
-    const defaultLeft = await btnDefault.evaluate((el) => getComputedStyle(el).paddingLeft);
-    const pLgLeft = await btnPLg.evaluate((el) => getComputedStyle(el).paddingLeft);
+        probe.style.backgroundColor = `color-mix(in oklab, var(--color-${name}-hover) ${step}, transparent)`;
+        document.querySelector('[data-testid="preview-root"]')!.append(probe);
 
-    expect(pSmLeft).toBe("10px");
-    expect(defaultLeft).toBe("16px");
-    expect(pLgLeft).toBe("24px");
+        const tint = getComputedStyle(probe).backgroundColor;
 
-    // Icon Buttons Padding (all sides)
-    const iconPSmPadding = await btnIconPSm.evaluate((el) => getComputedStyle(el).padding);
-    const iconDefaultPadding = await btnIconDefault.evaluate((el) => getComputedStyle(el).padding);
-    const iconPLgPadding = await btnIconPLg.evaluate((el) => getComputedStyle(el).padding);
+        probe.remove();
 
-    expect(iconPSmPadding).toBe("4px");
-    expect(iconDefaultPadding).toBe("8px");
-    expect(iconPLgPadding).toBe("12px");
+        return tint;
+      }, intent);
+      const outline = page.getByTestId(`btn-bare-edged-${intent}`);
 
-    // Test Aliases dynamically
-    await page.evaluate(() => {
-      const btn = document.createElement("button");
-      btn.className = "btn primary compact";
-      btn.setAttribute("data-testid", "btn-alias-compact");
-      document.body.appendChild(btn);
+      await outline.hover();
 
-      const btnSpacious = document.createElement("button");
-      btnSpacious.className = "btn primary spacious";
-      btnSpacious.setAttribute("data-testid", "btn-alias-spacious");
-      document.body.appendChild(btnSpacious);
-    });
+      await expect
+        .poll(
+          async () =>
+            getColorDistance(await outline.evaluate((element) => getComputedStyle(element).backgroundColor), expected),
+          { message: intent },
+        )
+        .toBeLessThanOrEqual(2);
+    }
+  });
 
-    const btnAliasCompact = page.getByTestId("btn-alias-compact");
-    const btnAliasSpacious = page.getByTestId("btn-alias-spacious");
+  test("configures button padding with the compact and spacious modifiers", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
 
-    const aliasCompactLeft = await btnAliasCompact.evaluate((el) => getComputedStyle(el).paddingLeft);
-    const aliasSpaciousLeft = await btnAliasSpacious.evaluate((el) => getComputedStyle(el).paddingLeft);
+    const readPadding = (testId: string, property: "padding" | "paddingLeft") =>
+      page.getByTestId(testId).evaluate((element, name) => getComputedStyle(element)[name], property);
 
-    expect(aliasCompactLeft).toBe("10px");
-    expect(aliasSpaciousLeft).toBe("24px");
+    expect(await readPadding("btn-compact", "paddingLeft")).toBe("10px");
+    expect(await readPadding("btn-default-padding", "paddingLeft")).toBe("16px");
+    expect(await readPadding("btn-spacious", "paddingLeft")).toBe("24px");
+
+    expect(await readPadding("btn-icon-compact", "padding")).toBe("4px");
+    expect(await readPadding("btn-icon-default", "padding")).toBe("8px");
+    expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");
   });
 });

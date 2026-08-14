@@ -17,39 +17,49 @@
    aesthetic, so the two differ wherever something else is in scope. */
 const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
 
-/* Only combinations the package supports are rendered. A presentation whose
+/* Presentation is two independent closed sets -- a fill and an edge -- so every
+   row names both. A row naming one leaves the other at the component's registry
+   default, which makes two rows of the grid mean different things depending on
+   which component they are under.
+
+   Only combinations the package supports are rendered. A presentation whose
    tokens a component never reads, or reads to the same values as another,
    produces a row indistinguishable from its neighbour and teaches nothing; the
-   playground is the support surface, so it must not imply otherwise.
-
-   `.fill` is absent from every set but the button's. It declares `--ui-hover-*`
-   and nothing else, and `.btn` is the only component with a fill-based hover, so
-   `.fill` is inert everywhere else. `out fill` is the documented pairing.
-   `.flat` is absent from the button set for the opposite reason: a button's own
-   fallbacks are exactly `.flat`'s values, so the two rows are the same row. */
-const PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
-const BUTTON_PRESENTATIONS = ["plain", "out", "out fill", "soft", "ghost"];
-const TOGGLE_PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
-/* Components that read only `--ui-border` and `--ui-border-scale`: the tint
-   presentations land on the same values as `plain`. */
-const BORDER_PRESENTATIONS = ["plain", "flat", "out"];
+   playground is the support surface, so it must not imply otherwise. */
+const PRESENTATIONS = [
+  "default",
+  "solid edged",
+  "solid edgeless",
+  "soft edged",
+  "soft edgeless",
+  "bare edged",
+  "bare edgeless",
+];
+/* Components that draw their edge whatever the edge class says, because losing
+   it would leave no mark of where typing goes (WCAG 1.4.11). */
+const FILL_PRESENTATIONS = ["default", "solid", "soft", "bare"];
+/* Components whose only presentation response is their edge; the fill classes
+   land on the same pixels as the default. */
+const EDGE_PRESENTATIONS = ["default", "edged", "edgeless"];
 /* Components that read intent but not presentation. Spelling the axis out per
    component keeps a page from claiming a variant the component ignores. */
-const INTENT_ONLY = ["plain"];
+const INTENT_ONLY = ["default"];
 const STATES = ["rest", "disabled"];
 
 const title = (value) => value.charAt(0).toUpperCase() + value.slice(1);
 const slug = (value) => value.replace(/\s+/gu, "-");
 
-/* `plain` and `rest` are the absence of a class, not classes themselves. */
+/* `default` and `rest` are the absence of a class, not classes themselves: a
+   component with no presentation class renders the pair the registry publishes
+   for it. */
 const classesFor = (base, intent, presentation, extra) =>
-  [base, intent === "none" ? "" : intent, presentation === "plain" ? "" : presentation, extra]
+  [base, intent === "none" ? "" : intent, presentation === "default" ? "" : presentation, extra]
     .filter(Boolean)
     .join(" ");
 
 /* Toggles share an axis: the same intents, the same states, and the same bare
    cell. Only the input type and the extra states differ. */
-const toggle = (label, type, presentations = TOGGLE_PRESENTATIONS) => ({
+const toggle = (label, type, presentations = PRESENTATIONS) => ({
   tag: "input",
   presentations,
   attrs: (intent) => ({ type, "aria-label": `${title(intent)} ${label}` }),
@@ -61,7 +71,7 @@ const toggle = (label, type, presentations = TOGGLE_PRESENTATIONS) => ({
 });
 
 /* A text control caps its fill rather than taking a presentation at full
-   strength, so it still reads every presentation class. */
+   strength, so it still reads every fill class. */
 const textControl = (tag, extra) => ({
   tag,
   layout: "grid",
@@ -72,7 +82,6 @@ const textControl = (tag, extra) => ({
 const COMPONENTS = {
   btn: {
     tag: "button",
-    presentations: BUTTON_PRESENTATIONS,
     text: (intent) => title(intent),
     states: { disabled: { disabled: "" }, loading: { class: "loading" } },
   },
@@ -124,9 +133,14 @@ const COMPONENTS = {
     text: (intent) => `${title(intent)} panel`,
     states: {},
   },
+  /* A divider takes `max(--ui-fill, --ui-border)` as its strength, so the only
+     row that differs from the default is the one where both are zero -- and a
+     row of invisible rules demonstrates nothing. `surfaces.spec.ts` asserts that
+     behaviour on elements it builds instead. */
   divider: {
     tag: "hr",
     layout: "stack",
+    presentations: INTENT_ONLY,
     states: {},
   },
   "empty-state": {
@@ -135,7 +149,10 @@ const COMPONENTS = {
     html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
     states: {},
   },
+  /* `ipt` draws its edge whatever the edge class says, so `edged` and `edgeless`
+     land on the same control and only the fill classes vary. */
   ipt: textControl("input", {
+    presentations: FILL_PRESENTATIONS,
     attrs: (intent) => ({
       type: "text",
       placeholder: `${title(intent)} input`,
@@ -158,7 +175,7 @@ const COMPONENTS = {
   /* A switch draws its own track and knob from theme tokens and reads no
      presentation token at all, so every presentation renders the same control. */
   switch: toggle("switch", "checkbox", INTENT_ONLY),
-  table: {
+  "data-table": {
     tag: "table",
     layout: "grid",
     html: (intent) =>
@@ -169,7 +186,7 @@ const COMPONENTS = {
   progress: {
     tag: "div",
     layout: "stack",
-    presentations: BORDER_PRESENTATIONS,
+    presentations: EDGE_PRESENTATIONS,
     attrs: (intent) => ({
       style: "--progress-value: 60%",
       role: "progressbar",
@@ -191,8 +208,11 @@ const COMPONENTS = {
     attrs: () => ({ "aria-hidden": "true" }),
     states: {},
   },
+  /* A loader is a coloured mask and nothing else: no fill, no edge, no
+     silhouette, so it reads intent and no presentation token at all. */
   loader: {
     tag: "span",
+    presentations: INTENT_ONLY,
     attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
     states: {},
   },
@@ -372,7 +392,18 @@ const buildField = (type, variant) => {
   message.id = messageId;
   message.dataset.testid = `${messageId}`;
 
-  field.append(label, input, message);
+  /* The icon is a masked pseudo-element on a wrapper around the control alone: a
+     text input is replaced content and generates none of its own, and `.field`
+     is a flex column whose pseudo-element would land beside the label. Every
+     cell carries the wrapper so the anatomy the package documents is the one the
+     grid demonstrates. */
+  const control = document.createElement("span");
+
+  control.className = "control";
+  control.dataset.testid = `control-${type}-${variant}`;
+  control.append(input);
+
+  field.append(label, control, message);
 
   return field;
 };

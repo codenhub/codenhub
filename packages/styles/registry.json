@@ -28,33 +28,26 @@
   },
   "intents": {
     "neutral": {
-      "family": "text",
-      "vocabulary": "neutral"
+      "family": "text"
     },
     "primary": {
-      "family": "primary",
-      "vocabulary": "emphasis"
+      "family": "primary"
     },
     "secondary": {
-      "family": "accent",
-      "vocabulary": "emphasis"
+      "family": "accent"
     },
     "success": {
-      "family": "success",
-      "vocabulary": "semantic"
+      "family": "success"
     },
     "warning": {
-      "family": "warning",
-      "vocabulary": "semantic"
+      "family": "warning"
     },
     "destructive": {
       "family": "destructive",
-      "vocabulary": "semantic",
       "aliases": ["danger", "error"]
     },
     "info": {
-      "family": "info",
-      "vocabulary": "semantic"
+      "family": "info"
     }
   },
   "modifiers": {
@@ -305,90 +298,27 @@
     }
   ],
   "helpers": [
-    {
-      "class": "field",
-      "purpose": "Wraps label, control, and hint."
-    },
-    {
-      "class": "control",
-      "purpose": "Wraps a control alone, so an icon can be a masked pseudo-element over it."
-    },
-    {
-      "class": "label",
-      "purpose": "Form label typography."
-    },
-    {
-      "class": "hint",
-      "purpose": "Helper text under a control."
-    },
-    {
-      "class": "icon",
-      "purpose": "Marks a control or button as carrying an icon."
-    },
-    {
-      "class": "table-wrap",
-      "purpose": "Horizontal overflow wrapper for wide tables."
-    },
-    {
-      "class": "quote-inline",
-      "purpose": "Inline quotation."
-    },
-    {
-      "class": "view",
-      "purpose": "Flex container."
-    },
-    {
-      "class": "stack",
-      "purpose": "Vertical flex stack."
-    },
-    {
-      "class": "cluster",
-      "purpose": "Wrapping horizontal row."
-    },
-    {
-      "class": "auto-grid",
-      "purpose": "Responsive auto-fit grid."
-    },
-    {
-      "class": "section",
-      "purpose": "Responsive block padding and inline gutter."
-    },
-    {
-      "class": "section-content",
-      "purpose": "Centered container."
-    },
-    {
-      "class": "text-display",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-title-lg",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-title",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-title-sm",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-label-lg",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-label",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "text-body",
-      "purpose": "Typography scale."
-    },
-    {
-      "class": "selection-contrast",
-      "purpose": "Flips the selection colours inside a filled region so selected text stays readable."
-    }
+    "field",
+    "control",
+    "label",
+    "hint",
+    "icon",
+    "table-wrap",
+    "quote-inline",
+    "view",
+    "stack",
+    "cluster",
+    "auto-grid",
+    "section",
+    "section-content",
+    "text-display",
+    "text-title-lg",
+    "text-title",
+    "text-title-sm",
+    "text-label-lg",
+    "text-label",
+    "text-body",
+    "selection-contrast"
   ],
   "aesthetics": [
     {
@@ -403,36 +333,6 @@
     {
       "class": "pixel",
       "completeShadow": false
-    }
-  ],
-  "removed": [
-    {
-      "class": "flat",
-      "replacedBy": "solid",
-      "note": "`.flat` returns as an elevation modifier meaning no depth."
-    },
-    {
-      "class": "out",
-      "replacedBy": "bare edged"
-    },
-    {
-      "class": "ghost",
-      "replacedBy": "bare"
-    },
-    {
-      "class": "fill",
-      "replacedBy": null,
-      "note": "Hover is derived. `.out.fill` has no replacement."
-    },
-    {
-      "class": "control-base",
-      "replacedBy": null,
-      "note": "Became the `text-control` utility; it was never a component."
-    },
-    {
-      "class": "ai",
-      "replacedBy": "loader",
-      "note": "Loader artwork is an art variant, not a separate class."
     }
   ]
 }

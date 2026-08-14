@@ -24,7 +24,8 @@
         <div class="stack tight">
           <h2 class="text-title">Cards</h2>
           <p class="text-body text-text-secondary">
-            A plain card is a neutral bordered container with a low elevation. Only an explicit presentation tints it.
+            A card with no presentation class is a bare, edged container with a low elevation. Only an explicit fill
+            tints it.
           </p>
         </div>
         <div data-matrix="card" data-matrix-states="rest" data-testid="card-matrix"></div>
@@ -113,7 +114,11 @@
       <section class="sect-inn stack loose">
         <div class="stack tight">
           <h2 class="text-title">Dividers</h2>
-          <p class="text-body text-text-secondary">Presentation changes rule strength or width; ghost removes it.</p>
+          <p class="text-body text-text-secondary">
+            A divider takes the stronger of its fill and its edge, so only
+            <code class="code">.bare.edgeless</code>
+            removes it.
+          </p>
         </div>
         <div data-matrix="divider" data-matrix-states="rest" data-testid="divider-matrix"></div>
         <div class="stack tight">
@@ -147,7 +152,7 @@
             <p class="text-body">No presentation class of its own.</p>
           </article>
           <aside class="panel success" data-testid="cascade-panel-inherited">Inherited soft panel</aside>
-          <article class="card primary out" data-testid="cascade-card-override">
+          <article class="card primary bare edged" data-testid="cascade-card-override">
             <h4 class="text-title-sm">Overridden</h4>
             <p class="text-body">Outlined on the element.</p>
           </article>

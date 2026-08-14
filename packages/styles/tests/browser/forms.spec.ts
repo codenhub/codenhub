@@ -16,27 +16,52 @@ test.describe("forms", () => {
     expect(isTransparent(borderColor)).toBe(false);
   });
 
-  test("caps text control fill so a flat container stays readable", async ({ page }) => {
+  /* Presentation cascades by design, so `.solid` on a container reaches the
+     inputs inside it, and an input filled 100% with the text colour has text the
+     same colour as its background. Our own cascade produced that, so our own
+     `min()` answers it -- the one bound the model keeps. The edge is drawn
+     whatever the edge class says, for the same reason: a container's `.edgeless`
+     would otherwise leave a field with no mark of where typing goes. */
+  test("caps text control fill and keeps its edge whatever the container says", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const styles = await page.evaluate(() => {
-      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const read = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const host = document.createElement("div");
+      const inherited = document.createElement("input");
 
-      return {
-        default: get("ipt-plain-none").backgroundColor,
-        flat: get("ipt-flat-none").backgroundColor,
-        flatBorderWidth: get("ipt-flat-none").borderTopWidth,
-        ghostBorder: get("ipt-ghost-none").borderTopColor,
-        outBorderWidth: get("ipt-out-none").borderTopWidth,
-        soft: get("ipt-soft-none").backgroundColor,
+      host.className = "solid edgeless";
+      inherited.className = "ipt";
+      host.append(inherited);
+      document.querySelector('[data-testid="preview-root"]')!.append(host);
+
+      const inheritedStyles = getComputedStyle(inherited);
+      const result = {
+        bare: read("ipt-bare-none").backgroundColor,
+        default: read("ipt-default-none").backgroundColor,
+        inheritedBackground: inheritedStyles.backgroundColor,
+        inheritedBorderColor: inheritedStyles.borderTopColor,
+        inheritedBorderWidth: inheritedStyles.borderTopWidth,
+        soft: read("ipt-soft-none").backgroundColor,
+        solid: read("ipt-solid-none").backgroundColor,
       };
+
+      host.remove();
+
+      return result;
     });
 
-    // `.flat` resolves to the same tint as `.soft` rather than a solid fill.
-    expectSameColor(styles.flat, styles.soft, "flat input clamps to the soft tint");
-    expect(getColorDistance(styles.flat, styles.default)).toBeGreaterThan(1);
-    expect(Number.parseFloat(styles.outBorderWidth)).toBeGreaterThan(Number.parseFloat(styles.flatBorderWidth));
-    expect(isTransparent(styles.ghostBorder)).toBe(true);
+    /* `.solid` clamps to the same tint as `.soft` rather than a saturated fill. */
+    expectSameColor(styles.solid, styles.soft, "solid input clamps to the soft tint");
+    expect(getColorDistance(styles.solid, styles.default)).toBeGreaterThan(1);
+    /* `.bare` is the published resting fill, so it lands on the default. */
+    expectSameColor(styles.bare, styles.default, "bare input is the resting fill");
+
+    /* The cascade case: the clamp and the edge floor both hold on an input that
+       declared nothing itself. */
+    expectSameColor(styles.inheritedBackground, styles.soft, "inherited solid clamps");
+    expect(Number.parseFloat(styles.inheritedBorderWidth)).toBeGreaterThan(0);
+    expect(isTransparent(styles.inheritedBorderColor)).toBe(false);
   });
 
   /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
@@ -57,8 +82,8 @@ test.describe("forms", () => {
       });
     };
 
-    const neutral = await readFocused("ipt-plain-none");
-    const intent = await readFocused("ipt-plain-success");
+    const neutral = await readFocused("ipt-default-none");
+    const intent = await readFocused("ipt-default-success");
 
     for (const [label, styles] of [
       ["neutral", neutral],
@@ -74,15 +99,15 @@ test.describe("forms", () => {
     await page.goto(FORMS_URL);
 
     const resting = await page
-      .getByTestId("ipt-plain-success")
+      .getByTestId("ipt-default-success")
       .evaluate((element) => getComputedStyle(element).borderTopColor);
 
-    await page.getByTestId("ipt-plain-success").hover();
+    await page.getByTestId("ipt-default-success").hover();
 
     await expect
       .poll(async () =>
         getColorDistance(
-          await page.getByTestId("ipt-plain-success").evaluate((element) => getComputedStyle(element).borderTopColor),
+          await page.getByTestId("ipt-default-success").evaluate((element) => getComputedStyle(element).borderTopColor),
           resting,
         ),
       )
@@ -92,25 +117,29 @@ test.describe("forms", () => {
   /* Both tints are mixed toward `transparent`, so their strength is their alpha.
      Comparing them against an opaque token instead would be dominated by that
      alpha gap and report every tint as equally distant. */
-  test("keeps the soft control tint quieter than a soft badge", async ({ page }) => {
+  test("caps a text control's tint at the published soft fill", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const softInput = await page
-      .getByTestId("ipt-soft-success")
+    const solidInput = await page
+      .getByTestId("ipt-solid-success")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
     await page.goto(FEEDBACK_URL);
 
     const softBadge = await page
-      .getByTestId("badge-soft-success")
+      .getByTestId("badge-soft-edgeless-success")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    const solidBadge = await page
+      .getByTestId("badge-solid-edgeless-success")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
-    const inputAlpha = readSrgb(softInput).alpha;
-    const badgeAlpha = readSrgb(softBadge).alpha;
+    const inputAlpha = readSrgb(solidInput).alpha;
 
-    // Visible, but markedly quieter than the badge tint.
+    /* The cap is the soft tint exactly, so a container's `.solid` puts a field at
+       the same strength a soft chip carries and nowhere near a filled one. */
     expect(inputAlpha).toBeGreaterThan(0);
-    expect(inputAlpha).toBeLessThan(badgeAlpha / 1.5);
+    expect(inputAlpha).toBeCloseTo(readSrgb(softBadge).alpha, 2);
+    expect(inputAlpha).toBeLessThan(readSrgb(solidBadge).alpha / 2);
   });
 
   test("applies intent classes to checked toggles", async ({ page }) => {
@@ -139,7 +168,7 @@ test.describe("forms", () => {
 
       return intents.flatMap((intent) =>
         ["checkbox", "radio", "switch"].map((component) => {
-          const styles = read(`${component}-plain-${intent}-checked`);
+          const styles = read(`${component}-default-${intent}-checked`);
 
           return {
             /* A checked radio keeps a transparent box and shows the intent in
@@ -171,8 +200,8 @@ test.describe("forms", () => {
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).backgroundColor;
 
       return {
-        checkbox: background("checkbox-plain-none-checked"),
-        switch: background("switch-plain-none-checked"),
+        checkbox: background("checkbox-default-none-checked"),
+        switch: background("switch-default-none-checked"),
         tokenText,
       };
     });
@@ -181,23 +210,26 @@ test.describe("forms", () => {
     expectSameColor(values.switch, values.tokenText, "checked switch background");
   });
 
-  test("keeps unchecked toggle boundaries under direct and inherited tint presentations", async ({ page }) => {
+  /* A toggle's closed silhouette is the only visible unchecked affordance, so a
+     tint must not take it away -- directly or through the cascade. */
+  test("keeps unchecked toggle boundaries under direct and inherited fills", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const boundaries = await page.evaluate(() => {
       const results: { borderColor: string; borderWidth: string; label: string }[] = [];
+      const host = document.querySelector('[data-testid="preview-root"]')!;
 
       for (const component of ["checkbox", "radio"]) {
-        for (const presentation of ["soft", "ghost"]) {
-          const direct = document.querySelector(`[data-testid="${component}-${presentation}-none"]`)!;
+        for (const fill of ["soft", "bare"]) {
+          const direct = document.querySelector(`[data-testid="${component}-${fill}-edged-none"]`)!;
           const inheritedHost = document.createElement("div");
           const inherited = document.createElement("input");
 
-          inheritedHost.className = presentation;
+          inheritedHost.className = fill;
           inherited.className = component;
           inherited.type = component;
           inheritedHost.append(inherited);
-          document.body.append(inheritedHost);
+          host.append(inheritedHost);
 
           for (const [mode, element] of [
             ["direct", direct],
@@ -208,7 +240,7 @@ test.describe("forms", () => {
             results.push({
               borderColor: styles.borderTopColor,
               borderWidth: styles.borderTopWidth,
-              label: `${component} ${mode} ${presentation}`,
+              label: `${component} ${mode} ${fill}`,
             });
           }
 
@@ -225,11 +257,42 @@ test.describe("forms", () => {
     }
   });
 
+  /* Wave 2. `.checkbox` and `.radio` are not on `text-control`, so nothing floors
+     their edge: `.edgeless` mixes `--intent-border` at 0% and the unchecked
+     boundary disappears, which is the affordance above stated the other way
+     round. Migrating the toggles is what makes this fail. */
+  test("loses the unchecked toggle boundary under an edgeless container", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const borderColors = await page.evaluate(() =>
+      ["checkbox", "radio"].map((component) => {
+        const host = document.createElement("div");
+        const toggle = document.createElement("input");
+
+        host.className = "edgeless";
+        toggle.className = component;
+        toggle.type = component;
+        host.append(toggle);
+        document.querySelector('[data-testid="preview-root"]')!.append(host);
+
+        const color = getComputedStyle(toggle).borderTopColor;
+
+        host.remove();
+
+        return { color, component };
+      }),
+    );
+
+    for (const { color, component } of borderColors) {
+      expect(isTransparent(color), `${component} edgeless boundary`).toBe(true);
+    }
+  });
+
   test("renders checkbox and switch with correct appearance and transitions", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const checkbox = page.getByTestId("checkbox-plain-none");
-    const switchElement = page.getByTestId("switch-plain-none");
+    const checkbox = page.getByTestId("checkbox-default-none");
+    const switchElement = page.getByTestId("switch-default-none");
 
     await expect(checkbox).toBeVisible();
     await expect(switchElement).toBeVisible();
@@ -279,57 +342,94 @@ test.describe("forms", () => {
       expect(after, testId).toBe(before);
     };
 
-    await expectUnmoved("checkbox-plain-none-disabled");
-    await expectUnmoved("switch-plain-none-disabled");
+    await expectUnmoved("checkbox-default-none-disabled");
+    await expectUnmoved("switch-default-none-disabled");
   });
 
-  test("configures input icons with composable classes, position, and theme variables", async ({ page }) => {
+  /* A data URI cannot read `currentColor` or a custom property, which is why the
+     icons used to ship a light, a dark, a focused-light and a focused-dark copy
+     of the same paths. They are masks now: one picture per type, coloured by the
+     element behind it. The wrapper is what makes that possible -- a text input is
+     replaced content and generates no pseudo-element of its own. */
+  test("paints a field icon from the control wrapper and colors it by state", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const emailInput = page.getByTestId("field-email-icon-left");
-    const rightInput = page.getByTestId("field-email-icon-right");
-    const searchStandardInput = page.getByTestId("field-search-standard");
+    const icons = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const wrapper = document.querySelector(`[data-testid="${testId}"]`)!;
+        const styles = getComputedStyle(wrapper, "::before");
 
-    const emailBgBefore = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-    expect(emailBgBefore).toContain("data:image/svg+xml");
-    expect(emailBgBefore).toContain("%23737373");
+        return {
+          background: styles.backgroundColor,
+          content: styles.content,
+          inlineStart: styles.insetInlineStart,
+          inlineEnd: styles.insetInlineEnd,
+          mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
+        };
+      };
 
-    await emailInput.focus();
-    const emailBgFocused = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-    expect(emailBgFocused).toContain("data:image/svg+xml");
-    expect(emailBgFocused).toContain("%230a0a0a");
-
-    // A search input without `.icon` keeps the plain control padding.
-    const searchPaddingLeft = await searchStandardInput.evaluate((el) => getComputedStyle(el).paddingLeft);
-    expect(searchPaddingLeft).toBe("12px");
-
-    const rightPadding = await rightInput.evaluate((el) => getComputedStyle(el).paddingRight);
-    const rightPos = await rightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
-
-    expect(rightPadding).not.toBe("0px");
-    expect(rightPos).toContain("100%");
-  });
-
-  test("uses light input artwork inside a light subtree of a dark theme", async ({ page }) => {
-    await page.goto(FORMS_URL);
-
-    const artwork = await page.evaluate(() => {
-      const dark = document.createElement("div");
-      const light = document.createElement("div");
-      const input = document.createElement("input");
-
-      dark.className = "dark";
-      light.className = "light";
-      input.className = "ipt email icon";
-      light.append(input);
-      dark.append(light);
-      document.body.append(dark);
-
-      return getComputedStyle(input).backgroundImage;
+      return {
+        email: read("control-email-icon-left"),
+        password: read("control-password-icon-left"),
+        right: read("control-email-icon-right"),
+        standard: read("control-search-standard"),
+      };
     });
 
-    expect(artwork).toContain("%23737373");
-    expect(artwork).not.toContain("%23a3a3a3");
+    expect(icons.email.mask, "email artwork").toContain("data:image/svg+xml");
+    /* One picture per type, not one per type per theme per state. */
+    expect(icons.password.mask, "password artwork").not.toBe(icons.email.mask);
+    /* `.right` moves the same artwork rather than swapping it. */
+    expect(icons.right.mask, "right artwork").toBe(icons.email.mask);
+    expect(icons.right.inlineEnd, "right position").not.toBe("auto");
+    expect(icons.email.inlineStart, "left position").not.toBe("auto");
+    /* A wrapper with no `.icon` inside paints nothing, so the class stays opt-in
+       and a field never reserves room for artwork it will not draw. */
+    expect(icons.standard.content, "no-icon wrapper").toBe("none");
+
+    /* The mask takes the surrounding text colour at a fixed remove and goes to
+       full strength while the control is focused, which is what the four
+       baked-in variants were approximating. */
+    const resting = icons.email.background;
+
+    await page.getByTestId("field-email-icon-left").focus();
+
+    expect(readSrgb(resting).alpha, "resting icon is dimmed").toBeLessThan(1);
+    /* The icon colour is transitioned, so this polls for the settled value. */
+    await expect
+      .poll(
+        async () =>
+          readSrgb(
+            await page
+              .getByTestId("control-email-icon-left")
+              .evaluate((element) => getComputedStyle(element, "::before").backgroundColor),
+          ).alpha,
+      )
+      .toBe(1);
+  });
+
+  test("reserves room for a field icon only when the control opts in", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const padding = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const styles = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+        return { left: styles.paddingLeft, right: styles.paddingRight };
+      };
+
+      return {
+        left: read("field-email-icon-left"),
+        right: read("field-email-icon-right"),
+        standard: read("field-search-standard"),
+      };
+    });
+
+    // A search input without `.icon` keeps the plain control padding.
+    expect(padding.standard.left).toBe("12px");
+    expect(Number.parseFloat(padding.left.left)).toBeGreaterThan(12);
+    expect(Number.parseFloat(padding.right.right)).toBeGreaterThan(12);
+    expect(padding.right.left).toBe("12px");
   });
 
   test("styles only hint error messages as field helper text", async ({ page }) => {
