@@ -119,7 +119,6 @@ const SUPPORTED_KEYWORDS = new Set([
   "minimum",
   "pattern",
   "properties",
-  "propertyNames",
   "required",
   "title",
   "type",
@@ -134,7 +133,6 @@ interface Schema {
   minimum?: number;
   pattern?: string;
   properties?: Record<string, Schema>;
-  propertyNames?: Schema;
   required?: string[];
   type?: string | string[];
   [keyword: string]: unknown;
@@ -279,28 +277,30 @@ test("every component's default names a presentation that exists", () => {
   expect(problems).toEqual([]);
 });
 
-test("every rename carries the reason it happened", () => {
-  const problems = registry.components
-    .filter((component) => component.renamedFrom !== undefined && component.renameReason === undefined)
-    .map((component) => `${component.class}: renamedFrom without renameReason`);
-  expect(problems).toEqual([]);
-});
-
 /* The two intent resets are the only selector lists in the package maintained by
    hand, so they are the two worth checking. A component missing from one reads
    an undefined `--intent-*`, which makes every `color-mix()` referencing it
    invalid at computed-value time and silently drops the declaration -- so the
    component renders as nothing rather than as an error. */
-test("every component is in an intent reset", async () => {
-  const intent = await read("src/intent.css");
-  const native = await read("src/native.css");
-  const open = intent.indexOf(":where(") + ":where(".length;
-  const reset = new Set(
-    intent
-      .slice(open, intent.indexOf(")", open))
+const whereSelectors = (source: string): Set<string> => {
+  const open = source.indexOf(":where(") + ":where(".length;
+
+  return new Set(
+    source
+      .slice(open, source.indexOf(")", open))
       .split(",")
       .map((selector) => selector.trim()),
   );
+};
+
+test("every component is in an intent reset", async () => {
+  /* Both lists are read as selector lists, and the native one has to be: asking
+     whether the file text contains the element name passes on any file long
+     enough to contain it anywhere. `pre` is inside `prefers-reduced-transparency`
+     and `select` is inside `selector`, so most of these elements could have been
+     missing from the reset with this test still green. */
+  const reset = whereSelectors(await read("src/intent.css"));
+  const native = whereSelectors(await read("src/native.css"));
   const problems: string[] = [];
 
   for (const { class: name } of registry.components) {
@@ -310,7 +310,7 @@ test("every component is in an intent reset", async () => {
   }
   for (const selector of registry.components.flatMap((component) => component.native)) {
     const element = selector.split(/[.:[]/)[0];
-    if (!native.includes(element)) {
+    if (!native.has(element)) {
       problems.push(`${element} is missing from the native intent reset in native.css`);
     }
   }
@@ -396,6 +396,75 @@ test("every implemented component declares its published default", async () => {
     ]) {
       if (!block.includes(declaration)) {
         problems.push(`${component.class} should declare ${declaration}`);
+      }
+    }
+  }
+  expect(problems).toEqual([]);
+});
+
+/* The same contract as above, for the shared utilities rather than the
+   components. They are `@utility`, so they are class names a consumer can type,
+   and `box` reads `--_d-fill`, `--_d-fg-on-fill` and `--_d-border` with no
+   fallback -- that absence is what forces a component to state its whole resting
+   geometry in one place. A utility that composes `box` and leaves one out paints
+   nothing where that slot was read, because an undefined `var()` inside a
+   `color-mix()` invalidates the declaration instead of reporting anything.
+   `surface` shipped that way: bare `surface` had no fill and no border. */
+test("every composition utility that takes box states its resting geometry", async () => {
+  const utilities = await shippedUtilities();
+  const problems: string[] = [];
+
+  for (const name of composition) {
+    const block = utilities.get(name);
+
+    if (name === "box" || block === undefined) {
+      continue;
+    }
+    const applied = [...block.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
+
+    if (!applied.includes("box")) {
+      continue;
+    }
+    for (const slot of ["--_d-fill", "--_d-fg-on-fill", "--_d-border"]) {
+      if (!block.includes(`${slot}:`)) {
+        problems.push(`${name} should declare ${slot}`);
+      }
+    }
+  }
+  expect(problems).toEqual([]);
+});
+
+/* `@apply` inlines the utility's declarations where it is written, so anything
+   the utility declares itself wins over the same slot written above it. A
+   component's own resting geometry therefore has to come after the composition
+   it applies: `surface` is bare and edged, and a solid tooltip stating its fill
+   first would paint as a bare one with nothing to show for it. */
+test("a component states its resting geometry after the composition it applies", async () => {
+  const utilities = await shippedUtilities();
+  const slots = ["--_d-fill", "--_d-fg-on-fill", "--_d-border"];
+  const declaring = [...composition].filter((name) =>
+    slots.some((slot) => utilities.get(name)?.includes(slot + ":") === true),
+  );
+  const problems: string[] = [];
+
+  for (const [name, block] of utilities) {
+    for (const applied of declaring) {
+      if (name === applied) {
+        continue;
+      }
+      const at = [...block.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
+        list.trim().split(/\s+/).includes(applied),
+      )?.index;
+
+      if (at === undefined) {
+        continue;
+      }
+      for (const slot of slots) {
+        const own = block.indexOf(slot + ":");
+
+        if (own !== -1 && own < at) {
+          problems.push(`${name} declares ${slot} above its @apply ${applied}`);
+        }
       }
     }
   }
@@ -514,7 +583,7 @@ test("every intent maps onto the color family the registry names", async () => {
   const problems: string[] = [];
 
   for (const [name, { family }] of Object.entries(registry.intents)) {
-    const block = intent.match(new RegExp(String.raw`(^|\n)\.${name}[^{]*` + `{([^}]*)}`));
+    const block = intent.match(new RegExp(String.raw`(^|\n)\.${name}(?![A-Za-z0-9_-])[^{]*` + `{([^}]*)}`));
 
     if (block === null) {
       problems.push(`.${name} has no block in intent.css`);

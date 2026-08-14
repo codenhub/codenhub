@@ -173,7 +173,8 @@
           }
         },
         "dependentRequired": {
-          "composition": ["compositionReason"]
+          "composition": ["compositionReason"],
+          "renamedFrom": ["renameReason"]
         }
       }
     },
