@@ -80,21 +80,15 @@
 }
 
 /* A panel is the flush, unelevated sibling: sidebars, toolbars, and wells that
-   sit flat against the layout rather than floating above it. */
+   sit flat against the layout rather than floating above it. Soft and edgeless
+   is what makes it read as a well without drawing a line to say so. */
 @utility panel {
-  --surface-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
-  --surface-bg: color-mix(in oklab, var(--intent-color) var(--surface-fill), var(--color-foreground));
-  --surface-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text));
-  --surface-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  @apply surface p-(--surface-padding,1rem);
 
-  @apply shaped block p-(--surface-padding,1rem) text-(--surface-fg);
-  background-color: var(--surface-bg);
-  border: var(--shape-border-width) solid var(--surface-border);
-  border-radius: var(--ui-radius-surface, var(--radius-surface));
-  /* The ring only, deliberately: a panel is the unelevated sibling and does not
-     read `--ui-shadow`. It still needs the edge, because a clipping aesthetic
-     removes its border, and resolves to `none` when there is no such aesthetic. */
-  box-shadow: var(--shape-ring, none);
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
 
   &.compact {
     --surface-padding: 0.5rem;
@@ -109,19 +103,16 @@
   }
 }
 
+/* The same container at rest, sized for nothing being in it. Its children take
+   the box's own foreground so an intent reaches the heading and the body copy
+   together rather than only the outline around them. */
 @utility empty-state {
-  --empty-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
-  --empty-bg: color-mix(in oklab, var(--intent-color) var(--empty-fill), transparent);
-  --empty-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
-  --empty-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--empty-line));
+  @apply surface flex flex-col items-center gap-3 p-[clamp(2rem,8vw,5rem)] text-center;
 
-  @apply shaped flex flex-col items-center gap-3 p-[clamp(2rem,8vw,5rem)] text-center;
-
-  background-color: var(--empty-bg);
-  border: min(var(--shape-border-width), 2px) solid var(--empty-edge);
-  border-radius: var(--ui-radius-surface, var(--radius-surface));
-  box-shadow: var(--shape-ring, none);
-  color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text-secondary));
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
 
   & > * {
     color: inherit;

@@ -30,7 +30,7 @@ test.describe("surfaces", () => {
         outlineBackground: primaryOutline.backgroundColor,
         outlineBorder: primaryOutline.borderTopColor,
         outlineBorderWidth: primaryOutline.borderTopWidth,
-        panelShadow: panel.boxShadow,
+        panelShadowOffset: panel.boxShadow.split(") ")[1],
         softBackground: successSoft.backgroundColor,
         tokenBackground: resolveToken("background"),
         tokenPrimary: resolveToken("primary"),
@@ -40,8 +40,11 @@ test.describe("surfaces", () => {
     /* A card is the elevated sibling, and its depth comes from the structural
        geometry `surface` carries scaled by the registry's elevation of 1. */
     expect(styles.neutralShadow).not.toBe("none");
-    // A panel is the flush one, so it stays unelevated.
-    expect(styles.panelShadow).toBe("none");
+    /* A panel is the flush one, so it stays unelevated -- which under `box` is a
+       shadow whose every length is zero rather than the keyword `none`. Zero is
+       what a multiplier of zero produces, and the distinction matters: a `none`
+       would mean the composition dropped out instead of resolving. */
+    expect(styles.panelShadowOffset).toBe("0px 0px 0px 0px");
 
     expectSameColor(styles.neutralBackground, styles.tokenBackground, "neutral card background");
     expect(getColorDistance(styles.softBackground, styles.tokenBackground)).toBeGreaterThan(2);
@@ -68,10 +71,11 @@ test.describe("surfaces", () => {
     expect(spacious).toBeGreaterThan(base);
   });
 
-  /* A divider is a rule, not a box: it has one line and no interior, so it takes
-     the stronger of the two presentation amounts rather than reading them
-     separately. Every combination but the fully bare one therefore draws. */
-  test("colors a divider by intent and takes the stronger presentation amount", async ({ page }) => {
+  /* A divider is an indicator: it reads intent and no presentation token at all.
+     A rule is a line, and neither a fill class nor an edge class has anything to
+     say about one -- while reading both used to mean a container's `.bare.edgeless`
+     made every `<hr>` inside it invisible. */
+  test("colors a divider by intent and ignores presentation entirely", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
@@ -115,43 +119,50 @@ test.describe("surfaces", () => {
     expect(styles.verticalWidth).not.toBe("0px");
 
     for (const variant of styles.variants) {
-      /* The rule keeps its width whatever the presentation: the width is the
-         aesthetic's material, clamped, and no presentation scales it. */
+      /* Same width and same colour on every row, including the one that used to
+         turn the rule off. The width is the aesthetic's material and nothing
+         scales it; the colour is the intent and nothing dilutes it. */
       expect(variant.width, `${variant.presentation} width`).toBe("1px");
-
-      if (variant.presentation === "bare edgeless") {
-        /* Both amounts at zero is the one way to turn a rule off. */
-        expect(isTransparent(variant.color), "bare edgeless divider").toBe(true);
-      } else {
-        expect(isTransparent(variant.color), `${variant.presentation} divider`).toBe(false);
-      }
+      expect(isTransparent(variant.color), `${variant.presentation} divider`).toBe(false);
     }
   });
 
-  /* An empty state is still wave 2: it composes `--ui-fill`, `--ui-fg-on-fill`
-     and `--ui-border` itself, behind a two-pixel edge ceiling. */
   test("renders every empty-state fill", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
       const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
 
+      const probe = document.createElement("span");
+
+      probe.style.color = "var(--color-background)";
+      document.body.append(probe);
+
+      const ground = getComputedStyle(probe).color;
+
+      probe.remove();
+
       return {
         bareEdgeless: get("empty-state-bare-edgeless-primary").backgroundColor,
-        bareEdgedBorderWidth: get("empty-state-bare-edged-primary").borderTopWidth,
+        bareEdgelessBorder: get("empty-state-bare-edgeless-primary").borderTopColor,
         defaultBorderWidth: get("empty-state-default-primary").borderTopWidth,
+        ground,
         softBackground: get("empty-state-soft-edged-primary").backgroundColor,
         solidBackground: get("empty-state-solid-edged-primary").backgroundColor,
         solidColor: get("empty-state-solid-edged-primary").color,
       };
     });
 
-    expect(isTransparent(styles.bareEdgeless)).toBe(true);
-    expect(isTransparent(styles.softBackground)).toBe(false);
-    expect(isTransparent(styles.solidBackground)).toBe(false);
+    /* Bare adds no fill, so what shows is the ground every surface rests on. */
+    expectSameColor(styles.bareEdgeless, styles.ground, "bare empty state ground");
+    expect(getColorDistance(styles.softBackground, styles.ground)).toBeGreaterThan(2);
+    expect(getColorDistance(styles.solidBackground, styles.ground)).toBeGreaterThan(2);
     expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
     expect(Number.parseFloat(styles.defaultBorderWidth)).toBeGreaterThanOrEqual(1);
-    expect(Number.parseFloat(styles.bareEdgedBorderWidth)).toBeLessThanOrEqual(2);
+    /* The two-pixel ceiling is gone with the edge scale that made it necessary.
+       `.edgeless` mixes the line to nothing rather than narrowing it: the width is
+       the aesthetic's material and presentation never touches it. */
+    expect(isTransparent(styles.bareEdgelessBorder), "edgeless empty state line").toBe(true);
   });
 
   /* Presentation cascades and intent does not, so a container sets the look of

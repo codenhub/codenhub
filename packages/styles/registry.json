@@ -76,8 +76,7 @@
         "edge": "edgeless",
         "elevation": 1
       },
-      "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]", "input[type=\"button\"]"],
-      "wave": 1
+      "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]", "input[type=\"button\"]"]
     },
     {
       "class": "ipt",
@@ -88,8 +87,7 @@
       },
       "native": [
         "input:not([type=\"checkbox\"], [type=\"radio\"], [type=\"submit\"], [type=\"reset\"], [type=\"button\"])"
-      ],
-      "wave": 1
+      ]
     },
     {
       "class": "card",
@@ -98,8 +96,7 @@
         "edge": "edged",
         "elevation": 1
       },
-      "native": [],
-      "wave": 1
+      "native": []
     },
     {
       "class": "badge",
@@ -108,8 +105,7 @@
         "edge": "edgeless",
         "elevation": 0
       },
-      "native": [],
-      "wave": 1
+      "native": []
     },
     {
       "class": "loader",
@@ -127,8 +123,7 @@
         "bars-wave",
         "pulse-ring"
       ],
-      "native": [],
-      "wave": 1
+      "native": []
     },
     {
       "class": "textarea",
@@ -137,8 +132,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": ["textarea"],
-      "wave": 2
+      "native": ["textarea"]
     },
     {
       "class": "select",
@@ -147,8 +141,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": ["select"],
-      "wave": 2
+      "native": ["select"]
     },
     {
       "class": "checkbox",
@@ -157,8 +150,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": ["input[type=\"checkbox\"]"],
-      "wave": 2
+      "native": ["input[type=\"checkbox\"]"]
     },
     {
       "class": "radio",
@@ -167,8 +159,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": ["input[type=\"radio\"]"],
-      "wave": 2
+      "native": ["input[type=\"radio\"]"]
     },
     {
       "class": "switch",
@@ -177,8 +168,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "panel",
@@ -187,8 +177,7 @@
         "edge": "edgeless",
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "alert",
@@ -197,8 +186,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "data-table",
@@ -210,7 +198,6 @@
       "native": ["table"],
       "renamedFrom": "table",
       "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
-      "wave": 2,
       "composition": "frame",
       "compositionReason": "Takes its border, radius and clip from `box` and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Its `overflow: hidden` over `border-separate` also does not compose with an aesthetic's `clip-path`."
     },
@@ -221,8 +208,7 @@
         "edge": "edged",
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "pre",
@@ -232,8 +218,7 @@
         "ground": "--intent-subtle",
         "elevation": 0
       },
-      "native": ["pre"],
-      "wave": 2
+      "native": ["pre"]
     },
     {
       "class": "quote",
@@ -243,7 +228,6 @@
         "elevation": 0
       },
       "native": ["blockquote"],
-      "wave": 2,
       "composition": "none",
       "compositionReason": "Typography rather than a painted box. The component is a left bar and an indent, so `box`'s background, edge, radius and shadow would all be inert on it."
     },
@@ -254,8 +238,7 @@
         "edge": "edgeless",
         "elevation": 2
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "kbd",
@@ -265,8 +248,7 @@
         "ground": "--intent-subtle",
         "elevation": 0
       },
-      "native": ["kbd"],
-      "wave": 2
+      "native": ["kbd"]
     },
     {
       "class": "code",
@@ -276,32 +258,28 @@
         "ground": "--intent-subtle",
         "elevation": 0
       },
-      "native": ["code"],
-      "wave": 2
+      "native": ["code"]
     },
     {
       "class": "skeleton",
       "default": {
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "progress",
       "default": {
         "elevation": 0
       },
-      "native": [],
-      "wave": 2
+      "native": []
     },
     {
       "class": "divider",
       "default": {
         "elevation": 0
       },
-      "native": ["hr"],
-      "wave": 2
+      "native": ["hr"]
     }
   ],
   "helpers": [

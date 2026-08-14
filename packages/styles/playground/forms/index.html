@@ -313,30 +313,32 @@ Collapsed the per-component intent blocks.</textarea
 
       <section class="sect-inn stack loose narrow">
         <div class="stack tight">
-          <h2 class="text-title">Control base</h2>
+          <h2 class="text-title">Text control</h2>
           <p class="text-body text-text-secondary">
-            <code class="code">.control-base</code>
-            is the low-level utility the three text controls compose: dimensions, border, placeholder, focus, invalid,
-            and disabled. Use it for a custom control when none of them fits.
+            <code class="code">.text-control</code>
+            is the utility all six controls above compose: the box, the field chrome, the fill cap, and the edge floor.
+            Use it for a custom control when none of them fits.
           </p>
         </div>
         <div class="stack tight">
           <div
-            class="control-base"
+            class="text-control"
+            style="padding: 0.5rem 0.75rem"
             contenteditable="true"
             role="textbox"
             aria-label="Custom control"
-            data-testid="control-base"
+            data-testid="text-control"
           >
             Editable custom control
           </div>
           <div
-            class="control-base"
+            class="text-control"
+            style="padding: 0.5rem 0.75rem"
             contenteditable="true"
             role="textbox"
             aria-label="Invalid custom control"
             aria-invalid="true"
-            data-testid="control-base-invalid"
+            data-testid="text-control-invalid"
           >
             Invalid custom control
           </div>

@@ -1,17 +1,22 @@
 ---
-status: APPROVED
-last_updated: 2026-08-13
-scope: The styling model proposed for `@codenhub/styles` 0.1.0.
+status: IMPLEMENTED
+last_updated: 2026-08-14
+scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
 # Model
 
 What decides how an element looks in 0.1.0.
 
-This document supersedes [Architecture](./architecture.md) once the refactor is
-implemented. Until then Architecture remains the accurate record of what the code
-does, and this is the proposal. Where the two conflict, the code follows
-Architecture and future work follows this.
+This document is the source of truth for the token contracts; public documents
+under `docs/` describe the same model for consumers. It supersedes
+[Architecture](./architecture.md), which described the model 0.1.0 replaced and is
+kept only for the measurements recorded in it.
+
+It is written as the argument for the model rather than as a reference to it,
+because the reasoning is the part that decides the next question. Sections that
+read as proposals -- [What dies](#what-dies), [Spike results](#spike-results) --
+are the record of what was changed and why, and are accurate as history.
 
 ## The problem being fixed
 
@@ -241,8 +246,10 @@ reasoning is kept here because the question will come back.
 **What was right.** Twenty-two components paint a box the same way, so the five
 expressions that mix intent x presentation x aesthetic live in exactly one place:
 `@utility box`. Components that share more than that share more: the six text
-controls share `@utility text-control`, the eight surfaces share
-`@utility surface`. Those are shared code, named for what they are.
+controls share `@utility text-control`, and the five containers -- card, panel,
+alert, empty state, and the tooltip's bubble -- share `@utility surface`. Those are
+shared code, named for what they are. Nothing else needs a name: a key cap, a code
+chip and a table take `box` and say the rest themselves.
 
 **What was wrong.** Naming those groups "roles" turned shared code into a
 taxonomy, and a taxonomy has to be complete: every component needed a role, the
@@ -292,12 +299,14 @@ That is the test. **A bound is justified when our own composition produces the
 broken result, and unjustified when a consumer's own combination does.** The
 first is a bug we shipped; the second is a decision they made.
 
-Two components pass it today:
+Three pass it today, and the third is the same argument in a different
+material:
 
-| Component      | Bound                        | What our own composition does to it                                                                     |
-| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `text-control` | Fill capped at the soft tint | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.       |
-| `.tooltip`     | Fill capped at the soft tint | The same cascade reaches a bubble nobody classed, and its label goes the color of the bubble behind it. |
+| Component      | Bound                               | What our own composition does to it                                                                                                                    |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text-control` | Fill capped at the soft tint        | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                      |
+| `.tooltip`     | Fill pinned at solid                | The same cascade reaches a bubble nobody classed and leaves it transparent over arbitrary content, with its label the color of whatever shows through. |
+| Toggles        | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one.       |
 
 The number is expected to move. This is a test, not a quota: a bound that passes
 it is published, and a bound that stops passing it is deleted.
@@ -368,8 +377,6 @@ with the `var()` fallback that is its default.
 | `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.               |
 | `--ui-clip`               | `none`               | Silhouette for structural components.                 |
 | `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                 |
-| `--ui-edge`               | _undefined_          | Inset ring width when the edge is not a border.       |
-| `--ui-edge-tight`         | `--ui-edge`          | Inset ring width for chips.                           |
 | `--ui-focus-inset`        | _undefined_          | Inset focus layer width. Undefined means no layer.    |
 
 The shadow split is the second half of the ink fix. A custom property resolves
@@ -537,15 +544,14 @@ declares, the hover step, the intents and their color families, the modifiers --
 then every component, helper, and aesthetic.
 
 Per component: class name, default fill/edge/elevation, the ground it rests on
-where it has one, native element selectors, implementation wave, and -- where one
-applies -- a rename or a partial composition, each with its reason.
+where it has one, native element selectors, and -- where one applies -- a rename or
+a partial composition, each with its reason.
 
 ```json
 {
   "class": "btn",
   "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
-  "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"],
-  "wave": 1
+  "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"]
 }
 ```
 
@@ -599,15 +605,13 @@ can type, whether or not we document it, so the honest position is to publish th
 as a small composition API rather than to pretend they are internal and be
 surprised when someone uses one.
 
-| Utility        | What applying it gives an element                                                     |
-| -------------- | ------------------------------------------------------------------------------------- |
-| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled. |
-| `box-hover`    | The derived hover tone, for something you press rather than type into.                |
-| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                  |
-| `text-control` | `box` plus the fill cap and the field affordances every text control shares.          |
-| `shaped`       | The aesthetic's silhouette and inset edge at control scale.                           |
-| `shaped-tight` | The same at chip scale.                                                               |
-| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                   |
+| Utility        | What applying it gives an element                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.           |
+| `box-hover`    | The derived hover tone, for something you press rather than type into.                          |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                            |
+| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share. |
+| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                             |
 
 They are the seam the components are built from, and a consumer composing a
 component we do not ship is better served by them than by copying a component's
@@ -676,18 +680,20 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 
 ## What dies
 
-| Goes away                | Replaced by                                    |
-| ------------------------ | ---------------------------------------------- |
-| `.flat`                  | `.solid`                                       |
-| `.out`                   | `.bare.edged`                                  |
-| `.ghost`                 | `.bare`                                        |
-| `.fill`                  | Derived hover. No replacement for `.out.fill`. |
-| `--ui-border-scale`      | Nothing. The aesthetic owns edge width.        |
-| `--ui-hover-fill`        | Derived hover.                                 |
-| `--ui-hover-fg-on-fill`  | Derived hover.                                 |
-| Per-component clamps     | Deleting the edge scale. Two bounds survive.   |
-| Aesthetic selector lists | `--ui-ink`, shadow parts, `--ui-backdrop`.     |
-| "Plain"                  | A published default pair per component.        |
+| Goes away                      | Replaced by                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `.flat`                        | `.solid`                                                                                                           |
+| `.out`                         | `.bare.edged`                                                                                                      |
+| `.ghost`                       | `.bare`                                                                                                            |
+| `.fill`                        | Derived hover. No replacement for `.out.fill`.                                                                     |
+| `--ui-border-scale`            | Nothing. The aesthetic owns edge width.                                                                            |
+| `--ui-edge`, `--ui-edge-tight` | The shadow parts. `--ui-shadow-inset` and a spread draw the same ring, in the vocabulary elevation already speaks. |
+| `shaped`, `shaped-tight`       | `box`. It reads `--ui-clip` and draws the ring itself, so neither utility held anything of its own.                |
+| `--ui-hover-fill`              | Derived hover.                                                                                                     |
+| `--ui-hover-fg-on-fill`        | Derived hover.                                                                                                     |
+| Per-component clamps           | Deleting the edge scale. Two bounds survive.                                                                       |
+| Aesthetic selector lists       | `--ui-ink`, shadow parts, `--ui-backdrop`.                                                                         |
+| "Plain"                        | A published default pair per component.                                                                            |
 
 `.soft` keeps its name and changes meaning slightly: it is now fill only, and an
 author who wants the old bordered-soft look writes `.soft.edged`.

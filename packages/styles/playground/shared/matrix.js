@@ -35,14 +35,15 @@ const PRESENTATIONS = [
   "bare edged",
   "bare edgeless",
 ];
-/* Components that draw their edge whatever the edge class says, because losing
-   it would leave no mark of where typing goes (WCAG 1.4.11). */
+/* The six text controls draw their edge whatever the edge class says, because
+   losing it would leave a field with no mark of where typing goes and a toggle
+   with no silhouette at all (WCAG 1.4.11). Their edge rows would be duplicates of
+   each other, so only the fill varies. */
 const FILL_PRESENTATIONS = ["default", "solid", "soft", "bare"];
-/* Components whose only presentation response is their edge; the fill classes
-   land on the same pixels as the default. */
-const EDGE_PRESENTATIONS = ["default", "edged", "edgeless"];
-/* Components that read intent but not presentation. Spelling the axis out per
-   component keeps a page from claiming a variant the component ignores. */
+/* Components that read intent but not presentation: the indicators, which stand
+   in for content rather than being a box with a look, and the tooltip bubble,
+   whose fill is pinned so it cannot float over a page transparent. Spelling the
+   axis out per component keeps a page from claiming a variant it ignores. */
 const INTENT_ONLY = ["default"];
 const STATES = ["rest", "disabled"];
 
@@ -58,10 +59,11 @@ const classesFor = (base, intent, presentation, extra) =>
     .join(" ");
 
 /* Toggles share an axis: the same intents, the same states, and the same bare
-   cell. Only the input type and the extra states differ. */
-const toggle = (label, type, presentations = PRESENTATIONS) => ({
+   cell. Only the input type and the label differ. Their fill rows come from
+   `text-control` like every other field's. */
+const toggle = (label, type) => ({
   tag: "input",
-  presentations,
+  presentations: FILL_PRESENTATIONS,
   attrs: (intent) => ({ type, "aria-label": `${title(intent)} ${label}` }),
   states: {
     checked: { checked: "" },
@@ -75,6 +77,7 @@ const toggle = (label, type, presentations = PRESENTATIONS) => ({
 const textControl = (tag, extra) => ({
   tag,
   layout: "grid",
+  presentations: FILL_PRESENTATIONS,
   states: { disabled: { disabled: "" }, invalid: { "aria-invalid": "true" } },
   ...extra,
 });
@@ -97,14 +100,12 @@ const COMPONENTS = {
   },
   code: {
     tag: "code",
-    presentations: INTENT_ONLY,
     text: (intent) => `${intent}()`,
     states: {},
   },
   pre: {
     tag: "pre",
     layout: "grid",
-    presentations: INTENT_ONLY,
     text: (intent) => `const intent = "${intent}";`,
     states: {},
   },
@@ -133,10 +134,8 @@ const COMPONENTS = {
     text: (intent) => `${title(intent)} panel`,
     states: {},
   },
-  /* A divider takes `max(--ui-fill, --ui-border)` as its strength, so the only
-     row that differs from the default is the one where both are zero -- and a
-     row of invisible rules demonstrates nothing. `surfaces.spec.ts` asserts that
-     behaviour on elements it builds instead. */
+  /* A rule is a line. There is no fill to vary and no edge beside the one it
+     already is. */
   divider: {
     tag: "hr",
     layout: "stack",
@@ -149,10 +148,7 @@ const COMPONENTS = {
     html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
     states: {},
   },
-  /* `ipt` draws its edge whatever the edge class says, so `edged` and `edgeless`
-     land on the same control and only the fill classes vary. */
   ipt: textControl("input", {
-    presentations: FILL_PRESENTATIONS,
     attrs: (intent) => ({
       type: "text",
       placeholder: `${title(intent)} input`,
@@ -172,9 +168,7 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  /* A switch draws its own track and knob from theme tokens and reads no
-     presentation token at all, so every presentation renders the same control. */
-  switch: toggle("switch", "checkbox", INTENT_ONLY),
+  switch: toggle("switch", "checkbox"),
   "data-table": {
     tag: "table",
     layout: "grid",
@@ -186,7 +180,7 @@ const COMPONENTS = {
   progress: {
     tag: "div",
     layout: "stack",
-    presentations: EDGE_PRESENTATIONS,
+    presentations: INTENT_ONLY,
     attrs: (intent) => ({
       style: "--progress-value: 60%",
       role: "progressbar",
@@ -205,11 +199,12 @@ const COMPONENTS = {
   skeleton: {
     tag: "div",
     layout: "stack",
+    presentations: INTENT_ONLY,
     attrs: () => ({ "aria-hidden": "true" }),
     states: {},
   },
   /* A loader is a coloured mask and nothing else: no fill, no edge, no
-     silhouette, so it reads intent and no presentation token at all. */
+     silhouette. */
   loader: {
     tag: "span",
     presentations: INTENT_ONLY,

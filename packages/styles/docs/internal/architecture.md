@@ -1,14 +1,20 @@
 ---
-status: APPROVED
-last_updated: 2026-08-12
-scope: `@codenhub/styles` styling model, token contracts, and composition rules.
+status: DRAFT
+last_updated: 2026-08-14
+scope: The `@codenhub/styles` styling model before 0.1.0. Superseded; kept for its measurements.
 ---
 
 # Architecture
 
-This document defines how `@codenhub/styles` decides what an element looks like.
-It is the source of truth for the token contracts; public documents under
-`docs/` describe the same model for consumers.
+**Superseded by [Model](./model.md).** This document described how the package
+decided what an element looked like before 0.1.0, when presentation was
+`.flat`/`.out`/`.ghost`, an edge had a scale, and a silhouette arrived through
+`shaped`. None of that is still true, so nothing here binds.
+
+It is kept, at DRAFT, for the two measurements the roadmap cites and the model
+builds on: [The cost of a no-op](#the-cost-of-a-no-op) and
+[Indirect tokens resolve once](#indirect-tokens-resolve-once). Both outlive the
+model they were made under, and re-measuring them would cost more than the page.
 
 ## The three axes
 

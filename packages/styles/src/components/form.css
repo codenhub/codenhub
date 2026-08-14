@@ -105,18 +105,21 @@
   background-color: currentColor;
 }
 
-/* What every text control shares: the box, the chrome, and one bound.
+/* What all six text controls share: the box, the chrome, and two bounds. The
+   three text inputs are on it for the chrome; `.checkbox`, `.radio` and
+   `.switch` are on it for the bounds, which are the same two either way.
 
-   The bound is the fill cap, and it is not there to stop a consumer combining
-   classes we never documented. Presentation cascades on purpose -- that is how a
-   container sets the look of a subtree -- so `.solid` on a toolbar reaches the
-   inputs inside it, and an input filled 100% with the text colour has text the
-   same colour as its background. Our own cascade produced that, so our own
-   `min()` answers it. Everything else here is chrome, not policy.
+   The first bound is the fill cap, and it is not there to stop a consumer
+   combining classes we never documented. Presentation cascades on purpose -- that
+   is how a container sets the look of a subtree -- so `.solid` on a toolbar
+   reaches the inputs inside it, and an input filled 100% with the text colour has
+   text the same colour as its background. Our own cascade produced that, so our
+   own `min()` answers it.
 
-   The edge is drawn whatever the presentation says, for the same reason: a
-   container's `.edgeless` would otherwise leave a control with no mark of where
-   typing goes (WCAG 1.4.11).
+   The second is the edge floor: the line is drawn whatever the presentation says,
+   because a container's `.edgeless` would otherwise leave a field with no mark of
+   where typing goes, and an unchecked toggle with no silhouette at all
+   (WCAG 1.4.11).
 
    No derived hover. Tinting the box on hover is right for something you press
    and wrong for something you type into, so only the line responds. */
@@ -160,6 +163,19 @@
   &[aria-invalid="true"] {
     --intent-border: var(--color-destructive);
     --intent-color: var(--color-destructive);
+  }
+
+  /* R8. The one state that lifts the cap, and it lives here rather than on the
+     three toggles because a text input is never `:checked` and the rule is inert
+     on one. A checked toggle is filled with its own intent by definition, so the
+     cap the unchecked box needs is exactly what has to give way.
+
+     Both are `box`'s own inputs rather than the presentation tokens: the cap sits
+     between `--ui-fill` and the fill, so a state written in that vocabulary would
+     be capped by the bound it exists to lift. */
+  &:checked {
+    --_fill: 100%;
+    --_fg: var(--intent-contrast);
   }
 
   /* Native decorations a field replaces with its own artwork. */
@@ -206,79 +222,6 @@
   }
 }
 
-@utility control-base {
-  /* A text control caps its fill well below the `.soft` tint. `.flat` would
-     otherwise put typed text on a saturated intent background, so a
-     container-level `.flat` would make every field inside it unreadable, and a
-     field needs a far quieter tint than a badge to stay legible while typing.
-     Clamping with `min()` resolves that from the value alone, with no
-     per-presentation selector. */
-  --control-fill: calc(min(var(--ui-fill, 0%), 6%) * var(--ui-bg-alpha, 1));
-  --control-bg: color-mix(in oklab, var(--intent-color) var(--control-fill), transparent);
-  --control-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
-  /* Neutral resolves this to the text color, which is the same value as
-     `--color-primary` in the shipped palette; a custom palette can differ. */
-  --control-border-active: var(--intent-color);
-  --control-fg: var(--color-text);
-  --control-placeholder: var(--color-text-secondary);
-
-  @apply shaped h-(--control-height,2.5rem) min-h-(--control-height,2.5rem) w-full appearance-none bg-(--control-bg) px-3 py-2 text-(--control-fg) transition-[background-color,border-color,box-shadow,color,opacity] duration-(--motion-duration-fast) ease-(--motion-ease);
-  box-sizing: border-box;
-  border: var(--shape-border-width) solid var(--control-border);
-  border-radius: var(--ui-radius, var(--radius-control));
-  box-shadow: var(--shape-ring, var(--ui-shadow, none));
-
-  &::placeholder {
-    color: var(--control-placeholder);
-  }
-
-  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
-    border-color: color-mix(in oklab, var(--intent-hover) var(--ui-border, 100%), transparent);
-  }
-
-  &:focus {
-    @apply outline-none;
-  }
-
-  /* The aesthetic shadow is carried through so focusing does not drop it. Its
-     fallback is a zero-size transparent shadow rather than `none`, because
-     `none` is only valid as the entire value: a `<shadow>, none` list is invalid
-     and drops the focus ring with it. */
-  &:focus-visible {
-    border-color: var(--control-border-active);
-    box-shadow:
-      var(--shape-focus-stack, 0 0 0 var(--focus-ring-width) var(--focus-ring)), var(--ui-shadow, 0 0 transparent);
-  }
-
-  &[aria-invalid="true"] {
-    --control-border: var(--color-destructive);
-    --control-border-active: var(--color-destructive);
-  }
-
-  &:disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed;
-
-    opacity: 0.58;
-  }
-
-  &::-webkit-search-decoration,
-  &::-webkit-search-cancel-button,
-  &::-webkit-search-results-button,
-  &::-webkit-search-results-decoration,
-  &::-webkit-calendar-picker-indicator,
-  &::-webkit-inner-spin-button,
-  &::-webkit-clear-button {
-    -webkit-appearance: none;
-    display: none !important;
-    opacity: 0;
-    pointer-events: none;
-    width: 0;
-    height: 0;
-  }
-}
-
 @utility field {
   --field-gap: 0.35rem;
 
@@ -303,14 +246,30 @@
   }
 }
 
+/* A bare, edged, unelevated multi-line text control. */
 @utility textarea {
-  @apply control-base min-h-28 resize-y;
+  @apply text-control px-3 py-2;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  @apply min-h-28 resize-y;
 }
 
+/* The same control with a native list behind it. The chevron is drawn from two
+   gradients rather than masked, because `appearance: none` removes the platform
+   arrow and a background image is the only thing a replaced element can paint. */
 @utility select {
-  @apply control-base;
+  @apply text-control h-(--control-height,2.5rem) py-2 pr-10 pl-3;
 
-  appearance: none;
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  min-height: var(--control-height);
   background-image:
     linear-gradient(45deg, transparent 50%, currentColor 50%),
     linear-gradient(135deg, currentColor 50%, transparent 50%);
@@ -319,40 +278,51 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
-  padding-right: 2.5rem;
 }
 
+/* The three toggles are text controls too, and they are on the utility for the
+   two bounds it carries rather than for the chrome. The fill cap keeps a
+   container's `.solid` from filling an unchecked box, and the edge floor keeps
+   its `.edgeless` from erasing the closed silhouette that is the only unchecked
+   affordance there is (WCAG 1.4.11). Both are bounds our own cascade earns, and
+   `text-control` is where the checked state that lifts the first one lives. */
 @utility checkbox {
-  /* Capped like text controls: an unchecked box must stay distinguishable from
-     a checked one, so `.flat` cannot fill it before it is checked. */
-  --toggle-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center;
 
-  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
-  /* Reads the aesthetic so a squaring aesthetic reaches it, but capped at its own
-     radius: a control radius is sized for a 40px control, and 14px of it on a 16px
-     box renders as a circle, which is the one shape a checkbox must not be. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  /* Capped at its own radius: a control radius is sized for a 40px control, and
+     14px of it on a 16px box renders as a circle, which is the one shape a
+     checkbox must not be. A squaring aesthetic still reaches it. */
   border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
-  background-color: color-mix(in oklab, var(--intent-color) var(--toggle-fill), transparent);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid
-    color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
 
-  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :checked) {
-    @apply border-(--color-border-hover);
-  }
+  /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
+     line the aesthetic draws elsewhere. A 16px box cannot spend four pixels a
+     side on an edge -- under `.pixel` that leaves an eight-pixel hole and an
+     unchecked box reads as a filled one. Our own aesthetic on our own component
+     produces that, so our own `min()` answers it. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
 
-  &:focus {
-    @apply outline-none;
-  }
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
+  /* `text-control` trades the outline for its own line colour, which reads on a
+     40px field and not on a 16px box. The ring goes back as a shadow layer
+     rather than as an `outline`, so a clipping aesthetic clips it with
+     everything else and its own inset focus layer still paints over the top. */
   &:focus-visible {
-    border-color: var(--intent-color);
-    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
   }
 
   &::after {
     @apply block size-3 opacity-0 transition-opacity duration-(--motion-duration-normal) ease-(--motion-ease);
 
-    background-color: var(--intent-contrast);
+    /* The mark takes the box's own foreground, which `box` already mixed against
+       this component's intent and fill, so a checked box in any intent has a
+       mark that reads against it. */
+    background-color: currentColor;
     content: "";
     mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
     -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
@@ -360,101 +330,88 @@
     -webkit-mask-size: contain;
   }
 
-  &:checked {
-    border-color: var(--intent-color);
-    background-color: var(--intent-color);
-
-    &::after {
-      @apply opacity-100;
-    }
-  }
-
-  &[aria-invalid="true"] {
-    @apply border-(--color-destructive);
-  }
-
-  &:disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed opacity-[0.58];
+  &:checked::after {
+    @apply opacity-100;
   }
 }
 
+/* The same control with a round silhouette and a dot for its mark. */
 @utility radio {
-  --toggle-fill: calc(min(var(--ui-fill, 0%), 12%) * var(--ui-bg-alpha, 1));
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center rounded-full;
 
-  @apply inline-grid size-4 cursor-pointer appearance-none place-content-center rounded-full transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
-  background-color: color-mix(in oklab, var(--intent-color) var(--toggle-fill), transparent);
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid
-    color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
 
-  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :checked) {
-    @apply border-(--color-border-hover);
-  }
+  /* The inset edge is capped for the reason given on `checkbox`, but the
+     silhouette is not taken: the circle is the only thing telling a radio from a
+     checkbox at a glance, and a stepped polygon would square it. An inset shadow
+     follows `border-radius`, so the edge stays round without one. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
 
-  &:focus {
-    @apply outline-none;
-  }
+  clip-path: none;
 
+  /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
-    border-color: var(--intent-color);
-    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
   }
 
   &::after {
     @apply block size-2 scale-0 rounded-full opacity-0 transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
 
-    background-color: var(--intent-contrast);
+    background-color: currentColor;
     content: "";
   }
 
-  &:checked {
-    @apply border-2 border-(--intent-color) bg-transparent;
-
-    &::after {
-      @apply scale-100 bg-(--intent-color) opacity-100;
-    }
-  }
-
-  &[aria-invalid="true"] {
-    @apply border-(--color-destructive);
-  }
-
-  &:disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed opacity-[0.58];
+  &:checked::after {
+    @apply scale-100 opacity-100;
   }
 }
 
-/* Tint presentations remove the general edge color. Toggles need the full edge,
-   rather than the bottom-rule floor used by text controls, because their closed
-   silhouette is the only visible unchecked affordance. */
+/* A2: every dimension is derived from the border width the box resolved, so the
+   knob cannot drift out of a thicker track. It used to be a fixed 16px pinned at
+   1px, which overflowed as soon as an aesthetic asked for 2px. */
 @utility switch {
-  /* A2: the track reads the aesthetic's border width like every other component.
-     Every dimension is derived from it so the knob cannot drift out of a thicker
-     track -- it used to be a fixed 16px pinned at 1px, which overflowed as soon as
-     an aesthetic asked for 2px. */
+  @apply text-control relative cursor-pointer;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
   --switch-height: 1.25rem;
   --switch-width: 2.5rem;
-  --switch-border-width: var(--ui-border-width, var(--border-width));
   --switch-gap: 1px;
-  --switch-inset: calc(var(--switch-border-width) + var(--switch-gap));
+  --switch-inset: calc(var(--_width) + var(--switch-gap));
   --switch-knob: calc(var(--switch-height) - var(--switch-inset) * 2);
   --switch-travel: calc(var(--switch-width) - var(--switch-inset) * 2 - var(--switch-knob));
 
-  @apply relative cursor-pointer appearance-none bg-(--color-surface) transition-[background-color,border-color,box-shadow] duration-(--motion-duration-normal) ease-(--motion-ease);
   height: var(--switch-height);
   width: var(--switch-width);
   /* Pill by default; a squaring aesthetic reaches the track and the knob together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  border: var(--switch-border-width) solid transparent;
+
+  /* Chip geometry, for the reason given on `checkbox`: a 20px track has no more
+     room for a thick inset edge than a 16px box does. */
+  --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
+
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+  /* The ring, for the reason given on `checkbox`. */
+  &:focus-visible {
+    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+  }
 
   &::after {
-    @apply absolute bg-(--color-text-secondary) transition-[transform,translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply absolute transition-[translate,background-color] duration-(--motion-duration-normal) ease-(--motion-ease);
 
+    /* The knob is the one part that does not take the box's foreground: an
+       unchecked track is unfilled, so a knob in that colour would be the same
+       tone as the label beside it. Checked, it takes the mark colour like the
+       other two toggles. */
+    background-color: var(--color-text-secondary);
     border-radius: var(--ui-radius, calc(infinity * 1px));
-
     content: "";
     height: var(--switch-knob);
     width: var(--switch-knob);
@@ -462,43 +419,16 @@
     left: var(--switch-gap);
   }
 
-  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
-    @apply border-(--color-border-hover);
-  }
-
-  &:focus {
-    @apply outline-none;
-  }
-
-  &:focus-visible {
-    border-color: var(--intent-color);
-    box-shadow: 0 0 0 var(--focus-ring-width) var(--focus-ring);
-  }
-
-  &:checked {
-    border-color: var(--intent-color);
-    background-color: var(--intent-color);
-
-    &::after {
-      background-color: var(--intent-contrast);
-      translate: var(--switch-travel);
-    }
-  }
-
-  &[aria-invalid="true"] {
-    @apply border-(--color-destructive);
-  }
-
-  &:disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed opacity-[0.58];
+  &:checked::after {
+    background-color: currentColor;
+    translate: var(--switch-travel);
   }
 }
 
 @media (forced-colors: active) {
   .checkbox,
-  .radio {
+  .radio,
+  .switch {
     /* Keep these explicit system colors from being forced back to transparent. */
     forced-color-adjust: none;
     background-color: Canvas;
@@ -506,7 +436,8 @@
     transition: none;
   }
 
-  .checkbox:checked {
+  .checkbox:checked,
+  .switch:checked {
     background-color: Highlight;
     border-color: Highlight;
 
@@ -524,7 +455,6 @@
     }
   }
 
-  .control-base:focus-visible,
   .ipt:focus-visible,
   .textarea:focus-visible,
   .select:focus-visible,

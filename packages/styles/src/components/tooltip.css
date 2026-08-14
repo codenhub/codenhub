@@ -1,13 +1,17 @@
 @reference "tailwindcss";
 @import "../theme.css";
 @import "../box.css";
+@import "./surface.css";
 
+/* The host is a positioning wrapper and nothing else. Its bubble is a
+   pseudo-element placed outside the host's own box, so painting the host would
+   draw a box around the trigger rather than around the message -- which is
+   exactly what a blanket surface membership did to this component once already.
+
+   The bubble is the component. It is a surface, so an aesthetic that blurs
+   surfaces blurs it too, and it rests solid and edgeless at twice a card's
+   depth. */
 @utility tooltip {
-  /* The bubble is always filled: a transparent or hairline tooltip floating
-     over arbitrary content is unreadable, so it reads intent but not the
-     presentation fill. Neutral resolves to the previous surface tone. */
-  --tooltip-bg: var(--intent-subtle);
-  --tooltip-fg: var(--intent-strong);
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
   --tooltip-right: auto;
@@ -18,15 +22,14 @@
 
   @apply relative;
 
-  /* The host is deliberately not shaped. Its bubble is a pseudo-element positioned
-     outside its box, which clipping the host would erase, so the bubble carries the
-     silhouette itself. Only the radius follows the aesthetic. */
+  /* The trigger badge, for a page with no element of its own to hang the message
+     on. Quiet on purpose: it marks that there is a message, it is not one. */
   &.tooltip-icon {
     @apply inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-fg);
+    background-color: var(--intent-subtle);
+    color: var(--intent-strong);
   }
 
   &[data-tooltip-position="bottom"] {
@@ -51,15 +54,27 @@
     --tooltip-transform: translate(100%, -50%);
   }
 
-  /* The bubble reads `--ui-shadow` like every other component rather than
-     hardcoding an elevation, so an aesthetic in scope shapes it too. Its default
-     is the elevation a raised surface uses: a bubble is a small transient
-     popover, not a modal. */
   &::after {
-    @apply shaped pointer-events-none absolute z-(--z-popover) w-max max-w-72 bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
 
+    --_d-fill: 100%;
+    --_d-fg-on-fill: 100%;
+    --_d-border: 0%;
+    --_d-elevation: 2;
+
+    /* The bound, and it is a floor rather than the cap a text control keeps.
+       Presentation cascades by design, so a container's `.bare` reaches a bubble
+       nobody classed and leaves a transparent panel floating over arbitrary
+       content with its label the colour of whatever is behind it. Our own
+       cascade produces that, so the fill and the foreground are stated here
+       instead of read. `--ui-bg-alpha` still applies, because an aesthetic
+       asking for translucency is asking for it everywhere. */
+    --_fill: calc(100% * var(--ui-bg-alpha, 1));
+    --_fg: var(--intent-contrast);
+
+    /* A bubble is a small transient popover, not a modal, so it takes the
+       control radius rather than the surface one `surface` hands it. */
     border-radius: var(--ui-radius, var(--radius-control));
-    box-shadow: var(--shape-ring, var(--ui-shadow, var(--elevation-mid)));
     content: attr(data-tooltip);
     left: var(--tooltip-left);
     right: var(--tooltip-right);

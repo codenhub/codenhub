@@ -110,7 +110,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "default", "native", "wave"],
+        "required": ["class", "default", "native"],
         "additionalProperties": false,
         "properties": {
           "class": {
@@ -157,11 +157,6 @@
           },
           "renameReason": {
             "type": "string"
-          },
-          "wave": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 2
           },
           "composition": {
             "type": "string",

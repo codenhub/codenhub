@@ -4,7 +4,7 @@ const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
 const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
-const CONTROL_CLASSES = ["control-base", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
+const CONTROL_CLASSES = ["ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 const LOADER_VARIANTS = [
   "loader",
   "dots-wave",

@@ -22,12 +22,13 @@ interface FillPresentation {
 
 interface ComponentEntry {
   class: string;
-  default: { fill?: string; edge?: string; elevation: number };
+  default: { fill?: string; edge?: string; ground?: string; elevation: number };
   art?: string[];
   native: string[];
   renamedFrom?: string;
   renameReason?: string;
-  wave: number;
+  composition?: "frame" | "none";
+  compositionReason?: string;
 }
 
 interface AestheticEntry {
@@ -368,16 +369,7 @@ function rootDeclarations(block: string): string {
 /* Shared composition rather than components: they are `@utility` so `@apply` can
    reach them, which also makes them class names a consumer could type. They are
    deliberately undocumented, and the registry does not list them. */
-const composition = new Set([
-  "box",
-  "box-hover",
-  "surface",
-  "text-control",
-  "control-base",
-  "shaped",
-  "shaped-tight",
-  "loader-mask",
-]);
+const composition = new Set(["box", "box-hover", "surface", "text-control", "loader-mask"]);
 
 /* The registry is the list of what the package supports, so a utility it does
    not name is either drift or an accidental part of the public surface. `.table`
@@ -394,15 +386,19 @@ test("every shipped utility is in the registry", async () => {
 
 /* A published default is a promise about what a component looks like with no
    presentation class on it, so it has to be the number the component actually
-   declares -- in its own block, not somewhere in the package. Wave 1 only: the
-   rest still carry their pre-refactor composition. */
-test("every implemented component declares its published default", async () => {
+   declares -- in its own block, not somewhere in the package.
+
+   `composition: "none"` is the one exemption, and it is exempt because it is
+   recorded: `.quote` paints a left bar rather than a box, so there is no `box`
+   under it for a resting geometry to be an input to. A component that wants out
+   of this check has to argue for it in `registry.json` first. */
+test("every component declares its published default", async () => {
   const utilities = await shippedUtilities();
   const problems: string[] = [];
 
-  for (const component of registry.components.filter(({ wave }) => wave === 1)) {
-    const { fill, edge, elevation } = component.default;
-    if (fill === undefined || edge === undefined) {
+  for (const component of registry.components) {
+    const { fill, edge, ground, elevation } = component.default;
+    if (fill === undefined || edge === undefined || component.composition === "none") {
       continue;
     }
     const block = utilities.get(component.class);
@@ -419,6 +415,10 @@ test("every implemented component declares its published default", async () => {
       `--_d-fg-on-fill: ${registry.presentation.fill[fill]["ui-fg-on-fill"]};`,
       `--_d-border: ${registry.presentation.edge[edge]["ui-border"]};`,
       `--_d-elevation: ${elevation};`,
+      /* The ground is the fifth, where a component has one. It is what a
+         component at 0% fill sits on, so leaving it out is the difference
+         between a tinted plate and a transparent one. */
+      ...(ground === undefined ? [] : [`--_d-ground: var(${ground});`]),
     ]) {
       if (!block.includes(declaration)) {
         problems.push(`${component.class} should declare ${declaration}`);

@@ -1,25 +1,37 @@
 @reference "tailwindcss";
+@import "../box.css";
 
 @utility table-wrap {
   @apply w-full overflow-x-auto;
 }
 
-/* Tinted parts sit on `--intent-subtle`, the slot meant for exactly this, and
-   presentation mixes the intent over it. A fill fallback of 0% means an
-   unintented table with no presentation keeps the plain surface tone, while
-   `.soft` tints it and `.flat` fills it with the intent. */
+/* The one component that takes the frame of `box` and not the whole of it. The
+   border, the radius and the clip come from the box; the head tone, the cell
+   rules and the row hover are private tokens, because none of the three axes has
+   a vocabulary for the inside of a table.
+
+   Its `overflow: hidden` is what keeps `border-separate` corners inside the
+   radius, and it does not compose with an aesthetic's `clip-path`: where both
+   apply, the clip wins and the corners square off. Recorded in `registry.json`
+   beside the decision. */
 @utility data-table {
-  --table-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
-  --table-border: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
+  @apply box text-body w-full border-separate text-left;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  --table-fill: calc(var(--ui-fill, var(--_d-fill)) * var(--ui-bg-alpha, 1));
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
-  --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text));
+  --table-head-fg: color-mix(
+    in oklab,
+    var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)),
+    var(--intent-strong)
+  );
   --table-row-hover: color-mix(in oklab, var(--intent-color) 8%, var(--color-foreground));
 
-  @apply text-body w-full border-separate text-left;
-
-  border: calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)) solid var(--table-border);
   border-spacing: 0;
-  border-radius: var(--ui-radius, var(--radius-control));
   overflow: hidden;
 
   & caption {
@@ -32,11 +44,15 @@
     color: var(--table-head-fg);
   }
 
+  /* The cell rules take the frame's colour and not its width. A rule between two
+     rows is structure rather than the silhouette, so it stays hairline under an
+     aesthetic that draws a thick edge, and it survives one that draws no border
+     at all. */
   & th,
   & td {
     @apply border-b px-4 py-3 align-top;
 
-    border-color: var(--table-border);
+    border-color: var(--_edge);
   }
 
   & th {
@@ -59,42 +75,76 @@
   }
 }
 
-@utility kbd {
-  --kbd-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
-  /* The line a key cap draws when it is not filled: the quiet border color, which
-     `.soft` and `.ghost` zero out. */
-  --kbd-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
-  /* Blended toward the fill by however much fill there is, so a filled cap has a
-     seamless edge instead of a stray gray ring. `.flat` fills completely and so
-     lands exactly on its own background; with no fill this is `--kbd-line`
-     untouched. A key cap fills with `--intent-color` but lines itself with
-     `--intent-border`, and without this the two never meet. */
-  --kbd-edge: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--kbd-line));
-  /* P3 ceiling: the 2x scale `.out` asks for is sized for a control, not a key
-     cap, and a 2px aesthetic would make it 4px. */
-  --shape-border-max: var(--border-width);
+/* Three components rest on a ground rather than on nothing: a key cap, an inline
+   code chip and a code block are each a quiet tinted plate at rest, and that tone
+   is `--intent-subtle` rather than a fill of the component's own intent. Writing
+   it as `soft` would be a different colour and would leave `.bare` looking
+   broken, so the ground is stated and the fill still rests at zero.
 
-  @apply shaped-tight inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
+   Each states its foreground against that ground for the same reason. `box`
+   mixes toward `--intent-color`, which is the tone meant to sit *on* a page
+   rather than on a tint of itself -- amber-600 on amber-100 is a smudge.
+   `--intent-strong` is the slot for exactly this, and mixing toward it keeps
+   `.solid` resolving to the contrast tone as it does everywhere else. */
+@utility kbd {
+  @apply box inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+  --_d-ground: var(--intent-subtle);
+
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
 
   /* Capped at its own radius: a control radius is sized for a control, and a key
      cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
   border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
-  background-color: color-mix(in oklab, var(--intent-color) var(--kbd-fill), var(--intent-subtle));
-  border: var(--shape-border-width) solid var(--kbd-edge);
-  box-shadow: var(--shape-ring, inset 0 -1px 0 var(--kbd-edge));
-  color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-strong));
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
 
+/* The same plate with no line around it. */
+@utility code {
+  @apply box px-1.25 py-0.75 font-mono;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
+  --_d-ground: var(--intent-subtle);
+
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
+
+  border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+}
+
+/* And at block scale, where the radius is a control's rather than a chip's. */
+@utility pre {
+  @apply box block overflow-x-auto px-2.5 py-1.5 font-mono;
+
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
+  --_d-ground: var(--intent-subtle);
+
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
+}
+
+/* Typography wearing a component's name, so it composes none of `box`: a
+   background, an edge, a radius and a shadow would all be inert on a left bar and
+   an indent. Recorded in `registry.json` beside the decision.
+
+   The bar is twice the line width the aesthetic asks for, which is this
+   component's own choice about what a quotation looks like rather than a scale
+   applied to an edge -- there is no such scale any more. */
 @utility quote {
   --quote-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
   --quote-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
   --quote-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--quote-line));
-  --quote-width: clamp(
-    var(--border-width),
-    calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1) * 2),
-    4px
-  );
+  --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2);
 
   @apply my-0 border-l pl-4 italic;
 
@@ -110,27 +160,4 @@
 
 @utility quote-inline {
   @apply text-text-secondary italic;
-}
-
-/* Code draws no border of any kind, so its edge is its own background: a clipping
-   aesthetic still steps the corners, but nothing rings the chip. Every other
-   shaped component either carries a border or fills itself, and blends the two. */
-@utility code {
-  @apply shaped-tight px-1.25 py-0.75 font-mono;
-
-  --shape-edge: var(--intent-subtle);
-
-  border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
-  background-color: var(--intent-subtle);
-  box-shadow: var(--shape-ring, none);
-}
-
-@utility pre {
-  @apply shaped-tight overflow-x-auto px-2.5 py-1.5 font-mono;
-
-  --shape-edge: var(--intent-subtle);
-
-  border-radius: var(--ui-radius, var(--radius-control));
-  background-color: var(--intent-subtle);
-  box-shadow: var(--shape-ring, none);
 }

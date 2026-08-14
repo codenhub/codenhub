@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
@@ -137,9 +137,11 @@ test.describe("aesthetics", () => {
     /* The ink used to be a hand-written list of components, which is what let a
        chip be left off it. It is now `--ui-ink` read through the shared intent
        reset, so it reaches every component -- chips included -- and the two
-       fourteen-selector lists are gone. What still holds a chip back is its own
-       border ceiling, not a missing name in the aesthetic. */
-    test("inks content chips without letting the aesthetic thicken them", async ({ page }) => {
+       fourteen-selector lists are gone. Nothing holds a chip back any more: the
+       one-pixel ceilings went with the edge scale that made them necessary, and a
+       thick chip under a thick aesthetic is two documented features combined
+       exactly as documented. */
+    test("inks content chips and lets the aesthetic set their edge", async ({ page }) => {
       await page.goto(TYPOGRAPHY_URL);
 
       const properties = ["border-top-color", "border-top-width"];
@@ -155,19 +157,20 @@ test.describe("aesthetics", () => {
         getColorDistance(inkedCap["border-top-color"]!, defaultCap["border-top-color"]!),
         "the ink moved the key cap edge",
       ).toBeGreaterThan(2);
-      /* Two pixels of border a side on a chip this size reads as a box with a
-         label in it, so the cap keeps its own one-pixel ceiling. */
-      expect(inkedCap["border-top-width"], "inked key cap width").toBe(defaultCap["border-top-width"]);
-      expect(inkedCap["border-top-width"], "inked key cap width").toBe("1px");
+      /* The aesthetic owns edge width, and a key cap no longer argues with it. */
+      expect(defaultCap["border-top-width"], "default key cap width").toBe("1px");
+      expect(inkedCap["border-top-width"], "inked key cap width").toBe("2px");
 
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
 
-      const code = await readStyles(page, "code-chip", ["border-top-width", "box-shadow"]);
+      const code = await readStyles(page, "code-chip", ["border-top-color", "box-shadow"]);
 
-      /* Code draws no edge by design. An ink outline and an offset shadow on one
-         read as a defect. */
-      expect(code["border-top-width"], "code border").toBe("0px");
-      expect(code["box-shadow"], "code shadow").toBe("none");
+      /* Code rests edgeless, so the ink has nothing to colour: `--ui-border` at
+         zero mixes the line away and P3 then leaves the fill, which is nothing.
+         It rests at elevation zero too, so the slab multiplies out to a shadow
+         whose every length is zero rather than an offset one. */
+      expect(isTransparent(code["border-top-color"]!), "code border").toBe(true);
+      expect(code["box-shadow"], "code shadow").toContain("0px 0px 0px 0px");
     });
 
     test("supplies the neutral ink without overriding an intent", async ({ page }) => {
@@ -265,17 +268,14 @@ test.describe("aesthetics", () => {
     expect(plain.clipPath, "default bubble clip").toBe("none");
     expect(stepped.clipPath, "pixel bubble clip").toContain("polygon(");
 
-    /* Wave 2. `.tooltip` still paints its own `--elevation-mid` drop rather than
-       composing `box`, so the shadow half of the material stops at the bubble:
-       a brutalist tooltip keeps the default blurred drop instead of the hard
-       offset one, and a stepped bubble gets neither an inset ring nor the
-       drop-shadow filter a clipped component needs to cast depth at all. This
-       records what the package does today; migrating `.tooltip` onto `box` is
-       what makes it fail. */
-    expect(plain.boxShadow, "default bubble").toMatch(/\b0px 4px 6px -1px\b/);
-    expect(inked.boxShadow, "neobrutalist bubble").toBe(plain.boxShadow);
-    expect(stepped.boxShadow, "pixel bubble").toBe(plain.boxShadow);
-    expect(stepped.filter, "pixel bubble filter").toBe("none");
+    /* The shadow half reaches it too, now that the bubble is a surface. The
+       registry rests it at elevation 2, so the structural depth doubles, the
+       brutalist slab doubles, and the stepped one trades both for the inset ring
+       its own clip demands. */
+    expect(plain.boxShadow, "default bubble").toContain("0px 2px 6px 0px");
+    expect(inked.boxShadow, "neobrutalist bubble").toContain("8px 8px 0px 0px");
+    expect(stepped.boxShadow, "pixel bubble").toContain("inset");
+    expect(stepped.boxShadow, "pixel bubble ring").toContain("0px 0px 0px 4px");
   });
 
   test("lets a tooltip's direct aesthetic outrank an inherited aesthetic", async ({ page }) => {
@@ -317,9 +317,7 @@ test.describe("aesthetics", () => {
     });
 
     /* The point of the test is the precedence, not the material: a tooltip
-       carrying its own aesthetic reads that one, whatever an ancestor declares.
-       `.tooltip` is wave 2 and reads only the silhouette and radius halves of
-       the material today, so those are what the precedence is asserted on. */
+       carrying its own aesthetic reads that one, whatever an ancestor declares. */
     for (const [label, styles] of [
       ["direct pixel", bubbles.directPixel],
       ["glass ancestor, pixel tooltip", bubbles.glassOverPixel],
@@ -337,10 +335,11 @@ test.describe("aesthetics", () => {
       expect(styles.clipPath, `${label} clip`).toBe("none");
       expect(styles.filter, `${label} filter`).toBe("none");
       expect(styles.borderRadius, `${label} radius`).toBe("14px");
-      /* Wave 2. The bubble draws no border of its own, so glass's hairline edge
-         has nothing to land on; the radius is the half of the material it does
-         read. Migrating `.tooltip` onto `box` is what makes this fail. */
-      expect(styles.borderWidth, `${label} border`).toBe("0px");
+      /* Glass declares a border width and the bubble is a box that reads it --
+         edgeless, so the line is blended into the fill rather than narrowed. The
+         backdrop is deliberately not asserted here: this test does not pin the
+         transparency preference, and glass drops the blur under `reduce`. */
+      expect(styles.borderWidth, `${label} border`).toBe("1px");
     }
   });
 
@@ -383,12 +382,11 @@ test.describe("aesthetics", () => {
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBeLessThan(1);
     });
 
-    /* Wave 2. `.panel`, `.alert` and `.tooltip` are not on the `surface` utility
-       yet, and `--ui-backdrop` is a slot only a surface resolves, so the blur
-       stops at cards. Their translucency is likewise unreached: they mix toward
-       `transparent` rather than `--ui-surface-ground`. Migrating them onto
-       `surface` is what makes this fail. */
-    test("does not reach the surfaces still off the surface utility", async ({ page, browserName }) => {
+    /* `--ui-backdrop` is a slot only a surface resolves, which is what keeps the
+       blur off every button and chip on the page without the aesthetic naming a
+       component. The other half of that sentence is that it must reach every
+       surface, and a panel, an alert and a tooltip bubble are all surfaces. */
+    test("reaches every surface and nothing else", async ({ page, browserName }) => {
       await allowTransparency(page, browserName);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
@@ -414,12 +412,20 @@ test.describe("aesthetics", () => {
         ["panel", panel],
         ["alert", alert],
       ] as const) {
-        const backdrop = readBackdrop(styles);
-
-        expect(backdrop === "" || backdrop === "none", `${label} backdrop`).toBe(true);
+        expect(readBackdrop(styles), `${label} backdrop`).toContain("blur(14px)");
+        expect(readSrgb(styles["background-color"]!).alpha, `${label} alpha`).toBeLessThan(1);
       }
 
-      expect(tooltipBackdrop === "" || tooltipBackdrop === "none", "tooltip backdrop").toBe(true);
+      expect(tooltipBackdrop, "tooltip backdrop").toContain("blur(14px)");
+
+      /* And nothing else. One compositing layer under every control of a dense
+         cluster reads as noise, which is why the slot is a surface's alone. */
+      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+
+      const button = await readStyles(page, "btn-default-none", BACKDROP_PROPERTIES);
+      const buttonBackdrop = readBackdrop(button);
+
+      expect(buttonBackdrop === "" || buttonBackdrop === "none", "button backdrop").toBe(true);
     });
 
     test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {
@@ -652,19 +658,17 @@ test.describe("aesthetics", () => {
       expect(chip["box-shadow"], "chip ring matches the structural one").toBe(structural["box-shadow"]);
     });
 
-    /* Wave 2. `.code` still draws its edge through `shaped-tight`, whose ring is
-       `inset 0 0 0 var(--ui-edge-tight, var(--ui-edge)) ...` -- and no shipped
-       aesthetic declares either token, so the whole value is invalid at
-       computed-value time and the chip falls back to `none`. The corners step
-       and the staircase is left uncovered. Migrating `.code` onto `box` is what
-       makes this fail. */
-    test("steps a code chip's corners and leaves the staircase uncovered", async ({ page }) => {
+    /* A clip removes a border, so a clipped chip with no inset ring is one whose
+       corners are cut and whose staircase nothing covers. `box` draws the ring
+       from the same shadow parts every other component uses. */
+    test("covers a stepped code chip's staircase with the inset ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
       const styles = await readStyles(page, "code-chip", ["clip-path", "box-shadow"]);
 
       expect(styles["clip-path"]).toContain("polygon(");
-      expect(styles["box-shadow"]).toBe("none");
+      expect(styles["box-shadow"]).toContain("inset");
+      expect(styles["box-shadow"], "chip ring depth").toContain("0px 0px 0px 4px");
     });
 
     test("keeps a focus ring that clipping would otherwise remove", async ({ page }) => {
@@ -693,7 +697,7 @@ test.describe("aesthetics", () => {
       expect(styles.outlineStyle).toBe("none");
     });
 
-    test("squares the components it does not clip, and keeps a radio round", async ({ page }) => {
+    test("squares what it can, clips a checkbox tight, and keeps a radio round", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
       const track = await readAll(page, ["progress-default-none"], ["border-radius", "clip-path"]);
@@ -701,19 +705,30 @@ test.describe("aesthetics", () => {
 
       await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
-      const checkbox = await readAll(page, ["checkbox-default-none"], ["border-radius", "clip-path"]);
+      const checkbox = await readStyles(page, "checkbox-default-none", ["border-radius", "box-shadow", "clip-path"]);
+      const radio = await readStyles(page, "radio-default-none", ["border-radius", "box-shadow", "clip-path"]);
 
-      for (const [testId, styles] of [...track, ...checkbox]) {
+      /* An indicator reads no material beyond the radius, so nothing clips it. */
+      for (const [testId, styles] of track) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["clip-path"], `${testId} clip`).toBe("none");
       }
 
       expect(fillRadius).toBe("0px");
 
-      const radio = await readStyles(page, "radio-default-none", ["border-radius"]);
+      /* A toggle takes the chip silhouette, and its inset edge is capped at the
+         line width: four pixels a side on a sixteen-pixel box would leave an
+         eight-pixel hole and an unchecked box would read as a filled one. */
+      expect(checkbox["border-radius"], "checkbox radius").toBe("0px");
+      expect(checkbox["clip-path"], "checkbox clip").toContain("polygon(");
+      expect(checkbox["box-shadow"], "checkbox ring").toContain("0px 0px 0px 2px");
 
-      /* The circle is the only thing telling a radio from a checkbox at a glance. */
-      expect(radio["border-radius"]).not.toBe("0px");
+      /* The circle is the only thing telling a radio from a checkbox at a glance,
+         so the radio is the one toggle that declines the silhouette. An inset
+         shadow follows `border-radius`, so its edge stays round without one. */
+      expect(radio["border-radius"], "radio radius").not.toBe("0px");
+      expect(radio["clip-path"], "radio clip").toBe("none");
+      expect(radio["box-shadow"], "radio ring").toContain("0px 0px 0px 2px");
     });
 
     test("resolves each component's own intent through the shared ring", async ({ page }) => {
@@ -768,17 +783,13 @@ test.describe("aesthetics", () => {
       const [button, input, code] = shapes;
 
       /* A clip removes a border, so the edge has to be the inset ring instead or
-         the element loses its outline entirely. Both `box` components get it. */
-      for (const shape of [button!, input!]) {
+         the element loses its outline entirely. Every `box` component gets it, a
+         bare `<code>` included: the ring travels through the `@apply` that maps
+         the element onto the utility, where a rule keyed on a class never could. */
+      for (const shape of [button!, input!, code!]) {
         expect(shape.ring, `${shape.selector} ring`).toContain("inset");
-        expect(shape.ring, `${shape.selector} ring depth`).toMatch(/\b0px 0px 0px 4px\b/);
+        expect(shape.ring, `${shape.selector} ring depth`).toContain("0px 0px 0px 4px");
       }
-
-      /* Wave 2. A bare `<code>` maps onto the `code` utility, which still draws
-         its edge through `shaped-tight` and the undeclared `--ui-edge-tight`, so
-         it is clipped with nothing covering the staircase. Migrating `.code`
-         onto `box` is what makes this fail. */
-      expect(code!.ring, "code ring").toBe("none");
     });
   });
 });

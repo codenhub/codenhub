@@ -171,9 +171,9 @@ test.describe("forms", () => {
           const styles = read(`${component}-default-${intent}-checked`);
 
           return {
-            /* A checked radio keeps a transparent box and shows the intent in
-               its ring and its dot, so its intent reads from the border. */
-            intentColor: component === "radio" ? styles.borderTopColor : styles.backgroundColor,
+            /* All three fill with the intent, because the checked state is one
+               rule on `text-control` rather than three per-component ones. */
+            intentColor: styles.backgroundColor,
             label: `${component} ${intent}`,
             token: tokens[intent]!,
           };
@@ -182,7 +182,7 @@ test.describe("forms", () => {
     });
 
     for (const { intentColor, label, token } of styles) {
-      expect(intentColor, label).toBe(token);
+      expectSameColor(intentColor, token, label);
     }
   });
 
@@ -221,7 +221,7 @@ test.describe("forms", () => {
 
       for (const component of ["checkbox", "radio"]) {
         for (const fill of ["soft", "bare"]) {
-          const direct = document.querySelector(`[data-testid="${component}-${fill}-edged-none"]`)!;
+          const direct = document.querySelector(`[data-testid="${component}-${fill}-none"]`)!;
           const inheritedHost = document.createElement("div");
           const inherited = document.createElement("input");
 
@@ -257,11 +257,11 @@ test.describe("forms", () => {
     }
   });
 
-  /* Wave 2. `.checkbox` and `.radio` are not on `text-control`, so nothing floors
-     their edge: `.edgeless` mixes `--intent-border` at 0% and the unchecked
-     boundary disappears, which is the affordance above stated the other way
-     round. Migrating the toggles is what makes this fail. */
-  test("loses the unchecked toggle boundary under an edgeless container", async ({ page }) => {
+  /* The same affordance against the other half of the axis. `text-control`
+     floors the edge, so a container's `.edgeless` reaches the toggle and the
+     boundary survives it -- which is the whole reason the three toggles are on
+     that utility rather than on `box` directly. */
+  test("keeps the unchecked toggle boundary under an edgeless container", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const borderColors = await page.evaluate(() =>
@@ -284,7 +284,7 @@ test.describe("forms", () => {
     );
 
     for (const { color, component } of borderColors) {
-      expect(isTransparent(color), `${component} edgeless boundary`).toBe(true);
+      expect(isTransparent(color), `${component} edgeless boundary`).toBe(false);
     }
   });
 

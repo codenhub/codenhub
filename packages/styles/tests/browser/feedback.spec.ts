@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 
@@ -106,29 +106,44 @@ test.describe("feedback", () => {
     }
   });
 
-  /* A skeleton is still wave 2: it reads `--ui-fill` behind a visibility floor
-     and `--ui-border` behind a one-pixel ceiling, and paints them into its own
-     gradient rather than through `box`. */
-  test("renders every skeleton presentation", async ({ page }) => {
+  /* An indicator reads intent and no presentation token at all: it stands in for
+     content rather than being a box with a look, so there is nothing a fill or an
+     edge class has to say about it. The floor that used to keep an unfilled
+     skeleton visible is gone with the `--ui-fill` read it was fighting. */
+  test("renders a skeleton from its intent alone", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const styles = await page.evaluate(() => {
-      const read = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const read = (className: string) => {
+        const skeleton = document.createElement("div");
+
+        skeleton.className = `skeleton ${className}`;
+        host.append(skeleton);
+
+        const computed = getComputedStyle(skeleton);
+        const values = { border: computed.borderTopWidth, image: computed.backgroundImage };
+
+        skeleton.remove();
+
+        return values;
+      };
 
       return {
-        bareBorderWidth: read("skeleton-bare-edged-primary").borderTopWidth,
-        bareEdgeless: read("skeleton-bare-edgeless-primary").backgroundImage,
-        soft: read("skeleton-soft-edgeless-primary").backgroundImage,
-        solid: read("skeleton-solid-edgeless-primary").backgroundImage,
+        bareEdgeless: read("primary bare edgeless"),
+        plain: read("primary"),
+        secondary: read("secondary"),
+        solidEdged: read("primary solid edged"),
       };
     });
 
-    /* The floor is what keeps an unfilled skeleton visible at all. */
-    expect(styles.bareEdgeless).not.toBe("none");
-    expect(styles.soft).not.toBe(styles.bareEdgeless);
-    expect(styles.solid).not.toBe(styles.soft);
-    /* A skeleton is 16px tall, so its edge keeps a one-pixel ceiling. */
-    expect(Number.parseFloat(styles.bareBorderWidth)).toBeLessThanOrEqual(1);
+    expect(styles.plain.image).not.toBe("none");
+    /* Both ends of both axes land on the same pixels as no class at all. */
+    expect(styles.solidEdged.image, "solid edged").toBe(styles.plain.image);
+    expect(styles.bareEdgeless.image, "bare edgeless").toBe(styles.plain.image);
+    expect(styles.solidEdged.border, "no edge to draw").toBe("0px");
+    /* Intent is the one axis it does read. */
+    expect(styles.secondary.image).not.toBe(styles.plain.image);
   });
 
   test("sizes loaders and renders every loader variant", async ({ page }) => {
@@ -193,10 +208,6 @@ test.describe("feedback", () => {
     expect(new Set(images).size).toBe(testIds.length);
   });
 
-  /* `.flat` is an elevation modifier now, and the fill it used to name is
-     `.solid`. An alert is still wave 2: it composes `--ui-fill`, `--ui-fg-on-fill`
-     and `--ui-border` itself rather than through `box`, so its resting pair is a
-     `var()` fallback (12% fill, 42% edge) rather than a `--_d-*` declaration. */
   test("renders every alert fill", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
@@ -211,8 +222,18 @@ test.describe("feedback", () => {
         };
       };
 
+      const probe = document.createElement("span");
+
+      probe.style.color = "var(--color-background)";
+      document.body.append(probe);
+
+      const ground = getComputedStyle(probe).color;
+
+      probe.remove();
+
       return {
         bare: read("alert-bare-edged-info"),
+        ground,
         softEdgeless: read("alert-soft-edgeless-warning"),
         solid: read("alert-solid-edged-info"),
       };
@@ -224,9 +245,16 @@ test.describe("feedback", () => {
     /* Soft tints and keeps the intent tone; `.edgeless` drops the line. */
     expect(isTransparent(styles.softEdgeless.background)).toBe(false);
     expect(getColorDistance(styles.softEdgeless.color, styles.softEdgeless.background)).toBeGreaterThan(2);
-    expect(isTransparent(styles.softEdgeless.border)).toBe(true);
-    /* Bare fills nothing at all, and `.edged` still draws the line. */
-    expect(isTransparent(styles.bare.background)).toBe(true);
+    /* `.edgeless` zeroes the line, and P3 then blends what is left toward the
+       fill: on a surface that leaves the fill's own twelve percent against the
+       opaque line an `.edged` one draws. The border box sits over the alert's own
+       background, so that reads as a seamless boundary rather than a gap. */
+    expect(readSrgb(styles.softEdgeless.border).alpha, "edgeless alert line").toBeLessThanOrEqual(0.13);
+    expect(readSrgb(styles.bare.border).alpha, "edged alert line").toBe(1);
+    /* Bare adds no fill, so what is left is the ground every surface rests on --
+       an alert is a container, and a container is opaque. `.edged` still draws
+       the line. */
+    expectSameColor(styles.bare.background, styles.ground, "bare alert ground");
     expect(isTransparent(styles.bare.border)).toBe(false);
   });
 
@@ -396,33 +424,37 @@ test.describe("feedback", () => {
     expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 
-  test("lifts a tooltip bubble no higher than a raised surface", async ({ page }) => {
+  /* Elevation is one unitless number multiplied into the aesthetic's shadow
+     geometry, so "twice a card" is a measurement rather than a second shadow
+     token. The registry rests a bubble at 2 and a card at 1, and this is that
+     sentence read off the composited value. */
+  test("lifts a tooltip bubble to twice a card's depth", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    const shadows = await page.evaluate(() => {
-      const probe = document.createElement("span");
+    const offsets = await page.evaluate(() => {
+      /* Every engine serialises a layer as `<colour> <x> <y> <blur> <spread>`, so
+         the vertical offset is the second length after the colour closes. */
+      const verticalOffset = (shadow: string) => Number.parseFloat(shadow.split(") ")[1]!.split(" ")[1]!);
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const card = document.createElement("div");
 
-      probe.style.boxShadow = "var(--elevation-mid)";
-      document.body.append(probe);
+      card.className = "card";
+      host.append(card);
 
-      const mid = getComputedStyle(probe).boxShadow;
+      const values = {
+        bubble: verticalOffset(
+          getComputedStyle(document.querySelector('[data-testid="fallback-tooltip"]')!, "::after").boxShadow,
+        ),
+        card: verticalOffset(getComputedStyle(card).boxShadow),
+      };
 
-      probe.remove();
+      card.remove();
 
-      const bubble = getComputedStyle(
-        document.querySelector('[data-testid="fallback-tooltip"]') as Element,
-        "::after",
-      ).boxShadow;
-
-      return { bubble, mid };
+      return values;
     });
 
-    /* A bubble is a small transient popover, not a modal, so it sits at the
-       elevation a hovered card uses. `--elevation-high` stays for full
-       overlays. The bubble also carries Tailwind's empty ring layers, so this
-       asserts the elevation is present rather than that it is the whole
-       value. */
-    expect(shadows.bubble).toContain(shadows.mid);
+    expect(offsets.card, "a card is raised").toBeGreaterThan(0);
+    expect(offsets.bubble).toBe(offsets.card * 2);
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {

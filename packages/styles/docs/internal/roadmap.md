@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-12
+last_updated: 2026-08-14
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -10,8 +10,8 @@ scope: `@codenhub/styles` package direction.
 
 This roadmap tracks durable direction for `@codenhub/styles`. It captures
 styling-system improvements that should guide future changes without turning
-this document into a release checklist. [Architecture](./architecture.md) owns
-the styling model itself.
+this document into a release checklist. [Model](./model.md) owns the styling
+model itself.
 
 Finished work is not tracked here. The token contract, the element coverage it
 was extended to, and the three shipped aesthetics are the model that Architecture
@@ -33,29 +33,34 @@ support for something nobody maintains. And the public docs owe consumers the
 rule explicitly, so the boundary is discoverable rather than inferred.
 
 Applying this is what trimmed the playground's variant matrix down to a
-per-component presentation set. The combinations dropped there are recorded in
-[Architecture](./architecture.md#presentation-is-narrower-than-its-class-list)
-alongside why each one is degenerate, so a future change can tell a deliberate
-omission from an oversight.
+per-component presentation set, and it is the reason the set moved again in
+0.1.0: a component that reads presentation through `box` reads all of it, so the
+rows a component used to ignore are now rows it answers. What is left narrow is
+narrow for a stated reason, written beside each entry in `matrix.js` -- the six
+text controls collapse their edge rows because the edge is floored, and the
+indicators and the tooltip bubble show one row because they read no presentation
+at all.
 
 ## Current Focus
 
-**Phase 2 -- `0.1.0` stabilization**. Close the gaps where the three axes meet a
-component that only partly implements them, one reviewable change at a time with
-`pnpm verify` green before the next begins. `0.1.0` is the first release of the
-current three-axis contract; the already-published `0.0.x` versions predate it.
+**Phase 2 -- `0.1.0` stabilization**. Every component now composes `box`, or
+records in `registry.json` why it takes less of it, and every one publishes the
+resting pair it renders with no presentation class on it. `0.1.0` is the first
+release of the current three-axis contract; the already-published `0.0.x`
+versions predate it.
 
-The rules came first, because they decide half the answers, and are now
-[Axis rules](./architecture.md#axis-rules). The shape material followed: the
-silhouette, its ring, the border ceiling, and the radius are tokens consumed
-through the `shaped` and `shaped-tight` utilities, so a bare `<button>`,
-`<input>`, `<code>`, or `<kbd>` carries the aesthetic's full silhouette. Then the
-geometry conformance fixes: the progress ceiling and fill blend, the chip border
-ceiling, the control border floor, and `.switch` reading its material.
+What is left is the consumer-facing half. The public documents under `docs/`
+still describe the model 0.1.0 replaced -- `.flat`, `.out` and `.ghost` as
+presentation, an edge with a scale, and the `--ui-edge` pair that the shadow
+parts now draw -- so they have to be rewritten against [Model](./model.md) before
+the release is honest. The visual baselines are wave-1 renderings and need
+regenerating on CI.
 
 ## Planned
 
-No further work is currently planned for `0.1.0` stabilization.
+- **Rewrite the public documents**: `docs/classes.md` and `docs/tokens.md`
+  against the shipped model, then `pnpm generate` for the derived files.
+- **Regenerate the visual baselines** on CI, once the matrix has settled.
 
 ## Later / Possible
 
@@ -111,7 +116,8 @@ consumer use, not frozen against future semver-major changes.
 
 ## References
 
-- [Architecture](./architecture.md)
+- [Model](./model.md)
+- [Architecture](./architecture.md) -- superseded, kept for its measurements
 - [Overview](../index.md)
 - [Tokens](../tokens.md)
 - [Classes](../classes.md)
