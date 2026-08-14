@@ -526,7 +526,8 @@ the registry names for it, and that pair is published.
 | -------------------------------------------- | -------------- |
 | `.btn`                                       | solid edgeless |
 | `.ipt` `.textarea` `.select`                 | bare edged     |
-| `.checkbox` `.radio` `.switch`               | bare edged     |
+| `.checkbox` `.radio`                         | bare edged     |
+| `.switch`                                    | solid edged    |
 | `.card`                                      | bare edged     |
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |

@@ -39,7 +39,9 @@ const PRESENTATIONS = [
 /* The six text controls draw their edge whatever the edge class says, because
    losing it would leave a field with no mark of where typing goes and a toggle
    with no silhouette at all (WCAG 1.4.11). Their edge rows would be duplicates of
-   each other, so only the fill varies. */
+   each other, so only the fill varies. A switch's fill rows do vary the line --
+   it is the only lever left once the cap collapses `.solid` and `.soft` onto one
+   tint -- but they vary it by fill, so these are still the rows that show it. */
 const FILL_PRESENTATIONS = ["default", "solid", "soft", "bare"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose

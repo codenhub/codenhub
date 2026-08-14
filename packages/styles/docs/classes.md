@@ -30,7 +30,7 @@ materials that component draws.
 | `.skeleton`                                               | Yes    | Yes          | Radius and edge    |
 | `.ipt`, `.textarea`, `.select`, `.control-base`           | Yes    | Yes          | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes          | Radius and edge    |
-| `.switch`                                                 | Yes    | No           | Radius and edge    |
+| `.switch`                                                 | Yes    | Yes          | Radius and edge    |
 | `.progress`                                               | Yes    | Yes          | Radius and edge    |
 | `.code`, `.pre`                                           | Yes    | No           | Radius and clip    |
 | `.tooltip`                                                | Yes    | No           | Shape and overlay  |
@@ -183,19 +183,19 @@ With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
 neutral and bordered.
 
-| Component                                       | Reads                                        |
-| ----------------------------------------------- | -------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.        |
-| `.kbd`                                          | Fill, text, border, and border width.        |
-| `.table`                                        | Header fill and text, border, border width.  |
-| `.ipt`, `.textarea`, `.select`, `.control-base` | Border, border width, and a capped fill.     |
-| `.checkbox`, `.radio`                           | Border, border width, capped unchecked fill. |
-| `.switch`                                       | Intent only, not presentation.               |
-| `.progress`                                     | Border and border width.                     |
-| `.divider`                                      | Line strength and clamped width.             |
-| `.quote`, `.loader`                             | Fill, text/artwork, border, and width.       |
-| `.skeleton`                                     | Fill and a one-pixel border ceiling.         |
-| `.code`, `.pre`, `.tooltip`                     | Intent only, not presentation.               |
+| Component                                       | Reads                                         |
+| ----------------------------------------------- | --------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.         |
+| `.kbd`                                          | Fill, text, border, and border width.         |
+| `.table`                                        | Header fill and text, border, border width.   |
+| `.ipt`, `.textarea`, `.select`, `.control-base` | Border, border width, and a capped fill.      |
+| `.checkbox`, `.radio`                           | Border, border width, capped unchecked fill.  |
+| `.switch`                                       | A capped fill, and the line it draws at rest. |
+| `.progress`                                     | Border and border width.                      |
+| `.divider`                                      | Line strength and clamped width.              |
+| `.quote`, `.loader`                             | Fill, text/artwork, border, and width.        |
+| `.skeleton`                                     | Fill and a one-pixel border ceiling.          |
+| `.code`, `.pre`, `.tooltip`                     | Intent only, not presentation.                |
 
 Text controls and toggles cap their fill well below the `.soft` tint. `.flat`
 would otherwise put typed text on a saturated background, so a `.flat` container
@@ -455,6 +455,12 @@ to set the checked color:
 | `.warning`                          | Warning color.          |
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
+
+A switch rests at `.solid`, where the other two rest at `.bare`, and its three
+fills are told apart by the line rather than by the tint: they share one cap, so
+`.solid` and `.soft` reach the same tinted track. `.solid` draws the line, `.soft`
+carries the track as a tint and shows the line under the pointer, and `.bare` is
+the knob alone. The checked track is the same filled shape under all three.
 
 A checked checkbox and a checked switch fill with the intent and cut their mark
 out of it. A checked radio does not fill: it takes a ring twice the resting line

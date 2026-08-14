@@ -273,6 +273,77 @@ test.describe("forms", () => {
     }
   });
 
+  /* A switch's three fills used to render as two looks. `text-control` caps every
+     fill at 12% -- lifting it would make an unchecked `.solid` switch look
+     checked -- so `.solid` and `.soft` land on the same tint and `.bare` landed
+     on the resting default. The line is the only lever left, so the line is what
+     separates them, and this measures the line rather than the fill.
+
+     The checked track is measured under all four because that is the part
+     presentation may not reach: a checked switch is filled with its intent and
+     its line is that fill, so a rule that made the line transparent without
+     excluding `:checked` would cut a page-colored ring out of a filled track. */
+  test("separates a switch's presentations by its line and leaves the checked track alone", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const read = async (presentation: string) => {
+      const cell = (suffix: string) =>
+        page.getByTestId(`switch-${presentation}-none${suffix}`).evaluate((element) => {
+          const styles = getComputedStyle(element);
+
+          return { edge: styles.borderTopColor, fill: styles.backgroundColor };
+        });
+
+      return { checked: await cell("-checked"), resting: await cell("") };
+    };
+
+    const fallback = await read("default");
+    const solid = await read("solid");
+    const soft = await read("soft");
+    const bare = await read("bare");
+
+    /* The registry rests a switch at solid, so the two are the same element. */
+    expectSameColor(fallback.resting.fill, solid.resting.fill, "resting switch fill");
+    expectSameColor(fallback.resting.edge, solid.resting.edge, "resting switch line");
+
+    expect(isTransparent(solid.resting.edge), "solid switch line").toBe(false);
+    expect(isTransparent(solid.resting.fill), "solid switch track").toBe(false);
+
+    expectSameColor(soft.resting.fill, solid.resting.fill, "soft switch track");
+    expect(isTransparent(soft.resting.edge), "soft switch line").toBe(true);
+
+    expect(isTransparent(bare.resting.fill), "bare switch track").toBe(true);
+    expect(isTransparent(bare.resting.edge), "bare switch line").toBe(true);
+
+    for (const { checked, label } of [
+      { checked: solid.checked, label: "solid" },
+      { checked: soft.checked, label: "soft" },
+      { checked: bare.checked, label: "bare" },
+    ]) {
+      expectSameColor(checked.fill, fallback.checked.fill, `checked ${label} switch track`);
+      expectSameColor(checked.edge, fallback.checked.edge, `checked ${label} switch line`);
+    }
+
+    /* One pointer, so the two are hovered in turn. Soft reveals the track it was
+       carrying as a tint; bare has renounced the track and has nothing to show.
+
+       The line transitions in, so this waits it out rather than reading the first
+       frame -- which is transparent either way. For bare the same pause is the
+       point: it gives a line the time to appear before the assertion says it
+       never did. */
+    const hoveredEdge = async (presentation: string) => {
+      const control = page.getByTestId(`switch-${presentation}-none`);
+
+      await control.hover();
+      await page.waitForTimeout(500);
+
+      return control.evaluate((element) => getComputedStyle(element).borderTopColor);
+    };
+
+    expect(isTransparent(await hoveredEdge("soft")), "hovered soft switch line").toBe(false);
+    expect(isTransparent(await hoveredEdge("bare")), "hovered bare switch line").toBe(true);
+  });
+
   /* A checkbox states itself by filling and cutting a tick out of the ground; a
      radio states itself with a dot inside a ring, and the dot is the same color
      as the ring. Filling the circle as well leaves a disc with an invisible dot

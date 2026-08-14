@@ -119,7 +119,12 @@
    The second is the edge floor: the line is drawn whatever the presentation says,
    because a container's `.edgeless` would otherwise leave a field with no mark of
    where typing goes, and an unchecked toggle with no silhouette at all
-   (WCAG 1.4.11).
+   (WCAG 1.4.11). `switch` opts out of the floor for two of its own fills, and it
+   is the only component that can: a switch paints a knob whatever its track does,
+   in `--color-text-secondary` at full strength -- past 9:1 against the page in
+   both themes -- and the knob's position is what carries the state. A checkbox
+   and a radio have nothing outside their line, which is why the floor is
+   absolute for them.
 
    No derived hover. Tinting the box on hover is right for something you press
    and wrong for something you type into, so only the line responds. */
@@ -412,12 +417,17 @@
 
 /* A2: every dimension is derived from the border width the box resolved, so the
    knob cannot drift out of a thicker track. It used to be a fixed 16px pinned at
-   1px, which overflowed as soon as an aesthetic asked for 2px. */
+   1px, which overflowed as soon as an aesthetic asked for 2px.
+
+   It rests at `solid`, where the other two toggles rest at `bare`, because the
+   fill cap it inherits is 12% and a switch's track is the one part of a toggle
+   that is meant to be a filled shape. Resting at `bare` made `.bare` a synonym
+   for the default and left the tinted track unreachable without a class. */
 @utility switch {
   @apply text-control relative cursor-pointer;
 
-  --_d-fill: 0%;
-  --_d-fg-on-fill: 0%;
+  --_d-fill: 100%;
+  --_d-fg-on-fill: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
 
@@ -442,6 +452,33 @@
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
     --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+  }
+
+  /* The two rules that make presentation mean something on a switch, and the
+     only place in the package where a fill class reaches the edge.
+
+     It is here because the fill alone cannot separate the three. `text-control`
+     caps every fill at 12% -- lifting that would make an unchecked `.solid`
+     switch indistinguishable from a checked one -- so `.solid` and `.soft` land
+     on the same tint and `.bare` lands on the default. Three names, two looks.
+     The line is the only lever left, so the line is what varies: solid keeps its
+     track drawn, soft carries the track as a tint and reveals the line under the
+     pointer, and bare has renounced the track altogether. There is nothing for
+     bare to reveal, which is why it alone has no hover rule.
+
+     `--_edge` rather than a width or the edge amount, because `--switch-inset`
+     is measured from `--_width`: taking the line away by narrowing it would slide
+     the knob. A transparent line occupies the same space it always did.
+
+     `:checked` is excluded from both. A checked switch is filled with its intent
+     and its line is that fill -- the edge blend doing its job -- so making it
+     transparent would cut a page-coloured ring out of a filled track. */
+  &.soft:not(:checked, :hover) {
+    --_edge: transparent;
+  }
+
+  &.bare:not(:checked) {
+    --_edge: transparent;
   }
 
   &::after {
