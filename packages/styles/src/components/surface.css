@@ -21,14 +21,17 @@
   --_d-border: 100%;
 
   --_d-ground: var(--ui-surface-ground, var(--color-background));
-  /* The structural depth a surface has with no aesthetic in scope, which is what
-     makes a card read as raised and a panel as flat with no material declared
-     anywhere. It is the shadow *geometry* only: the colour is still the
-     component's own line colour, so an aesthetic that sets its own offsets keeps
-     the intent-derived shadow the rest of the model gives it. Scaled by the
-     registry's per-component elevation, so a tooltip at 2 gets twice a card's. */
-  --_d-shadow-y: 1px;
-  --_d-shadow-blur: 3px;
+
+  /* No shadow geometry here, and that absence is the point. A surface used to
+     carry a structural 1px/3px so a card read as raised with no material
+     declared, which put a shadow under every card on a plain page and -- because
+     `--_d-shadow-*` inherits like any custom property, and a button declares
+     none of its own -- under every button and chip nested inside one too.
+
+     Depth is now something asked for rather than something a component has:
+     `.raised` and `.floating` carry the geometry for a consumer who wants it, an
+     aesthetic supplies its own, and the registry's per-component elevation says
+     how much depth a component takes when depth is drawn at all. */
 
   /* The surface's own complete-shadow slot. A shadow that cannot be described as
      one layer -- glass tucks two under the surface with negative spread -- has to

@@ -1,7 +1,16 @@
 /* Presentation answers two independent questions, and each is its own closed
    set: how much of the intent color fills the box, and whether the box draws a
    line at its boundary. Exactly one value from each set applies, so the six
-   combinations are the whole vocabulary and none of them is degenerate.
+   combinations are the whole vocabulary.
+
+   Five of them are distinct. `.solid` collapses the edge question rather than
+   answering it: the line blends toward the box's own background by the fill
+   amount, so at a full fill it *is* the background and there is nothing for
+   `.edged` to add or `.edgeless` to take away. That is the edge blend working,
+   not a gap in the set -- a filled box with a ring of another colour around it is
+   the thing the blend exists to prevent. The playground shows one `Solid` row
+   for the pair, because two rows that render identically claim support for a
+   distinction nobody maintains.
 
    Presentation declares only unitless numbers and percentages. A custom
    property's value is resolved on the element that declares it, so anything

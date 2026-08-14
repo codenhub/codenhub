@@ -125,19 +125,25 @@ Three presentation tokens total, down from six. Every value is a percentage, so
 presentation still inherits without carrying a resolved color, and a container
 can still set the look for a subtree while any element opts out.
 
-### What the six combinations are for
+### What the combinations are for
 
 ```text
-<button class="btn primary">              solid edgeless  primary action
-<button class="btn primary edged">        solid edged     filled with an ink outline
+<button class="btn primary">              solid           primary action
 <span   class="badge success">            soft  edgeless  tinted chip
 <button class="btn soft edged">           soft  edged     the common web button
 <button class="btn primary bare edged">   bare  edged     outline button
 <button class="btn bare">                 bare  edgeless  ghost, toolbar button
 ```
 
-None is degenerate on a component that draws both a fill and a line. That is the
-test the previous set failed.
+Five distinct boxes out of six spellings. `.solid` collapses the edge question
+rather than answering it: the line blends toward the box's own background by the
+fill amount, so at a full fill it _is_ the background, and `.edged` has nothing
+to add that `.edgeless` takes away. That is the edge blend working -- a filled
+box ringed in another colour is the thing it exists to prevent -- and it is why
+the playground renders one `Solid` row for the pair.
+
+None of the five is degenerate on a component that draws both a fill and a line.
+That is the test the previous set failed.
 
 ### Hover is derived, never declared
 
@@ -220,9 +226,21 @@ whole toolbar with one class and any element inside can opt back in.
 Zero lengths are written `0px` rather than `0` in the fallbacks, because
 `calc(0 * 1)` produces a number and a shadow position requires a length.
 
-The registry gives each component its default level, so "a card is raised and an
-input is not" is a published fact rather than an accident of which aesthetic
-happens to be loaded.
+The registry gives each component its default level, and the level says how much
+depth a component takes _when depth is drawn_ -- not that it rests above the
+page. Nothing is raised until an aesthetic draws depth, `.raised` or `.floating`
+asks for it, or the component is the one thing that floats without being asked.
+
+That last case is the tooltip bubble and only the bubble: it is placed over
+content nobody chose, so a flat panel there has no boundary at all. It supplies
+its geometry in the component's own slot, one below the aesthetic's, so an
+aesthetic in scope still outranks it.
+
+Depth used to be a property of the component instead. `surface` carried a
+structural `0 1px 3px`, which put a shadow under every card on a plain page --
+and, because `--_d-*` inherits like any custom property and a button declares no
+shadow geometry of its own, under every button and chip nested inside one too.
+The geometry moved to the things that ask for depth, and the leak went with it.
 
 ### The one limitation
 
@@ -350,34 +368,33 @@ with the `var()` fallback that is its default.
 
 ### Material tokens
 
-| Token                     | Fallback             | Meaning                                               |
-| ------------------------- | -------------------- | ----------------------------------------------------- |
-| `--ui-radius`             | `--radius-control`   | Corner radius for controls.                           |
-| `--ui-radius-surface`     | `--radius-surface`   | Corner radius for surfaces.                           |
-| `--ui-border-width`       | `--border-width`     | Edge thickness.                                       |
-| `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                   |
-| `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.             |
-| `--ui-shadow-x`           | `0px`                | Shadow offset, colorless so it inherits safely.       |
-| `--ui-shadow-y`           | `0px`                | Shadow offset.                                        |
-| `--ui-shadow-blur`        | `0px`                | Shadow blur.                                          |
-| `--ui-shadow-spread`      | `0px`                | Shadow spread.                                        |
-| `--ui-shadow-inset`       | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
-| `--ui-hover-shadow-x`     | `--ui-shadow-x`      | Shadow offset while hovered.                          |
-| `--ui-hover-shadow-y`     | `--ui-shadow-y`      | Shadow offset while hovered.                          |
-| `--ui-active-shadow-x`    | `--ui-shadow-x`      | Shadow offset while pressed.                          |
-| `--ui-active-shadow-y`    | `--ui-shadow-y`      | Shadow offset while pressed.                          |
-| `--ui-active-transform`   | `none`               | Transform applied while pressed.                      |
-| `--ui-shadow-tint`        | `transparent`        | Color mixed into the shadow, over its own intent.     |
-| `--ui-shadow-tint-amount` | `0%`                 | How much of that tint.                                |
-| `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.         |
-| `--ui-surface-shadow`     | _unset_              | Complete value; resolved by surfaces only.            |
-| `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent. |
-| `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.               |
-| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by surfaces only.           |
-| `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.               |
-| `--ui-clip`               | `none`               | Silhouette for structural components.                 |
-| `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                 |
-| `--ui-focus-inset`        | _undefined_          | Inset focus layer width. Undefined means no layer.    |
+| Token                   | Fallback             | Meaning                                               |
+| ----------------------- | -------------------- | ----------------------------------------------------- |
+| `--ui-radius`           | `--radius-control`   | Corner radius for controls.                           |
+| `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                           |
+| `--ui-border-width`     | `--border-width`     | Edge thickness.                                       |
+| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                   |
+| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.             |
+| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.       |
+| `--ui-shadow-y`         | `0px`                | Shadow offset.                                        |
+| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                          |
+| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                        |
+| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
+| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                          |
+| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                          |
+| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                          |
+| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                          |
+| `--ui-active-transform` | `none`               | Transform applied while pressed.                      |
+| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.       |
+| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.         |
+| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.            |
+| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent. |
+| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.               |
+| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.           |
+| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.               |
+| `--ui-clip`             | `none`               | Silhouette for structural components.                 |
+| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                 |
+| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.    |
 
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
@@ -756,7 +773,8 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
    no longer has. Kept in the list because the spike did find it; see
    [Shared composition, not a taxonomy](#shared-composition-not-a-taxonomy) for
    where the layer went.
-5. `--ui-shadow-tint`, the `--ui-active-*` slots, and `--ui-elevation`, added when
+5. `--ui-shadow-ink` (a tint colour and an amount at the time), the
+   `--ui-active-*` slots, and `--ui-elevation`, added when
    an aesthetic the model had never seen was built against it as a test. See
    [Adding an aesthetic](#adding-an-aesthetic): eight tokens and one two-selector rule
    reproduced a chunky-tile look end to end, across intents, with no component
@@ -819,8 +837,7 @@ uppercase actions. Built in the spike against a real screenshot:
   --ui-radius-surface: 1rem;
   --ui-border-width: 2px;
   --ui-shadow-y: 4px;
-  --ui-shadow-tint: #000;
-  --ui-shadow-tint-amount: 26%;
+  --ui-shadow-ink: 100%;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translateY(4px);
 }
@@ -845,13 +862,21 @@ learns about it.
 Eight tokens and one two-selector rule. Nothing modified, and the result
 holds across intents: a success button sits on a dark green edge, a neutral card
 on a dark gray one, a selected `.soft.edged.info` card on a dark blue one --
-because the tint composes against each component's own intent at the component,
-not at the container.
+because the shadow composes against each component's own intent at the
+component, not at the container.
 
-`--ui-shadow-tint` is what makes that work, and it generalizes to "a shade of
-whatever this thing already is". A tint is a plain color and an amount is a plain
-percentage; neither carries intent, so both inherit safely, and the mix happens
-where the intent lives.
+`--ui-shadow-ink` is what makes that work, and it generalizes to "a shade of
+whatever this thing already is". An amount is a plain percentage carrying no
+intent, so it inherits safely and the mix happens where the intent lives.
+
+The spike wrote this as a tint colour and an amount -- `#000` at 26%, mixed over
+the intent -- which let an aesthetic darken the shadow by an arbitrary colour.
+That pair shipped as one token: the base is the neutral depth colour and the
+amount says how much of the component's own ink replaces it, because the case
+that actually needed spelling was "this aesthetic's depth is ink, not shade", and
+the case that did not was any shadow at all on a page with no aesthetic. An
+aesthetic wanting a third colour under there declares `--ui-surface-shadow` or
+its own `box-shadow`, which is Tier 2 and says so.
 
 ### What the other aesthetics on the list will need
 

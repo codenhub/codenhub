@@ -225,7 +225,7 @@ test.describe("aesthetics", () => {
 
       const properties = ["border-top-width", "border-top-color", "background-color"];
       const outline = await readStyles(page, "btn-bare-edged-primary", properties);
-      const seamless = await readStyles(page, "btn-solid-edgeless-primary", properties);
+      const seamless = await readStyles(page, "btn-solid-primary", properties);
 
       /* The edge width is the aesthetic's and nothing else: presentation decides
          *whether* a line reads, never how thick it is. `--ui-border-scale` is
@@ -234,13 +234,14 @@ test.describe("aesthetics", () => {
       expect(seamless["border-top-width"], "edgeless width").toBe("2px");
 
       /* P3. `.bare.edged` draws a line the fill cannot hide; `.solid.edgeless`
-         blends its edge all the way to its own fill, so a filled button has a
-         seamless boundary rather than a ring of another colour. */
+         draws none, so the fill reaches the boundary unbroken. The width stays
+         the aesthetic's either way -- presentation decides whether a line reads,
+         never how much room it takes. */
       expect(
         getColorDistance(outline["border-top-color"]!, outline["background-color"]!),
         "edged line reads against its own fill",
       ).toBeGreaterThan(2);
-      expectSameColor(seamless["border-top-color"]!, seamless["background-color"]!, "edgeless edge");
+      expect(isTransparent(seamless["border-top-color"]!), "edgeless edge").toBe(true);
     });
   });
 

@@ -28,8 +28,9 @@ const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning"
    playground is the support surface, so it must not imply otherwise. */
 const PRESENTATIONS = [
   "default",
-  "solid edged",
-  "solid edgeless",
+  /* One row, not two: at a full fill the edge blends all the way to the
+     background, so `.solid.edged` and `.solid.edgeless` render the same box. */
+  "solid",
   "soft edged",
   "soft edgeless",
   "bare edged",

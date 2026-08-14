@@ -148,8 +148,8 @@ test.describe("surfaces", () => {
         defaultBorderWidth: get("empty-state-default-primary").borderTopWidth,
         ground,
         softBackground: get("empty-state-soft-edged-primary").backgroundColor,
-        solidBackground: get("empty-state-solid-edged-primary").backgroundColor,
-        solidColor: get("empty-state-solid-edged-primary").color,
+        solidBackground: get("empty-state-solid-primary").backgroundColor,
+        solidColor: get("empty-state-solid-primary").color,
       };
     });
 

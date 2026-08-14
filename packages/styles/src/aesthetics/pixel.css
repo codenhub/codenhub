@@ -22,6 +22,9 @@
      uncovered and the border reads as broken at every corner. Spread is not
      scaled by elevation, so a chip resting at zero keeps its edge. */
   --ui-shadow-inset: inset;
+  /* The ring is the element's edge drawn in ink, so it takes the intent rather
+     than the neutral depth colour. */
+  --ui-shadow-ink: 100%;
   --ui-shadow-spread: calc(var(--pixel-unit) * 2);
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;

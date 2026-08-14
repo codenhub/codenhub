@@ -118,8 +118,8 @@ test("renders every block quote presentation", async ({ page }) => {
       defaultBorderWidth: get("quote-default-primary").borderLeftWidth,
       edgedBorderWidth: get("quote-bare-edged-primary").borderLeftWidth,
       softBackground: get("quote-soft-edged-primary").backgroundColor,
-      solidBackground: get("quote-solid-edged-primary").backgroundColor,
-      solidColor: get("quote-solid-edged-primary").color,
+      solidBackground: get("quote-solid-primary").backgroundColor,
+      solidColor: get("quote-solid-primary").color,
     };
   });
 
@@ -156,9 +156,9 @@ test("reads presentation on key caps and tables", async ({ page }) => {
       neutralBackground: get("kbd-default-neutral").backgroundColor,
       softBackground: get("kbd-soft-edgeless-primary").backgroundColor,
       softBorderColor: get("kbd-soft-edgeless-primary").borderTopColor,
-      solidBackground: get("kbd-solid-edged-primary").backgroundColor,
-      solidBorderColor: get("kbd-solid-edged-primary").borderTopColor,
-      solidColor: get("kbd-solid-edged-primary").color,
+      solidBackground: get("kbd-solid-primary").backgroundColor,
+      solidBorderColor: get("kbd-solid-primary").borderTopColor,
+      solidColor: get("kbd-solid-primary").color,
       tableHeadBackground: head.backgroundColor,
       tokenBorder: resolveToken("border"),
       tokenPrimary: resolveToken("primary"),

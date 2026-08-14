@@ -235,7 +235,7 @@ test.describe("feedback", () => {
         bare: read("alert-bare-edged-info"),
         ground,
         softEdgeless: read("alert-soft-edgeless-warning"),
-        solid: read("alert-solid-edged-info"),
+        solid: read("alert-solid-info"),
       };
     });
 
@@ -284,10 +284,29 @@ test.describe("feedback", () => {
         return color;
       };
 
+      /* The edge axis is not on the grid at `.solid` -- one row stands for both,
+         because they render the same box -- so the pair is built here to prove
+         that is true rather than assumed. */
+      const probe = (className: string) => {
+        const element = document.createElement("span");
+
+        element.className = className;
+        document.body.append(element);
+
+        const styles = getComputedStyle(element);
+        const values = { background: styles.backgroundColor, border: styles.borderTopColor };
+
+        element.remove();
+
+        return values;
+      };
+
       return {
-        solidInfo: read("badge-solid-edged-info"),
-        solidPrimary: read("badge-solid-edgeless-primary"),
-        solidSecondary: read("badge-solid-edgeless-secondary"),
+        edgedSolid: probe("badge info solid edged"),
+        edgelessSolid: probe("badge info solid edgeless"),
+        solidInfo: read("badge-solid-info"),
+        solidPrimary: read("badge-solid-primary"),
+        solidSecondary: read("badge-solid-secondary"),
         softSuccess: read("badge-soft-edgeless-success"),
         tokenAccent: resolveToken("accent"),
         tokenAccentContrast: resolveToken("accent-contrast"),
@@ -300,8 +319,11 @@ test.describe("feedback", () => {
     expect(isTransparent(styles.solidInfo.background)).toBe(false);
     expect(getColorDistance(styles.solidInfo.color, styles.solidInfo.background)).toBeGreaterThan(2);
     /* P3: a filled badge's edge blends all the way to its own fill, so `.edged`
-       leaves a seamless boundary rather than a ring of another colour. */
-    expectSameColor(styles.solidInfo.border, styles.solidInfo.background, "solid badge edge");
+       draws the boundary in the fill and `.edgeless` draws none -- and the border
+       box shows the same fill through the gap. Two spellings, one box. */
+    expectSameColor(styles.edgedSolid.border, styles.edgedSolid.background, "solid edged badge edge");
+    expect(isTransparent(styles.edgelessSolid.border), "solid edgeless badge edge").toBe(true);
+    expectSameColor(styles.edgelessSolid.background, styles.edgedSolid.background, "solid badge fill");
 
     expectSameColor(styles.solidPrimary.background, styles.tokenPrimary, "solid primary badge");
     expectSameColor(styles.solidPrimary.color, styles.tokenPrimaryContrast, "solid primary badge text");
@@ -309,11 +331,12 @@ test.describe("feedback", () => {
     expectSameColor(styles.solidSecondary.background, styles.tokenAccent, "solid secondary badge");
     expectSameColor(styles.solidSecondary.color, styles.tokenAccentContrast, "solid secondary badge text");
 
-    /* Soft badge: tinted background and no line to read. `.edgeless` zeroes the
-       line, and P3 then blends the edge to the fill, so the boundary is the fill
-       rather than a transparent gap the background would show through. */
+    /* An edgeless box draws no edge at all, so the border band shows the fill
+       through it and the boundary is the fill rather than a ring. Asserting the
+       colour matched the fill instead would pass on a band painted a second coat
+       of a translucent tint, which is the ring it is meant to rule out. */
     expect(isTransparent(styles.softSuccess.background)).toBe(false);
-    expectSameColor(styles.softSuccess.border, styles.softSuccess.background, "soft badge edge");
+    expect(isTransparent(styles.softSuccess.border), "soft badge edge").toBe(true);
   });
 
   test("uses the neutral text tokens when no intent is set", async ({ page }) => {
@@ -428,7 +451,7 @@ test.describe("feedback", () => {
      geometry, so "twice a card" is a measurement rather than a second shadow
      token. The registry rests a bubble at 2 and a card at 1, and this is that
      sentence read off the composited value. */
-  test("lifts a tooltip bubble to twice a card's depth", async ({ page }) => {
+  test("lifts a tooltip bubble to twice a raised card's depth", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const offsets = await page.evaluate(() => {
@@ -438,7 +461,9 @@ test.describe("feedback", () => {
       const host = document.querySelector('[data-testid="preview-root"]')!;
       const card = document.createElement("div");
 
-      card.className = "card";
+      /* A card rests flat now, so the unit of depth is one a consumer asked
+         for. The bubble is the one component that floats without being asked. */
+      card.className = "card raised";
       host.append(card);
 
       const values = {
@@ -453,7 +478,7 @@ test.describe("feedback", () => {
       return values;
     });
 
-    expect(offsets.card, "a card is raised").toBeGreaterThan(0);
+    expect(offsets.card, "a raised card draws a step of depth").toBeGreaterThan(0);
     expect(offsets.bubble).toBe(offsets.card * 2);
   });
 

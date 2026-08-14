@@ -26,6 +26,10 @@
   /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
      the registry decides which components sit on a slab and `.flat` takes one
      off without this file knowing which component it landed on. */
+  /* The slab is ink, not shade: a hard offset of the element's own line colour
+     is the whole look, so this aesthetic asks for the intent instead of the
+     neutral depth colour every other shadow uses. */
+  --ui-shadow-ink: 100%;
   --ui-shadow-x: var(--neo-offset);
   --ui-shadow-y: var(--neo-offset);
   --ui-shadow-blur: 0px;

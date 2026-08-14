@@ -20,10 +20,22 @@
 
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
   --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-color));
-  --_line: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
   /* P3: the line blends toward the fill by the fill amount, so a filled box has
-     a seamless edge instead of a stray ring of another colour. */
-  --_edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, var(--_d-fill)), var(--_line));
+     a seamless edge instead of a stray ring of another colour.
+
+     The blend is the line's colour, and how much line there is comes after it.
+     Written the other way round -- how much line, then blend the fill into it --
+     `.edgeless` lands on the fill colour rather than on nothing, and the border
+     box paints that over the fill it already drew: two coats of a translucent
+     tint, which is a visible ring around an element that asked for no edge.
+
+     The blend runs toward `--_bg` rather than toward `--intent-color`, so a full
+     fill lands on the background the box actually painted -- alpha included. Run
+     against the raw intent instead, an aesthetic that thins the fill keeps an
+     opaque ring around a translucent box, and `.solid.edged` stops meaning what
+     `.solid.edgeless` means for that one aesthetic alone. */
+  --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --_edge: color-mix(in oklab, var(--_line) var(--ui-border, var(--_d-border)), transparent);
   --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
 
   /* Elevation is a unitless multiplier over the aesthetic's shadow geometry, so
@@ -32,21 +44,30 @@
      and a shadow position needs a length. */
   --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
   --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_elevation));
-  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, 0px)) * var(--_elevation));
-  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, 0px)) * var(--_elevation));
+  /* Three slots, most specific first: the aesthetic in scope, then the depth a
+     component draws when it is the thing that floats, then the plain step
+     `.raised` and `.floating` supply for a page with no aesthetic at all. The
+     order is what lets a raised card inside a neobrutalist page keep the slab
+     instead of trading it for a soft blur. Nothing declares the last slot until
+     something asks for depth, which is why a page with no aesthetic and no
+     modifier has no shadow anywhere. */
+  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px))) * var(--_elevation));
+  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--elevation-blur, 0px))) * var(--_elevation));
   /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
      inset ring spends spread on it, and scaling that by elevation would erase
      the edge of every component the registry rests at zero. Elevation is depth:
      offset and blur. */
   --_ss: var(--ui-shadow-spread, var(--_d-shadow-spread, 0px));
-  /* "A shade of whatever this thing already is": a tint and an amount are both
-     free of intent, so they inherit safely and the mix happens where the intent
-     lives. */
-  --_shadow-color: color-mix(
-    in oklab,
-    var(--ui-shadow-tint, transparent) var(--ui-shadow-tint-amount, 0%),
-    var(--intent-border)
-  );
+  /* A shadow is a neutral depth cue by default and the intent's own ink only
+     where an aesthetic says so. The amount is a bare percentage, so it inherits
+     safely and the mix happens where the intent lives -- which is the whole
+     reason this is composed here rather than declared on a container.
+
+     Defaulting to the neutral is what keeps depth from reading as colour: an
+     intent-coloured shadow at full opacity is a smear of the component's own
+     hue, not a shadow. An aesthetic whose depth *is* ink -- neobrutalism's slab,
+     pixel's ring -- asks for it by name. */
+  --_shadow-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
   --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.
@@ -105,13 +126,15 @@
 @utility box-hover {
   &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
     --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_d-ground, transparent));
-    --_line: color-mix(in oklab, var(--intent-hover) var(--ui-border, var(--_d-border)), transparent);
-    /* P3 again, against the hover tone. Without this the edge blends toward
-       `--intent-color`, which at `.solid` resolves to it exactly -- a ring of the
-       resting colour around a hovered box. */
-    --_edge: color-mix(in oklab, var(--intent-hover) var(--ui-fill, var(--_d-fill)), var(--_line));
+    /* P3 again, against the hover tone. Only the ink end has to move: the fill
+       end is `--_bg`, which the line above already redefined, so the resting
+       formula follows the hover on its own. Without this the edge blends toward
+       the resting ink -- a ring of the colour the box just left. */
+    --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-hover));
     --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
-    --_sy: calc(var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+    --_sy: calc(
+      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_elevation)
+    );
 
     transform: var(--ui-hover-transform, none);
   }

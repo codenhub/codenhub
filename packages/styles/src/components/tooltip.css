@@ -62,6 +62,15 @@
     --_d-border: 0%;
     --_d-elevation: 2;
 
+    /* The one component that draws depth with nothing asked for, because a
+       bubble is the case where depth is not decoration: it floats over content
+       nobody chose, and a flat panel over arbitrary pixels has no boundary. It
+       goes in the component's own slot rather than the modifier's, so an
+       aesthetic in scope still outranks it, and a pseudo-element has no children
+       for it to inherit onto. Elevation 2 doubles it to `0 2px 6px`. */
+    --_d-shadow-y: 1px;
+    --_d-shadow-blur: 3px;
+
     /* The bound, and it is a floor rather than the cap a text control keeps.
        Presentation cascades by design, so a container's `.bare` reaches a bubble
        nobody classed and leaves a transparent panel floating over arbitrary

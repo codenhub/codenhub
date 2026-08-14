@@ -369,9 +369,9 @@ test.describe("buttons", () => {
     expect(getColorDistance(styles.inheritedButtonBackground, styles.soloButtonBackground)).toBeGreaterThan(2);
 
     /* The badge is a different component reading the same inherited tokens. It
-       rests edgeless, so P3 blends its edge to the inherited fill and the
-       boundary is the tint rather than a gap. */
-    expectSameColor(styles.inheritedBadgeBorder, styles.inheritedBadgeBackground, "inherited badge edge");
+       rests edgeless, so it draws no edge and the inherited tint shows through
+       the border band unbroken. */
+    expect(isTransparent(styles.inheritedBadgeBorder), "inherited badge edge").toBe(true);
     expect(isTransparent(styles.inheritedBadgeBackground)).toBe(false);
 
     /* An element declaring its own presentation wins over the container: the
@@ -440,7 +440,18 @@ test.describe("buttons", () => {
   test("moves a hovered solid button's edge to the hover tone", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    const solid = page.getByTestId("btn-solid-edged-primary");
+    /* Built rather than read off the grid: `.solid` shows one row there, and a
+       button with no edge class rests edgeless, whose edge is nothing at all.
+       The tone the edge follows is only visible where a line is drawn. */
+    await page.evaluate(() => {
+      const button = document.createElement("button");
+
+      button.className = "btn primary solid edged";
+      button.dataset.testid = "hover-solid-edged";
+      document.querySelector('[data-testid="preview-root"]')!.append(button);
+    });
+
+    const solid = page.getByTestId("hover-solid-edged");
     const resting = await solid.evaluate((element) => getComputedStyle(element).borderTopColor);
     const hoverToken = await page.evaluate(() => {
       const probe = document.createElement("span");

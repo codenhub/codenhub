@@ -130,7 +130,7 @@ test.describe("forms", () => {
       .getByTestId("badge-soft-edgeless-success")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
     const solidBadge = await page
-      .getByTestId("badge-solid-edgeless-success")
+      .getByTestId("badge-solid-success")
       .evaluate((element) => getComputedStyle(element).backgroundColor);
 
     const inputAlpha = readSrgb(solidInput).alpha;
