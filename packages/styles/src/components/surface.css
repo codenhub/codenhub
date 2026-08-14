@@ -10,6 +10,16 @@
 @utility surface {
   @apply box block;
 
+  /* Bare and edged: the resting geometry of a container that has declared no
+     material. `box` reads these three with no fallback on purpose -- that is
+     what makes a component state its whole look in one place -- so a utility
+     that leaves one out renders with the declaration reading it dropped, not
+     with a default. `surface` is typeable on its own, so it owes all three;
+     `card` restates them because a component states its own. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+
   --_d-ground: var(--ui-surface-ground, var(--color-background));
   /* The structural depth a surface has with no aesthetic in scope, which is what
      makes a card read as raised and a panel as flat with no material declared
@@ -39,12 +49,15 @@
 
 /* A bare, edged, raised container. */
 @utility card {
+  @apply surface p-(--surface-padding,1.25rem);
+
+  /* After the `@apply`, not before: `surface` inlines its own resting geometry
+     at that point, so defaults written above it would be overridden by the very
+     utility they are meant to specialise. */
   --_d-fill: 0%;
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
   --_d-elevation: 1;
-
-  @apply surface p-(--surface-padding,1.25rem);
 
   &.compact {
     --surface-padding: 0.75rem;

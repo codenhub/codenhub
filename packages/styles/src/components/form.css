@@ -78,11 +78,18 @@
   translate: 0 -50%;
   pointer-events: none;
   background-color: color-mix(in oklab, currentColor 55%, transparent);
-  mask-image: var(--ipt-icon-src);
+  /* The fallback masks everything out, and it is load-bearing. This rule fires
+     on any `.control` wrapping an `.icon` while only the seven typed rules
+     above set a source, so on the eighth control `--ipt-icon-src` is undefined:
+     the declaration is invalid at computed-value time, `mask-image` resolves to
+     its initial `none` -- no mask, not an empty one -- and the background paints
+     a solid 1rem block where the artwork should be. A transparent gradient is a
+     valid image with zero alpha, so the box is masked away instead. */
+  mask-image: var(--ipt-icon-src, linear-gradient(transparent, transparent));
   mask-size: contain;
   mask-repeat: no-repeat;
   mask-position: center;
-  -webkit-mask-image: var(--ipt-icon-src);
+  -webkit-mask-image: var(--ipt-icon-src, linear-gradient(transparent, transparent));
   -webkit-mask-size: contain;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -115,6 +122,15 @@
    and wrong for something you type into, so only the line responds. */
 @utility text-control {
   @apply box;
+
+  /* The resting geometry, stated whole for the same reason every component
+     states it: `box` reads these three with no fallback, so a slot left out is
+     an undefined `var()` inside a `color-mix()` and the declaration reading it
+     collapses to its initial value rather than reporting anything. `text-control`
+     is typeable on its own, so it owes them exactly as a component does. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
 
   --_fill: calc(min(var(--ui-fill, var(--_d-fill)), 12%) * var(--ui-bg-alpha, 1));
   --_line: color-mix(in oklab, var(--intent-border) 100%, transparent);
@@ -165,12 +181,15 @@
 
 /* A bare, edged, unelevated text control. */
 @utility ipt {
+  @apply text-control h-(--control-height,2.5rem) px-3 py-2;
+
+  /* After the `@apply`, not before: it inlines `text-control`'s own resting
+     geometry at that point, so a component's defaults written above it lose to
+     the utility they are meant to specialise. */
   --_d-fill: 0%;
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
   --_d-elevation: 0;
-
-  @apply text-control h-(--control-height,2.5rem) px-3 py-2;
 
   min-height: var(--control-height);
 

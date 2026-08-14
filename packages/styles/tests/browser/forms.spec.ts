@@ -408,6 +408,36 @@ test.describe("forms", () => {
       .toBe(1);
   });
 
+  /* Seven typed rules set `--ipt-icon-src` and the artwork rule fires on any
+     `.control` wrapping an `.icon`, so a control outside those seven resolves an
+     undefined `var()`. With no fallback that declaration is invalid at
+     computed-value time and `mask-image` takes its initial `none` -- no mask
+     rather than an empty one -- and the box paints as a solid coloured square
+     next to the text. The fallback has to be a transparent image, not `none`. */
+  test("masks the icon box away on a control the artwork does not cover", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const uncovered = await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      host.innerHTML = `<div class="control"><span class="icon"></span><input type="text" class="ipt" /></div>`;
+      document.body.append(host);
+
+      const styles = getComputedStyle(host.querySelector(".control")!, "::before");
+      const values = {
+        content: styles.content,
+        mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
+      };
+
+      host.remove();
+
+      return values;
+    });
+
+    expect(uncovered.content, "the wrapper still generates the box").not.toBe("none");
+    expect(uncovered.mask, "an uncovered control masks the box away").not.toBe("none");
+  });
+
   test("reserves room for a field icon only when the control opts in", async ({ page }) => {
     await page.goto(FORMS_URL);
 
