@@ -443,7 +443,7 @@ inferred from a table somewhere else.
 2. **Presentation** decides how much fill and whether there is an edge.
 3. **Intent** colors both.
 
-Modifiers -- size, and [elevation](#elevation) -- sit above the four, being
+Modifiers -- size, and [elevation](#elevation) -- sit above the three, being
 per-element choices rather than axis membership. State sits above the modifiers: a
 control that is `:disabled` or `aria-invalid` reads as such regardless of every
 axis and modifier applied to it. State is a condition rather than
@@ -746,7 +746,10 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
    multiplies the fill, a surface's default fill is 0%, and the blur sat behind a
    solid background. This is the one finding that would have shipped as a visible
    defect.
-4. The indicator specificity rule under [Roles](#why-indicator-exists).
+4. The indicator specificity rule, which belonged to the role layer this model
+   no longer has. Kept in the list because the spike did find it; see
+   [Shared composition, not a taxonomy](#shared-composition-not-a-taxonomy) for
+   where the layer went.
 5. `--ui-shadow-tint`, the `--ui-active-*` slots, and `--ui-elevation`, added when
    an aesthetic the model had never seen was built against it as a test. See
    [Adding an aesthetic](#adding-an-aesthetic): eight tokens and one two-selector rule
