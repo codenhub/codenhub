@@ -210,7 +210,9 @@
       "native": ["table"],
       "renamedFrom": "table",
       "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
-      "wave": 2
+      "wave": 2,
+      "composition": "frame",
+      "compositionReason": "Takes its border, radius and clip from `box` and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Its `overflow: hidden` over `border-separate` also does not compose with an aesthetic's `clip-path`."
     },
     {
       "class": "empty-state",
@@ -225,8 +227,9 @@
     {
       "class": "pre",
       "default": {
-        "fill": "soft",
+        "fill": "bare",
         "edge": "edgeless",
+        "ground": "--intent-subtle",
         "elevation": 0
       },
       "native": ["pre"],
@@ -240,7 +243,9 @@
         "elevation": 0
       },
       "native": ["blockquote"],
-      "wave": 2
+      "wave": 2,
+      "composition": "none",
+      "compositionReason": "Typography rather than a painted box. The component is a left bar and an indent, so `box`'s background, edge, radius and shadow would all be inert on it."
     },
     {
       "class": "tooltip",
@@ -255,8 +260,9 @@
     {
       "class": "kbd",
       "default": {
-        "fill": "soft",
-        "edge": "edgeless",
+        "fill": "bare",
+        "edge": "edged",
+        "ground": "--intent-subtle",
         "elevation": 0
       },
       "native": ["kbd"],
@@ -265,8 +271,9 @@
     {
       "class": "code",
       "default": {
-        "fill": "soft",
+        "fill": "bare",
         "edge": "edgeless",
+        "ground": "--intent-subtle",
         "elevation": 0
       },
       "native": ["code"],

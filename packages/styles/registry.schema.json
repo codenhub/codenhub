@@ -131,6 +131,10 @@
               "elevation": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "ground": {
+                "type": "string",
+                "description": "Token the component rests on at 0% fill, for tinted parts that are not transparent by default."
               }
             }
           },
@@ -158,7 +162,18 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 2
+          },
+          "composition": {
+            "type": "string",
+            "enum": ["frame", "none"],
+            "description": "How much of `box` the component takes. Absent means all of it; `frame` means the border, radius and clip only; `none` means it does not compose `box` at all."
+          },
+          "compositionReason": {
+            "type": "string"
           }
+        },
+        "dependentRequired": {
+          "composition": ["compositionReason"]
         }
       }
     },

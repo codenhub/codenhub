@@ -486,10 +486,9 @@ test("the package publishes an entrypoint for every aesthetic in the registry", 
 
 /* Shadow parts fall back individually, so an aesthetic that sets an offset but
    not a blur inherits the structural blur a surface carries and gets a shape it
-   never asked for. Declaring the whole geometry is the contract; `--ui-shadow`
-   satisfies it too, since it replaces every part on every component at once.
-   `--ui-surface-shadow` does not: it replaces the shadow of surfaces only, and
-   the parts still paint every button, chip and control on the page. */
+   never asked for. Declaring the whole geometry is the contract, and there is no
+   exemption from it: `--ui-surface-shadow` replaces the shadow of surfaces only,
+   so the parts still paint every button, chip and control on the page. */
 test("every aesthetic declares a whole shadow geometry", async () => {
   const parts = ["--ui-shadow-x", "--ui-shadow-y", "--ui-shadow-blur", "--ui-shadow-spread"];
   const sources = await Promise.all(
@@ -499,7 +498,6 @@ test("every aesthetic declares a whole shadow geometry", async () => {
     })),
   );
   const problems = sources
-    .filter(({ source }) => !source.includes("--ui-shadow:"))
     .map(({ name, source }) => ({ missing: parts.filter((part) => !source.includes(`${part}:`)), name }))
     .filter(({ missing }) => missing.length > 0)
     .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);

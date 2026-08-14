@@ -50,15 +50,18 @@
   --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.
-     `--ui-shadow` stays the escape hatch that overrides every component. */
+     There is deliberately no `--ui-shadow` wrapper: a complete value has nothing
+     for the elevation multiplier to reach, so `.flat` would silently stop working
+     on anything that set one. `--ui-surface-shadow` is that escape hatch narrowed
+     to the single case that needs it. */
   --_shadow: var(--_shadow-parts);
-  --_focus-stack: var(--ui-shadow, var(--_shadow)), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
+  --_focus-stack: var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
 
   background-color: var(--_bg);
   color: var(--_fg);
   border: var(--_width) solid var(--_edge);
   border-radius: var(--ui-radius, var(--radius-control));
-  box-shadow: var(--ui-shadow, var(--_shadow));
+  box-shadow: var(--_shadow);
   clip-path: var(--ui-clip, none);
   transition:
     background-color var(--motion-duration-normal) var(--motion-ease),
@@ -80,7 +83,7 @@
      non-inherited property is `initial`, that is `none`. Every focused box would
      lose its shadow rather than keep it. `shape.css` uses the same shape. */
   &:focus-visible {
-    box-shadow: var(--_focus-stack, var(--ui-shadow, var(--_shadow)));
+    box-shadow: var(--_focus-stack, var(--_shadow));
   }
 
   &:disabled,

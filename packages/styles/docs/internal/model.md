@@ -170,7 +170,7 @@ token and five documented exceptions gone for a change nobody will see.
 - **P4.** A component bounds a presentation token only when the composition
   itself produces a broken result -- not to protect a consumer from a combination
   they chose. Any bound that survives that test is published. See
-  [the one bound that survives](#the-one-bound-that-survives-and-the-test-for-keeping-one).
+  [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one).
 
 ## Elevation
 
@@ -221,12 +221,15 @@ happens to be loaded.
 
 ### The one limitation
 
-An aesthetic setting `--ui-shadow` as a complete multi-layer value opts out of the
-elevation scale, because there is nothing for the multiplier to reach. That hole
-is kept small deliberately: shipped aesthetics express depth with the parts, and
-the complete-value form stays an escape hatch for shadows that genuinely cannot be
-described as one layer. An aesthetic taking the escape hatch declares it in the
-registry, so `.flat` not working on it is documented rather than discovered.
+An aesthetic setting `--ui-surface-shadow` as a complete multi-layer value opts
+out of the elevation scale on surfaces, because there is nothing for the
+multiplier to reach. That hole is kept small deliberately, and it is the only one:
+there is no general `--ui-shadow` slot, precisely because a complete value
+reaching every component would take `.flat` away from all of them at once. Shipped
+aesthetics express depth with the parts, and the complete value stays a
+surface-only escape hatch for shadows that genuinely cannot be described as one
+layer. An aesthetic taking it declares it in the registry, so `.flat` not reaching
+its surfaces is documented rather than discovered.
 
 ## Shared composition, not a taxonomy
 
@@ -266,14 +269,14 @@ invented to absorb:
 Fixing presentation did most of it. The edge scale was what made small components
 need ceilings, and with it gone they do not.
 
-### The one bound that survives, and the test for keeping one
+### The bounds that survive, and the test for keeping one
 
 `.badge.edged` under `.neobrutalism` now draws the aesthetic's 2px edge. It looks
 worse than a capped 1px edge would. It is also two documented features combined
 exactly as documented, and the package does not degrade its own code to save a
 consumer from a combination they chose. Document it; do not clamp it.
 
-`text-control` caps its fill at the soft tint, and that one stays, because it is
+`text-control` caps its fill at the soft tint, and that cap stays, because it is
 not the same situation:
 
 ```html
@@ -288,6 +291,16 @@ Our own cascade produced it, so our own `min()` answers it.
 That is the test. **A bound is justified when our own composition produces the
 broken result, and unjustified when a consumer's own combination does.** The
 first is a bug we shipped; the second is a decision they made.
+
+Two components pass it today:
+
+| Component      | Bound                        | What our own composition does to it                                                                     |
+| -------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `text-control` | Fill capped at the soft tint | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.       |
+| `.tooltip`     | Fill capped at the soft tint | The same cascade reaches a bubble nobody classed, and its label goes the color of the bubble behind it. |
+
+The number is expected to move. This is a test, not a quota: a bound that passes
+it is published, and a bound that stops passing it is deleted.
 
 ## Intent
 
@@ -348,7 +361,6 @@ with the `var()` fallback that is its default.
 | `--ui-shadow-tint`        | `transparent`        | Color mixed into the shadow, over its own intent.     |
 | `--ui-shadow-tint-amount` | `0%`                 | How much of that tint.                                |
 | `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.         |
-| `--ui-shadow`             | _unset_              | Complete multi-layer value; overrides the parts.      |
 | `--ui-surface-shadow`     | _unset_              | Complete value; resolved by surfaces only.            |
 | `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent. |
 | `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.               |
@@ -372,12 +384,12 @@ box-shadow: var(--ui-shadow-x, 0px) var(--ui-shadow-y, 0px) var(--ui-shadow-blur
   var(--intent-border);
 ```
 
-`--ui-shadow` remains as a complete-value override for the multi-layer case glass
-needs, where the color is fixed rather than intent-derived, and
-`--ui-surface-shadow` is the same slot narrowed to surfaces. Glass takes
-the narrow one: given through `--ui-shadow` its 18px drop shadow would land under
-every button and chip on the page as well, which is the same
-reach-one-kind-of-component problem `--ui-backdrop` solves, solved the same way.
+`--ui-surface-shadow` is the complete-value override for the multi-layer case
+glass needs, where the color is fixed rather than intent-derived. It is scoped to
+surfaces deliberately. The unscoped version of the same slot was drafted and
+dropped: glass's 18px drop shadow given through it would land under every button
+and chip on the page as well, which is the same reach-one-kind-of-component
+problem `--ui-backdrop` solves, solved the same way.
 
 Three of those slots exist because the spike found the first four insufficient.
 `--ui-shadow-inset` carries the `inset` keyword, without which pixel's ring has to
@@ -458,7 +470,7 @@ fixes it for every state at once rather than for that one.
 
 Three steps, and there is no fourth. The current model's fourth step was
 "component clamps the result"; the clamps are gone with the edge scale that
-forced them, and the one bound left is stated where it applies.
+forced them, and the bounds left are stated where they apply.
 
 ## Defaults
 
@@ -474,17 +486,44 @@ the registry names for it, and that pair is published.
 | `.card`                                      | bare edged     |
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |
-| `.table`                                     | bare edged     |
+| `.data-table`                                | bare edged     |
 | `.empty-state`                               | bare edged     |
 | `.tooltip`                                   | solid edgeless |
-| `.pre` `.code` `.kbd`                        | soft edgeless  |
+| `.pre` `.code`                               | bare edgeless  |
+| `.kbd`                                       | bare edged     |
 | `.badge`                                     | soft edgeless  |
 | `.quote`                                     | bare edged     |
 | `.loader` `.skeleton` `.progress` `.divider` | n/a            |
 
+Three of those name a ground as well. `.pre`, `.code` and `.kbd` are not
+transparent at rest -- each is a quiet tinted block -- and that tone is not a fill
+of the component's intent, it is `--intent-subtle`. Writing it as `soft` would be
+a different color and would leave `.bare` looking broken. So they rest at `bare`
+over `--_d-ground: var(--intent-subtle)`, the mechanism `surface` already uses for
+its own ground: `.bare` is today's look exactly, `.soft` is 12% of the intent over
+it, and `.solid` fills with the intent. The registry records the ground beside the
+pair.
+
 These are proposals, not derivations -- there is no rule that produces them, and
 there should not be. The point is that each is a decision on one line of one file
 rather than a `var()` fallback in the middle of a component.
+
+### Components that do not take the whole of `box`
+
+Two of them, and the registry says which rather than leaving it to be found by
+reading CSS.
+
+`.quote` composes none of it. It is a left bar and an indent, so a background, an
+edge, a radius and a shadow would all be inert on it; it is typography wearing a
+component's name.
+
+`.data-table` takes the frame -- border, radius, clip -- and paints its head, cell
+rules and row hover from private tokens, because none of those have an equivalent
+on the three axes, and because its `overflow: hidden` over `border-separate` does
+not compose with an aesthetic's `clip-path`.
+
+Both carry the reason in `registry.json` next to the decision, so a third one has
+to be argued for in the same place rather than appearing quietly in a stylesheet.
 
 ## The registry
 
@@ -497,8 +536,9 @@ It carries the closed sets first -- the fill and edge classes with the tokens ea
 declares, the hover step, the intents and their color families, the modifiers --
 then every component, helper, and aesthetic.
 
-Per component: class name, default fill/edge/elevation, native element selectors,
-implementation wave, and a rename with its reason where one applies.
+Per component: class name, default fill/edge/elevation, the ground it rests on
+where it has one, native element selectors, implementation wave, and -- where one
+applies -- a rename or a partial composition, each with its reason.
 
 ```json
 {
@@ -549,10 +589,30 @@ a defect nobody had noticed and check 2 now makes impossible to reintroduce.
 ### What leaves the public surface
 
 `.control-base` is gone. It was the shared composition every text control
-applied, and it still is -- as `@utility text-control`, which is shared code
-rather than a component with a name consumers could type. `.ai` is gone as a
-separate class: loader artwork is an art variant of `.loader`, listed on the
-component.
+applied, and it still is -- as `@utility text-control`. `.ai` is gone as a separate
+class: loader artwork is an art variant of `.loader`, listed on the component.
+
+### The composition API
+
+`@utility` does not make a private helper. Every name below is a class a consumer
+can type, whether or not we document it, so the honest position is to publish them
+as a small composition API rather than to pretend they are internal and be
+surprised when someone uses one.
+
+| Utility        | What applying it gives an element                                                     |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled. |
+| `box-hover`    | The derived hover tone, for something you press rather than type into.                |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                  |
+| `text-control` | `box` plus the fill cap and the field affordances every text control shares.          |
+| `shaped`       | The aesthetic's silhouette and inset edge at control scale.                           |
+| `shaped-tight` | The same at chip scale.                                                               |
+| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                   |
+
+They are the seam the components are built from, and a consumer composing a
+component we do not ship is better served by them than by copying a component's
+declarations. What they are not is a taxonomy: applying `box` says how an element
+is painted, not what kind of thing it is.
 
 ## Variant specs
 
@@ -625,7 +685,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 | `--ui-border-scale`      | Nothing. The aesthetic owns edge width.        |
 | `--ui-hover-fill`        | Derived hover.                                 |
 | `--ui-hover-fg-on-fill`  | Derived hover.                                 |
-| Per-component clamps     | Deleting the edge scale. One bound survives.   |
+| Per-component clamps     | Deleting the edge scale. Two bounds survive.   |
 | Aesthetic selector lists | `--ui-ink`, shadow parts, `--ui-backdrop`.     |
 | "Plain"                  | A published default pair per component.        |
 
