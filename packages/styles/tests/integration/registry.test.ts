@@ -339,6 +339,43 @@ async function shippedUtilities(): Promise<Map<string, string>> {
   return blocks;
 }
 
+/* Extracts declarations from the root level of a utility block, excluding any
+   nested selectors (e.g., &:hover, &:focus) and nested at-rules. Returns only
+   the declarations that appear directly in the utility's own rule body. */
+function getRootDeclarations(block: string): string {
+  let result = "";
+  let depth = 0;
+  let i = 1; // Skip opening brace
+
+  while (i < block.length) {
+    const char = block[i];
+
+    if (char === "{") {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      if (depth === 0) {
+        break; // End of root block
+      }
+      depth -= 1;
+      i += 1;
+      continue;
+    }
+
+    // Only collect content at depth 0 (root level)
+    if (depth === 0) {
+      result += char;
+    }
+
+    i += 1;
+  }
+
+  return result;
+}
+
 /* Shared composition rather than components: they are `@utility` so `@apply` can
    reach them, which also makes them class names a consumer could type. They are
    deliberately undocumented, and the registry does not list them. */
@@ -420,13 +457,14 @@ test("every composition utility that takes box states its resting geometry", asy
     if (name === "box" || block === undefined) {
       continue;
     }
-    const applied = [...block.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
+    const rootDeclarations = getRootDeclarations(block);
+    const applied = [...rootDeclarations.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
 
     if (!applied.includes("box")) {
       continue;
     }
     for (const slot of ["--_d-fill", "--_d-fg-on-fill", "--_d-border"]) {
-      if (!block.includes(`${slot}:`)) {
+      if (!rootDeclarations.includes(`${slot}:`)) {
         problems.push(`${name} should declare ${slot}`);
       }
     }
@@ -442,17 +480,20 @@ test("every composition utility that takes box states its resting geometry", asy
 test("a component states its resting geometry after the composition it applies", async () => {
   const utilities = await shippedUtilities();
   const slots = ["--_d-fill", "--_d-fg-on-fill", "--_d-border"];
-  const declaring = [...composition].filter((name) =>
-    slots.some((slot) => utilities.get(name)?.includes(slot + ":") === true),
-  );
+  const declaring = [...composition].filter((name) => {
+    const rootDeclarations = utilities.get(name);
+    return slots.some((slot) => rootDeclarations?.includes(slot + ":") === true);
+  });
   const problems: string[] = [];
 
   for (const [name, block] of utilities) {
+    const rootDeclarations = getRootDeclarations(block);
+
     for (const applied of declaring) {
       if (name === applied) {
         continue;
       }
-      const at = [...block.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
+      const at = [...rootDeclarations.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
         list.trim().split(/\s+/).includes(applied),
       )?.index;
 
@@ -460,7 +501,7 @@ test("a component states its resting geometry after the composition it applies",
         continue;
       }
       for (const slot of slots) {
-        const own = block.indexOf(slot + ":");
+        const own = rootDeclarations.indexOf(slot + ":");
 
         if (own !== -1 && own < at) {
           problems.push(`${name} declares ${slot} above its @apply ${applied}`);
@@ -469,6 +510,55 @@ test("a component states its resting geometry after the composition it applies",
     }
   }
   expect(problems).toEqual([]);
+});
+
+/* Demonstrates that getRootDeclarations correctly excludes geometry declared
+   only inside nested selectors. Without restricting to root declarations, such
+   utilities would incorrectly appear to declare their geometry. */
+test("getRootDeclarations excludes nested selector geometry", () => {
+  const validBlock = `{
+    @apply box;
+    --_d-fill: 100%;
+    --_d-fg-on-fill: 100%;
+    --_d-border: 100%;
+  }`;
+
+  const nestedOnlyBlock = `{
+    @apply box;
+    &:hover {
+      --_d-fill: 100%;
+      --_d-fg-on-fill: 100%;
+      --_d-border: 100%;
+    }
+  }`;
+
+  const mixedBlock = `{
+    @apply box;
+    --_d-fill: 100%;
+    &:hover {
+      --_d-fg-on-fill: 100%;
+    }
+    --_d-border: 100%;
+  }`;
+
+  const validRoot = getRootDeclarations(validBlock);
+  const nestedOnlyRoot = getRootDeclarations(nestedOnlyBlock);
+  const mixedRoot = getRootDeclarations(mixedBlock);
+
+  // Valid block should have all three slots
+  expect(validRoot.includes("--_d-fill:")).toBe(true);
+  expect(validRoot.includes("--_d-fg-on-fill:")).toBe(true);
+  expect(validRoot.includes("--_d-border:")).toBe(true);
+
+  // Nested-only block should have none of the slots in root
+  expect(nestedOnlyRoot.includes("--_d-fill:")).toBe(false);
+  expect(nestedOnlyRoot.includes("--_d-fg-on-fill:")).toBe(false);
+  expect(nestedOnlyRoot.includes("--_d-border:")).toBe(false);
+
+  // Mixed block should have only the root-level slots
+  expect(mixedRoot.includes("--_d-fill:")).toBe(true);
+  expect(mixedRoot.includes("--_d-fg-on-fill:")).toBe(false);
+  expect(mixedRoot.includes("--_d-border:")).toBe(true);
 });
 
 /* R7. Elevation multiplies every shadow length, and `calc(0 * 1)` is a number

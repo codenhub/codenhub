@@ -436,6 +436,12 @@ test.describe("forms", () => {
 
     expect(uncovered.content, "the wrapper still generates the box").not.toBe("none");
     expect(uncovered.mask, "an uncovered control masks the box away").not.toBe("none");
+    /* The fallback mask must be transparent, not merely non-none, so the box does
+       not paint as a solid square. Check the gradient contains transparent stops. */
+    expect(
+      uncovered.mask.includes("transparent") || uncovered.mask.includes("rgba(0, 0, 0, 0)") || uncovered.mask.includes("rgba(0,0,0,0)"),
+      "fallback mask gradient is transparent"
+    ).toBe(true);
   });
 
   test("reserves room for a field icon only when the control opts in", async ({ page }) => {
