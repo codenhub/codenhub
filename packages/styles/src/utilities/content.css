@@ -132,9 +132,14 @@
   --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
 }
 
-/* Typography wearing a component's name, so it composes none of `box`: a
-   background, an edge, a radius and a shadow would all be inert on a left bar and
-   an indent. Recorded in `registry.json` beside the decision.
+/* Typography wearing a component's name, so it composes none of `box`: `box`
+   draws a border on four sides and a quotation wants one, and a radius, a clip
+   and a shadow are inert on a left bar and an indent. What is left of `box`
+   after removing the border is not worth composing.
+
+   The cost is the two declarations below, which repeat `box`'s fill and edge
+   blend and have to agree with them. Recorded in `registry.json` beside the
+   decision.
 
    The bar is twice the line width the aesthetic asks for, plus a pixel, which is
    this component's own choice about what a quotation looks like rather than a
@@ -144,8 +149,18 @@
 @utility quote {
   --quote-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
-  --quote-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
-  --quote-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--quote-line));
+  /* The same edge blend `box` draws, in the same order and for the same reason:
+     the blend is the line's colour, and how much line there is comes after it.
+     Written the other way round -- how much line, then blend the fill into it --
+     `.edgeless` lands on the fill colour rather than on nothing, and the border
+     box paints that over the fill it already drew, so a quotation that asked for
+     no bar got a bar of two coats of its own tint.
+
+     That this had to be fixed twice is the cost of a quotation drawing its own
+     edge instead of taking `box`'s. Recorded in `registry.json` beside the
+     decision to compose none of `box`. */
+  --quote-line: color-mix(in oklab, var(--quote-bg) var(--ui-fill, 0%), var(--intent-border));
+  --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, 100%), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 
   @apply my-0 border-l py-2 pl-4 italic;

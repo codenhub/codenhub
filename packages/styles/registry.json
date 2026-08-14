@@ -220,7 +220,7 @@
       },
       "native": ["blockquote"],
       "composition": "none",
-      "compositionReason": "Typography rather than a painted box. The component is a left bar and an indent, so `box`'s background, edge, radius and shadow would all be inert on it."
+      "compositionReason": "Typography rather than a painted box. `box` draws a border on four sides and a quotation wants one, and its radius, clip and shadow are inert on a left bar. The cost is that the fill and the edge blend are reimplemented here and must agree with `box`: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made in both places. An edge change has two homes, not one."
     },
     {
       "class": "tooltip",

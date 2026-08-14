@@ -536,9 +536,15 @@ rather than a `var()` fallback in the middle of a component.
 Two of them, and the registry says which rather than leaving it to be found by
 reading CSS.
 
-`.quote` composes none of it. It is a left bar and an indent, so a background, an
-edge, a radius and a shadow would all be inert on it; it is typography wearing a
-component's name.
+`.quote` composes none of it, because `box` draws a border on four sides and a
+quotation wants one. A radius, a clip and a shadow are inert on a left bar as
+well, so what is left of `box` after removing the border is not worth composing.
+
+The cost is that the quotation reimplements the fill and the edge blend rather
+than taking them, and the two copies have to agree: the ordering fix that stopped
+`.edgeless` painting a ring over its own fill had to be made twice, once in `box`
+and later in `.quote`, because the second copy was not where anyone looked. The
+registry entry says so, so the next edge change knows there are two places.
 
 `.data-table` takes the frame -- border, radius, clip -- and paints its head, cell
 rules and row hover from private tokens, because none of those have an equivalent

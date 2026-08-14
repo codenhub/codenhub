@@ -159,12 +159,21 @@ test("renders every block quote presentation", async ({ page }) => {
       defaultBorderWidth: get("quote-default-primary").borderLeftWidth,
       edgedBorderWidth: get("quote-bare-edged-primary").borderLeftWidth,
       softBackground: get("quote-soft-edged-primary").backgroundColor,
+      softEdgedBorder: get("quote-soft-edged-primary").borderLeftColor,
+      softEdgelessBorder: get("quote-soft-edgeless-primary").borderLeftColor,
       solidBackground: get("quote-solid-primary").backgroundColor,
       solidColor: get("quote-solid-primary").color,
     };
   });
 
   expect(isTransparent(styles.bareEdgelessBorder)).toBe(true);
+  /* The fill has to be non-zero for this to mean anything. A bare edgeless bar
+     is transparent under a wrong edge blend too, because there is no fill for a
+     wrong one to leave behind -- so the assertion above passed while a soft
+     edgeless quotation drew a bar of its own tint over the tint it had already
+     painted. `.edgeless` means no bar at every fill, not only at zero. */
+  expect(isTransparent(styles.softEdgelessBorder)).toBe(true);
+  expect(isTransparent(styles.softEdgedBorder)).toBe(false);
   expect(isTransparent(styles.softBackground)).toBe(false);
   expect(isTransparent(styles.solidBackground)).toBe(false);
   expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
