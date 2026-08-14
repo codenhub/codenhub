@@ -317,17 +317,25 @@ That is the test. **A bound is justified when our own composition produces the
 broken result, and unjustified when a consumer's own combination does.** The
 first is a bug we shipped; the second is a decision they made.
 
-Three pass it today, and the third is the same argument in a different
-material:
+Two pass it today, and they are the same argument in different materials:
 
-| Component      | Bound                               | What our own composition does to it                                                                                                                    |
-| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `text-control` | Fill capped at the soft tint        | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                      |
-| `.tooltip`     | Fill pinned at solid                | The same cascade reaches a bubble nobody classed and leaves it transparent over arbitrary content, with its label the color of whatever shows through. |
-| Toggles        | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one.       |
+| Component      | Bound                               | What our own composition does to it                                                                                                              |
+| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text-control` | Fill capped at the soft tint        | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
+| Toggles        | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
 
 The number is expected to move. This is a test, not a quota: a bound that passes
-it is published, and a bound that stops passing it is deleted.
+it is published, and a bound that stops passing it is deleted. `.tooltip` is the
+first to be deleted rather than published. Its bound was a fill pinned at solid
+and a foreground pinned with it, against a container's `.bare` cascading onto a
+bubble nobody classed and leaving it boundaryless over arbitrary content.
+
+Giving the bubble a ground answers the same objection without pinning anything.
+It still rests filled, so an intent still floods it, but `--intent-subtle` is
+underneath, and an opaque ground is what keeps a bubble opaque at every fill
+rather than at the one fill it was allowed to have. The label follows the fill
+like any other label. A bound is a confession that composition failed somewhere,
+and this one turned out to be a component resting on nothing.
 
 ## Intent
 

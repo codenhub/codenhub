@@ -234,6 +234,7 @@
       "default": {
         "fill": "solid",
         "edge": "edgeless",
+        "ground": "--ui-surface-ground, var(--intent-subtle)",
         "elevation": 2
       },
       "native": []

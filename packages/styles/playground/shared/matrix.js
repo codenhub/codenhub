@@ -42,9 +42,11 @@ const PRESENTATIONS = [
    each other, so only the fill varies. */
 const FILL_PRESENTATIONS = ["default", "solid", "soft", "bare"];
 /* Components that read intent but not presentation: the indicators, which stand
-   in for content rather than being a box with a look, and the tooltip bubble,
-   whose fill is pinned so it cannot float over a page transparent. Spelling the
-   axis out per component keeps a page from claiming a variant it ignores. */
+   in for content rather than being a box with a look, and the tooltip, whose
+   cell is the trigger badge rather than the bubble. The bubble does read
+   presentation, but it is a pseudo-element that only appears on hover, so a row
+   per fill would render four identical badges. Spelling the axis out per
+   component keeps a page from claiming a variant it ignores. */
 const INTENT_ONLY = ["default"];
 const STATES = ["rest", "disabled"];
 

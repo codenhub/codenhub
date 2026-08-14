@@ -9,8 +9,8 @@
    exactly what a blanket surface membership did to this component once already.
 
    The bubble is the component. It is a surface, so an aesthetic that blurs
-   surfaces blurs it too, and it rests solid and edgeless at twice a card's
-   depth. */
+   surfaces blurs it too, and it rests on a tinted ground, edgeless, at twice a
+   card's depth. */
 @utility tooltip {
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
@@ -57,10 +57,32 @@
   &::after {
     @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
 
+    /* Filled, on a tinted ground. The fill is what makes an intent mean something
+       here -- `.tooltip.primary` is the primary colour, black on a light page and
+       white on a dark one, the way a primary button is -- and the ground is what
+       the neutral intent lands on when its fill stops short.
+
+       That pairing is the whole trick. Neutral's fill caps at `--intent-fill-max`,
+       so a tooltip nobody has classed is a fifth of the page's ink over
+       `--color-surface`: a quiet grey plate in either theme, rather than the ink
+       filled to the brim, which in a dark theme is a white slab. An intent has no
+       cap, so it floods the ground and the ground stops mattering.
+
+       The ground also retires a bound. Presentation cascades, so a container's
+       `.bare` reaches a bubble nobody classed; with nothing under the fill that
+       left a boundaryless bubble over arbitrary content, which the component used
+       to answer by pinning its fill at solid and refusing to read presentation at
+       all. An opaque ground answers it at every presentation instead.
+
+       The fallback order matters: glass replaces the ground of every surface with
+       a translucent one so its blur has something to show through, and a bubble
+       is one of the surfaces it names. Reading `--ui-surface-ground` first is
+       what keeps a glass tooltip glass. */
     --_d-fill: 100%;
     --_d-fg-on-fill: 100%;
     --_d-border: 0%;
     --_d-elevation: 2;
+    --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
 
     /* The one component that draws depth with nothing asked for, because a
        bubble is the case where depth is not decoration: it floats over content
@@ -70,16 +92,6 @@
        for it to inherit onto. Elevation 2 doubles it to `0 2px 6px`. */
     --_d-shadow-y: 1px;
     --_d-shadow-blur: 3px;
-
-    /* The bound, and it is a floor rather than the cap a text control keeps.
-       Presentation cascades by design, so a container's `.bare` reaches a bubble
-       nobody classed and leaves a transparent panel floating over arbitrary
-       content with its label the colour of whatever is behind it. Our own
-       cascade produces that, so the fill and the foreground are stated here
-       instead of read. `--ui-bg-alpha` still applies, because an aesthetic
-       asking for translucency is asking for it everywhere. */
-    --_fill: calc(100% * var(--ui-bg-alpha, 1));
-    --_fg: var(--intent-contrast);
 
     /* A bubble is a small transient popover, not a modal, so it takes the
        control radius rather than the surface one `surface` hands it. */

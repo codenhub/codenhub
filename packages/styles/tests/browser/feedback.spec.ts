@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 
@@ -505,5 +505,83 @@ test.describe("feedback", () => {
     expect(tooltipStyles.left).not.toBe("auto");
     expect(tooltipStyles.top).not.toBe("auto");
     expect(tooltipStyles.transformOrigin).not.toBe("");
+  });
+
+  /* The bubble used to pin its fill at solid so a container's `.bare` could not
+     reach it. It rests on a tinted ground now and reads presentation like
+     anything else, which means this is the assertion the pin used to be, stated
+     as a property rather than as a refusal: a bubble is opaque and its label
+     reads, at every presentation, whether the presentation is its own or a
+     container's.
+
+     Both directions are covered because they fail differently. The bubble's own
+     class is what a consumer writes; the container's is what our own cascade
+     does to a bubble nobody classed, and that second one is the case that
+     produced a boundaryless bubble floating over arbitrary content. */
+  test("keeps a tooltip bubble opaque and legible at every presentation", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const bubbles = await page.evaluate(() => {
+      const host = document.createElement("div");
+      document.body.append(host);
+
+      const read = ({ container, own }: { container: string; own: string }) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = container;
+        const tooltip = document.createElement("span");
+        tooltip.className = `tooltip ${own}`.trim();
+        tooltip.dataset.tooltip = "Message";
+        tooltip.dataset.state = "open";
+        wrapper.append(tooltip);
+        host.append(wrapper);
+
+        const styles = getComputedStyle(tooltip, "::after");
+        const values = { background: styles.backgroundColor, foreground: styles.color, label: `${container}>${own}` };
+
+        wrapper.remove();
+
+        return values;
+      };
+
+      const presentations = ["", "bare", "soft", "solid", "primary", "destructive", "destructive solid"];
+      const values = [
+        ...presentations.map((own) => read({ container: "", own })),
+        ...presentations.map((container) => read({ container, own: "" })),
+      ];
+
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const tokens = { page: getComputedStyle(document.body).backgroundColor, primary: resolveToken("primary") };
+
+      host.remove();
+
+      return { tokens, values };
+    });
+
+    for (const bubble of bubbles.values) {
+      expect(readSrgb(bubble.background).alpha, `${bubble.label} bubble ground`).toBe(1);
+      expect(
+        getContrastRatio(bubble.foreground, bubble.background),
+        `${bubble.label} bubble label`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+
+    /* And the two looks themselves, because "legible" says neither "quiet" nor
+       "coloured", and the bubble owes both. With no intent it is a quiet plate --
+       the neutral fill stops at its cap, so it never reaches the page's ink,
+       which in a dark theme would be a white slab. With one it is that intent's
+       own colour at full strength, the way a filled button is. */
+    const resting = bubbles.values.find((bubble) => bubble.label === ">")!;
+    const primary = bubbles.values.find((bubble) => bubble.label === ">primary")!;
+
+    expect(getContrastRatio(resting.background, bubbles.tokens.page), "resting bubble is quiet").toBeLessThan(3);
+    expect(getContrastRatio(primary.background, bubbles.tokens.page), "primary bubble is not").toBeGreaterThan(5);
+    expectSameColor(primary.background, bubbles.tokens.primary, "primary bubble ground");
   });
 });

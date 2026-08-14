@@ -518,9 +518,14 @@ Unchecked checkboxes and radios restore their full edge under `.soft` and
 `.ghost`. Skeletons retain a six-percent fill floor under `.ghost` so a loading
 placeholder never disappears.
 
-Tooltips ignore the presentation fill entirely. A transparent or hairline
-tooltip floating over arbitrary content is unreadable, so the bubble stays
-filled and reads only the intent. It does read the material tokens, so an
+A tooltip bubble is filled, over a tinted ground. An intent fills it with that
+intent's own color: `.tooltip.primary` is the primary color, black on a light
+page and white on a dark one, and `.tooltip.destructive` is a red bubble. With no
+intent the fill stops at the neutral cap and the ground shows through, so the
+bubble is a quiet grey plate in either theme rather than a slab of the page's own
+ink. The ground is also what keeps a bubble opaque when a container's
+[presentation](#presentation) cascades into one, so a tooltip stays readable over
+whatever it floats above at every fill. It reads the material tokens too, so an
 [aesthetic](#aesthetics) in scope shapes the bubble like any other component.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
