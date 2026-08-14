@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
 
 const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
 
@@ -53,6 +53,47 @@ test("styles keyboard and quotation content", async ({ page }) => {
   expect(styles.keyboardFamily.toLowerCase()).toContain("mono");
   expect(styles.quoteBorder).not.toBe("0px");
   expect(styles.inlineQuoteStyle).toBe("italic");
+});
+
+/* The attribution follows the quotation rather than carrying a tone of its own.
+   Asserting the two match is what keeps them from drifting apart again: pinned
+   to the secondary text tone, a cite sat at 1.00:1 on a filled quote in dark
+   theme -- the same colour as the ground it was printed on -- while the line
+   above it had moved to the contrast tone. */
+test("prints a quotation's attribution in the quotation's own colour", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const quotes = await page.evaluate(() =>
+    [...document.querySelectorAll(".quote")]
+      .filter((quote) => quote.querySelector("cite"))
+      .map((quote) => {
+        const quoteStyles = getComputedStyle(quote);
+
+        return {
+          background: quoteStyles.backgroundColor,
+          cite: getComputedStyle(quote.querySelector("cite")!).color,
+          label: quote.className,
+          quote: quoteStyles.color,
+          solid: quote.classList.contains("solid"),
+        };
+      }),
+  );
+
+  expect(quotes.length).toBeGreaterThan(0);
+
+  for (const quote of quotes) {
+    expectSameColor(quote.cite, quote.quote, `${quote.label} cite`);
+  }
+
+  /* A filled quotation is the case the pin broke, and the only one where the
+     ground is opaque enough to measure a ratio against. The threshold is the 3:1
+     the filled components are held to elsewhere. */
+  const filled = quotes.filter((quote) => quote.solid);
+  expect(filled.length).toBeGreaterThan(0);
+
+  for (const quote of filled) {
+    expect(getContrastRatio(quote.cite, quote.background), `${quote.label} cite`).toBeGreaterThanOrEqual(3);
+  }
 });
 
 /* Intent cascades nowhere except into table rows, because a row is part of the

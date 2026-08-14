@@ -371,15 +371,15 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 
 ## Content
 
-| Class           | Purpose                                                                     | Intent affects         |
-| --------------- | --------------------------------------------------------------------------- | ---------------------- |
-| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                     | Nothing.               |
-| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows. | Head, border, hover.   |
-| `.kbd`          | Inline keyboard-input styling.                                              | Surface, border, text. |
-| `.quote`        | Block quote styling; nested `cite` elements receive attribution styling.    | Bar, surface, text.    |
-| `.quote-inline` | Inline quotation styling.                                                   | Nothing.               |
-| `.code`         | Inline code formatting.                                                     | Surface.               |
-| `.pre`          | Scrollable block code formatting with larger padding.                       | Surface.               |
+| Class           | Purpose                                                                                  | Intent affects         |
+| --------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
+| `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                                  | Nothing.               |
+| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
+| `.kbd`          | Inline keyboard-input styling.                                                           | Surface, border, text. |
+| `.quote`        | Block quote styling; a nested `cite` is set upright and takes the quotation's own color. | Bar, surface, text.    |
+| `.quote-inline` | Inline quotation styling.                                                                | Nothing.               |
+| `.code`         | Inline code formatting.                                                                  | Surface.               |
+| `.pre`          | Scrollable block code formatting with larger padding.                                    | Surface.               |
 
 A table's rows deliberately inherit its intent instead of resetting it, so
 `.table.success` tints throughout. A row carrying its own intent still wins:
