@@ -127,6 +127,59 @@ test("lets a table row override the table intent while others inherit it", async
   expect(styles.inheritedRow).not.toBe(styles.overriddenRow);
 });
 
+/* A hovered row used to mix into `--color-foreground`, a tone the page owns and
+   the table may not be wearing. On a solid table -- whose body is the intent --
+   that put a near-black band across a white table. The step is relative now, so
+   the assertion is relative too: a hovered row stays near its own table and well
+   away from the page tone it used to land on. */
+test("steps a hovered table row from its own table rather than the page", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const rows = await page.evaluate(() => {
+    const table = document.querySelector('[data-testid="data-table"]')!;
+    const host = document.createElement("div");
+    document.body.append(host);
+
+    const read = (intent: string) => {
+      const clone = table.cloneNode(true) as HTMLElement;
+      clone.className = `data-table solid ${intent}`;
+      host.append(clone);
+      /* `--table-row-hover` is a `color-mix()` over `var()`s, so reading the
+         property gives back its text rather than a colour. It resolves on the
+         table, so a probe inside one reports the value the row actually gets --
+         and it goes in a cell, because a stray span in a `<table>` is hoisted
+         out of it. */
+      const probe = document.createElement("span");
+      probe.style.color = "var(--table-row-hover)";
+      clone.querySelector("td")!.append(probe);
+
+      const values = {
+        background: getComputedStyle(clone).backgroundColor,
+        hover: getComputedStyle(probe).color,
+        intent,
+      };
+      clone.remove();
+      return values;
+    };
+
+    const values = ["primary", "secondary", "neutral"].map(read);
+
+    const probe = document.createElement("span");
+    probe.style.color = "var(--color-foreground)";
+    document.body.append(probe);
+    const tokenForeground = getComputedStyle(probe).color;
+    probe.remove();
+    host.remove();
+
+    return { tokenForeground, values };
+  });
+
+  for (const row of rows.values) {
+    expect(getColorDistance(row.hover, row.background), `${row.intent} hovered row`).toBeLessThanOrEqual(40);
+    expect(getColorDistance(row.hover, rows.tokenForeground), `${row.intent} hovered row`).toBeGreaterThan(40);
+  }
+});
+
 test("colors key caps and quotes by intent", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 

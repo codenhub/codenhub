@@ -32,7 +32,14 @@
     var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)),
     var(--intent-strong)
   );
-  --table-row-hover: color-mix(in oklab, var(--intent-color) 8%, var(--color-foreground));
+  /* A hovered row is a step from the table it is in, not from a tone the page
+     happens to own. Mixed into `--color-foreground` it was neither: a solid
+     table paints its body with the intent, so a primary table in dark theme is
+     white and its hovered row came out near-black -- a dark band across a light
+     table. Mixing into `--_bg` makes the step relative at every fill, the way
+     `box-hover` is: a filled table shifts within its own colour, a soft one
+     deepens its tint, and a bare one picks up a faint wash of the page. */
+  --table-row-hover: color-mix(in oklab, var(--intent-hover) 8%, var(--_bg));
 
   border-spacing: 0;
   overflow: hidden;

@@ -23,13 +23,39 @@
   @apply relative;
 
   /* The trigger badge, for a page with no element of its own to hang the message
-     on. Quiet on purpose: it marks that there is a message, it is not one. */
+     on. Quiet on purpose: it marks that there is a message, it is not one, so it
+     stays a tinted plate rather than taking the fill its bubble takes. That is a
+     key cap's resting shape exactly -- bare, edged, on `--intent-subtle` -- and it
+     is composed rather than hand-painted so the plate, the ink and the line come
+     from the same place they come from everywhere else.
+
+     The line is what earns its keep. A plate alone cannot tell these intents
+     apart: `--intent-subtle` is a near-page tint for the text, primary and accent
+     families alike, so a badge made of it was the same colour for neutral and
+     primary in light, the same for neutral and secondary in dark, and 1.04:1
+     against the page for secondary -- three of eight indistinguishable and one
+     invisible. `--intent-border` is the slot that differs across all three.
+
+     Painting the host is right here and wrong everywhere else on this component:
+     a `.tooltip` host is a positioning wrapper whose bubble is placed outside its
+     box, so painting one draws a box around the trigger rather than around the
+     message. `.tooltip-icon` is the opt-in that says the host *is* the badge. */
   &.tooltip-icon {
-    @apply inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
+    @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
+
+    --_d-fill: 0%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 100%;
+    --_d-elevation: 0;
+    --_d-ground: var(--intent-subtle);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
-    background-color: var(--intent-subtle);
-    color: var(--intent-strong);
+    /* The one thing `box` hands it that it must refuse. An aesthetic's `clip-path`
+       clips a host's pseudo-elements along with the host, and this host's
+       pseudo-element is the bubble, positioned outside its box -- so a stepped
+       badge under `.pixel` would clip the message away entirely. The bubble
+       carries the stepped shape itself; the badge stays round. */
+    clip-path: none;
   }
 
   &[data-tooltip-position="bottom"] {
