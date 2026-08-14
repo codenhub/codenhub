@@ -202,15 +202,6 @@
       "compositionReason": "Takes its border, radius and clip from `box` and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Its `overflow: hidden` over `border-separate` also does not compose with an aesthetic's `clip-path`."
     },
     {
-      "class": "empty-state",
-      "default": {
-        "fill": "bare",
-        "edge": "edged",
-        "elevation": 0
-      },
-      "native": []
-    },
-    {
       "class": "pre",
       "default": {
         "fill": "bare",

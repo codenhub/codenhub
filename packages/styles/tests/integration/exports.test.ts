@@ -41,7 +41,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw": { candidates: "btn", patterns: [/\.btn\{/] },
   "./tw/theme": { patterns: [/--color-primary:/] },
   "./tw/components": { candidates: "alert btn", patterns: [/\.alert\{/, /\.btn\{/] },
-  "./tw/surface": { candidates: "empty-state", patterns: [/\.empty-state\{/] },
+  "./tw/surface": { candidates: "panel", patterns: [/\.panel\{/] },
   "./tw/button": { candidates: "btn", patterns: [/\.btn\{/] },
   "./tw/form": { candidates: "ipt radio", patterns: [/\.ipt\{/, /\.radio\{/] },
   "./tw/feedback": { candidates: "alert progress", patterns: [/\.alert\{/, /\.progress\{/] },
@@ -68,7 +68,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
   "./components": {
     target: "dist/components.css",
-    patterns: [/.alert\{/, /.btn\{/, /.empty-state\{/, /.field\{/, /.loader\{/, /.text-title\{/, /.tooltip\{/],
+    patterns: [/.alert\{/, /.btn\{/, /.panel\{/, /.field\{/, /.loader\{/, /.text-title\{/, /.tooltip\{/],
   },
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {

@@ -136,17 +136,19 @@
    background, an edge, a radius and a shadow would all be inert on a left bar and
    an indent. Recorded in `registry.json` beside the decision.
 
-   The bar is twice the line width the aesthetic asks for, which is this
-   component's own choice about what a quotation looks like rather than a scale
-   applied to an edge -- there is no such scale any more. */
+   The bar is twice the line width the aesthetic asks for, plus a pixel, which is
+   this component's own choice about what a quotation looks like rather than a
+   scale applied to an edge -- there is no such scale any more. The constant is
+   what makes the bar read as a bar at the default hairline: doubling 1px gives
+   2px, and a quotation mark needs more presence than a table rule. */
 @utility quote {
   --quote-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
   --quote-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 100%), transparent);
   --quote-edge: color-mix(in oklab, var(--intent-color) var(--ui-fill, 0%), var(--quote-line));
-  --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2);
+  --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 
-  @apply my-0 border-l pl-4 italic;
+  @apply my-0 border-l py-2 pl-4 italic;
 
   background-color: var(--quote-bg);
   border-left-color: var(--quote-edge);

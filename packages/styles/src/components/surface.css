@@ -105,19 +105,3 @@
     --surface-padding: 0;
   }
 }
-
-/* The same container at rest, sized for nothing being in it. Its children take
-   the box's own foreground so an intent reaches the heading and the body copy
-   together rather than only the outline around them. */
-@utility empty-state {
-  @apply surface flex flex-col items-center gap-3 p-[clamp(2rem,8vw,5rem)] text-center;
-
-  --_d-fill: 0%;
-  --_d-fg-on-fill: 0%;
-  --_d-border: 100%;
-  --_d-elevation: 0;
-
-  & > * {
-    color: inherit;
-  }
-}

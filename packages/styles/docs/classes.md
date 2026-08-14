@@ -24,7 +24,7 @@ materials that component draws.
 | Components                                                | Intent | Presentation | Aesthetic material |
 | --------------------------------------------------------- | ------ | ------------ | ------------------ |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes          | Shape              |
-| `.empty-state`, `.loader`                                 | Yes    | Yes          | Shape              |
+| `.loader`                                                 | Yes    | Yes          | Shape              |
 | `.kbd`, `.table`                                          | Yes    | Yes          | Radius and edge    |
 | `.quote`, `.divider`                                      | Yes    | Yes          | Edge width         |
 | `.skeleton`                                               | Yes    | Yes          | Radius and edge    |
@@ -121,15 +121,14 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 
 ## Surfaces
 
-| Class          | Purpose                                                             |
-| -------------- | ------------------------------------------------------------------- |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded.  |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.    |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                            |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                          |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
-| `.empty-state` | Centered empty-state surface with presentation-aware fill and edge. |
+| Class          | Purpose                                                            |
+| -------------- | ------------------------------------------------------------------ |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
 
 Both read intent, [presentation](#presentation), and
 [material tokens](./tokens.md#material-tokens). A plain `.card` is a neutral
@@ -194,7 +193,7 @@ neutral and bordered.
 | `.switch`                                       | Intent only, not presentation.               |
 | `.progress`                                     | Border and border width.                     |
 | `.divider`                                      | Line strength and clamped width.             |
-| `.empty-state`, `.quote`, `.loader`             | Fill, text/artwork, border, and width.       |
+| `.quote`, `.loader`                             | Fill, text/artwork, border, and width.       |
 | `.skeleton`                                     | Fill and a one-pixel border ceiling.         |
 | `.code`, `.pre`, `.tooltip`                     | Intent only, not presentation.               |
 

@@ -511,7 +511,6 @@ the registry names for it, and that pair is published.
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |
 | `.data-table`                                | bare edged     |
-| `.empty-state`                               | bare edged     |
 | `.tooltip`                                   | solid edgeless |
 | `.pre` `.code`                               | bare edgeless  |
 | `.kbd`                                       | bare edged     |

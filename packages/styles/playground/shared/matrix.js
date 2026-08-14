@@ -143,12 +143,6 @@ const COMPONENTS = {
     presentations: INTENT_ONLY,
     states: {},
   },
-  "empty-state": {
-    tag: "div",
-    layout: "grid",
-    html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
-    states: {},
-  },
   ipt: textControl("input", {
     attrs: (intent) => ({
       type: "text",

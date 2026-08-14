@@ -127,7 +127,7 @@ test.describe("surfaces", () => {
     }
   });
 
-  test("renders every empty-state fill", async ({ page }) => {
+  test("renders every card fill against the surface ground", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
@@ -143,18 +143,18 @@ test.describe("surfaces", () => {
       probe.remove();
 
       return {
-        bareEdgeless: get("empty-state-bare-edgeless-primary").backgroundColor,
-        bareEdgelessBorder: get("empty-state-bare-edgeless-primary").borderTopColor,
-        defaultBorderWidth: get("empty-state-default-primary").borderTopWidth,
+        bareEdgeless: get("card-bare-edgeless-primary").backgroundColor,
+        bareEdgelessBorder: get("card-bare-edgeless-primary").borderTopColor,
+        defaultBorderWidth: get("card-default-primary").borderTopWidth,
         ground,
-        softBackground: get("empty-state-soft-edged-primary").backgroundColor,
-        solidBackground: get("empty-state-solid-primary").backgroundColor,
-        solidColor: get("empty-state-solid-primary").color,
+        softBackground: get("card-soft-edged-primary").backgroundColor,
+        solidBackground: get("card-solid-primary").backgroundColor,
+        solidColor: get("card-solid-primary").color,
       };
     });
 
     /* Bare adds no fill, so what shows is the ground every surface rests on. */
-    expectSameColor(styles.bareEdgeless, styles.ground, "bare empty state ground");
+    expectSameColor(styles.bareEdgeless, styles.ground, "bare card ground");
     expect(getColorDistance(styles.softBackground, styles.ground)).toBeGreaterThan(2);
     expect(getColorDistance(styles.solidBackground, styles.ground)).toBeGreaterThan(2);
     expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
@@ -162,7 +162,7 @@ test.describe("surfaces", () => {
     /* The two-pixel ceiling is gone with the edge scale that made it necessary.
        `.edgeless` mixes the line to nothing rather than narrowing it: the width is
        the aesthetic's material and presentation never touches it. */
-    expect(isTransparent(styles.bareEdgelessBorder), "edgeless empty state line").toBe(true);
+    expect(isTransparent(styles.bareEdgelessBorder), "edgeless card line").toBe(true);
   });
 
   /* Presentation cascades and intent does not, so a container sets the look of
