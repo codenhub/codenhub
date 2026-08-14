@@ -496,6 +496,17 @@ slots on `aria-invalid`, which is R8, while `.checkbox` and `.switch` overwrite
 `border-color` on `:checked`, which is not. Both look fine today; only the first
 still looks fine under an aesthetic that draws its edge as an inset ring.
 
+R8 says what a state may declare. It does not say where, and where turns out to
+decide whether the state wins at all. A state written as `&[aria-invalid="true"]`
+inside `@utility` lands in the utilities layer; the intent resets land in no
+layer at all; an unlayered declaration beats a layered one at any specificity. So
+the moment the control classes joined the reset, the destructive slots an invalid
+field declares were overruled by the neutral ones, every invalid control drew a
+plain gray line, and the only thing still marking the error was the hint
+underneath it. The rule is a plain rule now, and `:is(...)` gives it 0-2-0 so it
+outranks an intent class on the same element by more than source order. **A state
+that writes an intent slot is declared where intents are declared.**
+
 The cost of the rule is that a state can only express itself in the vocabulary
 the axes already have. That is the point: if a state needs something the
 vocabulary cannot say, the vocabulary is missing a slot, and adding the slot

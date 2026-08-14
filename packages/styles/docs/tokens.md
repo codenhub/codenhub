@@ -65,6 +65,7 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 | `--color-surface`              | Nested or muted surface.                                                                                      |
 | `--color-text`                 | Primary text color.                                                                                           |
 | `--color-text-secondary`       | Secondary text color.                                                                                         |
+| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                           |
 | `--color-text-hover`           | Text hover state.                                                                                             |
 | `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
 | `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
@@ -124,6 +125,13 @@ page and the wrong look for the intent that means _nothing in particular_.
 Neutral stops at `20%`, so `.solid` gives it a quiet plate that still reads as a
 step past `.soft`. Hover adds its step on top of the cap, so a capped fill still
 deepens under the pointer.
+
+The cap bounds the foreground with the fill. `--intent-contrast` is the ink for a
+_full_ fill, so printing it at full strength on a fifth of one puts white on
+light grey; a component reads the contrast only as far as its intent lets the
+fill go, and takes `--intent-strong` for the rest. A state that lifts the cap on
+purpose — a checked checkbox is filled with its own intent by definition — lifts
+both together and gets the contrast whole.
 
 Set them directly to define an intent this package does not ship. **State every
 slot**, including `--intent-fill-max`: components reset all seven to the neutral

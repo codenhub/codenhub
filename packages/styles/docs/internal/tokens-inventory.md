@@ -95,7 +95,7 @@ Declared once with `light-dark()`, which resolves against the element's computed
 | `--color-border-hover`      | neutral-600 / 500 | Hovered line color.                   | KEEP    |
 | `--color-text`              | neutral-950 / 50  | Body text.                            | KEEP    |
 | `--color-text-secondary`    | neutral-700 / 400 | De-emphasized text.                   | KEEP    |
-| `--color-text-contrast`     | neutral-50 / 950  | **Wrong for what it names.**          | DELETE  |
+| `--color-text-contrast`     | neutral-50 / 950  | Ink for a full fill of the text tone. | KEEP    |
 | `--color-text-hover`        | neutral-700 / 200 | Hovered neutral base.                 | KEEP    |
 | `--color-text-strong`       | neutral-900 / 100 | High-emphasis neutral tone.           | KEEP    |
 | `--color-text-subtle`       | neutral-200 / 900 | **Nothing reads it.**                 | DELETE  |
@@ -122,11 +122,21 @@ should read this paragraph first.
 and read by nothing. `intent.css` deliberately maps neutral's subtle slot to
 `--color-surface` instead, and says why in source.
 
-`--color-text-contrast` went the same way later in 0.1.0, for a stronger reason
-than disuse: it names "text on a filled neutral", and once neutral's fill was
-capped, the thing to print on a filled neutral became the ink itself. The token
-did not fall out of use so much as become the wrong answer to its own question.
-Neutral's `--intent-contrast` is `--color-text`.
+`--color-text-contrast` was deleted mid-0.1.0 and brought back, and the round
+trip is worth recording. It names "text on a filled neutral"; when neutral's fill
+was capped, what a `.neutral.solid` badge needed printed on its quiet plate
+became the ink, so the token read as the wrong answer to its own question and
+neutral's `--intent-contrast` was pointed at `--color-text`.
+
+The question was right and the place was wrong. "How much of the foreground is
+the contrast ink" is `--ui-fg-on-fill`, and it is written for the fill the
+presentation asked for, so a capped intent had to cap it too -- which `box` now
+does, in one `min()` beside the one that caps the fill. Answering it in the
+intent slot instead broke every fill that lifts the cap on purpose: a checked
+checkbox is filled with its own intent by definition, and with the slot bent it
+came out a black box with a black tick, in both themes, for both `none` and
+`.neutral`. The token is the ink for a _full_ fill, which is exactly what it was
+named, and the cap is not its business.
 
 The `-contrast` / `-hover` / `-subtle` / `-strong` suffixes are consistent across
 all six color families, and that is the single best property of the current token

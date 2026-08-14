@@ -27,11 +27,7 @@
      ink printed on it. */
   --table-fill: calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
-  --table-head-fg: color-mix(
-    in oklab,
-    var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)),
-    var(--intent-strong)
-  );
+  --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
   /* A hovered row is a step from the table it is in, not from a tone the page
      happens to own. Mixed into `--color-foreground` it was neither: a solid
      table paints its body with the intent, so a primary table in dark theme is
@@ -172,7 +168,11 @@
   background-color: var(--quote-bg);
   border-left-color: var(--quote-edge);
   border-left-width: var(--quote-width);
-  color: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--color-text-secondary));
+  color: color-mix(
+    in oklab,
+    var(--intent-contrast) min(var(--ui-fg-on-fill, 0%), var(--intent-fill-max, 100%)),
+    var(--color-text-secondary)
+  );
 
   /* The attribution takes no colour of its own, so it follows the quotation's.
      Pinned to the secondary text tone it was invisible on a filled quote --

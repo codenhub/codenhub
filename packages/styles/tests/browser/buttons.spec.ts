@@ -188,10 +188,15 @@ test.describe("buttons", () => {
 
   /* A filled button with no intent is the package's most common single element,
      and the neutral cap is the whole reason it is a quiet plate rather than a
-     slab of the page's own ink. The expected fill is built from the cap the
+     slab of the page's own ink. Both expectations are built from the cap the
      button itself reports, so this states the contract -- a neutral fill stops
-     where its intent says it stops -- instead of restating a number that would
-     then have to be changed in two places. */
+     where its intent says it stops, and its ink walks toward the contrast tone
+     exactly that far -- instead of restating numbers that would then have to be
+     changed in two places.
+
+     The ink matters as much as the fill. Capping one alone prints the ink of a
+     full slab onto a fifth of one: white on light grey, which is how a capped
+     intent loses its label. */
   test("fills a button with no intent to the neutral cap and no further", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
@@ -211,15 +216,15 @@ test.describe("buttons", () => {
         background: styles.backgroundColor,
         cap,
         expectedFill: resolveColor(`color-mix(in oklab, var(--color-text) ${cap}, transparent)`),
+        expectedText: resolveColor(`color-mix(in oklab, var(--color-text-contrast) ${cap}, var(--color-text-strong))`),
         foreground: styles.color,
         page: getComputedStyle(document.body).backgroundColor,
-        tokenText: resolveColor("var(--color-text)"),
       };
     });
 
     expect(Number.parseFloat(values.cap)).toBeLessThan(100);
     expectSameColor(values.background, values.expectedFill, "no-intent button background");
-    expectSameColor(values.foreground, values.tokenText, "no-intent button text");
+    expectSameColor(values.foreground, values.expectedText, "no-intent button text");
 
     /* A quieter plate is only worth having if the label still reads on it. The
        fill is translucent, so the ratio is measured against what the button

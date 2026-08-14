@@ -32,6 +32,14 @@
   --_capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
   --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
+  /* The ink takes the same cap, because the pair only makes sense together.
+     `--ui-fg-on-fill` says how much of the foreground should be the contrast
+     ink, and it is written for the fill the presentation asked for: `.solid`
+     asks for 100% of both. Capping one and not the other prints ink meant for
+     a full slab onto a 20% plate -- white on light grey -- which is how a
+     capped intent lost its label. Capped together, the ink walks toward the
+     contrast exactly as far as the fill walks toward the color. */
+  --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-fill-max, 100%));
 
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
   /* The ink end is `--intent-strong` and not `--intent-color`, because the two
@@ -48,8 +56,15 @@
      tone is the one picked to be read.
 
      `kbd`, `code` and `pre` already wrote this mix by hand for their own tinted
-     grounds. They no longer have to. */
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
+     grounds. They no longer have to.
+
+     `--intent-contrast` keeps its own meaning -- the ink for a *full* fill of
+     `--intent-color` -- because `--_on-fill` above is what reconciles it with a
+     capped intent. Bending the slot itself instead, so that neutral's contrast
+     was the ink, made every full fill of neutral illegible: a checked checkbox
+     lifts the cap by definition, and it came out as a black box with a black
+     tick. */
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
   /* P3: the line blends toward the fill by the fill amount, so a filled box has
      a seamless edge instead of a stray ring of another colour.
 

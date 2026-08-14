@@ -393,6 +393,7 @@ Examples:
 | `.hint`                                                               | Secondary helper text.                                          |
 | `.hint.error`                                                         | Helper text with destructive intent.                            |
 | `.control-base`                                                       | Shared public text-control styling.                             |
+| `.control`                                                            | Wraps a control alone so its icon has somewhere to paint.       |
 | `.ipt`                                                                | Input control styling.                                          |
 | `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
 | `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
@@ -412,15 +413,34 @@ Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `mon
 `date` and `datetime-local` depend on the engine, because their picker button is the one browsers do not all let a stylesheet hide. Where it can be hidden, the type opts itself into `.icon` and shows the themed calendar in its place. Where it cannot, the native button stays and no custom icon is drawn, since two calendar glyphs on one field read as a defect. `.icon`, `.left`, and `.right` are inert on these two types in that case rather than reserving space for artwork that never paints.
 Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
 
-Input icons are `background-image` data URIs rather than masks, because a text
-input is a replaced element with no pseudo-element to mask, and masking the
-input itself would clip its border, background, and text. A data URI cannot read
-a custom property, so each icon ships light and dark artwork and the theme
-re-points an alias. Input icons therefore follow the theme but not the intent.
-Override one with `--ipt-icon-src` and `--ipt-icon-src-focus`:
+An input icon is a masked pseudo-element on `.control`, a wrapper that holds the
+control and nothing else. A text input is a replaced element and generates no
+pseudo-element of its own, and masking the input would clip its border, its
+background, and the typed text with it. **Without the wrapper, `.icon` reserves
+the space and paints nothing.**
 
 ```html
-<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
+<label class="field">
+  <span class="label">Email</span>
+  <span class="control">
+    <input class="ipt email icon" type="email" />
+  </span>
+</label>
+```
+
+A mask carries no color, so the icon takes the surrounding text color at a fixed
+remove and goes to full strength while the control is focused. One rule serves
+both themes and every intent, where the `background-image` version it replaced
+needed a light, a dark, a focused-light, and a focused-dark copy of every glyph.
+
+`--ipt-icon-src` replaces the artwork, and it goes on the wrapper rather than on
+the input: the wrapper is what paints the icon, and a custom property set on a
+child does not travel up to it.
+
+```html
+<span class="control" style="--ipt-icon-src: url('/icons/user.svg')">
+  <input class="ipt icon" />
+</span>
 ```
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons
@@ -435,6 +455,11 @@ to set the checked color:
 | `.warning`                          | Warning color.          |
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
+
+A checked checkbox and a checked switch fill with the intent and cut their mark
+out of it. A checked radio does not fill: it takes a ring twice the resting line
+weight and a dot, both in the intent color, because a filled circle with a dot of
+the same color inside it is a disc.
 
 Text controls also take intent, which colors the resting border and the
 focus-visible border, and presentation, which sets border weight and a capped

@@ -1,19 +1,50 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
 
 test.describe("forms", () => {
-  test("marks an invalid control without an intent class", async ({ page }) => {
+  /* An invalid control is destructive, and it has to be destructive over an
+     intent class rather than under one. The rule that says so cannot live inside
+     `@utility text-control`: a rule nested there lands in the utilities layer,
+     the intent reset lands in no layer at all, and unlayered beats layered at
+     any specificity. It did not matter until the control classes joined the
+     reset, at which point every invalid field drew a plain grey line and the
+     only thing still marking the error was the hint underneath it. Asserting
+     "not transparent" is what let that through, so this names the color. */
+  test("marks an invalid control destructive over any intent class", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const borderColor = await page
-      .getByTestId("invalid-input")
-      .evaluate((element) => getComputedStyle(element).borderColor);
+    const values = await page.evaluate(() => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-destructive)";
+      document.body.append(probe);
+      const destructive = getComputedStyle(probe).color;
+      probe.remove();
 
-    expect(isTransparent(borderColor)).toBe(false);
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const overridden = document.createElement("input");
+
+      overridden.className = "ipt success";
+      overridden.setAttribute("aria-invalid", "true");
+      host.append(overridden);
+
+      const read = (element: Element) => getComputedStyle(element).borderColor;
+      const result = {
+        destructive,
+        overridden: read(overridden),
+        plain: read(document.querySelector('[data-testid="invalid-input"]')!),
+      };
+
+      overridden.remove();
+
+      return result;
+    });
+
+    expectSameColor(values.plain, values.destructive, "invalid control border");
+    expectSameColor(values.overridden, values.destructive, "invalid control border under .success");
   });
 
   /* Presentation cascades by design, so `.solid` on a container reaches the
@@ -167,12 +198,13 @@ test.describe("forms", () => {
       };
 
       return intents.flatMap((intent) =>
-        ["checkbox", "radio", "switch"].map((component) => {
+        ["checkbox", "switch"].map((component) => {
           const styles = read(`${component}-default-${intent}-checked`);
 
           return {
-            /* All three fill with the intent, because the checked state is one
-               rule on `text-control` rather than three per-component ones. */
+            /* Both fill with the intent, because the checked state is one rule
+               on `text-control` rather than two per-component ones. The radio
+               opts out of the fill and is measured in its own test. */
             intentColor: styles.backgroundColor,
             label: `${component} ${intent}`,
             token: tokens[intent]!,
@@ -208,6 +240,117 @@ test.describe("forms", () => {
 
     expectSameColor(values.checkbox, values.tokenText, "checked checkbox background");
     expectSameColor(values.switch, values.tokenText, "checked switch background");
+  });
+
+  /* The mark has to read on the fill it is printed on, and the two intents that
+     resolve to the neutral family are where that stopped being true: pointing
+     neutral's `--intent-contrast` at the ink -- correct for a capped plate --
+     made a checked box a black square with a black tick, because a checked
+     toggle lifts the cap by definition. Both themes, both spellings of neutral.
+
+     3:1 is the bound for a graphical object (WCAG 1.4.11) rather than the 4.5:1
+     a label would owe. The failure it exists to catch measured 1.0. */
+  test("keeps a checked toggle's mark legible on its own fill", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const marks = await page.evaluate(() => {
+      const intents = ["none", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
+
+      return intents.flatMap((intent) =>
+        ["checkbox", "switch"].map((component) => {
+          const styles = getComputedStyle(
+            document.querySelector(`[data-testid="${component}-default-${intent}-checked"]`)!,
+          );
+
+          return { fill: styles.backgroundColor, label: `${component} ${intent}`, mark: styles.color };
+        }),
+      );
+    });
+
+    for (const { fill, label, mark } of marks) {
+      expect(readSrgb(fill).alpha, `${label} fill`).toBe(1);
+      expect(getContrastRatio(mark, fill), `${label} mark`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  /* A checkbox states itself by filling and cutting a tick out of the ground; a
+     radio states itself with a dot inside a ring, and the dot is the same color
+     as the ring. Filling the circle as well leaves a disc with an invisible dot
+     in it, which is what the shared checked rule made of every radio. */
+  test("rings a checked radio in its intent instead of filling it", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const radios = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const tokens: Record<string, string> = {
+        destructive: resolveToken("destructive"),
+        info: resolveToken("info"),
+        neutral: resolveToken("text"),
+        none: resolveToken("text"),
+        primary: resolveToken("primary"),
+        secondary: resolveToken("accent"),
+        success: resolveToken("success"),
+        warning: resolveToken("warning"),
+      };
+
+      return Object.keys(tokens).map((intent) => {
+        const checked = getComputedStyle(document.querySelector(`[data-testid="radio-default-${intent}-checked"]`)!);
+        const resting = getComputedStyle(document.querySelector(`[data-testid="radio-default-${intent}"]`)!);
+
+        return {
+          dot: checked.color,
+          fill: checked.backgroundColor,
+          label: `radio ${intent}`,
+          restingWidth: Number.parseFloat(resting.borderTopWidth),
+          ring: checked.borderTopColor,
+          ringWidth: Number.parseFloat(checked.borderTopWidth),
+          token: tokens[intent]!,
+        };
+      });
+    });
+
+    for (const radio of radios) {
+      expect(isTransparent(radio.fill), `${radio.label} fill`).toBe(true);
+      expectSameColor(radio.ring, radio.token, `${radio.label} ring`);
+      expectSameColor(radio.dot, radio.token, `${radio.label} dot`);
+      expect(radio.ringWidth, `${radio.label} ring width`).toBeGreaterThan(radio.restingWidth);
+    }
+  });
+
+  /* `text-control` is documented as usable on its own, and until it joined the
+     intent reset it resolved no intent at all: every slot it reads was an
+     undefined `var()` inside a `color-mix()`, so `--_edge` was invalid at
+     computed-value time and the `border` shorthand collapsed to `none`. The
+     element that showed it was the one that sets two of the slots itself --
+     an invalid control kept its line at rest and lost it on hover, because
+     `--intent-hover` was the one the state does not set. */
+  test("resolves an intent on a bare text control at rest and on hover", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    /* One pointer, so the two controls are measured one after the other rather
+       than in parallel. */
+    const expectALine = async (testId: string) => {
+      const control = page.getByTestId(testId);
+      const read = () => control.evaluate((element) => getComputedStyle(element).borderTopColor);
+      const width = await control.evaluate((element) => getComputedStyle(element).borderTopWidth);
+      const resting = await read();
+
+      expect(Number.parseFloat(width), `${testId} border width`).toBeGreaterThan(0);
+      expect(isTransparent(resting), `${testId} resting border`).toBe(false);
+
+      await control.hover();
+      await expect.poll(read, { message: `${testId} hovered border` }).not.toBe(resting);
+    };
+
+    await expectALine("text-control");
+    await expectALine("text-control-invalid");
   });
 
   /* A toggle's closed silhouette is the only visible unchecked affordance, so a

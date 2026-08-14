@@ -1,2 +1,15 @@
+/* The package's entry excludes this playground from the content scan, so a
+   consumer compiling `@codenhub/styles/tw` never generates our fixtures. The
+   published `dist/` is unaffected -- it is built by scanning `src/` itself,
+   where every `@utility <name>` writes its own name -- but this environment is
+   compiled from source with the fixtures excluded, so a class used only in
+   hand-written playground HTML is generated nowhere and renders as nothing.
+   `.text-control` was exactly that: a box in `dist/`, a bare div here.
+
+   The two `@source` lines put the fixtures back for this entry alone, which is
+   what makes the vanilla environment show what a consumer installs.
+   `entry-tw.css` states them for the same reason. */
 @import "@codenhub/styles";
 @import "@codenhub/styles/aesthetics";
+@source "../**/*.html";
+@source "./matrix.js";

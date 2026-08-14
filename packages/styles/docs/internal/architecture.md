@@ -229,6 +229,21 @@ and louder than every semantic intent. The cap lets one token stay the ink at
 the tint end while `.solid` stops at a quiet plate, which is the only way to get
 both out of a single color.
 
+The cap covers the foreground as well as the background, in a second `min()`
+beside the first. `--ui-fg-on-fill` says how much of the foreground is the
+contrast ink, and it is written for the fill the presentation asked for --
+`.solid` asks for 100% of both. Capping one and not the other prints the ink of
+a full slab onto a fifth of one, which is white on light grey. The two are
+capped together, so the ink walks toward the contrast exactly as far as the fill
+walks toward the color, and a state that lifts the cap deliberately -- a checked
+toggle is filled with its own intent by definition -- lifts both and gets the
+contrast whole.
+
+Bending `--intent-contrast` instead, so that neutral's contrast was the ink, is
+the same fix applied in the wrong place, and it was tried: it reads correctly for
+every capped fill and breaks every uncapped one. A checked checkbox came out a
+black box with a black tick.
+
 `--intent-color` and `--intent-strong` divide the other half of that problem.
 The base is a ground and the strong tone is an ink; `box` reads the base for a
 fill and the strong tone for text, so a bare component prints the tone chosen to

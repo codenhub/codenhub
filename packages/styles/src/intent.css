@@ -33,12 +33,16 @@
    neutral-300 and neutral-200 territory -- distinct at a glance -- and hover
    adds `--hover-step` on top, so the plate still deepens under the pointer.
 
-   `--intent-contrast` is the ink rather than `--color-text-contrast` for the
-   same reason: what a filled neutral needs printed on it is the text color, now
-   that the fill is a quiet plate instead of a slab of that very ink. */
+   `--intent-contrast` stays the page color. What a `.neutral.solid` badge
+   needs printed on its quiet plate is the ink, not the page, but that is
+   `box`'s question and `box` answers it by capping `--ui-fg-on-fill` with this
+   same bound. Answering it here instead -- pointing the slot at `--color-text`
+   -- looked equivalent and was not: the slot also serves the fills that lift
+   the cap on purpose, and a checked neutral checkbox came out a black box with
+   a black tick. */
 .neutral {
   --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);
@@ -116,10 +120,19 @@
 
    This list and the matching one in `native.css` are the package's only
    hand-maintained selector lists, and `tests/integration/registry.test.ts`
-   fails the build when a component in the registry is missing from either. */
+   fails the build when a component in the registry is missing from either.
+
+   `.text-control` is on it without being a component. It is the utility the six
+   field controls compose, and it is documented as usable on its own for a
+   control the package does not ship -- a `contenteditable` div, most often.
+   Every element that reaches it through a component class was already covered;
+   an element that wears it directly was not, so it resolved no intent at all
+   and `box` collapsed on it: no fill, no border, and a hover that could only
+   make the nothing more so. */
 :where(
   .btn,
   .ipt,
+  .text-control,
   .textarea,
   .select,
   .checkbox,
@@ -141,7 +154,7 @@
   .divider
 ) {
   --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);

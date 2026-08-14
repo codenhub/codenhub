@@ -160,11 +160,6 @@
     --_line: var(--intent-color);
   }
 
-  &[aria-invalid="true"] {
-    --intent-border: var(--color-destructive);
-    --intent-color: var(--color-destructive);
-  }
-
   /* R8. The one state that lifts the cap, and it lives here rather than on the
      three toggles because a text input is never `:checked` and the rule is inert
      on one. A checked toggle is filled with its own intent by definition, so the
@@ -172,7 +167,10 @@
 
      Both are `box`'s own inputs rather than the presentation tokens: the cap sits
      between `--ui-fill` and the fill, so a state written in that vocabulary would
-     be capped by the bound it exists to lift. */
+     be capped by the bound it exists to lift. The ink is lifted in the same
+     breath and for the same reason -- `box` caps the two together, so a mark
+     printed at the capped amount on an uncapped fill would be the ink of a plate
+     this box no longer is. */
   &:checked {
     --_fill: 100%;
     --_fg: var(--intent-contrast);
@@ -193,6 +191,27 @@
     width: 0;
     height: 0;
   }
+}
+
+/* An invalid control carries the destructive intent, and this is a plain rule
+   rather than a `&[aria-invalid="true"]` inside `text-control` because a rule
+   inside `@utility` lands in the utilities layer and the intent reset does not
+   land in a layer at all. Unlayered beats layered whatever the specificity, so
+   the nested version was overruled by the reset the moment the control classes
+   joined it: every invalid field drew a plain grey line, and the only thing that
+   still marked the error was the hint underneath.
+
+   `:is()` takes the specificity of its heaviest argument, so this is 0-2-0 and
+   outranks an intent class on the same element by more than source order. An
+   invalid control is destructive whatever else it was asked to be.
+
+   Hover is redirected with the other two. The hover rule reads `--intent-hover`,
+   which the reset fills from the text family, and a red-lined control that turns
+   grey under the pointer reads as the error clearing itself. */
+:is(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch, input, textarea, select)[aria-invalid="true"] {
+  --intent-color: var(--color-destructive);
+  --intent-hover: var(--color-destructive-hover);
+  --intent-border: var(--color-destructive);
 }
 
 /* A bare, edged, unelevated text control. */
@@ -362,6 +381,28 @@
 
     background-color: currentColor;
     content: "";
+  }
+
+  /* The original checked radio, restored. A checkbox states itself by filling
+     -- its mark is a tick cut out of a solid ground -- and `text-control`'s
+     checked state is written for that. A radio states itself with a dot inside
+     a ring, and the two are the same color: filling the circle as well leaves a
+     disc with the dot invisible inside it, which is what a neutral radio was.
+
+     So it takes the fill back to nothing and spends the intent on the line and
+     the dot instead. `--_line` rather than `--_edge`, so it hands the color to
+     the same slot the resting and hovered states use and `text-control`'s edge
+     floor still draws it -- a checked radio keeps its ring under a container's
+     `.edgeless` exactly as an unchecked one does. */
+  &:checked {
+    --_fill: 0%;
+    --_line: var(--intent-color);
+    --_fg: var(--intent-color);
+
+    /* Twice the line the aesthetic draws, which is the 2px the original pinned
+       at the default hairline, and capped so a thick aesthetic cannot close the
+       circle over its own dot: 3px leaves 10px of interior for an 8px mark. */
+    border-width: min(calc(var(--_width) * 2), 3px);
   }
 
   &:checked::after {
