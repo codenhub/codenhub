@@ -393,12 +393,10 @@ Examples:
 | `.hint`                                                               | Secondary helper text.                                          |
 | `.hint.error`                                                         | Helper text with destructive intent.                            |
 | `.control-base`                                                       | Shared public text-control styling.                             |
-| `.control`                                                            | Wraps a control alone so its icon has somewhere to paint.       |
 | `.ipt`                                                                | Input control styling.                                          |
 | `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
 | `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
 | `.email`, `.password`, `.url`, `.tel`, `.search`, `.date`, etc.       | Input type icon selectors (class or matching `type` attribute). |
-| `.no-icon`, `[data-no-icon]`                                          | Suppresses auto-included icons on native form inputs.           |
 | `.textarea`                                                           | Textarea control styling.                                       |
 | `.select`                                                             | Select control styling.                                         |
 | `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                |
@@ -408,39 +406,32 @@ Examples:
 | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
 
 `.ipt` input icons are opt-in via `.icon` (e.g. `<input class="ipt email icon left">`).
-Native inputs in `native.css` (`email`, `password`, `url`, `tel`, `search`, `month`, `week`, `time`) include input icons by default. Use `.no-icon` or `data-no-icon` to suppress them.
+Native inputs mapped in `native.css` get the same icon source from their type, and the same opt-in: the artwork is drawn only where the element also carries `.icon`.
 
 `date` and `datetime-local` depend on the engine, because their picker button is the one browsers do not all let a stylesheet hide. Where it can be hidden, the type opts itself into `.icon` and shows the themed calendar in its place. Where it cannot, the native button stays and no custom icon is drawn, since two calendar glyphs on one field read as a defect. `.icon`, `.left`, and `.right` are inert on these two types in that case rather than reserving space for artwork that never paints.
 Native WebKit search decorations are suppressed on `search` inputs to prevent placeholder overlap when `.icon` is omitted.
 
-An input icon is a masked pseudo-element on `.control`, a wrapper that holds the
-control and nothing else. A text input is a replaced element and generates no
-pseudo-element of its own, and masking the input would clip its border, its
-background, and the typed text with it. **Without the wrapper, `.icon` reserves
-the space and paints nothing.**
+An input icon is a `background-image` on the control itself, so a field that
+wants one needs no wrapper element around it.
 
 ```html
 <label class="field">
   <span class="label">Email</span>
-  <span class="control">
-    <input class="ipt email icon" type="email" />
-  </span>
+  <input class="ipt email icon" type="email" />
 </label>
 ```
 
-A mask carries no color, so the icon takes the surrounding text color at a fixed
-remove and goes to full strength while the control is focused. One rule serves
-both themes and every intent, where the `background-image` version it replaced
-needed a light, a dark, a focused-light, and a focused-dark copy of every glyph.
+A `data:` URI is a document of its own and inherits nothing from the page, so the
+artwork can read neither `currentColor` nor a custom property and each glyph
+ships a light and a dark copy that a theme selector picks between. That is the
+one place in the package where a theme is chosen by selector rather than
+resolved by `light-dark()` at the point of use, because `light-dark()` takes
+colors and these are images.
 
-`--ipt-icon-src` replaces the artwork, and it goes on the wrapper rather than on
-the input: the wrapper is what paints the icon, and a custom property set on a
-child does not travel up to it.
+`--ipt-icon-src` on the control replaces the artwork with any image.
 
 ```html
-<span class="control" style="--ipt-icon-src: url('/icons/user.svg')">
-  <input class="ipt icon" />
-</span>
+<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
 ```
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons

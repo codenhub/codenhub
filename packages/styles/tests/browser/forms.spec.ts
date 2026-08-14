@@ -560,102 +560,70 @@ test.describe("forms", () => {
     await expectUnmoved("switch-default-none-disabled");
   });
 
-  /* A data URI cannot read `currentColor` or a custom property, which is why the
-     icons used to ship a light, a dark, a focused-light and a focused-dark copy
-     of the same paths. They are masks now: one picture per type, coloured by the
-     element behind it. The wrapper is what makes that possible -- a text input is
-     replaced content and generates no pseudo-element of its own. */
-  test("paints a field icon from the control wrapper and colors it by state", async ({ page }) => {
+  /* A data URI is a document of its own and inherits nothing from the page, so
+     the artwork cannot read `currentColor` or a custom property and ships one
+     copy per theme. What the copies buy is that the icon is painted by the
+     control itself: no wrapper element, and nothing between a field and its
+     glyph. */
+  test("paints a field icon on the control itself and swaps it with the theme", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const icons = await page.evaluate(() => {
-      const read = (testId: string) => {
-        const wrapper = document.querySelector(`[data-testid="${testId}"]`)!;
-        const styles = getComputedStyle(wrapper, "::before");
+    const read = (testId: string) =>
+      page.getByTestId(testId).evaluate((node) => {
+        const styles = getComputedStyle(node);
 
-        return {
-          background: styles.backgroundColor,
-          content: styles.content,
-          inlineStart: styles.insetInlineStart,
-          inlineEnd: styles.insetInlineEnd,
-          mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
-        };
-      };
+        return { image: styles.backgroundImage, position: styles.backgroundPosition };
+      });
 
-      return {
-        email: read("control-email-icon-left"),
-        password: read("control-password-icon-left"),
-        right: read("control-email-icon-right"),
-        standard: read("control-search-standard"),
-      };
-    });
+    const email = await read("field-email-icon-left");
+    const password = await read("field-password-icon-left");
+    const right = await read("field-email-icon-right");
+    const standard = await read("field-search-standard");
 
-    expect(icons.email.mask, "email artwork").toContain("data:image/svg+xml");
-    /* One picture per type, not one per type per theme per state. */
-    expect(icons.password.mask, "password artwork").not.toBe(icons.email.mask);
+    expect(email.image, "email artwork").toContain("data:image/svg+xml");
+    /* One picture per type, and the type is what chooses it. */
+    expect(password.image, "password artwork").not.toBe(email.image);
     /* `.right` moves the same artwork rather than swapping it. */
-    expect(icons.right.mask, "right artwork").toBe(icons.email.mask);
-    expect(icons.right.inlineEnd, "right position").not.toBe("auto");
-    expect(icons.email.inlineStart, "left position").not.toBe("auto");
-    /* A wrapper with no `.icon` inside paints nothing, so the class stays opt-in
+    expect(right.image, "right artwork").toBe(email.image);
+    expect(right.position, "right position").not.toBe(email.position);
+    /* A typed control with no `.icon` paints nothing, so the class stays opt-in
        and a field never reserves room for artwork it will not draw. */
-    expect(icons.standard.content, "no-icon wrapper").toBe("none");
+    expect(standard.image, "a control that did not opt in").toBe("none");
 
-    /* The mask takes the surrounding text colour at a fixed remove and goes to
-       full strength while the control is focused, which is what the four
-       baked-in variants were approximating. */
-    const resting = icons.email.background;
+    /* The copies are the whole reason the theme blocks exist: a colour would
+       resolve at the point of use through `light-dark()`, an image cannot. */
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
 
-    await page.getByTestId("field-email-icon-left").focus();
+    const dark = await read("field-email-icon-left");
 
-    expect(readSrgb(resting).alpha, "resting icon is dimmed").toBeLessThan(1);
-    /* The icon colour is transitioned, so this polls for the settled value. */
-    await expect
-      .poll(
-        async () =>
-          readSrgb(
-            await page
-              .getByTestId("control-email-icon-left")
-              .evaluate((element) => getComputedStyle(element, "::before").backgroundColor),
-          ).alpha,
-      )
-      .toBe(1);
+    expect(dark.image, "the dark copy").toContain("data:image/svg+xml");
+    expect(dark.image, "the theme picks between two copies").not.toBe(email.image);
   });
 
-  /* Seven typed rules set `--ipt-icon-src` and the artwork rule fires on any
-     `.control` wrapping an `.icon`, so a control outside those seven resolves an
-     undefined `var()`. With no fallback that declaration is invalid at
-     computed-value time and `mask-image` takes its initial `none` -- no mask
-     rather than an empty one -- and the box paints as a solid coloured square
-     next to the text. The fallback has to be a transparent image, not `none`. */
-  test("masks the icon box away on a control the artwork does not cover", async ({ page }) => {
+  /* Seven typed rules set `--ipt-icon-src`, and `.icon` can be written on a
+     control outside those seven. Without a fallback the declaration is invalid
+     at computed-value time, which lands on the same `none` -- the fallback is
+     there so the rule says what it does rather than relying on that. Either way
+     the control must paint no artwork while still reserving its room. */
+  test("paints no artwork on a control the seven typed rules do not name", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const uncovered = await page.evaluate(() => {
       const host = document.createElement("div");
 
-      host.innerHTML = `<div class="control"><span class="icon"></span><input type="text" class="ipt" /></div>`;
+      host.innerHTML = `<input type="text" class="ipt icon" />`;
       document.body.append(host);
 
-      const styles = getComputedStyle(host.querySelector(".control")!, "::before");
-      const values = {
-        content: styles.content,
-        mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
-      };
+      const styles = getComputedStyle(host.querySelector("input")!);
+      const values = { image: styles.backgroundImage, paddingLeft: styles.paddingLeft };
 
       host.remove();
 
       return values;
     });
 
-    expect(uncovered.content, "the wrapper still generates the box").not.toBe("none");
-    /* Pinned rather than merely not `none`. The contract is that the box is
-       masked away, and an opaque fallback would satisfy `not none` while painting
-       the solid square this test exists to catch. All three engines serialise the
-       transparent gradient identically. */
-    expect(uncovered.mask, "an uncovered control masks the box away").toBe(
-      "linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))",
-    );
+    expect(uncovered.image, "an uncovered control paints nothing").toBe("none");
+    expect(Number.parseFloat(uncovered.paddingLeft), "and still reserves its room").toBeGreaterThan(12);
   });
 
   test("reserves room for a field icon only when the control opts in", async ({ page }) => {

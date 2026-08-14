@@ -62,39 +62,27 @@ test("styles native forms and buttons without utility classes", async ({ page })
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
 
-/* A native mapping gives the control and stops there. An icon needs a `.control`
-   wrapper to paint into and a bare element has no wrapper by definition, so the
-   artwork is opt-in: wrap the control and write `.icon`. A mapping that guessed
-   would reserve space on every typed input on the page. */
+/* A native mapping gives the control and its icon source, and stops there. The
+   artwork is opt-in because a mapping that guessed would put a glyph on every
+   typed input on the page, and a native mapping has no class in which to write
+   the opt-in. */
 test("paints a native input icon only where the author opted in", async ({ page }) => {
   await page.goto(NATIVE_URL);
 
   const icons = await page.evaluate(() => {
-    const readWrapper = (id: string) => {
-      const styles = getComputedStyle(document.querySelector(`#${id}`)!.closest(".control")!, "::before");
+    const read = (id: string) => {
+      const styles = getComputedStyle(document.querySelector(`#${id}`)!);
 
-      return {
-        content: styles.content,
-        inlineEnd: styles.insetInlineEnd,
-        inlineStart: styles.insetInlineStart,
-        mask: styles.maskImage || styles.getPropertyValue("-webkit-mask-image"),
-      };
+      return { image: styles.backgroundImage, position: styles.backgroundPosition };
     };
 
-    return {
-      bare: getComputedStyle(document.querySelector("#native-search-noicon")!).backgroundImage,
-      left: readWrapper("native-email"),
-      right: readWrapper("native-email-right"),
-      wrapped: document.querySelector("#native-search-noicon")!.closest(".control"),
-    };
+    return { bare: read("native-search-noicon"), left: read("native-email"), right: read("native-email-right") };
   });
 
-  expect(icons.wrapped, "the opt-out input has no wrapper").toBeNull();
-  expect(icons.bare, "an unwrapped input paints no artwork").toBe("none");
-  expect(icons.left.mask, "wrapped artwork").toContain("data:image/svg+xml");
-  expect(icons.left.inlineStart, "left position").not.toBe("auto");
-  expect(icons.right.inlineEnd, "right position").not.toBe("auto");
-  expect(icons.right.mask, "right artwork is the same picture moved").toBe(icons.left.mask);
+  expect(icons.bare.image, "an input that did not opt in paints no artwork").toBe("none");
+  expect(icons.left.image, "opted-in artwork").toContain("data:image/svg+xml");
+  expect(icons.right.image, "right artwork is the same picture moved").toBe(icons.left.image);
+  expect(icons.right.position, "right position").not.toBe(icons.left.position);
 });
 
 /* `native.css` re-declares border and background after `@apply`, which would

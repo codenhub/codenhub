@@ -283,7 +283,6 @@
   ],
   "helpers": [
     "field",
-    "control",
     "label",
     "hint",
     "icon",

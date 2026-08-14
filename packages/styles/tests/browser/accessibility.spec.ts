@@ -23,20 +23,12 @@ test("associates every native form label with its control", async ({ page }) => 
 
   const labels = page.locator(".native-label");
   await expect(labels).toHaveCount(16);
-  /* A control carrying an icon sits inside a `.control` wrapper, so the label's
-     control is not always its next sibling -- but it is always the one control
-     the following block holds. */
   expect(
     await labels.evaluateAll((elements) =>
-      elements.every((label) => {
-        const next = label.nextElementSibling;
-
-        return (
-          label instanceof HTMLLabelElement &&
-          label.control !== null &&
-          (label.control === next || next?.contains(label.control) === true)
-        );
-      }),
+      elements.every(
+        (label) =>
+          label instanceof HTMLLabelElement && label.control !== null && label.control === label.nextElementSibling,
+      ),
     ),
   ).toBe(true);
 });

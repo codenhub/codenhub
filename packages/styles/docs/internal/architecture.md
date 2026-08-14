@@ -463,13 +463,41 @@ part not every engine lets a stylesheet hide.
   calendar glyphs on one field read as a defect. Measured `false` in Firefox.
 
 The negative branch has to actively undo `.icon` rather than merely withhold it,
-using `!important` for the same reason `.no-icon` does -- `.icon.right` carries
-equal specificity, so nothing else reliably wins. Without that, an author or a
-fixture putting `.icon` on the field reserves 2.375rem of padding for artwork
-that never paints, which is the shape of the original bug.
+with `!important` -- `.icon.right` carries equal specificity, so nothing short of
+importance reliably wins. Without that, an author or a fixture putting `.icon` on
+the field reserves 2.375rem of padding for artwork that never paints, which is
+the shape of the original bug.
 
-Both branches are duplicated in `components/form.css` and in `native.css`,
-because the classed and the unclassed form of the same control have to agree.
+Both branches live in `components/form.css` alone. `native.css` maps a bare
+`input[type="date"]` to `.ipt` and stops there, the same as every other type: the
+mapping has no class in which to write an opt-in, so a native date field draws
+its own picker button and nothing of ours.
+
+### Input icons are painted by the control
+
+An icon is a `background-image` on the control, not a mask on a wrapper around
+it. The two are a straight trade and the trade was made twice.
+
+A `data:` URI is a document of its own. It inherits nothing from the page, so
+`currentColor` and `var()` written inside the artwork resolve against the SVG's
+own root where neither is defined, and CSS cannot concatenate a colour into a
+`url()` string either. Artwork painted as a background therefore carries its
+colour baked in: fourteen copies for seven icons, one per theme.
+
+A mask carries no colour and needs seven. What it needs instead is an element to
+mask, and a text input is replaced content that generates no pseudo-element --
+masking the input itself would clip its border, its background and the typed text
+with it. So the mask requires a wrapper element around every field that wants an
+icon.
+
+Fourteen data URIs cost a maintainer one generated block and nothing at runtime.
+A mandatory wrapper costs every author of every form, and it is the kind of cost
+that shows up as a field with padding and no glyph when someone forgets it. The
+package pays the fourteen.
+
+The aliases that pick between the copies are the one place a theme is chosen by
+selector rather than resolved by `light-dark()` at the point of use, for the
+reason in `Theme values`: `light-dark()` takes colours, and these are images.
 
 ## Aesthetics
 

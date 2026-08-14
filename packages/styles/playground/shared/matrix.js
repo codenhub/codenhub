@@ -386,18 +386,7 @@ const buildField = (type, variant) => {
   message.id = messageId;
   message.dataset.testid = `${messageId}`;
 
-  /* The icon is a masked pseudo-element on a wrapper around the control alone: a
-     text input is replaced content and generates none of its own, and `.field`
-     is a flex column whose pseudo-element would land beside the label. Every
-     cell carries the wrapper so the anatomy the package documents is the one the
-     grid demonstrates. */
-  const control = document.createElement("span");
-
-  control.className = "control";
-  control.dataset.testid = `control-${type}-${variant}`;
-  control.append(input);
-
-  field.append(label, control, message);
+  field.append(label, input, message);
 
   return field;
 };

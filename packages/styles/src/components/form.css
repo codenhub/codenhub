@@ -2,107 +2,84 @@
 @import "../theme.css";
 @import "../box.css";
 
-/* Seven pictures, seven tokens. They used to be forty-four: a data URI cannot
-   read `currentColor` or a custom property, so every icon shipped a light, a
-   dark, a focused-light and a focused-dark copy of the same paths, and three
-   theme blocks re-pointed the aliases between them.
+/* Fourteen pictures, seven icons. A `data:` URI is a document of its own: it
+   inherits nothing from the page, so `currentColor` and `var()` written inside
+   the artwork resolve against the SVG's own root where neither is defined, and
+   CSS cannot concatenate a colour into a `url()` string either. Artwork painted
+   as a `background-image` therefore carries its colour baked in, which is one
+   copy per theme.
 
-   A mask has no such problem, because it carries no colour at all -- the element
-   behind it does. What blocked masking before was the element: a text input is
-   replaced content and generates no pseudo-element, and masking the input itself
-   would clip its border, its background and the typed text with it. So the mask
-   goes on a wrapper around the control alone.
+   That is the price of painting on the input itself, and it is the cheaper
+   price. The alternative reads the page's colour and needs seven copies rather
+   than fourteen, but only by masking a pseudo-element, and an input is replaced
+   content that generates none -- so it needs a wrapper element around every
+   field that wants an icon. Fourteen data URIs cost a maintainer nothing at
+   runtime; a mandatory wrapper costs every author of every form.
 
-   `.field` cannot be that wrapper. It is a flex column holding a label and a
-   hint, and anything positioned against it lands beside the label rather than
-   inside the control. `.control` wraps the control and nothing else. */
+   The aliases below are the one place in the package that still branches on a
+   theme selector. `theme.css` resolves colour with `light-dark()` and leaves the
+   selectors setting `color-scheme` alone, but `light-dark()` takes colours and
+   these are images, so the choice has to be made by selector. Explicit aliases
+   rather than a fallback chain, because a fallback cannot override a dark value
+   inherited into a light subtree. */
 :root {
-  --ipt-icon-email: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-  --ipt-icon-password: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-  --ipt-icon-url: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-  --ipt-icon-tel: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-  --ipt-icon-search: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-  --ipt-icon-calendar: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-  --ipt-icon-clock: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
+  --ipt-icon-email-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
+  --ipt-icon-email-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
+
+  --ipt-icon-password-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
+  --ipt-icon-password-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
+
+  --ipt-icon-url-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
+  --ipt-icon-url-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
+
+  --ipt-icon-tel-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
+  --ipt-icon-tel-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
+
+  --ipt-icon-search-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
+  --ipt-icon-search-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
+
+  --ipt-icon-calendar-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
+  --ipt-icon-calendar-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
+
+  --ipt-icon-clock-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
+  --ipt-icon-clock-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
 }
 
-/* The wrapper that makes an icon possible. It wraps the control alone, so its
-   pseudo-element sits over the control's box and its `:focus-within` is the
-   control's own focus. */
-@utility control {
-  @apply relative block;
+:root,
+.light,
+.theme-light,
+[data-theme="light"] {
+  --ipt-icon-email: var(--ipt-icon-email-light);
+  --ipt-icon-password: var(--ipt-icon-password-light);
+  --ipt-icon-url: var(--ipt-icon-url-light);
+  --ipt-icon-tel: var(--ipt-icon-tel-light);
+  --ipt-icon-search: var(--ipt-icon-search-light);
+  --ipt-icon-calendar: var(--ipt-icon-calendar-light);
+  --ipt-icon-clock: var(--ipt-icon-clock-light);
 }
 
-/* The artwork is chosen by what the wrapper contains, because a custom property
-   set on the input cannot travel up to the wrapper that paints it. */
-.control:has(> :is([type="email"], .email)) {
-  --ipt-icon-src: var(--ipt-icon-email);
+.dark,
+.theme-dark,
+[data-theme="dark"] {
+  --ipt-icon-email: var(--ipt-icon-email-dark);
+  --ipt-icon-password: var(--ipt-icon-password-dark);
+  --ipt-icon-url: var(--ipt-icon-url-dark);
+  --ipt-icon-tel: var(--ipt-icon-tel-dark);
+  --ipt-icon-search: var(--ipt-icon-search-dark);
+  --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
+  --ipt-icon-clock: var(--ipt-icon-clock-dark);
 }
 
-.control:has(> :is([type="password"], .password)) {
-  --ipt-icon-src: var(--ipt-icon-password);
-}
-
-.control:has(> :is([type="url"], .url)) {
-  --ipt-icon-src: var(--ipt-icon-url);
-}
-
-.control:has(> :is([type="tel"], .tel)) {
-  --ipt-icon-src: var(--ipt-icon-tel);
-}
-
-.control:has(> :is([type="search"], .search)) {
-  --ipt-icon-src: var(--ipt-icon-search);
-}
-
-.control:has(
-  > :is([type="date"], [type="datetime-local"], [type="month"], [type="week"], .date, .datetime, .month, .week)
-) {
-  --ipt-icon-src: var(--ipt-icon-calendar);
-}
-
-.control:has(> :is([type="time"], .time)) {
-  --ipt-icon-src: var(--ipt-icon-clock);
-}
-
-/* The icon itself: one rule, both themes, every intent. It takes the surrounding
-   text colour at a fixed remove and goes to full strength while the control is
-   focused, which is what the four baked-in variants were approximating. */
-.control:has(> .icon)::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  inset-inline-start: 0.75rem;
-  width: 1rem;
-  height: 1rem;
-  translate: 0 -50%;
-  pointer-events: none;
-  background-color: color-mix(in oklab, currentColor 55%, transparent);
-  /* The fallback masks everything out, and it is load-bearing. This rule fires
-     on any `.control` wrapping an `.icon` while only the seven typed rules
-     above set a source, so on the eighth control `--ipt-icon-src` is undefined:
-     the declaration is invalid at computed-value time, `mask-image` resolves to
-     its initial `none` -- no mask, not an empty one -- and the background paints
-     a solid 1rem block where the artwork should be. A transparent gradient is a
-     valid image with zero alpha, so the box is masked away instead. */
-  mask-image: var(--ipt-icon-src, linear-gradient(transparent, transparent));
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  -webkit-mask-image: var(--ipt-icon-src, linear-gradient(transparent, transparent));
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  transition: background-color var(--motion-duration-fast) var(--motion-ease);
-}
-
-.control:has(> .icon.right)::before {
-  inset-inline-start: auto;
-  inset-inline-end: 0.75rem;
-}
-
-.control:focus-within::before {
-  background-color: currentColor;
+@media (prefers-color-scheme: dark) {
+  :root:not(.light, .theme-light, [data-theme="light"]) {
+    --ipt-icon-email: var(--ipt-icon-email-dark);
+    --ipt-icon-password: var(--ipt-icon-password-dark);
+    --ipt-icon-url: var(--ipt-icon-url-dark);
+    --ipt-icon-tel: var(--ipt-icon-tel-dark);
+    --ipt-icon-search: var(--ipt-icon-search-dark);
+    --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
+    --ipt-icon-clock: var(--ipt-icon-clock-dark);
+  }
 }
 
 /* What all six text controls share: the box, the chrome, and two bounds. The
@@ -233,16 +210,110 @@
 
   min-height: var(--control-height);
 
-  /* Reserves the room the wrapper's icon paints into. An icon with no `.control`
-     around it reserves space and shows nothing, which is why the class is opt-in
-     rather than implied by the input's type. */
-  &.icon {
-    padding-left: 2.375rem;
+  /* Which picture a field wants is decided by what the field is, and a text
+     input can read that off itself: the source is set here, and `.icon` is what
+     decides whether it is painted. The class stays opt-in because a form full
+     of glyphs is a design choice, not a property of the input types in it.
 
-    &.right {
-      padding-left: 0.75rem;
-      padding-right: 2.375rem;
-    }
+     Both spellings are matched. The attribute is the truth for a real input; the
+     class is for an element that is not one, or one whose type the author has
+     changed under a class that has to keep the icon. */
+  &.email,
+  &[type="email"] {
+    --ipt-icon-src: var(--ipt-icon-email);
+  }
+
+  &.password,
+  &[type="password"] {
+    --ipt-icon-src: var(--ipt-icon-password);
+  }
+
+  &.url,
+  &[type="url"] {
+    --ipt-icon-src: var(--ipt-icon-url);
+  }
+
+  &.tel,
+  &[type="tel"] {
+    --ipt-icon-src: var(--ipt-icon-tel);
+  }
+
+  &.search,
+  &[type="search"] {
+    --ipt-icon-src: var(--ipt-icon-search);
+  }
+
+  &.month,
+  &.week,
+  &[type="month"],
+  &[type="week"] {
+    --ipt-icon-src: var(--ipt-icon-calendar);
+  }
+
+  &.time,
+  &[type="time"] {
+    --ipt-icon-src: var(--ipt-icon-clock);
+  }
+}
+
+/* Date and datetime-local are the two types whose picker button cannot be hidden
+   everywhere. Where it can, the themed calendar replaces it and the type opts
+   itself into `.icon` rather than waiting to be asked -- a date field with no
+   glyph at all is the one case where the opt-in rule would leave a hole rather
+   than a clean field.
+
+   Where it cannot, the native button stays and the custom icon is taken back
+   off, because two calendar glyphs on one field read as a defect. That branch
+   has to actively undo `.icon` rather than merely withhold it: an author can
+   still write the class, and it would otherwise reserve padding for artwork that
+   never paints. `!important` because `.icon.right` carries equal specificity, so
+   nothing short of importance reliably wins. */
+@supports selector(input::-webkit-calendar-picker-indicator) {
+  .ipt.date,
+  .ipt.datetime,
+  .ipt[type="date"],
+  .ipt[type="datetime-local"] {
+    --ipt-icon-src: var(--ipt-icon-calendar);
+
+    @apply icon;
+  }
+}
+
+@supports not selector(input::-webkit-calendar-picker-indicator) {
+  .ipt.date,
+  .ipt.datetime,
+  .ipt[type="date"],
+  .ipt[type="datetime-local"] {
+    background-image: none !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
+/* The icon itself, painted by the control rather than beside it. It has to be
+   declared after `ipt`, because its padding and `ipt`'s `px-3` carry equal
+   specificity and the later one wins.
+
+   The `none` fallback matters on a control the seven rules above do not name:
+   without it the declaration is invalid at computed-value time, which is the
+   same `none` by a longer route, but stating it keeps the rule readable. */
+@utility icon {
+  background-image: var(--ipt-icon-src, none);
+  background-position: 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+  padding-left: 2.375rem;
+
+  &.left {
+    background-position: 0.75rem center;
+    padding-left: 2.375rem;
+    padding-right: 0.75rem;
+  }
+
+  &.right {
+    background-position: calc(100% - 0.75rem) center;
+    padding-left: 0.75rem;
+    padding-right: 2.375rem;
   }
 }
 

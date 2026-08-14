@@ -92,12 +92,11 @@
             standard cell is the whole supported surface.
           </p>
           <p class="text-body text-text-secondary">
-            An icon is a masked pseudo-element on
-            <code class="code">.control</code>
-            , a wrapper around the control alone. An input is replaced content and has no pseudo-element of its own, and
-            masking the input would clip its border, its background, and the typed text with it. The mask carries no
-            color, so one rule serves both themes and every intent, where the background-image version needed four
-            copies of every glyph.
+            An icon is a
+            <code class="code">background-image</code>
+            on the control itself, so a field that wants one needs no wrapper element around it. A data URI is a
+            document of its own and inherits no color from the page, so each glyph ships a light and a dark copy and the
+            theme picks between them.
           </p>
         </div>
         <div data-fields data-testid="field-matrix"></div>
@@ -105,28 +104,21 @@
           <h3 class="text-title-sm">Overrides</h3>
           <p class="text-body text-text-secondary">
             <code class="code">--ipt-icon-src</code>
-            on the
-            <code class="code">.control</code>
-            wrapper replaces the artwork -- on the input it does nothing, because the wrapper is what paints it and a
-            custom property does not travel up;
-            <code class="code">.no-icon</code>
-            suppresses the ones native inputs include by default.
+            on the control replaces the artwork with any image, which is the whole of the override surface: the type
+            picks a source and this overrules it.
           </p>
           <div class="form-grid">
             <label class="field">
               <span class="label">Custom icon</span>
-              <span
-                class="control"
+              <input
+                class="ipt icon"
+                type="text"
+                value="Custom artwork"
+                data-testid="field-custom-icon"
                 style="
-                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
+                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
                 "
-              >
-                <input class="ipt icon" type="text" value="Custom artwork" data-testid="field-custom-icon" />
-              </span>
-            </label>
-            <label class="field">
-              <span class="label">Suppressed icon</span>
-              <input class="ipt email no-icon" type="email" value="you@example.com" data-testid="field-no-icon" />
+              />
             </label>
           </div>
         </div>
@@ -205,50 +197,42 @@
           </label>
           <label class="field" data-testid="field-complete">
             <span class="label">Email</span>
-            <span class="control">
-              <input class="ipt email icon" type="email" value="you@example.com" aria-describedby="field-hint" />
-            </span>
+            <input class="ipt email icon" type="email" value="you@example.com" aria-describedby="field-hint" />
             <span class="hint" id="field-hint" data-testid="field-hint">We only use this to send build failures.</span>
           </label>
           <label class="field" data-testid="field-with-error">
             <span class="label">Email</span>
-            <span class="control">
-              <input
-                class="ipt email icon"
-                type="email"
-                value="not-an-email"
-                aria-invalid="true"
-                aria-describedby="field-error"
-                data-testid="invalid-input"
-              />
-            </span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="not-an-email"
+              aria-invalid="true"
+              aria-describedby="field-error"
+              data-testid="invalid-input"
+            />
             <span class="hint error" id="field-error" data-testid="field-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-hint-and-error">
             <span class="label">Email</span>
-            <span class="control">
-              <input
-                class="ipt email icon"
-                type="email"
-                value="not-an-email"
-                aria-invalid="true"
-                aria-describedby="field-both-hint field-both-error"
-              />
-            </span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="not-an-email"
+              aria-invalid="true"
+              aria-describedby="field-both-hint field-both-error"
+            />
             <span class="hint" id="field-both-hint">We only use this to send build failures.</span>
             <span class="hint error" id="field-both-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-disabled">
             <span class="label">Email</span>
-            <span class="control">
-              <input
-                class="ipt email icon"
-                type="email"
-                value="you@example.com"
-                disabled
-                aria-describedby="field-disabled-hint"
-              />
-            </span>
+            <input
+              class="ipt email icon"
+              type="email"
+              value="you@example.com"
+              disabled
+              aria-describedby="field-disabled-hint"
+            />
             <span class="hint" id="field-disabled-hint">
               A disabled control dims itself; the label and hint keep full contrast so the field stays readable.
             </span>

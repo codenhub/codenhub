@@ -118,9 +118,10 @@
     @apply ipt;
   }
 
-  /* An icon needs a `.control` wrapper to paint into, and a bare element has no
-     wrapper by definition, so a native mapping gives the control and stops
-     there. Authors opt in by wrapping and writing `.icon`. */
+  /* The mapping gives the control and its icon source, and stops there. A form
+     full of glyphs is a design choice rather than a property of the types in it,
+     so the artwork waits for `.icon` on the element -- which a native mapping
+     cannot write, because there is no class to write it in. */
   input[type="email"],
   input[type="password"],
   input[type="url"],

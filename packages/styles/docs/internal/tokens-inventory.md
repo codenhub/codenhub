@@ -377,6 +377,16 @@ Cost: the icon class moves from the input to its wrapper, which is a markup brea
 Acceptable at 0.1.0, and it is the same defect as the loaders -- artwork that
 carries baked-in presentation instead of taking its color from its host.
 
+**Reversed.** The wrapper shipped and came back out. The token arithmetic was
+right and the cost was misjudged: it is not a one-time markup break, it is a
+wrapper element every author writes around every field, forever, and a field that
+loses it renders padding and no glyph. Fourteen data URIs cost a maintainer one
+generated block; a mandatory wrapper costs every consumer of the package. The
+icons are `background-image` on the control again, at fourteen tokens rather than
+the original forty-four -- the focus pair is gone, which halves the artwork and
+removes the second thing the masked version was bought for. The verdict on the
+count stands; the remedy does not.
+
 ## Aesthetic internals (9)
 
 | Token             | Aesthetic    | Job                                                 | Verdict  |
@@ -420,7 +430,7 @@ to drive a determinate progress bar and appears only in an example.
 | #   | Finding                                                                       | Where it lands                     |
 | --- | ----------------------------------------------------------------------------- | ---------------------------------- |
 | T1  | 228 tokens, no naming distinction between contract and scratch.               | `--_` prefix.                      |
-| T2  | 44 input-icon tokens encode 7 pictures; color is baked into the artwork.      | Masked wrapper.                    |
+| T2  | 44 input-icon tokens encode 7 pictures; color is baked into the artwork.      | 14 tokens, no wrapper.             |
 | T3  | `--color-foreground` names a surface tone.                                    | Keep the name, document the wart.  |
 | T4  | `--color-text-subtle` is dead; `--elevation-high` is unread but load-bearing. | Delete the first, keep the second. |
 | T5  | `--border-width` vs `--ui-border-width` do not carry their layer distinction. | Rename the foundation one.         |
