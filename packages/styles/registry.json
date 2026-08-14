@@ -28,26 +28,33 @@
   },
   "intents": {
     "neutral": {
-      "family": "text"
+      "family": "text",
+      "fillMax": "20%"
     },
     "primary": {
-      "family": "primary"
+      "family": "primary",
+      "fillMax": "100%"
     },
     "secondary": {
-      "family": "accent"
+      "family": "accent",
+      "fillMax": "100%"
     },
     "success": {
-      "family": "success"
+      "family": "success",
+      "fillMax": "100%"
     },
     "warning": {
-      "family": "warning"
+      "family": "warning",
+      "fillMax": "100%"
     },
     "destructive": {
       "family": "destructive",
+      "fillMax": "100%",
       "aliases": ["danger", "error"]
     },
     "info": {
-      "family": "info"
+      "family": "info",
+      "fillMax": "100%"
     }
   },
   "modifiers": {

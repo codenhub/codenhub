@@ -345,6 +345,13 @@ Every component that supports intent accepts the same list and reads the same
 [intent tokens](./tokens.md#intent-tokens), so a custom intent class works
 everywhere without touching a component.
 
+`.neutral` is the only intent that does not fill all the way. Its color is the
+page's own text color, so a full fill of it would be a black or white slab --
+the loudest element on the page, for the intent that means nothing in
+particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral is
+a quiet plate a step past `.soft` rather than a block of ink. Set the slot on
+your own intent classes; see [intent tokens](./tokens.md#intent-tokens).
+
 Size and shape classes:
 
 | Class                                                                  | Purpose                                                      |
@@ -416,7 +423,7 @@ to set the checked color:
 
 | Class                               | Meaning                 |
 | ----------------------------------- | ----------------------- |
-| `.neutral` _(default)_              | Text color.             |
+| `.neutral` _(default)_              | Text color, capped.     |
 | `.primary`                          | Primary color.          |
 | `.secondary`                        | Secondary/accent color. |
 | `.success`                          | Success color.          |

@@ -656,6 +656,13 @@ Every component that supports intent accepts the same list and reads the same
 [intent tokens](docs/tokens.md#intent-tokens), so a custom intent class works
 everywhere without touching a component.
 
+`.neutral` is the only intent that does not fill all the way. Its color is the
+page's own text color, so a full fill of it would be a black or white slab --
+the loudest element on the page, for the intent that means nothing in
+particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral is
+a quiet plate a step past `.soft` rather than a block of ink. Set the slot on
+your own intent classes; see [intent tokens](docs/tokens.md#intent-tokens).
+
 Size and shape classes:
 
 | Class                                                                  | Purpose                                                      |
@@ -727,7 +734,7 @@ to set the checked color:
 
 | Class                               | Meaning                 |
 | ----------------------------------- | ----------------------- |
-| `.neutral` _(default)_              | Text color.             |
+| `.neutral` _(default)_              | Text color, capped.     |
 | `.primary`                          | Primary color.          |
 | `.secondary`                        | Secondary/accent color. |
 | `.success`                          | Success color.          |
@@ -990,7 +997,6 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 | `--color-surface`              | Nested or muted surface.                                                                                      |
 | `--color-text`                 | Primary text color.                                                                                           |
 | `--color-text-secondary`       | Secondary text color.                                                                                         |
-| `--color-text-contrast`        | Text/icon color on text filled surface.                                                                       |
 | `--color-text-hover`           | Text hover state.                                                                                             |
 | `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
 | `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
@@ -1019,24 +1025,42 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 
 ## Intent Tokens
 
-Intent classes set these five slots; components read them. Because every
-supporting component reads the same five names, an intent works on every
+Intent classes set these seven slots; components read them. Because every
+supporting component reads the same seven names, an intent works on every
 component that supports intent, and a custom intent needs no component changes.
 
 | Token               | Purpose                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color.                                                              |
+| `--intent-color`    | The intent's base color. What a fill is made of.                                      |
 | `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                   |
 | `--intent-hover`    | The intent's hovered base color.                                                      |
-| `--intent-strong`   | High-emphasis tone. Readable text, icon, or border on subtle fills.                   |
+| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.    |
 | `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`. |
 | `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
+| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.  |
+
+`--intent-color` and `--intent-strong` are two ends of the same family and not
+interchangeable. The base is a ground, chosen to be filled with; the strong tone
+is chosen to be read against a page. A `.soft` or `.bare` component prints the
+strong one, which is why an unfilled warning reads in amber-800 rather than the
+amber-600 its solid sibling is filled with.
 
 `--intent-border` exists because a neutral border must stay the quiet border
 gray rather than the text color. Everything that draws a line reads it: control
 borders, table rules, dividers, key caps, and quote bars.
 
-Set them directly to define an intent this package does not ship:
+`--intent-fill-max` exists for the neutral intent, whose color is the page's own
+ink. Every other intent is a hue, legible pale at 12% and saturated at 100%; a
+grey filled to 100% is a black or white slab, which is the loudest thing on the
+page and the wrong look for the intent that means _nothing in particular_.
+Neutral stops at `20%`, so `.solid` gives it a quiet plate that still reads as a
+step past `.soft`. Hover adds its step on top of the cap, so a capped fill still
+deepens under the pointer.
+
+Set them directly to define an intent this package does not ship. **State every
+slot**, including `--intent-fill-max`: components reset all seven to the neutral
+values, so a slot your intent leaves out keeps neutral's — and an intent that
+omits the cap fills to 20% of its color instead of 100%.
 
 ```css
 .brand {
@@ -1046,6 +1070,7 @@ Set them directly to define an intent this package does not ship:
   --intent-strong: var(--color-violet-800);
   --intent-subtle: var(--color-violet-100);
   --intent-border: var(--color-violet-600);
+  --intent-fill-max: 100%;
 }
 ```
 

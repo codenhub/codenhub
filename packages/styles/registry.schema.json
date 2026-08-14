@@ -64,12 +64,17 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["family"],
+        "required": ["family", "fillMax"],
         "additionalProperties": false,
         "properties": {
           "family": {
             "type": "string",
             "description": "The --color-* family this intent maps onto. Checked against intent.css."
+          },
+          "fillMax": {
+            "type": "string",
+            "pattern": "^[0-9]+%$",
+            "description": "How far this intent lets a fill go. 100% for every intent but neutral, whose color is the page ink. Checked against --intent-fill-max in intent.css."
           },
           "aliases": {
             "type": "array",

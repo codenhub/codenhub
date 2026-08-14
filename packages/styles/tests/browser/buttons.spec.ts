@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   BUTTON_INTENT_TOKENS,
   expectSameColor,
+  flattenColor,
   getColorDistance,
   getContrastRatio,
   isTransparent,
@@ -185,30 +186,46 @@ test.describe("buttons", () => {
     expect(Number(styles.disabledOpacity)).toBeLessThan(1);
   });
 
-  test("uses the neutral text tokens when no intent is set", async ({ page }) => {
+  /* A filled button with no intent is the package's most common single element,
+     and the neutral cap is the whole reason it is a quiet plate rather than a
+     slab of the page's own ink. The expected fill is built from the cap the
+     button itself reports, so this states the contract -- a neutral fill stops
+     where its intent says it stops -- instead of restating a number that would
+     then have to be changed in two places. */
+  test("fills a button with no intent to the neutral cap and no further", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const values = await page.evaluate(() => {
-      const resolveToken = (tokenName: string) => {
+      const resolveColor = (value: string) => {
         const probe = document.createElement("span");
-        probe.style.color = `var(--color-${tokenName})`;
+        probe.style.color = value;
         document.body.append(probe);
         const color = getComputedStyle(probe).color;
         probe.remove();
         return color;
       };
       const styles = getComputedStyle(document.querySelector('[data-testid="btn-default-none"]')!);
+      const cap = styles.getPropertyValue("--intent-fill-max").trim();
 
       return {
         background: styles.backgroundColor,
+        cap,
+        expectedFill: resolveColor(`color-mix(in oklab, var(--color-text) ${cap}, transparent)`),
         foreground: styles.color,
-        tokenText: resolveToken("text"),
-        tokenTextContrast: resolveToken("text-contrast"),
+        page: getComputedStyle(document.body).backgroundColor,
+        tokenText: resolveColor("var(--color-text)"),
       };
     });
 
-    expectSameColor(values.background, values.tokenText, "no-intent button background");
-    expectSameColor(values.foreground, values.tokenTextContrast, "no-intent button text");
+    expect(Number.parseFloat(values.cap)).toBeLessThan(100);
+    expectSameColor(values.background, values.expectedFill, "no-intent button background");
+    expectSameColor(values.foreground, values.tokenText, "no-intent button text");
+
+    /* A quieter plate is only worth having if the label still reads on it. The
+       fill is translucent, so the ratio is measured against what the button
+       actually shows: the fill composited over the page behind it. */
+    const plate = flattenColor(values.background, values.page);
+    expect(getContrastRatio(values.foreground, plate), "no-intent button label").toBeGreaterThanOrEqual(4.5);
   });
 
   test("hides nested elements inside loading buttons", async ({ page }) => {
@@ -268,12 +285,14 @@ test.describe("buttons", () => {
             host,
             tokenName: intent.tokenName,
           }),
-          /* An unfilled button's text is the intent colour itself, not a
-             separate emphasis tone: `--ui-fg-on-fill` is 0%, so `box` mixes the
-             contrast tone in at zero strength and lands on `--intent-color`. */
+          /* An unfilled button's text is the intent's strong tone: `--ui-fg-on-fill`
+             is 0%, so `box` mixes the contrast tone in at zero strength and lands
+             on `--intent-strong`. The base tone is a ground, picked to be filled
+             with; the strong tone is the one picked to be read on a page, which
+             is why amber-800 rather than amber-600 prints here. */
           expectedPresentationText: resolveTokenColor({
             host,
-            tokenName: intent.tokenName,
+            tokenName: `${intent.tokenName}-strong`,
           }),
           /* The same mix `.soft` produces, resolved by the browser so the test
              states the intended tint rather than a hard-coded color. */
@@ -394,7 +413,7 @@ test.describe("buttons", () => {
       const step = getComputedStyle(document.documentElement).getPropertyValue("--hover-step").trim();
 
       probe.style.backgroundColor = `color-mix(in oklab, var(--color-primary-hover) ${step}, transparent)`;
-      probe.style.color = "var(--color-primary)";
+      probe.style.color = "var(--color-primary-strong)";
       host.append(probe);
 
       const values = {

@@ -135,7 +135,7 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
 
-  --_fill: calc(min(var(--ui-fill, var(--_d-fill)), 12%) * var(--ui-bg-alpha, 1));
+  --_fill: calc(min(var(--ui-fill, var(--_d-fill)), 12%, var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   --_line: color-mix(in oklab, var(--intent-border) 100%, transparent);
   --_edge: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line));
   --_fg: var(--intent-color);

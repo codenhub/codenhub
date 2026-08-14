@@ -22,7 +22,10 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  --table-fill: calc(var(--ui-fill, var(--_d-fill)) * var(--ui-bg-alpha, 1));
+  /* Capped the way `box` caps, because the head is a fill of the intent like any
+     other and a neutral table head is otherwise a slab of the page's ink with
+     ink printed on it. */
+  --table-fill: calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
   --table-head-fg: color-mix(
     in oklab,
@@ -81,11 +84,11 @@
    it as `soft` would be a different colour and would leave `.bare` looking
    broken, so the ground is stated and the fill still rests at zero.
 
-   Each states its foreground against that ground for the same reason. `box`
-   mixes toward `--intent-color`, which is the tone meant to sit *on* a page
-   rather than on a tint of itself -- amber-600 on amber-100 is a smudge.
-   `--intent-strong` is the slot for exactly this, and mixing toward it keeps
-   `.solid` resolving to the contrast tone as it does everywhere else. */
+   Each used to restate its foreground too, because `box` mixed toward
+   `--intent-color` -- the tone meant to sit *on* a page rather than on a tint of
+   itself, and amber-600 on amber-100 is a smudge. `box` now mixes toward
+   `--intent-strong`, which is what these three were reaching for, so the three
+   copies are gone and the ground is the only thing left to declare. */
 @utility kbd {
   @apply box inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
 
@@ -94,8 +97,6 @@
   --_d-border: 100%;
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
-
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
 
   /* Capped at its own radius: a control radius is sized for a control, and a key
      cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
@@ -113,8 +114,6 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
-
   border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
@@ -128,8 +127,6 @@
   --_d-border: 0%;
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
-
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
 }
 
 /* Typography wearing a component's name, so it composes none of `box`: `box`
@@ -147,7 +144,7 @@
    what makes the bar read as a bar at the default hairline: doubling 1px gives
    2px, and a quotation mark needs more presence than a table rule. */
 @utility quote {
-  --quote-fill: calc(var(--ui-fill, 0%) * var(--ui-bg-alpha, 1));
+  --quote-fill: calc(min(var(--ui-fill, 0%), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
   /* The same edge blend `box` draws, in the same order and for the same reason:
      the blend is the line's colour, and how much line there is comes after it.

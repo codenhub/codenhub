@@ -335,14 +335,15 @@ Unchanged. Six slots, seven classes, no cascade, and the zero-specificity reset
 that lets an element's own intent class win over an inherited value. It is the
 part of the current model that has held up under everything asked of it.
 
-| Token               | Meaning                                               |
-| ------------------- | ----------------------------------------------------- |
-| `--intent-color`    | The intent's base color.                              |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.   |
-| `--intent-hover`    | The intent's hovered base color.                      |
-| `--intent-strong`   | High-emphasis tone; readable text on subtle surfaces. |
-| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.        |
-| `--intent-border`   | Line color; the quiet border gray with no intent set. |
+| Token               | Meaning                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.          |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.       |
+| `--intent-hover`    | The intent's hovered base color.                          |
+| `--intent-strong`   | The intent printed on a page, wherever a fill is partial. |
+| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.            |
+| `--intent-fill-max` | How far a fill of this intent may go. 100% but neutral.   |
+| `--intent-border`   | Line color; the quiet border gray with no intent set.     |
 
 One change of ownership. The shared reset declares:
 

@@ -95,7 +95,7 @@ Declared once with `light-dark()`, which resolves against the element's computed
 | `--color-border-hover`      | neutral-600 / 500 | Hovered line color.                   | KEEP    |
 | `--color-text`              | neutral-950 / 50  | Body text.                            | KEEP    |
 | `--color-text-secondary`    | neutral-700 / 400 | De-emphasized text.                   | KEEP    |
-| `--color-text-contrast`     | neutral-50 / 950  | Text on a filled neutral.             | KEEP    |
+| `--color-text-contrast`     | neutral-50 / 950  | **Wrong for what it names.**          | DELETE  |
 | `--color-text-hover`        | neutral-700 / 200 | Hovered neutral base.                 | KEEP    |
 | `--color-text-strong`       | neutral-900 / 100 | High-emphasis neutral tone.           | KEEP    |
 | `--color-text-subtle`       | neutral-200 / 900 | **Nothing reads it.**                 | DELETE  |
@@ -121,6 +121,12 @@ should read this paragraph first.
 `--color-text-subtle` is dead. It is declared, described in the public token doc,
 and read by nothing. `intent.css` deliberately maps neutral's subtle slot to
 `--color-surface` instead, and says why in source.
+
+`--color-text-contrast` went the same way later in 0.1.0, for a stronger reason
+than disuse: it names "text on a filled neutral", and once neutral's fill was
+capped, the thing to print on a filled neutral became the ink itself. The token
+did not fall out of use so much as become the wrong answer to its own question.
+Neutral's `--intent-contrast` is `--color-text`.
 
 The `-contrast` / `-hover` / `-subtle` / `-strong` suffixes are consistent across
 all six color families, and that is the single best property of the current token
@@ -196,11 +202,20 @@ build an intent the package does not ship.
 | `--intent-strong`   | High-emphasis tone; readable text on subtle surfaces. | KEEP    |
 | `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.        | KEEP    |
 | `--intent-border`   | Line color; the quiet border gray with no intent set. | KEEP    |
+| _(none at survey)_  | How far a fill of this intent may go.                 | ADD     |
 
-This layer has no findings. Six slots, seven intent classes, zero per-component
-branching, and the `:where()` reset that keeps intent from cascading is the one
-mechanism in the package that has held up under everything asked of it. It
-carries into 0.1.0 unchanged.
+One finding, and it surfaced after the survey rather than in it. Six slots, seven
+intent classes, zero per-component branching, and the `:where()` reset that keeps
+intent from cascading is the one mechanism in the package that has held up under
+everything asked of it. The shape carries into 0.1.0; the count does not.
+
+0.1.0 adds `--intent-fill-max`, a seventh slot, because two of the six were doing
+two jobs each. `--intent-color` was both the ground a fill is made of and the ink
+an unfilled component prints in, and no single grey satisfies both -- the neutral
+intent has to be the page's ink at the tint end and something much quieter at
+100%. Splitting the ink onto `--intent-strong`, which already meant "readable on
+a subtle fill", took care of the text; the cap takes care of the fill. See
+[Architecture](./architecture.md#intent-tokens).
 
 One change of ownership, not of shape: `--intent-border` currently defaults to
 `--color-border` inside the shared reset, and `neobrutalism.css` overrides it

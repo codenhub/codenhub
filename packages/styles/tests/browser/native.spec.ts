@@ -105,14 +105,15 @@ test("applies intent classes to classless native elements", async ({ page }) => 
   await page.goto(NATIVE_URL);
 
   const styles = await page.evaluate(() => {
-    const resolveToken = (tokenName: string) => {
+    const resolveColor = (value: string) => {
       const probe = document.createElement("span");
-      probe.style.color = `var(--color-${tokenName})`;
+      probe.style.color = value;
       document.body.append(probe);
       const color = getComputedStyle(probe).color;
       probe.remove();
       return color;
     };
+    const resolveToken = (tokenName: string) => resolveColor(`var(--color-${tokenName})`);
 
     const host = document.createElement("div");
     host.innerHTML = `
@@ -128,9 +129,11 @@ test("applies intent classes to classless native elements", async ({ page }) => 
       intentButtonBg: getComputedStyle(host.querySelector("button.destructive")!).backgroundColor,
       keyboardText: getComputedStyle(host.querySelector("kbd")!).color,
       plainButtonBg: getComputedStyle(host.querySelector("button:not(.destructive)")!).backgroundColor,
+      neutralFill: resolveColor(
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+      ),
       tokenDestructive: resolveToken("destructive"),
       tokenSuccess: resolveToken("success"),
-      tokenText: resolveToken("text"),
       tokenWarningStrong: resolveToken("warning-strong"),
     };
 
@@ -140,7 +143,9 @@ test("applies intent classes to classless native elements", async ({ page }) => 
   });
 
   expectSameColor(styles.intentButtonBg, styles.tokenDestructive, "native button intent background");
-  expectSameColor(styles.plainButtonBg, styles.tokenText, "native button neutral background");
+  /* A `<button>` nobody has styled is the most visible element in the package, and
+     the neutral cap is what keeps it a quiet plate instead of a slab of ink. */
+  expectSameColor(styles.plainButtonBg, styles.neutralFill, "native button neutral background");
   expectSameColor(styles.inputBorder, styles.tokenSuccess, "native input intent border");
   expectSameColor(styles.keyboardText, styles.tokenWarningStrong, "native kbd intent text");
 });

@@ -150,6 +150,20 @@ export const getColorDistance = (left: string, right: string) => {
 
 export const isTransparent = (color: string) => readSrgb(color).alpha === 0;
 
+/* An intent that caps its fill paints a translucent background, so what a reader
+   sees is the fill composited over whatever is behind it. Measuring contrast
+   against the declared colour instead reports the ratio of a colour against
+   itself -- 1.00 -- for a neutral component that is in fact perfectly legible.
+   Tests that measure a capped fill flatten it first. */
+export const flattenColor = (color: string, ground: string) => {
+  const top = readSrgb(color);
+  const bottom = readSrgb(ground);
+  const composite = (channel: "blue" | "green" | "red") =>
+    Math.round(top[channel] * top.alpha + bottom[channel] * (1 - top.alpha));
+
+  return `rgb(${composite("red")} ${composite("green")} ${composite("blue")})`;
+};
+
 const getRelativeLuminance = ({ blue, green, red }: LinearColor) => 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 
 export const getContrastRatio = (foreground: string, background: string) => {

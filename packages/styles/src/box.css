@@ -14,12 +14,42 @@
    component's file next to its geometry. They are the only per-component input
    this file takes; everything else is the three axes. */
 @utility box {
-  /* Presentation, resolved against this component's own registry default. */
-  --_fill: calc(var(--ui-fill, var(--_d-fill)) * var(--ui-bg-alpha, 1));
-  --_hover-fill: calc(min(100%, var(--ui-fill, var(--_d-fill)) + var(--hover-step)) * var(--ui-bg-alpha, 1));
+  /* Presentation, resolved against this component's own registry default, then
+     capped by how far the intent lets a fill go.
+
+     The cap exists for one intent. A hue is legible at both ends of the fill
+     range: pale at 12%, saturated at 100%. Grey is not -- neutral's colour is
+     the page's ink, so 12% is the tint every neutral badge and panel is made of
+     while 100% is a black or white slab, which makes the intent that means
+     *nothing in particular* the loudest thing the package can draw. One colour
+     cannot serve both, so the intent says where its own fill stops instead, and
+     neutral stops early. Everything else leaves it at 100% and computes exactly
+     as it did before.
+
+     The cap lands before the hover step rather than after it, so a capped
+     intent still deepens when you hover it. Capping afterwards would pin rest
+     and hover to the same value and silently remove the feedback. */
+  --_capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+  --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
+  --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
 
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
-  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-color));
+  /* The ink end is `--intent-strong` and not `--intent-color`, because the two
+     ends of this mix are answering different questions. `--intent-contrast` is
+     a colour to print *on* the fill; the other end is a colour to print on the
+     page, and `--intent-strong` is the slot for exactly that -- "readable text,
+     icon, or border on subtle fills".
+
+     Reading `--intent-color` here made every colour do double duty as both a
+     ground and an ink, which is what forced neutral's hand: it had to be the
+     page's ink so a bare card's body copy was legible, and that left `.solid`
+     no choice but the slab. It also printed bare and soft components in the
+     mid-tone base -- amber-600 on a white page is 3.1:1 -- where the strong
+     tone is the one picked to be read.
+
+     `kbd`, `code` and `pre` already wrote this mix by hand for their own tinted
+     grounds. They no longer have to. */
+  --_fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-strong));
   /* P3: the line blends toward the fill by the fill amount, so a filled box has
      a seamless edge instead of a stray ring of another colour.
 

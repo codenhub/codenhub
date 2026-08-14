@@ -343,11 +343,14 @@ test.describe("feedback", () => {
     await page.goto(FEEDBACK_URL);
 
     const values = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--color-text)";
-      document.body.append(probe);
-      const tokenText = getComputedStyle(probe).color;
-      probe.remove();
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
 
       const read = (testId: string, pseudo?: string) =>
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, pseudo);
@@ -356,12 +359,16 @@ test.describe("feedback", () => {
         alertFg: read("alert-default-none").color,
         badgeFg: read("badge-default-none").color,
         progressBg: read("progress-default-none", "::after").backgroundColor,
-        tokenText,
+        tokenText: resolveToken("text"),
+        tokenTextStrong: resolveToken("text-strong"),
       };
     });
 
-    expectSameColor(values.alertFg, values.tokenText, "no-intent alert text");
-    expectSameColor(values.badgeFg, values.tokenText, "no-intent badge text");
+    /* Text on a page is the strong tone, which for the neutral intent is the ink.
+       A progress fill is not text: it takes `--intent-color` directly, because an
+       indicator is a shape rather than something to read. */
+    expectSameColor(values.alertFg, values.tokenTextStrong, "no-intent alert text");
+    expectSameColor(values.badgeFg, values.tokenTextStrong, "no-intent badge text");
     expectSameColor(values.progressBg, values.tokenText, "no-intent progress fill");
   });
 

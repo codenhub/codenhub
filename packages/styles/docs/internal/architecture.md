@@ -52,7 +52,7 @@ things:
 | **Emphasis** | `.primary` `.secondary`                                         | How much it matters on this page.               |
 | _Neutral_    | `.neutral`, or no class                                         | Neither; the default every component resets to. |
 
-They are one axis rather than two because they write the same six slots, so
+They are one axis rather than two because they write the same seven slots, so
 exactly one of them can apply. That is worth stating plainly, because the
 boundary reads as blurry until you notice it is a single slot: there is no way to
 express "the primary action, which is also destructive". You pick.
@@ -190,18 +190,26 @@ component. A row carrying its own intent class still wins.
 Set by intent classes, read by components. Public: consumers may set them
 directly to build an intent the package does not ship.
 
-| Token               | Meaning                                               |
-| ------------------- | ----------------------------------------------------- |
-| `--intent-color`    | The intent's base color.                              |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.   |
-| `--intent-hover`    | The intent's hovered base color.                      |
-| `--intent-strong`   | High-emphasis tone; readable text on subtle surfaces. |
-| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.        |
-| `--intent-border`   | Line color; the border gray when no intent is set.    |
+| Token               | Meaning                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.          |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.       |
+| `--intent-hover`    | The intent's hovered base color.                          |
+| `--intent-strong`   | The intent printed on a page, wherever a fill is partial. |
+| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.            |
+| `--intent-fill-max` | How far a fill of this intent may go. 100% but neutral.   |
+| `--intent-border`   | Line color; the border gray when no intent is set.        |
 
-Intent classes map a `--color-*` family onto these six slots and do nothing
-else. Adding an intent is six declarations; adding a component that supports
+Intent classes map a `--color-*` family onto these seven slots and do nothing
+else. Adding an intent is seven declarations; adding a component that supports
 every intent is zero.
+
+Every intent writes every slot, including `--intent-fill-max`, whose value is
+`100%` for six of the seven. Six identical declarations look like boilerplate
+worth deleting and are not: the reset writes neutral's cap onto every component
+root, so an intent that omits the slot silently inherits a limit it never asked
+for. `tests/integration/registry.test.ts` fails the build on an intent missing a
+slot, which is what makes this a rule rather than a habit.
 
 `--intent-border` is separate from `--intent-color` because a neutral border
 must stay the quiet border gray rather than the text color. Without it, every
@@ -211,6 +219,22 @@ Neutral maps `--intent-subtle` to `--color-surface` rather than
 `--color-text-subtle`. The tinted surface a neutral component sits on is the
 surface token, and tooltips, key caps, code, table heads, and skeletons all read
 that slot for their resting background.
+
+`--intent-fill-max` exists for the same intent and the same reason: neutral's
+color is the page's ink, which it has to be, because that ink is the text of
+every unfilled component. A hue survives the whole fill range -- pale at 12%,
+saturated at 100% -- and a grey does not: 100% of the ink is a black or white
+slab. Filled neutral was pixel for pixel filled primary in the shipped theme,
+and louder than every semantic intent. The cap lets one token stay the ink at
+the tint end while `.solid` stops at a quiet plate, which is the only way to get
+both out of a single color.
+
+`--intent-color` and `--intent-strong` divide the other half of that problem.
+The base is a ground and the strong tone is an ink; `box` reads the base for a
+fill and the strong tone for text, so a bare component prints the tone chosen to
+be read rather than the tone chosen to be filled with. This is also what closed
+the soft and bare contrast gaps on the semantic intents, which sat near 3:1
+while printing their mid-tone base on a white page.
 
 A composed `box-shadow` must not fall back to `none`. `none` is valid only as an
 entire value, so `<shadow>, none` is invalid and drops the whole declaration,

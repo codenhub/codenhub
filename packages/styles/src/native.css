@@ -21,11 +21,12 @@
    chip are the same component reached two ways. */
 :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
   --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
+  --intent-contrast: var(--color-text);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);
   --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 20%;
 }
 
 :where(hr) {

@@ -85,10 +85,18 @@ for the terms on which they return.
 
 ## Later / Possible
 
-- **WCAG AA text contrast**: Raise filled success and warning component text
+- **WCAG AA text contrast**: Raise _filled_ success and warning component text
   contrast to WCAG 1.4.3's 4.5:1 threshold for normal text. Their current
   neutral-50 foreground over emerald-600 and amber-600 backgrounds reaches only
   about 3.5:1 and 3.1:1; the browser test currently enforces 3:1.
+
+  The unfilled half of this is done. `box` prints `--intent-strong` rather than
+  `--intent-color` wherever a fill is partial, which took soft and bare success
+  and warning text from roughly 3.5:1 and 3.1:1 to 7.3:1 and 6.8:1 in light, and
+  past 15:1 in dark. What is left is the filled case, where the contrast tone
+  sits on the saturated base and neither is free to move without changing what
+  the intent looks like.
+
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
   matrix has stopped moving, because the two would otherwise drift. It waits on

@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
+import {
+  expectSameColor,
+  flattenColor,
+  getColorDistance,
+  getContrastRatio,
+  isTransparent,
+  readSrgb,
+} from "./test-utils";
 
 const TYPOGRAPHY_URL = "http://localhost:5184/typography/?env=vanilla";
 
@@ -73,6 +80,7 @@ test("prints a quotation's attribution in the quotation's own colour", async ({ 
           background: quoteStyles.backgroundColor,
           cite: getComputedStyle(quote.querySelector("cite")!).color,
           label: quote.className,
+          page: getComputedStyle(document.body).backgroundColor,
           quote: quoteStyles.color,
           solid: quote.classList.contains("solid"),
         };
@@ -85,14 +93,16 @@ test("prints a quotation's attribution in the quotation's own colour", async ({ 
     expectSameColor(quote.cite, quote.quote, `${quote.label} cite`);
   }
 
-  /* A filled quotation is the case the pin broke, and the only one where the
-     ground is opaque enough to measure a ratio against. The threshold is the 3:1
-     the filled components are held to elsewhere. */
+  /* A filled quotation is the case the pin broke. Its ground is not necessarily
+     opaque -- a neutral fill stops at its intent's cap -- so the ratio is taken
+     against the ground composited over the page, which is what a reader sees.
+     The threshold is the 3:1 the filled components are held to elsewhere. */
   const filled = quotes.filter((quote) => quote.solid);
   expect(filled.length).toBeGreaterThan(0);
 
   for (const quote of filled) {
-    expect(getContrastRatio(quote.cite, quote.background), `${quote.label} cite`).toBeGreaterThanOrEqual(3);
+    const ground = flattenColor(quote.background, quote.page);
+    expect(getContrastRatio(quote.cite, ground), `${quote.label} cite`).toBeGreaterThanOrEqual(3);
   }
 });
 

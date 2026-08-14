@@ -45,7 +45,7 @@ interface Registry {
     edge: Record<string, { "ui-border": string }>;
     hoverStep: string;
   };
-  intents: Record<string, { family: string; aliases?: string[] }>;
+  intents: Record<string, { aliases?: string[]; family: string; fillMax: string }>;
   modifiers: Record<string, unknown>;
   components: ComponentEntry[];
   helpers?: string[];
@@ -629,12 +629,20 @@ test("every aesthetic declares a whole shadow geometry", async () => {
 /* `family` is the only record that `.secondary` maps onto the accent palette
    rather than a `--color-secondary-*` family that does not exist, and the
    browser suite hard-codes the same mapping. Held against the stylesheet so the
-   registry cannot drift from the six slots an intent actually declares. */
-test("every intent maps onto the color family the registry names", async () => {
+   registry cannot drift from the slots an intent actually declares.
+
+   `fillMax` is checked the same way, and it is what makes this test a mechanism
+   rather than a record. Six intents declare `100%`, which is also what `box`
+   falls back to, so omitting the slot looks harmless while reading -- and is
+   not: the reset writes neutral's cap onto every component root, so an intent
+   that leaves the slot alone inherits a limit it never asked for and quietly
+   loses most of its fill. The symptom is a slightly pale button, which is
+   exactly the kind of thing that ships. */
+test("every intent maps onto the color family and fill cap the registry names", async () => {
   const intent = await read("src/intent.css");
   const problems: string[] = [];
 
-  for (const [name, { family }] of Object.entries(registry.intents)) {
+  for (const [name, { family, fillMax }] of Object.entries(registry.intents)) {
     const block = intent.match(new RegExp(String.raw`(^|\n)\.${name}(?![A-Za-z0-9_-])[^{]*` + `{([^}]*)}`));
 
     if (block === null) {
@@ -643,6 +651,34 @@ test("every intent maps onto the color family the registry names", async () => {
     }
     if (!block[2].includes(`--intent-color: var(--color-${family})`)) {
       problems.push(`.${name} should map --intent-color onto --color-${family}`);
+    }
+    if (!block[2].includes(`--intent-fill-max: ${fillMax}`)) {
+      problems.push(`.${name} should declare --intent-fill-max: ${fillMax}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* Both resets stand in for a missing intent class, so they owe every slot an
+   intent class writes. A slot missing from one of them is an undefined `var()`
+   inside whichever `color-mix()` reads it, and that declaration collapses to its
+   initial value without reporting anything. */
+test("both intent resets declare every slot the neutral intent declares", async () => {
+  const sources = { "intent.css": await read("src/intent.css"), "native.css": await read("src/native.css") };
+  const neutral = sources["intent.css"].match(/\n\.neutral[^{]*{([^}]*)}/)![1];
+  const slots = [...neutral.matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
+  const problems: string[] = [];
+
+  expect(slots.length).toBeGreaterThan(0);
+
+  for (const [file, source] of Object.entries(sources)) {
+    const reset = source.match(/:where\([^)]*\)\s*{([^}]*--intent-color[^}]*)}/)![1];
+
+    for (const slot of slots) {
+      if (!reset.includes(`${slot}:`)) {
+        problems.push(`the intent reset in ${file} is missing ${slot}`);
+      }
     }
   }
 
