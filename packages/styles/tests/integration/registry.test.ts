@@ -339,41 +339,30 @@ async function shippedUtilities(): Promise<Map<string, string>> {
   return blocks;
 }
 
-/* Extracts declarations from the root level of a utility block, excluding any
-   nested selectors (e.g., &:hover, &:focus) and nested at-rules. Returns only
-   the declarations that appear directly in the utility's own rule body. */
-function getRootDeclarations(block: string): string {
-  let result = "";
+/* A utility's own declarations, with every nested selector and at-rule dropped.
+   The two guards below ask what a component declares at rest, and `&:hover`,
+   `&.compact` and `&.interactive` all sit inside the same block, so a component
+   setting its fill only on hover would otherwise read as having declared it.
+   `shippedUtilities` slices from the opening brace, so the walk starts past it. */
+function rootDeclarations(block: string): string {
+  let root = "";
   let depth = 0;
-  let i = 1; // Skip opening brace
 
-  while (i < block.length) {
-    const char = block[i];
+  for (let index = 1; index < block.length; index += 1) {
+    const char = block[index];
 
     if (char === "{") {
       depth += 1;
-      i += 1;
-      continue;
-    }
-
-    if (char === "}") {
+    } else if (char === "}") {
       if (depth === 0) {
-        break; // End of root block
+        break;
       }
       depth -= 1;
-      i += 1;
-      continue;
+    } else if (depth === 0) {
+      root += char;
     }
-
-    // Only collect content at depth 0 (root level)
-    if (depth === 0) {
-      result += char;
-    }
-
-    i += 1;
   }
-
-  return result;
+  return root;
 }
 
 /* Shared composition rather than components: they are `@utility` so `@apply` can
@@ -457,14 +446,14 @@ test("every composition utility that takes box states its resting geometry", asy
     if (name === "box" || block === undefined) {
       continue;
     }
-    const rootDeclarations = getRootDeclarations(block);
-    const applied = [...rootDeclarations.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
+    const root = rootDeclarations(block);
+    const applied = [...root.matchAll(/@apply ([^;]*);/g)].flatMap(([, list]) => list.trim().split(/\s+/));
 
     if (!applied.includes("box")) {
       continue;
     }
     for (const slot of ["--_d-fill", "--_d-fg-on-fill", "--_d-border"]) {
-      if (!rootDeclarations.includes(`${slot}:`)) {
+      if (!root.includes(`${slot}:`)) {
         problems.push(`${name} should declare ${slot}`);
       }
     }
@@ -481,19 +470,20 @@ test("a component states its resting geometry after the composition it applies",
   const utilities = await shippedUtilities();
   const slots = ["--_d-fill", "--_d-fg-on-fill", "--_d-border"];
   const declaring = [...composition].filter((name) => {
-    const rootDeclarations = utilities.get(name);
-    return slots.some((slot) => rootDeclarations?.includes(slot + ":") === true);
+    const block = utilities.get(name);
+
+    return block !== undefined && slots.some((slot) => rootDeclarations(block).includes(slot + ":"));
   });
   const problems: string[] = [];
 
   for (const [name, block] of utilities) {
-    const rootDeclarations = getRootDeclarations(block);
+    const root = rootDeclarations(block);
 
     for (const applied of declaring) {
       if (name === applied) {
         continue;
       }
-      const at = [...rootDeclarations.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
+      const at = [...root.matchAll(/@apply ([^;]*);/g)].find(([, list]) =>
         list.trim().split(/\s+/).includes(applied),
       )?.index;
 
@@ -501,7 +491,7 @@ test("a component states its resting geometry after the composition it applies",
         continue;
       }
       for (const slot of slots) {
-        const own = rootDeclarations.indexOf(slot + ":");
+        const own = root.indexOf(slot + ":");
 
         if (own !== -1 && own < at) {
           problems.push(`${name} declares ${slot} above its @apply ${applied}`);
@@ -512,53 +502,25 @@ test("a component states its resting geometry after the composition it applies",
   expect(problems).toEqual([]);
 });
 
-/* Demonstrates that getRootDeclarations correctly excludes geometry declared
-   only inside nested selectors. Without restricting to root declarations, such
-   utilities would incorrectly appear to declare their geometry. */
-test("getRootDeclarations excludes nested selector geometry", () => {
-  const validBlock = `{
-    @apply box;
-    --_d-fill: 100%;
+/* The two guards above are only as good as the walk that feeds them, and it is
+   a hand-rolled brace counter over text. One block carries all three cases: a
+   slot at the root, a slot nested inside a selector, and a slot at the root
+   after that nesting closes -- which is where an off-by-one in the depth count
+   shows up. A silent bug here weakens both guards without failing anything. */
+test("the root walk keeps a component's own declarations and drops its nested ones", () => {
+  const root = rootDeclarations(`{
+  @apply box;
+  --_d-fill: 100%;
+  &:hover {
     --_d-fg-on-fill: 100%;
-    --_d-border: 100%;
-  }`;
+  }
+  --_d-border: 100%;
+}`);
 
-  const nestedOnlyBlock = `{
-    @apply box;
-    &:hover {
-      --_d-fill: 100%;
-      --_d-fg-on-fill: 100%;
-      --_d-border: 100%;
-    }
-  }`;
-
-  const mixedBlock = `{
-    @apply box;
-    --_d-fill: 100%;
-    &:hover {
-      --_d-fg-on-fill: 100%;
-    }
-    --_d-border: 100%;
-  }`;
-
-  const validRoot = getRootDeclarations(validBlock);
-  const nestedOnlyRoot = getRootDeclarations(nestedOnlyBlock);
-  const mixedRoot = getRootDeclarations(mixedBlock);
-
-  // Valid block should have all three slots
-  expect(validRoot.includes("--_d-fill:")).toBe(true);
-  expect(validRoot.includes("--_d-fg-on-fill:")).toBe(true);
-  expect(validRoot.includes("--_d-border:")).toBe(true);
-
-  // Nested-only block should have none of the slots in root
-  expect(nestedOnlyRoot.includes("--_d-fill:")).toBe(false);
-  expect(nestedOnlyRoot.includes("--_d-fg-on-fill:")).toBe(false);
-  expect(nestedOnlyRoot.includes("--_d-border:")).toBe(false);
-
-  // Mixed block should have only the root-level slots
-  expect(mixedRoot.includes("--_d-fill:")).toBe(true);
-  expect(mixedRoot.includes("--_d-fg-on-fill:")).toBe(false);
-  expect(mixedRoot.includes("--_d-border:")).toBe(true);
+  expect(root).toContain("@apply box;");
+  expect(root).toContain("--_d-fill:");
+  expect(root, "declared only on hover").not.toContain("--_d-fg-on-fill:");
+  expect(root, "after the nesting closes").toContain("--_d-border:");
 });
 
 /* R7. Elevation multiplies every shadow length, and `calc(0 * 1)` is a number

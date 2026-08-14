@@ -435,13 +435,13 @@ test.describe("forms", () => {
     });
 
     expect(uncovered.content, "the wrapper still generates the box").not.toBe("none");
-    expect(uncovered.mask, "an uncovered control masks the box away").not.toBe("none");
-    /* The fallback mask must be transparent, not merely non-none, so the box does
-       not paint as a solid square. Check the gradient contains transparent stops. */
-    expect(
-      uncovered.mask.includes("transparent") || uncovered.mask.includes("rgba(0, 0, 0, 0)") || uncovered.mask.includes("rgba(0,0,0,0)"),
-      "fallback mask gradient is transparent"
-    ).toBe(true);
+    /* Pinned rather than merely not `none`. The contract is that the box is
+       masked away, and an opaque fallback would satisfy `not none` while painting
+       the solid square this test exists to catch. All three engines serialise the
+       transparent gradient identically. */
+    expect(uncovered.mask, "an uncovered control masks the box away").toBe(
+      "linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0))",
+    );
   });
 
   test("reserves room for a field icon only when the control opts in", async ({ page }) => {
