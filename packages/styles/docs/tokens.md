@@ -60,6 +60,7 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 | `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.            |
 | `--color-border`               | Default border color.                                                                                         |
 | `--color-border-hover`         | Interactive border color.                                                                                     |
+| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                         |
 | `--color-background`           | Page and default raised surface background.                                                                   |
 | `--color-foreground`           | Subtle raised foreground surface.                                                                             |
 | `--color-surface`              | Nested or muted surface.                                                                                      |
@@ -183,7 +184,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--elevation-mid`           | Elevation for raised components such as dropdowns, tooltips, and popovers. |
 | `--elevation-high`          | Elevation for full overlays such as modal dialogs.                         |
 | `--focus-ring`              | Focus-visible ring color.                                                  |
-| `--focus-ring-offset`       | Focus-visible outline offset.                                              |
+| `--focus-ring-offset`       | Focus-visible outline offset. Negative, so the ring lands on the edge.     |
 | `--focus-ring-width`        | Focus-visible outline/ring width.                                          |
 | `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).              |
 | `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                         |

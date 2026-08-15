@@ -386,8 +386,8 @@ component-scoped variables:
 ```
 
 A component may clamp a token it cannot honor, under P3. Text controls and toggles
-cap their fill with `min(var(--ui-fill, 0%), 12%)`, so a `.flat` container cannot
-put typed text on a saturated background. Clamping resolves from the value alone
+cap their fill with `min(var(--ui-fill, 0%), 6%)`, so a container's `.solid`
+cannot put typed text on a saturated background. Clamping resolves from the value alone
 and needs no per-presentation selector, which keeps the component free of axis
 branching.
 
@@ -472,6 +472,105 @@ Both branches live in `components/form.css` alone. `native.css` maps a bare
 `input[type="date"]` to `.ipt` and stops there, the same as every other type: the
 mapping has no class in which to write an opt-in, so a native date field draws
 its own picker button and nothing of ours.
+
+### The focus ring a layer took away
+
+`text-control` carried `&:focus { @apply outline-none }`, which reads as "no ring
+when the control is clicked". It did more than that. A rule nested inside
+`@utility` lands in `@layer utilities`; `reset.css` declares its `:focus-visible`
+outline in `@layer base`; utilities beat base whatever the specificity. The
+declaration suppressed the keyboard ring along with the pointer one, and a text
+control became the only classed thing in the package that focused with no ring at
+all -- the same trap that had already killed `[aria-invalid]`.
+
+Nothing replaced it, because nothing had to. `reset.css` styles `:focus-visible`
+and not `:focus`, so a click never draws a ring on its own and the rule was
+guarding against something that could not happen. Deleting it is the whole fix.
+The line still moves to the intent on focus, which is now a second signal rather
+than the only one.
+
+An aesthetic that clips cannot show an outline, and that case was already handled:
+`--ui-focus-inset` swaps the outline for an inset ring layer, and `pixel.css`
+declares it. Restoring the ring on text controls puts them where buttons already
+were under every aesthetic.
+
+### What a text control's fill cap is for, and what it costs
+
+The cap exists because presentation cascades: `.solid` on a toolbar reaches an
+input nobody classed, and an input filled 100% with the text color has text the
+color of its own background. It was 12%.
+
+12% is also exactly what `.soft` asks for, which meant `min()` handed `.solid` and
+`.soft` the same tint. Three fill names rendered two boxes, and since the edge
+floor already makes `.edged` and `.edgeless` inert on a control, presentation had
+one working value out of five.
+
+The cap is 6% now, and it governs `.solid` and the cascade rather than every
+fill: `.soft` written on the element names the tint it wants and takes it whole,
+because a consumer naming a tint is not the case the bound was written for. So
+`.soft` is the heavier wash of the two, which inverts their usual relationship
+and is the look that was asked for.
+
+### The resting line is a fraction, so the pointer has somewhere to go
+
+Hover on a text control replaces `--intent-border` with `--intent-hover`. Drawn at
+full strength that reads as almost nothing on a colored intent, because
+`--color-success` and `--color-success-hover` are one step apart in the palette.
+Only the neutral family looked right, and by accident: its resting tone is a
+border token and its hover is the text one, which are two places apart rather
+than one.
+
+`--_line-rest` is the fix. A text control rests at 60% of its intent and takes
+the tone whole on hover and on focus, so the line **arrives** rather than shifts.
+Measured against the page, flattened:
+
+| intent      | rest   | hover  |
+| ----------- | ------ | ------ |
+| none        | 2.25:1 | 9.93:1 |
+| primary     | 5.18:1 | 9.93:1 |
+| secondary   | 2.87:1 | 9.93:1 |
+| success     | 2.10:1 | 3.95:1 |
+| warning     | 1.95:1 | 3.50:1 |
+| destructive | 3.26:1 | 6.11:1 |
+| info        | 2.87:1 | 6.70:1 |
+
+`.checkbox`, `.radio`, and `.switch` set it back to 100%. Their line is a
+silhouette rather than a field's edge, and an unchecked box has nothing else
+marking it.
+
+The cost is that a resting control boundary no longer clears the 3:1 of WCAG
+1.4.11 on most intents. `--color-control-border` is neutral-500 -- a tone that
+does clear it, on both grounds at once -- and the fraction is what takes it back
+under. The quieter field was chosen with the number known. Recorded in
+docs/accessibility.md.
+
+### `.soft` drops its line, and what that costs
+
+On the three text inputs, `.soft` draws no line at rest, on hover, or on focus.
+That is a fill class deciding an edge, which the axes forbid, and it is a
+deliberate exception recorded rather than derived.
+
+The cost is measurable and was measured before the decision. A borderless field
+identifies itself by its tint alone, and a 12% tint is 1.31:1 against the page
+where WCAG 1.4.11 asks a control boundary for 3:1. The tint would need about 44%
+fill to carry that on its own, which is not a field any more. So `.soft` does not
+meet 1.4.11 at rest, by choice: it is an opt-in presentation, never the default,
+and a consumer who needs the boundary uses the two that keep it.
+
+Three bounds keep the exception from spreading, and each is asserted:
+
+- **The class on the element, never a container's.** A `.soft` toolbar tints the
+  fields inside it and leaves their lines alone. The cascade case is precisely
+  what the edge floor was written for, and it is untouched.
+- **Text inputs only.** `.checkbox`, `.radio`, and `.switch` are excluded by name.
+  A toggle with no line has no silhouette at all, and the switch already answers
+  `.soft` its own way.
+- **Focus still shows.** The ring from `reset.css` had to be restored before this
+  could land -- a borderless field with the ring suppressed would have had no
+  focused state whatsoever.
+
+Hover moves to the fill, stepping to the cap, because the line is not there to
+answer the pointer.
 
 ### Input icons are painted by the control
 

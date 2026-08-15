@@ -121,7 +121,13 @@ test("applies intent classes to classless native elements", async ({ page }) => 
         `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
       ),
       tokenDestructive: resolveToken("destructive"),
-      tokenSuccess: resolveToken("success"),
+      /* At the fraction a text control rests its line at, not the whole tone: a
+         field rests quiet so the pointer has somewhere to go, and comparing
+         against the whole tone reports that as the wrong color rather than a
+         lighter one. */
+      tokenSuccess: resolveColor(
+        `color-mix(in oklab, var(--color-success) ${getComputedStyle(host.querySelector("input")!).getPropertyValue("--_line-rest").trim()}, transparent)`,
+      ),
       tokenWarningStrong: resolveToken("warning-strong"),
     };
 

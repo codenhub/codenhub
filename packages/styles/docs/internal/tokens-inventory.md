@@ -166,7 +166,7 @@ set: adding an intent really is five declarations. Keep the shape exactly.
 | `--elevation-mid`           | two-layer shadow       | Hovered card, tooltip bubble.             | KEEP    |
 | `--elevation-high`          | two-layer shadow       | Unread; third rung of a public scale.     | KEEP    |
 | `--focus-ring`              | primary at 64%         | Focus ring color.                         | KEEP    |
-| `--focus-ring-offset`       | 2px                    | Outline offset.                           | KEEP    |
+| `--focus-ring-offset`       | `-1 * --border-width`  | Outline offset; negative, over the edge.  | KEEP    |
 | `--focus-ring-width`        | 3px                    | Outline width.                            | KEEP    |
 | `--motion-duration-fast`    | 120ms                  | Row hover and other cheap transitions.    | KEEP    |
 | `--motion-duration-normal`  | 200ms                  | Standard transition.                      | KEEP    |
@@ -427,17 +427,18 @@ to drive a determinate progress bar and appears only in an example.
 
 ## Findings
 
-| #   | Finding                                                                       | Where it lands                     |
-| --- | ----------------------------------------------------------------------------- | ---------------------------------- |
-| T1  | 228 tokens, no naming distinction between contract and scratch.               | `--_` prefix.                      |
-| T2  | 44 input-icon tokens encode 7 pictures; color is baked into the artwork.      | 14 tokens, no wrapper.             |
-| T3  | `--color-foreground` names a surface tone.                                    | Keep the name, document the wart.  |
-| T4  | `--color-text-subtle` is dead; `--elevation-high` is unread but load-bearing. | Delete the first, keep the second. |
-| T5  | `--border-width` vs `--ui-border-width` do not carry their layer distinction. | Rename the foundation one.         |
-| T6  | `--surface-hover-transform` duplicates a material slot.                       | Fold into the fallback.            |
-| T7  | Eleven components declare the same four-expression fill/bg/line/edge block.   | Role layer owns it.                |
-| T8  | Aesthetic ink reaches components only through component selector lists.       | `--ui-ink`.                        |
-| T9  | Aesthetic shadows cannot be colorless, so they cannot inherit.                | `--ui-shadow-*` parts.             |
+| #   | Finding                                                                             | Where it lands                     |
+| --- | ----------------------------------------------------------------------------------- | ---------------------------------- |
+| T1  | 228 tokens, no naming distinction between contract and scratch.                     | `--_` prefix.                      |
+| T2  | 44 input-icon tokens encode 7 pictures; color is baked into the artwork.            | 14 tokens, no wrapper.             |
+| T3  | `--color-foreground` names a surface tone.                                          | Keep the name, document the wart.  |
+| T4  | `--color-text-subtle` is dead; `--elevation-high` is unread but load-bearing.       | Delete the first, keep the second. |
+| T5  | `--border-width` vs `--ui-border-width` do not carry their layer distinction.       | Rename the foundation one.         |
+| T6  | `--surface-hover-transform` duplicates a material slot.                             | Fold into the fallback.            |
+| T7  | Eleven components declare the same four-expression fill/bg/line/edge block.         | Role layer owns it.                |
+| T8  | The control line is 1.42:1 against the light page; nothing else identifies a field. | `--color-control-border`.          |
+| T8  | Aesthetic ink reaches components only through component selector lists.             | `--ui-ink`.                        |
+| T9  | Aesthetic shadows cannot be colorless, so they cannot inherit.                      | `--ui-shadow-*` parts.             |
 
 T1, T5, and T6 are renames with no behavior change and can land first. T2,
 T7, T8, and T9 depend on the model doc and belong to the implementation waves.

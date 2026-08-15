@@ -117,8 +117,36 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
 
-  --_fill: calc(min(var(--ui-fill, var(--_d-fill)), 12%, var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
-  --_line: color-mix(in oklab, var(--intent-border) 100%, transparent);
+  /* The cap used to be 12%, which is exactly what `.soft` asks for, so `min()`
+     handed `.solid` and `.soft` the same tint and three fill names rendered two
+     boxes. 6% is a quiet wash, and it is the cap rather than a presentation:
+     `.soft` names the tint it wants and takes it whole below, so what this
+     governs is `.solid` and the container that cascades one onto a field nobody
+     classed.
+
+     Named rather than written into the `min()`, because the soft hover below is
+     derived from it and the two must not drift apart. Typed text is
+     `--intent-color` over a wash of its own tone, past 10:1 in both themes at
+     any value this cap is likely to take, so the bound still does what it was
+     written for. */
+  --_fill-cap: 6%;
+  --_fill: calc(
+    min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1)
+  );
+  /* The resting line is a fraction of the intent rather than all of it, and the
+     fraction is what makes the pointer visible. Drawn at full strength a control
+     already sits at its intent's darkest, and hover moves it to a neighbouring
+     tone -- `--color-primary` to `--color-primary-hover` is one step in the
+     palette, which reads as nothing. Only the neutral family looked right,
+     because its resting tone is a border token and its hover is the text one,
+     two places apart.
+
+     Resting at 60% gives every intent that distance: hover and focus both take
+     the tone whole, so the line arrives rather than shifts. A toggle sets this
+     back to 100% -- its line is a silhouette rather than a field's edge, and
+     there is nothing else marking an unchecked box. */
+  --_line-rest: 60%;
+  --_line: color-mix(in oklab, var(--intent-border) var(--_line-rest), transparent);
   --_edge: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line));
   --_fg: var(--intent-color);
 
@@ -134,10 +162,18 @@
     --_line: color-mix(in oklab, var(--intent-hover) 100%, transparent);
   }
 
-  &:focus {
-    @apply outline-none;
-  }
+  /* The focus ring is the one in `reset.css`, and it took a layer bug to lose
+     it. This block used to be `&:focus { @apply outline-none }`, which reads as
+     "no outline when clicked" -- but a rule nested in `@utility` lands in the
+     utilities layer, `reset.css` declares `:focus-visible` in `@layer base`, and
+     utilities beat base. It suppressed the keyboard ring along with the mouse
+     one, and a text control was the only classed thing in the package focusing
+     with no ring at all. The same trap as the invalid rule above.
 
+     Nothing replaces it, because nothing has to: `reset.css` styles
+     `:focus-visible` alone, so a click never draws a ring on its own. The line
+     still moves to the intent on top of it, which is a second signal rather than
+     the only one. */
   &:focus-visible {
     --_line: var(--intent-color);
   }
@@ -172,6 +208,42 @@
     pointer-events: none;
     width: 0;
     height: 0;
+  }
+}
+
+/* `.soft` on a text input is a tint and nothing else -- no line at rest, on
+   hover, or on focus. That is a fill class deciding an edge, which the axes say
+   it may not do, and it is a deliberate exception rather than an oversight: the
+   three fills are told apart by the tint and the line together, and `.soft` is
+   the one that reads as a field sunk into the page rather than drawn on it.
+
+   The edge floor still holds everywhere it was written to. This lists the three
+   text inputs and the bare utility by name, so `.checkbox`, `.radio`, and
+   `.switch` are untouched -- a toggle with no line has no silhouette at all, and
+   the switch already answers `.soft` its own way. It also matches the class on
+   the element and never a container's, so a `.soft` toolbar still tints the
+   fields inside it and leaves their lines alone: the cascade case is the one the
+   floor exists for.
+
+   What carries focus here is the ring from `reset.css`, which is why it had to
+   come back before this could land. A borderless field with the ring suppressed
+   would have had no focused state at all.
+
+   Hover is the fill instead of the line, because the line is gone and something
+   has to answer the pointer. Twice the cap rather than a number of its own, so
+   the step stays proportional whatever the cap is retuned to. */
+:is(.text-control, .ipt, .textarea, .select).soft {
+  --_edge: transparent;
+
+  /* The published `.soft` fill, taken whole. The cap below it exists to stop a
+     container's `.solid` from filling a field nobody classed, and `.soft` on the
+     element is not that case -- it is a consumer naming the tint they want. Only
+     `--intent-fill-max` still applies, because a neutral tint is the text color
+     and that one is ours to bound. */
+  --_fill: calc(min(var(--ui-fill, 12%), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
+
+  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled]) {
+    --_fill: calc(min(20%, var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   }
 }
 
@@ -386,6 +458,7 @@
 
   --_d-fill: 0%;
   --_d-fg-on-fill: 0%;
+  --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
 
@@ -436,6 +509,7 @@
 
   --_d-fill: 0%;
   --_d-fg-on-fill: 0%;
+  --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
 
@@ -499,6 +573,7 @@
 
   --_d-fill: 100%;
   --_d-fg-on-fill: 100%;
+  --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
 

@@ -1,8 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
+import {
+  expectSameColor,
+  flattenColor,
+  getColorDistance,
+  getContrastRatio,
+  isTransparent,
+  readSrgb,
+} from "./test-utils";
 
-const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
 
 test.describe("forms", () => {
@@ -18,11 +24,24 @@ test.describe("forms", () => {
     await page.goto(FORMS_URL);
 
     const values = await page.evaluate(() => {
+      /* Drawn at the same fraction the resting line takes, because that is what
+         the control paints -- comparing against the whole tone would report a
+         quiet destructive line as the wrong color rather than a lighter one. */
+      const control = document.createElement("input");
+
+      control.className = "ipt";
+      document.body.append(control);
+
       const probe = document.createElement("span");
-      probe.style.color = "var(--color-destructive)";
+
+      probe.style.setProperty("--_line-rest", getComputedStyle(control).getPropertyValue("--_line-rest"));
+      probe.style.color = "color-mix(in oklab, var(--color-destructive) var(--_line-rest), transparent)";
       document.body.append(probe);
+
       const destructive = getComputedStyle(probe).color;
+
       probe.remove();
+      control.remove();
 
       const host = document.querySelector('[data-testid="preview-root"]')!;
       const overridden = document.createElement("input");
@@ -82,15 +101,19 @@ test.describe("forms", () => {
       return result;
     });
 
-    /* `.solid` clamps to the same tint as `.soft` rather than a saturated fill. */
-    expectSameColor(styles.solid, styles.soft, "solid input clamps to the soft tint");
+    /* `.solid` clamps far below a saturated fill, and below `.soft` as well:
+       `.soft` names the tint it wants and takes it whole, while `.solid` is the
+       one a container can cascade onto a field nobody classed, so it is the one
+       the cap governs. */
+    expect(readSrgb(styles.solid).alpha, "solid input clamps").toBeLessThan(0.5);
+    expect(readSrgb(styles.solid).alpha, "and below the tint soft names").toBeLessThan(readSrgb(styles.soft).alpha);
     expect(getColorDistance(styles.solid, styles.default)).toBeGreaterThan(1);
     /* `.bare` is the published resting fill, so it lands on the default. */
     expectSameColor(styles.bare, styles.default, "bare input is the resting fill");
 
     /* The cascade case: the clamp and the edge floor both hold on an input that
        declared nothing itself. */
-    expectSameColor(styles.inheritedBackground, styles.soft, "inherited solid clamps");
+    expectSameColor(styles.inheritedBackground, styles.solid, "inherited solid clamps");
     expect(Number.parseFloat(styles.inheritedBorderWidth)).toBeGreaterThan(0);
     expect(isTransparent(styles.inheritedBorderColor)).toBe(false);
   });
@@ -145,32 +168,210 @@ test.describe("forms", () => {
       .toBeGreaterThan(2);
   });
 
-  /* Both tints are mixed toward `transparent`, so their strength is their alpha.
-     Comparing them against an opaque token instead would be dominated by that
-     alpha gap and report every tint as equally distant. */
-  test("caps a text control's tint at the published soft fill", async ({ page }) => {
+  /* Three fills, three boxes, told apart by the tint and the line together:
+     `.bare` fills nothing and draws a line, `.soft` tints and draws none,
+     `.solid` tints and draws one. The cap sits at or below what `.soft` asks
+     for, so the two tinted fills land on the same wash and the line is what
+     separates them -- which is why the line rule is asserted here rather than
+     left to the presentation table.
+
+     Alphas rather than colors, because every tint is mixed toward `transparent`
+     and its strength *is* its alpha. */
+  test("separates a text control's three fills by tint and by line", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const solidInput = await page
-      .getByTestId("ipt-solid-success")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
+    const read = await page.evaluate(() => {
+      const host = document.createElement("div");
 
-    await page.goto(FEEDBACK_URL);
+      host.innerHTML = `
+        <input class="ipt bare" type="text" />
+        <input class="ipt soft" type="text" />
+        <input class="ipt solid" type="text" />
+        <input class="ipt success solid" type="text" />`;
+      document.body.append(host);
 
-    const softBadge = await page
-      .getByTestId("badge-soft-edgeless-success")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
-    const solidBadge = await page
-      .getByTestId("badge-solid-success")
-      .evaluate((element) => getComputedStyle(element).backgroundColor);
+      const values = [...host.querySelectorAll("input")].map((input) => {
+        const styles = getComputedStyle(input);
 
-    const inputAlpha = readSrgb(solidInput).alpha;
+        return { fill: styles.backgroundColor, line: styles.borderTopColor, width: styles.borderTopWidth };
+      });
 
-    /* The cap is the soft tint exactly, so a container's `.solid` puts a field at
-       the same strength a soft chip carries and nowhere near a filled one. */
-    expect(inputAlpha).toBeGreaterThan(0);
-    expect(inputAlpha).toBeCloseTo(readSrgb(softBadge).alpha, 2);
-    expect(inputAlpha).toBeLessThan(readSrgb(solidBadge).alpha / 2);
+      host.remove();
+
+      return values;
+    });
+
+    const [bare, soft, solid, colored] = read.map((entry) => ({ ...entry, alpha: readSrgb(entry.fill).alpha }));
+
+    expect(bare.alpha, "bare fills nothing").toBe(0);
+    expect(soft.alpha, "soft tints").toBeGreaterThan(0);
+    expect(solid.alpha, "solid tints").toBeGreaterThan(0);
+    expect(soft.alpha, "soft takes the tint it names, solid takes the cap").toBeGreaterThan(solid.alpha);
+    /* One cap for every intent, where the text family used to land lower. */
+    expect(colored.alpha, "a colored solid takes the same cap").toBeCloseTo(solid.alpha, 2);
+    /* Nowhere near a filled chip, which is what the cap is for. */
+    expect(solid.alpha, "and stays far below a real fill").toBeLessThan(0.5);
+
+    /* `.soft` is the one fill with no line. The other two keep theirs, and every
+       one of them keeps its width, so the geometry never moves. */
+    expect(isTransparent(soft.line), "soft draws no line").toBe(true);
+
+    for (const entry of [bare, solid, colored]) {
+      expect(isTransparent(entry.line), `${entry.fill} line`).toBe(false);
+    }
+
+    for (const entry of [bare, soft, solid, colored]) {
+      expect(Number.parseFloat(entry.width), `${entry.fill} width`).toBeGreaterThan(0);
+    }
+  });
+
+  /* `.soft` dropping its line is a fill class deciding an edge, which the axes
+     say it may not do, so the exception is bounded in three ways and each one is
+     measured here: it is the class on the element and never a container's, it
+     reaches the three text inputs and not the toggles, and the pointer gets the
+     fill because the line is not there to answer it. */
+  test("bounds the borderless soft control to the element that asked for it", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const values = await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      host.innerHTML = `
+        <div class="soft"><input class="ipt" type="text" /></div>
+        <input class="checkbox soft" type="checkbox" />
+        <input class="radio soft" type="radio" />`;
+      document.body.append(host);
+
+      const line = (selector: string) => getComputedStyle(host.querySelector(selector)!).borderTopColor;
+      const result = { checkbox: line(".checkbox"), inherited: line(".ipt"), radio: line(".radio") };
+
+      host.remove();
+
+      return result;
+    });
+
+    /* The cascade case is the one the edge floor was written for: a `.soft`
+       toolbar tints the fields inside it and must not erase them. */
+    expect(isTransparent(values.inherited), "a field under a soft container").toBe(false);
+    /* A toggle has nothing outside its line, so the floor stays absolute there. */
+    expect(isTransparent(values.checkbox), "soft checkbox").toBe(false);
+    expect(isTransparent(values.radio), "soft radio").toBe(false);
+
+    const soft = page.getByTestId("ipt-soft-none");
+    const resting = readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha;
+
+    await soft.hover();
+    /* The fill is transitioned, so the first frame still reports the resting
+       value whichever way the rule went. */
+    await page.waitForTimeout(500);
+
+    const hovered = readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha;
+
+    expect(hovered, "hover answers on the fill").toBeGreaterThan(resting);
+  });
+
+  /* `text-control` used to carry `&:focus { @apply outline-none }`, which reads
+     as "no ring when clicked". A rule nested in `@utility` lands in the
+     utilities layer, `reset.css` declares `:focus-visible` in `@layer base`, and
+     utilities beat base -- so it took the keyboard ring with it and a text
+     control was the only classed thing in the package that focused with no ring
+     at all. Both signals are asserted, because the border alone is what the bug
+     left behind and it passed for a focus indicator. */
+  test("rings a focused text control and moves its line to the intent", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const expected = await page.evaluate(() => {
+      const probe = document.createElement("div");
+
+      probe.style.color = "var(--focus-ring)";
+      document.body.append(probe);
+
+      const value = getComputedStyle(probe).color;
+
+      probe.remove();
+
+      return value;
+    });
+
+    const input = page.getByTestId("field-email-icon-left");
+
+    await input.focus();
+    /* The line is transitioned, so the first frame still reports the resting
+       color whichever way the rule went. */
+    await page.waitForTimeout(500);
+
+    const focused = await input.evaluate((element) => {
+      const styles = getComputedStyle(element);
+
+      return {
+        line: styles.borderTopColor,
+        outlineColor: styles.outlineColor,
+        outlineStyle: styles.outlineStyle,
+        outlineWidth: styles.outlineWidth,
+        resting: getComputedStyle(document.documentElement).getPropertyValue("--color-control-border"),
+      };
+    });
+
+    expect(focused.outlineStyle, "the ring is drawn").toBe("solid");
+    expect(Number.parseFloat(focused.outlineWidth), "at the token width").toBeGreaterThanOrEqual(2);
+    expectSameColor(focused.outlineColor, expected, "focus ring color");
+    expect(focused.line, "and the line moves off its resting tone").not.toBe(focused.resting);
+  });
+
+  /* A text control rests transparent, so its border is the only thing marking
+     where typing goes. It rests quiet on purpose and does not clear the 3:1 WCAG
+     1.4.11 asks of a control boundary -- that tone reads as a box drawn on the
+     page. What is asserted is the shape of the decision rather than the number:
+     the resting line is heavier than the plain border token it used to take, and
+     the pointer brings a line far heavier still, so the field answers when it is
+     reached for. Measured in both themes because one choice has to work on both
+     grounds. */
+  test("rests a control line quiet and brings a much heavier one on hover", async ({ page }) => {
+    const expectALine = async (theme: string) => {
+      await page.goto(FORMS_URL);
+
+      const ground = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+
+        const host = document.createElement("div");
+
+        host.id = "line-probe";
+        host.innerHTML = `<input class="ipt" type="text" />`;
+        document.body.append(host);
+
+        return {
+          page: getComputedStyle(document.body).backgroundColor,
+          resting: getComputedStyle(host.querySelector("input")!).borderTopColor,
+        };
+      }, theme);
+
+      await page.locator("#line-probe input").hover();
+      /* The line is transitioned, so the first frame still reports the resting
+         color whichever way the rule went. */
+      await page.waitForTimeout(500);
+
+      const hovered = await page.locator("#line-probe input").evaluate((element) => {
+        const value = getComputedStyle(element).borderTopColor;
+
+        document.querySelector("#line-probe")!.remove();
+
+        return value;
+      });
+
+      /* Flattened against the page before measuring. The resting line is drawn
+         at `--_line-rest` of the intent, so it carries an alpha, and a contrast
+         ratio taken on the unflattened value reports the tone the line would be
+         at full strength -- which is the thing this test exists to show it is
+         not. */
+      const restingRatio = getContrastRatio(flattenColor(ground.resting, ground.page), ground.page);
+      const hoveredRatio = getContrastRatio(flattenColor(hovered, ground.page), ground.page);
+
+      expect(hoveredRatio, `${theme} hovered line`).toBeGreaterThan(restingRatio * 1.5);
+    };
+
+    await expectALine("light");
+    await expectALine("dark");
   });
 
   test("applies intent classes to checked toggles", async ({ page }) => {
@@ -309,6 +510,8 @@ test.describe("forms", () => {
     expect(isTransparent(solid.resting.edge), "solid switch line").toBe(false);
     expect(isTransparent(solid.resting.fill), "solid switch track").toBe(false);
 
+    /* The cap sits at or below what `.soft` asks for, so soft and solid share a
+       track and the line is the only thing telling them apart. */
     expectSameColor(soft.resting.fill, solid.resting.fill, "soft switch track");
     expect(isTransparent(soft.resting.edge), "soft switch line").toBe(true);
 

@@ -27,6 +27,20 @@
   --color-accent-strong: light-dark(var(--color-neutral-800), var(--color-neutral-200));
   --color-border: light-dark(var(--color-neutral-300), var(--color-neutral-700));
   --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
+
+  /* A text control's line is the only thing identifying it: the box is
+     transparent at rest, so nothing else marks where typing goes.
+     `--color-border` is neutral-300/700 and measures 1.42:1 on the light page,
+     which is a line you can barely see.
+
+     One value rather than a `light-dark()` pair, and that is the point: the page
+     is neutral-50 in light and neutral-950 in dark, so a tone halfway between
+     them reads on both grounds at once. A text control draws it at
+     `--_line-rest` rather than whole, which is what keeps the field quiet while
+     leaving the pointer somewhere to go -- so the line as painted lands under
+     the 3:1 WCAG 1.4.11 asks of a control boundary. Recorded in
+     docs/accessibility.md. */
+  --color-control-border: var(--color-neutral-500);
   --color-background: light-dark(var(--color-neutral-50), var(--color-neutral-950));
   --color-foreground: light-dark(var(--color-neutral-100), var(--color-neutral-900));
   --color-surface: light-dark(var(--color-neutral-200), var(--color-neutral-800));
@@ -90,7 +104,15 @@
   --elevation-high: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
   --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
-  --focus-ring-offset: 2px;
+  /* Negative, so the ring is drawn over the edge rather than beside it: at a
+     positive offset the outline floats a gap away and reads as a second, detached
+     frame around the control. Pulled in by exactly the material line width, the
+     ring lands on top of the line and a focused control reads as its own edge
+     thickening -- which is what a focus indicator is meant to look like.
+
+     A component drawing no line at rest loses nothing: the outline moves one
+     pixel inward over its own fill, which at a hairline is not a visible change. */
+  --focus-ring-offset: calc(-1 * var(--border-width));
   --focus-ring-width: 3px;
 
   --motion-duration-fast: 120ms;

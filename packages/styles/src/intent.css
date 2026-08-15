@@ -162,6 +162,22 @@
   --intent-fill-max: 20%;
 }
 
+/* The six text controls take a heavier line than everything else that rests on
+   the shared neutral. A card, a table or a divider sits on a filled surface or
+   separates content that identifies itself; a text control at rest is a
+   transparent box whose only mark is its border, and WCAG 1.4.11 asks that
+   border for 3:1. `--color-border` gives it 1.42:1.
+
+   Declared here at zero specificity for the same reason the indicators below
+   are: written inside `@utility text-control` it would land in the utilities
+   layer, the reset above lands in no layer at all, and unlayered beats layered
+   at any specificity. Written as a plain class list it would carry 0-1-0 and,
+   being later in the stylesheet, beat `.primary` -- which would make every
+   colored control draw a grey line. `:where()` keeps it under both. */
+:where(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch) {
+  --intent-border: var(--ui-ink, var(--color-control-border));
+}
+
 /* Indicators take the color they sit in rather than the shared neutral, so a
    loader inside filled or colored content still matches it. It has to be
    declared here at zero specificity: written in the component's own block it

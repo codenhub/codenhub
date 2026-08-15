@@ -253,7 +253,10 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Feature                 | Behavior                                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `:focus-visible`        | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus      | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
+| Form control focus      | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                    |
+| Control boundaries      | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.           |
+| Toggle boundaries       | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.        |
+| `.soft` text inputs     | Opt out of the line entirely and do not meet 1.4.11 at rest; the focus ring still draws. Opt-in, never a default.         |
 | Invalid controls        | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
 | Disabled controls       | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
 | Current page            | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
@@ -771,7 +774,13 @@ the same color inside it is a disc.
 
 Text controls also take intent, which colors the resting border and the
 focus-visible border, and presentation, which sets border weight and a capped
-tint:
+tint. `.bare` fills nothing, `.soft` takes its published tint whole and draws
+**no line at all**, and `.solid` is a quieter wash that keeps its line -- the cap
+governs `.solid` and the container that cascades one onto an unclassed field,
+where `.soft` on the element names the tint it wants. `.soft` is the one
+presentation with no boundary, which is why it is opt-in and never the default;
+its focus ring still shows. A `.soft` container does not do this to the fields
+inside it -- only the class written on the control itself:
 
 ```html
 <input class="ipt success" placeholder="Valid" />
@@ -1019,6 +1028,7 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 | `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.            |
 | `--color-border`               | Default border color.                                                                                         |
 | `--color-border-hover`         | Interactive border color.                                                                                     |
+| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                         |
 | `--color-background`           | Page and default raised surface background.                                                                   |
 | `--color-foreground`           | Subtle raised foreground surface.                                                                             |
 | `--color-surface`              | Nested or muted surface.                                                                                      |
@@ -1142,7 +1152,7 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 | `--elevation-mid`           | Elevation for raised components such as dropdowns, tooltips, and popovers. |
 | `--elevation-high`          | Elevation for full overlays such as modal dialogs.                         |
 | `--focus-ring`              | Focus-visible ring color.                                                  |
-| `--focus-ring-offset`       | Focus-visible outline offset.                                              |
+| `--focus-ring-offset`       | Focus-visible outline offset. Negative, so the ring lands on the edge.     |
 | `--focus-ring-width`        | Focus-visible outline/ring width.                                          |
 | `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).              |
 | `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                         |

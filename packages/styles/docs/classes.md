@@ -460,7 +460,13 @@ the same color inside it is a disc.
 
 Text controls also take intent, which colors the resting border and the
 focus-visible border, and presentation, which sets border weight and a capped
-tint:
+tint. `.bare` fills nothing, `.soft` takes its published tint whole and draws
+**no line at all**, and `.solid` is a quieter wash that keeps its line -- the cap
+governs `.solid` and the container that cascades one onto an unclassed field,
+where `.soft` on the element names the tint it wants. `.soft` is the one
+presentation with no boundary, which is why it is opt-in and never the default;
+its focus ring still shows. A `.soft` container does not do this to the fields
+inside it -- only the class written on the control itself:
 
 ```html
 <input class="ipt success" placeholder="Valid" />

@@ -695,7 +695,12 @@ test.describe("aesthetics", () => {
       });
 
       expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(2);
-      expect(styles.outlineStyle).toBe("none");
+      /* The outline from `reset.css` is declared and drawn, and `clip-path`
+         clips an element's whole rendering including its outline -- which is the
+         reason the inset layer exists. This used to read `none`, because
+         `text-control` carried an `outline-none` that suppressed the ring on
+         every control in the package rather than only under a clip. */
+      expect(styles.outlineStyle).toBe("solid");
     });
 
     test("squares what it can, clips a checkbox tight, and keeps a radio round", async ({ page }) => {

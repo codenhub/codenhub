@@ -11,7 +11,10 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Feature                 | Behavior                                                                                                                  |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `:focus-visible`        | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus      | `.ipt`, `.textarea`, and `.select` use focused border and ring styles.                                                    |
+| Form control focus      | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                    |
+| Control boundaries      | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.           |
+| Toggle boundaries       | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.        |
+| `.soft` text inputs     | Opt out of the line entirely and do not meet 1.4.11 at rest; the focus ring still draws. Opt-in, never a default.         |
 | Invalid controls        | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
 | Disabled controls       | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
 | Current page            | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |

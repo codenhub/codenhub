@@ -183,6 +183,27 @@ token and five documented exceptions gone for a change nobody will see.
   they chose. Any bound that survives that test is published. See
   [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one).
 
+### Where a fill class decides an edge
+
+Two components break the independence of the axes, both on purpose, and both are
+listed here so the exception stays countable rather than becoming a habit:
+
+| Component   | What it does                                                   | Why                                                                                                                  |
+| ----------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `.switch`   | `.soft` hides the line until hover; `.bare` hides it entirely. | The fill cap makes the tint alone too small a difference to read as three presentations on a 32px track.             |
+| Text inputs | `.soft` draws no line at rest, on hover, or on focus.          | `.soft` is meant to read as a field sunk into the page rather than drawn on it, which a line prevents by definition. |
+
+Both are the class on the element and never a container's, so the cascade case
+that the edge floor exists for is untouched in each. Neither reaches `.checkbox`
+or `.radio`, which have nothing outside their line.
+
+The text-input exception is the one with a cost: a borderless field identifies
+itself by a 12% tint, which is 1.31:1 against the page where WCAG 1.4.11 asks a
+boundary for 3:1. It is opt-in and never a default, and the focus ring still
+draws, but `.soft` on a text input does not meet 1.4.11 at rest. Recorded as a
+decision rather than a defect. See
+[`.soft` drops its line](architecture.md#soft-drops-its-line-and-what-that-costs).
+
 ## Elevation
 
 Depth is not uniform within an aesthetic. In the chunky-tile look, white option
@@ -301,8 +322,8 @@ worse than a capped 1px edge would. It is also two documented features combined
 exactly as documented, and the package does not degrade its own code to save a
 consumer from a combination they chose. Document it; do not clamp it.
 
-`text-control` caps its fill at the soft tint, and that cap stays, because it is
-not the same situation:
+`text-control` caps its fill, and that cap stays, because it is not the same
+situation:
 
 ```html
 <div class="solid"><input class="ipt" /></div>
@@ -321,7 +342,7 @@ Two pass it today, and they are the same argument in different materials:
 
 | Component      | Bound                               | What our own composition does to it                                                                                                              |
 | -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `text-control` | Fill capped at the soft tint        | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
+| `text-control` | Fill capped at 6%                   | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
 | Toggles        | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
 
 The number is expected to move. This is a test, not a quota: a bound that passes
