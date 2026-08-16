@@ -137,8 +137,8 @@
    and a shadow are inert on a left bar and an indent. What is left of `box`
    after removing the border is not worth composing.
 
-   The cost is the two declarations below, which repeat `box`'s fill and edge
-   blend and have to agree with them. Recorded in `registry.json` beside the
+   The cost is the fill and edge blends below, which repeat `box` and have to
+   agree with it. Recorded in `registry.json` beside the
    decision.
 
    The bar is twice the line width the aesthetic asks for, plus a pixel, which is
@@ -147,7 +147,11 @@
    what makes the bar read as a bar at the default hairline: doubling 1px gives
    2px, and a quotation mark needs more presence than a table rule. */
 @utility quote {
-  --quote-fill: calc(min(var(--ui-fill, 0%), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+  --quote-fill: calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
   /* The same edge blend `box` draws, in the same order and for the same reason:
      the blend is the line's colour, and how much line there is comes after it.
@@ -159,8 +163,8 @@
      That this had to be fixed twice is the cost of a quotation drawing its own
      edge instead of taking `box`'s. Recorded in `registry.json` beside the
      decision to compose none of `box`. */
-  --quote-line: color-mix(in oklab, var(--quote-bg) var(--ui-fill, 0%), var(--intent-border));
-  --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, 100%), transparent);
+  --quote-line: color-mix(in oklab, var(--quote-bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, var(--_d-border)), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 
   @apply my-0 border-l py-2 pl-4 italic;
@@ -170,7 +174,7 @@
   border-left-width: var(--quote-width);
   color: color-mix(
     in oklab,
-    var(--intent-contrast) min(var(--ui-fg-on-fill, 0%), var(--intent-fill-max, 100%)),
+    var(--intent-contrast) min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-fill-max, 100%)),
     var(--intent-strong)
   );
 

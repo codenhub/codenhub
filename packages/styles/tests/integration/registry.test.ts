@@ -424,21 +424,22 @@ test("every shipped utility is in the registry", async () => {
    presentation class on it, so it has to be the number the component actually
    declares -- in its own block, not somewhere in the package.
 
-   `composition: "none"` is the one exemption, and it is exempt because it is
-   recorded: `.quote` paints a left bar rather than a box, so there is no `box`
-   under it for a resting geometry to be an input to. A component that wants out
-   of this check has to argue for it in `registry.json` first. */
+   `composition: "none"` exempts only components that publish neither axis.
+   `.quote` paints its own left bar, but still publishes a fill and edge, so its
+   custom renderer must declare those defaults. */
 test("every component declares its published default", async () => {
   const utilities = await shippedUtilities();
   const problems: string[] = [];
 
   for (const component of registry.components) {
     const { fill, edge, ground, elevation } = component.default;
-    if (component.composition === "none") {
+    if (component.composition === "none" && fill === undefined && edge === undefined) {
       continue;
     }
-    if (fill === undefined || edge === undefined) {
-      problems.push(`${component.class} has no published fill and edge`);
+    const fillPresentation = fill === undefined ? undefined : registry.presentation.fill[fill];
+    const edgePresentation = edge === undefined ? undefined : registry.presentation.edge[edge];
+    if (fillPresentation === undefined || edgePresentation === undefined) {
+      problems.push(`${component.class} has a missing or invalid published fill or edge`);
       continue;
     }
     const block = utilities.get(component.class);
@@ -451,9 +452,9 @@ test("every component declares its published default", async () => {
        undefined `var()` inside `color-mix()` invalidates the declaration rather
        than reporting anything. */
     for (const declaration of [
-      `--_d-fill: ${registry.presentation.fill[fill]["ui-fill"]};`,
-      `--_d-fg-on-fill: ${registry.presentation.fill[fill]["ui-fg-on-fill"]};`,
-      `--_d-border: ${registry.presentation.edge[edge]["ui-border"]};`,
+      `--_d-fill: ${fillPresentation["ui-fill"]};`,
+      `--_d-fg-on-fill: ${fillPresentation["ui-fg-on-fill"]};`,
+      `--_d-border: ${edgePresentation["ui-border"]};`,
       `--_d-elevation: ${elevation};`,
       /* The ground is the fifth, where a component has one. It is what a
          component at 0% fill sits on, so leaving it out is the difference
