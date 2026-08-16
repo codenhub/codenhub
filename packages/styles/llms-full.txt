@@ -1187,12 +1187,13 @@ compares computed color strings should compare colors instead.
 ## Material Tokens
 
 Material tokens describe what a component is _made of_ rather than which intent
-it shows or how strongly. They are lengths and shadows, so like presentation
-tokens they carry no color and inherit safely.
+it shows or how strongly. They control shape, borders, shadows, translucency,
+filters, and transforms.
 
 Components read each with a fallback, so leaving them unset produces the default
-look. Setting them on a container restyles the whole subtree. Shadow geometry is
-split into colorless parts so each component can supply its own intent color.
+look. Setting them on a container restyles the whole subtree. Only shadow
+geometry is split into colorless parts that inherit safely; color-capable inputs
+such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
 | Token                   | Purpose                                                | Fallback             |
 | ----------------------- | ------------------------------------------------------ | -------------------- |
@@ -1262,8 +1263,9 @@ them; only the `--ui-*` inputs above are public.
 ### Aesthetic Tokens
 
 The shipped [aesthetic classes](docs/classes.md#aesthetics) set material tokens for
-you. Each also exposes its own tokens so you can tune it without rebuilding it.
-They are available only where that aesthetic's stylesheet is imported.
+you. Only aesthetics with a token listed below expose an aesthetic-specific
+token. Tune all other behavior through the shared material tokens above. Listed
+tokens are available only where that aesthetic's stylesheet is imported.
 
 | Token          | Aesthetic       | Purpose                                                   | Default                           |
 | -------------- | --------------- | --------------------------------------------------------- | --------------------------------- |
