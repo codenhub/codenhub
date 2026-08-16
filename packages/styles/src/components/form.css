@@ -661,6 +661,7 @@
   }
 
   .checkbox:checked,
+  .radio:checked,
   .switch:checked {
     background-color: Highlight;
     border-color: Highlight;
@@ -670,15 +671,7 @@
     }
   }
 
-  .radio:checked {
-    background-color: Canvas;
-    border-color: Highlight;
-
-    &::after {
-      background-color: Highlight;
-    }
-  }
-
+  .text-control:focus-visible,
   .ipt:focus-visible,
   .textarea:focus-visible,
   .select:focus-visible,

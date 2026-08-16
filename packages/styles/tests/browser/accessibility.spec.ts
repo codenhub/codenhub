@@ -4,7 +4,7 @@ const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
 const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
-const CONTROL_CLASSES = ["ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
+const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 const LOADER_VARIANTS = [
   "loader",
   "dots-wave",
@@ -210,6 +210,7 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   const expectSystemToggleColors = async (fixture: {
     checkboxClass: string;
+    isRadioFilled: boolean;
     radioClass: string;
     stylesUrl: string;
   }) => {
@@ -259,9 +260,9 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
     expect(colors.checkboxBackground).toBe(colors.expectedHighlight);
     expect(colors.checkboxMark).toBe(colors.expectedHighlightText);
-    expect(colors.radioBackground).toBe(colors.expectedCanvas);
+    expect(colors.radioBackground).toBe(fixture.isRadioFilled ? colors.expectedHighlight : colors.expectedCanvas);
     expect(colors.radioBorder).toBe(colors.expectedHighlight);
-    expect(colors.radioMark).toBe(colors.expectedHighlight);
+    expect(colors.radioMark).toBe(fixture.isRadioFilled ? colors.expectedHighlightText : colors.expectedHighlight);
     expect(colors.uncheckedCheckboxBackground).toBe(colors.expectedCanvas);
     expect(colors.uncheckedCheckboxBorder).toBe(colors.expectedCanvasText);
     expect(colors.uncheckedRadioBackground).toBe(colors.expectedCanvas);
@@ -270,10 +271,16 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   await expectSystemToggleColors({
     checkboxClass: "checkbox",
+    isRadioFilled: true,
     radioClass: "radio",
     stylesUrl: COMPONENT_STYLES_URL,
   });
-  await expectSystemToggleColors({ checkboxClass: "", radioClass: "", stylesUrl: NATIVE_STYLES_URL });
+  await expectSystemToggleColors({
+    checkboxClass: "",
+    isRadioFilled: false,
+    radioClass: "",
+    stylesUrl: NATIVE_STYLES_URL,
+  });
 });
 
 test("keeps the select arrow themed for every dark-mode path while light override wins", async ({ page }) => {
