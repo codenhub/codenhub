@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-14
+last_updated: 2026-08-16
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -56,23 +56,30 @@ entry once the package no longer needs it.
   run under `pnpm test:browser`.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.
 
-## `@codenhub/styles`: no visual regression baselines during `0.1.0`
+## `@codenhub/styles`: no visual regression baselines
 
 - **Rules bypassed:** `docs/specs/tests.md` (use visual regression testing for
   style sheets and components to capture visual changes before merge).
 - **Where it applies:** `packages/styles/tests/browser/`.
-- **Why acceptable:** A baseline catches an unintended rendering change, and the
-  three-axis contract this package is being rebuilt on has not stopped moving:
-  every rendering difference through `0.1.0` has been a deliberate one, so a
-  baseline reported that the requested change happened and cost a regeneration
-  cycle to say it. The 123 computed-style assertions the browser suite runs in
-  Chromium, Firefox, and WebKit are the contract checks, and they state the
-  guarantee rather than the rendering, so a deliberate change leaves them
-  standing. Keeping the superseded baselines instead would leave a gate that is
-  red for a known reason, which trains a reviewer to wave the next one through.
-- **Temporary or permanent:** Temporary. Ends when the variant matrix settles,
-  and before the first release on the three-axis contract; the terms are in
-  `packages/styles/docs/internal/roadmap.md`.
+- **Why acceptable:** The package is CSS-only, and the asserted contract is
+  limited to token resolution, computed composition, state and accessibility
+  behavior, material geometry, and related DOM behavior. The browser suite
+  asserts those contracts directly in Chromium, Firefox, and WebKit, including
+  glass and reduced-transparency behavior. These assertions do not detect every
+  final-paint defect: clipping or compositing integration, font rendering,
+  antialiasing, and interactions among properties that each compute correctly
+  can still be wrong on screen. Screenshot baselines would add substantial
+  platform variance without making those failures reliably diagnostic, so the
+  current targeted assertions are the more effective gate for this package.
+- **Temporary or permanent:** Permanent while the package remains CSS-only and
+  this computed-style, cross-browser strategy remains effective.
+- **Reevaluate when:** The package stops being CSS-only; the browser suite stops
+  covering Chromium, Firefox, and WebKit or its glass and reduced-transparency
+  branches; the public contract adds a visual outcome that computed styles and
+  DOM behavior cannot assert; or a confirmed final-paint, clipping, compositing,
+  font-rendering, antialiasing, or correct-property-interaction regression passes
+  the suite. Reevaluation means choosing an effective test for the demonstrated
+  gap and updating this exception; it does not presume screenshot baselines.
 
 ## `@codenhub/error`: built-in opt-in registry presets
 

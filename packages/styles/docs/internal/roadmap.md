@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-14
+last_updated: 2026-08-16
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -8,80 +8,51 @@ scope: `@codenhub/styles` package direction.
 
 ## Purpose
 
-This roadmap tracks durable direction for `@codenhub/styles`. It captures
-styling-system improvements that should guide future changes without turning
-this document into a release checklist. [Model](./model.md) owns the styling
-model itself.
+This roadmap tracks durable direction and release readiness for
+`@codenhub/styles` without duplicating issue tracking. [Model](./model.md) owns
+the styling model itself.
 
-Finished work is not tracked here. The token contract, the element coverage it
-was extended to, and the three shipped aesthetics are the model that Architecture
-now describes, so the record of building them lives there and in the history
-rather than in a list of completed stages.
+Finished work is not tracked here. The current token contract, component
+coverage, and shipped aesthetics belong in the model and repository history,
+not in a completed-work checklist.
 
 ## Supported surface
 
-The package supports what it demonstrates and documents. A class combination
-that is neither shown working in the playground nor described in the public docs
-is not part of the contract, and making one behave is the consumer's concern
-rather than a defect to fix here.
-
-Two obligations follow, and they are the reason the rule is worth stating rather
-than assuming. The playground may only render combinations that are supported,
-because it is the demonstration half of that sentence: a row that resolves to
-the same values as its neighbour, or to a control with no visible border, claims
-support for something nobody maintains. And the public docs owe consumers the
-rule explicitly, so the boundary is discoverable rather than inferred.
-
-Applying this is what trimmed the playground's variant matrix down to a
-per-component presentation set, and it is the reason the set moved again in
-0.1.0: a component that reads presentation through `box` reads all of it, so the
-rows a component used to ignore are now rows it answers. What is left narrow is
-narrow for a stated reason, written beside each entry in `matrix.js` -- the six
-text controls collapse their edge rows because the edge is floored, and the
-indicators and the tooltip bubble show one row because they read no presentation
-at all.
+[Model](./model.md) defines the styling contract, `registry.json` records the
+supported machine-readable surface, and the public documentation owns the
+consumer contract under `docs/specs/packages-documentation.md`. This roadmap
+adds no support rules.
 
 ## Current Focus
 
-**Phase 2 -- `0.1.0` stabilization**. Every component now composes `box`, or
-records in `registry.json` why it takes less of it, and every one publishes the
-resting pair it renders with no presentation class on it. `0.1.0` is the first
-release of the current three-axis contract; the already-published `0.0.x`
-versions predate it.
+**`0.1.0` stabilization.** The immediate focus is to stabilize the internal
+source of truth and turn the remaining review and problem findings into a clear,
+finite release path.
 
-What is left is the consumer-facing half. The public documents under `docs/`
-still describe the model 0.1.0 replaced -- `.flat`, `.out` and `.ghost` as
-presentation, an edge with a scale, and the `--ui-edge` pair that the shadow
-parts now draw -- so they have to be rewritten against [Model](./model.md) before
-the release is honest. The visual baselines are gone for the duration; see below
-for the terms on which they return.
+The existing public docs describe current behavior, but they are not yet an
+editorially useful or final consumer guide. A complete consumer-focused,
+task-oriented reformulation remains required before `0.1.0` is complete. This is
+an internal readiness condition, not a public stability warning; the package
+remains active.
 
 ## Planned
 
-- **Rewrite the public documents**: `docs/classes.md` and `docs/tokens.md`
-  against the shipped model, then `pnpm generate` for the derived files.
-- **Restore the visual baselines**, once the matrix has settled and before the
-  first release on the three-axis contract. They were deleted rather than left
-  stale, and the condition for bringing them back is the point: a pixel baseline
-  earns its cost by catching an _unintended_ rendering change, and through 0.1.0
-  every rendering change has been an intended one. Kept as wave-1 renderings they
-  were a permanently red gate, which is how a real failure later gets waved
-  through.
+`0.1.0` is complete when all of these outcomes hold:
 
-  Two things the deleted suite had already settled, so restoring it does not
-  relearn them. One environment holds the baselines and it is the one that gates
-  a merge: a per-platform set means a contributor records a set nobody else runs,
-  and no two operating systems' fonts and antialiasing compare. That is why the
-  config carried a `snapshotPathTemplate` dropping `{platform}`, removed with the
-  suite. And headless Chromium reports `prefers-reduced-transparency: reduce`
-  where other machines do not, which renders glass opaque and unblurred from the
-  same stylesheet, so every snapshot has to pin the preference through CDP
-  `Emulation.setEmulatedMedia` or it differs per machine.
-
-  Restoring them also needs a write-back path that does not exist: the CI
-  workflow holds `contents: read` and uploads artifacts only on failure, so
-  recording a set means a run with `--update-snapshots`, a way to get the files
-  back, and a second run to confirm they pass.
+- **Internal sources are stable**: [Model](./model.md), `registry.json`, the test
+  strategy, roadmap, and applicable package exceptions agree on the current
+  contract and release direction.
+- **The current review is closed**: every review thread and finding on the
+  release PR is resolved, or explicitly dismissed after the relevant behavior or
+  document has been verified. This roadmap does not duplicate that finding list.
+- **Public docs are final**: README and public docs satisfy
+  `docs/specs/packages-readme.md` and `docs/specs/packages-documentation.md`,
+  cover every `package.json` export, and match current behavior. Running
+  `pnpm generate styles` leaves all derived documentation current.
+- **Validation is clean**: `pnpm verify --changed` passes for the release
+  candidate.
+- **The PR is merge-ready**: all required PR checks are green and the PR is
+  mergeable with no unresolved blocking review thread or finding.
 
 ## Later / Possible
 
@@ -99,10 +70,9 @@ for the terms on which they return.
 
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
-  matrix has stopped moving, because the two would otherwise drift. It waits on
-  Phase 2: a demo must not show combinations the package does not support, and
-  Phase 2 is what decides whether the components under-reading presentation widen
-  or are declared intent-only.
+  supported surface and consumer documentation are stable, because the two
+  applications would otherwise drift. A demo must not show combinations the
+  package does not support.
 
 ## Notes
 
@@ -118,10 +88,9 @@ which is why a shape pair needs two token slots rather than one
 
 ## Versioning
 
-`0.1.0` is the next release. Package consumers do not gate its stability: they
-may change while this package settles. The package stays on `0.x` while the public
-contract remains young, so necessary breaking corrections stay explicit and
-cheap. Documentation status is `active`: package is supported for normal
+`0.1.0` is the next release. The package stays on `0.x` while the public contract
+remains young, so necessary breaking corrections stay explicit and cheap.
+Documentation status remains `active`: the package is supported for normal
 consumer use, not frozen against future semver-major changes.
 
 ## Not Planned

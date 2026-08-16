@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-14
+last_updated: 2026-08-16
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -53,6 +53,7 @@ packages/styles/
       typography.spec.ts
     integration/
       exports.test.ts
+      registry.test.ts
 ```
 
 ## `playground/`
@@ -100,44 +101,57 @@ Starts on http://localhost:5184.
 
 ## `tests/browser/`
 
-Automated cross-browser testing for computed-style confidence.
-One-shot runs use the `debug` server and built public exports; UI/source-mode
-runs use the `dev` server and live `src/` aliases for synchronized iteration.
+Automated browser testing runs in Chromium, Firefox, and WebKit. One-shot runs
+use the `debug` server and built public exports; UI/source-mode runs use the `dev`
+server and live `src/` aliases for synchronized iteration.
 
-- Focused specs execute accessibility, component, environment, layout, native,
-  route, theme, and typography assertions.
-- Form regressions assert visible unchecked checkbox and radio boundaries for
-  direct and inherited `.soft` and `.ghost` in Chromium, Firefox, and WebKit.
-- Surface, feedback, and typography regressions cover every supported
-  presentation on dividers, cards, skeletons, loaders, and block quotes,
-  including their width clamps, visibility floors, and filled contrast.
-- Aesthetic regressions cover direct glass and pixel tooltips plus both mixed
-  ancestor/direct orders, including complete pseudo-element resets.
-- Glass regressions deterministically emulate both transparency preferences in
-  Chromium and cover cards, panels, alerts, and tooltip bubbles in each branch.
-- Form regressions assert `.hint.error` composes helper typography with
-  destructive intent while bare `.error` remains an intent class.
-- `test-utils.ts`: Shared Playwright test setup and helpers.
+Rendering contracts are asserted primarily through computed styles on the
+shared playground fixtures. These assertions name the behavior the package
+promises, such as resolved intent colors, presentation inheritance, visible
+control boundaries, focus treatment, material geometry, pseudo-element artwork,
+and relative elevation. The suite also checks browser-visible semantics,
+navigation, route/environment wiring, and fixture accessibility where those are
+the observable contract.
 
-Every assertion here is a computed style, and there are no screenshot baselines
-while the model is still moving. A pixel baseline detects a regression on a
-surface that has stopped changing; through 0.1.0 every rendering difference has
-been a deliberate one, so a baseline reported only that the change asked for
-happened, and each one cost a regeneration on the one environment allowed to
-record it. Recorded in [Roadmap](./roadmap.md), which owns the terms for
-bringing them back, and waived against `docs/specs/tests.md` in
-`docs/specs/packages-exceptions.md`.
+- Component-focused specs cover buttons, forms, feedback, surfaces, typography,
+  layout, native mappings, themes, and shared composition behavior.
+- Form checks retain direct and inherited fill coverage for unchecked checkbox
+  and radio boundaries, along with focus, forced-color, and reduced-motion
+  behavior.
+- Aesthetic checks retain glass behavior coverage: translucency and blur on
+  cards, panels, alerts, and tooltip bubbles when transparency is allowed;
+  absence of per-control blur; and opaque, unblurred degradation under reduced
+  transparency.
+- Chromium explicitly emulates both `prefers-reduced-transparency` branches.
+  The allowed-transparency behavior also runs in Firefox and WebKit, so syntax
+  and computed values are checked across all supported browser engines.
+- Direct and inherited aesthetic precedence, including glass and pixel tooltip
+  pseudo-elements, is verified through computed styles.
+- `test-utils.ts` provides shared color parsing, comparison, contrast, and
+  Playwright helpers.
 
-A computed style is also the more durable assertion of the two. It states the
-guarantee -- this edge is transparent, this bubble sits at twice a raised card's
-depth -- so a deliberate change to how the value is reached leaves it standing,
-and only a change to what the package promises turns it red.
+Screenshot and pixel baselines are intentionally not part of this package's
+test strategy. The asserted rendering contract is narrower: token resolution,
+computed composition, state and accessibility behavior, material geometry, and
+related DOM behavior that can be checked deterministically across all three
+browser engines. Computed styles do not prove the final paint. They can miss
+clipping and compositing integration, font rendering, antialiasing, and defects
+caused by interactions among properties that each compute correctly.
+
+Screenshots would add operating-system, font, antialiasing, and media-preference
+variance without making those failures reliably diagnostic. The permanent
+package-specific exception to `docs/specs/tests.md` is recorded in
+`docs/specs/packages-exceptions.md`, including measurable reevaluation triggers.
+If one of those triggers occurs, add or change the test technique that directly
+addresses the demonstrated gap; screenshot baselines are not presumed.
 
 ## `tests/integration/`
 
 Node-based Vitest checks validate every published target. Every compiled export
 contains representative public output, and every Tailwind entrypoint is
-processed independently against representative public selectors.
+processed independently against representative public selectors. Registry tests
+validate its schema and internal consistency, hold component defaults and class
+claims against the stylesheets, and enforce material and intent invariants.
 
 ## Scripts
 

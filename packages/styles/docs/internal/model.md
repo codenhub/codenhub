@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-14
+last_updated: 2026-08-16
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -835,8 +835,13 @@ Chromium in this environment reports `prefers-reduced-transparency: reduce`, whe
 Firefox and WebKit report no preference. Glass therefore renders opaque and
 unblurred in Chromium and translucent in the other two, from the same stylesheet
 -- which is the degradation working correctly, and it got exercised by accident.
-Visual snapshots of any glass surface must pin the media state or they will differ
-per machine and per engine.
+This environment-dependent branch is one reason the browser suite asserts both
+computed outcomes directly instead of maintaining visual snapshots. Those
+assertions verify the declared CSS and DOM contract, not the final composited
+image: clipping and compositing integration, font rendering, antialiasing, and
+interactions among properties that each compute correctly remain outside their
+reach. [Tests](./tests.md) defines that boundary, and the package exception
+records the conditions that require reevaluating it.
 
 ## Adding an aesthetic
 
