@@ -202,17 +202,15 @@ _which_ intent it shows. They are unitless numbers and percentages, so they carr
 no color and inherit safely: a container sets them once and every component below
 resolves them against its own intent.
 
-| Token                   | Purpose                                                                    |
-| ----------------------- | -------------------------------------------------------------------------- |
-| `--ui-fill`             | Percentage of the intent color mixed into the background.                  |
-| `--ui-fg-on-fill`       | Percentage blended from the intent readable tone toward its contrast tone. |
-| `--ui-border`           | Percentage of the intent color mixed into the border color.                |
-| `--ui-border-scale`     | Multiplier applied to `--border-width`.                                    |
-| `--ui-hover-fill`       | Percentage of the intent hover color mixed into the hovered background.    |
-| `--ui-hover-fg-on-fill` | Percentage blended toward the contrast tone while hovered.                 |
+| Token             | Purpose                                                                    |
+| ----------------- | -------------------------------------------------------------------------- |
+| `--ui-fill`       | Percentage of the intent color mixed into the background.                  |
+| `--ui-fg-on-fill` | Percentage blended from the intent readable tone toward its contrast tone. |
+| `--ui-border`     | Percentage of the intent color mixed into the border color.                |
 
-A component resolves them with `color-mix`, supplying its own default as the
-`var()` fallback so it keeps its normal look when no presentation is in scope:
+A component resolves them with `color-mix` from its published default. Hover is
+derived by adding `--hover-step` to the resting fill and using `--intent-hover`;
+there are no per-presentation hover tokens.
 
 ```css
 background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
@@ -239,36 +237,36 @@ it shows or how strongly. They are lengths and shadows, so like presentation
 tokens they carry no color and inherit safely.
 
 Components read each with a fallback, so leaving them unset produces the default
-look. Setting them on a container restyles the whole subtree. The `--ui-shadow`
-fallback is whatever the component draws on its own: `none` for most, an
-elevation for cards and tooltip bubbles.
+look. Setting them on a container restyles the whole subtree. Shadow geometry is
+split into colorless parts so each component can supply its own intent color.
 
-| Token                  | Purpose                                                      | Fallback           |
-| ---------------------- | ------------------------------------------------------------ | ------------------ |
-| `--ui-radius`          | Corner radius for controls.                                  | `--radius-control` |
-| `--ui-radius-surface`  | Corner radius for surfaces such as alerts.                   | `--radius-surface` |
-| `--ui-border-width`    | Base border thickness, before `--ui-border-scale`.           | `--border-width`   |
-| `--ui-shadow`          | Complete `box-shadow` value.                                 | Per component      |
-| `--ui-bg-alpha`        | Unitless multiplier over `--ui-fill`, for translucency.      | `1`                |
-| `--ui-hover-transform` | `transform` applied while an interactive element is hovered. | `none`             |
-| `--ui-clip`            | Structural component silhouette.                             | `none`             |
-| `--ui-clip-tight`      | Compact component silhouette.                                | `--ui-clip`        |
-| `--ui-edge`            | Structural inset edge width.                                 | Unset              |
-| `--ui-edge-tight`      | Compact inset edge width.                                    | `--ui-edge`        |
-| `--ui-border-max`      | Ceiling on the component's computed border width.            | `100px`            |
-| `--ui-focus-inset`     | Focus layer depth immediately inside an inset edge.          | `0px`              |
-
-Glass composes its two shadow layers from `--elevation-color`. Set that token on
-the `.glass` element when tuning the aesthetic; a custom property referenced by
-an inherited `--ui-shadow` resolves where the shadow is declared, not later on a
-descendant component.
-
-Presentation and material meet in one place. The aesthetic supplies the base
-thickness and the presentation scales it:
-
-```css
-border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
-```
+| Token                   | Purpose                                                | Fallback             |
+| ----------------------- | ------------------------------------------------------ | -------------------- |
+| `--ui-radius`           | Corner radius for controls.                            | `--radius-control`   |
+| `--ui-radius-surface`   | Corner radius for surfaces.                            | `--radius-surface`   |
+| `--ui-border-width`     | Edge thickness.                                        | `--border-width`     |
+| `--ui-border-max`       | Ceiling on computed edge width.                        | `100px`              |
+| `--ui-ink`              | Neutral line color when no intent is set.              | `--color-border`     |
+| `--ui-shadow-x`         | Shadow horizontal offset.                              | `0px`                |
+| `--ui-shadow-y`         | Shadow vertical offset.                                | `0px`                |
+| `--ui-shadow-blur`      | Shadow blur radius.                                    | `0px`                |
+| `--ui-shadow-spread`    | Shadow spread radius.                                  | `0px`                |
+| `--ui-shadow-inset`     | The `inset` keyword for an inner ring.                 | Empty                |
+| `--ui-hover-shadow-x`   | Shadow horizontal offset while hovered.                | `--ui-shadow-x`      |
+| `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                  | `--ui-shadow-y`      |
+| `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                | `--ui-shadow-x`      |
+| `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                  | `--ui-shadow-y`      |
+| `--ui-active-transform` | Transform while pressed.                               | `none`               |
+| `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.      | `0%`                 |
+| `--ui-elevation`        | Unitless multiplier over shadow geometry.              | `1`                  |
+| `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only. | Unset                |
+| `--ui-surface-ground`   | Ground a surface sits on.                              | `--color-background` |
+| `--ui-bg-alpha`         | Multiplier over fill for translucent materials.        | `1`                  |
+| `--ui-backdrop`         | Backdrop filter accepted by surfaces only.             | `none`               |
+| `--ui-hover-transform`  | Transform while an interactive element is hovered.     | `none`               |
+| `--ui-clip`             | Structural component silhouette.                       | `none`               |
+| `--ui-clip-tight`       | Compact component silhouette.                          | `--ui-clip`          |
+| `--ui-focus-inset`      | Inset focus layer width.                               | Unset                |
 
 ```html
 <section style="--ui-radius: 0; --ui-border-width: 3px">
@@ -280,36 +278,29 @@ border-width: calc(var(--ui-border-width) * var(--ui-border-scale));
 > **Material token contract**: components read these; aesthetic classes and
 > consumer overrides set them.
 
-### Shape and ring pairs
+### Shape and ring composition
 
-Shape customization is a paired contract. Set `--ui-clip` and `--ui-edge`
-together, with matching corner-cut and edge depths. Buttons, text controls,
-surfaces, alerts, loaders, and tooltip bubbles consume this structural pair.
-Badges, key caps, inline code, and preformatted blocks consume
-`--ui-clip-tight` and `--ui-edge-tight`; either tight token falls back to its
-structural counterpart when omitted.
-
-Clipping removes borders, outlines, and outer shadows. A clipped component
-therefore draws `--ui-edge` as an inset ring. Set `--ui-border-max: 0px` when the
-ring replaces the component border, or choose another ceiling when both are
-deliberate. Focusable components restore the clipped focus outline as a second
-inset layer whose total depth is the edge plus `--ui-focus-inset`.
+Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a
+clip can replace the border with an inset shadow by setting
+`--ui-shadow-inset`, the four shadow geometry parts, and `--ui-shadow-ink`.
+Set `--ui-border-max: 0px` when that ring replaces the component border.
+Focusable components restore the clipped focus outline through
+`--ui-focus-inset`.
 
 ```css
 .stepped {
   --ui-clip: polygon(/* structural silhouette */);
-  --ui-edge: 4px;
   --ui-clip-tight: polygon(/* compact silhouette */);
-  --ui-edge-tight: 2px;
   --ui-border-max: 0px;
+  --ui-shadow-inset: inset;
+  --ui-shadow-x: 0px;
+  --ui-shadow-y: 0px;
+  --ui-shadow-blur: 0px;
+  --ui-shadow-spread: 4px;
+  --ui-shadow-ink: 100%;
   --ui-focus-inset: var(--focus-ring-width);
 }
 ```
-
-The pair requirement is visual rather than a validation mechanism. A clip alone
-clips the component without drawing a replacement edge. An edge alone draws an
-inset ring without changing the silhouette. Both values are valid CSS, but those
-one-sided results are not a complete shape customization.
 
 Variables named `--shape-*` are internal composition outputs. Do not set or read
 them; only the `--ui-*` inputs above are public.
@@ -320,24 +311,15 @@ The shipped [aesthetic classes](./classes.md#aesthetics) set material tokens for
 you. Each also exposes its own tokens so you can tune it without rebuilding it.
 They are available only where that aesthetic's stylesheet is imported.
 
-| Token             | Aesthetic       | Purpose                                                   | Default                                 |
-| ----------------- | --------------- | --------------------------------------------------------- | --------------------------------------- |
-| `--neo-ink`       | `.neobrutalism` | Outline and shadow color with no intent set.              | Near-black on light, near-white on dark |
-| `--neo-offset`    | `.neobrutalism` | Hard shadow offset, and the distance hover travels.       | `4px`                                   |
-| `--glass-blur`    | `.glass`        | Backdrop blur radius.                                     | `14px`                                  |
-| `--glass-opacity` | `.glass`        | Percentage of the background token kept under a surface.  | `45%`                                   |
-| `--glass-fill`    | `.glass`        | Percentage of the intent mixed into a surface.            | `12%`                                   |
-| `--glass-edge`    | `.glass`        | Highlight color the intent border is mixed into.          | Translucent white                       |
-| `--pixel-unit`    | `.pixel`        | One pixel of the grid. Corners step by it; edges are two. | `2px`, and `1px` on chips               |
-| `--pixel-ink`     | `.pixel`        | Outline color.                                            | Near-black on light, near-white on dark |
-| `--font-pixel`    | `.pixel`        | Pixel font stack. Yours to supply; no font binary ships.  | Falls back to the monospace stack       |
+| Token          | Aesthetic       | Purpose                                                   | Default                           |
+| -------------- | --------------- | --------------------------------------------------------- | --------------------------------- |
+| `--neo-offset` | `.neobrutalism` | Hard shadow offset and distance hover travels.            | `4px`                             |
+| `--pixel-unit` | `.pixel`        | One pixel of the grid. Corners and inset rings derive it. | `2px`                             |
+| `--font-pixel` | `.pixel`        | Consumer-supplied pixel font stack.                       | Falls back to the monospace stack |
 
-`.neobrutalism` and `.pixel` also set `--intent-border`, the one place an
-aesthetic touches the intent axis: a thick outline in the quiet border gray reads
-as a mistake rather than as the aesthetic. They set it at zero specificity, so an
-intent class on the element still wins, which is also what makes a neobrutalist
-shadow take the component's own intent color. Key caps are excluded from both, so
-a `.kbd` keeps its quiet edge under either aesthetic.
+Shipped aesthetics set the shared material tokens above. `.neobrutalism` and
+`.pixel` set `--ui-ink` for their neutral outline; intent classes still override
+the intent slots on each component.
 
 ## Component Internals
 

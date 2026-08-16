@@ -30,7 +30,7 @@ loaders honor reduced motion without the reset. This includes
 native entrypoints include both that fallback and the reset's broader animation
 and transition shortening.
 
-In forced colors, class-based form controls including `.control-base` receive a
+In forced colors, class-based form controls including `.text-control` receive a
 2px `Highlight` system-color focus outline. The native entrypoint provides the
 same visible system outline for unclassed text inputs, selects, textareas,
 checkboxes, and radios.

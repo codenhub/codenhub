@@ -435,13 +435,13 @@ to drive a determinate progress bar and appears only in an example.
 | T4  | `--color-text-subtle` is dead; `--elevation-high` is unread but load-bearing.       | Delete the first, keep the second. |
 | T5  | `--border-width` vs `--ui-border-width` do not carry their layer distinction.       | Rename the foundation one.         |
 | T6  | `--surface-hover-transform` duplicates a material slot.                             | Fold into the fallback.            |
-| T7  | Eleven components declare the same four-expression fill/bg/line/edge block.         | Role layer owns it.                |
+| T7  | Eleven components declare the same four-expression fill/bg/line/edge block.         | `box` owns it.                     |
 | T8  | The control line is 1.42:1 against the light page; nothing else identifies a field. | `--color-control-border`.          |
-| T8  | Aesthetic ink reaches components only through component selector lists.             | `--ui-ink`.                        |
-| T9  | Aesthetic shadows cannot be colorless, so they cannot inherit.                      | `--ui-shadow-*` parts.             |
+| T9  | Aesthetic ink reaches components only through component selector lists.             | `--ui-ink`.                        |
+| T10 | Aesthetic shadows cannot be colorless, so they cannot inherit.                      | `--ui-shadow-*` parts.             |
 
 T1, T5, and T6 are renames with no behavior change and can land first. T2,
-T7, T8, and T9 depend on the model doc and belong to the implementation waves.
+T7, T8, T9, and T10 depend on the model doc and belong to the implementation waves.
 
 ## References
 

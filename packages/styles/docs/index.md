@@ -15,13 +15,13 @@ without a component-specific variant:
 | Axis         | Question        | Classes                                                                   | Inheritance  |
 | ------------ | --------------- | ------------------------------------------------------------------------- | ------------ |
 | Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info` | Element only |
-| Presentation | How much of it? | `.flat`, `.out`, `.soft`, `.ghost`                                        | Cascades     |
+| Presentation | How much of it? | `.solid`, `.soft`, `.bare`, `.edged`, `.edgeless`                         | Cascades     |
 | Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel` from an optional aesthetic stylesheet | Cascades     |
 
 ```html
 <section class="soft pixel">
   <button class="btn primary">Soft primary pixel button</button>
-  <button class="btn destructive out">Outlined destructive override</button>
+  <button class="btn destructive bare edged">Outlined destructive override</button>
 </section>
 ```
 
@@ -103,8 +103,8 @@ theme tokens so their classes can work independently.
 | `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                      |
 | `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
 | `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                              |
-| `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.ai` for loading state.                                                       |
-| `@codenhub/styles/tw/form`       | Source theme plus field, public `control-base`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
+| `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.loader-mask` for loading state.                                              |
+| `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
 | `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                             |
 | `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                              |
 | `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                              |

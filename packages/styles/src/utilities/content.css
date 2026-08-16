@@ -171,15 +171,12 @@
   color: color-mix(
     in oklab,
     var(--intent-contrast) min(var(--ui-fg-on-fill, 0%), var(--intent-fill-max, 100%)),
-    var(--color-text-secondary)
+    var(--intent-strong)
   );
 
   /* The attribution takes no colour of its own, so it follows the quotation's.
-     Pinned to the secondary text tone it was invisible on a filled quote --
-     neutral ink on a saturated ground -- while the line above it moved to the
-     contrast tone as the fill came up. The two are the same colour at rest,
-     because a quotation at zero fill *is* the secondary tone, so what the pin
-     bought was a disagreement at every other fill and nothing anywhere else.
+     Pinning it to a neutral secondary tone loses both the intent-specific strong
+     tone at zero fill and the contrast tone as the fill comes up.
 
      Type and posture are what separate an attribution from the quotation: it is
      upright where the quote is italic, and it sits on its own line. */

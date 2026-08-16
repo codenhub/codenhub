@@ -175,6 +175,21 @@
         "dependentRequired": {
           "composition": ["compositionReason"],
           "renamedFrom": ["renameReason"]
+        },
+        "if": {
+          "required": ["composition"],
+          "properties": {
+            "composition": {
+              "const": "none"
+            }
+          }
+        },
+        "else": {
+          "properties": {
+            "default": {
+              "required": ["fill", "edge", "elevation"]
+            }
+          }
         }
       }
     },

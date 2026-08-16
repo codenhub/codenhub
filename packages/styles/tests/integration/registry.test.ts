@@ -112,9 +112,12 @@ const SUPPORTED_KEYWORDS = new Set([
   "$id",
   "$schema",
   "additionalProperties",
+  "const",
   "dependentRequired",
   "description",
   "enum",
+  "else",
+  "if",
   "items",
   "maximum",
   "minimum",
@@ -122,19 +125,24 @@ const SUPPORTED_KEYWORDS = new Set([
   "properties",
   "required",
   "title",
+  "then",
   "type",
 ]);
 
 interface Schema {
   additionalProperties?: boolean | Schema;
+  const?: unknown;
   dependentRequired?: Record<string, string[]>;
   enum?: unknown[];
+  else?: Schema;
+  if?: Schema;
   items?: Schema;
   maximum?: number;
   minimum?: number;
   pattern?: string;
   properties?: Record<string, Schema>;
   required?: string[];
+  then?: Schema;
   type?: string | string[];
   [keyword: string]: unknown;
 }
@@ -157,6 +165,17 @@ function validate(value: unknown, schema: Schema, path: string, problems: string
 
   if (schema.enum !== undefined && !schema.enum.includes(value)) {
     problems.push(`${path}: ${JSON.stringify(value)} is not one of ${schema.enum.join(", ")}`);
+  }
+
+  if (schema.const !== undefined && value !== schema.const) {
+    problems.push(`${path}: expected ${JSON.stringify(schema.const)}, got ${JSON.stringify(value)}`);
+  }
+
+  if (schema.if !== undefined) {
+    const conditionProblems: string[] = [];
+
+    validate(value, schema.if, path, conditionProblems);
+    validate(value, conditionProblems.length === 0 ? (schema.then ?? {}) : (schema.else ?? {}), path, problems);
   }
 
   if (typeof value === "string" && schema.pattern !== undefined && !new RegExp(schema.pattern).test(value)) {
@@ -221,6 +240,23 @@ test("the registry matches the schema beside it", async () => {
   validate(registry, schema, "registry", problems);
 
   expect(problems).toEqual([]);
+});
+
+test("component defaults require fill and edge unless composition is none", async () => {
+  const schema = JSON.parse(await read("registry.schema.json")) as Schema;
+  const componentSchema = schema.properties?.components?.items;
+  const normal = structuredClone(registry.components.find((component) => component.class === "btn")!);
+  const unboxed = structuredClone(registry.components.find((component) => component.composition === "none")!);
+  const normalProblems: string[] = [];
+  const unboxedProblems: string[] = [];
+
+  delete normal.default.fill;
+  delete normal.default.edge;
+  validate(normal, componentSchema!, "btn", normalProblems);
+  validate(unboxed, componentSchema!, "quote", unboxedProblems);
+
+  expect(normalProblems).toEqual(['btn.default: missing required "fill"', 'btn.default: missing required "edge"']);
+  expect(unboxedProblems).toEqual([]);
 });
 
 test("no class name is claimed twice", () => {
@@ -398,7 +434,11 @@ test("every component declares its published default", async () => {
 
   for (const component of registry.components) {
     const { fill, edge, ground, elevation } = component.default;
-    if (fill === undefined || edge === undefined || component.composition === "none") {
+    if (component.composition === "none") {
+      continue;
+    }
+    if (fill === undefined || edge === undefined) {
+      problems.push(`${component.class} has no published fill and edge`);
       continue;
     }
     const block = utilities.get(component.class);
@@ -660,20 +700,44 @@ test("every intent maps onto the color family and fill cap the registry names", 
   expect(problems).toEqual([]);
 });
 
+test("documents the neutral intent fill cap in every generated reference", async () => {
+  const expected = registry.intents.neutral.fillMax;
+  const sources = { "docs/tokens.md": await read("docs/tokens.md"), "llms-full.txt": await read("llms-full.txt") };
+
+  expect(expected).toBe("20%");
+  for (const [file, source] of Object.entries(sources)) {
+    const match = source.match(/Neutral stops at `([0-9]+%)`/);
+
+    expect(match, `${file} should document the neutral fill cap`).not.toBeNull();
+    expect(match?.[1], `${file} neutral fill cap`).toBe(expected);
+  }
+});
+
 /* Both resets stand in for a missing intent class, so they owe every slot an
    intent class writes. A slot missing from one of them is an undefined `var()`
    inside whichever `color-mix()` reads it, and that declaration collapses to its
    initial value without reporting anything. */
 test("both intent resets declare every slot the neutral intent declares", async () => {
   const sources = { "intent.css": await read("src/intent.css"), "native.css": await read("src/native.css") };
-  const neutral = sources["intent.css"].match(/\n\.neutral[^{]*{([^}]*)}/)![1];
-  const slots = [...neutral.matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
   const problems: string[] = [];
+  const neutralMatch = sources["intent.css"].match(/(?:^|\n)\.neutral(?![A-Za-z0-9_-])[^{}]*\{([^{}]*)}/);
+
+  if (neutralMatch === null) {
+    problems.push("intent.css: could not extract .neutral intent block");
+  }
+
+  const slots = [...(neutralMatch?.[1] ?? "").matchAll(/--intent-[a-z-]+(?=:)/g)].map((match) => match[0]);
 
   expect(slots.length).toBeGreaterThan(0);
 
   for (const [file, source] of Object.entries(sources)) {
-    const reset = source.match(/:where\([^)]*\)\s*{([^}]*--intent-color[^}]*)}/)![1];
+    const resetMatch = source.match(/:where\((?:[^()]|\([^()]*\))*\)\s*\{([^{}]*--intent-color[^{}]*)}/);
+
+    if (resetMatch === null) {
+      problems.push(`${file}: could not extract intent reset`);
+      continue;
+    }
+    const reset = resetMatch[1];
 
     for (const slot of slots) {
       if (!reset.includes(`${slot}:`)) {

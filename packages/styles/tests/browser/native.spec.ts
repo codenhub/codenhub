@@ -42,6 +42,15 @@ test("styles native forms and buttons without utility classes", async ({ page })
 
   const input = page.locator('input[type="text"]');
   const button = page.getByRole("button", { name: "button element" });
+  const untypedInputMinHeight = await page.evaluate(() => {
+    const input = document.createElement("input");
+
+    document.body.append(input);
+    const minHeight = getComputedStyle(input).minHeight;
+    input.remove();
+
+    return minHeight;
+  });
   const inputStyles = await input.evaluate((element) => {
     const styles = getComputedStyle(element);
 
@@ -49,6 +58,8 @@ test("styles native forms and buttons without utility classes", async ({ page })
       borderColor: styles.borderTopColor,
       borderStyle: styles.borderTopStyle,
       borderWidth: styles.borderTopWidth,
+      intentBorder: styles.getPropertyValue("--intent-border"),
+      expectedIntentBorder: getComputedStyle(document.documentElement).getPropertyValue("--color-control-border"),
       token: styles.getPropertyValue("--border-width").trim(),
     };
   });
@@ -58,6 +69,8 @@ test("styles native forms and buttons without utility classes", async ({ page })
   expect(inputStyles.borderStyle).toBe("solid");
   expect(inputStyles.borderWidth).toBe("1px");
   expect(inputStyles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(inputStyles.intentBorder.trim()).toBe(inputStyles.expectedIntentBorder.trim());
+  expect(untypedInputMinHeight).toBe("40px");
   await expect(button).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });

@@ -24,16 +24,16 @@ materials that component draws.
 | Components                                                | Intent | Presentation | Aesthetic material |
 | --------------------------------------------------------- | ------ | ------------ | ------------------ |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes          | Shape              |
-| `.loader`                                                 | Yes    | Yes          | Shape              |
-| `.kbd`, `.table`                                          | Yes    | Yes          | Radius and edge    |
-| `.quote`, `.divider`                                      | Yes    | Yes          | Edge width         |
-| `.skeleton`                                               | Yes    | Yes          | Radius and edge    |
-| `.ipt`, `.textarea`, `.select`, `.control-base`           | Yes    | Yes          | Shape              |
+| `.loader`                                                 | Yes    | No           | No                 |
+| `.kbd`, `.data-table`                                     | Yes    | Yes          | Radius and edge    |
+| `.quote`                                                  | Yes    | Yes          | Edge width         |
+| `.divider`, `.skeleton`                                   | Yes    | No           | No                 |
+| `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes          | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes          | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes          | Radius and edge    |
-| `.progress`                                               | Yes    | Yes          | Radius and edge    |
-| `.code`, `.pre`                                           | Yes    | No           | Radius and clip    |
-| `.tooltip`                                                | Yes    | No           | Shape and overlay  |
+| `.progress`                                               | Yes    | No           | No                 |
+| `.code`, `.pre`                                           | Yes    | Yes          | Radius and clip    |
+| `.tooltip`                                                | Yes    | Yes          | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No           | No                 |
 
 Intent aliases such as `.danger` and `.error` occupy the same intent axis as
@@ -53,8 +53,7 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
 - `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It
-  takes intent and presentation classes, with line width clamped from `1px` to
-  `2px`; `.ghost` removes it.
+  takes intent, but presentation classes do not affect it.
 
 The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
@@ -63,7 +62,7 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 | Class           | Purpose                                                                                  | Intent affects         |
 | --------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
 | `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                                  | Nothing.               |
-| `.table`        | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
+| `.data-table`   | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
 | `.kbd`          | Inline keyboard-input styling.                                                           | Surface, border, text. |
 | `.quote`        | Block quote styling; a nested `cite` is set upright and takes the quotation's own color. | Bar, surface, text.    |
 | `.quote-inline` | Inline quotation styling.                                                                | Nothing.               |
@@ -71,10 +70,10 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 | `.pre`          | Scrollable block code formatting with larger padding.                                    | Surface.               |
 
 A table's rows deliberately inherit its intent instead of resetting it, so
-`.table.success` tints throughout. A row carrying its own intent still wins:
+`.data-table.success` tints throughout. A row carrying its own intent still wins:
 
 ```html
-<table class="table success">
+<table class="data-table success">
   <tbody>
     <tr>
       <td>Inherits the table intent</td>
@@ -89,20 +88,20 @@ A table's rows deliberately inherit its intent instead of resetting it, so
 This is the one place intent cascades, because a table's rows are parts of the
 table rather than independent components.
 
-`.table` and `.kbd` also read [presentation](#presentation). A table applies it
+`.data-table` and `.kbd` also read [presentation](#presentation). A table applies it
 to its header and border, and a key cap to its whole chip:
 
 ```html
-<table class="table success soft">...</table>
-<kbd class="kbd primary flat">Ctrl</kbd>
-<kbd class="kbd primary out">Shift</kbd>
+<table class="data-table success soft edged">...</table>
+<kbd class="kbd primary solid">Ctrl</kbd>
+<kbd class="kbd primary bare edged">Shift</kbd>
 ```
 
-Use `.table-wrap` around `.table` when table width may exceed its container:
+Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
 ```html
 <div class="table-wrap">
-  <table class="table">
+  <table class="data-table">
     <thead>
       <tr>
         <th>Package</th>
@@ -121,14 +120,15 @@ Use `.table-wrap` around `.table` when table width may exceed its container:
 
 ## Surfaces
 
-| Class          | Purpose                                                            |
-| -------------- | ------------------------------------------------------------------ |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
+| Class          | Purpose                                                                  |
+| -------------- | ------------------------------------------------------------------------ |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded.       |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.         |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.           |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                                 |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                               |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.       |
+| `.flat`        | Removes part-based elevation; glass surfaces keep their complete shadow. |
 
 Both read intent, [presentation](#presentation), and
 [material tokens](./tokens.md#material-tokens). A plain `.card` is a neutral
@@ -137,7 +137,7 @@ bordered container; only an explicit presentation tints it.
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
-<article class="card primary out">Intent border, no fill</article>
+<article class="card primary bare edged">Intent border, no fill</article>
 <a class="card interactive" href="/package">Lifts on hover</a>
 <aside class="panel">Flush panel</aside>
 ```
@@ -148,36 +148,39 @@ operable by keyboard.
 
 ## Presentation
 
-`.flat`, `.out`, `.ghost`, and `.soft` decide how strongly a component shows its
-intent. They set [presentation tokens](./tokens.md#presentation-tokens) and
+Presentation has two independent axes. `.solid`, `.soft`, and `.bare` decide how
+much intent fills a component; `.edged` and `.edgeless` decide whether it draws a
+boundary. They set [presentation tokens](./tokens.md#presentation-tokens) and
 nothing else, so they work on the component itself or on any ancestor:
 
 ```html
 <div class="soft">
   <button class="btn primary">Soft primary button</button>
   <span class="badge success">Soft success badge</span>
-  <button class="btn primary out">Outlined; the element wins</button>
+  <button class="btn primary bare edged">Outlined; the element wins</button>
 </div>
 ```
 
 A declaration on the element always beats one inherited from a container, so a
 container sets the default look for its subtree and any element opts out.
 
-| Class    | Look                                                             |
-| -------- | ---------------------------------------------------------------- |
-| `.flat`  | Intent-colored fill with contrast text and a matching border.    |
-| `.out`   | Transparent fill with a doubled intent border and readable text. |
-| `.ghost` | Transparent fill and border with readable text.                  |
-| `.soft`  | Lightly tinted fill, no border, readable text.                   |
+| Class       | Look                                                       |
+| ----------- | ---------------------------------------------------------- |
+| `.solid`    | Intent-colored fill with contrast text.                    |
+| `.soft`     | Lightly tinted fill with intent-colored text.              |
+| `.bare`     | No intent fill, with intent-colored text.                  |
+| `.edged`    | Intent-colored boundary at the aesthetic's material width. |
+| `.edgeless` | No boundary.                                               |
 
 Values each class ships:
 
-| Class    | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` | `--ui-border-scale` | `--ui-hover-fill` | `--ui-hover-fg-on-fill` |
-| -------- | ----------- | ----------------- | ------------- | ------------------- | ----------------- | ----------------------- |
-| `.flat`  | `100%`      | `100%`            | `100%`        | `1`                 | `100%`            | `100%`                  |
-| `.out`   | `0%`        | `0%`              | `100%`        | `2`                 | `14%`             | `0%`                    |
-| `.ghost` | `0%`        | `0%`              | `0%`          | `1`                 | `14%`             | `0%`                    |
-| `.soft`  | `12%`       | `0%`              | `0%`          | `1`                 | `22%`             | `0%`                    |
+| Class       | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` |
+| ----------- | ----------- | ----------------- | ------------- |
+| `.solid`    | `100%`      | `100%`            |               |
+| `.soft`     | `12%`       | `0%`              |               |
+| `.bare`     | `0%`        | `0%`              |               |
+| `.edged`    |             |                   | `100%`        |
+| `.edgeless` |             |                   | `0%`          |
 
 With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
@@ -187,25 +190,19 @@ neutral and bordered.
 | ----------------------------------------------- | --------------------------------------------- |
 | `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.         |
 | `.kbd`                                          | Fill, text, border, and border width.         |
-| `.table`                                        | Header fill and text, border, border width.   |
-| `.ipt`, `.textarea`, `.select`, `.control-base` | Border, border width, and a capped fill.      |
+| `.data-table`                                   | Header fill and text, border, border width.   |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.      |
 | `.checkbox`, `.radio`                           | Border, border width, capped unchecked fill.  |
 | `.switch`                                       | A capped fill, and the line it draws at rest. |
-| `.progress`                                     | Border and border width.                      |
-| `.divider`                                      | Line strength and clamped width.              |
-| `.quote`, `.loader`                             | Fill, text/artwork, border, and width.        |
-| `.skeleton`                                     | Fill and a one-pixel border ceiling.          |
-| `.code`, `.pre`, `.tooltip`                     | Intent only, not presentation.                |
+| `.quote`                                        | Fill, text, border, and width.                |
+| `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.             |
+| `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.                |
 
-Text controls and toggles cap their fill well below the `.soft` tint. `.flat`
-would otherwise put typed text on a saturated background, so a `.flat` container
-would make every field inside it unreadable; on those components both `.flat` and
-`.soft` resolve to a much quieter tint than they produce elsewhere, because a
-field has to stay legible while being typed into. `.ghost` removes the border
-from a text control and leaves a bottom rule, so the field keeps its affordance.
-Unchecked checkboxes and radios restore their full edge under `.soft` and
-`.ghost`. Skeletons retain a six-percent fill floor under `.ghost` so a loading
-placeholder never disappears.
+Text controls and toggles cap inherited or `.solid` fill at `6%`, keeping typed
+text legible. A `.soft` class written directly on a text control takes its full
+tint and removes its line; `.bare` removes its fill while preserving the control
+affordance. Unchecked checkboxes and radios keep their full edge under every fill
+and edge class.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that
 intent's own color: `.tooltip.primary` is the primary color, black on a light
@@ -254,22 +251,13 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                       |
 | `.pixel`        | Stepped corners, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 
-Aesthetics and presentations compose, but not every pair is worth using. Bad
-combinations are documented rather than blocked.
-
-| Aesthetic       | `.flat` | `.out` | `.ghost` | `.soft` |
-| --------------- | ------- | ------ | -------- | ------- |
-| `.neobrutalism` | Yes     | Yes    | Weak     | Yes     |
-| `.glass`        | Yes     | Yes    | Yes      | Yes     |
-| `.pixel`        | Yes     | Yes    | Weak     | Yes     |
-
-"Weak" means the aesthetic's defining trait is the border or shadow that
-`.ghost` removes, which leaves the element nearly unstyled.
+Aesthetics compose with every supported fill and edge pair. `.bare.edgeless`
+intentionally removes the visible material traits from components whose
+aesthetic is expressed only through their fill, edge, or elevation.
 
 An explicit presentation on the element still wins over the aesthetic's
-defaults, and the two meet only in the border: the aesthetic supplies the
-thickness and the presentation scales it, so `.out` under `.neobrutalism` gives a
-4px edge rather than replacing the 2px material.
+defaults. The aesthetic supplies edge thickness; presentation only decides
+whether that edge is drawn.
 
 An aesthetic directly on a component likewise wins over an inherited aesthetic.
 This includes tooltip pseudo-elements: `.tooltip.glass` gets the complete glass
@@ -330,7 +318,8 @@ from a checkbox at a glance.
 
 ## Buttons
 
-Use `.btn` with one optional intent class, one optional presentation class, optional size class, and optional state.
+Use `.btn` with one optional intent class, one optional fill class, one optional
+edge class, optional size class, and optional state.
 
 Intent classes map color tokens into button tone slots. [Presentation](#presentation) decides how much of that intent reaches background, text, border, and hover.
 
@@ -359,25 +348,24 @@ your own intent classes; see [intent tokens](./tokens.md#intent-tokens).
 
 Size and shape classes:
 
-| Class                                                                  | Purpose                                                      |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).      |
-| `.fill` with `.out`                                                    | Filled hover treatment using intent color and contrast text. |
-| `.sm`                                                                  | Smaller button.                                              |
-| `.lg`                                                                  | Larger button.                                               |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                    |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                     |
-| `.icon`                                                                | Square icon button. Use an accessible name in HTML.          |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.  |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                            |
+| Class                                                                  | Purpose                                                     |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).     |
+| `.sm`                                                                  | Smaller button.                                             |
+| `.lg`                                                                  | Larger button.                                              |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                   |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                    |
+| `.icon`                                                                | Square icon button. Use an accessible name in HTML.         |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator. |
+| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                           |
 
 Examples:
 
 ```html
 <button class="btn primary">Primary</button>
-<button class="btn success out">Success outline</button>
+<button class="btn success bare edged">Success outline</button>
 <button class="btn warning soft">Warning soft</button>
-<button class="btn destructive ghost">Danger ghost</button>
+<button class="btn destructive bare edgeless">Danger bare</button>
 <button class="btn icon primary" aria-label="Create">+</button>
 <button class="btn primary loading" disabled>Saving</button>
 ```
@@ -392,7 +380,7 @@ Examples:
 | `.label`                                                              | Form label text.                                                |
 | `.hint`                                                               | Secondary helper text.                                          |
 | `.hint.error`                                                         | Helper text with destructive intent.                            |
-| `.control-base`                                                       | Shared public text-control styling.                             |
+| `.text-control`                                                       | Shared public text-control composition utility.                 |
 | `.ipt`                                                                | Input control styling.                                          |
 | `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
 | `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
@@ -470,14 +458,14 @@ inside it -- only the class written on the control itself:
 
 ```html
 <input class="ipt success" placeholder="Valid" />
-<input class="ipt out" placeholder="Heavier border" />
-<input class="ipt ghost" placeholder="Underline only" />
+<input class="ipt bare edged" placeholder="Outlined" />
+<input class="ipt bare edgeless" placeholder="No edge" />
 <div class="soft">
   <input class="ipt" placeholder="Tinted from the container" />
 </div>
 ```
 
-`.control-base` is a public low-level utility from the form entrypoint. It
+`.text-control` is a public low-level utility from the form entrypoint. It
 provides the shared control dimensions, border, placeholder, focus-visible,
 invalid, and disabled styles composed by `ipt`, `textarea`, and `select`. Use it
 for custom text-like controls; prefer those higher-level utilities when they fit.
@@ -511,18 +499,18 @@ Example:
 | `.alert`         | Inline feedback surface.                                                     |
 | `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
 | `.badge`         | Compact status pill.                                                         |
-| `.ai`            | Low-level activity indicator base. Applies CSS mask to show a spinner SVG.   |
-| `.loader`        | Standalone inline loader tile with presentation-aware surface and artwork.   |
-| `.skeleton`      | Presentation-aware ambient loading placeholder.                              |
+| `.loader-mask`   | Low-level activity indicator composition utility. Applies the spinner mask.  |
+| `.loader`        | Standalone inline loader artwork.                                            |
+| `.skeleton`      | Ambient loading placeholder.                                                 |
 | `.progress`      | Progress track. Uses `--progress-value` variable.                            |
 | `.active`        | Optional on `.progress` to add a track shimmer.                              |
 | `.indeterminate` | Optional on `.progress` to animate a moving fill without `--progress-value`. |
 
-Activity indicator modifier classes (compose with `.loader` or any element using `.ai`):
+Activity indicator modifier classes compose with `.loader`:
 
 | Class                  | Animation style                         |
 | ---------------------- | --------------------------------------- |
-| _(default / `.ai`)_    | Circular spinner (rotating arc).        |
+| _(default)_            | Circular spinner (rotating arc).        |
 | `.dots-wave`           | Three dots bouncing up/down in a wave.  |
 | `.dots-fade`           | Three dots fading in and out.           |
 | `.dots-queue`          | Dot queuing from left to right.         |
@@ -551,10 +539,8 @@ Alerts, badges, progress bars, skeletons, and loaders accept `.primary`,
 `.info`. Without an intent, they use the text palette, except `.loader`, which
 keeps `currentColor` so it matches whatever content surrounds it.
 
-Skeletons and loaders read every presentation. A flat loader uses contrast
-artwork over its intent fill; a ghost loader removes its tile and keeps bare
-intent artwork. Skeleton edges never exceed `1px`, and ghost skeletons retain a
-minimum visible fill.
+Skeletons, loaders, progress bars, and dividers are indicators. They read intent
+but ignore fill and edge presentation.
 
 ```html
 <span class="loader success" aria-hidden="true"></span>
@@ -572,11 +558,11 @@ Examples:
 
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
-<div class="alert primary flat" role="status">Deployment started.</div>
+<div class="alert primary solid" role="status">Deployment started.</div>
 <div class="alert warning soft icon" role="status">Review required.</div>
-<div class="alert destructive out" role="alert">Deployment failed.</div>
+<div class="alert destructive bare edged" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
-<span class="badge success flat">Live</span>
+<span class="badge success solid">Live</span>
 <span class="badge info soft">Draft</span>
 <span class="loader" aria-hidden="true"></span>
 <span class="loader dots-wave" aria-hidden="true"></span>

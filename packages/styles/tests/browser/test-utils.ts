@@ -158,6 +158,11 @@ export const isTransparent = (color: string) => readSrgb(color).alpha === 0;
 export const flattenColor = (color: string, ground: string) => {
   const top = readSrgb(color);
   const bottom = readSrgb(ground);
+
+  if (bottom.alpha !== 1) {
+    throw new Error(`Expected an opaque ground, got ${ground}`);
+  }
+
   const composite = (channel: "blue" | "green" | "red") =>
     Math.round(top[channel] * top.alpha + bottom[channel] * (1 - top.alpha));
 

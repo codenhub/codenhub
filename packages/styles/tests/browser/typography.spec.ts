@@ -216,9 +216,20 @@ test("renders every block quote presentation", async ({ page }) => {
 
   const styles = await page.evaluate(() => {
     const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+    const resolveToken = (tokenName: string) => {
+      const probe = document.createElement("span");
+
+      probe.style.color = `var(--color-${tokenName})`;
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+
+      return color;
+    };
 
     return {
       bareEdgelessBorder: get("quote-bare-edgeless-primary").borderLeftColor,
+      bareText: get("quote-bare-edged-primary").color,
       defaultBorderWidth: get("quote-default-primary").borderLeftWidth,
       edgedBorderWidth: get("quote-bare-edged-primary").borderLeftWidth,
       softBackground: get("quote-soft-edged-primary").backgroundColor,
@@ -226,10 +237,12 @@ test("renders every block quote presentation", async ({ page }) => {
       softEdgelessBorder: get("quote-soft-edgeless-primary").borderLeftColor,
       solidBackground: get("quote-solid-primary").backgroundColor,
       solidColor: get("quote-solid-primary").color,
+      strongPrimary: resolveToken("primary-strong"),
     };
   });
 
   expect(isTransparent(styles.bareEdgelessBorder)).toBe(true);
+  expectSameColor(styles.bareText, styles.strongPrimary, "bare quote intent text");
   /* The fill has to be non-zero for this to mean anything. A bare edgeless bar
      is transparent under a wrong edge blend too, because there is no fill for a
      wrong one to leave behind -- so the assertion above passed while a soft

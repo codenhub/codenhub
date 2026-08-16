@@ -68,7 +68,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
   "./components": {
     target: "dist/components.css",
-    patterns: [/.alert\{/, /.btn\{/, /.panel\{/, /.field\{/, /.loader\{/, /.text-title\{/, /.tooltip\{/],
+    patterns: [/\.alert\{/, /\.btn\{/, /\.panel\{/, /\.field\{/, /\.loader\{/, /\.text-title\{/, /\.tooltip\{/],
   },
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {

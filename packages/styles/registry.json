@@ -130,7 +130,9 @@
         "bars-wave",
         "pulse-ring"
       ],
-      "native": []
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints only its artwork and has no box presentation."
     },
     {
       "class": "textarea",
@@ -264,21 +266,27 @@
       "default": {
         "elevation": 0
       },
-      "native": []
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints its own animated fill and has no box presentation."
     },
     {
       "class": "progress",
       "default": {
         "elevation": 0
       },
-      "native": []
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints its own track and fill and has no box presentation."
     },
     {
       "class": "divider",
       "default": {
         "elevation": 0
       },
-      "native": ["hr"]
+      "native": ["hr"],
+      "composition": "none",
+      "compositionReason": "An indicator paints a single rule and has no box presentation."
     }
   ],
   "helpers": [

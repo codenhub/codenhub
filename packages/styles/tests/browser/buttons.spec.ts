@@ -12,6 +12,10 @@ import {
 
 const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";
 
+test("rejects a transparent ground when flattening a color", () => {
+  expect(() => flattenColor("rgb(0 0 0 / 50%)", "transparent")).toThrow("Expected an opaque ground");
+});
+
 test.describe("buttons", () => {
   test("keeps filled semantic button text readable", async ({ page }) => {
     await page.goto(BUTTONS_URL);

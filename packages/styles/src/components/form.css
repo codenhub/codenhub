@@ -490,7 +490,7 @@
     /* The mark takes the box's own foreground, which `box` already mixed against
        this component's intent and fill, so a checked box in any intent has a
        mark that reads against it. */
-    background-color: currentColor;
+    background-color: currentcolor;
     content: "";
     mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
     -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>");
@@ -529,7 +529,7 @@
   &::after {
     @apply block size-2 scale-0 rounded-full opacity-0 transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
 
-    background-color: currentColor;
+    background-color: currentcolor;
     content: "";
   }
 
@@ -565,7 +565,7 @@
    1px, which overflowed as soon as an aesthetic asked for 2px.
 
    It rests at `solid`, where the other two toggles rest at `bare`, because the
-   fill cap it inherits is 12% and a switch's track is the one part of a toggle
+   fill cap it inherits is 6% and a switch's track is the one part of a toggle
    that is meant to be a filled shape. Resting at `bare` made `.bare` a synonym
    for the default and left the tinted track unreachable without a class. */
 @utility switch {
@@ -604,7 +604,7 @@
      only place in the package where a fill class reaches the edge.
 
      It is here because the fill alone cannot separate the three. `text-control`
-     caps every fill at 12% -- lifting that would make an unchecked `.solid`
+     caps every fill at 6% -- lifting that would make an unchecked `.solid`
      switch indistinguishable from a checked one -- so `.solid` and `.soft` land
      on the same tint and `.bare` lands on the default. Three names, two looks.
      The line is the only lever left, so the line is what varies: solid keeps its
@@ -644,7 +644,7 @@
   }
 
   &:checked::after {
-    background-color: currentColor;
+    background-color: currentcolor;
     translate: var(--switch-travel);
   }
 }

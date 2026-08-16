@@ -360,7 +360,7 @@ and this one turned out to be a component resting on nothing.
 
 ## Intent
 
-Unchanged. Six slots, seven classes, no cascade, and the zero-specificity reset
+Unchanged. Seven slots, seven classes, no cascade, and the zero-specificity reset
 that lets an element's own intent class win over an inherited value. It is the
 part of the current model that has held up under everything asked of it.
 
@@ -575,8 +575,9 @@ rather than a `var()` fallback in the middle of a component.
 
 ### Components that do not take the whole of `box`
 
-Two of them, and the registry says which rather than leaving it to be found by
-reading CSS.
+Six of them, and the registry says which rather than leaving it to be found by
+reading CSS. Four are indicators: `.loader`, `.skeleton`, `.progress`, and
+`.divider` paint their own artwork and do not take box presentation.
 
 `.quote` composes none of it, because `box` draws a border on four sides and a
 quotation wants one. A radius, a clip and a shadow are inert on a left bar as
@@ -638,7 +639,8 @@ Six checks, all of which fail the build:
 
 1. No duplicate class name anywhere in the package.
 2. No collision with a Tailwind static utility.
-3. Every component's default names a fill and an edge that exist, or neither.
+3. Every component's default names a fill and an edge that exist, unless its
+   composition is explicitly `none`.
 4. A rename carries its reason.
 5. Every component appears in one of the two hand-maintained intent resets. A
    component missing from one reads an undefined `--intent-*`, which makes every
@@ -746,7 +748,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 
 | Goes away                      | Replaced by                                                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| `.flat`                        | `.solid`                                                                                                           |
+| Former presentation `.flat`    | `.solid`; the active `.flat` elevation modifier remains public.                                                    |
 | `.out`                         | `.bare.edged`                                                                                                      |
 | `.ghost`                       | `.bare`                                                                                                            |
 | `.fill`                        | Derived hover. No replacement for `.out.fill`.                                                                     |

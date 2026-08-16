@@ -29,6 +29,28 @@
   --intent-fill-max: 20%;
 }
 
+/* Native text controls need the same stronger neutral boundary as their classed
+   counterparts, without changing buttons, checkboxes, radios, or other inputs. */
+:where(
+  input:not([type]),
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="tel"],
+  input[type="search"],
+  input[type="month"],
+  input[type="week"],
+  input[type="time"],
+  input[type="date"],
+  input[type="datetime-local"],
+  textarea,
+  select
+) {
+  --intent-border: var(--ui-ink, var(--color-control-border));
+}
+
 :where(hr) {
   --intent-color: currentColor;
   --intent-border: currentColor;
@@ -113,6 +135,7 @@
   }
 
   /* Form controls */
+  input:not([type]),
   input[type="text"],
   input[type="number"] {
     @apply ipt;

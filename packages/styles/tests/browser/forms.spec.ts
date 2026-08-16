@@ -261,13 +261,11 @@ test.describe("forms", () => {
     const resting = readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha;
 
     await soft.hover();
-    /* The fill is transitioned, so the first frame still reports the resting
-       value whichever way the rule went. */
-    await page.waitForTimeout(500);
-
-    const hovered = readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha;
-
-    expect(hovered, "hover answers on the fill").toBeGreaterThan(resting);
+    await expect
+      .poll(async () => readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha, {
+        message: "hover answers on the fill",
+      })
+      .toBeGreaterThan(resting);
   });
 
   /* `text-control` used to carry `&:focus { @apply outline-none }`, which reads
@@ -294,28 +292,30 @@ test.describe("forms", () => {
     });
 
     const input = page.getByTestId("field-email-icon-left");
+    const restingLine = await input.evaluate((element) => getComputedStyle(element).borderTopColor);
 
     await input.focus();
-    /* The line is transitioned, so the first frame still reports the resting
-       color whichever way the rule went. */
-    await page.waitForTimeout(500);
+    const readFocused = () =>
+      input.evaluate((element) => {
+        const styles = getComputedStyle(element);
 
-    const focused = await input.evaluate((element) => {
-      const styles = getComputedStyle(element);
+        return {
+          line: styles.borderTopColor,
+          outlineColor: styles.outlineColor,
+          outlineStyle: styles.outlineStyle,
+          outlineWidth: styles.outlineWidth,
+        };
+      });
 
-      return {
-        line: styles.borderTopColor,
-        outlineColor: styles.outlineColor,
-        outlineStyle: styles.outlineStyle,
-        outlineWidth: styles.outlineWidth,
-        resting: getComputedStyle(document.documentElement).getPropertyValue("--color-control-border"),
-      };
-    });
+    await expect
+      .poll(async () => (await readFocused()).line, { message: "focused control line" })
+      .not.toBe(restingLine);
+    const focused = await readFocused();
 
     expect(focused.outlineStyle, "the ring is drawn").toBe("solid");
     expect(Number.parseFloat(focused.outlineWidth), "at the token width").toBeGreaterThanOrEqual(2);
     expectSameColor(focused.outlineColor, expected, "focus ring color");
-    expect(focused.line, "and the line moves off its resting tone").not.toBe(focused.resting);
+    expect(focused.line, "and the line moves off its resting tone").not.toBe(restingLine);
   });
 
   /* A text control rests transparent, so its border is the only thing marking
@@ -346,28 +346,23 @@ test.describe("forms", () => {
         };
       }, theme);
 
+      const restingRatio = getContrastRatio(flattenColor(ground.resting, ground.page), ground.page);
+
       await page.locator("#line-probe input").hover();
-      /* The line is transitioned, so the first frame still reports the resting
-         color whichever way the rule went. */
-      await page.waitForTimeout(500);
-
-      const hovered = await page.locator("#line-probe input").evaluate((element) => {
-        const value = getComputedStyle(element).borderTopColor;
-
-        document.querySelector("#line-probe")!.remove();
-
-        return value;
-      });
+      const input = page.locator("#line-probe input");
+      const readHovered = () => input.evaluate((element) => getComputedStyle(element).borderTopColor);
 
       /* Flattened against the page before measuring. The resting line is drawn
          at `--_line-rest` of the intent, so it carries an alpha, and a contrast
          ratio taken on the unflattened value reports the tone the line would be
          at full strength -- which is the thing this test exists to show it is
          not. */
-      const restingRatio = getContrastRatio(flattenColor(ground.resting, ground.page), ground.page);
-      const hoveredRatio = getContrastRatio(flattenColor(hovered, ground.page), ground.page);
-
-      expect(hoveredRatio, `${theme} hovered line`).toBeGreaterThan(restingRatio * 1.5);
+      await expect
+        .poll(async () => getContrastRatio(flattenColor(await readHovered(), ground.page), ground.page), {
+          message: `${theme} hovered line`,
+        })
+        .toBeGreaterThan(restingRatio * 1.5);
+      await page.locator("#line-probe").evaluate((element) => element.remove());
     };
 
     await expectALine("light");
@@ -534,17 +529,20 @@ test.describe("forms", () => {
        frame -- which is transparent either way. For bare the same pause is the
        point: it gives a line the time to appear before the assertion says it
        never did. */
-    const hoveredEdge = async (presentation: string) => {
-      const control = page.getByTestId(`switch-${presentation}-none`);
-
-      await control.hover();
-      await page.waitForTimeout(500);
-
-      return control.evaluate((element) => getComputedStyle(element).borderTopColor);
+    const control = (presentation: string) => page.getByTestId(`switch-${presentation}-none`);
+    const readEdge = (presentation: string) =>
+      control(presentation).evaluate((element) => getComputedStyle(element).borderTopColor);
+    const hover = async (presentation: string) => {
+      await control(presentation).hover();
     };
 
-    expect(isTransparent(await hoveredEdge("soft")), "hovered soft switch line").toBe(false);
-    expect(isTransparent(await hoveredEdge("bare")), "hovered bare switch line").toBe(true);
+    await hover("soft");
+    await expect
+      .poll(async () => isTransparent(await readEdge("soft")), { message: "hovered soft switch line" })
+      .toBe(false);
+    await hover("bare");
+    await page.waitForTimeout(500);
+    expect(isTransparent(await readEdge("bare")), "hovered bare switch line").toBe(true);
   });
 
   /* A checkbox states itself by filling and cutting a tick out of the ground; a

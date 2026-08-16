@@ -30,7 +30,7 @@ test.describe("surfaces", () => {
         outlineBackground: primaryOutline.backgroundColor,
         outlineBorder: primaryOutline.borderTopColor,
         outlineBorderWidth: primaryOutline.borderTopWidth,
-        panelShadowOffset: panel.boxShadow.split(") ")[1],
+        panelShadowOffset: panel.boxShadow.match(/-?\d+(?:\.\d+)?px(?:\s+-?\d+(?:\.\d+)?px){3}/g)?.join(", "),
         softBackground: successSoft.backgroundColor,
         tokenBackground: resolveToken("background"),
         tokenPrimary: resolveToken("primary"),
