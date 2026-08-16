@@ -1,5 +1,5 @@
 @reference "tailwindcss";
-@import "../box.css";
+@reference "../box.css";
 
 @utility table-wrap {
   @apply w-full overflow-x-auto;

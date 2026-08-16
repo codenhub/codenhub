@@ -5,9 +5,9 @@
 
    The division of labour is the point. The aesthetic decides what depth looks
    like -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
-   elevation decides how much of it this element gets. Neither needs to know the
-   other, so `.flat` removes a slab under one aesthetic, a blur under another,
-   and nothing at all under none, without a single conditional.
+   elevation decides how much part-based geometry this element gets. Neither
+   needs to know the other, so `.flat` removes a part-based slab or blur without a
+   conditional. Complete surface shadows such as glass remain.
 
    One unitless number, multiplied into the aesthetic's shadow geometry where the
    component composes it. Being unitless is also what makes it safe to inherit, so
@@ -20,7 +20,8 @@
    Written on a component instead, that geometry would inherit into everything
    nested inside it, and a plain page would have a shadow under every card. */
 
-/* No depth, whatever the aesthetic draws. */
+/* No part-based depth. Complete surface shadow values, such as glass, are not
+   reached by the elevation multiplier. */
 .flat {
   --ui-elevation: 0;
 }

@@ -1,5 +1,4 @@
 @reference "tailwindcss";
-@import "./theme.css";
 
 /* How a box is painted, in one place. Intent supplies the colour, presentation
    how much of it, the aesthetic the material, and this composes the three.
@@ -147,7 +146,7 @@
      invalid `var()` would poison the `box-shadow` declaration itself, and a
      declaration invalid at computed-value time becomes `unset` -- which for a
      non-inherited property is `initial`, that is `none`. Every focused box would
-     lose its shadow rather than keep it. `shape.css` uses the same shape. */
+     lose its shadow rather than keep it. */
   &:focus-visible {
     box-shadow: var(--_focus-stack, var(--_shadow));
   }

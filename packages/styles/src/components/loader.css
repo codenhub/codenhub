@@ -1,6 +1,5 @@
 @reference "tailwindcss";
 @source inline("loader dots-wave dots-fade dots-queue dots-rotate dots-grow dots-grow-alternate dot-bounce bars-wave pulse-ring");
-@import "../box.css";
 
 /* The mask machinery, shared by the loader and by any component that shows a
    spinner of its own. Artwork is a mask rather than an image so it takes its

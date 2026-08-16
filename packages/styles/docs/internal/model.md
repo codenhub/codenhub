@@ -20,30 +20,30 @@ are the record of what was changed and why, and are accurate as history.
 
 ## The problem being fixed
 
-The current model is three orthogonal axes with per-component clamps. It is
-carefully specified and it produces unpredictable results. Three causes, all
+The replaced model had three orthogonal axes with per-component clamps. It was
+carefully specified and produced unpredictable results. Three causes were
 structural:
 
-**There is no default.** An element with no presentation class gets whatever
-`var()` fallback each component happens to declare. `--ui-fill` falls back to
+**There was no default.** An element with no presentation class got whatever
+`var()` fallback each component happened to declare. `--ui-fill` fell back to
 100% on a button, 12% on an alert and a badge, 0% on a card and a table. The
 resting look of the library was never chosen; it accumulated. This is why a plain
-button is filled while a plain table is outlined, and why neither is wrong under
-any rule currently written down.
+button was filled while a plain table was outlined, and neither was wrong under
+any rule then written down.
 
-**Every component is on every axis.** `intent.css` resets twenty-five selectors,
-and the supported-surface table asks each of them to express fill, border, and
-silhouette. Components that cannot express those honestly were given clamps to
+**Every component was on every axis.** `intent.css` reset twenty-five selectors,
+and the supported-surface table asked each of them to express fill, border, and
+silhouette. Components that could not express those honestly were given clamps to
 keep them from looking broken: a 1px ceiling on progress, another on badges and
 key caps, a 6% floor on skeletons, a bottom-rule floor on text controls, an edge
-restored on unchecked toggles. Each clamp is documented and each is an exception
-a reader has to hold.
+restored on unchecked toggles. Each clamp was documented and each was an
+exception a reader had to hold.
 
-**Presentation bundles two decisions into one class.** Fill and edge are separate
-questions, and the five classes pick fixed pairs of answers. The pairs cover four
-of six possibilities, collapse to three distinct results on most components, and
-leave the most common button on the web -- a subtle fill with a border -- with no
-spelling at all.
+**Presentation bundled two decisions into one class.** Fill and edge were
+separate questions, and the five classes picked fixed pairs of answers. The pairs
+covered four of six possibilities, collapsed to three distinct results on most
+components, and left the most common button on the web -- a subtle fill with a
+border -- with no spelling at all.
 
 The fix is not more rules. It is fewer decisions, each made explicitly.
 
@@ -96,8 +96,8 @@ container saying "everything below me is a success" is a trap: it would turn a
 nested destructive button green. So presentation and aesthetic inherit, and
 intent is redeclared by every component at its own root.
 
-What changes from the current model is presentation's shape. Nothing is added:
-there is no fourth layer deciding which axes reach which component, and
+The implemented model changed the replaced model's presentation shape. It added
+no fourth layer deciding which axes reach which component, and
 [the attempt to add one](#shared-composition-not-a-taxonomy) is recorded below
 along with why it was removed.
 
@@ -215,12 +215,12 @@ builds the screen.
 So elevation is a **modifier**, not a fourth axis. It sits with size, above the
 three axes:
 
-| Class       | `--ui-elevation` | Means                                   |
-| ----------- | ---------------- | --------------------------------------- |
-| `.flat`     | `0`              | No depth, whatever the aesthetic draws. |
-| _(default)_ | `1`              | The aesthetic's depth as authored.      |
-| `.raised`   | `1`              | The same, said explicitly.              |
-| `.floating` | `2`              | Twice it, for menus and popovers.       |
+| Class       | `--ui-elevation` | Means                                        |
+| ----------- | ---------------- | -------------------------------------------- |
+| `.flat`     | `0`              | No part-based depth; complete values remain. |
+| _(default)_ | `1`              | The aesthetic's depth as authored.           |
+| `.raised`   | `1`              | The same, said explicitly.                   |
+| `.floating` | `2`              | Twice it, for menus and popovers.            |
 
 One unitless number, multiplied into the aesthetic's shadow geometry where the
 component composes it:
@@ -236,10 +236,10 @@ spread is not depth.
 
 The division of labor is the point. **The aesthetic decides what depth looks
 like** -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
-**elevation decides how much of it this element gets**. Neither needs to know the
-other. `.flat` on a chunky-tile card removes a 4px slab; on a glass card it would
-remove a soft shadow; under no aesthetic at all it removes nothing, because there
-was nothing.
+**elevation decides how much part-based geometry this element gets**. Neither
+needs to know the other. `.flat` on a chunky-tile card removes a 4px slab, but it
+does not reach glass's complete `--ui-surface-shadow`; under no aesthetic at all
+it removes nothing, because there was nothing.
 
 Being unitless is what makes it safe to inherit, so a container can flatten a
 whole toolbar with one class and any element inside can opt back in.
@@ -360,9 +360,10 @@ and this one turned out to be a component resting on nothing.
 
 ## Intent
 
-Unchanged. Seven slots, seven classes, no cascade, and the zero-specificity reset
-that lets an element's own intent class win over an inherited value. It is the
-part of the current model that has held up under everything asked of it.
+Unchanged from the replaced model: seven slots, seven classes, no cascade, and
+the zero-specificity reset that lets an element's own intent class win over an
+inherited value. This is the part inherited from that model after it held up
+under everything asked of it.
 
 | Token               | Meaning                                                   |
 | ------------------- | --------------------------------------------------------- |
@@ -382,10 +383,10 @@ One change of ownership. The shared reset declares:
 
 An aesthetic sets `--ui-ink` to substitute its own neutral line color, and an
 intent class still overrides the whole slot, so a destructive control keeps its
-red edge under any aesthetic. This deletes the two fourteen-selector component
-lists in `neobrutalism.css` and closes the native-element gap Architecture
-records: a bare `<input>` under `.pixel` currently gets the silhouette but not
-the ink.
+red edge under any aesthetic. This deleted the two fourteen-selector component
+lists in `neobrutalism.css` and closed the native-element gap Architecture
+records: under the replaced model, a bare `<input>` under `.pixel` got the
+silhouette but not the ink.
 
 Rules I1 through I4 from Architecture carry over unchanged, including the one
 deliberate exception where table rows inherit their table's intent.
@@ -429,9 +430,9 @@ with the `var()` fallback that is its default.
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
 declared on `.neobrutalism` resolves the container's intent and inherits down
-already-resolved -- which is exactly why the aesthetic has to name every
-component today. Colorless geometry inherits safely, and the component supplies
-the color:
+already-resolved -- which is exactly why the replaced aesthetic implementation
+had to name every component. Colorless geometry inherits safely, and the
+component supplies the color:
 
 ```css
 box-shadow: var(--ui-shadow-x, 0px) var(--ui-shadow-y, 0px) var(--ui-shadow-blur, 0px) var(--ui-shadow-spread, 0px)
@@ -465,11 +466,10 @@ behind it.
   selector list the aesthetic owns, recorded in the registry as `selectors` with
   a `selectorReason`, so the exception is countable rather than invisible.
 - **R6.** An aesthetic declares the whole shadow geometry -- all four parts, or a
-  complete value. The parts fall back individually, so an aesthetic that sets an
-  offset but not a blur inherits the structural blur a surface carries and gets a
-  shape it never asked for. Measured: a chunky-tile aesthetic setting only
-  `--ui-shadow-y` drew a 4px slab with a 3px blur on cards and a hard slab on
-  buttons.
+  complete value. The parts resolve independently, so an omitted part can come
+  from another aesthetic in scope or fall through to component- or
+  foundation-owned geometry. That produces mixed material the aesthetic did not
+  author; declaring every part makes its shadow self-contained.
 
 - **R7.** A shadow length is written with a unit, `0px` and not `0`. Elevation
   multiplies each part, and `calc(0 * 1)` is a number where a length is required:
@@ -507,15 +507,16 @@ a choice, so it is not an axis, but it wins when it collides with one.
 `--ui-fill`, `--ui-border`, or an intent slot, and lets `box` paint. It does not
 write `background-color`, `border-color`, or `box-shadow` of its own.
 
-This is the rule with the most leverage left in the model, because state is where
-a design system usually grows its escape hatches. Wave 2 adds `:checked`,
-`:indeterminate`, `.active`, `[data-state]` and selected rows, and each one has an
-obvious wrong answer -- paint the property directly -- that works in isolation and
-then ignores the aesthetic, ignores elevation, and loses the hover derivation.
-Wave 1 already spells the same idea two ways: `text-control` overwrites the intent
-slots on `aria-invalid`, which is R8, while `.checkbox` and `.switch` overwrite
-`border-color` on `:checked`, which is not. Both look fine today; only the first
-still looks fine under an aesthetic that draws its edge as an inset ring.
+This rule had the most leverage left during implementation, because state is
+where a design system usually grows its escape hatches. The planned second wave
+added `:checked`, `:indeterminate`, `.active`, `[data-state]` and selected rows,
+and each had an obvious wrong answer -- paint the property directly -- that worked
+in isolation and then ignored the aesthetic, ignored elevation, and lost the
+hover derivation. Before R8 was implemented consistently, `text-control`
+overwrote the intent slots on `aria-invalid`, which followed R8, while `.checkbox`
+and `.switch` overwrote `border-color` on `:checked`, which did not. Both looked
+fine in isolation; only the first survived an aesthetic that drew its edge as an
+inset ring.
 
 R8 says what a state may declare. It does not say where, and where turns out to
 decide whether the state wins at all. A state written as `&[aria-invalid="true"]`
@@ -533,7 +534,7 @@ the axes already have. That is the point: if a state needs something the
 vocabulary cannot say, the vocabulary is missing a slot, and adding the slot
 fixes it for every state at once rather than for that one.
 
-Three steps, and there is no fourth. The current model's fourth step was
+Three steps, and there is no fourth. The replaced model's fourth step was
 "component clamps the result"; the clamps are gone with the edge scale that
 forced them, and the bounds left are stated where they apply.
 
@@ -569,9 +570,9 @@ its own ground: `.bare` is today's look exactly, `.soft` is 12% of the intent ov
 it, and `.solid` fills with the intent. The registry records the ground beside the
 pair.
 
-These are proposals, not derivations -- there is no rule that produces them, and
-there should not be. The point is that each is a decision on one line of one file
-rather than a `var()` fallback in the middle of a component.
+These authored defaults are implemented decisions, not derivations -- there is no
+rule that produces them, and there should not be. Each is stated in one place
+rather than hidden as a `var()` fallback in the middle of a component.
 
 ### Components that do not take the whole of `box`
 
@@ -691,17 +692,13 @@ What each aesthetic must look like, so a change can be judged against something.
 ### Default
 
 No aesthetic class in scope. 1px edges, 0.5rem control radius, 0.875rem surface
-radius, no silhouette, no shadow except the card's elevation. The default is the
+radius, no silhouette, and no component depth by default. The default is the
 absence of material declarations, not a set of root values -- which is why a card
 gets surface radius and a button gets control radius from the same unset token.
-
-The card's depth is the one thing the absence of material cannot supply, so the
-`surface` utility carries a structural shadow _geometry_ -- `--_d-shadow-y: 1px`,
-`--_d-shadow-blur: 3px` -- behind the aesthetic's own. It is geometry only: the
-colour is still the component's own line colour, so nothing about the intent model
-changes, and any aesthetic that sets offsets of its own replaces it. Scaled by the
-registry's per-component elevation, it is also what makes a panel flat, a card
-raised, and a tooltip twice a card, with no per-component shadow anywhere.
+`.raised` and `.floating` opt an element into the foundation shadow geometry, and
+an aesthetic can supply different geometry. The tooltip bubble is the sole
+component-owned exception: it carries explicit depth because it floats over
+arbitrary content and needs a boundary there.
 
 ### `.glass`
 
@@ -729,16 +726,17 @@ element into its own shadow.
 - Ink follows the theme, not the palette: near-black on light, near-white on
   dark. Pure black disappears on a dark page.
 - The offset shadow is the component's own `--intent-border`, so a success button
-  casts a green shadow and an unintented one casts ink.
+  casts a green shadow and a neutral button casts ink.
 - Hover moves the element by the shadow offset and shrinks the shadow to nothing.
 
 ### `.pixel`
 
 An 8-bit look built from a stepped silhouette and an inset ring.
 
-- Corners step by a 2px grid unit; chips step by 1px on their own polygon.
-- The edge is an inset ring of the same depth as the cut. A thinner ring leaves
-  the staircase uncovered and the border reads as broken at every corner.
+- Corners step by a 2px grid unit. Tight chips use their own 2px silhouette but
+  retain the shared 4px inset ring as a supported compact-component exception.
+- The shared edge is a 4px inset ring. A thinner structural ring leaves the
+  staircase uncovered and the border reads as broken at every corner.
 - No radius anywhere. `clip-path` clips a border away, so the border ceiling goes
   to zero and the ring does the drawing.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font

@@ -1,7 +1,7 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../box.css";
-@import "./surface.css";
+@reference "../box.css";
+@reference "./surface.css";
 
 @keyframes anim-skeleton {
   0% {

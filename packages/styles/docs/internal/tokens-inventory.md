@@ -1,19 +1,22 @@
 ---
 status: DRAFT
-last_updated: 2026-08-13
+last_updated: 2026-08-16
 scope: Complete catalogue of every custom property declared by `@codenhub/styles`, with a verdict for the 0.1.0 refactor.
 ---
 
 # Token inventory
+
+This historical draft is superseded by [Model](./model.md), the implemented
+contract. The tables below retain the branch-point inventory and proposed
+vocabulary for historical context; they are not active authority.
 
 Every custom property the package declares, what declares it, what reads it, and
 what should happen to it in 0.1.0. Tokens are the foundation the whole styling
 model is built from, so this document comes before the model: a rule about
 composition is only as good as the vocabulary it composes.
 
-This is a working document. It records the state of `src/` at the branch point
-and the verdict proposed for each token. [Architecture](./architecture.md) owns
-the model; this owns the vocabulary.
+This records the state of `src/` at the branch point and the verdict proposed for
+each token. It no longer owns the active model or vocabulary.
 
 ## How to read a verdict
 

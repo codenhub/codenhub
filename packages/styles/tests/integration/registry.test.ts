@@ -646,11 +646,11 @@ test("the package publishes an entrypoint for every aesthetic in the registry", 
   }
 });
 
-/* Shadow parts fall back individually, so an aesthetic that sets an offset but
-   not a blur inherits the structural blur a surface carries and gets a shape it
-   never asked for. Declaring the whole geometry is the contract, and there is no
-   exemption from it: `--ui-surface-shadow` replaces the shadow of surfaces only,
-   so the parts still paint every button, chip and control on the page. */
+/* Shadow parts resolve individually, so an omitted part can come from another
+   aesthetic in scope or fall through to component- or foundation-owned geometry,
+   producing mixed material. Declaring the whole geometry is the contract, and
+   there is no exemption from it: `--ui-surface-shadow` replaces the shadow of
+   surfaces only, so the parts still paint every button, chip and control. */
 test("every aesthetic declares a whole shadow geometry", async () => {
   const parts = ["--ui-shadow-x", "--ui-shadow-y", "--ui-shadow-blur", "--ui-shadow-spread"];
   const sources = await Promise.all(

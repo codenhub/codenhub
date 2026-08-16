@@ -1,6 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../box.css";
+@reference "../box.css";
 
 /* Fourteen pictures, seven icons. A `data:` URI is a document of its own: it
    inherits nothing from the page, so `currentColor` and `var()` written inside

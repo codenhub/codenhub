@@ -5,7 +5,7 @@ import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 
 test.describe("surfaces", () => {
-  test("gives cards elevation and reads intent and presentation", async ({ page }) => {
+  test("keeps ordinary surfaces flat and reads intent and presentation", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
     const styles = await page.evaluate(() => {
@@ -26,7 +26,7 @@ test.describe("surfaces", () => {
 
       return {
         neutralBackground: neutral.backgroundColor,
-        neutralShadow: neutral.boxShadow,
+        neutralShadowOffset: neutral.boxShadow.match(/-?\d+(?:\.\d+)?px(?:\s+-?\d+(?:\.\d+)?px){3}/g)?.join(", "),
         outlineBackground: primaryOutline.backgroundColor,
         outlineBorder: primaryOutline.borderTopColor,
         outlineBorderWidth: primaryOutline.borderTopWidth,
@@ -37,13 +37,9 @@ test.describe("surfaces", () => {
       };
     });
 
-    /* A card is the elevated sibling, and its depth comes from the structural
-       geometry `surface` carries scaled by the registry's elevation of 1. */
-    expect(styles.neutralShadow).not.toBe("none");
-    /* A panel is the flush one, so it stays unelevated -- which under `box` is a
-       shadow whose every length is zero rather than the keyword `none`. Zero is
-       what a multiplier of zero produces, and the distinction matters: a `none`
-       would mean the composition dropped out instead of resolving. */
+    /* Neither ordinary surface opts into depth. The composed shadow remains a
+       valid zero-length value rather than gaining structural elevation. */
+    expect(styles.neutralShadowOffset).toBe("0px 0px 0px 0px");
     expect(styles.panelShadowOffset).toBe("0px 0px 0px 0px");
 
     expectSameColor(styles.neutralBackground, styles.tokenBackground, "neutral card background");

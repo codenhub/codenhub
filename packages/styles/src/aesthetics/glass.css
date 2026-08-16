@@ -21,11 +21,10 @@
   --ui-backdrop: blur(14px) saturate(1.6);
 
   /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
-     the blur, and a drop shadow under a translucent button reads as grime. That
-     has to be said in parts rather than left unsaid: the parts fall back
-     individually, so silence here would let a surface's structural 1px/3px
-     inherit onto every button and chip on the page. `--ui-surface-shadow` below
-     replaces the shadow of surfaces only. */
+     the blur, and a drop shadow under a translucent button reads as grime. All
+     general parts are explicitly zero so inherited or future geometry cannot
+     leak onto controls. `--ui-surface-shadow` below replaces the shadow of
+     surfaces only. */
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: 0px;

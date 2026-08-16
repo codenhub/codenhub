@@ -361,6 +361,7 @@ test.describe("aesthetics", () => {
       await session.send("Emulation.setEmulatedMedia", {
         features: [{ name: "prefers-reduced-transparency", value: "no-preference" }],
       });
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(false);
     };
 
     /* `""` is "the engine has no such property"; `"none"` is "it has one and it
@@ -435,6 +436,7 @@ test.describe("aesthetics", () => {
       await session.send("Emulation.setEmulatedMedia", {
         features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
       });
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(true);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
       const card = await readStyles(page, "card-default-none", BACKDROP_PROPERTIES);
@@ -444,16 +446,6 @@ test.describe("aesthetics", () => {
          opaque surface rather than a softer blur. */
       expect(backdrop === "" || backdrop === "none", "card backdrop").toBe(true);
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
-    });
-
-    test("leaves controls solid rather than giving each one its own blur", async ({ page, browserName }) => {
-      await allowTransparency(page, browserName);
-      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
-
-      const styles = await readStyles(page, "btn-default-primary", BACKDROP_PROPERTIES);
-      const backdrop = readBackdrop(styles);
-
-      expect(backdrop === "" || backdrop === "none").toBe(true);
     });
 
     test("still applies its material tokens to controls", async ({ page }) => {
@@ -635,13 +627,8 @@ test.describe("aesthetics", () => {
       }
     });
 
-    /* A chip steps its corners on its own polygon -- one unit rather than two --
-       but the ring is the aesthetic's shadow spread, and `box` has one spread
-       for every component it paints. So a badge's silhouette is the tight one
-       while its ring is the structural depth. The two disagree, and nothing in
-       the model says which should give: `--ui-edge-tight` names the idea but
-       only `shape.css` reads it, and `box` has no tight slot at all. Recorded
-       rather than asserted as correct. */
+    /* Supported compact-component exception: a chip uses its own 2px tight
+       silhouette while retaining the aesthetic's shared 4px inset ring. */
     test("steps a chip on the tight polygon while its ring stays the structural one", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 

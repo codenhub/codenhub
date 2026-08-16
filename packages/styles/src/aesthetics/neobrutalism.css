@@ -6,7 +6,7 @@
    `--ui-ink` and four shadow parts: the ink reaches every component and every
    bare element through the shared intent reset, and the shadow is colourless
    geometry that each component colours against its own intent, so a success
-   button still casts a green shadow and an unintented one casts ink.
+   button still casts a green shadow and a neutral button casts ink.
 
    Load after the base stylesheet. Aesthetics override the neutral defaults the
    shared reset declares at zero specificity, so source order decides. */

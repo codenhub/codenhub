@@ -208,9 +208,8 @@ test("colors key caps and quotes by intent", async ({ page }) => {
   expectSameColor(styles.quoteInfo, styles.tokenInfo, "quote intent rule");
 });
 
-/* A quote is still wave 2: it draws a left bar rather than a box, composing
-   `--ui-fill` and `--ui-border` itself, and clamps the bar between one and four
-   pixels. */
+/* A quote draws a left bar rather than a box and composes `--ui-fill` and
+   `--ui-border` itself. */
 test("renders every block quote presentation", async ({ page }) => {
   await page.goto(TYPOGRAPHY_URL);
 
@@ -253,10 +252,9 @@ test("renders every block quote presentation", async ({ page }) => {
   expect(isTransparent(styles.softBackground)).toBe(false);
   expect(isTransparent(styles.solidBackground)).toBe(false);
   expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
-  /* The bar is clamped between one and four pixels, and no presentation scales
-     it: `.edged` decides whether the bar reads, never how wide it is. */
+  /* No presentation scales the bar: `.edged` decides whether it reads, never
+     how wide it is. */
   expect(Number.parseFloat(styles.defaultBorderWidth)).toBeGreaterThanOrEqual(1);
-  expect(Number.parseFloat(styles.edgedBorderWidth)).toBeLessThanOrEqual(4);
   expect(styles.edgedBorderWidth).toBe(styles.defaultBorderWidth);
 });
 
@@ -298,11 +296,9 @@ test("reads presentation on key caps and tables", async ({ page }) => {
   expect(getColorDistance(styles.softBackground, styles.neutralBackground)).toBeGreaterThan(2);
   expectSameColor(styles.solidBackground, styles.tokenPrimary, "solid kbd fill");
   expect(getColorDistance(styles.solidColor, styles.solidBackground)).toBeGreaterThan(2);
-  /* A key cap caps its border at the base width, so a thicker aesthetic cannot
-     turn a chip into a box with a label in it. No presentation scales it either,
-     so `.edged` matches the default rather than doubling it. */
+  /* No presentation scales a key cap's border, so `.edged` matches the default
+     rather than changing its width. */
   expect(Number.parseFloat(styles.edgedBorderWidth)).toBe(Number.parseFloat(styles.defaultBorderWidth));
-  expect(Number.parseFloat(styles.edgedBorderWidth)).toBeLessThanOrEqual(1);
   /* The default draws the quiet border colour; `.edgeless` drops the line, and a
      filled cap lands on its own fill so nothing rings it. */
   expectSameColor(styles.defaultBorderColor, styles.tokenBorder, "default kbd edge");

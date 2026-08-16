@@ -1,6 +1,6 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "../box.css";
+@reference "../box.css";
 
 /* What every surface shares. Two slots exist here and nowhere else, and that is
    how an aesthetic reaches surfaces without naming one: only a surface resolves
@@ -50,7 +50,7 @@
   backdrop-filter: var(--ui-backdrop, none);
 }
 
-/* A bare, edged, raised container. */
+/* A bare, edged container that takes one unit when depth is supplied. */
 @utility card {
   @apply surface p-(--surface-padding,1.25rem);
 
