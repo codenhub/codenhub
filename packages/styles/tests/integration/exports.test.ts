@@ -84,7 +84,13 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
   "./tw/aesthetics/pixel": {
-    patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/, /--ui-shadow-inset:/],
+    patterns: [
+      /\.pixel\{/,
+      /--ui-clip:\s*polygon/,
+      /--ui-clip-tight:\s*polygon/,
+      /--ui-shadow-edge:/,
+      /--ui-shadow-inset:/,
+    ],
   },
 };
 const compiledExportContracts: Record<string, CompiledExportContract> = {

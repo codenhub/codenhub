@@ -43,6 +43,9 @@
 
   --ui-clip: none;
   --ui-clip-tight: none;
+  /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
+     has to say so rather than inherit it. */
+  --ui-shadow-edge: initial;
   --ui-hover-transform: none;
   --ui-active-transform: none;
 }

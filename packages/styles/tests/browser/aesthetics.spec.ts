@@ -680,8 +680,8 @@ test.describe("aesthetics", () => {
     });
 
     /* Supported compact-component exception: a chip uses its own 2px tight
-       silhouette while retaining the aesthetic's shared 4px inset ring. */
-    test("steps a chip on the tight polygon while its ring stays the structural one", async ({ page }) => {
+       silhouette while retaining the aesthetic's shared 4px inset geometry. */
+    test("steps a chip on the tight polygon while its ring keeps the structural depth", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
       const chip = await readStyles(page, "badge-default-none", ["box-shadow", "clip-path"]);
@@ -694,8 +694,42 @@ test.describe("aesthetics", () => {
       expect(chip["clip-path"], "chip clip").toContain("0px 2px, 1px 2px");
       expect(structural["clip-path"], "card clip").toContain("0px 4px, 2px 4px");
 
+      /* The geometry is shared; the colour is not, and no longer can be. A badge
+         is edgeless and a card is edged, so the ring answers each of them
+         separately. */
       expect(chip["box-shadow"], "chip ring").toMatch(/\b0px 0px 0px 4px\b/);
-      expect(chip["box-shadow"], "chip ring matches the structural one").toBe(structural["box-shadow"]);
+      expect(structural["box-shadow"], "card ring").toMatch(/\b0px 0px 0px 4px\b/);
+    });
+
+    /* The ring is this aesthetic's border, drawn where a `clip-path` cannot cut
+       it, so it answers the edge axis exactly as a real border does. It did not:
+       `--ui-shadow-ink` painted it at full strength on every box the aesthetic
+       reached, so `.edged` and `.edgeless` rendered identically and the aesthetic
+       decided an axis that is not its to decide. `--ui-shadow-edge` points it at
+       `--_edge` instead, which already carries the edge amount as its alpha. */
+    test("draws the inset ring only where the edge axis asks for one", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+
+      const surfaces = await readAll(page, ["card-ghost-edged-none", "card-soft-edgeless-none"], ["box-shadow"]);
+      const [edged, edgeless] = surfaces.map(([, styles]) => styles["box-shadow"]!);
+
+      /* Same geometry either way -- only the colour moves, which is what keeps
+         the aesthetic's material out of the presentation's decision. */
+      for (const shadow of [edged, edgeless]) {
+        expect(shadow).toMatch(/\b0px 0px 0px 4px\b/);
+        expect(shadow).toContain("inset");
+      }
+
+      expect(isTransparent(readShadowColor(edged!)), "edged ring").toBe(false);
+      expect(isTransparent(readShadowColor(edgeless!)), "edgeless ring").toBe(true);
+
+      /* A field floors its own edge, so a container asking for none cannot take
+         away the one mark of where typing goes (WCAG 1.4.11). */
+      await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+      const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
+
+      expect(isTransparent(readShadowColor(field["box-shadow"]!)), "field ring").toBe(false);
     });
 
     /* A clip removes a border, so a clipped chip with no inset ring is one whose
@@ -779,8 +813,12 @@ test.describe("aesthetics", () => {
     test("resolves each component's own intent through the shared ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
+      /* Probed on `.ghost.edged`, because the ring now answers the edge axis and
+         a fill would blend it toward the plate: P3 runs the line into the fill by
+         the fill amount, so a `.solid` ring is the plate's own colour by design.
+         Zero fill is where the intent reaches the line undiluted. */
       const [neutralShadow, tintedShadow] = await page.evaluate(() =>
-        ["btn-default-none", "btn-soft-edgeless-destructive"].map(
+        ["btn-ghost-edged-none", "btn-ghost-edged-destructive"].map(
           (testId) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).boxShadow,
         ),
       );
@@ -835,6 +873,11 @@ test.describe("aesthetics", () => {
         expect(shape.ring, `${shape.selector} ring`).toContain("inset");
         expect(shape.ring, `${shape.selector} ring depth`).toContain("0px 0px 0px 4px");
       }
+
+      /* The input is the one probed for colour: it floors its own edge, so the
+         ring is there whatever a container says, where a `<button>` is solid and
+         edgeless and a `<code>` edgeless, and neither is owed a line. */
+      expect(isTransparent(readShadowColor(input!.ring)), "input ring").toBe(false);
     });
   });
 });

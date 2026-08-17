@@ -3,9 +3,9 @@
 
    Tier 1 only. `clip-path` clips a border, an outline and any outer shadow, so
    the border ceiling goes to zero and the edge becomes an inset shadow instead --
-   which is exactly what `--ui-shadow-inset` and `--ui-shadow-spread` are for. The
-   ring is still coloured by each component's own intent, because the parts carry
-   no colour. */
+   which is exactly what `--ui-shadow-inset`, `--ui-shadow-spread` and
+   `--ui-shadow-edge` are for. The ring is still coloured by each component's own
+   intent, because the parts carry no colour. */
 .pixel {
   --pixel-unit: 2px;
 
@@ -22,9 +22,22 @@
      uncovered and the border reads as broken at every corner. Spread is not
      scaled by elevation, so a chip resting at zero keeps its edge. */
   --ui-shadow-inset: inset;
-  /* The ring is the element's edge drawn in ink, so it takes the intent rather
-     than the neutral depth colour. */
-  --ui-shadow-ink: 100%;
+  /* The ring is not depth -- it is this element's border, drawn where a
+     `clip-path` cannot cut it. `--ui-shadow-edge` says so, and `box` colours it
+     from `--_edge`: the P3 blend toward the fill, with the edge axis as its
+     alpha. That is what keeps presentation intact under this aesthetic. An
+     `.edgeless` badge or a `.solid` button has no line, so it gets no ring; a
+     `.edged` card gets one; a field, which floors its own edge, keeps one
+     whatever a container asks for.
+
+     Before this the ring took `--ui-shadow-ink` and painted at full strength on
+     every box the aesthetic reached, so `.edged` and `.edgeless` rendered
+     identically and the aesthetic decided an axis that is not its to decide.
+
+     Declared empty on purpose: the token is read for its presence, not its
+     value. `box` explains why -- the percentage form nests two `color-mix()`
+     results, which WebKit resolves as though the percentage were zero. */
+  --ui-shadow-edge: ;
   --ui-shadow-spread: calc(var(--pixel-unit) * 2);
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;

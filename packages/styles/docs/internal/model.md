@@ -698,6 +698,7 @@ with the `var()` fallback that is its default.
 | `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                          |
 | `--ui-active-transform` | `none`               | Transform applied while pressed.                      |
 | `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.       |
+| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.    |
 | `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.         |
 | `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.            |
 | `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent. |
@@ -730,6 +731,24 @@ problem `--ui-backdrop` solves, solved the same way.
 Three of those slots exist because the spike found the first four insufficient.
 `--ui-shadow-inset` carries the `inset` keyword, without which pixel's ring has to
 be written as a complete value and loses the component's own intent.
+`--ui-shadow-edge` is the fourth, added later: the inset ring is not a shadow at
+all but a border drawn where a `clip-path` cannot cut it, so it has to answer the
+edge axis the way a real border does. Pointing it at `--_edge` is the whole
+implementation, because `--_edge` already carries P3's blend toward the fill and
+the edge amount as its alpha. Without it, `.edged` and `.edgeless` rendered
+identically under `.pixel` and the aesthetic decided an axis that is not its to
+decide.
+
+It is read for its presence rather than its value, and that is a measured
+constraint rather than a preference. As a percentage --
+`color-mix(in oklab, var(--_edge) var(--ui-shadow-edge), var(--_depth-color))` --
+both ends of the mix are themselves `color-mix()` results, and WebKit resolves
+that nesting as though the percentage were zero: every ring came out in
+`--elevation-color` at 8% alpha, in that engine alone, with Chromium and Firefox
+agreeing with the spec. Declaring the token empty and selecting between two
+single mixes with the guaranteed-invalid fallback idiom keeps all three engines
+in agreement. An aesthetic nested inside one that declares it clears it with
+`initial`.
 `--ui-hover-shadow-*` lets neobrutalism collapse its shadow on hover without the
 `:hover` selector R3 forbids. `--ui-surface-ground` exists because
 `--ui-bg-alpha` multiplies the _fill_, and a surface's default fill is 0%: with no

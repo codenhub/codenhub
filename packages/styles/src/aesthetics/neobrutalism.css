@@ -49,6 +49,11 @@
   --ui-clip: none;
   --ui-clip-tight: none;
   --ui-shadow-inset: ;
+  /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
+     button keeps it. Cleared rather than omitted, because a neobrutalist region
+     nested inside a pixel one would otherwise inherit pixel's answer and lose the
+     slab on everything the edge axis rests at zero. */
+  --ui-shadow-edge: initial;
   --ui-backdrop: none;
 }
 

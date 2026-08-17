@@ -776,6 +776,11 @@ a container to scale the whole look:
 </section>
 ```
 
+The outline is an inset ring, because a clip removes a real border. It is the
+element's edge rather than a shadow, so it answers `.edged` and `.edgeless` the
+way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged`
+card draws one, and a field keeps one whatever a container asks for.
+
 `--font-pixel` is yours to supply. The package ships no font binary, so the
 aesthetic has no network side effect and falls back to the monospace stack.
 
@@ -1421,6 +1426,7 @@ such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 | `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`      |
 | `--ui-active-transform` | Transform while pressed.                                                                                      | `none`               |
 | `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                 |
+| `--ui-shadow-edge`      | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                |
 | `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                  |
 | `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                |
 | `--ui-surface-ground`   | Ground a surface sits on.                                                                                     | `--color-background` |
@@ -1445,22 +1451,33 @@ such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
 Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a
 clip can replace the border with an inset shadow by setting
-`--ui-shadow-inset`, the four shadow geometry parts, and `--ui-shadow-ink`.
-Set `--ui-border-max: 0px` when that ring replaces the component border.
-Focusable components restore the clipped focus outline through
-`--ui-focus-inset`.
+`--ui-shadow-inset` and the four shadow geometry parts. Set
+`--ui-border-max: 0px` when that ring replaces the component border. Focusable
+components restore the clipped focus outline through `--ui-focus-inset`.
+
+Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes
+the element's edge color, which carries the edge axis as its alpha, so `.edged`
+draws it and `.edgeless` does not — the same answer a real border gives. Without
+it the ring paints on every component the aesthetic reaches and the edge classes
+have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in
+the intent's own ink, such as a hard offset slab, which an `.edgeless` element
+still gets.
+
+The token is read for its presence, not its value: declare it empty to switch the
+ring on, and `initial` to switch it back off in an aesthetic nested inside one
+that declares it.
 
 ```css
 .stepped {
   --ui-clip: polygon(/* structural silhouette */);
-  --ui-clip-tight: polygon(/* compact silhouette */);
+  --ui-clip-tight: none;
   --ui-border-max: 0px;
   --ui-shadow-inset: inset;
+  --ui-shadow-edge: ;
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 4px;
-  --ui-shadow-ink: 100%;
   --ui-focus-inset: var(--focus-ring-width);
 }
 ```

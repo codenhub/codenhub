@@ -139,9 +139,38 @@
 
      Defaulting to the neutral is what keeps depth from reading as colour: an
      intent-coloured shadow at full opacity is a smear of the component's own
-     hue, not a shadow. An aesthetic whose depth *is* ink -- neobrutalism's slab,
-     pixel's ring -- asks for it by name. */
-  --_shadow-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
+     hue, not a shadow. An aesthetic whose depth *is* ink -- neobrutalism's slab
+     -- asks for it by name. */
+  --_depth-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
+  /* Or the shadow is not depth at all. An aesthetic that draws its line as an
+     inset ring is drawing the border somewhere a `clip-path` cannot cut it, so
+     that ring has to answer the edge axis exactly as a real border does --
+     otherwise the aesthetic decides an axis that is not its to decide, which is
+     what `.pixel` did: `.edged` and `.edgeless` rendered identically.
+
+     `--_edge` is the whole answer, because it already carries both halves: P3's
+     blend toward the fill, and `--_edge-amount` as its alpha. At `.edgeless` it
+     is transparent and the ring disappears on its own, with no second percentage
+     to keep in step.
+
+     Separate from `--ui-shadow-ink` rather than folded into it, because the two
+     mean opposite things. Neobrutalism's slab is depth cast in ink and stays
+     under an `.edgeless` button; pixel's ring is the line itself and must not.
+     Pointing `--ui-shadow-ink` at `--_edge` instead would have taken the slab off
+     every edgeless neobrutalist element on the page.
+
+     The switch is presence rather than a percentage, and that is not a style
+     choice. Written as `color-mix(in oklab, var(--_edge) var(--ui-shadow-edge),
+     var(--_depth-color))` both ends are themselves `color-mix()` results, and
+     WebKit resolves that nesting as though the percentage were zero: every ring
+     came out in `--elevation-color` at 8% alpha, in that engine only, with
+     Chromium and Firefox agreeing with the spec. So the aesthetic declares the
+     token empty to mean "my shadow is my edge", and each branch stays a single
+     mix. An undeclared token makes the line below invalid at computed-value
+     time, which is what hands the `var()` its fallback -- the same idiom
+     `--_focus-stack` uses at the bottom of this utility. */
+  --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
+  --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
   --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.

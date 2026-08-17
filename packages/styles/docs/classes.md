@@ -452,6 +452,11 @@ a container to scale the whole look:
 </section>
 ```
 
+The outline is an inset ring, because a clip removes a real border. It is the
+element's edge rather than a shadow, so it answers `.edged` and `.edgeless` the
+way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged`
+card draws one, and a field keeps one whatever a container asks for.
+
 `--font-pixel` is yours to supply. The package ships no font binary, so the
 aesthetic has no network side effect and falls back to the monospace stack.
 
