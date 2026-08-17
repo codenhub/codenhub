@@ -111,7 +111,7 @@ component that supports intent, and a custom intent needs no component changes.
 
 `--intent-color` and `--intent-strong` are two ends of the same family and not
 interchangeable. The base is a ground, chosen to be filled with; the strong tone
-is chosen to be read against a page. A `.soft` or `.bare` component prints the
+is chosen to be read against a page. A `.soft` or `.ghost` component prints the
 strong one, which is why an unfilled warning reads in amber-800 rather than the
 amber-600 its solid sibling is filled with.
 

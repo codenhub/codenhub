@@ -227,10 +227,10 @@ test("renders every block quote presentation", async ({ page }) => {
     };
 
     return {
-      bareEdgelessBorder: get("quote-bare-edgeless-primary").borderLeftColor,
-      bareText: get("quote-bare-edged-primary").color,
+      ghostEdgelessBorder: get("quote-ghost-edgeless-primary").borderLeftColor,
+      ghostText: get("quote-ghost-edged-primary").color,
       defaultBorderWidth: get("quote-default-primary").borderLeftWidth,
-      edgedBorderWidth: get("quote-bare-edged-primary").borderLeftWidth,
+      edgedBorderWidth: get("quote-ghost-edged-primary").borderLeftWidth,
       softBackground: get("quote-soft-edged-primary").backgroundColor,
       softEdgedBorder: get("quote-soft-edged-primary").borderLeftColor,
       softEdgelessBorder: get("quote-soft-edgeless-primary").borderLeftColor,
@@ -240,9 +240,9 @@ test("renders every block quote presentation", async ({ page }) => {
     };
   });
 
-  expect(isTransparent(styles.bareEdgelessBorder)).toBe(true);
-  expectSameColor(styles.bareText, styles.strongPrimary, "bare quote intent text");
-  /* The fill has to be non-zero for this to mean anything. A bare edgeless bar
+  expect(isTransparent(styles.ghostEdgelessBorder)).toBe(true);
+  expectSameColor(styles.ghostText, styles.strongPrimary, "ghost quote intent text");
+  /* The fill has to be non-zero for this to mean anything. A ghost edgeless bar
      is transparent under a wrong edge blend too, because there is no fill for a
      wrong one to leave behind -- so the assertion above passed while a soft
      edgeless quotation drew a bar of its own tint over the tint it had already
@@ -276,7 +276,7 @@ test("reads presentation on key caps and tables", async ({ page }) => {
     return {
       defaultBorderColor: get("kbd-default-neutral").borderTopColor,
       defaultBorderWidth: get("kbd-default-neutral").borderTopWidth,
-      edgedBorderWidth: get("kbd-bare-edged-primary").borderTopWidth,
+      edgedBorderWidth: get("kbd-ghost-edged-primary").borderTopWidth,
       neutralBackground: get("kbd-default-neutral").backgroundColor,
       softBackground: get("kbd-soft-edgeless-primary").backgroundColor,
       softBorderColor: get("kbd-soft-edgeless-primary").borderTopColor,

@@ -27,7 +27,7 @@ test.describe("buttons", () => {
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .bare)):not(:is(.soft, .bare) *)",
+          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .ghost)):not(:is(.soft, .ghost) *)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -58,10 +58,10 @@ test.describe("buttons", () => {
 
         return getComputedStyle(element);
       };
-      const outline = read("btn-bare-edged-success");
+      const outline = read("btn-ghost-edged-success");
       const soft = read("btn-soft-edgeless-success");
       const pill = read("primary-pill-button");
-      const ghost = read("btn-bare-edgeless-secondary");
+      const ghost = read("btn-ghost-edgeless-secondary");
 
       return {
         ghostBackground: ghost.backgroundColor,
@@ -76,11 +76,11 @@ test.describe("buttons", () => {
       };
     });
 
-    /* `bare edged` is the outline button: no fill, a line in the intent. */
+    /* `ghost edged` is the outline button: no fill, a line in the intent. */
     expect(isTransparent(styles.successOutlineBorder)).toBe(false);
     expect(isTransparent(styles.successOutlineColor)).toBe(false);
     expect(isTransparent(styles.successOutlineBackground)).toBe(true);
-    /* `bare edgeless` is the ghost: no fill and no line at all. The line goes in
+    /* `ghost edgeless` is the ghost: no fill and no line at all. The line goes in
        the colour rather than the width, so the box geometry stays identical
        across the edge classes and nothing shifts when one is applied. */
     expect(isTransparent(styles.ghostBackground)).toBe(true);
@@ -90,16 +90,16 @@ test.describe("buttons", () => {
     expect(isTransparent(styles.successSoftColor)).toBe(false);
     expect(Number.parseFloat(styles.primaryPillBorderRadius)).toBeGreaterThan(20);
 
-    await page.getByTestId("btn-bare-edgeless-secondary").hover();
+    await page.getByTestId("btn-ghost-edgeless-secondary").hover();
 
-    /* Hover is derived rather than declared: `bare` picks up the hover step, so
+    /* Hover is derived rather than declared: `ghost` picks up the hover step, so
        a ghost button's background transitions out of fully transparent. A single
        read can land on the starting value before the transition moves. */
     await expect
       .poll(async () =>
         isTransparent(
           await page
-            .getByTestId("btn-bare-edgeless-secondary")
+            .getByTestId("btn-ghost-edgeless-secondary")
             .evaluate((element) => getComputedStyle(element).backgroundColor),
         ),
       )
@@ -280,8 +280,8 @@ test.describe("buttons", () => {
         const ghostButton = document.createElement("button");
         const softButton = document.createElement("button");
 
-        outlineButton.className = `btn ${intent.className} bare edged`;
-        ghostButton.className = `btn ${intent.className} bare edgeless`;
+        outlineButton.className = `btn ${intent.className} ghost edged`;
+        ghostButton.className = `btn ${intent.className} ghost edgeless`;
         softButton.className = `btn ${intent.className} soft edgeless`;
         host.append(outlineButton, ghostButton, softButton);
 
@@ -362,7 +362,7 @@ test.describe("buttons", () => {
       const inheritedBadge = document.createElement("span");
 
       inheritedButton.className = "btn primary";
-      overriddenButton.className = "btn primary bare edged";
+      overriddenButton.className = "btn primary ghost edged";
       inheritedBadge.className = "badge success";
       container.append(inheritedButton, overriddenButton, inheritedBadge);
       document.body.append(container);
@@ -438,7 +438,7 @@ test.describe("buttons", () => {
 
     expect(expected.step).toBe("14%");
 
-    const outline = page.getByTestId("btn-bare-edged-primary");
+    const outline = page.getByTestId("btn-ghost-edged-primary");
 
     await outline.hover();
 
@@ -534,7 +534,7 @@ test.describe("buttons", () => {
 
         return tint;
       }, intent);
-      const outline = page.getByTestId(`btn-bare-edged-${intent}`);
+      const outline = page.getByTestId(`btn-ghost-edged-${intent}`);
 
       await outline.hover();
 

@@ -33,16 +33,21 @@ const PRESENTATIONS = [
   "solid",
   "soft edged",
   "soft edgeless",
-  "bare edged",
-  "bare edgeless",
+  "ghost edged",
+  "ghost edgeless",
 ];
-/* The six text controls draw their edge whatever the edge class says, because
-   losing it would leave a field with no mark of where typing goes and a toggle
-   with no silhouette at all (WCAG 1.4.11). Their edge rows would be duplicates of
-   each other, so only the fill varies. A switch's fill rows do vary the line --
-   it is the only lever left once the cap collapses `.solid` and `.soft` onto one
-   tint -- but they vary it by fill, so these are still the rows that show it. */
-const FILL_PRESENTATIONS = ["default", "solid", "soft", "bare"];
+/* `.checkbox` and `.radio` keep their line whatever the edge class says: an
+   unchecked box is a transparent square and an unchecked radio a transparent
+   circle, so removing the line removes the control (WCAG 1.4.11). Their edge
+   rows would be duplicates of each other, so only the fill varies. The registry
+   records the same fact as `axes: ["fill"]`, and `tests/browser/axes.spec.ts`
+   asserts it in both directions.
+
+   The three text inputs and the switch are no longer on this list. Their edge
+   axis used to be inert -- `text-control` rewrote the composed edge and dropped
+   `--ui-border` out of it -- and now that it composes, their edge rows show a
+   real difference. */
+const FILL_PRESENTATIONS = ["default", "solid", "soft", "ghost"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose
    cell is the trigger badge rather than the bubble. The bubble does read
@@ -63,12 +68,13 @@ const classesFor = (base, intent, presentation, extra) =>
     .filter(Boolean)
     .join(" ");
 
-/* Toggles share an axis: the same intents, the same states, and the same bare
-   cell. Only the input type and the label differ. Their fill rows come from
-   `text-control` like every other field's. */
-const toggle = (label, type) => ({
+/* Toggles share an axis: the same intents, the same states, and the same
+   unclassed cell. Only the input type, the label, and which axes the component
+   reads differ -- `.checkbox` and `.radio` floor their edge absolutely, and a
+   switch composes it like any other control. */
+const toggle = (label, type, presentations = FILL_PRESENTATIONS) => ({
   tag: "input",
-  presentations: FILL_PRESENTATIONS,
+  presentations,
   attrs: (intent) => ({ type, "aria-label": `${title(intent)} ${label}` }),
   states: {
     checked: { checked: "" },
@@ -78,11 +84,11 @@ const toggle = (label, type) => ({
 });
 
 /* A text control caps its fill rather than taking a presentation at full
-   strength, so it still reads every fill class. */
+   strength, so it still reads every fill class -- and since the edge composes,
+   it reads every edge class too. The full grid applies. */
 const textControl = (tag, extra) => ({
   tag,
   layout: "grid",
-  presentations: FILL_PRESENTATIONS,
   states: { disabled: { disabled: "" }, invalid: { "aria-invalid": "true" } },
   ...extra,
 });
@@ -167,7 +173,7 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  switch: toggle("switch", "checkbox"),
+  switch: toggle("switch", "checkbox", PRESENTATIONS),
   "data-table": {
     tag: "table",
     layout: "grid",

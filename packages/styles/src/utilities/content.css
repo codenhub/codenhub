@@ -34,7 +34,7 @@
      white and its hovered row came out near-black -- a dark band across a light
      table. Mixing into `--_bg` makes the step relative at every fill, the way
      `box-hover` is: a filled table shifts within its own colour, a soft one
-     deepens its tint, and a bare one picks up a faint wash of the page. */
+     deepens its tint, and a ghost one picks up a faint wash of the page. */
   --table-row-hover: color-mix(in oklab, var(--intent-hover) 8%, var(--_bg));
 
   border-spacing: 0;
@@ -84,7 +84,7 @@
 /* Three components rest on a ground rather than on nothing: a key cap, an inline
    code chip and a code block are each a quiet tinted plate at rest, and that tone
    is `--intent-subtle` rather than a fill of the component's own intent. Writing
-   it as `soft` would be a different colour and would leave `.bare` looking
+   it as `soft` would be a different colour and would leave `.ghost` looking
    broken, so the ground is stated and the fill still rests at zero.
 
    Each used to restate its foreground too, because `box` mixed toward

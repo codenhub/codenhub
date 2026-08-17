@@ -115,7 +115,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "default", "native"],
+        "required": ["class", "default", "native", "axes"],
         "additionalProperties": false,
         "properties": {
           "class": {
@@ -170,11 +170,58 @@
           },
           "compositionReason": {
             "type": "string"
+          },
+          "axes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["fill", "edge"]
+            },
+            "description": "Axes this component actually reads. An axis listed here must change the component's computed values when its class is applied; an axis left off must not. Asserted by the browser suite."
+          },
+          "bounds": {
+            "type": "array",
+            "description": "Bounds this component places on an axis input. A bound is justified only when our own composition produces the broken result, never when a consumer's own combination does.",
+            "items": {
+              "type": "object",
+              "required": ["token", "kind", "value", "reason", "escape"],
+              "additionalProperties": false,
+              "properties": {
+                "token": {
+                  "type": "string",
+                  "enum": ["--ui-fill", "--ui-border"]
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["cap", "floor"]
+                },
+                "value": {
+                  "type": "string"
+                },
+                "escape": {
+                  "type": ["string", "null"],
+                  "description": "What lifts the bound, or null when it is absolute."
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "The composition of ours that produces the broken result."
+                }
+              }
+            }
+          },
+          "axesTarget": {
+            "type": "string",
+            "description": "Pseudo-element the axes are read on, when the component paints somewhere other than its own box."
+          },
+          "axesTargetReason": {
+            "type": "string"
           }
         },
         "dependentRequired": {
           "composition": ["compositionReason"],
-          "renamedFrom": ["renameReason"]
+          "renamedFrom": ["renameReason"],
+          "axesTarget": ["axesTargetReason"]
         },
         "if": {
           "required": ["composition"],

@@ -146,8 +146,34 @@
      back to 100% -- its line is a silhouette rather than a field's edge, and
      there is nothing else marking an unchecked box. */
   --_line-rest: 60%;
-  --_line: color-mix(in oklab, var(--intent-border) var(--_line-rest), transparent);
-  --_edge: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line));
+  /* Two seams rather than one composed result. `--_line-tone` is what colour the
+     line is, and the states below move it; `--_line` folds in P3's blend toward
+     the fill, exactly as `box` does it, so the two agree and a state never has to
+     restate the blend to keep it.
+
+     Written as a single `--_line` that states overwrote, a hovered or focused
+     control lost the blend along with the tone, because replacing a composed
+     result drops every term it was composed from. Same failure as the edge
+     below, one property over. */
+  --_line-tone: color-mix(in oklab, var(--intent-border) var(--_line-rest), transparent);
+  --_line: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line-tone));
+  /* The edge floor, as an input to `box` rather than a rewrite of its result.
+     The line is drawn whatever a *container's* edge class says, because a
+     `.edgeless` toolbar would otherwise leave a field with no mark of where
+     typing goes and a toggle with no silhouette at all (WCAG 1.4.11). That is
+     our own cascade producing the broken result, so our own floor answers it.
+
+     An element's own `.edgeless` lowers the floor -- see the rule below the
+     utility -- which is a consumer naming what they want rather than a cascade
+     reaching something nobody classed. `.checkbox` and `.radio` are left off
+     that rule and keep the floor absolute: they have nothing outside their line,
+     so removing it removes the control.
+
+     This used to be `--_edge: color-mix(...)` written after `@apply box`, which
+     dropped `--ui-border` out of the composition entirely. `.edged` and
+     `.edgeless` were both inert on all six text controls, and `--_d-border` was
+     declared and never read on each of them. */
+  --_edge-floor: 100%;
   --_fg: var(--intent-color);
 
   @apply w-full appearance-none;
@@ -159,7 +185,7 @@
   }
 
   &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
-    --_line: color-mix(in oklab, var(--intent-hover) 100%, transparent);
+    --_line-tone: var(--intent-hover);
   }
 
   /* The focus ring is the one in `reset.css`, and it took a layer bug to lose
@@ -175,7 +201,7 @@
      still moves to the intent on top of it, which is a second signal rather than
      the only one. */
   &:focus-visible {
-    --_line: var(--intent-color);
+    --_line-tone: var(--intent-color);
   }
 
   /* R8. The one state that lifts the cap, and it lives here rather than on the
@@ -211,40 +237,51 @@
   }
 }
 
-/* `.soft` on a text input is a tint and nothing else -- no line at rest, on
-   hover, or on focus. That is a fill class deciding an edge, which the axes say
-   it may not do, and it is a deliberate exception rather than an oversight: the
-   three fills are told apart by the tint and the line together, and `.soft` is
-   the one that reads as a field sunk into the page rather than drawn on it.
+/* `.soft` on a text control is a tint and nothing else. It used to be a tint
+   *and* the removal of the line, which made a fill class decide an edge -- the
+   one thing the axes say it may not do -- and left the sunk-field look with no
+   spelling of its own. It is now `.soft.edgeless`, which is two classes saying
+   two things instead of one class saying both.
 
-   The edge floor still holds everywhere it was written to. This lists the three
-   text inputs and the bare utility by name, so `.checkbox`, `.radio`, and
-   `.switch` are untouched -- a toggle with no line has no silhouette at all, and
-   the switch already answers `.soft` its own way. It also matches the class on
-   the element and never a container's, so a `.soft` toolbar still tints the
-   fields inside it and leaves their lines alone: the cascade case is the one the
-   floor exists for.
+   What survives from that rule is the part that was never about the edge: `.soft`
+   on the element takes the published 12% fill whole. The cap below it exists to
+   stop a container's `.solid` from filling a field nobody classed, and `.soft` on
+   the element is not that case -- it is a consumer naming the tint they want.
+   Only `--intent-fill-max` still applies, because a neutral tint is the text
+   colour and that one is ours to bound.
 
-   What carries focus here is the ring from `reset.css`, which is why it had to
-   come back before this could land. A borderless field with the ring suppressed
-   would have had no focused state at all.
+   Matching the class on the element and never a container's is what separates the
+   two. A `.soft` toolbar still tints the fields inside it at the cap; a field
+   wearing `.soft` itself gets the tint it asked for.
 
-   Hover is the fill instead of the line, because the line is gone and something
-   has to answer the pointer. Twice the cap rather than a number of its own, so
-   the step stays proportional whatever the cap is retuned to. */
-:is(.text-control, .ipt, .textarea, .select).soft {
-  --_edge: transparent;
+   `:not(:checked)` is load-bearing, and it is the layer trap this file keeps
+   running into from a new direction. The checked states live inside `@utility`,
+   so they land in the utilities layer; this rule is unlayered, and an unlayered
+   declaration beats a layered one at any specificity. Without the exclusion a
+   checked `.soft` toggle kept the 12% tint instead of filling -- a checked
+   switch came out a pale track with the knob at the far end, and a checked
+   checkbox a pale square with a tick the same colour as its ground.
 
-  /* The published `.soft` fill, taken whole. The cap below it exists to stop a
-     container's `.solid` from filling a field nobody classed, and `.soft` on the
-     element is not that case -- it is a consumer naming the tint they want. Only
-     `--intent-fill-max` still applies, because a neutral tint is the text color
-     and that one is ours to bound. */
+   The old version of this rule listed only the three text inputs, which are
+   never `:checked`, so the collision could not happen. Adding the toggles is
+   what exposed it. */
+:is(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch).soft:not(:checked) {
   --_fill: calc(min(var(--ui-fill, 12%), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
+}
 
-  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled]) {
-    --_fill: calc(min(20%, var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
-  }
+/* The element's own `.edgeless`, lowering the floor `text-control` raises.
+   Same idiom, same reason: a class on the element is a consumer describing what
+   they want, and a class on a container is a cascade reaching something nobody
+   classed. The floor answers the second and this answers the first.
+
+   `.checkbox` and `.radio` are deliberately absent. Every other control has
+   something left when the line goes -- a field keeps its focus ring and its
+   text, a switch keeps a knob drawn in `--color-text-secondary` at past 9:1 --
+   but an unchecked checkbox is a transparent square and an unchecked radio is a
+   transparent circle. Removing their line removes the control, so for those two
+   the floor stays absolute and the combination is published as unsupported. */
+:is(.text-control, .ipt, .textarea, .select, .switch).edgeless {
+  --_edge-floor: 0%;
 }
 
 /* An invalid control carries the destructive intent, and this is a plain rule
@@ -268,7 +305,7 @@
   --intent-border: var(--color-destructive);
 }
 
-/* A bare, edged, unelevated text control. */
+/* A ghost, edged, unelevated text control. */
 @utility ipt {
   @apply text-control h-(--control-height,2.5rem) px-3 py-2;
 
@@ -413,7 +450,7 @@
   }
 }
 
-/* A bare, edged, unelevated multi-line text control. */
+/* A ghost, edged, unelevated multi-line text control. */
 @utility textarea {
   @apply text-control px-3 py-2;
 
@@ -540,13 +577,13 @@
      disc with the dot invisible inside it, which is what a neutral radio was.
 
      So it takes the fill back to nothing and spends the intent on the line and
-     the dot instead. `--_line` rather than `--_edge`, so it hands the color to
-     the same slot the resting and hovered states use and `text-control`'s edge
+     the dot instead. `--_line-tone` rather than `--_edge`, so it hands the colour
+     to the same seam the resting and hovered states use and `text-control`'s edge
      floor still draws it -- a checked radio keeps its ring under a container's
      `.edgeless` exactly as an unchecked one does. */
   &:checked {
     --_fill: 0%;
-    --_line: var(--intent-color);
+    --_line-tone: var(--intent-color);
     --_fg: var(--intent-color);
 
     /* Twice the line the aesthetic draws, which is the 2px the original pinned
@@ -564,10 +601,10 @@
    knob cannot drift out of a thicker track. It used to be a fixed 16px pinned at
    1px, which overflowed as soon as an aesthetic asked for 2px.
 
-   It rests at `solid`, where the other two toggles rest at `bare`, because the
-   fill cap it inherits is 6% and a switch's track is the one part of a toggle
-   that is meant to be a filled shape. Resting at `bare` made `.bare` a synonym
-   for the default and left the tinted track unreachable without a class. */
+   It rests at `solid`, where the other two toggles rest at `ghost`, because a
+   switch's track is the one part of a toggle that is meant to be a filled shape.
+   Resting at `ghost` made `.ghost` a synonym for the default and left the tinted
+   track unreachable without a class. */
 @utility switch {
   @apply text-control relative cursor-pointer;
 
@@ -576,6 +613,35 @@
   --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
+
+  /* A switch raises the fill cap it inherits, and that is what lets it read the
+     fill axis like everything else does.
+
+     At `text-control`'s 6% the three fills landed on two looks -- `.solid` and
+     `.soft` were the same wash -- so the component varied the *line* per fill
+     class instead. That was the only place in the package where a fill class
+     decided an edge, and it made `.soft` mean something different on a switch
+     than on every other component. Raising the cap retires it: the fill names
+     now name fills here too.
+
+     The cap cannot go to 100%. A checked switch lifts `--_fill` to 100% whole,
+     so an unchecked `.solid` at the same value would be pixel-for-pixel a
+     checked one, and the knob's position would be the only thing left saying
+     which.
+
+     40% is measured rather than picked. On the light page, the four tracks
+     composite to 250, 221, 154 and 10, which is 29 steps from `ghost` to
+     `soft`, 67 from `soft` to `solid`, and 144 from an unchecked `solid` to a
+     checked track -- against roughly 20 for a clearly visible step, the same
+     threshold the hover step was measured against. `tests/browser/axes.spec.ts`
+     asserts all three so the number cannot drift back.
+
+     `--intent-fill-max` still applies underneath, so neutral stops at 20% and a
+     neutral switch is quieter than a coloured one by design.
+
+     A cap rather than a resting value, because the case it answers is still the
+     cascade: a `.solid` toolbar reaching a switch nobody classed. */
+  --_fill-cap: 40%;
 
   --switch-height: 1.25rem;
   --switch-width: 2.5rem;
@@ -598,33 +664,6 @@
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
     --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
-  }
-
-  /* The two rules that make presentation mean something on a switch, and the
-     only place in the package where a fill class reaches the edge.
-
-     It is here because the fill alone cannot separate the three. `text-control`
-     caps every fill at 6% -- lifting that would make an unchecked `.solid`
-     switch indistinguishable from a checked one -- so `.solid` and `.soft` land
-     on the same tint and `.bare` lands on the default. Three names, two looks.
-     The line is the only lever left, so the line is what varies: solid keeps its
-     track drawn, soft carries the track as a tint and reveals the line under the
-     pointer, and bare has renounced the track altogether. There is nothing for
-     bare to reveal, which is why it alone has no hover rule.
-
-     `--_edge` rather than a width or the edge amount, because `--switch-inset`
-     is measured from `--_width`: taking the line away by narrowing it would slide
-     the knob. A transparent line occupies the same space it always did.
-
-     `:checked` is excluded from both. A checked switch is filled with its intent
-     and its line is that fill -- the edge blend doing its job -- so making it
-     transparent would cut a page-coloured ring out of a filled track. */
-  &.soft:not(:checked, :hover) {
-    --_edge: transparent;
-  }
-
-  &.bare:not(:checked) {
-    --_edge: transparent;
   }
 
   &::after {

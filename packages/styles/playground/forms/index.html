@@ -25,9 +25,13 @@
           <h2 class="text-title">Text inputs</h2>
           <p class="text-body text-text-secondary">
             One row per presentation, one column per intent, starting with a cell that carries no intent class at all.
-            Intent colors the resting and focus border;
-            <code class="code">.bare</code>
-            drops the border to a bottom rule so the field keeps its affordance.
+            Intent colors the resting and focus border. Fill and edge compose independently:
+            <code class="code">.soft</code>
+            tints and keeps the line,
+            <code class="code">.soft.edgeless</code>
+            is the field sunk into the page, and a container's
+            <code class="code">.edgeless</code>
+            is floored so a field never loses the mark of where typing goes.
           </p>
         </div>
         <div data-matrix="ipt" data-matrix-states="rest" data-testid="ipt-matrix"></div>

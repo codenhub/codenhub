@@ -50,7 +50,7 @@
   backdrop-filter: var(--ui-backdrop, none);
 }
 
-/* A bare, edged container that takes one unit when depth is supplied. */
+/* A ghost, edged container that takes one unit when depth is supplied. */
 @utility card {
   @apply surface p-(--surface-padding,1.25rem);
 

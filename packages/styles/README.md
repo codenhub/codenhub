@@ -48,7 +48,7 @@ to force a theme for the root or a subtree.
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
 also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
-`.solid`, `.soft`, and `.bare` set how much intent fills a component; `.edged`
+`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
 and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
 container sets the look below it and any element can still override it.
 
@@ -56,7 +56,7 @@ container sets the look below it and any element can still override it.
 <div class="soft">
   <button class="btn primary">Soft</button>
   <span class="badge success">Soft</span>
-  <button class="btn primary bare edged">Outlined</button>
+  <button class="btn primary ghost edged">Outlined</button>
 </div>
 ```
 

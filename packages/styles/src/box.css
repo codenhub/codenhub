@@ -49,8 +49,8 @@
 
      Reading `--intent-color` here made every colour do double duty as both a
      ground and an ink, which is what forced neutral's hand: it had to be the
-     page's ink so a bare card's body copy was legible, and that left `.solid`
-     no choice but the slab. It also printed bare and soft components in the
+     page's ink so a ghost card's body copy was legible, and that left `.solid`
+     no choice but the slab. It also printed ghost and soft components in the
      mid-tone base -- amber-600 on a white page is 3.1:1 -- where the strong
      tone is the one picked to be read.
 
@@ -79,7 +79,18 @@
      opaque ring around a translucent box, and `.solid.edged` stops meaning what
      `.solid.edgeless` means for that one aesthetic alone. */
   --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
-  --_edge: color-mix(in oklab, var(--_line) var(--ui-border, var(--_d-border)), transparent);
+  /* How much line there is, as an input rather than a result. A component that
+     must keep its line whatever the edge class says raises `--_edge-floor`
+     instead of rewriting `--_edge`, and the composition above still runs.
+
+     The distinction is not cosmetic. Rewriting the result drops every term the
+     result was composed from, silently and with nothing to report: that is how
+     `--ui-border` stopped reaching all six text controls, and how `--_d-border`
+     sat declared and unread on each of them for a release. Bounding the input
+     leaves the axis live, so `.edged` and `.edgeless` still mean what they say
+     on a component that happens to floor itself. */
+  --_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
+  --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
   --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
 
   /* Elevation is a unitless multiplier over the aesthetic's shadow geometry, so
@@ -162,7 +173,7 @@
 }
 
 /* Hover is derived from the resting fill rather than declared: one formula, no
-   tokens, no branches. `bare` picks up a tint, `soft` deepens, `solid` stays
+   tokens, no branches. `ghost` picks up a tint, `soft` deepens, `solid` stays
    full and darkens because the colour changed.
 
    Separate from `box` because tinting on hover is right for something you press

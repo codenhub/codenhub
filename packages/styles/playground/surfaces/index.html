@@ -24,7 +24,7 @@
         <div class="stack tight">
           <h2 class="text-title">Cards</h2>
           <p class="text-body text-text-secondary">
-            A card with no presentation class is a bare, edged, flat container. Only an explicit fill tints it.
+            A card with no presentation class is a ghost, edged, flat container. Only an explicit fill tints it.
           </p>
         </div>
         <div data-matrix="card" data-matrix-states="rest" data-testid="card-matrix"></div>
@@ -105,7 +105,7 @@
           <h2 class="text-title">Dividers</h2>
           <p class="text-body text-text-secondary">
             A divider takes the stronger of its fill and its edge, so only
-            <code class="code">.bare.edgeless</code>
+            <code class="code">.ghost.edgeless</code>
             removes it.
           </p>
         </div>
@@ -141,7 +141,7 @@
             <p class="text-body">No presentation class of its own.</p>
           </article>
           <aside class="panel success" data-testid="cascade-panel-inherited">Inherited soft panel</aside>
-          <article class="card primary bare edged" data-testid="cascade-card-override">
+          <article class="card primary ghost edged" data-testid="cascade-card-override">
             <h4 class="text-title-sm">Overridden</h4>
             <p class="text-body">Outlined on the element.</p>
           </article>

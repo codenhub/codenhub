@@ -96,7 +96,7 @@ test.describe("feedback", () => {
 
       return {
         intent,
-        variants: ["", "solid edged", "soft edged", "bare edged", "bare edgeless"].map(read),
+        variants: ["", "solid edged", "soft edged", "ghost edged", "ghost edgeless"].map(read),
       };
     });
 
@@ -130,7 +130,7 @@ test.describe("feedback", () => {
       };
 
       return {
-        bareEdgeless: read("primary bare edgeless"),
+        ghostEdgeless: read("primary ghost edgeless"),
         plain: read("primary"),
         secondary: read("secondary"),
         solidEdged: read("primary solid edged"),
@@ -140,7 +140,7 @@ test.describe("feedback", () => {
     expect(styles.plain.image).not.toBe("none");
     /* Both ends of both axes land on the same pixels as no class at all. */
     expect(styles.solidEdged.image, "solid edged").toBe(styles.plain.image);
-    expect(styles.bareEdgeless.image, "bare edgeless").toBe(styles.plain.image);
+    expect(styles.ghostEdgeless.image, "ghost edgeless").toBe(styles.plain.image);
     expect(styles.solidEdged.border, "no edge to draw").toBe("0px");
     /* Intent is the one axis it does read. */
     expect(styles.secondary.image).not.toBe(styles.plain.image);
@@ -232,7 +232,7 @@ test.describe("feedback", () => {
       probe.remove();
 
       return {
-        bare: read("alert-bare-edged-info"),
+        ghost: read("alert-ghost-edged-info"),
         ground,
         softEdgeless: read("alert-soft-edgeless-warning"),
         solid: read("alert-solid-info"),
@@ -250,12 +250,12 @@ test.describe("feedback", () => {
        opaque line an `.edged` one draws. The border box sits over the alert's own
        background, so that reads as a seamless boundary rather than a gap. */
     expect(readSrgb(styles.softEdgeless.border).alpha, "edgeless alert line").toBeLessThanOrEqual(0.13);
-    expect(readSrgb(styles.bare.border).alpha, "edged alert line").toBe(1);
+    expect(readSrgb(styles.ghost.border).alpha, "edged alert line").toBe(1);
     /* Bare adds no fill, so what is left is the ground every surface rests on --
        an alert is a container, and a container is opaque. `.edged` still draws
        the line. */
-    expectSameColor(styles.bare.background, styles.ground, "bare alert ground");
-    expect(isTransparent(styles.bare.border)).toBe(false);
+    expectSameColor(styles.ghost.background, styles.ground, "ghost alert ground");
+    expect(isTransparent(styles.ghost.border)).toBe(false);
   });
 
   test("renders every badge fill", async ({ page }) => {
@@ -507,7 +507,7 @@ test.describe("feedback", () => {
     expect(tooltipStyles.transformOrigin).not.toBe("");
   });
 
-  /* The bubble used to pin its fill at solid so a container's `.bare` could not
+  /* The bubble used to pin its fill at solid so a container's `.ghost` could not
      reach it. It rests on a tinted ground now and reads presentation like
      anything else, which means this is the assertion the pin used to be, stated
      as a property rather than as a refusal: a bubble is opaque and its label
@@ -543,7 +543,7 @@ test.describe("feedback", () => {
         return values;
       };
 
-      const presentations = ["", "bare", "soft", "solid", "primary", "destructive", "destructive solid"];
+      const presentations = ["", "ghost", "soft", "solid", "primary", "destructive", "destructive solid"];
       const values = [
         ...presentations.map((own) => read({ container: "", own })),
         ...presentations.map((container) => read({ container, own: "" })),

@@ -50,7 +50,7 @@ to force a theme for the root or a subtree.
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
 also supported. See [Tokens](./docs/tokens.md) for precedence details.
 
-`.solid`, `.soft`, and `.bare` set how much intent fills a component; `.edged`
+`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
 and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
 container sets the look below it and any element can still override it.
 
@@ -58,7 +58,7 @@ container sets the look below it and any element can still override it.
 <div class="soft">
   <button class="btn primary">Soft</button>
   <span class="badge success">Soft</span>
-  <button class="btn primary bare edged">Outlined</button>
+  <button class="btn primary ghost edged">Outlined</button>
 </div>
 ```
 
@@ -122,13 +122,13 @@ without a component-specific variant:
 | Axis         | Question        | Classes                                                                   | Inheritance  |
 | ------------ | --------------- | ------------------------------------------------------------------------- | ------------ |
 | Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info` | Element only |
-| Presentation | How much of it? | `.solid`, `.soft`, `.bare`, `.edged`, `.edgeless`                         | Cascades     |
+| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                        | Cascades     |
 | Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel` from an optional aesthetic stylesheet | Cascades     |
 
 ```html
 <section class="soft pixel">
   <button class="btn primary">Soft primary pixel button</button>
-  <button class="btn destructive bare edged">Outlined destructive override</button>
+  <button class="btn destructive ghost edged">Outlined destructive override</button>
 </section>
 ```
 
@@ -256,7 +256,9 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Form control focus      | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                    |
 | Control boundaries      | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.           |
 | Toggle boundaries       | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.        |
-| `.soft` text inputs     | Opt out of the line entirely and do not meet 1.4.11 at rest; the focus ring still draws. Opt-in, never a default.         |
+| Cascaded `.edgeless`    | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                     |
+| Own `.edgeless`         | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest.          |
+| `.checkbox`/`.radio`    | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged.    |
 | Invalid controls        | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
 | Disabled controls       | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
 | Current page            | `[aria-current="page"]` applies primary color and stronger font weight.                                                   |
@@ -335,20 +337,34 @@ means the component reads applicable radius, border-width, shadow, hover, or
 clip/edge material tokens; an aesthetic may intentionally affect only the
 materials that component draws.
 
-| Components                                                | Intent | Presentation | Aesthetic material |
-| --------------------------------------------------------- | ------ | ------------ | ------------------ |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes          | Shape              |
-| `.loader`                                                 | Yes    | No           | No                 |
-| `.kbd`, `.data-table`                                     | Yes    | Yes          | Radius and edge    |
-| `.quote`                                                  | Yes    | Yes          | Edge width         |
-| `.divider`, `.skeleton`                                   | Yes    | No           | No                 |
-| `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes          | Shape              |
-| `.checkbox`, `.radio`                                     | Yes    | Yes          | Radius and edge    |
-| `.switch`                                                 | Yes    | Yes          | Radius and edge    |
-| `.progress`                                               | Yes    | No           | No                 |
-| `.code`, `.pre`                                           | Yes    | Yes          | Radius and clip    |
-| `.tooltip`                                                | Yes    | Yes          | Shape and overlay  |
-| `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No           | No                 |
+Presentation is two independent axes, so they get a column each. A `Yes` means
+the class changes what the component computes, which
+`tests/browser/axes.spec.ts` asserts against `registry.json` in both directions:
+an axis marked `Yes` must move, and an axis marked `No` must not.
+
+| Components                                                | Intent | Fill | Edge | Aesthetic material |
+| --------------------------------------------------------- | ------ | ---- | ---- | ------------------ |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`             | Yes    | Yes  | Yes  | Shape              |
+| `.loader`                                                 | Yes    | No   | No   | No                 |
+| `.kbd`, `.data-table`                                     | Yes    | Yes  | Yes  | Radius and edge    |
+| `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
+| `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
+| `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes  | Yes  | Shape              |
+| `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
+| `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
+| `.progress`                                               | Yes    | No   | No   | No                 |
+| `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
+| `.tooltip`                                                | Yes    | Yes  | Yes  | Shape and overlay  |
+| `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
+
+`.checkbox` and `.radio` are the only components that read one axis and not the
+other. Their line is the only thing marking an unchecked box, so it is drawn
+whatever the edge class says, from a container or from the element itself.
+`.edgeless` on either is unsupported rather than merely discouraged.
+
+Every other text control floors a _cascaded_ `.edgeless` and honours its own: a
+`.edgeless` toolbar will not erase the line of a field nobody classed, while
+`.ipt.edgeless` is a consumer describing what they want and gets it.
 
 Intent aliases such as `.danger` and `.error` occupy the same intent axis as
 `.destructive`; they do not add component behavior. State and modifier classes
@@ -408,7 +424,7 @@ to its header and border, and a key cap to its whole chip:
 ```html
 <table class="data-table success soft edged">...</table>
 <kbd class="kbd primary solid">Ctrl</kbd>
-<kbd class="kbd primary bare edged">Shift</kbd>
+<kbd class="kbd primary ghost edged">Shift</kbd>
 ```
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
@@ -451,7 +467,7 @@ bordered container; only an explicit presentation tints it.
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
-<article class="card primary bare edged">Intent border, no fill</article>
+<article class="card primary ghost edged">Intent border, no fill</article>
 <a class="card interactive" href="/package">Lifts on hover</a>
 <aside class="panel">Flush panel</aside>
 ```
@@ -462,7 +478,7 @@ operable by keyboard.
 
 ## Presentation
 
-Presentation has two independent axes. `.solid`, `.soft`, and `.bare` decide how
+Presentation has two independent axes. `.solid`, `.soft`, and `.ghost` decide how
 much intent fills a component; `.edged` and `.edgeless` decide whether it draws a
 boundary. They set [presentation tokens](docs/tokens.md#presentation-tokens) and
 nothing else, so they work on the component itself or on any ancestor:
@@ -471,7 +487,7 @@ nothing else, so they work on the component itself or on any ancestor:
 <div class="soft">
   <button class="btn primary">Soft primary button</button>
   <span class="badge success">Soft success badge</span>
-  <button class="btn primary bare edged">Outlined; the element wins</button>
+  <button class="btn primary ghost edged">Outlined; the element wins</button>
 </div>
 ```
 
@@ -482,7 +498,7 @@ container sets the default look for its subtree and any element opts out.
 | ----------- | ---------------------------------------------------------- |
 | `.solid`    | Intent-colored fill with contrast text.                    |
 | `.soft`     | Lightly tinted fill with intent-colored text.              |
-| `.bare`     | No intent fill, with intent-colored text.                  |
+| `.ghost`    | No fill at rest, with intent-colored text.                 |
 | `.edged`    | Intent-colored boundary at the aesthetic's material width. |
 | `.edgeless` | No boundary.                                               |
 
@@ -492,31 +508,50 @@ Values each class ships:
 | ----------- | ----------- | ----------------- | ------------- |
 | `.solid`    | `100%`      | `100%`            |               |
 | `.soft`     | `12%`       | `0%`              |               |
-| `.bare`     | `0%`        | `0%`              |               |
+| `.ghost`    | `0%`        | `0%`              |               |
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
+
+A fill class never decides an edge and an edge class never decides a fill. The
+combinations mean exactly what they spell:
+
+```html
+<button class="btn primary">Solid, the button default</button>
+<button class="btn soft edged">Tinted with a border</button>
+<button class="btn primary ghost edged">Outline</button>
+<button class="btn ghost">Ghost; picks up a tint on hover</button>
+<input class="ipt soft edgeless" />
+<!-- A field sunk into the page -->
+```
+
+`.solid` is the one pair that collapses. At a full fill the boundary blends all
+the way to the box's own background, so `.solid.edged` and `.solid.edgeless`
+render the same thing — a filled box ringed in another color is the thing the
+blend exists to prevent. Five distinct results from six spellings.
 
 With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
 neutral and bordered.
 
-| Component                                       | Reads                                         |
-| ----------------------------------------------- | --------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.         |
-| `.kbd`                                          | Fill, text, border, and border width.         |
-| `.data-table`                                   | Header fill and text, border, border width.   |
-| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.      |
-| `.checkbox`, `.radio`                           | Border, border width, capped unchecked fill.  |
-| `.switch`                                       | A capped fill, and the line it draws at rest. |
-| `.quote`                                        | Fill, text, border, and width.                |
-| `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.             |
-| `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.                |
+| Component                                       | Reads                                       |
+| ----------------------------------------------- | ------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.       |
+| `.kbd`                                          | Fill, text, border, and border width.       |
+| `.data-table`                                   | Header fill and text, border, border width. |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
+| `.checkbox`, `.radio`                           | Capped unchecked fill. The border is fixed. |
+| `.switch`                                       | Border, border width, and a capped fill.    |
+| `.quote`                                        | Fill, text, border, and width.              |
+| `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
+| `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
-Text controls and toggles cap inherited or `.solid` fill at `6%`, keeping typed
-text legible. A `.soft` class written directly on a text control takes its full
-tint and removes its line; `.bare` removes its fill while preserving the control
-affordance. Unchecked checkboxes and radios keep their full edge under every fill
-and edge class.
+Text controls and toggles cap an inherited or `.solid` fill at `6%`, keeping
+typed text legible; a switch caps at `40%`, where its three fills separate as
+fills. A `.soft` class written directly on a text control takes its published
+`12%` tint whole, because that is a consumer naming what they want rather than a
+container's cascade reaching a field nobody classed. The same split governs the
+edge: a cascaded `.edgeless` is floored, and the element's own is honoured —
+except on `.checkbox` and `.radio`, which never drop their line at all.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that
 intent's own color: `.tooltip.primary` is the primary color, black on a light
@@ -565,7 +600,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                       |
 | `.pixel`        | Stepped corners, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 
-Aesthetics compose with every supported fill and edge pair. `.bare.edgeless`
+Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless`
 intentionally removes the visible material traits from components whose
 aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -677,9 +712,9 @@ Examples:
 
 ```html
 <button class="btn primary">Primary</button>
-<button class="btn success bare edged">Success outline</button>
+<button class="btn success ghost edged">Success outline</button>
 <button class="btn warning soft">Warning soft</button>
-<button class="btn destructive bare edgeless">Danger bare</button>
+<button class="btn destructive ghost edgeless">Danger ghost</button>
 <button class="btn icon primary" aria-label="Create">+</button>
 <button class="btn primary loading" disabled>Saving</button>
 ```
@@ -749,11 +784,11 @@ to set the checked color:
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
-A switch rests at `.solid`, where the other two rest at `.bare`, and its three
-fills are told apart by the line rather than by the tint: they share one cap, so
-`.solid` and `.soft` reach the same tinted track. `.solid` draws the line, `.soft`
-carries the track as a tint and shows the line under the pointer, and `.bare` is
-the knob alone. The checked track is the same filled shape under all three.
+A switch rests at `.solid`, where the other two rest at `.ghost`, and its three
+fills are told apart by the tint like every other component's: it caps at `40%`
+rather than `6%`, so `.solid` is a filled track, `.soft` a light one and `.ghost`
+the knob alone. All three keep their line. The checked track is the same filled
+shape under all three, and sits well clear of an unchecked `.solid`.
 
 A checked checkbox and a checked switch fill with the intent and cut their mark
 out of it. A checked radio does not fill: it takes a ring twice the resting line
@@ -761,21 +796,28 @@ weight and a dot, both in the intent color, because a filled circle with a dot o
 the same color inside it is a disc.
 
 Text controls also take intent, which colors the resting border and the
-focus-visible border, and presentation, which sets border weight and a capped
-tint. `.bare` fills nothing, `.soft` takes its published tint whole and draws
-**no line at all**, and `.solid` is a quieter wash that keeps its line -- the cap
-governs `.solid` and the container that cascades one onto an unclassed field,
-where `.soft` on the element names the tint it wants. `.soft` is the one
-presentation with no boundary, which is why it is opt-in and never the default;
-its focus ring still shows. A `.soft` container does not do this to the fields
-inside it -- only the class written on the control itself:
+focus-visible border, and both presentation axes. `.ghost` fills nothing, `.soft`
+takes its published `12%` tint whole, and `.solid` is a quieter wash at the `6%`
+cap — the cap governs `.solid` and the container that cascades one onto an
+unclassed field, where `.soft` on the element names the tint it wants. None of
+them touches the line.
+
+The boundary is the edge axis's, and it splits the same way. A container's
+`.edgeless` is floored, so a toolbar cannot leave a field with no mark of where
+typing goes. `.edgeless` on the control itself is honoured, which is how the
+borderless field is spelled — it does not meet WCAG 1.4.11 at rest, so it is
+opt-in and never a default, and the focus ring still shows.
 
 ```html
 <input class="ipt success" placeholder="Valid" />
-<input class="ipt bare edged" placeholder="Outlined" />
-<input class="ipt bare edgeless" placeholder="No edge" />
+<input class="ipt ghost edged" placeholder="Outlined" />
+<input class="ipt soft edged" placeholder="Tinted with a border" />
+<input class="ipt soft edgeless" placeholder="Sunk into the page" />
 <div class="soft">
-  <input class="ipt" placeholder="Tinted from the container" />
+  <input class="ipt" placeholder="Tinted from the container, capped at 6%" />
+</div>
+<div class="edgeless">
+  <input class="ipt" placeholder="Keeps its line; the floor holds" />
 </div>
 ```
 
@@ -874,7 +916,7 @@ Examples:
 <div class="alert success" role="status">Saved successfully.</div>
 <div class="alert primary solid" role="status">Deployment started.</div>
 <div class="alert warning soft icon" role="status">Review required.</div>
-<div class="alert destructive bare edged" role="alert">Deployment failed.</div>
+<div class="alert destructive ghost edged" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success solid">Live</span>
 <span class="badge info soft">Draft</span>
@@ -1065,7 +1107,7 @@ component that supports intent, and a custom intent needs no component changes.
 
 `--intent-color` and `--intent-strong` are two ends of the same family and not
 interchangeable. The base is a ground, chosen to be filled with; the strong tone
-is chosen to be read against a page. A `.soft` or `.bare` component prints the
+is chosen to be read against a page. A `.soft` or `.ghost` component prints the
 strong one, which is why an unfilled warning reads in amber-800 rather than the
 amber-600 its solid sibling is filled with.
 

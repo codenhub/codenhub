@@ -81,8 +81,31 @@ _in what voice_.
 | Axis         | Answers                      | Owns                           | Cascades | Classes                                                                         |
 | ------------ | ---------------------------- | ------------------------------ | -------- | ------------------------------------------------------------------------------- |
 | Intent       | What does this mean?         | Hue only                       | No       | `.neutral` `.primary` `.secondary` `.success` `.warning` `.destructive` `.info` |
-| Presentation | How much of it does it show? | Unitless ratios only           | Yes      | `.solid` `.soft` `.bare` and `.edged` `.edgeless`                               |
+| Presentation | How much of it does it show? | Unitless ratios only           | Yes      | `.solid` `.soft` `.ghost` and `.edged` `.edgeless`                              |
 | Aesthetic    | What is it made of?          | Lengths, shadows, shapes, type | Yes      | `.neobrutalism` `.glass` `.pixel`                                               |
+
+### What makes something an axis rather than a modifier
+
+The three above are axes and size and elevation are modifiers, and for a long
+time the only stated reason was that the three were the questions written down
+first. That does not survive contact with elevation, which is a closed set of
+unitless numbers that cascades and ships three classes — structurally identical
+to fill.
+
+The test that does hold:
+
+> **An axis interacts with the other axes in the composition. A modifier
+> composes independently.**
+
+Edge blends against fill: `--_line` mixes toward `--_bg` by the fill amount,
+which is P3, and it is why `.solid.edged` and `.solid.edgeless` render one box.
+Two things that interact inside one expression are one question with two
+dimensions, not one question and one bolt-on. Elevation multiplies shadow
+geometry nothing else touches; `.pill` sets a radius nothing else touches; `.sm`
+sets lengths. None of them can change what another axis produces.
+
+So edge stays inside presentation, elevation stays a modifier, and the next
+candidate is argued against this sentence rather than against precedent.
 
 The three are orthogonal by construction, and the "Owns" column is what enforces
 it. Intent may only produce color, so it can never change a shape. Presentation
@@ -108,11 +131,16 @@ exactly one value from each set applies.
 
 ### Fill: how much of the intent color fills the box
 
-| Class    | `--ui-fill` | `--ui-fg-on-fill` | Reads as                                                 |
-| -------- | ----------- | ----------------- | -------------------------------------------------------- |
-| `.solid` | `100%`      | `100%`            | Filled with the intent color; text is the contrast tone. |
-| `.soft`  | `12%`       | `0%`              | Tinted with the intent color; text is the intent color.  |
-| `.bare`  | `0%`        | `0%`              | No fill at all; text is the intent color.                |
+| Class    | `--ui-fill` | `--ui-fg-on-fill` | Reads as                                                   |
+| -------- | ----------- | ----------------- | ---------------------------------------------------------- |
+| `.solid` | `100%`      | `100%`            | Filled with the intent color; text is the contrast tone.   |
+| `.soft`  | `12%`       | `0%`              | Tinted with the intent color; text is the intent color.    |
+| `.ghost` | `0%`        | `0%`              | No fill at rest; text is the intent color. Tints on hover. |
+
+`.ghost` was `.bare` until 0.1.0. The rename is the one naming defect the set
+had: `.bare` and `.edgeless` both read as "less of something", so an author who
+wanted no border reached for `.bare` and got no background. `.ghost` names a
+fill and only a fill.
 
 ### Edge: whether the box draws a line at its boundary
 
@@ -128,11 +156,12 @@ can still set the look for a subtree while any element opts out.
 ### What the combinations are for
 
 ```text
-<button class="btn primary">              solid           primary action
-<span   class="badge success">            soft  edgeless  tinted chip
-<button class="btn soft edged">           soft  edged     the common web button
-<button class="btn primary bare edged">   bare  edged     outline button
-<button class="btn bare">                 bare  edgeless  ghost, toolbar button
+<button class="btn primary">              solid            primary action
+<span   class="badge success">            soft   edgeless  tinted chip
+<button class="btn soft edged">           soft   edged     the common web button
+<button class="btn primary ghost edged">  ghost  edged     outline button
+<button class="btn ghost">                ghost  edgeless  toolbar button
+<input  class="ipt soft edgeless" />      soft   edgeless  field sunk into the page
 ```
 
 Five distinct boxes out of six spellings. `.solid` collapses the edge question
@@ -153,11 +182,15 @@ hover color = --intent-hover, always
 hover edge  = --intent-hover at the same width
 ```
 
-One formula, no branches, no tokens. `bare` picks up a 14% tint, `soft` deepens
+One formula, no branches, no tokens. `ghost` picks up a 14% tint, `soft` deepens
 to 26%, `solid` stays full and darkens because the base color changed. This
 replaces `--ui-hover-fill` and `--ui-hover-fg-on-fill`, and it is what deletes
 `.fill`: a class whose only job was to make an outline button fill on hover, and
 which was inert on every other component in the library.
+
+It is also what makes `.ghost` a fill name rather than an absence. A ghost
+element rests at nothing and gains a tint under the pointer, which is the
+behavior the name is chosen for.
 
 The cost is stated plainly: an outline button no longer fills completely on
 hover. It tints. `.out.fill` has no replacement spelling and is not coming back.
@@ -182,27 +215,102 @@ token and five documented exceptions gone for a change nobody will see.
   itself produces a broken result -- not to protect a consumer from a combination
   they chose. Any bound that survives that test is published. See
   [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one).
+- **P5.** A fill class never decides an edge, and an edge class never decides a
+  fill. The axes are independent everywhere, with no exceptions.
+- **P6.** A component may bound an axis **input**. It may never rewrite the
+  composed **result**. See [the seams](#seams-not-rewrites).
 
-### Where a fill class decides an edge
+### No fill class decides an edge
 
-Two components break the independence of the axes, both on purpose, and both are
-listed here so the exception stays countable rather than becoming a habit:
+There used to be two exceptions here, both deliberate, both documented, and both
+gone:
 
-| Component   | What it does                                                   | Why                                                                                                                  |
-| ----------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `.switch`   | `.soft` hides the line until hover; `.bare` hides it entirely. | The fill cap makes the tint alone too small a difference to read as three presentations on a 32px track.             |
-| Text inputs | `.soft` draws no line at rest, on hover, or on focus.          | `.soft` is meant to read as a field sunk into the page rather than drawn on it, which a line prevents by definition. |
+| Component   | What it did                                                | What replaced it                                                                                           |
+| ----------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `.switch`   | `.soft` hid the line until hover; `.bare` hid it entirely. | A `40%` fill cap of its own, where the three fills separate as fills. Measured: 29, 67 and 144 sRGB steps. |
+| Text inputs | `.soft` drew no line at rest, on hover, or on focus.       | `.soft.edgeless`. Two classes saying two things instead of one class saying both.                          |
 
-Both are the class on the element and never a container's, so the cascade case
-that the edge floor exists for is untouched in each. Neither reaches `.checkbox`
-or `.radio`, which have nothing outside their line.
+The switch was the more expensive of the two, because it made `.soft` mean
+something different there than on every other component in the library — the
+thing a reader cannot learn once. It existed only because `text-control`'s 6% cap
+collapsed `.solid` and `.soft` onto one tint, leaving the line as the only lever.
+Raising the cap gave the fill axis back its own job.
 
-The text-input exception is the one with a cost: a borderless field identifies
-itself by a 12% tint, which is 1.31:1 against the page where WCAG 1.4.11 asks a
-boundary for 3:1. It is opt-in and never a default, and the focus ring still
-draws, but `.soft` on a text input does not meet 1.4.11 at rest. Recorded as a
-decision rather than a defect. See
-[`.soft` drops its line](architecture.md#soft-drops-its-line-and-what-that-costs).
+The cost of the text-input change is that the sunk field now takes two classes
+instead of one. That is the intended direction: what a consumer types is what
+they get.
+
+### Seams, not rewrites
+
+P6 is the rule the whole edge change is built on, and it is stated because
+breaking it is invisible.
+
+`text-control` used to write, after `@apply box`:
+
+```css
+--_edge: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_line));
+```
+
+That is a composed result being replaced, and replacing a result drops every term
+it was composed from. `--ui-border` fell out of the expression entirely, so
+`.edged` and `.edgeless` were inert on all six text controls, and `--_d-border`
+was declared and never read on each of them. Nothing reported it. Every class
+resolved, every token was declared, every component rendered — the only symptom
+was that two documented classes did nothing.
+
+The same shape written as a bound on an input leaves the axis live:
+
+```css
+/* box */
+--_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
+--_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
+
+/* text-control */
+--_edge-floor: 100%;
+```
+
+`--_fill-cap` and `--_line-rest` were already written this way and were already
+the parts of that file that behaved. `--_edge-floor` and `--_line-tone` join
+them. A component that needs something the seams cannot express needs a new
+seam, which is one line in `box` and visible there.
+
+**The test that enforces it.** `registry.json` records the axes each component
+reads, and `tests/browser/axes.spec.ts` asserts it in both directions: an axis
+the registry calls live must change what the component computes, and an axis it
+leaves off must not. The one-directional version of that test is what the package
+had, and it passed throughout the release in which the edge axis was dead.
+
+### Element or cascade: the split that replaced the exceptions
+
+Both surviving edge bounds turn on the same distinction, and it is the same one
+[the bounds test](#the-bounds-that-survive-and-the-test-for-keeping-one) already
+draws:
+
+- **A class on a container** is our own cascade reaching something nobody
+  classed. A bound may answer it.
+- **A class on the element** is a consumer describing what they want. A bound may
+  not answer it.
+
+CSS expresses it directly. The utility raises the floor; a plain rule matching
+the element's own class lowers it:
+
+```css
+:is(.text-control, .ipt, .textarea, .select, .switch).edgeless {
+  --_edge-floor: 0%;
+}
+```
+
+So a `.edgeless` toolbar cannot erase the line of a field inside it, and
+`.ipt.edgeless` gets exactly the borderless field it asked for. That field does
+not meet WCAG 1.4.11 at rest — a 12% tint is 1.31:1 against the page where a
+control boundary is asked for 3:1 — which is now a consumer's opt-in rather than
+a default the package shipped. Recorded in [Accessibility](../accessibility.md).
+
+`.checkbox` and `.radio` are deliberately absent from that rule. An unchecked
+checkbox is a transparent square and an unchecked radio a transparent circle:
+removing the line removes the control, so their floor is absolute in both
+directions and `.edgeless` on them is published as unsupported. They are the only
+two components in the package that read one presentation axis and not the other.
 
 ## Elevation
 
@@ -338,17 +446,29 @@ That is the test. **A bound is justified when our own composition produces the
 broken result, and unjustified when a consumer's own combination does.** The
 first is a bug we shipped; the second is a decision they made.
 
-Two pass it today, and they are the same argument in different materials:
+Four pass it today, and they are the same argument in different materials. Every
+one is recorded in `registry.json` under the component's `bounds`, with the
+composition of ours that earns it and what lifts it:
 
-| Component      | Bound                               | What our own composition does to it                                                                                                              |
-| -------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `text-control` | Fill capped at 6%                   | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
-| Toggles        | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
+| Component            | Bound                               | What our own composition does to it                                                                                                              |
+| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text-control`       | Fill capped at 6%                   | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
+| `.switch`            | Fill capped at 40%                  | A checked switch fills to 100%, so an uncapped `.solid` would be pixel-for-pixel a checked one with only the knob to tell them apart.            |
+| Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                             |
+| `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                             |
+| Toggles              | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
+
+The count went from two to five, and that is the test working rather than
+failing. Three of the additions are bounds that already existed as rewritten
+results — the edge floor was `--_edge: color-mix(...)` and the switch cap was two
+`--_edge: transparent` rules — and were invisible because a rewrite has nowhere to
+declare itself. Written as bounds on inputs they are countable, publishable, and
+testable, which is the whole argument for P6.
 
 The number is expected to move. This is a test, not a quota: a bound that passes
 it is published, and a bound that stops passing it is deleted. `.tooltip` is the
 first to be deleted rather than published. Its bound was a fill pinned at solid
-and a foreground pinned with it, against a container's `.bare` cascading onto a
+and a foreground pinned with it, against a container's `.ghost` cascading onto a
 bubble nobody classed and leaving it boundaryless over arbitrary content.
 
 Giving the bubble a ground answers the same objection without pinning anything.
@@ -547,26 +667,26 @@ the registry names for it, and that pair is published.
 | Component                                    | Default        |
 | -------------------------------------------- | -------------- |
 | `.btn`                                       | solid edgeless |
-| `.ipt` `.textarea` `.select`                 | bare edged     |
-| `.checkbox` `.radio`                         | bare edged     |
+| `.ipt` `.textarea` `.select`                 | ghost edged    |
+| `.checkbox` `.radio`                         | ghost edged    |
 | `.switch`                                    | solid edged    |
-| `.card`                                      | bare edged     |
+| `.card`                                      | ghost edged    |
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |
-| `.data-table`                                | bare edged     |
+| `.data-table`                                | ghost edged    |
 | `.tooltip`                                   | solid edgeless |
-| `.pre` `.code`                               | bare edgeless  |
-| `.kbd`                                       | bare edged     |
+| `.pre` `.code`                               | ghost edgeless |
+| `.kbd`                                       | ghost edged    |
 | `.badge`                                     | soft edgeless  |
-| `.quote`                                     | bare edged     |
+| `.quote`                                     | ghost edged    |
 | `.loader` `.skeleton` `.progress` `.divider` | n/a            |
 
 Three of those name a ground as well. `.pre`, `.code` and `.kbd` are not
 transparent at rest -- each is a quiet tinted block -- and that tone is not a fill
 of the component's intent, it is `--intent-subtle`. Writing it as `soft` would be
-a different color and would leave `.bare` looking broken. So they rest at `bare`
+a different color and would leave `.ghost` looking broken. So they rest at `ghost`
 over `--_d-ground: var(--intent-subtle)`, the mechanism `surface` already uses for
-its own ground: `.bare` is today's look exactly, `.soft` is 12% of the intent over
+its own ground: `.ghost` is today's look exactly, `.soft` is 12% of the intent over
 it, and `.solid` fills with the intent. The registry records the ground beside the
 pair.
 
@@ -609,17 +729,41 @@ It carries the closed sets first -- the fill and edge classes with the tokens ea
 declares, the hover step, the intents and their color families, the modifiers --
 then every component, helper, and aesthetic.
 
-Per component: class name, default fill/edge/elevation, the ground it rests on
-where it has one, native element selectors, and -- where one applies -- a rename or
-a partial composition, each with its reason.
+Per component: class name, default fill/edge/elevation, the axes it reads, the
+ground it rests on where it has one, native element selectors, and -- where one
+applies -- a rename, a partial composition, or a bound, each with its reason.
 
 ```json
 {
   "class": "btn",
   "default": { "fill": "solid", "edge": "edgeless", "elevation": 1 },
+  "axes": ["fill", "edge"],
   "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]"]
 }
 ```
+
+`axes` is what makes a dead axis findable. It is the registry's claim about the
+component, and the browser suite is what holds it to it. A bound narrows an axis
+without removing it, so a component that bounds one still lists it:
+
+```json
+{
+  "class": "checkbox",
+  "axes": ["fill"],
+  "bounds": [
+    {
+      "token": "--ui-border",
+      "kind": "floor",
+      "value": "100%",
+      "escape": null,
+      "reason": "An unchecked checkbox is a transparent square with nothing outside its line, so removing the line removes the control."
+    }
+  ]
+}
+```
+
+An `escape` of `null` is the register of what the package does not support.
+`.checkbox` and `.radio` are the only two entries carrying one.
 
 **It describes the stylesheet; it does not produce it.** An earlier draft
 generated selector lists from it, which made the CSS a build artifact and put a
@@ -649,9 +793,18 @@ Six checks, all of which fail the build:
    as nothing rather than as an error.
 6. Every implemented component declares the resting values the registry
    publishes for it.
+7. Every component declares the axes it reads, and every bound it places on one
+   carries the composition of ours that earns it and what lifts it.
 
 Checks 5 and 6 are what a generator would have made unnecessary, and they cost
 sixty lines instead of four hundred.
+
+Check 7 is enforced in the browser rather than against the stylesheet text, in
+`tests/browser/axes.spec.ts`, because it is the only one whose answer is a
+computed value. It asserts both directions: an axis the registry calls live must
+change what the component computes, and an axis it leaves off must not. The
+package went a whole release with `.edged` and `.edgeless` inert on six
+components and every other check passing, which is what this one exists for.
 
 ### The one rename
 
@@ -747,17 +900,19 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 | Goes away                      | Replaced by                                                                                                        |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
 | Former presentation `.flat`    | `.solid`; the active `.flat` elevation modifier remains public.                                                    |
-| `.out`                         | `.bare.edged`                                                                                                      |
-| `.ghost`                       | `.bare`                                                                                                            |
+| `.out`                         | `.ghost.edged`                                                                                                     |
+| `.bare`                        | `.ghost`, which is the name the old ghost button had. The fill class keeps the meaning; only the spelling moved.   |
 | `.fill`                        | Derived hover. No replacement for `.out.fill`.                                                                     |
 | `--ui-border-scale`            | Nothing. The aesthetic owns edge width.                                                                            |
 | `--ui-edge`, `--ui-edge-tight` | The shadow parts. `--ui-shadow-inset` and a spread draw the same ring, in the vocabulary elevation already speaks. |
 | `shaped`, `shaped-tight`       | `box`. It reads `--ui-clip` and draws the ring itself, so neither utility held anything of its own.                |
 | `--ui-hover-fill`              | Derived hover.                                                                                                     |
 | `--ui-hover-fg-on-fill`        | Derived hover.                                                                                                     |
-| Per-component clamps           | Deleting the edge scale. Two bounds survive.                                                                       |
+| Per-component clamps           | Deleting the edge scale. Five bounds survive, each in `registry.json`.                                             |
 | Aesthetic selector lists       | `--ui-ink`, shadow parts, `--ui-backdrop`.                                                                         |
 | "Plain"                        | A published default pair per component.                                                                            |
+| `.soft` dropping its line      | `.soft.edgeless`. No fill class decides an edge (P5).                                                              |
+| The switch's per-fill line     | A 40% fill cap of its own. Same rule.                                                                              |
 
 `.soft` keeps its name and changes meaning slightly: it is now fill only, and an
 author who wants the old bordered-soft look writes `.soft.edged`.
@@ -774,7 +929,7 @@ three material slots and one specificity rule were added because of what it foun
 | Q2  | Do colorless shadow parts take the own intent? | **Yes**, and the chip's 1px cap holds under a 2px aesthetic.     |
 | Q3  | Does `--ui-backdrop` scope blur to surfaces?   | **Yes**, with no component selector -- but see the ground token. |
 | Q4  | Is a 14% hover step visible?                   | **Yes**, comfortably. Smallest separation measured is 31.        |
-| Q5  | Is `bare edged` distinct from `soft edged`?    | **Yes**, at 1px. Separation is 48-52 in both themes.             |
+| Q5  | Is `ghost edged` distinct from `soft edged`?   | **Yes**, at 1px. Separation is 48-52 in both themes.             |
 | Q6  | Does anything fail to resolve in WebKit?       | **No**. Every composed value resolves in all three engines.      |
 
 Q1 is the one worth stating loudly. Architecture records the missing ink on bare
@@ -791,17 +946,17 @@ gets. Distances are sRGB, where roughly 20 is a clearly visible step:
 
 | Fill level     | Resting -> hover | Separation |
 | -------------- | ---------------- | ---------: |
-| `bare`, light  | 250 -> 223       |         47 |
+| `ghost`, light | 250 -> 223       |         47 |
 | `soft`, light  | 220 -> 202       |         31 |
 | `solid`, light | 10 -> 64         |         94 |
-| `bare`, dark   | 10 -> 40         |         52 |
+| `ghost`, dark  | 10 -> 40         |         52 |
 | `soft`, dark   | 38 -> 66         |         48 |
 | `solid`, dark  | 250 -> 229       |         36 |
 
 `soft` in light mode is the tightest at 31, still half again the visibility
 threshold. 14% stands.
 
-`bare edged` and `soft edged` separate by 48 to 52 in both themes at a single
+`ghost edged` and `soft edged` separate by 48 to 52 in both themes at a single
 pixel of border, so dropping `--ui-border-scale` costs nothing legible.
 
 ### What the spike changed

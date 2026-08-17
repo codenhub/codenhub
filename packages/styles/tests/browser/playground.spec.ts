@@ -53,8 +53,8 @@ test("renders a variant matrix from its spec", async ({ page }) => {
   /* One cell per intent per presentation, each addressable on its own, and every
      row names both halves of the presentation pair. */
   await expect(page.getByTestId("btn-default-primary")).toBeVisible();
-  await expect(page.getByTestId("btn-bare-edged-success")).toHaveClass(/btn success bare edged/);
-  await expect(page.getByTestId("btn-bare-edgeless-destructive-disabled")).toBeDisabled();
+  await expect(page.getByTestId("btn-ghost-edged-success")).toHaveClass(/btn success ghost edged/);
+  await expect(page.getByTestId("btn-ghost-edgeless-destructive-disabled")).toBeDisabled();
 });
 
 test("keeps route cards compact", async ({ page }) => {

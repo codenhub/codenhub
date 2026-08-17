@@ -25,7 +25,7 @@
   /* The trigger badge, for a page with no element of its own to hang the message
      on. Quiet on purpose: it marks that there is a message, it is not one, so it
      stays a tinted plate rather than taking the fill its bubble takes. That is a
-     key cap's resting shape exactly -- bare, edged, on `--intent-subtle` -- and it
+     key cap's resting shape exactly -- ghost, edged, on `--intent-subtle` -- and it
      is composed rather than hand-painted so the plate, the ink and the line come
      from the same place they come from everywhere else.
 
@@ -95,7 +95,7 @@
        cap, so it floods the ground and the ground stops mattering.
 
        The ground also retires a bound. Presentation cascades, so a container's
-       `.bare` reaches a bubble nobody classed; with nothing under the fill that
+       `.ghost` reaches a bubble nobody classed; with nothing under the fill that
        left a boundaryless bubble over arbitrary content, which the component used
        to answer by pinning its fill at solid and refusing to read presentation at
        all. An opaque ground answers it at every presentation instead.

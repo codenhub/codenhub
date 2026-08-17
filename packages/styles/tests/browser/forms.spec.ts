@@ -11,6 +11,10 @@ import {
 
 const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
 
+/* Matrix rows name a fill and an edge, and the test id joins them with a dash the
+   way `playground/shared/matrix.js` does. */
+const slug = (presentation: string) => presentation.replace(/\s+/gu, "-");
+
 test.describe("forms", () => {
   /* An invalid control is destructive, and it has to be destructive over an
      intent class rather than under one. The rule that says so cannot live inside
@@ -87,12 +91,12 @@ test.describe("forms", () => {
 
       const inheritedStyles = getComputedStyle(inherited);
       const result = {
-        bare: read("ipt-bare-none").backgroundColor,
+        ghost: read("ipt-ghost-edged-none").backgroundColor,
         default: read("ipt-default-none").backgroundColor,
         inheritedBackground: inheritedStyles.backgroundColor,
         inheritedBorderColor: inheritedStyles.borderTopColor,
         inheritedBorderWidth: inheritedStyles.borderTopWidth,
-        soft: read("ipt-soft-none").backgroundColor,
+        soft: read("ipt-soft-edged-none").backgroundColor,
         solid: read("ipt-solid-none").backgroundColor,
       };
 
@@ -108,8 +112,8 @@ test.describe("forms", () => {
     expect(readSrgb(styles.solid).alpha, "solid input clamps").toBeLessThan(0.5);
     expect(readSrgb(styles.solid).alpha, "and below the tint soft names").toBeLessThan(readSrgb(styles.soft).alpha);
     expect(getColorDistance(styles.solid, styles.default)).toBeGreaterThan(1);
-    /* `.bare` is the published resting fill, so it lands on the default. */
-    expectSameColor(styles.bare, styles.default, "bare input is the resting fill");
+    /* `.ghost` is the published resting fill, so it lands on the default. */
+    expectSameColor(styles.ghost, styles.default, "ghost input is the resting fill");
 
     /* The cascade case: the clamp and the edge floor both hold on an input that
        declared nothing itself. */
@@ -168,23 +172,23 @@ test.describe("forms", () => {
       .toBeGreaterThan(2);
   });
 
-  /* Three fills, three boxes, told apart by the tint and the line together:
-     `.bare` fills nothing and draws a line, `.soft` tints and draws none,
-     `.solid` tints and draws one. The cap sits at or below what `.soft` asks
-     for, so the two tinted fills land on the same wash and the line is what
-     separates them -- which is why the line rule is asserted here rather than
-     left to the presentation table.
+  /* Three fills, three boxes, told apart by the tint alone: `.ghost` fills
+     nothing, `.soft` takes the 12% it names, `.solid` takes the 6% cap. All
+     three keep their line, because the line is the edge axis's business and no
+     fill class reaches it any more. `.soft` used to draw none, which was the
+     package's other fill-decides-an-edge exception; the sunk field it produced
+     is now spelled `.soft.edgeless`, asserted below.
 
      Alphas rather than colors, because every tint is mixed toward `transparent`
      and its strength *is* its alpha. */
-  test("separates a text control's three fills by tint and by line", async ({ page }) => {
+  test("separates a text control's three fills by tint, and leaves every line alone", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const read = await page.evaluate(() => {
       const host = document.createElement("div");
 
       host.innerHTML = `
-        <input class="ipt bare" type="text" />
+        <input class="ipt ghost" type="text" />
         <input class="ipt soft" type="text" />
         <input class="ipt solid" type="text" />
         <input class="ipt success solid" type="text" />`;
@@ -201,9 +205,9 @@ test.describe("forms", () => {
       return values;
     });
 
-    const [bare, soft, solid, colored] = read.map((entry) => ({ ...entry, alpha: readSrgb(entry.fill).alpha }));
+    const [ghost, soft, solid, colored] = read.map((entry) => ({ ...entry, alpha: readSrgb(entry.fill).alpha }));
 
-    expect(bare.alpha, "bare fills nothing").toBe(0);
+    expect(ghost.alpha, "ghost fills nothing").toBe(0);
     expect(soft.alpha, "soft tints").toBeGreaterThan(0);
     expect(solid.alpha, "solid tints").toBeGreaterThan(0);
     expect(soft.alpha, "soft takes the tint it names, solid takes the cap").toBeGreaterThan(solid.alpha);
@@ -212,60 +216,61 @@ test.describe("forms", () => {
     /* Nowhere near a filled chip, which is what the cap is for. */
     expect(solid.alpha, "and stays far below a real fill").toBeLessThan(0.5);
 
-    /* `.soft` is the one fill with no line. The other two keep theirs, and every
-       one of them keeps its width, so the geometry never moves. */
-    expect(isTransparent(soft.line), "soft draws no line").toBe(true);
-
-    for (const entry of [bare, solid, colored]) {
+    /* Every fill keeps its line, and every one keeps its width, so the geometry
+       never moves between them. */
+    for (const entry of [ghost, soft, solid, colored]) {
       expect(isTransparent(entry.line), `${entry.fill} line`).toBe(false);
     }
 
-    for (const entry of [bare, soft, solid, colored]) {
+    for (const entry of [ghost, soft, solid, colored]) {
       expect(Number.parseFloat(entry.width), `${entry.fill} width`).toBeGreaterThan(0);
     }
   });
 
-  /* `.soft` dropping its line is a fill class deciding an edge, which the axes
-     say it may not do, so the exception is bounded in three ways and each one is
-     measured here: it is the class on the element and never a container's, it
-     reaches the three text inputs and not the toggles, and the pointer gets the
-     fill because the line is not there to answer it. */
-  test("bounds the borderless soft control to the element that asked for it", async ({ page }) => {
+  /* The fill axis has the same element-versus-cascade split the edge axis has,
+     and this is the half of it nothing else measures. A `.soft` toolbar reaching
+     a field nobody classed is our own cascade, so the 6% cap answers it; `.soft`
+     written on the field is a consumer naming the tint they want, so it takes the
+     published 12% whole.
+
+     Getting this backwards is not a cosmetic difference. The cap exists because a
+     container's `.solid` would otherwise fill a field 100% with its own text
+     colour, which is text the same colour as its background. */
+  test("caps a cascaded fill on a text control and honours the element's own", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const values = await page.evaluate(() => {
       const host = document.createElement("div");
 
       host.innerHTML = `
-        <div class="soft"><input class="ipt" type="text" /></div>
-        <input class="checkbox soft" type="checkbox" />
-        <input class="radio soft" type="radio" />`;
+        <div class="soft"><input class="ipt cascaded" type="text" /></div>
+        <div class="solid"><input class="ipt flooded" type="text" /></div>
+        <input class="ipt own soft" type="text" />`;
       document.body.append(host);
 
-      const line = (selector: string) => getComputedStyle(host.querySelector(selector)!).borderTopColor;
-      const result = { checkbox: line(".checkbox"), inherited: line(".ipt"), radio: line(".radio") };
+      const read = (selector: string) => {
+        const styles = getComputedStyle(host.querySelector(selector)!);
+
+        return { fill: styles.backgroundColor, line: styles.borderTopColor };
+      };
+      const result = { cascaded: read(".cascaded"), flooded: read(".flooded"), own: read(".own") };
 
       host.remove();
 
       return result;
     });
 
-    /* The cascade case is the one the edge floor was written for: a `.soft`
-       toolbar tints the fields inside it and must not erase them. */
-    expect(isTransparent(values.inherited), "a field under a soft container").toBe(false);
-    /* A toggle has nothing outside its line, so the floor stays absolute there. */
-    expect(isTransparent(values.checkbox), "soft checkbox").toBe(false);
-    expect(isTransparent(values.radio), "soft radio").toBe(false);
+    const alpha = (color: string) => readSrgb(color).alpha;
 
-    const soft = page.getByTestId("ipt-soft-none");
-    const resting = readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha;
+    /* The element's own `.soft` outruns anything a container cascades. */
+    expect(alpha(values.own.fill), "own .soft takes the published tint").toBeGreaterThan(alpha(values.cascaded.fill));
+    /* And a container's `.solid` gets the cap, not a filled field. */
+    expect(alpha(values.flooded.fill), "a cascaded .solid is capped").toBeLessThan(0.2);
 
-    await soft.hover();
-    await expect
-      .poll(async () => readSrgb(await soft.evaluate((element) => getComputedStyle(element).backgroundColor)).alpha, {
-        message: "hover answers on the fill",
-      })
-      .toBeGreaterThan(resting);
+    /* No fill class touches the line any more, in either direction. */
+    for (const [source, measured] of Object.entries(values)) {
+      expect(isTransparent(measured.line), `${source} keeps its line`).toBe(false);
+    }
   });
 
   /* `text-control` used to carry `&:focus { @apply outline-none }`, which reads
@@ -469,22 +474,26 @@ test.describe("forms", () => {
     }
   });
 
-  /* A switch's three fills used to render as two looks. `text-control` caps every
-     fill at 12% -- lifting it would make an unchecked `.solid` switch look
-     checked -- so `.solid` and `.soft` land on the same tint and `.bare` landed
-     on the resting default. The line is the only lever left, so the line is what
-     separates them, and this measures the line rather than the fill.
+  /* A switch's three fills used to render as two looks, so the component varied
+     its *line* per fill class instead -- the only place in the package where a
+     fill class decided an edge, and the reason `.soft` meant something different
+     on a switch than on anything else. Raising the fill cap to 40% retired it.
+
+     This is the assertion that rule is gone: the fills separate as fills, and the
+     line is drawn under every one of them. `axes.spec.ts` measures how far apart
+     the fills land; this measures that each is distinct and that none of them
+     reaches the line.
 
      The checked track is measured under all four because that is the part
      presentation may not reach: a checked switch is filled with its intent and
-     its line is that fill, so a rule that made the line transparent without
-     excluding `:checked` would cut a page-colored ring out of a filled track. */
-  test("separates a switch's presentations by its line and leaves the checked track alone", async ({ page }) => {
+     its line is that fill, so a fill class leaking into the edge would cut a
+     page-colored ring out of a filled track. */
+  test("separates a switch's presentations by its fill and keeps the line under all of them", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const read = async (presentation: string) => {
       const cell = (suffix: string) =>
-        page.getByTestId(`switch-${presentation}-none${suffix}`).evaluate((element) => {
+        page.getByTestId(`switch-${slug(presentation)}-none${suffix}`).evaluate((element) => {
           const styles = getComputedStyle(element);
 
           return { edge: styles.borderTopColor, fill: styles.backgroundColor };
@@ -493,56 +502,66 @@ test.describe("forms", () => {
       return { checked: await cell("-checked"), resting: await cell("") };
     };
 
+    /* A switch reads both axes now, so the matrix renders the full grid and every
+       row names a fill and an edge. The edged rows are the ones to measure: they
+       are where a fill class leaking into the line would show. */
     const fallback = await read("default");
     const solid = await read("solid");
-    const soft = await read("soft");
-    const bare = await read("bare");
+    const soft = await read("soft edged");
+    const ghost = await read("ghost edged");
 
     /* The registry rests a switch at solid, so the two are the same element. */
     expectSameColor(fallback.resting.fill, solid.resting.fill, "resting switch fill");
     expectSameColor(fallback.resting.edge, solid.resting.edge, "resting switch line");
 
-    expect(isTransparent(solid.resting.edge), "solid switch line").toBe(false);
+    /* Three fills, three tracks. The pairwise distances are measured in
+       `axes.spec.ts`; what matters here is that no two are the same colour. */
     expect(isTransparent(solid.resting.fill), "solid switch track").toBe(false);
+    expect(isTransparent(soft.resting.fill), "soft switch track").toBe(false);
+    expect(isTransparent(ghost.resting.fill), "ghost switch track").toBe(true);
+    expect(getColorDistance(soft.resting.fill, solid.resting.fill), "soft vs solid track").toBeGreaterThan(2);
 
-    /* The cap sits at or below what `.soft` asks for, so soft and solid share a
-       track and the line is the only thing telling them apart. */
-    expectSameColor(soft.resting.fill, solid.resting.fill, "soft switch track");
-    expect(isTransparent(soft.resting.edge), "soft switch line").toBe(true);
-
-    expect(isTransparent(bare.resting.fill), "bare switch track").toBe(true);
-    expect(isTransparent(bare.resting.edge), "bare switch line").toBe(true);
+    /* The edge floor, under every fill. This is what the removed exception used
+       to break: `.soft` and `.ghost` each pinned the line transparent. */
+    for (const { label, resting } of [
+      { label: "solid", resting: solid.resting },
+      { label: "soft", resting: soft.resting },
+      { label: "ghost", resting: ghost.resting },
+    ]) {
+      expect(isTransparent(resting.edge), `${label} switch line`).toBe(false);
+    }
 
     for (const { checked, label } of [
       { checked: solid.checked, label: "solid" },
       { checked: soft.checked, label: "soft" },
-      { checked: bare.checked, label: "bare" },
+      { checked: ghost.checked, label: "ghost" },
     ]) {
       expectSameColor(checked.fill, fallback.checked.fill, `checked ${label} switch track`);
       expectSameColor(checked.edge, fallback.checked.edge, `checked ${label} switch line`);
     }
 
-    /* One pointer, so the two are hovered in turn. Soft reveals the track it was
-       carrying as a tint; bare has renounced the track and has nothing to show.
+    /* Hover moves the line tone to `--intent-hover` for every fill now, where it
+       used to reveal a line on `.soft` and do nothing at all on `.bare`. The line
+       transitions, so this polls rather than reading the first frame.
 
-       The line transitions in, so this waits it out rather than reading the first
-       frame -- which is transparent either way. For bare the same pause is the
-       point: it gives a line the time to appear before the assertion says it
-       never did. */
-    const control = (presentation: string) => page.getByTestId(`switch-${presentation}-none`);
+       Sequential by necessity rather than by oversight: there is one pointer, so
+       the two cannot be hovered at once. */
+    const control = (presentation: string) => page.getByTestId(`switch-${slug(presentation)}-none`);
     const readEdge = (presentation: string) =>
       control(presentation).evaluate((element) => getComputedStyle(element).borderTopColor);
-    const hover = async (presentation: string) => {
+    const expectHoverMoves = async (presentation: string) => {
+      const resting = await readEdge(presentation);
+
       await control(presentation).hover();
+      await expect
+        .poll(async () => getColorDistance(await readEdge(presentation), resting), {
+          message: `hovered ${presentation} switch line moves`,
+        })
+        .toBeGreaterThan(2);
     };
 
-    await hover("soft");
-    await expect
-      .poll(async () => isTransparent(await readEdge("soft")), { message: "hovered soft switch line" })
-      .toBe(false);
-    await hover("bare");
-    await page.waitForTimeout(500);
-    expect(isTransparent(await readEdge("bare")), "hovered bare switch line").toBe(true);
+    await expectHoverMoves("soft edged");
+    await expectHoverMoves("ghost edged");
   });
 
   /* A checkbox states itself by filling and cutting a tick out of the ground; a
@@ -635,7 +654,7 @@ test.describe("forms", () => {
       const host = document.querySelector('[data-testid="preview-root"]')!;
 
       for (const component of ["checkbox", "radio"]) {
-        for (const fill of ["soft", "bare"]) {
+        for (const fill of ["soft", "ghost"]) {
           const direct = document.querySelector(`[data-testid="${component}-${fill}-none"]`)!;
           const inheritedHost = document.createElement("div");
           const inherited = document.createElement("input");

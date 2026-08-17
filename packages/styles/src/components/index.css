@@ -15,4 +15,4 @@
 @import "./surface.css";
 @import "./tooltip.css";
 
-@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft bare edged edgeless flat raised floating loader");
+@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");

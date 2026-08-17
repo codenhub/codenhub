@@ -15,13 +15,13 @@ without a component-specific variant:
 | Axis         | Question        | Classes                                                                   | Inheritance  |
 | ------------ | --------------- | ------------------------------------------------------------------------- | ------------ |
 | Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info` | Element only |
-| Presentation | How much of it? | `.solid`, `.soft`, `.bare`, `.edged`, `.edgeless`                         | Cascades     |
+| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                        | Cascades     |
 | Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel` from an optional aesthetic stylesheet | Cascades     |
 
 ```html
 <section class="soft pixel">
   <button class="btn primary">Soft primary pixel button</button>
-  <button class="btn destructive bare edged">Outlined destructive override</button>
+  <button class="btn destructive ghost edged">Outlined destructive override</button>
 </section>
 ```
 

@@ -37,8 +37,12 @@
   --ui-fg-on-fill: 0%;
 }
 
-/* No fill at all. Text is the intent color. */
-.bare {
+/* No fill at rest; the derived hover gives it one. Text is the intent color.
+
+   Named `.ghost` rather than `.bare` because `.bare` and `.edgeless` both read
+   as "less of something", so an author wanting no border reached for `.bare`
+   first and got no background instead. `.ghost` says fill and only fill. */
+.ghost {
   --ui-fill: 0%;
   --ui-fg-on-fill: 0%;
 }

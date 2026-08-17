@@ -127,6 +127,7 @@ const SUPPORTED_KEYWORDS = new Set([
   "title",
   "then",
   "type",
+  "uniqueItems",
 ]);
 
 interface Schema {
@@ -144,6 +145,7 @@ interface Schema {
   required?: string[];
   then?: Schema;
   type?: string | string[];
+  uniqueItems?: boolean;
   [keyword: string]: unknown;
 }
 
@@ -188,6 +190,16 @@ function validate(value: unknown, schema: Schema, path: string, problems: string
     }
     if (schema.maximum !== undefined && value > schema.maximum) {
       problems.push(`${path}: ${value} is above ${schema.maximum}`);
+    }
+  }
+
+  if (Array.isArray(value) && schema.uniqueItems === true) {
+    /* Comparison by serialization, which is enough for the arrays the registry
+       holds: they are strings and flat objects with stable key order. */
+    const seen = new Set(value.map((entry) => JSON.stringify(entry)));
+
+    if (seen.size !== value.length) {
+      problems.push(`${path}: contains duplicate entries`);
     }
   }
 
