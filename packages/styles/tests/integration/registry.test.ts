@@ -415,8 +415,13 @@ function rootDeclarations(block: string): string {
 }
 
 /* Shared composition rather than components: they are `@utility` so `@apply` can
-   reach them, which also makes them class names a consumer could type. They are
-   deliberately undocumented, and the registry does not list them. */
+   reach them, which also makes them class names a consumer could type. The
+   registry does not list them, because they publish no per-component default for
+   it to hold. Two of them -- `text-control` and `surface` -- are documented all
+   the same, as the low-level boxes a consumer builds on when the package ships
+   no component for what they are making; the other three are internal. Both
+   documented ones are in the intent reset, which is what a typeable class needs
+   to paint at all. */
 const composition = new Set(["box", "box-hover", "surface", "text-control", "loader-mask"]);
 
 /* The registry is the list of what the package supports, so a utility it does

@@ -122,17 +122,21 @@
    hand-maintained selector lists, and `tests/integration/registry.test.ts`
    fails the build when a component in the registry is missing from either.
 
-   `.text-control` is on it without being a component. It is the utility the six
-   field controls compose, and it is documented as usable on its own for a
-   control the package does not ship -- a `contenteditable` div, most often.
-   Every element that reaches it through a component class was already covered;
-   an element that wears it directly was not, so it resolved no intent at all
-   and `box` collapsed on it: no fill, no border, and a hover that could only
-   make the nothing more so. */
+   `.text-control` and `.surface` are on it without being components. Each is a
+   utility the shipped components compose, and each is documented as usable on
+   its own -- `.text-control` for a control the package does not ship, a
+   `contenteditable` div most often, and `.surface` for a box a consumer paints
+   themselves under whichever aesthetic is in scope. Every element that reaches
+   one through a component class was already covered; an element that wears it
+   directly was not, so it resolved no intent at all and `box` collapsed on it:
+   no fill, no border, and a hover that could only make the nothing more so.
+   Measured on a bare `<div class="surface">`, which computed a transparent
+   background and a zero-width border. */
 :where(
   .btn,
   .ipt,
   .text-control,
+  .surface,
   .textarea,
   .select,
   .checkbox,

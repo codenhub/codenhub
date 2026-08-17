@@ -34,6 +34,7 @@ an axis marked `Yes` must move, and an axis marked `No` must not.
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
 | `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes  | Yes  | Shape              |
+| `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
 | `.progress`                                               | Yes    | No   | No   | No                 |
@@ -522,6 +523,7 @@ Examples:
 | `.label`                                                              | Form label text.                                                |
 | `.hint`                                                               | Secondary helper text.                                          |
 | `.hint.error`                                                         | Helper text with destructive intent.                            |
+| `.surface`                                                            | Shared public container composition utility.                    |
 | `.text-control`                                                       | Shared public text-control composition utility.                 |
 | `.ipt`                                                                | Input control styling.                                          |
 | `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
@@ -620,6 +622,18 @@ opt-in and never a default, and the focus ring still shows.
 <div class="edgeless">
   <input class="ipt" placeholder="Keeps its line; the floor holds" />
 </div>
+```
+
+`.surface` is a public low-level utility. It is the box every container in the
+package composes: ghost, edged, surface radius, and the two slots only a surface
+resolves — the backdrop filter and the complete surface shadow. Use it to paint a
+container the package does not ship, under whichever aesthetic is in scope.
+Prefer `.card` or `.panel` when they fit.
+
+```html
+<div class="surface glass">Blurred, translucent, glass corners</div>
+<div class="surface pixel">Cut corners and an inset ring</div>
+<div class="surface primary solid">Any intent, any presentation</div>
 ```
 
 `.text-control` is a public low-level utility from the form entrypoint. It
