@@ -115,6 +115,14 @@ is chosen to be read against a page. A `.soft` or `.ghost` component prints the
 strong one, which is why an unfilled warning reads in amber-800 rather than the
 amber-600 its solid sibling is filled with.
 
+The strong tone has to stay recognisably its own hue, not just readable. On a
+dark page the `-100` shade of every family is a pale tint that carries almost no
+chroma at small sizes: a soft success badge and a soft destructive one printed
+labels that both read white, and a soft radio's dot stopped matching the ring
+around it. The dark tones are `-300` for that reason, and the tinted grounds
+under them are `-900` so there is room — measured at 5.0:1 or better everywhere a
+partial fill prints text, and past 9:1 on the page.
+
 `--intent-border` exists because a neutral border must stay the quiet border
 gray rather than the text color. Everything that draws a line reads it: control
 borders, table rules, dividers, key caps, and quote bars.

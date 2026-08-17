@@ -26,6 +26,8 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Filled labels           | Every intent's `.solid` label meets 1.4.3 (4.5:1) as normal text, in both themes. Lowest is success at 5.14:1.             |
 | Warning ink             | `--color-warning-contrast` is the near-black tone, not the page tone. Amber dark enough to carry white is not amber.       |
 | Partial fills           | Contrast ink appears only past a half fill, so a capped plate keeps `--intent-strong` rather than walking toward the page. |
+| Intent hue in dark      | `--intent-strong` is the `-300` shade in dark, so a soft or ghost label keeps its own hue instead of reading white.        |
+| Toggle marks            | A checked mark meets 3:1 as a state indicator on every plate its fill class can paint, in both themes.                     |
 | Forced colors           | `forced-colors: active` preserves visible borders and checked states using system colors.                                  |
 
 The loader fallback is embedded in loader CSS, so focused imports that include
