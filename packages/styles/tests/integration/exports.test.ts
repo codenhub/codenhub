@@ -87,7 +87,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     patterns: [
       /\.pixel\{/,
       /--ui-clip:\s*polygon/,
-      /--ui-clip-tight:\s*polygon/,
+      /--ui-clip-tight:\s*none/,
       /--ui-shadow-edge:/,
       /--ui-shadow-inset:/,
     ],

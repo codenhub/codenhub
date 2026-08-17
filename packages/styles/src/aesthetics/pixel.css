@@ -1,5 +1,5 @@
-/* Pixel: an 8-bit look built from a stepped `clip-path` corner and an inset ring
-   where the border would be.
+/* Pixel: an 8-bit look built from a single-step `clip-path` corner and an inset
+   ring where the border would be.
 
    Tier 1 only. `clip-path` clips a border, an outline and any outer shadow, so
    the border ceiling goes to zero and the edge becomes an inset shadow instead --
@@ -7,19 +7,28 @@
    `--ui-shadow-edge` are for. The ring is still coloured by each component's own
    intent, because the parts carry no colour. */
 .pixel {
-  --pixel-unit: 2px;
+  /* One pixel of the imaginary low-resolution grid. Everything else is a
+     multiple of it: the ring is one unit thick and the corner is one unit
+     square, so a consumer scaling this scales the whole look at once. */
+  --pixel-unit: 4px;
 
   --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --ui-radius: 0;
   --ui-radius-surface: 0;
 
   /* A border would be clipped at the straight sides and paint a second line
-     beside the ring, so the ceiling takes it out and the ring does the drawing. */
+     beside the ring, so the ceiling takes it out and the ring does the drawing.
+
+     The width itself stays under the unit deliberately. Its one live reader is
+     the toggle cap in `form.css`, which reads it as the thinnest line this
+     aesthetic will accept where the full ring does not fit: a 16px checkbox
+     spending four pixels a side leaves an eight-pixel hole and an unchecked box
+     reads as a filled one. */
   --ui-border-width: 2px;
   --ui-border-max: 0px;
 
-  /* The ring is as deep as the corner cut. A thinner one leaves the staircase
-     uncovered and the border reads as broken at every corner. Spread is not
+  /* The ring is one unit deep, which is exactly the corner cut, so the staircase
+     is covered and the line does not read as broken at the corners. Spread is not
      scaled by elevation, so a chip resting at zero keeps its edge. */
   --ui-shadow-inset: inset;
   /* The ring is not depth -- it is this element's border, drawn where a
@@ -38,62 +47,44 @@
      value. `box` explains why -- the percentage form nests two `color-mix()`
      results, which WebKit resolves as though the percentage were zero. */
   --ui-shadow-edge: ;
-  --ui-shadow-spread: calc(var(--pixel-unit) * 2);
+  --ui-shadow-spread: var(--pixel-unit);
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: 0px;
 
   /* The focus ring is a second inset layer, and shadows paint first-on-top, so it
      has to be wider than the edge to show at all. */
-  --ui-focus-inset: calc(var(--pixel-unit) * 2 + var(--focus-ring-width));
+  --ui-focus-inset: calc(var(--pixel-unit) + var(--focus-ring-width));
 
-  /* The polygon resolves `--pixel-unit` here, on `.pixel`, not on whichever
+  /* One square unit off each corner, and nothing else. The staircase this
+     replaces stepped twice at half the unit to approximate a curve, which is the
+     one thing a low-resolution grid cannot do: at any size it read as a bevel
+     that had not quite committed. A single cut of the grid's own unit is the
+     shape the look is actually made of.
+
+     The polygon resolves `--pixel-unit` here, on `.pixel`, not on whichever
      component reads it, which is why the unit is declared above rather than
-     overridden per component. Chips step at one unit on their own polygon. */
+     overridden per component. */
   --ui-clip: polygon(
-    0 calc(var(--pixel-unit) * 2),
-    var(--pixel-unit) calc(var(--pixel-unit) * 2),
+    0 var(--pixel-unit),
     var(--pixel-unit) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) var(--pixel-unit),
+    var(--pixel-unit) 0,
+    calc(100% - var(--pixel-unit)) 0,
     calc(100% - var(--pixel-unit)) var(--pixel-unit),
-    calc(100% - var(--pixel-unit)) calc(var(--pixel-unit) * 2),
-    100% calc(var(--pixel-unit) * 2),
-    100% calc(100% - var(--pixel-unit) * 2),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit) * 2),
+    100% var(--pixel-unit),
+    100% calc(100% - var(--pixel-unit)),
     calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
+    calc(100% - var(--pixel-unit)) 100%,
+    var(--pixel-unit) 100%,
     var(--pixel-unit) calc(100% - var(--pixel-unit)),
-    var(--pixel-unit) calc(100% - var(--pixel-unit) * 2),
-    0 calc(100% - var(--pixel-unit) * 2)
+    0 calc(100% - var(--pixel-unit))
   );
-  --ui-clip-tight: polygon(
-    0 2px,
-    1px 2px,
-    1px 1px,
-    2px 1px,
-    2px 0,
-    calc(100% - 2px) 0,
-    calc(100% - 2px) 1px,
-    calc(100% - 1px) 1px,
-    calc(100% - 1px) 2px,
-    100% 2px,
-    100% calc(100% - 2px),
-    calc(100% - 1px) calc(100% - 2px),
-    calc(100% - 1px) calc(100% - 1px),
-    calc(100% - 2px) calc(100% - 1px),
-    calc(100% - 2px) 100%,
-    2px 100%,
-    2px calc(100% - 1px),
-    1px calc(100% - 1px),
-    1px calc(100% - 2px),
-    0 calc(100% - 2px)
-  );
+  /* Chips take the other half of the vocabulary: no radius at all. The cut is one
+     grid unit whatever the element is, and one unit off each corner of a 24px
+     badge or a 16px checkbox is a bite rather than a corner. Squared is the
+     honest small-scale answer, and it is still the pixel look -- the aesthetic is
+     a grid, and a square is on it. */
+  --ui-clip-tight: none;
 
   --ui-hover-transform: none;
   --ui-active-transform: none;

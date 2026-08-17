@@ -679,26 +679,40 @@ test.describe("aesthetics", () => {
       }
     });
 
-    /* Supported compact-component exception: a chip uses its own 2px tight
-       silhouette while retaining the aesthetic's shared 4px inset geometry. */
-    test("steps a chip on the tight polygon while its ring keeps the structural depth", async ({ page }) => {
-      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
-
-      const chip = await readStyles(page, "badge-default-none", ["box-shadow", "clip-path"]);
-
+    /* The corner is one square grid unit and nothing else. The staircase this
+       replaces stepped twice at half a unit to approximate a curve, which is the
+       one shape a low-resolution grid cannot draw: at any size it read as a bevel
+       that had not quite committed rather than as a pixel. */
+    test("cuts one square grid unit off each corner", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
-      const structural = await readStyles(page, "card-default-none", ["box-shadow", "clip-path"]);
+      const structural = await readStyles(page, "card-default-none", ["clip-path"]);
 
-      /* One unit of cut on the chip against two on the card. */
-      expect(chip["clip-path"], "chip clip").toContain("0px 2px, 1px 2px");
-      expect(structural["clip-path"], "card clip").toContain("0px 4px, 2px 4px");
+      /* Left edge to the cut, across the corner square, then up to the top edge:
+         two vertices where the staircase needed four. The unit is the ring's own
+         depth, so the cut and what covers it agree by construction. */
+      expect(structural["clip-path"], "card clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+    });
 
-      /* The geometry is shared; the colour is not, and no longer can be. A badge
-         is edgeless and a card is edged, so the ring answers each of them
-         separately. */
-      expect(chip["box-shadow"], "chip ring").toMatch(/\b0px 0px 0px 4px\b/);
-      expect(structural["box-shadow"], "card ring").toMatch(/\b0px 0px 0px 4px\b/);
+    /* The other half of the vocabulary: no radius at all. One unit off each
+       corner of a 24px badge is a bite rather than a corner, and squared is still
+       on the grid this aesthetic is made of. */
+    test("squares a chip instead of stepping it", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
+
+      const chip = await readStyles(page, "badge-default-none", ["clip-path", "border-radius"]);
+
+      await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
+
+      const code = await readStyles(page, "code-chip", ["clip-path", "border-radius"]);
+
+      for (const [name, styles] of [
+        ["badge", chip],
+        ["code", code],
+      ] as const) {
+        expect(styles["clip-path"], `${name} clip`).toBe("none");
+        expect(styles["border-radius"], `${name} radius`).toBe("0px");
+      }
     });
 
     /* The ring is this aesthetic's border, drawn where a `clip-path` cannot cut
@@ -732,19 +746,6 @@ test.describe("aesthetics", () => {
       expect(isTransparent(readShadowColor(field["box-shadow"]!)), "field ring").toBe(false);
     });
 
-    /* A clip removes a border, so a clipped chip with no inset ring is one whose
-       corners are cut and whose staircase nothing covers. `box` draws the ring
-       from the same shadow parts every other component uses. */
-    test("covers a stepped code chip's staircase with the inset ring", async ({ page }) => {
-      await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
-
-      const styles = await readStyles(page, "code-chip", ["clip-path", "box-shadow"]);
-
-      expect(styles["clip-path"]).toContain("polygon(");
-      expect(styles["box-shadow"]).toContain("inset");
-      expect(styles["box-shadow"], "chip ring depth").toContain("0px 0px 0px 4px");
-    });
-
     test("keeps a focus ring that clipping would otherwise remove", async ({ page }) => {
       await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
@@ -776,7 +777,7 @@ test.describe("aesthetics", () => {
       expect(styles.outlineStyle).toBe("solid");
     });
 
-    test("squares what it can, clips a checkbox tight, and keeps a radio round", async ({ page }) => {
+    test("squares what it can, squares a checkbox, and keeps a radio round", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
       const track = await readAll(page, ["progress-default-none"], ["border-radius", "clip-path"]);
@@ -795,11 +796,12 @@ test.describe("aesthetics", () => {
 
       expect(fillRadius).toBe("0px");
 
-      /* A toggle takes the chip silhouette, and its inset edge is capped at the
-         line width: four pixels a side on a sixteen-pixel box would leave an
-         eight-pixel hole and an unchecked box would read as a filled one. */
+      /* A toggle takes the chip silhouette, which this aesthetic squares, and its
+         inset edge is capped at the line width: four pixels a side on a
+         sixteen-pixel box would leave an eight-pixel hole and an unchecked box
+         reads as a filled one. */
       expect(checkbox["border-radius"], "checkbox radius").toBe("0px");
-      expect(checkbox["clip-path"], "checkbox clip").toContain("polygon(");
+      expect(checkbox["clip-path"], "checkbox clip").toBe("none");
       expect(checkbox["box-shadow"], "checkbox ring").toContain("0px 0px 0px 2px");
 
       /* The circle is the only thing telling a radio from a checkbox at a glance,
@@ -857,26 +859,32 @@ test.describe("aesthetics", () => {
         }),
       );
 
+      const [button, input, code] = shapes;
+
       for (const shape of shapes) {
-        expect(shape.clipped, `${shape.selector} clip`).toBe(true);
         expect(shape.borderTopWidth, `${shape.selector} border`).toBe("0px");
         expect(shape.borderTopLeftRadius, `${shape.selector} radius`).toBe("0px");
       }
 
-      const [button, input, code] = shapes;
+      /* The structural silhouette on the two structural elements, and the chip
+         one -- squared, under this aesthetic -- on the content chip. Both are
+         material tokens, so both travel. */
+      expect(button!.clipped, "button clip").toBe(true);
+      expect(input!.clipped, "input clip").toBe(true);
+      expect(code!.clipped, "code clip").toBe(false);
 
       /* A clip removes a border, so the edge has to be the inset ring instead or
-         the element loses its outline entirely. Every `box` component gets it, a
-         bare `<code>` included: the ring travels through the `@apply` that maps
-         the element onto the utility, where a rule keyed on a class never could. */
+         the element loses its outline entirely. The ring travels through the
+         `@apply` that maps the element onto the utility, where a rule keyed on a
+         class never could. A bare `<input>` is the one probed for colour: it is
+         the element that floors its own edge, so the ring is there whatever a
+         container says, where a `<button>` is solid and edgeless and a `<code>`
+         edgeless, and neither is owed a line. */
       for (const shape of [button!, input!, code!]) {
         expect(shape.ring, `${shape.selector} ring`).toContain("inset");
         expect(shape.ring, `${shape.selector} ring depth`).toContain("0px 0px 0px 4px");
       }
 
-      /* The input is the one probed for colour: it floors its own edge, so the
-         ring is there whatever a container says, where a `<button>` is solid and
-         edgeless and a `<code>` edgeless, and neither is owed a line. */
       expect(isTransparent(readShadowColor(input!.ring)), "input ring").toBe(false);
     });
   });

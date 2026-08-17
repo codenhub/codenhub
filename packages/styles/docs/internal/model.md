@@ -1071,10 +1071,16 @@ element into its own shadow.
 
 An 8-bit look built from a stepped silhouette and an inset ring.
 
-- Corners step by a 2px grid unit. Tight chips use their own 2px silhouette but
-  retain the shared 4px inset ring as a supported compact-component exception.
-- The shared edge is a 4px inset ring. A thinner structural ring leaves the
-  staircase uncovered and the border reads as broken at every corner.
+- One square grid unit is cut from each corner, and the unit is 4px. The two-step
+  staircase this replaces approximated a curve at half the unit, which is the one
+  shape a low-resolution grid cannot draw: at any size it read as a bevel that had
+  not quite committed.
+- Corners are one unit or nothing. Chips square rather than step, because one unit
+  off each corner of a 24px badge is a bite rather than a corner.
+- The edge is a one-unit inset ring, the same size as the cut, so the corner is
+  covered and the line does not read as broken there.
+- The ring answers the edge axis, through `--ui-shadow-edge`. It is the border,
+  not depth, so `.edgeless` draws none and a field's own floor keeps one.
 - No radius anywhere. `clip-path` clips a border away, so the border ceiling goes
   to zero and the ring does the drawing.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font

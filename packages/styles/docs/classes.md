@@ -388,11 +388,11 @@ Like presentation, an aesthetic class cascades to any subtree:
 </section>
 ```
 
-| Class           | Look                                                                                                               |
-| --------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.        |
-| `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                       |
-| `.pixel`        | Stepped corners, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
+| Class           | Look                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.                     |
+| `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
+| `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless`
 intentionally removes the visible material traits from components whose
@@ -442,15 +442,20 @@ become opaque.
 
 ### Pixel
 
-`--pixel-unit` is one pixel of the imaginary low-resolution grid. Corners step by
-that unit and the outline is two units thick; chips use a smaller unit. Set it on
-a container to scale the whole look:
+`--pixel-unit` is one pixel of the imaginary low-resolution grid, `4px` by
+default. One square unit is cut from each corner and the outline is one unit
+thick, so the cut and what covers it are the same size. Set it on the element
+carrying the class to scale the whole look:
 
 ```html
-<section class="pixel" style="--pixel-unit: 3px">
+<section class="pixel" style="--pixel-unit: 6px">
   <button class="btn primary">Chunkier</button>
 </section>
 ```
+
+Corners are one unit or nothing. Chips — badges, key caps, code, toggles — square
+instead of stepping, because one unit off each corner of a 24px badge is a bite
+rather than a corner.
 
 The outline is an inset ring, because a clip removes a real border. It is the
 element's edge rather than a shadow, so it answers `.edged` and `.edgeless` the

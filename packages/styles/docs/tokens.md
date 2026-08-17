@@ -346,11 +346,15 @@ you. Only aesthetics with a token listed below expose an aesthetic-specific
 token. Tune all other behavior through the shared material tokens above. Listed
 tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token          | Aesthetic       | Purpose                                                   | Default                           |
-| -------------- | --------------- | --------------------------------------------------------- | --------------------------------- |
-| `--neo-offset` | `.neobrutalism` | Hard shadow offset and distance hover travels.            | `4px`                             |
-| `--pixel-unit` | `.pixel`        | One pixel of the grid. Corners and inset rings derive it. | `2px`                             |
-| `--font-pixel` | `.pixel`        | Consumer-supplied pixel font stack.                       | Falls back to the monospace stack |
+| Token          | Aesthetic       | Purpose                                                     | Default                           |
+| -------------- | --------------- | ----------------------------------------------------------- | --------------------------------- |
+| `--neo-offset` | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
+| `--pixel-unit` | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
+| `--font-pixel` | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
+
+Set an aesthetic token on the element carrying the aesthetic class. A custom
+property resolves its own `var()` references where it is declared, so a value set
+further down the tree arrives too late for the tokens that read it.
 
 Shipped aesthetics set the shared material tokens above. `.neobrutalism` and
 `.pixel` set `--ui-ink` for their neutral outline; intent classes still override
