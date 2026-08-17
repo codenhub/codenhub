@@ -254,19 +254,39 @@
    two. A `.soft` toolbar still tints the fields inside it at the cap; a field
    wearing `.soft` itself gets the tint it asked for.
 
-   `:not(:checked)` is load-bearing, and it is the layer trap this file keeps
-   running into from a new direction. The checked states live inside `@utility`,
-   so they land in the utilities layer; this rule is unlayered, and an unlayered
-   declaration beats a layered one at any specificity. Without the exclusion a
-   checked `.soft` toggle kept the 12% tint instead of filling -- a checked
-   switch came out a pale track with the knob at the far end, and a checked
-   checkbox a pale square with a tick the same colour as its ground.
+   Both raise `--_fill-cap` rather than writing `--_fill`, which is P6 and is
+   also what keeps the two orderable. Written as a rewrite -- which is how the
+   `.soft` half shipped -- `.soft` took 12% while `.solid` was left on the 6%
+   cascade cap, so the louder fill name rendered the quieter box: 236 against
+   soft's 220 on the light page, inverted on `.ipt`, `.checkbox` and `.radio`
+   alike. Naming a cap per class puts them back in order and leaves one
+   expression composing the fill.
 
-   The old version of this rule listed only the three text inputs, which are
-   never `:checked`, so the collision could not happen. Adding the toggles is
-   what exposed it. */
+   20% rather than something larger because a text control is a thing you type
+   into: the typed line is `--intent-color` at full strength, and the plate has
+   to stay far enough under it to read. It also has to clear `.soft`'s 12%, and
+   it lands on the same plate a `.solid` badge draws, so a filled field and a
+   filled chip agree.
+
+   `.switch` is left off the `.solid` rule. Its track is the whole component
+   rather than a backdrop for text, so it caps at 40% in its own utility, where
+   its three fills separate far enough to read. Adding it here would quietly
+   overrule that -- an unlayered declaration beats a layered one -- and drop
+   `.soft` and `.solid` back to eight steps apart.
+
+   `:not(:checked)` is the layer trap this file keeps meeting from new
+   directions. The checked states live inside `@utility` and land in the
+   utilities layer; these rules are unlayered and win at any specificity.
+   Without the exclusion a checked `.soft` toggle kept the tint instead of
+   filling -- a checked switch came out a pale track with the knob at the far
+   end, and a checked checkbox a pale square with a tick the colour of its own
+   ground. */
 :is(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch).soft:not(:checked) {
-  --_fill: calc(min(var(--ui-fill, 12%), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
+  --_fill-cap: 12%;
+}
+
+:is(.text-control, .ipt, .textarea, .select, .checkbox, .radio).solid:not(:checked) {
+  --_fill-cap: 20%;
 }
 
 /* The element's own `.edgeless`, lowering the floor `text-control` raises.

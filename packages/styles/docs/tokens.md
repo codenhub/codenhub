@@ -46,50 +46,50 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 
 ## Color Tokens
 
-| Token                          | Purpose                                                                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| `--color-primary`              | Primary action/content color.                                                                                 |
-| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                    |
-| `--color-primary-hover`        | Primary hover state.                                                                                          |
-| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                            |
-| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.           |
-| `--color-accent`               | Secondary/accent surface.                                                                                     |
-| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                     |
-| `--color-accent-hover`         | Accent hover state.                                                                                           |
-| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                             |
-| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.            |
-| `--color-border`               | Default border color.                                                                                         |
-| `--color-border-hover`         | Interactive border color.                                                                                     |
-| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                         |
-| `--color-background`           | Page and default raised surface background.                                                                   |
-| `--color-foreground`           | Subtle raised foreground surface.                                                                             |
-| `--color-surface`              | Nested or muted surface.                                                                                      |
-| `--color-text`                 | Primary text color.                                                                                           |
-| `--color-text-secondary`       | Secondary text color.                                                                                         |
-| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                           |
-| `--color-text-hover`           | Text hover state.                                                                                             |
-| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                               |
-| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.              |
-| `--color-success`              | Success state color.                                                                                          |
-| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 3:1 UI component contrast against `--color-success`.         |
-| `--color-success-hover`        | Success hover tone.                                                                                           |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                      |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                                     |
-| `--color-warning`              | Warning state color.                                                                                          |
-| `--color-warning-contrast`     | Text/icon color on warning filled surface. Meets 3:1 UI component contrast against `--color-warning`.         |
-| `--color-warning-hover`        | Warning hover tone.                                                                                           |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                      |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                     |
-| `--color-destructive`          | Destructive/error state color.                                                                                |
-| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 3:1 UI component contrast against `--color-destructive`. |
-| `--color-destructive-hover`    | Destructive hover tone.                                                                                       |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                  |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                 |
-| `--color-info`                 | Informational state color.                                                                                    |
-| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 3:1 UI component contrast against `--color-info`.               |
-| `--color-info-hover`           | Info hover tone.                                                                                              |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                         |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                        |
+| Token                          | Purpose                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `--color-primary`              | Primary action/content color.                                                                                |
+| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                   |
+| `--color-primary-hover`        | Primary hover state.                                                                                         |
+| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                           |
+| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.          |
+| `--color-accent`               | Secondary/accent surface.                                                                                    |
+| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                    |
+| `--color-accent-hover`         | Accent hover state.                                                                                          |
+| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                            |
+| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.           |
+| `--color-border`               | Default border color.                                                                                        |
+| `--color-border-hover`         | Interactive border color.                                                                                    |
+| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                        |
+| `--color-background`           | Page and default raised surface background.                                                                  |
+| `--color-foreground`           | Subtle raised foreground surface.                                                                            |
+| `--color-surface`              | Nested or muted surface.                                                                                     |
+| `--color-text`                 | Primary text color.                                                                                          |
+| `--color-text-secondary`       | Secondary text color.                                                                                        |
+| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                          |
+| `--color-text-hover`           | Text hover state.                                                                                            |
+| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                              |
+| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.             |
+| `--color-success`              | Success state color.                                                                                         |
+| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).         |
+| `--color-success-hover`        | Success hover tone.                                                                                          |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                     |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                                    |
+| `--color-warning`              | Warning state color.                                                                                         |
+| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).            |
+| `--color-warning-hover`        | Warning hover tone.                                                                                          |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                     |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                    |
+| `--color-destructive`          | Destructive/error state color.                                                                               |
+| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1). |
+| `--color-destructive-hover`    | Destructive hover tone.                                                                                      |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                 |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                |
+| `--color-info`                 | Informational state color.                                                                                   |
+| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).               |
+| `--color-info-hover`           | Info hover tone.                                                                                             |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                        |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                       |
 
 > **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
@@ -127,12 +127,17 @@ Neutral stops at `20%`, so `.solid` gives it a quiet plate that still reads as a
 step past `.soft`. Hover adds its step on top of the cap, so a capped fill still
 deepens under the pointer.
 
-The cap bounds the foreground with the fill. `--intent-contrast` is the ink for a
-_full_ fill, so printing it at full strength on a fifth of one puts white on
-light grey; a component reads the contrast only as far as its intent lets the
-fill go, and takes `--intent-strong` for the rest. A state that lifts the cap on
-purpose — a checked checkbox is filled with its own intent by definition — lifts
-both together and gets the contrast whole.
+The foreground is gated by the plate rather than tied to the fill.
+`--intent-contrast` is the ink for a _full_ fill, so printing it at full strength
+on a fifth of one puts white on light grey. Contrast ink therefore appears only
+once the fill is past halfway and reaches full at a full fill; below that a
+component prints `--intent-strong`, the tone chosen to be read.
+
+That means a capped neutral takes the strong tone whole rather than a fraction of
+the way toward the page. Tying it to the fill instead cost a neutral `.solid`
+button four points of contrast and a neutral tooltip nearly ten. A state that
+lifts the cap on purpose — a checked checkbox is filled with its own intent by
+definition — reaches a full fill and gets the contrast whole.
 
 Set them directly to define an intent this package does not ship. **State every
 slot**, including `--intent-fill-max`: components reset all seven to the neutral

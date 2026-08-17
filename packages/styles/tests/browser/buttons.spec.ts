@@ -192,15 +192,20 @@ test.describe("buttons", () => {
 
   /* A filled button with no intent is the package's most common single element,
      and the neutral cap is the whole reason it is a quiet plate rather than a
-     slab of the page's own ink. Both expectations are built from the cap the
-     button itself reports, so this states the contract -- a neutral fill stops
-     where its intent says it stops, and its ink walks toward the contrast tone
-     exactly that far -- instead of restating numbers that would then have to be
-     changed in two places.
+     slab of the page's own ink. The fill expectation is built from the cap the
+     button itself reports, so it states the contract rather than restating a
+     number that would then live in two places.
 
-     The ink matters as much as the fill. Capping one alone prints the ink of a
-     full slab onto a fifth of one: white on light grey, which is how a capped
-     intent loses its label. */
+     The ink is the other half, and it is not the same rule. Contrast ink is for
+     a plate dark enough to need it, so a fill this far from full keeps
+     `--intent-strong` whole -- the tone picked to be read on a page.
+
+     Both wrong answers are worth naming, because the package shipped one of
+     them. Uncapped, the ink is the contrast tone at full strength: white on
+     light grey, and the label is gone. Tied to the fill linearly, it walks a
+     fifth of the way to the page anyway and lands on 61 where the strong tone
+     is 23 -- still legible, measurably worse for nothing, and the same line
+     that cost the neutral tooltip half its contrast. */
   test("fills a button with no intent to the neutral cap and no further", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
@@ -220,7 +225,7 @@ test.describe("buttons", () => {
         background: styles.backgroundColor,
         cap,
         expectedFill: resolveColor(`color-mix(in oklab, var(--color-text) ${cap}, transparent)`),
-        expectedText: resolveColor(`color-mix(in oklab, var(--color-text-contrast) ${cap}, var(--color-text-strong))`),
+        expectedText: resolveColor("var(--color-text-strong)"),
         foreground: styles.color,
         page: getComputedStyle(document.body).backgroundColor,
       };

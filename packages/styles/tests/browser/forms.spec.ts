@@ -105,19 +105,30 @@ test.describe("forms", () => {
       return result;
     });
 
-    /* `.solid` clamps far below a saturated fill, and below `.soft` as well:
-       `.soft` names the tint it wants and takes it whole, while `.solid` is the
-       one a container can cascade onto a field nobody classed, so it is the one
-       the cap governs. */
+    /* `.solid` clamps far below a saturated fill, and above `.soft`, because
+       each names its own cap. Both are the element's own class, which is a
+       consumer describing what they want; the 6% cap underneath them is for the
+       container that cascades onto a field nobody classed. */
     expect(readSrgb(styles.solid).alpha, "solid input clamps").toBeLessThan(0.5);
-    expect(readSrgb(styles.solid).alpha, "and below the tint soft names").toBeLessThan(readSrgb(styles.soft).alpha);
+    expect(readSrgb(styles.solid).alpha, "and above the tint soft names").toBeGreaterThan(readSrgb(styles.soft).alpha);
     expect(getColorDistance(styles.solid, styles.default)).toBeGreaterThan(1);
     /* `.ghost` is the published resting fill, so it lands on the default. */
     expectSameColor(styles.ghost, styles.default, "ghost input is the resting fill");
 
-    /* The cascade case: the clamp and the edge floor both hold on an input that
-       declared nothing itself. */
-    expectSameColor(styles.inheritedBackground, styles.solid, "inherited solid clamps");
+    /* The cascade case, and the reason the two caps are not one number. A
+       `.solid` container reaching a field nobody classed gets the 6% cap; the
+       field wearing `.solid` itself gets the 20% its own class names. The
+       cascaded fill is therefore quieter than the declared one, which is the
+       whole shape of the element-versus-cascade split.
+
+       Asserting these were equal is what let the inversion sit: with one cap for
+       both, `.solid` was pinned to the cascade value and `.soft` walked past it. */
+    expect(readSrgb(styles.inheritedBackground).alpha, "a cascaded solid is quieter than a declared one").toBeLessThan(
+      readSrgb(styles.solid).alpha,
+    );
+    expect(readSrgb(styles.inheritedBackground).alpha, "and quieter than soft").toBeLessThan(
+      readSrgb(styles.soft).alpha,
+    );
     expect(Number.parseFloat(styles.inheritedBorderWidth)).toBeGreaterThan(0);
     expect(isTransparent(styles.inheritedBorderColor)).toBe(false);
   });
@@ -207,10 +218,14 @@ test.describe("forms", () => {
 
     const [ghost, soft, solid, colored] = read.map((entry) => ({ ...entry, alpha: readSrgb(entry.fill).alpha }));
 
+    /* The three fills are ordered, which they were not until each named its own
+       cap. `.soft` used to bypass the cap and take 12% while `.solid` was left on
+       the 6% one written for a container's cascade, so the louder name rendered
+       the quieter box. The ordering is the assertion; the values are in the
+       registry. */
     expect(ghost.alpha, "ghost fills nothing").toBe(0);
     expect(soft.alpha, "soft tints").toBeGreaterThan(0);
-    expect(solid.alpha, "solid tints").toBeGreaterThan(0);
-    expect(soft.alpha, "soft takes the tint it names, solid takes the cap").toBeGreaterThan(solid.alpha);
+    expect(solid.alpha, "solid tints more than soft").toBeGreaterThan(soft.alpha);
     /* One cap for every intent, where the text family used to land lower. */
     expect(colored.alpha, "a colored solid takes the same cap").toBeCloseTo(solid.alpha, 2);
     /* Nowhere near a filled chip, which is what the cap is for. */

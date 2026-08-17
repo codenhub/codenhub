@@ -31,14 +31,33 @@
   --_capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
   --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
-  /* The ink takes the same cap, because the pair only makes sense together.
-     `--ui-fg-on-fill` says how much of the foreground should be the contrast
-     ink, and it is written for the fill the presentation asked for: `.solid`
-     asks for 100% of both. Capping one and not the other prints ink meant for
-     a full slab onto a 20% plate -- white on light grey -- which is how a
-     capped intent lost its label. Capped together, the ink walks toward the
-     contrast exactly as far as the fill walks toward the color. */
-  --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-fill-max, 100%));
+  /* How much of the foreground is the contrast ink. `--ui-fg-on-fill` is what
+     the presentation asks for -- `.solid` asks for all of it -- and the second
+     term is how much the plate can actually carry.
+
+     Contrast ink is for a plate dark enough to need it. It appears once the
+     fill is past halfway and reaches full at a full fill, so a partial plate
+     keeps `--intent-strong`, which is the tone picked to be read.
+
+     This used to be `min(asked, --intent-fill-max)`, which tied the ink to the
+     fill linearly and read plausibly: cap them together and the ink walks
+     toward the contrast exactly as far as the fill walks toward the colour. It
+     is wrong at the bottom of the range, because legibility is not linear. A
+     capped neutral `.solid` fills to 20% and stays a light plate, so the best
+     ink available is the darkest one -- and the old form walked 20% away from
+     it, toward the page. Measured on the light page, a neutral `.solid` button
+     printed 61 on 202 for 6.63:1 where the strong tone gives 10.9:1, and a
+     neutral tooltip printed 61 on 179 for 5.18:1. Both were the same line.
+
+     The cap it replaces is still doing its original job. Uncapped, a neutral
+     `.solid` prints near-white on light grey and loses its label entirely;
+     the ramp gives that case 0%, which is the answer the cap was reaching for.
+
+     `--ui-fg-on-fill` stays the ceiling rather than becoming the result, so the
+     presentation token still decides and `.soft` still asks for none. Deriving
+     the ink from the fill alone would leave the slot declared and unread, which
+     is the failure `--ui-border` already had. */
+  --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_capped) * 2 - 100%)));
 
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
   /* The ink end is `--intent-strong` and not `--intent-color`, because the two

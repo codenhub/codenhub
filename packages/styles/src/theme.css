@@ -51,13 +51,23 @@
   --color-text-subtle: light-dark(var(--color-neutral-200), var(--color-neutral-900));
   --color-text-strong: light-dark(var(--color-neutral-900), var(--color-neutral-100));
 
-  --color-success: var(--color-emerald-600);
+  /* Emerald-700 rather than 600. A filled button's label is normal-size text, so
+     WCAG 1.4.3 asks 4.5:1, and white on emerald-600 measures 3.50:1 -- it passed
+     only as large text, which `.btn` is not. One step darker carries the white
+     label and leaves the hue where it was. */
+  --color-success: var(--color-emerald-700);
   --color-success-contrast: var(--color-neutral-50);
   --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
   --color-success-subtle: light-dark(var(--color-emerald-100), var(--color-emerald-800));
   --color-success-strong: light-dark(var(--color-emerald-800), var(--color-emerald-100));
+  /* Amber is the one family that cannot solve this by darkening. White on
+     amber-600 measures 3.07:1, and the amber dark enough to carry white has
+     stopped being amber -- it reads brown, which is not the colour a warning is
+     supposed to be. So the ink moves instead of the hue: dark ink on amber is
+     what a warning looks like nearly everywhere, and it is the only intent whose
+     contrast tone is not the page colour. */
   --color-warning: var(--color-amber-600);
-  --color-warning-contrast: var(--color-neutral-50);
+  --color-warning-contrast: var(--color-neutral-950);
   --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
   --color-warning-subtle: light-dark(var(--color-amber-100), var(--color-amber-800));
   --color-warning-strong: light-dark(var(--color-amber-800), var(--color-amber-100));

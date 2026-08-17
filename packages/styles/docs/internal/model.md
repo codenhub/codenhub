@@ -174,6 +174,42 @@ the playground renders one `Solid` row for the pair.
 None of the five is degenerate on a component that draws both a fill and a line.
 That is the test the previous set failed.
 
+### The ink is gated by the plate, not tied to the fill
+
+`--ui-fg-on-fill` is what the presentation asks for. What it gets is bounded by
+how much ink the plate can actually carry:
+
+```
+on-fill = min(asked, max(0%, capped fill * 2 - 100%))
+```
+
+Contrast ink is for a plate dark enough to need it. Past a half fill it comes in
+and reaches full at a full fill; below that the foreground stays
+`--intent-strong`, which is the tone chosen to be read on a page.
+
+This replaced `min(asked, --intent-fill-max)`, which read plausibly — cap the
+fill and the ink together, and the ink walks toward the contrast exactly as far
+as the fill walks toward the color — and was wrong at the bottom of the range,
+because legibility is not linear. Only one intent caps, and it is the most
+common one:
+
+| Element                    | before            | after              |
+| -------------------------- | ----------------- | ------------------ |
+| `.btn` no intent, `.solid` | 61 on 202, 6.63:1 | 23 on 202, 10.94:1 |
+| `.tooltip` no intent       | 61 on 179, 5.18:1 | 23 on 179, 8.55:1  |
+
+The tooltip is the one that mattered. Its ground is `--intent-subtle` and its
+fill is the capped neutral over it, so the plate darkened and the ink lightened
+at once, from about 15.7:1 under the pre-0.1.0 surface-and-text pairing down to
+5.18:1. Both halves were this single line.
+
+The bound the old form was reaching for still holds. Uncapped, a neutral
+`.solid` prints near-white on light grey and loses its label; the ramp answers
+that case with 0%, which is what it wanted. And `--ui-fg-on-fill` stays the
+ceiling rather than becoming the result, so the presentation token still decides
+— derived from the fill alone it would be declared and unread, which is the
+failure `--ui-border` already had.
+
 ### Hover is derived, never declared
 
 ```
@@ -452,7 +488,7 @@ composition of ours that earns it and what lifts it:
 
 | Component            | Bound                               | What our own composition does to it                                                                                                              |
 | -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `text-control`       | Fill capped at 6%                   | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color.                                                |
+| `text-control`       | Cascaded fill capped at 6%          | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap. |
 | `.switch`            | Fill capped at 40%                  | A checked switch fills to 100%, so an uncapped `.solid` would be pixel-for-pixel a checked one with only the knob to tell them apart.            |
 | Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                             |
 | `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                             |

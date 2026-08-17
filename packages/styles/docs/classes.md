@@ -229,13 +229,23 @@ neutral and bordered.
 | `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
-Text controls and toggles cap an inherited or `.solid` fill at `6%`, keeping
-typed text legible; a switch caps at `40%`, where its three fills separate as
-fills. A `.soft` class written directly on a text control takes its published
-`12%` tint whole, because that is a consumer naming what they want rather than a
-container's cascade reaching a field nobody classed. The same split governs the
-edge: a cascaded `.edgeless` is floored, and the element's own is honoured —
-except on `.checkbox` and `.radio`, which never drop their line at all.
+Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text
+legible when a `.solid` container reaches a field nobody classed. A fill class
+written on the control itself names its own cap instead, because that is a
+consumer describing what they want: `.soft` takes `12%` and `.solid` takes
+`20%`. A switch caps at `40%`, where its three fills separate far enough to read
+on a track.
+
+| On a text control | fill |
+| ----------------- | ---- |
+| `.ghost`          | 0%   |
+| cascaded `.solid` | 6%   |
+| `.soft`           | 12%  |
+| `.solid`          | 20%  |
+
+The same split governs the edge: a cascaded `.edgeless` is floored and the
+element's own is honoured — except on `.checkbox` and `.radio`, which never drop
+their line at all.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that
 intent's own color: `.tooltip.primary` is the primary color, black on a light
@@ -480,11 +490,10 @@ weight and a dot, both in the intent color, because a filled circle with a dot o
 the same color inside it is a disc.
 
 Text controls also take intent, which colors the resting border and the
-focus-visible border, and both presentation axes. `.ghost` fills nothing, `.soft`
-takes its published `12%` tint whole, and `.solid` is a quieter wash at the `6%`
-cap — the cap governs `.solid` and the container that cascades one onto an
-unclassed field, where `.soft` on the element names the tint it wants. None of
-them touches the line.
+focus-visible border, and both presentation axes. `.ghost` fills nothing,
+`.soft` takes `12%`, and `.solid` takes `20%` — quiet enough that typed text
+still reads on it, and ordered so the louder name draws the stronger tint. None
+of them touches the line.
 
 The boundary is the edge axis's, and it splits the same way. A container's
 `.edgeless` is floored, so a toolbar cannot leave a field with no mark of where

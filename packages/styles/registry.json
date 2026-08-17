@@ -102,7 +102,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "6%",
-          "escape": "the element's own .soft, which takes the published 12% whole",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
           "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
         },
         {
@@ -169,7 +169,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "6%",
-          "escape": "the element's own .soft, which takes the published 12% whole",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
           "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
         },
         {
@@ -195,7 +195,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "6%",
-          "escape": "the element's own .soft, which takes the published 12% whole",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
           "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
         },
         {
@@ -221,7 +221,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "6%",
-          "escape": "the element's own :checked, which lifts the fill whole",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%, or :checked",
           "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
         },
         {
@@ -247,7 +247,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "6%",
-          "escape": "the element's own :checked, which spends the intent on the line and the dot",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%, or :checked",
           "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
         },
         {
@@ -273,7 +273,7 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "40%",
-          "escape": "the element's own :checked",
+          "escape": "the element's own .soft (12%), or :checked, which fills whole",
           "reason": "A checked switch lifts the fill to 100%, so an unchecked .solid at the same value would be pixel-for-pixel a checked one."
         },
         {
