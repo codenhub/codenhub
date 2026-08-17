@@ -96,6 +96,38 @@ test.describe("aesthetics", () => {
       }
     });
 
+    /* The one component this aesthetic names in a selector, recorded in the
+       registry as `selectors`. The slab is a second ink line rather than depth
+       here, and an alert is the only container the registry rests flat, so
+       without it a neobrutalist alert is the one box on the page that looks like
+       it lost its material. It is written into the component's resting default
+       rather than the modifier, which is what leaves every elevation class still
+       winning on the element. */
+    test("rests an alert on the slab while every elevation class still wins", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (className: string) => {
+          const alert = document.createElement("div");
+
+          alert.className = className;
+          host.append(alert);
+
+          const shadow = getComputedStyle(alert).boxShadow;
+
+          alert.remove();
+          return shadow;
+        };
+
+        return { flat: read("alert flat"), floating: read("alert floating"), resting: read("alert") };
+      });
+
+      expect(measured.resting, "resting alert").toMatch(/\b4px 4px 0px\b/);
+      expect(measured.flat, "flat alert").toMatch(/\b0px 0px 0px 0px\b/);
+      expect(measured.floating, "floating alert").toMatch(/\b8px 8px 0px\b/);
+    });
+
     test("squares the components that hardcode a radius", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
 

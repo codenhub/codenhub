@@ -421,6 +421,12 @@ Only `.btn` and `.card.interactive` move on hover. A card lifts when it opts in
 with `.interactive`; a plain card, an alert, or a panel is a container rather
 than a control and stays put.
 
+An alert rests on the slab under this aesthetic and nowhere else. Here the slab
+is a second ink line rather than depth, and an alert is the only container the
+package rests flat, so without it a neobrutalist alert is the one box on the page
+that reads as unfinished. It is a resting default, so `.flat` still takes it off
+and `.floating` still doubles it.
+
 ### Glass
 
 `.glass` needs something behind it to blur. On a flat page background it renders

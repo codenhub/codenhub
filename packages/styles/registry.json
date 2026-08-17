@@ -506,7 +506,9 @@
   "aesthetics": [
     {
       "class": "neobrutalism",
-      "completeShadow": false
+      "completeShadow": false,
+      "selectors": ["alert"],
+      "selectorReason": "The slab is this aesthetic's second ink line rather than depth, and an alert is the one container the registry rests flat. Elevation has only two slots -- the modifier and the component's resting default -- and an aesthetic writing the modifier would beat `.flat`. It writes `--_d-elevation` instead, so every elevation class still wins on the element; a token reaching only alerts would name the component through a longer route."
     },
     {
       "class": "glass",

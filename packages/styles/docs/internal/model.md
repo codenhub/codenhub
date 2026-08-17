@@ -1043,6 +1043,10 @@ element into its own shadow.
 - The offset shadow is the component's own `--intent-border`, so a success button
   casts a green shadow and a neutral button casts ink.
 - Hover moves the element by the shadow offset and shrinks the shadow to nothing.
+- An alert rests on the slab, which is the one component this aesthetic names in a
+  selector. Here the slab is a second ink line rather than depth, and an alert is
+  the only container the registry rests flat. Written into the component's resting
+  default rather than the modifier, so every elevation class still wins.
 
 ### `.pixel`
 
