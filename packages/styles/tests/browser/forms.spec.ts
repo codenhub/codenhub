@@ -499,10 +499,11 @@ test.describe("forms", () => {
      the fills land; this measures that each is distinct and that none of them
      reaches the line.
 
-     The checked track is measured under all four because that is the part
-     presentation may not reach: a checked switch is filled with its intent and
-     its line is that fill, so a fill class leaking into the edge would cut a
-     page-colored ring out of a filled track. */
+     The checked track is measured under each because a fill class leaking into
+     the edge would cut a page-colored ring out of a filled track. It is no
+     longer the same track under all of them: `:checked` lifts the fill bounds
+     rather than pinning a fill, so `.solid` reaches full and `.soft` keeps the
+     tint it named. */
   test("separates a switch's presentations by its fill and keeps the line under all of them", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -517,23 +518,20 @@ test.describe("forms", () => {
       return { checked: await cell("-checked"), resting: await cell("") };
     };
 
-    /* A switch reads both axes now, so the matrix renders the full grid and every
-       row names a fill and an edge. The edged rows are the ones to measure: they
-       are where a fill class leaking into the line would show. */
+    /* A switch reads both axes, so the matrix renders a fill and an edge per
+       row. `.ghost` is not among them: no toggle supports it. */
     const fallback = await read("default");
     const solid = await read("solid");
     const soft = await read("soft edged");
-    const ghost = await read("ghost edged");
 
     /* The registry rests a switch at solid, so the two are the same element. */
     expectSameColor(fallback.resting.fill, solid.resting.fill, "resting switch fill");
     expectSameColor(fallback.resting.edge, solid.resting.edge, "resting switch line");
 
-    /* Three fills, three tracks. The pairwise distances are measured in
-       `axes.spec.ts`; what matters here is that no two are the same colour. */
+    /* Two fills, two tracks. The pairwise distances are measured in
+       `axes.spec.ts`; what matters here is that they are not the same colour. */
     expect(isTransparent(solid.resting.fill), "solid switch track").toBe(false);
     expect(isTransparent(soft.resting.fill), "soft switch track").toBe(false);
-    expect(isTransparent(ghost.resting.fill), "ghost switch track").toBe(true);
     expect(getColorDistance(soft.resting.fill, solid.resting.fill), "soft vs solid track").toBeGreaterThan(2);
 
     /* The edge floor, under every fill. This is what the removed exception used
@@ -541,16 +539,18 @@ test.describe("forms", () => {
     for (const { label, resting } of [
       { label: "solid", resting: solid.resting },
       { label: "soft", resting: soft.resting },
-      { label: "ghost", resting: ghost.resting },
     ]) {
       expect(isTransparent(resting.edge), `${label} switch line`).toBe(false);
     }
 
-    for (const { checked, label } of [
-      { checked: solid.checked, label: "solid" },
-      { checked: soft.checked, label: "soft" },
-      { checked: ghost.checked, label: "ghost" },
-    ]) {
+    /* The checked track follows the fill class now, so `.solid` is the one that
+       matches the default and `.soft` is deliberately quieter than both. */
+    expect(
+      getColorDistance(soft.checked.fill, solid.checked.fill),
+      "a checked soft switch is not a checked solid one",
+    ).toBeGreaterThan(20);
+
+    for (const { checked, label } of [{ checked: solid.checked, label: "solid" }]) {
       expectSameColor(checked.fill, fallback.checked.fill, `checked ${label} switch track`);
       expectSameColor(checked.edge, fallback.checked.edge, `checked ${label} switch line`);
     }
@@ -558,6 +558,10 @@ test.describe("forms", () => {
     /* Hover moves the line tone to `--intent-hover` for every fill now, where it
        used to reveal a line on `.soft` and do nothing at all on `.bare`. The line
        transitions, so this polls rather than reading the first frame.
+
+       Both probes are edged rows. A `.soft.edgeless` switch has no line at rest
+       -- that is the element's own `.edgeless` lowering the floor, working -- so
+       there is nothing there for a hover to move.
 
        Sequential by necessity rather than by oversight: there is one pointer, so
        the two cannot be hovered at once. */
@@ -576,14 +580,15 @@ test.describe("forms", () => {
     };
 
     await expectHoverMoves("soft edged");
-    await expectHoverMoves("ghost edged");
+    await expectHoverMoves("solid");
   });
 
   /* A checkbox states itself by filling and cutting a tick out of the ground; a
-     radio states itself with a dot inside a ring, and the dot is the same color
-     as the ring. Filling the circle as well leaves a disc with an invisible dot
-     in it, which is what the shared checked rule made of every radio. */
-  test("rings a checked radio in its intent instead of filling it", async ({ page }) => {
+     radio states itself with a dot inside a ring. `.soft` is where that reads
+     most clearly, because the tint stays light enough for the ring to carry the
+     intent whole. The dot is no longer pinned to the intent -- it takes `box`'s
+     composed foreground, so it stays readable when a `.solid` radio fills. */
+  test("rings a soft checked radio in its intent instead of filling it", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const radios = await page.evaluate(() => {
@@ -607,8 +612,8 @@ test.describe("forms", () => {
       };
 
       return Object.keys(tokens).map((intent) => {
-        const checked = getComputedStyle(document.querySelector(`[data-testid="radio-default-${intent}-checked"]`)!);
-        const resting = getComputedStyle(document.querySelector(`[data-testid="radio-default-${intent}"]`)!);
+        const checked = getComputedStyle(document.querySelector(`[data-testid="radio-soft-${intent}-checked"]`)!);
+        const resting = getComputedStyle(document.querySelector(`[data-testid="radio-soft-${intent}"]`)!);
 
         return {
           dot: checked.color,
@@ -623,9 +628,10 @@ test.describe("forms", () => {
     });
 
     for (const radio of radios) {
-      expect(isTransparent(radio.fill), `${radio.label} fill`).toBe(true);
+      /* A tint rather than a fill: `.soft` asks for 12% and the checked state
+         lifts the cap without changing what the class asked for. */
+      expect(readSrgb(radio.fill).alpha, `${radio.label} fill`).toBeLessThan(0.5);
       expectSameColor(radio.ring, radio.token, `${radio.label} ring`);
-      expectSameColor(radio.dot, radio.token, `${radio.label} dot`);
       expect(radio.ringWidth, `${radio.label} ring width`).toBeGreaterThan(radio.restingWidth);
     }
   });
@@ -670,7 +676,11 @@ test.describe("forms", () => {
 
       for (const component of ["checkbox", "radio"]) {
         for (const fill of ["soft", "ghost"]) {
-          const direct = document.querySelector(`[data-testid="${component}-${fill}-none"]`)!;
+          /* `.ghost` is unsupported on a toggle, so there is no matrix cell for
+             it and only the cascade case exists. That case is the one that
+             matters here: a container can still hand a toggle a fill it does not
+             support, and the silhouette has to survive it. */
+          const direct = document.querySelector(`[data-testid="${component}-${fill}-none"]`);
           const inheritedHost = document.createElement("div");
           const inherited = document.createElement("input");
 
@@ -684,6 +694,10 @@ test.describe("forms", () => {
             ["direct", direct],
             ["inherited", inherited],
           ] as const) {
+            if (!element) {
+              continue;
+            }
+
             const styles = getComputedStyle(element);
 
             results.push({

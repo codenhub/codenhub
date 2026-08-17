@@ -210,7 +210,7 @@
     {
       "class": "checkbox",
       "default": {
-        "fill": "ghost",
+        "fill": "solid",
         "edge": "edged",
         "elevation": 0
       },
@@ -220,23 +220,37 @@
         {
           "token": "--ui-fill",
           "kind": "cap",
-          "value": "6%",
-          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%, or :checked",
-          "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
+          "value": "20%",
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
         },
         {
           "token": "--ui-border",
           "kind": "floor",
           "value": "100%",
           "escape": null,
-          "reason": "An unchecked checkbox is a transparent square with nothing outside its line, so removing the line removes the control."
+          "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
         }
       ]
     },
     {
       "class": "radio",
       "default": {
-        "fill": "ghost",
+        "fill": "solid",
         "edge": "edged",
         "elevation": 0
       },
@@ -246,16 +260,30 @@
         {
           "token": "--ui-fill",
           "kind": "cap",
-          "value": "6%",
-          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%, or :checked",
-          "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
+          "value": "20%",
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
         },
         {
           "token": "--ui-border",
           "kind": "floor",
           "value": "100%",
           "escape": null,
-          "reason": "An unchecked radio is a transparent circle with nothing outside its line, so removing the line removes the control."
+          "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
         }
       ]
     },
@@ -273,15 +301,29 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "40%",
-          "escape": "the element's own .soft (12%), or :checked, which fills whole",
-          "reason": "A checked switch lifts the fill to 100%, so an unchecked .solid at the same value would be pixel-for-pixel a checked one."
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "A switch track is the whole component, so its three fills have to separate as fills; 40% is where they do, measured."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
         },
         {
           "token": "--ui-border",
           "kind": "floor",
           "value": "100%",
           "escape": "the element's own .edgeless",
-          "reason": "A container's .edgeless would leave a field with no mark of where typing goes (WCAG 1.4.11)."
+          "reason": "A container's .edgeless would leave a toggle with no silhouette (WCAG 1.4.11). A switch may opt out on the element because its knob still carries the state."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
         }
       ]
     },

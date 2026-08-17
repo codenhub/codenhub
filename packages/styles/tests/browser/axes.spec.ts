@@ -28,6 +28,7 @@ interface ComponentEntry {
   bounds?: { token: string; kind: "cap" | "floor"; value: string; escape: string | null; reason: string }[];
   composition?: "frame" | "none";
   default: { fill?: string; edge?: string; elevation: number };
+  unsupported?: { axis: "fill" | "edge"; class: string; reason: string }[];
 }
 
 const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as {
@@ -38,9 +39,16 @@ const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";
 
 /* Every axis, and the class that moves a component off its published default in
    each. A component resting at one end is probed from the other, so the probe is
-   always asking for a change rather than restating what is already there. */
+   always asking for a change rather than restating what is already there.
+
+   A class the registry marks unsupported is dropped from the probe rather than
+   asserted about: the package does not maintain what it renders, so requiring it
+   to move would be testing an outcome nobody promised. */
 const FILL_CLASSES = ["solid", "soft", "ghost"] as const;
 const EDGE_CLASSES = ["edged", "edgeless"] as const;
+
+const supported = (component: ComponentEntry, axis: "fill" | "edge", classes: readonly string[]) =>
+  classes.filter((name) => !component.unsupported?.some((entry) => entry.axis === axis && entry.class === name));
 
 /* The markup each component needs to paint at all. Anything not listed is a
    plain `<div>`, which is enough for a box. */
@@ -124,13 +132,13 @@ test.describe("axes", () => {
       const base = await readPainted(page, component.class, tag, type, target);
 
       const fillResults = await Promise.all(
-        FILL_CLASSES.map(async (fill) => ({
+        supported(component, "fill", FILL_CLASSES).map(async (fill) => ({
           fill,
           painted: await readPainted(page, `${component.class} ${fill}`, tag, type, target),
         })),
       );
       const edgeResults = await Promise.all(
-        EDGE_CLASSES.map(async (edge) => ({
+        supported(component, "edge", EDGE_CLASSES).map(async (edge) => ({
           edge,
           painted: await readPainted(page, `${component.class} ${edge}`, tag, type, target),
         })),
@@ -150,12 +158,15 @@ test.describe("axes", () => {
     });
   }
 
-  /* The bound that replaced the switch's fill-decides-edge exception. Its three
-     fills used to land on two looks, so the component varied the line per fill
-     class instead -- the only place in the package where a fill class decided an
-     edge. Raising the cap retires that, and this is the measurement the cap was
-     chosen against: three resting fills that separate from each other, and all
-     three clearly below a checked track.
+  /* The bound that replaced the switch's fill-decides-edge exception. Its fills
+     used to land on one look, so the component varied the line per fill class
+     instead -- the only place in the package where a fill class decided an edge.
+     Raising the cap retires that, and this is the measurement the cap was chosen
+     against: two resting fills that separate from each other and from the page,
+     both clearly below a checked track.
+
+     `.ghost` is not probed. It is unsupported on a toggle, so what it renders is
+     not a promise the package keeps.
 
      Measured on the composited pixel rather than the computed string, because a
      `color-mix()` carrying alpha says nothing about what the eye gets. */
@@ -183,7 +194,6 @@ test.describe("axes", () => {
 
       return {
         checked: read("switch primary", true),
-        ghost: read("switch primary ghost", false),
         ground,
         soft: read("switch primary soft", false),
         solid: read("switch primary solid", false),
@@ -199,7 +209,7 @@ test.describe("axes", () => {
       return `rgb(${channel("red")} ${channel("green")} ${channel("blue")})`;
     };
 
-    const ghost = flatten(tracks.ghost);
+    const page_ = tracks.ground;
     const soft = flatten(tracks.soft);
     const solid = flatten(tracks.solid);
     const checked = flatten(tracks.checked);
@@ -208,10 +218,84 @@ test.describe("axes", () => {
        threshold the hover step was measured against. Each neighbouring pair
        clears it, and the gap from an unchecked `.solid` to a checked track is
        what keeps the two states from reading alike. */
-    expect(getColorDistance(ghost, soft), `ghost ${ghost} vs soft ${soft}`).toBeGreaterThan(10);
+    expect(getColorDistance(page_, soft), `page ${page_} vs soft ${soft}`).toBeGreaterThan(10);
     expect(getColorDistance(soft, solid), `soft ${soft} vs solid ${solid}`).toBeGreaterThan(20);
     expect(getColorDistance(solid, checked), `solid ${solid} vs checked ${checked}`).toBeGreaterThan(40);
   });
+
+  /* Presentation reaches the checked state, which it did not until `:checked`
+     stopped writing `--_fill` and `--_fg` outright and started lifting the
+     bounds instead. Every checked toggle used to render the same filled box
+     whatever fill class it carried.
+
+     Three things are asserted together because they are one rule seen from three
+     sides: the fill class decides the checked plate, the mark stays readable on
+     whatever plate that is, and an unsupported `.ghost` is floored rather than
+     left as a mark on nothing. */
+  for (const control of ["checkbox", "radio", "switch"] as const) {
+    test(`${control} composes its checked fill and keeps the mark on a ground`, async ({ page }) => {
+      await page.goto(SURFACES_URL);
+
+      const read = await page.evaluate(
+        ({ className, type }) => {
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const probe = (extra: string, checked: boolean) => {
+            const element = document.createElement("input");
+
+            element.type = type;
+            element.className = `${className} ${extra}`.trim();
+            element.checked = checked;
+            host.append(element);
+
+            const styles = getComputedStyle(element);
+            const painted = { fill: styles.backgroundColor, mark: styles.color };
+
+            element.remove();
+
+            return painted;
+          };
+
+          return {
+            ghostChecked: probe("ghost", true),
+            softChecked: probe("soft", true),
+            softResting: probe("soft", false),
+            solidChecked: probe("solid", true),
+            solidResting: probe("solid", false),
+          };
+        },
+        { className: control, type: control === "radio" ? "radio" : "checkbox" },
+      );
+
+      const alpha = (color: string) => readSrgb(color).alpha;
+
+      /* `.solid` reaches the full fill its name asks for; `.soft` stays at the
+         tint its name asks for. Equal here is the old behaviour returning. */
+      expect(alpha(read.solidChecked.fill), `${control} checked .solid fills`).toBeGreaterThan(0.9);
+      expect(alpha(read.softChecked.fill), `${control} checked .soft stays a tint`).toBeLessThan(0.5);
+      expect(alpha(read.solidChecked.fill), `${control} checked .solid and .soft are different plates`).toBeGreaterThan(
+        alpha(read.softChecked.fill),
+      );
+
+      /* The cap lifts only for the checked state, so `.solid` still separates
+         from itself across the two. */
+      expect(alpha(read.solidChecked.fill), `${control} .solid checked outfills its resting plate`).toBeGreaterThan(
+        alpha(read.solidResting.fill),
+      );
+
+      /* The mark reads on every one of those plates, which is `--_on-fill`
+         following the fill rather than a pinned contrast tone. */
+      for (const [label, painted] of Object.entries(read)) {
+        const ground = getColorDistance(painted.fill, painted.mark);
+
+        expect(ground, `${control} ${label} mark is not its own ground`).toBeGreaterThan(20);
+      }
+
+      /* `.ghost` is unsupported on a toggle, so the checked floor gives its mark
+         a ground rather than leaving a tick on the page. */
+      expect(alpha(read.ghostChecked.fill), `${control} checked .ghost is floored`).toBeGreaterThan(0);
+      expect(alpha(read.softResting.fill), `${control} resting .soft still tints`).toBeGreaterThan(0);
+    });
+  }
 
   /* The two bounds with no escape. `.checkbox` and `.radio` keep their line
      whatever the edge class says, on the element or on a container, because an

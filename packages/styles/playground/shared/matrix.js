@@ -46,8 +46,12 @@ const PRESENTATIONS = [
    The three text inputs and the switch are no longer on this list. Their edge
    axis used to be inert -- `text-control` rewrote the composed edge and dropped
    `--ui-border` out of it -- and now that it composes, their edge rows show a
-   real difference. */
-const FILL_PRESENTATIONS = ["default", "solid", "soft", "ghost"];
+   real difference.
+
+   No `ghost` row. The registry marks it unsupported on all three toggles, and
+   the playground is the support surface: rendering a row the package does not
+   maintain claims support for it. */
+const FILL_PRESENTATIONS = ["default", "solid", "soft"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose
    cell is the trigger badge rather than the bubble. The bubble does read
@@ -173,7 +177,9 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  switch: toggle("switch", "checkbox", PRESENTATIONS),
+  /* A switch reads the edge axis where the other two floor it, so it takes the
+     full grid minus the `ghost` rows no toggle supports. */
+  switch: toggle("switch", "checkbox", ["default", "solid", "soft edged", "soft edgeless"]),
   "data-table": {
     tag: "table",
     layout: "grid",

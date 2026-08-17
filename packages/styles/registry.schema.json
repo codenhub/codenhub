@@ -216,6 +216,27 @@
           },
           "axesTargetReason": {
             "type": "string"
+          },
+          "unsupported": {
+            "type": "array",
+            "description": "Axis values this component does not support. The playground must not render them and the docs must publish them as unsupported.",
+            "items": {
+              "type": "object",
+              "required": ["axis", "class", "reason"],
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "type": "string",
+                  "enum": ["fill", "edge"]
+                },
+                "class": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "dependentRequired": {

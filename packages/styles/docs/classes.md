@@ -223,7 +223,7 @@ neutral and bordered.
 | `.kbd`                                          | Fill, text, border, and border width.       |
 | `.data-table`                                   | Header fill and text, border, border width. |
 | `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
-| `.checkbox`, `.radio`                           | Capped unchecked fill. The border is fixed. |
+| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
 | `.switch`                                       | Border, border width, and a capped fill.    |
 | `.quote`                                        | Fill, text, border, and width.              |
 | `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
@@ -478,16 +478,25 @@ to set the checked color:
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
-A switch rests at `.solid`, where the other two rest at `.ghost`, and its three
-fills are told apart by the tint like every other component's: it caps at `40%`
-rather than `6%`, so `.solid` is a filled track, `.soft` a light one and `.ghost`
-the knob alone. All three keep their line. The checked track is the same filled
-shape under all three, and sits well clear of an unchecked `.solid`.
+All three toggles rest at `.solid`, and **`.ghost` is not supported on any of
+them.** An unchecked ghost toggle is the silhouette every toggle already has, and
+a checked one is a mark on nothing — a tick floating on the page, a dot with no
+ring around it. A container that cascades `.ghost` onto a toggle is floored
+rather than obeyed.
 
-A checked checkbox and a checked switch fill with the intent and cut their mark
-out of it. A checked radio does not fill: it takes a ring twice the resting line
-weight and a dot, both in the intent color, because a filled circle with a dot of
-the same color inside it is a disc.
+Presentation decides the fill in both states. Being checked lifts the cap rather
+than pinning a fill, so the class still chooses:
+
+| Toggle            | unchecked       | checked                         |
+| ----------------- | --------------- | ------------------------------- |
+| `.solid`, default | 20%, switch 40% | 100%, mark in the contrast tone |
+| `.soft`           | 12%             | 12%, mark in the strong tone    |
+
+A checked checkbox and a checked switch cut their mark out of that plate. A
+checked radio thickens its ring to twice the resting line and takes the intent
+whole on it, so `.radio.soft` is the classic ring-and-dot radio and
+`.radio.solid` is a filled circle whose dot stays readable — the mark follows the
+plate rather than being pinned to the intent color.
 
 Text controls also take intent, which colors the resting border and the
 focus-visible border, and both presentation axes. `.ghost` fills nothing,

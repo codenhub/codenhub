@@ -348,6 +348,58 @@ removing the line removes the control, so their floor is absolute in both
 directions and `.edgeless` on them is published as unsupported. They are the only
 two components in the package that read one presentation axis and not the other.
 
+### A state lifts bounds; it does not write results
+
+R8 says a state re-declares an input rather than a painted property, and P6 adds
+the same discipline one level down: an input, not a composed result. `:checked`
+was the rule that broke both without looking like it.
+
+```css
+/* was */
+&:checked {
+  --_fill: 100%;
+  --_fg: var(--intent-contrast);
+}
+/* is */
+&:checked {
+  --_fill-cap: 100%;
+  --_fill-floor: 12%;
+}
+```
+
+The first form is why every checked toggle rendered as the same filled box
+whatever presentation it carried: the fill class had nothing left to decide.
+Lifting the bounds leaves it deciding -- `.solid` reaches the 100% it asks for,
+`.soft` stays at the 12% it asks for -- and the ink follows the plate through
+`--_on-fill` rather than being told what to be.
+
+The floor is the bound that pairs with it. A container's fill class can still
+hand a checked toggle a fill it never asked for, and a mark with no ground under
+it is a tick floating on the page. Our own cascade produces that, so the bound is
+one the test allows.
+
+One intent slot moves with the state. `--intent-fill-max` stops neutral at 20%
+because a neutral fill is the page's own ink and a full one is a slab -- true of a
+badge, and false of the one component whose whole job is to be unmistakably on.
+So a checked toggle lifts it, declared where intents are declared for the reason
+[Precedence](#precedence) gives.
+
+### Unsupported values
+
+`.ghost` is not supported on `.checkbox`, `.radio`, or `.switch`. Unchecked it is
+the silhouette every toggle already has; checked it is a mark on nothing.
+
+That is a third thing a component can say about an axis, alongside reading it and
+bounding it, and it is recorded as `unsupported` in the registry with its reason.
+The playground does not render those rows -- it is the support surface, so a row
+it draws is a claim -- and `axes.spec.ts` drops them from its probe rather than
+asserting about them, because requiring an unmaintained combination to behave is
+testing a promise nobody made.
+
+Unsupported is not unreachable. A container can still cascade `.ghost` onto a
+toggle, which is what the checked fill floor is for: the package clamps such a
+combination to the nearest supported thing rather than rendering it broken.
+
 ## Elevation
 
 Depth is not uniform within an aesthetic. In the chunky-tile look, white option
@@ -489,12 +541,13 @@ composition of ours that earns it and what lifts it:
 | Component            | Bound                               | What our own composition does to it                                                                                                              |
 | -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `text-control`       | Cascaded fill capped at 6%          | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap. |
-| `.switch`            | Fill capped at 40%                  | A checked switch fills to 100%, so an uncapped `.solid` would be pixel-for-pixel a checked one with only the knob to tell them apart.            |
+| Toggles              | Fill capped at 20%, switch 40%      | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.               |
+| Toggles              | Checked fill floored at 12%         | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                               |
 | Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                             |
 | `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                             |
 | Toggles              | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
 
-The count went from two to five, and that is the test working rather than
+The count went from two to seven, and that is the test working rather than
 failing. Three of the additions are bounds that already existed as rewritten
 results — the edge floor was `--_edge: color-mix(...)` and the switch cap was two
 `--_edge: transparent` rules — and were invisible because a rewrite has nowhere to
@@ -704,7 +757,7 @@ the registry names for it, and that pair is published.
 | -------------------------------------------- | -------------- |
 | `.btn`                                       | solid edgeless |
 | `.ipt` `.textarea` `.select`                 | ghost edged    |
-| `.checkbox` `.radio`                         | ghost edged    |
+| `.checkbox` `.radio`                         | solid edged    |
 | `.switch`                                    | solid edged    |
 | `.card`                                      | ghost edged    |
 | `.panel`                                     | soft edgeless  |
