@@ -77,11 +77,52 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 | --------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
 | `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                                  | Nothing.               |
 | `.data-table`   | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
+| `.ruled`        | On `.data-table`. Draws a rule between body rows.                                        | Rule color.            |
+| `.ruleless`     | On `.data-table`. Draws no lines inside the table at all.                                | Nothing.               |
 | `.kbd`          | Inline keyboard-input styling.                                                           | Surface, border, text. |
 | `.quote`        | Block quote styling; a nested `cite` is set upright and takes the quotation's own color. | Bar, surface, text.    |
 | `.quote-inline` | Inline quotation styling.                                                                | Nothing.               |
 | `.code`         | Inline code formatting.                                                                  | Surface.               |
 | `.pre`          | Scrollable block code formatting with larger padding.                                    | Surface.               |
+
+### Table rules
+
+A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
+together:
+
+| Class       | Head and foot boundaries | Rules between body rows |
+| ----------- | ------------------------ | ----------------------- |
+| `.ruleless` | No                       | No                      |
+| _no class_  | Yes                      | No                      |
+| `.ruled`    | Yes                      | Yes                     |
+
+```html
+<table class="data-table">Head and foot boundaries only</table>
+<table class="data-table ruled">Every row separated</table>
+<table class="data-table ruleless">No lines inside the table at all</table>
+```
+
+The boundaries under a head and above a foot separate the parts of a table from
+each other, so they are drawn by default where the row rules are not. Rules
+between body rows used to arrive on their own, because the component's published
+edge default is `edged` and the edge axis wrote the rules along with the
+boundary — so whether you got them depended on a registry default rather than on
+anything in your markup.
+
+`--ui-rule` is the token behind both classes, so a container can set the answer
+for a whole region without classing each table:
+
+```html
+<section style="--ui-rule: 100%">
+  <table class="data-table">Ruled by the region</table>
+</section>
+```
+
+The frame around the table is the edge axis and is asked for the same way:
+`.data-table` publishes `edgeless`, so `.edged` draws one. None of the three
+switches reaches the others — `.data-table.ruleless.edged` is a framed table with
+no lines inside it, and `.data-table.ruled` is a frameless one with every row
+separated.
 
 A table's rows deliberately inherit its intent instead of resetting it, so
 `.data-table.success` tints throughout. A row carrying its own intent still wins:
@@ -102,14 +143,31 @@ A table's rows deliberately inherit its intent instead of resetting it, so
 This is the one place intent cascades, because a table's rows are parts of the
 table rather than independent components.
 
-`.data-table` and `.kbd` also read [presentation](#presentation). A table applies it
-to its header and border, and a key cap to its whole chip:
+`.data-table`, `.kbd`, `.code`, and `.pre` also read
+[presentation](#presentation). A table applies it to its header, its rules and
+its border; a chip to its whole plate:
 
 ```html
 <table class="data-table success soft edged">...</table>
+<table class="data-table">A ghost table: rules and type, no header plate</table>
 <kbd class="kbd primary solid">Ctrl</kbd>
-<kbd class="kbd primary ghost edged">Shift</kbd>
+<kbd class="kbd primary soft edged">Shift</kbd>
 ```
+
+`.ghost` means two different things on these components, and both are worth
+knowing before you reach for it.
+
+On `.data-table` it removes the header plate along with the body tint, so
+`.data-table.ghost` is boundaries and type alone. The component rests at `soft`,
+so that is something to ask for rather than the default.
+
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on
+`--intent-subtle`, and that ground draws the plate whatever the fill says — so
+`.ghost` took the fill away and changed nothing visible. Worse, the ground alone
+is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and
+primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All
+three rest at `.soft` instead, which puts a real `12%` of the intent over the
+ground and separates them.
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
@@ -134,15 +192,14 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 ## Surfaces
 
-| Class          | Purpose                                                                  |
-| -------------- | ------------------------------------------------------------------------ |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded.       |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.         |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.           |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                                 |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                               |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.       |
-| `.flat`        | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| Class          | Purpose                                                            |
+| -------------- | ------------------------------------------------------------------ |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
 
 Both read intent, [presentation](#presentation), and
 [material tokens](./tokens.md#material-tokens). A plain `.card` is a neutral
@@ -196,8 +253,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-A fill class never decides an edge and an edge class never decides a fill. The
-combinations mean exactly what they spell:
+The combinations mean exactly what they spell:
 
 ```html
 <button class="btn primary">Solid, the button default</button>
@@ -208,10 +264,16 @@ combinations mean exactly what they spell:
 <!-- A field sunk into the page -->
 ```
 
-`.solid` is the one pair that collapses. At a full fill the boundary blends all
-the way to the box's own background, so `.solid.edged` and `.solid.edgeless`
-render the same thing — a filled box ringed in another color is the thing the
-blend exists to prevent. Five distinct results from six spellings.
+A fill class never decides an edge and an edge class never decides a fill. Use
+`.solid.edgeless` for a filled box with no line — and prefer it on a neutral one,
+because a capped fill leaves the box translucent and the edge blend then paints a
+second coat of the same tint rather than disappearing into it (measured 1.53:1
+against its own plate in light, 1.82:1 in dark).
+
+The edge is the silhouette and nothing else. Rules _inside_ a component that has
+an inside are a separate switch — see `.ruled` under [Content](#content) —
+because tying them to this axis made them arrive by implication rather than by
+request.
 
 With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
@@ -249,13 +311,23 @@ their line at all.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that
 intent's own color: `.tooltip.primary` is the primary color, black on a light
-page and white on a dark one, and `.tooltip.destructive` is a red bubble. With no
-intent the fill stops at the neutral cap and the ground shows through, so the
-bubble is a quiet grey plate in either theme rather than a slab of the page's own
-ink. The ground is also what keeps a bubble opaque when a container's
-[presentation](#presentation) cascades into one, so a tooltip stays readable over
-whatever it floats above at every fill. It reads the material tokens too, so an
-[aesthetic](#aesthetics) in scope shapes the bubble like any other component.
+page and white on a dark one, and `.tooltip.destructive` is a red bubble.
+
+With no intent the bubble is `--color-tooltip`, the one plate in the package
+chosen per theme rather than derived from an intent. Composed like everything
+else it was `20%` of the page's ink over the surface tone, which steps _lighter_
+than the surface on a dark page and _darker_ on a light one — so the dark bubble
+read as lifted and the light one as a mid-grey slab two steps darker than every
+card on the screen. The token states each direction instead: near-white over a
+light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
+
+Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as
+well, and floors it: a container's `.solid` or `.edgeless` cannot take the
+boundary away from a bubble nobody classed, while `.tooltip.edgeless` still can.
+The ground keeps the bubble opaque at every fill, so a cascaded presentation
+leaves it readable over whatever it floats above. It reads the material tokens
+too, so an [aesthetic](#aesthetics) in scope shapes the bubble like any other
+component.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
@@ -263,6 +335,33 @@ is a trap rather than a feature. Use `.neutral` to opt an element back out.
 
 Presentation and [material tokens](./tokens.md#material-tokens) do cascade, so a
 container can set the look of its whole subtree while any element overrides it.
+
+## Elevation
+
+Depth is a modifier, not an axis. Nothing is raised until an
+[aesthetic](#aesthetics) draws depth or one of these classes asks for it.
+
+| Class       | Depth                                                                    |
+| ----------- | ------------------------------------------------------------------------ |
+| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.floating` | Twice it, for menus and popovers.                                        |
+
+Each is one unitless multiplier over whatever shadow geometry is in scope, so the
+same class reads as a soft blur on a plain page and as a hard offset slab under
+`.neobrutalism` — the aesthetic decides what depth looks like, the class decides
+how much of it this element takes.
+
+```html
+<article class="card raised">Lifted</article>
+<div class="floating panel">A menu surface</div>
+<article class="card flat">Flat, whatever the page or container says</article>
+```
+
+The multiplier is a plain number, so it inherits: a container lifts or flattens a
+whole region and any element inside it still opts out on itself. Spread is
+deliberately left out of the multiplication, because an aesthetic that draws its
+edge as an inset ring spends spread on it and scaling that would erase the edge.
 
 ## Aesthetics
 

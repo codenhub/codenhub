@@ -161,6 +161,113 @@ test.describe("surfaces", () => {
     expect(isTransparent(styles.ghostEdgelessBorder), "edgeless card line").toBe(true);
   });
 
+  /* Elevation had classes, a registry entry and a documented table, and nothing
+     that read any of them: no fixture in the preview and no assertion here. The
+     three classes could have stopped multiplying and the only symptom would have
+     been a flat page.
+
+     Every length is read off the composited `box-shadow` rather than off
+     `--ui-elevation`, because the token being right is not the claim -- the claim
+     is that one unitless number scales the geometry an aesthetic supplies, which
+     is only observable after the multiplication. */
+  test("multiplies the depth in scope by the elevation asked for", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    /* Every engine serialises a layer as `<colour> <x> <y> <blur> <spread>`, so
+       the lengths start after the colour closes. */
+    const lengths = (shadow: string) =>
+      shadow
+        .split(") ")[1]!
+        .split(" ")
+        .map((length) => Number.parseFloat(length));
+
+    const shadows = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).boxShadow;
+
+      return {
+        default: get("elevation-default"),
+        flat: get("elevation-flat"),
+        floating: get("elevation-floating"),
+        inherited: get("elevation-inherited"),
+        optedOut: get("elevation-opt-out"),
+        panelFloating: get("elevation-panel-floating"),
+        panelRaised: get("elevation-panel-raised"),
+        raised: get("elevation-raised"),
+      };
+    });
+
+    const raised = lengths(shadows.raised);
+    const floating = lengths(shadows.floating);
+
+    /* A page with no aesthetic and no modifier draws nothing. The geometry lives
+       on the two classes that ask for depth, so a component resting at elevation
+       1 still has nothing to multiply until something supplies it. */
+    expect(
+      lengths(shadows.default).every((length) => length === 0),
+      "unasked card",
+    ).toBe(true);
+    expect(
+      lengths(shadows.flat).every((length) => length === 0),
+      ".flat card",
+    ).toBe(true);
+
+    expect(raised[1], ".raised offset").toBeGreaterThan(0);
+    expect(raised[2], ".raised blur").toBeGreaterThan(0);
+    /* Twice, exactly. `.floating` is the same geometry through a multiplier of
+       two, which is the sentence the registry writes as `"floating": 2`. */
+    expect(floating[1], ".floating offset").toBe(raised[1]! * 2);
+    expect(floating[2], ".floating blur").toBe(raised[2]! * 2);
+    /* Spread is deliberately left out of the multiplication: an aesthetic that
+       draws its edge as an inset ring spends spread on it. */
+    expect(floating[3], ".floating spread").toBe(lengths(shadows.raised)[3]);
+
+    /* A panel rests at zero and a card at one, and neither rest level survives
+       the modifier: the class supplies the geometry, so the two match. */
+    expect(lengths(shadows.panelRaised).slice(0, 4), "raised panel").toEqual(raised.slice(0, 4));
+    expect(lengths(shadows.panelFloating).slice(0, 4), "floating panel").toEqual(floating.slice(0, 4));
+
+    /* The number is unitless, so it inherits: a container lifts its whole region
+       and an element inside it still opts out on itself. */
+    expect(lengths(shadows.inherited).slice(0, 4), "inherited from the container").toEqual(raised.slice(0, 4));
+    expect(
+      lengths(shadows.optedOut).every((length) => length === 0),
+      "opted out of an inherited lift",
+    ).toBe(true);
+  });
+
+  /* The division of labour the modifier exists for: the aesthetic decides what
+     depth looks like and elevation decides how much of it this element takes.
+     Neither knows the other, so the same class has to come out as a soft blur on
+     a plain page and as a hard offset slab under `.neobrutalism`. */
+  test("takes the aesthetic's depth rather than its own under an aesthetic", async ({ page }) => {
+    await page.goto(`${SURFACES_URL}&aesthetic=neobrutalism`);
+
+    const shadows = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).boxShadow;
+
+      return { flat: get("elevation-flat"), raised: get("elevation-raised") };
+    });
+
+    const raised = shadows.raised
+      .split(") ")[1]!
+      .split(" ")
+      .map((length) => Number.parseFloat(length));
+
+    /* Neobrutalism draws a hard slab: a horizontal offset the plain step never
+       has, and no blur. */
+    expect(raised[0], "slab x offset").toBeGreaterThan(0);
+    expect(raised[1], "slab y offset").toBeGreaterThan(0);
+    expect(raised[2], "slab blur").toBe(0);
+    /* And `.flat` removes it without knowing what it was. */
+    expect(
+      shadows.flat
+        .split(") ")[1]!
+        .split(" ")
+        .every((length) => Number.parseFloat(length) === 0),
+      ".flat under an aesthetic",
+    ).toBe(true);
+  });
+
   /* Presentation cascades and intent does not, so a container sets the look of
      its subtree while any element opts out. Breaking either half is silent. */
   test("lets a container set the presentation while an element overrides it", async ({ page }) => {

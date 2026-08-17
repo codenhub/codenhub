@@ -9,7 +9,7 @@
    exactly what a blanket surface membership did to this component once already.
 
    The bubble is the component. It is a surface, so an aesthetic that blurs
-   surfaces blurs it too, and it rests on a tinted ground, edgeless, at twice a
+   surfaces blurs it too, and it rests on a ground of its own, edged, at twice a
    card's depth. */
 @utility tooltip {
   --tooltip-gap: 0.5rem;
@@ -83,16 +83,24 @@
   &::after {
     @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
 
-    /* Filled, on a tinted ground. The fill is what makes an intent mean something
-       here -- `.tooltip.primary` is the primary colour, black on a light page and
-       white on a dark one, the way a primary button is -- and the ground is what
-       the neutral intent lands on when its fill stops short.
+    /* Filled, on a ground of its own. The fill is what makes an intent mean
+       something here -- `.tooltip.primary` is the primary colour, black on a light
+       page and white on a dark one, the way a primary button is -- and the ground
+       is what a bubble carrying no fill lands on.
 
-       That pairing is the whole trick. Neutral's fill caps at `--intent-fill-max`,
-       so a tooltip nobody has classed is a fifth of the page's ink over
-       `--color-surface`: a quiet grey plate in either theme, rather than the ink
-       filled to the brim, which in a dark theme is a white slab. An intent has no
-       cap, so it floods the ground and the ground stops mattering.
+       With no intent the two are the same tone. `intent.css` resolves the
+       tooltip's no-intent case onto `--color-tooltip` and lifts the neutral cap
+       with it, so an unclassed bubble is that plate at full strength rather than
+       a fifth of the page's ink over the surface tone. That derivation is what
+       made a light bubble a mid-grey slab while the dark one read as lifted; the
+       pair states each direction instead. An intent has its own colour and floods
+       the ground the same way it always did.
+
+       The ground stays the surface tone rather than following the plate. Pointed
+       at `--color-tooltip` as well, the two ends of the fill were the same colour
+       and the fill axis went inert: `.ghost`, `.soft` and `.solid` all rendered
+       the same bubble on an unclassed tooltip, which is a documented axis doing
+       nothing. `tests/browser/axes.spec.ts` caught it.
 
        The ground also retires a bound. Presentation cascades, so a container's
        `.ghost` reaches a bubble nobody classed; with nothing under the fill that
@@ -106,9 +114,35 @@
        what keeps a glass tooltip glass. */
     --_d-fill: 100%;
     --_d-fg-on-fill: 100%;
-    --_d-border: 0%;
+    --_d-border: 100%;
     --_d-elevation: 2;
     --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
+
+    /* A bubble's line is a boundary against content nobody chose, not a
+       silhouette around a fill, and that is the one place `box`'s edge blend is
+       wrong for it: the blend runs the line toward the plate by the fill amount,
+       so at a full fill the line *is* the plate and a near-white bubble over
+       near-white content has nothing marking where it starts. The plate carries
+       the message; the line only has to say where the message ends.
+
+       Only the colour is restated, not the amount. How much line there is still
+       comes from `--_edge-amount`, bounded by the floor below. */
+    --_line: var(--intent-border);
+
+    /* And a floor under how much of it there is, for the same reason the ground
+       is opaque: the line is the boundary, and a cascade must not be able to
+       take a boundary away from a bubble nobody classed. `.solid` answers the
+       edge question now, so a `.solid` container reached in and removed it --
+       silently, and worst in the light theme, where the plate is near-white and
+       the line is the only thing separating the message from whatever is behind
+       it.
+
+       The escape is the same idiom `text-control` uses: a class on the element is
+       a consumer describing what they want, a class on a container is a cascade
+       reaching something nobody classed. The floor answers the second, the rule
+       below answers the first, and `tests/browser/axes.spec.ts` still sees the
+       edge axis move because it probes with the class on the element. */
+    --_edge-floor: 100%;
 
     /* The one component that draws depth with nothing asked for, because a
        bubble is the case where depth is not decoration: it floats over content
@@ -129,6 +163,10 @@
     bottom: var(--tooltip-bottom);
     transform: var(--tooltip-transform) scale(0);
     transform-origin: var(--tooltip-origin);
+  }
+
+  &.edgeless::after {
+    --_edge-floor: 0%;
   }
 
   &:hover::after,

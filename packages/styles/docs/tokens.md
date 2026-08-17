@@ -46,50 +46,52 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 
 ## Color Tokens
 
-| Token                          | Purpose                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `--color-primary`              | Primary action/content color.                                                                                |
-| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                   |
-| `--color-primary-hover`        | Primary hover state.                                                                                         |
-| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                           |
-| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.          |
-| `--color-accent`               | Secondary/accent surface.                                                                                    |
-| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                    |
-| `--color-accent-hover`         | Accent hover state.                                                                                          |
-| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                            |
-| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.           |
-| `--color-border`               | Default border color.                                                                                        |
-| `--color-border-hover`         | Interactive border color.                                                                                    |
-| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                        |
-| `--color-background`           | Page and default raised surface background.                                                                  |
-| `--color-foreground`           | Subtle raised foreground surface.                                                                            |
-| `--color-surface`              | Nested or muted surface.                                                                                     |
-| `--color-text`                 | Primary text color.                                                                                          |
-| `--color-text-secondary`       | Secondary text color.                                                                                        |
-| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                          |
-| `--color-text-hover`           | Text hover state.                                                                                            |
-| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                              |
-| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.             |
-| `--color-success`              | Success state color.                                                                                         |
-| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).         |
-| `--color-success-hover`        | Success hover tone.                                                                                          |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                     |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                                    |
-| `--color-warning`              | Warning state color.                                                                                         |
-| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).            |
-| `--color-warning-hover`        | Warning hover tone.                                                                                          |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                     |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                    |
-| `--color-destructive`          | Destructive/error state color.                                                                               |
-| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1). |
-| `--color-destructive-hover`    | Destructive hover tone.                                                                                      |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                 |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                |
-| `--color-info`                 | Informational state color.                                                                                   |
-| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).               |
-| `--color-info-hover`           | Info hover tone.                                                                                             |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                        |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                       |
+| Token                          | Purpose                                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `--color-primary`              | Primary action/content color.                                                                                     |
+| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                        |
+| `--color-primary-hover`        | Primary hover state.                                                                                              |
+| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                                |
+| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.               |
+| `--color-accent`               | Secondary/accent surface.                                                                                         |
+| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                         |
+| `--color-accent-hover`         | Accent hover state.                                                                                               |
+| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                                 |
+| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.                |
+| `--color-border`               | Default border color.                                                                                             |
+| `--color-border-hover`         | Interactive border color.                                                                                         |
+| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                             |
+| `--color-background`           | Page and default raised surface background.                                                                       |
+| `--color-foreground`           | Subtle raised foreground surface.                                                                                 |
+| `--color-surface`              | Nested or muted surface.                                                                                          |
+| `--color-text`                 | Primary text color.                                                                                               |
+| `--color-text-secondary`       | Secondary text color.                                                                                             |
+| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                               |
+| `--color-text-hover`           | Text hover state.                                                                                                 |
+| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                                   |
+| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.                  |
+| `--color-tooltip`              | Tooltip bubble plate with no intent. Chosen per theme rather than derived: near-white in light, mid grey in dark. |
+| `--color-tooltip-contrast`     | Ink on `--color-tooltip`.                                                                                         |
+| `--color-success`              | Success state color.                                                                                              |
+| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).              |
+| `--color-success-hover`        | Success hover tone.                                                                                               |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                          |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                                         |
+| `--color-warning`              | Warning state color.                                                                                              |
+| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).                 |
+| `--color-warning-hover`        | Warning hover tone.                                                                                               |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                          |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                         |
+| `--color-destructive`          | Destructive/error state color.                                                                                    |
+| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1).      |
+| `--color-destructive-hover`    | Destructive hover tone.                                                                                           |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                      |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                     |
+| `--color-info`                 | Informational state color.                                                                                        |
+| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).                    |
+| `--color-info-hover`           | Info hover tone.                                                                                                  |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                             |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                            |
 
 > **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
@@ -225,6 +227,11 @@ A component resolves them with `color-mix` from its published default. Hover is
 derived by adding `--hover-step` to the resting fill and using `--intent-hover`;
 there are no per-presentation hover tokens.
 
+No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled
+box with no line is `.solid.edgeless`, which is worth reaching for on a neutral
+component: neutral caps its fill, so the box stays translucent and a border over
+it paints a second coat of the same tint instead of blending into it.
+
 ```css
 background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
 ```
@@ -254,33 +261,34 @@ look. Setting them on a container restyles the whole subtree. Only shadow
 geometry is split into colorless parts that inherit safely; color-capable inputs
 such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
-| Token                   | Purpose                                                | Fallback             |
-| ----------------------- | ------------------------------------------------------ | -------------------- |
-| `--ui-radius`           | Corner radius for controls.                            | `--radius-control`   |
-| `--ui-radius-surface`   | Corner radius for surfaces.                            | `--radius-surface`   |
-| `--ui-border-width`     | Edge thickness.                                        | `--border-width`     |
-| `--ui-border-max`       | Ceiling on computed edge width.                        | `100px`              |
-| `--ui-ink`              | Neutral line color when no intent is set.              | `--color-border`     |
-| `--ui-shadow-x`         | Shadow horizontal offset.                              | `0px`                |
-| `--ui-shadow-y`         | Shadow vertical offset.                                | `0px`                |
-| `--ui-shadow-blur`      | Shadow blur radius.                                    | `0px`                |
-| `--ui-shadow-spread`    | Shadow spread radius.                                  | `0px`                |
-| `--ui-shadow-inset`     | The `inset` keyword for an inner ring.                 | Empty                |
-| `--ui-hover-shadow-x`   | Shadow horizontal offset while hovered.                | `--ui-shadow-x`      |
-| `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                  | `--ui-shadow-y`      |
-| `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                | `--ui-shadow-x`      |
-| `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                  | `--ui-shadow-y`      |
-| `--ui-active-transform` | Transform while pressed.                               | `none`               |
-| `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.      | `0%`                 |
-| `--ui-elevation`        | Unitless multiplier over shadow geometry.              | `1`                  |
-| `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only. | Unset                |
-| `--ui-surface-ground`   | Ground a surface sits on.                              | `--color-background` |
-| `--ui-bg-alpha`         | Multiplier over fill for translucent materials.        | `1`                  |
-| `--ui-backdrop`         | Backdrop filter accepted by surfaces only.             | `none`               |
-| `--ui-hover-transform`  | Transform while an interactive element is hovered.     | `none`               |
-| `--ui-clip`             | Structural component silhouette.                       | `none`               |
-| `--ui-clip-tight`       | Compact component silhouette.                          | `--ui-clip`          |
-| `--ui-focus-inset`      | Inset focus layer width.                               | Unset                |
+| Token                   | Purpose                                                                                                       | Fallback             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `--ui-radius`           | Corner radius for controls.                                                                                   | `--radius-control`   |
+| `--ui-radius-surface`   | Corner radius for surfaces.                                                                                   | `--radius-surface`   |
+| `--ui-border-width`     | Edge thickness.                                                                                               | `--border-width`     |
+| `--ui-border-max`       | Ceiling on computed edge width.                                                                               | `100px`              |
+| `--ui-ink`              | Neutral line color when no intent is set.                                                                     | `--color-border`     |
+| `--ui-rule`             | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row. | unset                |
+| `--ui-shadow-x`         | Shadow horizontal offset.                                                                                     | `0px`                |
+| `--ui-shadow-y`         | Shadow vertical offset.                                                                                       | `0px`                |
+| `--ui-shadow-blur`      | Shadow blur radius.                                                                                           | `0px`                |
+| `--ui-shadow-spread`    | Shadow spread radius.                                                                                         | `0px`                |
+| `--ui-shadow-inset`     | The `inset` keyword for an inner ring.                                                                        | Empty                |
+| `--ui-hover-shadow-x`   | Shadow horizontal offset while hovered.                                                                       | `--ui-shadow-x`      |
+| `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`      |
+| `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`      |
+| `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`      |
+| `--ui-active-transform` | Transform while pressed.                                                                                      | `none`               |
+| `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                 |
+| `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                  |
+| `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                |
+| `--ui-surface-ground`   | Ground a surface sits on.                                                                                     | `--color-background` |
+| `--ui-bg-alpha`         | Multiplier over fill for translucent materials.                                                               | `1`                  |
+| `--ui-backdrop`         | Backdrop filter accepted by surfaces only.                                                                    | `none`               |
+| `--ui-hover-transform`  | Transform while an interactive element is hovered.                                                            | `none`               |
+| `--ui-clip`             | Structural component silhouette.                                                                              | `none`               |
+| `--ui-clip-tight`       | Compact component silhouette.                                                                                 | `--ui-clip`          |
+| `--ui-focus-inset`      | Inset focus layer width.                                                                                      | Unset                |
 
 ```html
 <section style="--ui-radius: 0; --ui-border-width: 3px">

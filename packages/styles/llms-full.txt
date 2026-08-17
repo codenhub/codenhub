@@ -53,6 +53,9 @@ also supported. See [Tokens](./docs/tokens.md) for precedence details.
 `.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
 and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
 container sets the look below it and any element can still override it.
+`.solid` also takes the boundary away, because a filled box ringed in another
+color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the
+way back to a line.
 
 ```html
 <div class="soft">
@@ -398,11 +401,52 @@ The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compa
 | --------------- | ---------------------------------------------------------------------------------------- | ---------------------- |
 | `.table-wrap`   | Full-width horizontal overflow wrapper for wide tables.                                  | Nothing.               |
 | `.data-table`   | Rounded nested table styling for captions, heads, footers, cells, and rows.              | Head, border, hover.   |
+| `.ruled`        | On `.data-table`. Draws a rule between body rows.                                        | Rule color.            |
+| `.ruleless`     | On `.data-table`. Draws no lines inside the table at all.                                | Nothing.               |
 | `.kbd`          | Inline keyboard-input styling.                                                           | Surface, border, text. |
 | `.quote`        | Block quote styling; a nested `cite` is set upright and takes the quotation's own color. | Bar, surface, text.    |
 | `.quote-inline` | Inline quotation styling.                                                                | Nothing.               |
 | `.code`         | Inline code formatting.                                                                  | Surface.               |
 | `.pre`          | Scrollable block code formatting with larger padding.                                    | Surface.               |
+
+### Table rules
+
+A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
+together:
+
+| Class       | Head and foot boundaries | Rules between body rows |
+| ----------- | ------------------------ | ----------------------- |
+| `.ruleless` | No                       | No                      |
+| _no class_  | Yes                      | No                      |
+| `.ruled`    | Yes                      | Yes                     |
+
+```html
+<table class="data-table">Head and foot boundaries only</table>
+<table class="data-table ruled">Every row separated</table>
+<table class="data-table ruleless">No lines inside the table at all</table>
+```
+
+The boundaries under a head and above a foot separate the parts of a table from
+each other, so they are drawn by default where the row rules are not. Rules
+between body rows used to arrive on their own, because the component's published
+edge default is `edged` and the edge axis wrote the rules along with the
+boundary — so whether you got them depended on a registry default rather than on
+anything in your markup.
+
+`--ui-rule` is the token behind both classes, so a container can set the answer
+for a whole region without classing each table:
+
+```html
+<section style="--ui-rule: 100%">
+  <table class="data-table">Ruled by the region</table>
+</section>
+```
+
+The frame around the table is the edge axis and is asked for the same way:
+`.data-table` publishes `edgeless`, so `.edged` draws one. None of the three
+switches reaches the others — `.data-table.ruleless.edged` is a framed table with
+no lines inside it, and `.data-table.ruled` is a frameless one with every row
+separated.
 
 A table's rows deliberately inherit its intent instead of resetting it, so
 `.data-table.success` tints throughout. A row carrying its own intent still wins:
@@ -423,14 +467,31 @@ A table's rows deliberately inherit its intent instead of resetting it, so
 This is the one place intent cascades, because a table's rows are parts of the
 table rather than independent components.
 
-`.data-table` and `.kbd` also read [presentation](#presentation). A table applies it
-to its header and border, and a key cap to its whole chip:
+`.data-table`, `.kbd`, `.code`, and `.pre` also read
+[presentation](#presentation). A table applies it to its header, its rules and
+its border; a chip to its whole plate:
 
 ```html
 <table class="data-table success soft edged">...</table>
+<table class="data-table">A ghost table: rules and type, no header plate</table>
 <kbd class="kbd primary solid">Ctrl</kbd>
-<kbd class="kbd primary ghost edged">Shift</kbd>
+<kbd class="kbd primary soft edged">Shift</kbd>
 ```
+
+`.ghost` means two different things on these components, and both are worth
+knowing before you reach for it.
+
+On `.data-table` it removes the header plate along with the body tint, so
+`.data-table.ghost` is boundaries and type alone. The component rests at `soft`,
+so that is something to ask for rather than the default.
+
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on
+`--intent-subtle`, and that ground draws the plate whatever the fill says — so
+`.ghost` took the fill away and changed nothing visible. Worse, the ground alone
+is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and
+primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All
+three rest at `.soft` instead, which puts a real `12%` of the intent over the
+ground and separates them.
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
@@ -455,15 +516,14 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 ## Surfaces
 
-| Class          | Purpose                                                                  |
-| -------------- | ------------------------------------------------------------------------ |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded.       |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.         |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.           |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                                 |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                               |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.       |
-| `.flat`        | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| Class          | Purpose                                                            |
+| -------------- | ------------------------------------------------------------------ |
+| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
+| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
+| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
+| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
 
 Both read intent, [presentation](#presentation), and
 [material tokens](docs/tokens.md#material-tokens). A plain `.card` is a neutral
@@ -517,8 +577,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-A fill class never decides an edge and an edge class never decides a fill. The
-combinations mean exactly what they spell:
+The combinations mean exactly what they spell:
 
 ```html
 <button class="btn primary">Solid, the button default</button>
@@ -529,10 +588,16 @@ combinations mean exactly what they spell:
 <!-- A field sunk into the page -->
 ```
 
-`.solid` is the one pair that collapses. At a full fill the boundary blends all
-the way to the box's own background, so `.solid.edged` and `.solid.edgeless`
-render the same thing — a filled box ringed in another color is the thing the
-blend exists to prevent. Five distinct results from six spellings.
+A fill class never decides an edge and an edge class never decides a fill. Use
+`.solid.edgeless` for a filled box with no line — and prefer it on a neutral one,
+because a capped fill leaves the box translucent and the edge blend then paints a
+second coat of the same tint rather than disappearing into it (measured 1.53:1
+against its own plate in light, 1.82:1 in dark).
+
+The edge is the silhouette and nothing else. Rules _inside_ a component that has
+an inside are a separate switch — see `.ruled` under [Content](#content) —
+because tying them to this axis made them arrive by implication rather than by
+request.
 
 With no presentation class in scope, each component keeps its own default:
 buttons are filled, alerts and badges are tinted, surfaces and controls are
@@ -570,13 +635,23 @@ their line at all.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that
 intent's own color: `.tooltip.primary` is the primary color, black on a light
-page and white on a dark one, and `.tooltip.destructive` is a red bubble. With no
-intent the fill stops at the neutral cap and the ground shows through, so the
-bubble is a quiet grey plate in either theme rather than a slab of the page's own
-ink. The ground is also what keeps a bubble opaque when a container's
-[presentation](#presentation) cascades into one, so a tooltip stays readable over
-whatever it floats above at every fill. It reads the material tokens too, so an
-[aesthetic](#aesthetics) in scope shapes the bubble like any other component.
+page and white on a dark one, and `.tooltip.destructive` is a red bubble.
+
+With no intent the bubble is `--color-tooltip`, the one plate in the package
+chosen per theme rather than derived from an intent. Composed like everything
+else it was `20%` of the page's ink over the surface tone, which steps _lighter_
+than the surface on a dark page and _darker_ on a light one — so the dark bubble
+read as lifted and the light one as a mid-grey slab two steps darker than every
+card on the screen. The token states each direction instead: near-white over a
+light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
+
+Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as
+well, and floors it: a container's `.solid` or `.edgeless` cannot take the
+boundary away from a bubble nobody classed, while `.tooltip.edgeless` still can.
+The ground keeps the bubble opaque at every fill, so a cascaded presentation
+leaves it readable over whatever it floats above. It reads the material tokens
+too, so an [aesthetic](#aesthetics) in scope shapes the bubble like any other
+component.
 
 Intent classes do not cascade. `.primary` and its siblings stay on the element
 that shows the intent, because a container silently recoloring every descendant
@@ -584,6 +659,33 @@ is a trap rather than a feature. Use `.neutral` to opt an element back out.
 
 Presentation and [material tokens](docs/tokens.md#material-tokens) do cascade, so a
 container can set the look of its whole subtree while any element overrides it.
+
+## Elevation
+
+Depth is a modifier, not an axis. Nothing is raised until an
+[aesthetic](#aesthetics) draws depth or one of these classes asks for it.
+
+| Class       | Depth                                                                    |
+| ----------- | ------------------------------------------------------------------------ |
+| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.floating` | Twice it, for menus and popovers.                                        |
+
+Each is one unitless multiplier over whatever shadow geometry is in scope, so the
+same class reads as a soft blur on a plain page and as a hard offset slab under
+`.neobrutalism` — the aesthetic decides what depth looks like, the class decides
+how much of it this element takes.
+
+```html
+<article class="card raised">Lifted</article>
+<div class="floating panel">A menu surface</div>
+<article class="card flat">Flat, whatever the page or container says</article>
+```
+
+The multiplier is a plain number, so it inherits: a container lifts or flattens a
+whole region and any element inside it still opts out on itself. Spread is
+deliberately left out of the multiplication, because an aesthetic that draws its
+edge as an inset ring spends spread on it and scaling that would erase the edge.
 
 ## Aesthetics
 
@@ -1065,50 +1167,52 @@ This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
 
 ## Color Tokens
 
-| Token                          | Purpose                                                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| `--color-primary`              | Primary action/content color.                                                                                |
-| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                   |
-| `--color-primary-hover`        | Primary hover state.                                                                                         |
-| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                           |
-| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.          |
-| `--color-accent`               | Secondary/accent surface.                                                                                    |
-| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                    |
-| `--color-accent-hover`         | Accent hover state.                                                                                          |
-| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                            |
-| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.           |
-| `--color-border`               | Default border color.                                                                                        |
-| `--color-border-hover`         | Interactive border color.                                                                                    |
-| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                        |
-| `--color-background`           | Page and default raised surface background.                                                                  |
-| `--color-foreground`           | Subtle raised foreground surface.                                                                            |
-| `--color-surface`              | Nested or muted surface.                                                                                     |
-| `--color-text`                 | Primary text color.                                                                                          |
-| `--color-text-secondary`       | Secondary text color.                                                                                        |
-| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                          |
-| `--color-text-hover`           | Text hover state.                                                                                            |
-| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                              |
-| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.             |
-| `--color-success`              | Success state color.                                                                                         |
-| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).         |
-| `--color-success-hover`        | Success hover tone.                                                                                          |
-| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                     |
-| `--color-success-strong`       | High-emphasis companion tone for success.                                                                    |
-| `--color-warning`              | Warning state color.                                                                                         |
-| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).            |
-| `--color-warning-hover`        | Warning hover tone.                                                                                          |
-| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                     |
-| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                    |
-| `--color-destructive`          | Destructive/error state color.                                                                               |
-| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1). |
-| `--color-destructive-hover`    | Destructive hover tone.                                                                                      |
-| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                 |
-| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                |
-| `--color-info`                 | Informational state color.                                                                                   |
-| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).               |
-| `--color-info-hover`           | Info hover tone.                                                                                             |
-| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                        |
-| `--color-info-strong`          | High-emphasis companion tone for info.                                                                       |
+| Token                          | Purpose                                                                                                           |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `--color-primary`              | Primary action/content color.                                                                                     |
+| `--color-primary-contrast`     | Text/icon color on primary filled surface.                                                                        |
+| `--color-primary-hover`        | Primary hover state.                                                                                              |
+| `--color-primary-subtle`       | Low-emphasis companion tone for primary. Use as soft surface or subtle background.                                |
+| `--color-primary-strong`       | High-emphasis companion tone for primary. Use as readable text, icon, or border on subtle surfaces.               |
+| `--color-accent`               | Secondary/accent surface.                                                                                         |
+| `--color-accent-contrast`      | Text/icon color on accent filled surface.                                                                         |
+| `--color-accent-hover`         | Accent hover state.                                                                                               |
+| `--color-accent-subtle`        | Low-emphasis companion tone for accent. Use as soft surface or subtle background.                                 |
+| `--color-accent-strong`        | High-emphasis companion tone for accent. Use as readable text, icon, or border on subtle surfaces.                |
+| `--color-border`               | Default border color.                                                                                             |
+| `--color-border-hover`         | Interactive border color.                                                                                         |
+| `--color-control-border`       | Resting line on the six text controls; one value, drawn at a fraction on text inputs.                             |
+| `--color-background`           | Page and default raised surface background.                                                                       |
+| `--color-foreground`           | Subtle raised foreground surface.                                                                                 |
+| `--color-surface`              | Nested or muted surface.                                                                                          |
+| `--color-text`                 | Primary text color.                                                                                               |
+| `--color-text-secondary`       | Secondary text color.                                                                                             |
+| `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                               |
+| `--color-text-hover`           | Text hover state.                                                                                                 |
+| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                                   |
+| `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.                  |
+| `--color-tooltip`              | Tooltip bubble plate with no intent. Chosen per theme rather than derived: near-white in light, mid grey in dark. |
+| `--color-tooltip-contrast`     | Ink on `--color-tooltip`.                                                                                         |
+| `--color-success`              | Success state color.                                                                                              |
+| `--color-success-contrast`     | Text/icon color on success filled surface. Meets 4.5:1 as normal text on `--color-success` (5.14:1).              |
+| `--color-success-hover`        | Success hover tone.                                                                                               |
+| `--color-success-subtle`       | Low-emphasis companion tone for success.                                                                          |
+| `--color-success-strong`       | High-emphasis companion tone for success.                                                                         |
+| `--color-warning`              | Warning state color.                                                                                              |
+| `--color-warning-contrast`     | The near-black tone, not the page tone. Meets 4.5:1 as normal text on `--color-warning` (6.19:1).                 |
+| `--color-warning-hover`        | Warning hover tone.                                                                                               |
+| `--color-warning-subtle`       | Low-emphasis companion tone for warning.                                                                          |
+| `--color-warning-strong`       | High-emphasis companion tone for warning.                                                                         |
+| `--color-destructive`          | Destructive/error state color.                                                                                    |
+| `--color-destructive-contrast` | Text/icon color on destructive filled surface. Meets 4.5:1 as normal text on `--color-destructive` (5.78:1).      |
+| `--color-destructive-hover`    | Destructive hover tone.                                                                                           |
+| `--color-destructive-subtle`   | Low-emphasis companion tone for destructive.                                                                      |
+| `--color-destructive-strong`   | High-emphasis companion tone for destructive.                                                                     |
+| `--color-info`                 | Informational state color.                                                                                        |
+| `--color-info-contrast`        | Text/icon color on info filled surface. Meets 4.5:1 as normal text on `--color-info` (6.19:1).                    |
+| `--color-info-hover`           | Info hover tone.                                                                                                  |
+| `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                             |
+| `--color-info-strong`          | High-emphasis companion tone for info.                                                                            |
 
 > **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
@@ -1244,6 +1348,11 @@ A component resolves them with `color-mix` from its published default. Hover is
 derived by adding `--hover-step` to the resting fill and using `--intent-hover`;
 there are no per-presentation hover tokens.
 
+No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled
+box with no line is `.solid.edgeless`, which is worth reaching for on a neutral
+component: neutral caps its fill, so the box stays translucent and a border over
+it paints a second coat of the same tint instead of blending into it.
+
 ```css
 background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
 ```
@@ -1273,33 +1382,34 @@ look. Setting them on a container restyles the whole subtree. Only shadow
 geometry is split into colorless parts that inherit safely; color-capable inputs
 such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
-| Token                   | Purpose                                                | Fallback             |
-| ----------------------- | ------------------------------------------------------ | -------------------- |
-| `--ui-radius`           | Corner radius for controls.                            | `--radius-control`   |
-| `--ui-radius-surface`   | Corner radius for surfaces.                            | `--radius-surface`   |
-| `--ui-border-width`     | Edge thickness.                                        | `--border-width`     |
-| `--ui-border-max`       | Ceiling on computed edge width.                        | `100px`              |
-| `--ui-ink`              | Neutral line color when no intent is set.              | `--color-border`     |
-| `--ui-shadow-x`         | Shadow horizontal offset.                              | `0px`                |
-| `--ui-shadow-y`         | Shadow vertical offset.                                | `0px`                |
-| `--ui-shadow-blur`      | Shadow blur radius.                                    | `0px`                |
-| `--ui-shadow-spread`    | Shadow spread radius.                                  | `0px`                |
-| `--ui-shadow-inset`     | The `inset` keyword for an inner ring.                 | Empty                |
-| `--ui-hover-shadow-x`   | Shadow horizontal offset while hovered.                | `--ui-shadow-x`      |
-| `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                  | `--ui-shadow-y`      |
-| `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                | `--ui-shadow-x`      |
-| `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                  | `--ui-shadow-y`      |
-| `--ui-active-transform` | Transform while pressed.                               | `none`               |
-| `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.      | `0%`                 |
-| `--ui-elevation`        | Unitless multiplier over shadow geometry.              | `1`                  |
-| `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only. | Unset                |
-| `--ui-surface-ground`   | Ground a surface sits on.                              | `--color-background` |
-| `--ui-bg-alpha`         | Multiplier over fill for translucent materials.        | `1`                  |
-| `--ui-backdrop`         | Backdrop filter accepted by surfaces only.             | `none`               |
-| `--ui-hover-transform`  | Transform while an interactive element is hovered.     | `none`               |
-| `--ui-clip`             | Structural component silhouette.                       | `none`               |
-| `--ui-clip-tight`       | Compact component silhouette.                          | `--ui-clip`          |
-| `--ui-focus-inset`      | Inset focus layer width.                               | Unset                |
+| Token                   | Purpose                                                                                                       | Fallback             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `--ui-radius`           | Corner radius for controls.                                                                                   | `--radius-control`   |
+| `--ui-radius-surface`   | Corner radius for surfaces.                                                                                   | `--radius-surface`   |
+| `--ui-border-width`     | Edge thickness.                                                                                               | `--border-width`     |
+| `--ui-border-max`       | Ceiling on computed edge width.                                                                               | `100px`              |
+| `--ui-ink`              | Neutral line color when no intent is set.                                                                     | `--color-border`     |
+| `--ui-rule`             | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row. | unset                |
+| `--ui-shadow-x`         | Shadow horizontal offset.                                                                                     | `0px`                |
+| `--ui-shadow-y`         | Shadow vertical offset.                                                                                       | `0px`                |
+| `--ui-shadow-blur`      | Shadow blur radius.                                                                                           | `0px`                |
+| `--ui-shadow-spread`    | Shadow spread radius.                                                                                         | `0px`                |
+| `--ui-shadow-inset`     | The `inset` keyword for an inner ring.                                                                        | Empty                |
+| `--ui-hover-shadow-x`   | Shadow horizontal offset while hovered.                                                                       | `--ui-shadow-x`      |
+| `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`      |
+| `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`      |
+| `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`      |
+| `--ui-active-transform` | Transform while pressed.                                                                                      | `none`               |
+| `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                 |
+| `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                  |
+| `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                |
+| `--ui-surface-ground`   | Ground a surface sits on.                                                                                     | `--color-background` |
+| `--ui-bg-alpha`         | Multiplier over fill for translucent materials.                                                               | `1`                  |
+| `--ui-backdrop`         | Backdrop filter accepted by surfaces only.                                                                    | `none`               |
+| `--ui-hover-transform`  | Transform while an interactive element is hovered.                                                            | `none`               |
+| `--ui-clip`             | Structural component silhouette.                                                                              | `none`               |
+| `--ui-clip-tight`       | Compact component silhouette.                                                                                 | `--ui-clip`          |
+| `--ui-focus-inset`      | Inset focus layer width.                                                                                      | Unset                |
 
 ```html
 <section style="--ui-radius: 0; --ui-border-width: 3px">

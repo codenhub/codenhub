@@ -131,11 +131,27 @@ exactly one value from each set applies.
 
 ### Fill: how much of the intent color fills the box
 
-| Class    | `--ui-fill` | `--ui-fg-on-fill` | Reads as                                                   |
-| -------- | ----------- | ----------------- | ---------------------------------------------------------- |
-| `.solid` | `100%`      | `100%`            | Filled with the intent color; text is the contrast tone.   |
-| `.soft`  | `12%`       | `0%`              | Tinted with the intent color; text is the intent color.    |
-| `.ghost` | `0%`        | `0%`              | No fill at rest; text is the intent color. Tints on hover. |
+| Class    | `--ui-fill` | `--ui-fg-on-fill` | `--ui-border` | Reads as                                                          |
+| -------- | ----------- | ----------------- | ------------- | ----------------------------------------------------------------- |
+| `.solid` | `100%`      | `100%`            | `0%`          | Filled with the intent color, no line; text is the contrast tone. |
+| `.soft`  | `12%`       | `0%`              |               | Tinted with the intent color; text is the intent color.           |
+| `.ghost` | `0%`        | `0%`              |               | No fill at rest; text is the intent color. Tints on hover.        |
+
+`.solid` briefly answered the edge question as well, writing `--ui-border: 0%`
+alongside its fill. The problem it was aimed at is real and still open: the edge
+blend runs the line toward `--_bg`, which for an opaque fill _is_ the fill and for
+a capped one is a second coat of the same tint painted over the first, so every
+neutral component that draws a line draws a ring over its own plate -- measured at
+1.53:1 against that plate in light and 1.82:1 in dark on `.ipt` and any
+`.btn.solid.edged`.
+
+It was reverted anyway, because the cure cost more than the disease. Six
+combinations stay readable only while each half means what it says; a fill class
+that sometimes decides an edge turns the set into something to memorise rather
+than read, and the first thing it produced in review was the question of why
+`.soft` kept a frame that `.solid` removed. The ring is a fault in the blend, and
+`box` is where a fix for it goes. `.solid.edgeless` is how a consumer asks for a
+filled box with no line meanwhile.
 
 `.ghost` was `.bare` until 0.1.0. The rename is the one naming defect the set
 had: `.bare` and `.edgeless` both read as "less of something", so an author who
@@ -148,6 +164,27 @@ fill and only a fill.
 | ----------- | ------------- | -------------------------------------------------------------- |
 | `.edged`    | `100%`        | A line in the intent color, at the aesthetic's material width. |
 | `.edgeless` | `0%`          | No line.                                                       |
+
+The edge is the silhouette and nothing else. Rules inside a component that has
+an inside were briefly a second slot on this axis, written by `.edged` and
+`.edgeless` and left alone by `.solid` so that a filled table kept its rows
+apart. That was the wrong home for them, and the reason is not tidiness: it made
+the rules arrive by implication. A table drew them because its published edge
+default happened to be `edged` -- a fact about `registry.json` rather than about
+the markup -- so a consumer reading their own HTML could not tell whether they
+had asked for rules, and had no name to ask with.
+
+`.ruled` is that name. Ruling every row is a style choice rather than an answer
+to "does this box draw a boundary", so it is a component modifier, and
+`--ui-rule` is the slot behind it -- still a token, so a container can rule a
+region without classing each table, but no longer a value any presentation class
+writes.
+
+Two lines survive the switch, because they are not decoration: the one under a
+head and the one above a foot. Those separate the parts of a table from each
+other, so they hold at every presentation and do not wait for `.ruled`. The foot
+draws its own upward rather than leaning on the last body row drawing downward,
+because with rules off that row paints nothing.
 
 Three presentation tokens total, down from six. Every value is a percentage, so
 presentation still inherits without carrying a resolved color, and a container
@@ -202,6 +239,16 @@ The tooltip is the one that mattered. Its ground is `--intent-subtle` and its
 fill is the capped neutral over it, so the plate darkened and the ink lightened
 at once, from about 15.7:1 under the pre-0.1.0 surface-and-text pairing down to
 5.18:1. Both halves were this single line.
+
+The bubble has since come off that ramp altogether, and the row above is kept
+because the ramp it measures is still what every other component uses. The fix
+made the plate legible and left it ugly: 20% of the page's ink over the surface
+tone steps _lighter_ than the surface on a dark page and _darker_ on a light one,
+so the dark bubble read as lifted and the light one as a mid-grey slab. One
+derivation cannot serve both directions. `--color-tooltip` and
+`--color-tooltip-contrast` state each end instead, and `intent.css` resolves the
+tooltip's no-intent case onto them -- lifting the neutral cap with it, since the
+token is a plate rather than an ink and has nothing to stop short of.
 
 The bound the old form was reaching for still holds. Uncapped, a neutral
 `.solid` prints near-white on light grey and loses its label; the ramp answers
@@ -389,6 +436,21 @@ So a checked toggle lifts it, declared where intents are declared for the reason
 `.ghost` is not supported on `.checkbox`, `.radio`, or `.switch`. Unchecked it is
 the silhouette every toggle already has; checked it is a mark on nothing.
 
+It is not supported on `.kbd`, `.code`, or `.pre` either, for the opposite
+reason. Those three rest on a ground, and a ground draws the plate whatever the
+fill says -- so `.ghost` took the fill away and changed nothing visible. What was
+left was `--intent-subtle` alone, which is a near-page tint rather than a
+distinguishing one: on the light page a ghost chip measured `#e5e5e5` for both
+neutral and primary, and `#f5f5f5` at 1.04:1 against the page for secondary.
+Four of eight intents rendering as one invisible chip is not a variation. All
+three rest at `soft` now, which puts a real 12% of the intent over the same
+ground and separates them.
+
+`.data-table` is the counter-example that keeps the rule honest. Its plate is a
+head tone rather than a chip ground, and dropping it at zero fill is exactly
+what `.ghost` should mean -- so there the class is supported, it is the
+component's default -- and a ghost table is boundaries and type alone.
+
 That is a third thing a component can say about an axis, alongside reading it and
 bounding it, and it is recorded as `unsupported` in the registry with its reason.
 The playground does not render those rows -- it is the support surface, so a row
@@ -538,16 +600,17 @@ Four pass it today, and they are the same argument in different materials. Every
 one is recorded in `registry.json` under the component's `bounds`, with the
 composition of ours that earns it and what lifts it:
 
-| Component            | Bound                               | What our own composition does to it                                                                                                              |
-| -------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `text-control`       | Cascaded fill capped at 6%          | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap. |
-| Toggles              | Fill capped at 20%, switch 40%      | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.               |
-| Toggles              | Checked fill floored at 12%         | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                               |
-| Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                             |
-| `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                             |
-| Toggles              | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. |
+| Component            | Bound                               | What our own composition does to it                                                                                                                                                                                                           |
+| -------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text-control`       | Cascaded fill capped at 6%          | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap.                                                                                              |
+| Toggles              | Fill capped at 20%, switch 40%      | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.                                                                                                            |
+| Toggles              | Checked fill floored at 12%         | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                                                                                                                            |
+| Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                                                                                                                          |
+| `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                                                                                                                          |
+| `.tooltip`           | Edge floored at 100%                | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`. |
+| Toggles              | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one.                                                                                              |
 
-The count went from two to seven, and that is the test working rather than
+The count went from two to eight, and that is the test working rather than
 failing. Three of the additions are bounds that already existed as rewritten
 results — the edge floor was `--_edge: color-mix(...)` and the switch cap was two
 `--_edge: transparent` rules — and were invisible because a rewrite has nowhere to
@@ -559,6 +622,15 @@ it is published, and a bound that stops passing it is deleted. `.tooltip` is the
 first to be deleted rather than published. Its bound was a fill pinned at solid
 and a foreground pinned with it, against a container's `.ghost` cascading onto a
 bubble nobody classed and leaving it boundaryless over arbitrary content.
+
+It is also the first to come back in a narrower form. A ground answers the
+cascade for the plate, and `.solid` writing `--ui-border: 0%` opened the same
+hole one layer out: the bubble's line is a boundary against content nobody chose,
+and a container could now take it away. The bound that returned is an edge floor
+with the escape `text-control` already uses -- a class on the element is a
+consumer describing what they want, a class on a container is a cascade reaching
+something nobody classed -- rather than the pinned fill it replaced. Narrower,
+escapable, and it leaves both axes live.
 
 Giving the bubble a ground answers the same objection without pinning anything.
 It still rests filled, so an intent still floods it, but `--intent-subtle` is
@@ -762,22 +834,23 @@ the registry names for it, and that pair is published.
 | `.card`                                      | ghost edged    |
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |
-| `.data-table`                                | ghost edged    |
-| `.tooltip`                                   | solid edgeless |
-| `.pre` `.code`                               | ghost edgeless |
-| `.kbd`                                       | ghost edged    |
+| `.data-table`                                | soft edgeless  |
+| `.tooltip`                                   | solid edged    |
+| `.pre` `.code`                               | soft edgeless  |
+| `.kbd`                                       | soft edged     |
 | `.badge`                                     | soft edgeless  |
 | `.quote`                                     | ghost edged    |
 | `.loader` `.skeleton` `.progress` `.divider` | n/a            |
 
-Three of those name a ground as well. `.pre`, `.code` and `.kbd` are not
+Four of those name a ground as well. `.pre`, `.code` and `.kbd` are not
 transparent at rest -- each is a quiet tinted block -- and that tone is not a fill
-of the component's intent, it is `--intent-subtle`. Writing it as `soft` would be
-a different color and would leave `.ghost` looking broken. So they rest at `ghost`
-over `--_d-ground: var(--intent-subtle)`, the mechanism `surface` already uses for
-its own ground: `.ghost` is today's look exactly, `.soft` is 12% of the intent over
-it, and `.solid` fills with the intent. The registry records the ground beside the
-pair.
+of the component's intent, it is `--intent-subtle`. They rest at `soft` over
+`--_d-ground: var(--intent-subtle)`, the mechanism `surface` already uses for its
+own ground, so the plate is 12% of the intent over that tone and `.solid` fills
+with the intent. They rested at `ghost` until the ground made that class
+meaningless on them; see [Unsupported values](#unsupported-values). The tooltip
+bubble names one too, and reads `--ui-surface-ground` ahead of it so a glass
+tooltip stays glass. The registry records the ground beside the pair.
 
 These authored defaults are implemented decisions, not derivations -- there is no
 rule that produces them, and there should not be. Each is stated in one place

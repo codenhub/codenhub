@@ -134,6 +134,102 @@
           </div>
         </div>
         <div class="stack tight">
+          <h3 class="text-title-sm">Rules</h3>
+          <p class="text-body text-text-secondary">
+            A table nobody classed draws the two boundaries that separate its parts — under the head, above the foot —
+            and nothing between its rows.
+            <code class="code">.ruled</code>
+            adds those,
+            <code class="code">.ruleless</code>
+            takes every line inside the table away, and both move the same
+            <code class="code">--ui-rule</code>
+            token, so a container can answer for a whole region.
+          </p>
+          <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Default</p>
+              <table class="data-table" data-testid="data-table-rules-default">
+                <thead>
+                  <tr>
+                    <th scope="col">Package</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Styles</th>
+                    <td>Ready</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Theme</th>
+                    <td>Planned</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    <td>2</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">.ruled</p>
+              <table class="data-table ruled" data-testid="data-table-ruled">
+                <thead>
+                  <tr>
+                    <th scope="col">Package</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Styles</th>
+                    <td>Ready</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Theme</th>
+                    <td>Planned</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    <td>2</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">.ruleless</p>
+              <table class="data-table ruleless" data-testid="data-table-ruleless">
+                <thead>
+                  <tr>
+                    <th scope="col">Package</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">Styles</th>
+                    <td>Ready</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Theme</th>
+                    <td>Planned</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th scope="row">Total</th>
+                    <td>2</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="stack tight">
           <h3 class="text-title-sm">Row intent</h3>
           <p class="text-body text-text-secondary">
             The one place intent cascades: rows are parts of the table rather than independent components, so they

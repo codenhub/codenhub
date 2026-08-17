@@ -149,10 +149,30 @@ test.describe("aesthetics", () => {
 
       await page.goto(withAesthetic(TYPOGRAPHY_URL, "neobrutalism"));
 
-      const inkedCap = await readStyles(page, "kbd-default-none", properties);
+      const inkedCap = await readStyles(page, "kbd-default-none", [...properties, "background-color"]);
       const ink = await resolveToken(page, "--color-text");
+      /* A chip rests `soft`, and `box` blends a line toward the plate it rings by
+         the resting fill, so the ink sets the edge without being the edge whole.
+         Restating the blend here rather than loosening the comparison keeps the
+         assertion exact: what is checked is that the aesthetic's ink is the ink
+         end of that mix, not merely that the edge moved somewhere darker. */
+      const inkedEdge = await page.evaluate(
+        ([plate, tone]) => {
+          const probe = document.createElement("span");
 
-      expectSameColor(inkedCap["border-top-color"]!, ink, "inked key cap edge");
+          probe.style.color = `color-mix(in oklab, ${plate} 12%, ${tone})`;
+          document.body.append(probe);
+
+          const resolved = getComputedStyle(probe).color;
+
+          probe.remove();
+
+          return resolved;
+        },
+        [inkedCap["background-color"]!, ink] as const,
+      );
+
+      expectSameColor(inkedCap["border-top-color"]!, inkedEdge, "inked key cap edge");
       expect(
         getColorDistance(inkedCap["border-top-color"]!, defaultCap["border-top-color"]!),
         "the ink moved the key cap edge",
@@ -166,9 +186,9 @@ test.describe("aesthetics", () => {
       const code = await readStyles(page, "code-chip", ["border-top-color", "box-shadow"]);
 
       /* Code rests edgeless, so the ink has nothing to colour: `--ui-border` at
-         zero mixes the line away and P3 then leaves the fill, which is nothing.
-         It rests at elevation zero too, so the slab multiplies out to a shadow
-         whose every length is zero rather than an offset one. */
+         zero mixes the line away and P3 then leaves nothing behind it. It rests at
+         elevation zero too, so the slab multiplies out to a shadow whose every
+         length is zero rather than an offset one. */
       expect(isTransparent(code["border-top-color"]!), "code border").toBe(true);
       expect(code["box-shadow"], "code shadow").toContain("0px 0px 0px 0px");
     });

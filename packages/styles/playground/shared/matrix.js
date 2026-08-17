@@ -28,8 +28,11 @@ const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning"
    playground is the support surface, so it must not imply otherwise. */
 const PRESENTATIONS = [
   "default",
-  /* One row, not two: at a full fill the edge blends all the way to the
-     background, so `.solid.edged` and `.solid.edgeless` render the same box. */
+  /* One row, not two: `.solid` answers the edge question itself -- it fills the
+     box and takes the line away -- so `.solid` and `.solid.edgeless` are the same
+     box. `.solid.edged` is the documented way back to a line and is left off the
+     grid, because the edge blend still runs that line toward the fill: for every
+     intent whose fill is opaque the cell would repeat the row above. */
   "solid",
   "soft edged",
   "soft edgeless",
@@ -52,6 +55,14 @@ const PRESENTATIONS = [
    the playground is the support surface: rendering a row the package does not
    maintain claims support for it. */
 const FILL_PRESENTATIONS = ["default", "solid", "soft"];
+/* The full grid minus the two `ghost` rows, for the components the registry
+   marks `.ghost` unsupported on while still reading both axes. A key cap, a
+   code chip and a code block rest on a ground, so `.ghost` draws the plate
+   anyway and the row teaches that a class does nothing -- and at zero fill the
+   plate is `--intent-subtle` alone, which renders four of the eight intents as
+   the same near-page chip. A switch is on this list for a different reason,
+   recorded beside it. */
+const NO_GHOST_PRESENTATIONS = ["default", "solid", "soft edged", "soft edgeless"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose
    cell is the trigger badge rather than the bubble. The bubble does read
@@ -109,16 +120,19 @@ const COMPONENTS = {
     states: {},
   },
   kbd: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "kbd",
     text: (intent) => title(intent),
     states: {},
   },
   code: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "code",
     text: (intent) => `${intent}()`,
     states: {},
   },
   pre: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "pre",
     layout: "grid",
     text: (intent) => `const intent = "${intent}";`,
@@ -179,7 +193,7 @@ const COMPONENTS = {
   radio: toggle("radio", "radio"),
   /* A switch reads the edge axis where the other two floor it, so it takes the
      full grid minus the `ghost` rows no toggle supports. */
-  switch: toggle("switch", "checkbox", ["default", "solid", "soft edged", "soft edgeless"]),
+  switch: toggle("switch", "checkbox", NO_GHOST_PRESENTATIONS),
   "data-table": {
     tag: "table",
     layout: "grid",

@@ -17,25 +17,123 @@
 @utility data-table {
   @apply box text-body w-full border-separate text-left;
 
-  --_d-fill: 0%;
+  --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
-  --_d-border: 100%;
+  /* Edgeless, so the frame is asked for rather than inherited from a default
+     nobody can see in their own markup. Published `edged`, `.edged` on a table
+     computed exactly what no class computed -- a switch that could not move
+     anything -- and the frame arrived because of a line in `registry.json`.
+     `.edged` draws it now, and the two boundaries a table keeps whatever else it
+     draws mean a frameless one still reads as a table. */
+  --_d-border: 0%;
   --_d-elevation: 0;
 
   /* Capped the way `box` caps, because the head is a fill of the intent like any
      other and a neutral table head is otherwise a slab of the page's ink with
      ink printed on it. */
   --table-fill: calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
-  --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--intent-subtle));
+  /* The head's plate is the tint, so a table carrying no fill has no head plate.
+     `.ghost` means no tint here the way it means no fill everywhere else, and a
+     ghost table is boundaries and type and nothing else -- which is what `.ghost`
+     is for on this component, since the published resting fill is `soft`.
+
+     Any fill at all brings the ground back whole rather than in proportion. A
+     soft head mixed onto the page instead of onto `--intent-subtle` is a
+     different colour from the one this component has always drawn, and the fill
+     is meant to read as a step past the tint rather than as a replacement for
+     it. A saturating ramp says that, because the signal is a percentage and
+     there is no branch to hang off one: the smallest fill any presentation asks
+     for is 12%, so a multiplier of 100 puts every non-zero fill over the top and
+     leaves zero where it is.
+
+     It reads `--ui-fill` rather than `--table-fill` because that is the question
+     being asked: what the presentation wanted, not what the intent cap and an
+     aesthetic's alpha left of it. A glass `.soft` table still wants its head
+     plate, and neutral's 20% cap has no bearing on whether there is one. Reading
+     the raw class value also keeps the expression a `calc()` over one `var()`
+     rather than over `--table-fill`'s own `calc()`/`min()` chain, which matters
+     for the reason `--table-rule-plated` below records. */
+  --table-ground: min(100%, calc(var(--ui-fill, var(--_d-fill)) * 100));
+  --table-head-plate: color-mix(in oklab, var(--intent-subtle) var(--table-ground), transparent);
+  --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--table-head-plate));
   --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+  /* How much rule there is between body rows, and none unless asked for. Ruling
+     every row is a style choice rather than part of what a table is, and tying it
+     to the edge axis made it arrive by implication instead: a table drew rules
+     because its published edge default happened to be `edged`, which is a fact
+     about the registry rather than anything the markup says. A consumer reading
+     their own HTML could not tell whether they had asked for rules.
+
+     `.ruled` is that ask and `.ruleless` is its opposite, with `--ui-rule` behind
+     both -- so a consumer who wants a whole region ruled, or a whole region bare,
+     sets the token on a container instead of classing every table.
+
+     One token covers three positions because the two places that read it take
+     different fallbacks. Unset, each site answers for itself: no rules between
+     rows, but the boundaries below still drawn. Set, the answer is the same at
+     both. So `.ruled` writes 100% and gets rules everywhere, `.ruleless` writes 0%
+     and gets a table with no lines in it at all, and a table nobody classed sits
+     between them. A second token would have said the same thing with more parts,
+     and would have let the two drift. */
+  --table-rule-amount: var(--ui-rule, 0%);
+  --table-boundary-amount: var(--ui-rule, 100%);
+  /* What the rule is drawn in, which is not the same tone at every fill.
+     `.ghost` and `.soft` keep `--intent-border` -- the slot an aesthetic restates
+     through `--ui-ink` -- because at those fills the plate has not swallowed it.
+     `.solid` is where it has: at a full fill `--intent-border` *is* the plate for
+     every intent, and at neutral's capped fill it is a near shade of the same
+     grey, so the rule the rows are separated by disappears exactly where the
+     plate is busiest.
+
+     The filled case draws in `currentColor` instead, at a fifth. That is the ink
+     the cell is already printing -- `--table-head-fg` on a head, `box`'s own
+     `--_fg` in the body -- so it reads on a light plate and a dark one without a
+     per-intent branch, and it lands *over* the plate because a translucent border
+     composites onto the background the element already painted.
+
+     Naming the ink rather than composing it is also what keeps this expression
+     cheap, and cheap is a requirement here rather than a preference. Written as
+     `color-mix(--table-head-fg 20%, --_bg)` the rule expanded, through four levels
+     of substitution, into a `color-mix()` over two more `color-mix()`es over a
+     `min()`/`max()`/`calc()` chain -- and every `th` and `td` on a page resolves it.
+     WebKit's renderer crashed outright on the two routes that draw tables, taking
+     22 specs across four files with it, while Chromium and Firefox rendered them
+     correctly. Neither the depth nor the table alone did it: bisected, the new
+     tokens were fine until the cells consumed them.
+
+     `currentColor` and `transparent` are leaves the engine has resolved already,
+     which is what takes the expression back down to something every engine can
+     carry. `--table-row-hover` below is written the same way, for the same
+     reason. */
+  --table-rule-plated: color-mix(in oklab, currentColor 20%, transparent);
+  --table-rule-tone: color-mix(in oklab, var(--table-rule-plated) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --table-rule: color-mix(in oklab, var(--table-rule-tone) var(--table-rule-amount), transparent);
+  --table-boundary: color-mix(in oklab, var(--table-rule-tone) var(--table-boundary-amount), transparent);
   /* A hovered row is a step from the table it is in, not from a tone the page
      happens to own. Mixed into `--color-foreground` it was neither: a solid
      table paints its body with the intent, so a primary table in dark theme is
      white and its hovered row came out near-black -- a dark band across a light
-     table. Mixing into `--_bg` makes the step relative at every fill, the way
-     `box-hover` is: a filled table shifts within its own colour, a soft one
-     deepens its tint, and a ghost one picks up a faint wash of the page. */
-  --table-row-hover: color-mix(in oklab, var(--intent-hover) 8%, var(--_bg));
+     table. Painting a translucent step instead makes it relative at every fill,
+     the way `box-hover` is: the row composites onto whatever plate the table
+     drew, so a filled table shifts within its own colour, a soft one deepens its
+     tint, and a ghost one picks up a faint wash of the page.
+
+     Which tone it steps toward has to move with the fill as well. On a bare or
+     tinted plate that is `--intent-hover`, the deepening every other component
+     gets. On a filled one it cannot be: `--intent-hover` is
+     `mix(--intent-color 82%, --intent-strong)`, which is very nearly the colour
+     the plate is already painted, so a step toward it is no step. Measured, a
+     solid success table moved 1.00:1 in light and a solid destructive one
+     1.008:1 -- the feedback was declared and invisible. A filled plate steps
+     toward `currentColor` instead, which is the ink that plate already carries
+     and therefore always contrasts with it.
+
+     Both ends are leaves, and the step lands on `transparent` rather than on
+     `--_bg`, for the reason `--table-rule-plated` above gives: compositing is
+     what the browser does with a translucent background anyway, so naming `--_bg`
+     buys the same colour for two more levels of substitution. */
+  --table-hover-tone: color-mix(in oklab, currentColor var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+  --table-row-hover: color-mix(in oklab, var(--table-hover-tone) 12%, transparent);
 
   border-spacing: 0;
   overflow: hidden;
@@ -50,15 +148,45 @@
     color: var(--table-head-fg);
   }
 
-  /* The cell rules take the frame's colour and not its width. A rule between two
-     rows is structure rather than the silhouette, so it stays hairline under an
-     aesthetic that draws a thick edge, and it survives one that draws no border
-     at all. */
+  /* Every cell carries the hairline; what varies is whether it is painted. A rule
+     is structure rather than the silhouette, so it stays hairline under an
+     aesthetic that draws a thick edge, and it survives a fill that would
+     otherwise paint over it. */
   & th,
   & td {
     @apply border-b px-4 py-3 align-top;
 
-    border-color: var(--_edge);
+    border-color: var(--table-rule);
+  }
+
+  /* The two lines that separate the parts of a table from each other: under the
+     head and above the foot. They are boundaries rather than decoration on the
+     rows, so they are drawn by default where the row rules are not, and they do
+     not answer to the edge axis -- `.edgeless` takes the silhouette off the box,
+     and a head that runs into its own body is not a silhouette question.
+
+     The foot draws upward rather than relying on the last body row drawing down,
+     because with rules off that row paints nothing. Stated on the foot, the
+     boundary holds at every setting. */
+  & thead tr:last-child > * {
+    border-bottom-color: var(--table-boundary);
+  }
+
+  & tfoot tr:first-child > * {
+    @apply border-t;
+
+    border-top-color: var(--table-boundary);
+  }
+
+  /* Rules between body rows, on request -- and every line off, on the opposite
+     request. `.ruleless` is declared second so it wins the nonsense combination
+     rather than leaving it to whichever class the author typed first. */
+  &.ruled {
+    --ui-rule: 100%;
+  }
+
+  &.ruleless {
+    --ui-rule: 0%;
   }
 
   & th {
@@ -76,16 +204,43 @@
     background-color: var(--table-row-hover);
   }
 
-  & tbody tr:last-child > * {
+  /* The rule comes off the row that is visually last, which is not always the
+     last row of the body. Written as `tbody tr:last-child` it came off the body's
+     last row unconditionally, so a table with a footer lost the one rule that
+     separates the two -- the summary ran straight on from the rows it summarises --
+     while the footer kept a bottom rule of its own, drawing a hairline immediately
+     inside the frame. A missing line where one belongs and a doubled one where it
+     does not, from the same declaration.
+
+     Both selectors are `:last-child` on the section, so whichever section the
+     markup puts last is the one that loses its rule. That covers a footer written
+     before the body, which HTML still allows, and multiple bodies, where only the
+     last one ends the table.
+
+     It went unseen because it was invisible until this release: `thead` and
+     `tfoot` shared an unconditional `--intent-subtle` plate, so the footer was a
+     band and the band did the separating. `.ghost` dropping that plate is what
+     left the rule doing the job alone. */
+  & tbody:last-child tr:last-child > *,
+  & tfoot:last-child tr:last-child > * {
     @apply border-b-0;
   }
 }
 
 /* Three components rest on a ground rather than on nothing: a key cap, an inline
    code chip and a code block are each a quiet tinted plate at rest, and that tone
-   is `--intent-subtle` rather than a fill of the component's own intent. Writing
-   it as `soft` would be a different colour and would leave `.ghost` looking
-   broken, so the ground is stated and the fill still rests at zero.
+   is `--intent-subtle` rather than a fill of the component's own intent.
+
+   All three rest at `soft`, and `.ghost` is published as unsupported on them.
+   The ground is what makes a chip a chip, and `.ghost` asks for no fill while
+   the ground stays -- so on these three it drew the plate anyway and meant
+   nothing, which is the opposite of what it means everywhere else. Worse, at
+   zero fill the plate is `--intent-subtle` alone, and that slot is a near-page
+   tint: measured on the light page, a ghost `code` chip was `#e5e5e5` for both
+   neutral and primary, and `#f5f5f5` for secondary at 1.04:1 against a `#fafafa`
+   page. A class that renders four intents as the same invisible chip is not a
+   variation. Resting at `soft` puts a real 12% of the intent over the ground, so
+   the plate is a step past the page and the intents separate.
 
    Each used to restate its foreground too, because `box` mixed toward
    `--intent-color` -- the tone meant to sit *on* a page rather than on a tint of
@@ -95,7 +250,7 @@
 @utility kbd {
   @apply box inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
 
-  --_d-fill: 0%;
+  --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
   --_d-elevation: 0;
@@ -111,7 +266,7 @@
 @utility code {
   @apply box px-1.25 py-0.75 font-mono;
 
-  --_d-fill: 0%;
+  --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
   --_d-border: 0%;
   --_d-elevation: 0;
@@ -125,7 +280,7 @@
 @utility pre {
   @apply box block overflow-x-auto px-2.5 py-1.5 font-mono;
 
-  --_d-fill: 0%;
+  --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
   --_d-border: 0%;
   --_d-elevation: 0;

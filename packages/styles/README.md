@@ -51,6 +51,9 @@ also supported. See [Tokens](./docs/tokens.md) for precedence details.
 `.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
 and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
 container sets the look below it and any element can still override it.
+`.solid` also takes the boundary away, because a filled box ringed in another
+color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the
+way back to a line.
 
 ```html
 <div class="soft">

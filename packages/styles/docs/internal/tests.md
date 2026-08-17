@@ -115,6 +115,11 @@ the observable contract.
 
 - Component-focused specs cover buttons, forms, feedback, surfaces, typography,
   layout, native mappings, themes, and shared composition behavior.
+- Elevation is asserted off the composited `box-shadow` rather than off
+  `--ui-elevation`: the claim is that one unitless number scales the geometry an
+  aesthetic supplies, which is only observable after the multiplication. Both the
+  plain step and the neobrutalist slab are covered, along with the inheritance
+  and the per-element opt-out.
 - Form checks retain direct and inherited fill coverage for unchecked checkbox
   and radio boundaries, along with focus, forced-color, and reduced-motion
   behavior.

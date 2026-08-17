@@ -3,14 +3,20 @@
    line at its boundary. Exactly one value from each set applies, so the six
    combinations are the whole vocabulary.
 
-   Five of them are distinct. `.solid` collapses the edge question rather than
-   answering it: the line blends toward the box's own background by the fill
-   amount, so at a full fill it *is* the background and there is nothing for
-   `.edged` to add or `.edgeless` to take away. That is the edge blend working,
-   not a gap in the set -- a filled box with a ring of another colour around it is
-   the thing the blend exists to prevent. The playground shows one `Solid` row
-   for the pair, because two rows that render identically claim support for a
-   distinction nobody maintains.
+   A fill class never decides an edge and an edge class never decides a fill.
+   `.solid` briefly broke that rule, writing `--ui-border: 0%` alongside its fill
+   so that a filled box could not be ringed in another colour. It bought a real
+   fix -- the edge blend runs the line toward the fill, which lands *on* the fill
+   when the fill is opaque and on a second coat of the same tint when it is not,
+   so every capped intent that drew a line drew a visible ring over its own plate
+   -- at the cost of the one property that makes the six combinations readable:
+   that each half means only what it says. Two axes that are independent in two
+   cases out of three are not axes.
+
+   The ring is a fault in the blend rather than in the class, and it is recorded
+   as such: `.solid.edged` on a capped intent measures 1.53:1 against its own
+   plate in light and 1.82:1 in dark. `.solid.edgeless` is how a consumer asks
+   for a filled box with no line.
 
    Presentation declares only unitless numbers and percentages. A custom
    property's value is resolved on the element that declares it, so anything
@@ -41,7 +47,11 @@
 
    Named `.ghost` rather than `.bare` because `.bare` and `.edgeless` both read
    as "less of something", so an author wanting no border reached for `.bare`
-   first and got no background instead. `.ghost` says fill and only fill. */
+   first and got no background instead. `.ghost` says fill and only fill.
+
+   A component that rests on a ground rather than on nothing keeps that ground
+   here: `.ghost` is zero fill, not zero paint. `.data-table` is the exception
+   that proves it -- its head plate *is* the tint, so a ghost table drops it. */
 .ghost {
   --ui-fill: 0%;
   --ui-fg-on-fill: 0%;
@@ -49,7 +59,14 @@
 
 /* A line in the intent color, at the aesthetic's material width. The width comes
    from the aesthetic and nothing else: there is no presentation scale on it, so
-   small components need no ceilings to survive a thick one. */
+   small components need no ceilings to survive a thick one.
+
+   The edge is the silhouette and nothing else. Rules *inside* a component that
+   has an inside are a separate decision with its own class -- `.data-table.ruled`
+   -- because tying them here made them arrive by implication: a table drew rules
+   only because its published edge default happened to be `edged`, so whether a
+   consumer got them depended on a default they had not read and could not name.
+   Two questions, two switches. */
 .edged {
   --ui-border: 100%;
 }
