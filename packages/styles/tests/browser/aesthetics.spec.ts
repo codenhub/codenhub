@@ -387,7 +387,7 @@ test.describe("aesthetics", () => {
     ] as const) {
       expect(styles.clipPath, `${label} clip`).toBe("none");
       expect(styles.filter, `${label} filter`).toBe("none");
-      expect(styles.borderRadius, `${label} radius`).toBe("14px");
+      expect(styles.borderRadius, `${label} radius`).toBe("12px");
       /* Glass declares a border width and the bubble is a box that reads it --
          edgeless, so the line is blended into the fill rather than narrowed. The
          backdrop is deliberately not asserted here: this test does not pin the
@@ -500,12 +500,42 @@ test.describe("aesthetics", () => {
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
     });
 
+    /* The knob, in the shape the other two aesthetics already publish: a value
+       set on the element that carries the aesthetic class, resolved there and
+       inherited already-resolved. A consumer who wants tighter glass has one
+       place to say so and does not have to know that `--ui-radius` is what it
+       feeds. */
+    test("takes its corner from the public radius knob", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.createElement("div");
+        const card = document.createElement("div");
+
+        host.className = "glass";
+        host.style.setProperty("--glass-radius-surface", "2rem");
+        card.className = "card";
+        host.append(card);
+        document.querySelector('[data-testid="preview-root"]')!.append(host);
+
+        const radius = getComputedStyle(card).borderTopLeftRadius;
+
+        host.remove();
+        return radius;
+      });
+
+      expect(measured, "overridden surface radius").toBe("32px");
+    });
+
     test("still applies its material tokens to controls", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "glass"));
 
       const styles = await readStyles(page, "btn-default-primary", ["border-radius"]);
 
-      expect(styles["border-radius"]).toBe("14px");
+      /* `--glass-radius`, resolved through `--ui-radius`. A bubble takes the
+         control radius rather than the surface one, so both this and the tooltip
+         above measure the same knob. */
+      expect(styles["border-radius"]).toBe("12px");
     });
 
     test("composes its shadow from the public elevation color", async ({ page }) => {

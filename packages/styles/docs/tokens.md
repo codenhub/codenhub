@@ -346,11 +346,13 @@ you. Only aesthetics with a token listed below expose an aesthetic-specific
 token. Tune all other behavior through the shared material tokens above. Listed
 tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token          | Aesthetic       | Purpose                                                     | Default                           |
-| -------------- | --------------- | ----------------------------------------------------------- | --------------------------------- |
-| `--neo-offset` | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
-| `--pixel-unit` | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
-| `--font-pixel` | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
+| Token                    | Aesthetic       | Purpose                                                     | Default                           |
+| ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
+| `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                         |
+| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
+| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
+| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
 
 Set an aesthetic token on the element carrying the aesthetic class. A custom
 property resolves its own `var()` references where it is declared, so a value set

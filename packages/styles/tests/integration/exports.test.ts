@@ -80,7 +80,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/] },
+  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius:/] },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
   "./tw/aesthetics/pixel": {

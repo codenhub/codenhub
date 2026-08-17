@@ -1050,6 +1050,10 @@ panel and nothing more.
 - Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is
   dropped. Transparency is the whole aesthetic, so the honest degradation is an
   opaque surface rather than a softer blur.
+- Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem.
+  Rounder than the base geometry, because a translucent panel with a tight corner
+  reads as a cut-out rather than as a pane; a full step above `--radius-surface`
+  landed closer to a pill than to glass.
 
 ### `.neobrutalism`
 

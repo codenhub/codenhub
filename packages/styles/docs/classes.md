@@ -432,6 +432,17 @@ and `.floating` still doubles it.
 `.glass` needs something behind it to blur. On a flat page background it renders
 as a plain translucent panel.
 
+`--glass-radius` and `--glass-radius-surface` are the corners, at `0.75rem` and
+`1rem`. Glass is rounder than the base geometry because a translucent panel with
+a tight corner reads as a cut-out rather than as a pane. Set them on the element
+carrying the class:
+
+```html
+<section class="glass" style="--glass-radius-surface: 1.5rem">
+  <div class="card">Softer</div>
+</section>
+```
+
 The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only.
 Controls stay solid and sit on the glass: a blur under every control of a dense
 cluster costs a composited layer apiece and reads as noise. Controls still take

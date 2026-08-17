@@ -8,8 +8,19 @@
    compositing layer apiece, and one under every control of a dense cluster reads
    as noise. */
 .glass {
-  --ui-radius: 0.875rem;
-  --ui-radius-surface: 1.25rem;
+  /* The one knob this aesthetic has, in the shape the other two already use --
+     `--neo-offset` and `--pixel-unit` are set on the element that carries the
+     aesthetic class, and so is this. Glass is softer than the base geometry
+     because a translucent panel with a tight corner reads as a cut-out rather
+     than as a pane, but it was a full step above `--radius-surface` and landed
+     closer to a pill than to glass. A pair rather than one value plus a
+     multiplier: controls and surfaces do not scale together, and 12/16 is the
+     ratio that keeps a button inside a card looking like it belongs there. */
+  --glass-radius: 0.75rem;
+  --glass-radius-surface: 1rem;
+
+  --ui-radius: var(--glass-radius);
+  --ui-radius-surface: var(--glass-radius-surface);
   --ui-border-width: 1px;
   --ui-border-max: 100px;
 
