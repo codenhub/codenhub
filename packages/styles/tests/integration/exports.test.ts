@@ -78,9 +78,15 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     candidates: "stack data-table",
     patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
+  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/] },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius:/] },
+  /* The bar is a shade of the element rather than a repeat of it, which takes the
+     opaque depth colour as well as the ink amount. Both are asserted because
+     either one alone leaves the bar invisible. */
+  "./tw/aesthetics/chunky-tile": {
+    patterns: [/\.chunky-tile\{/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
+  },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
   "./tw/aesthetics/pixel": {

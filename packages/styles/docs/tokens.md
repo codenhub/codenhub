@@ -353,6 +353,8 @@ tokens are available only where that aesthetic's stylesheet is imported.
 | `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
 | `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
 | `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
+| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                             |
+| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack      |
 
 Set an aesthetic token on the element carrying the aesthetic class. A custom
 property resolves its own `var()` references where it is declared, so a value set

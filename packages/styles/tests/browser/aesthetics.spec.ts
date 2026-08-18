@@ -66,6 +66,43 @@ const resolveToken = (page: Page, token: string) =>
     return resolved;
   }, token);
 
+/* `box` composes colours with `color-mix(in oklab, ...)`, and an engine hands the
+   result back in the space it was authored in -- `oklab()`, not `rgb()` -- so a
+   luminance comparison cannot read the serialized string directly. Painting the
+   colour onto a 1x1 canvas over an opaque ground forces it through the engine's
+   own conversion, alpha included, which is the number a reader actually sees. */
+const readComposited = (page: Page, colors: readonly string[]) =>
+  page.evaluate((values: readonly string[]) => {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = 1;
+    canvas.height = 1;
+
+    const context = canvas.getContext("2d", { willReadFrequently: true })!;
+
+    return values.map((value) => {
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, 1, 1);
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+
+      const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+      const channels = [red!, green!, blue!].map((channel) => {
+        const ratio = channel / 255;
+
+        return ratio <= 0.03928 ? ratio / 12.92 : ((ratio + 0.055) / 1.055) ** 2.4;
+      });
+
+      return {
+        luminance: 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!,
+        rgb: [red!, green!, blue!] as [number, number, number],
+      };
+    });
+  }, colors);
+
+const channelDistance = (a: readonly number[], b: readonly number[]) =>
+  Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
+
 test.describe("aesthetics", () => {
   test("applies the selected aesthetic to the ordinary fixtures", async ({ page }) => {
     await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
@@ -916,6 +953,123 @@ test.describe("aesthetics", () => {
       }
 
       expect(isTransparent(readShadowColor(input!.ring)), "input ring").toBe(false);
+    });
+  });
+  test.describe("chunky tile", () => {
+    /* The whole aesthetic in one measurement. `--intent-border` IS `--intent-color`
+       for all six hue intents, so at a full shadow ink the bar equals the plate
+       exactly -- the state this aesthetic exists to avoid, where the bar is painted
+       and invisible and the press then reads as the button spontaneously
+       shortening. An opaque `--elevation-color` plus a partial ink is what turns
+       the repeat into a shade. */
+    test("seats a filled tile on a darker shade of its own fill", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const probes = await readAll(
+        page,
+        ["btn-default-success", "btn-default-warning", "btn-default-info"],
+        ["background-color", "box-shadow"],
+      );
+
+      /* oxlint-disable-next-line no-await-in-loop -- two probes, read in turn on one page. */
+      for (const [testId, styles] of probes) {
+        // oxlint-disable-next-line no-await-in-loop
+        const [fill, bar] = await readComposited(page, [
+          styles["background-color"]!,
+          readShadowColor(styles["box-shadow"]!),
+        ]);
+
+        expect(bar!.luminance, `${testId} bar is darker than its fill`).toBeLessThan(fill!.luminance);
+        /* Far enough apart to read as a separate surface rather than as an
+           antialiasing seam. Measured, identical on both palettes because the hue
+           intents do not vary by theme: success #007a55 on #004c34 is 57, warning
+           #e17100 on #914600 is 91, info #4f39f6 on #30219f is 95. */
+        expect(channelDistance(fill!.rgb, bar!.rgb), `${testId} bar separates from its fill`).toBeGreaterThan(40);
+      }
+    });
+
+    test("drops the bar straight down and presses the element into it", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const button = await readStyles(page, "btn-default-none", [
+        "box-shadow",
+        "border-radius",
+        "border-top-width",
+        "--ui-active-shadow-y",
+        "--ui-active-transform",
+        "--ui-hover-transform",
+      ]);
+
+      /* No x offset is what separates this from neobrutalism, and no blur or spread
+         is what keeps the bar inside the element's own silhouette so its corners
+         stay in step with the radius. */
+      expect(button["box-shadow"], "resting bar").toMatch(/\b0px 4px 0px 0px\b/);
+      expect(button["border-radius"], "radius").toBe("16px");
+      expect(button["border-top-width"], "line").toBe("2px");
+
+      /* `:focus-visible` can be driven from a keyboard but `:active` cannot, so the
+         press asserts the tokens the rule reads. That the rule reads them is
+         `button.css`'s contract and the neobrutalism suite already covers it. */
+      expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
+      expect(button["--ui-active-transform"].trim(), "the element travels the bar's depth").toBe("translateY(4px)");
+      expect(button["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
+    });
+
+    /* An unfilled tile gets its bar for free and correct: the shadow ink resolves
+       `--intent-border`, which is the token that drew the line, so a card's border
+       and its bar are the same colour by construction rather than by a second
+       token kept in step with the first. */
+    test("matches an unfilled tile's bar to the line it already draws", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "chunky-tile"));
+
+      const card = await readStyles(page, "card-default-none", ["background-color", "border-top-color", "box-shadow"]);
+      const [fill, bar, line] = await readComposited(page, [
+        card["background-color"]!,
+        readShadowColor(card["box-shadow"]!),
+        card["border-top-color"]!,
+      ]);
+
+      expect(bar!.luminance, "bar is darker than the plate").toBeLessThan(fill!.luminance);
+      /* The bar is the line run toward the depth colour, so the two share a family
+         rather than a value. This asserts the family, not equality. */
+      expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
+    });
+
+    /* The recorded R3 exception. `.btn` is the only action the package ships, and
+       the bare element is named beside the class so the treatment reaches an
+       unclassed `<button>` the way every Tier 1 token already does. */
+    test("weights its action labels, including on an unclassed button", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const classed = await readStyles(page, "btn-default-none", ["text-transform", "font-weight", "letter-spacing"]);
+
+      expect(classed["font-weight"], "classed weight").toBe("800");
+      expect(classed["letter-spacing"], "classed tracking").not.toBe("normal");
+      /* Casing is the application's decision. An aesthetic that recased a label
+         would also recase every acronym, proper noun and locale whose rules are
+         not English's, which is not a material choice at all. */
+      expect(classed["text-transform"], "casing is left alone").toBe("none");
+
+      await page.goto(withAesthetic(NATIVE_URL, "chunky-tile"));
+
+      const bare = await page.evaluate(() => {
+        const styles = getComputedStyle(document.querySelector('[data-testid="native-root"] button')!);
+
+        return { transform: styles.textTransform, weight: styles.fontWeight };
+      });
+
+      expect(bare.weight, "bare <button> weight").toBe("800");
+      expect(bare.transform, "bare <button> casing").toBe("none");
+    });
+
+    /* Depth stays a per-element decision, and this aesthetic changes none of it:
+       the registry rests a badge at zero, so it sits on no bar until asked. */
+    test("leaves the components the registry rests flat without a bar", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "chunky-tile"));
+
+      const badge = await readStyles(page, "badge-default-none", ["box-shadow"]);
+
+      expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
     });
   });
 });

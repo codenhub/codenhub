@@ -518,6 +518,12 @@
     {
       "class": "pixel",
       "completeShadow": false
+    },
+    {
+      "class": "chunky-tile",
+      "completeShadow": false,
+      "selectors": ["btn"],
+      "selectorReason": "A heavy, slightly tracked label is what makes an action read as a tile, and neither `font-weight` nor `letter-spacing` holds a material slot -- adding two would put typography into the material vocabulary for one aesthetic. A slot buys nothing either: `.btn` is the only action the package ships, so an action-scoped token would be this same list with an indirection in front of it. Casing is left alone deliberately: how a label is worded is the application's decision, not the aesthetic's."
     }
   ]
 }

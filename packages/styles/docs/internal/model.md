@@ -1090,6 +1090,26 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font
   binary.
 
+### `.chunky-tile`
+
+Rounded slabs seated on a darker shade of themselves, pressed flat on click.
+
+- 16px on controls and surfaces alike, and 2px lines. One radius rather than a
+  pair, because the corner is what makes a 40px button and a 200px card read as
+  the same object; chips clamp it themselves at `--radius-small`.
+- The bar is solid, unblurred, straight down, and spreadless. Zero x is what
+  separates it from neobrutalism, whose two-axis offset reads as a card lifted off
+  the page where this is a slab seated on it.
+- The bar is a shade of the element rather than a repeat of it, which takes an
+  opaque `--elevation-color` as well as a partial `--ui-shadow-ink`. See the
+  correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
+- An unfilled tile's bar and its line are the same colour by construction: both
+  resolve `--intent-border`.
+- Hover holds still and the press moves, which is the opposite of neobrutalism and
+  deliberate — a seated slab has one gesture.
+- Actions are heavier and slightly tracked, through the one recorded selector
+  list. Casing is left to the application.
+
 ## What dies
 
 | Goes away                      | Replaced by                                                                                                        |
@@ -1234,16 +1254,41 @@ Rounded slabs sitting on a darker shade of themselves, pressed flat on click, wi
 uppercase actions. Built in the spike against a real screenshot:
 
 ```css
-.duolingo {
+.chunky-tile {
   --ui-radius: 1rem;
   --ui-radius-surface: 1rem;
   --ui-border-width: 2px;
+  --elevation-color: rgb(0 0 0);
+  --ui-shadow-ink: 72%;
   --ui-shadow-y: 4px;
-  --ui-shadow-ink: 100%;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translateY(4px);
 }
 ```
+
+**The two colour lines are a correction.** The spike wrote this block with
+`--ui-shadow-ink: 100%` and no depth colour, and claimed the result below — that a
+success button sits on a dark green edge. It does not. `--intent-border` _is_
+`--intent-color` for all six hue intents, so at a full ink the bar equals the
+plate exactly: measured when the aesthetic was built, `.btn.success` printed
+`#007a55` on `#007a55`, an sRGB distance of 0, identically on both palettes. The
+bar was painted and invisible, and the press then read as the button spontaneously
+shortening.
+
+Lowering the ink alone does not rescue it, because the other end of that mix is
+`--elevation-color` at `rgb(15 23 42 / 0.08)`: the mix runs toward something nearly
+transparent, composites against the page, and the bar comes out _lighter_ than the
+plate. Naming the depth colour opaque points the same mix at black, and one value
+then darkens on both palettes — `#007a55` on `#004c34`, `#e17100` on `#914600`,
+`#4f39f6` on `#30219f`.
+
+That is also the answer to "which token darkens a shadow", which this section
+below says was dropped on purpose: it was not lost, it moved. `--elevation-color`
+is the base the ink mixes toward, so an aesthetic names its own depth colour and
+`--ui-shadow-ink` says how far the intent walks away from it. No second token, and
+no nested `color-mix()` — which matters, because nesting two is what
+[`--ui-shadow-edge`](#material-tokens) found WebKit resolving as though the
+percentage were zero.
 
 Depth in that aesthetic is not uniform, and it does not have to be: the promo
 panel that should not sit on a slab carries `.flat`, and the aesthetic never
@@ -1254,14 +1299,20 @@ learns about it.
 ```
 
 ```css
-.duolingo :is(.btn, button) {
+.chunky-tile :is(.btn, button) {
   font-weight: 800;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 ```
 
-Eight tokens and one two-selector rule. Nothing modified, and the result
+The spike's version of that rule also set `text-transform: uppercase`, and the
+shipped one does not. Weight and tracking are what the type is made of; casing is
+how a label is _worded_, which belongs to the application. An aesthetic that
+recases silently also recases every acronym, proper noun, and locale whose rules
+are not English's — a correctness cost for a look a consumer can write in one line
+of their own.
+
+Nine tokens and one two-selector rule. Nothing modified, and the result
 holds across intents: a success button sits on a dark green edge, a neutral card
 on a dark gray one, a selected `.soft.edged.info` card on a dark blue one --
 because the shadow composes against each component's own intent at the
@@ -1289,7 +1340,7 @@ Checked against the model rather than promised:
 | Liquid glass | Blur, translucent ground, radius, hairline edge   | Specular highlight on surfaces     |
 | Cyberpunk    | Clipped corners, edge width, glow via shadow tint | Scanline background on surfaces    |
 | Synthwave    | Radius, glow, gradient ground                     | Gradient text or chrome on actions |
-| Chunky tile  | Everything above                                  | Uppercase actions                  |
+| Chunky tile  | Everything above, and the shade under it          | Heavier, tracked action labels     |
 
 Three of the four want a treatment on _surfaces_, which is a slot. Only the fourth
 wants one on actions, and `.btn` is the only action there is.

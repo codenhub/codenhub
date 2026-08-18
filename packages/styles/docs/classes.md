@@ -393,6 +393,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.                     |
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
+| `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless`
 intentionally removes the visible material traits from components whose
@@ -475,6 +476,51 @@ card draws one, and a field keeps one whatever a container asks for.
 
 `--font-pixel` is yours to supply. The package ships no font binary, so the
 aesthetic has no network side effect and falls back to the monospace stack.
+
+### Chunky tile
+
+Rounded slabs sitting on a darker shade of themselves, pressed flat on click. The
+look mobile learning and game apps use; it is named for what it is made of rather
+than for any one product.
+
+`--tile-lift` is how deep the bar is and how far a press travels, `4px` by
+default. One number drives both, so the top edge drops by exactly the bar's depth
+and the bottom edge does not move:
+
+```html
+<section class="chunky-tile" style="--tile-lift: 6px">
+  <button class="btn success">Continue</button>
+</section>
+```
+
+The bar is a darker shade of the element's own colour rather than a shadow under
+it, so it follows every intent: a success button sits on a dark green edge, a
+destructive one on a dark red edge, and a plain card on a grey edge that matches
+the line it already draws. Measured on the light palette, `.btn.success` is
+`#007a55` on `#004c34`. On a dark page a near-black surface cannot go darker, so
+its bar lands lighter and reads as a rim.
+
+Only what the registry rests above zero sits on a bar — buttons, cards and
+tooltips. A badge, chip or field is flat until it asks for depth with `.raised`,
+and `.flat` takes the bar off anything:
+
+```html
+<div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
+```
+
+`--font-rounded` is yours to supply. A heavy rounded grotesque is most of this
+look and the package ships no font binary, so with nothing supplied the page's own
+stack is used.
+
+Action labels are drawn heavier and slightly tracked. Casing is left alone: how a
+label is worded is the application's decision, so if you want uppercase buttons,
+write that rule in your own stylesheet.
+
+Two things this aesthetic does not reach. `.card.interactive` hovers but does not
+press — the press is a `.btn` behavior — so a chunky answer tile does not travel
+into its bar. And the shipped `.primary` is a near-black monochrome, which leaves
+a primary button's bar almost invisible against its own plate; give `.primary` a
+hue if it is the call to action.
 
 Nothing casts a shadow except the tooltip bubble, which needs separating from
 whatever it floats over. The rest sit flat on the page.
