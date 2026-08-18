@@ -1004,7 +1004,7 @@ test.describe("aesthetics", () => {
          is what keeps the bar inside the element's own silhouette so its corners
          stay in step with the radius. */
       expect(button["box-shadow"], "resting bar").toMatch(/\b0px 4px 0px 0px\b/);
-      expect(button["border-radius"], "radius").toBe("16px");
+      expect(button["border-radius"], "radius").toBe("12px");
       expect(button["border-top-width"], "line").toBe("2px");
 
       /* `:focus-visible` can be driven from a keyboard but `:active` cannot, so the

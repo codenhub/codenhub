@@ -1094,7 +1094,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 
 Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 
-- 16px on controls and surfaces alike, and 2px lines. One radius rather than a
+- 12px on controls and surfaces alike, and 2px lines. One radius rather than a
   pair, because the corner is what makes a 40px button and a 200px card read as
   the same object; chips clamp it themselves at `--radius-small`.
 - The bar is solid, unblurred, straight down, and spreadless. Zero x is what
@@ -1255,8 +1255,8 @@ uppercase actions. Built in the spike against a real screenshot:
 
 ```css
 .chunky-tile {
-  --ui-radius: 1rem;
-  --ui-radius-surface: 1rem;
+  --ui-radius: 0.75rem;
+  --ui-radius-surface: 0.75rem;
   --ui-border-width: 2px;
   --elevation-color: rgb(0 0 0);
   --ui-shadow-ink: 72%;

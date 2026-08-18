@@ -30,10 +30,10 @@
      not scale together; a tile and a button do -- the corner is what makes a 40px
      button and a 200px card read as the same object. Chips clamp it themselves:
      `kbd`, `code`, `.checkbox` and `.radio` take
-     `min(var(--ui-radius), var(--radius-small))`, so 16px lands as 4px there
+     `min(var(--ui-radius), var(--radius-small))`, so this lands as 4px there
      rather than turning a 16px checkbox into a circle. */
-  --ui-radius: 1rem;
-  --ui-radius-surface: 1rem;
+  --ui-radius: 0.75rem;
+  --ui-radius-surface: 0.75rem;
 
   /* Half the tile. A 1px border under a 4px bar reads as a shadow with a hairline
      rather than as a slab with an edge. The ceiling is restated so a chunky region
