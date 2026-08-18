@@ -85,7 +85,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      opaque depth colour as well as the ink amount. Both are asserted because
      either one alone leaves the bar invisible. */
   "./tw/aesthetics/chunky-tile": {
-    patterns: [/\.chunky-tile\{/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
+    patterns: [/\.chunky-tile\{/, /--tile-radius,/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */

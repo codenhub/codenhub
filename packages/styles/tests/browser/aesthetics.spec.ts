@@ -1062,6 +1062,45 @@ test.describe("aesthetics", () => {
       expect(bare.transform, "bare <button> casing").toBe("none");
     });
 
+    /* The knob exists for one reason, and this is it. An aesthetic declares the
+       shared material tokens on its own class, and a declaration beats inheritance
+       whatever the specificity -- so a consumer theming from `:root` or a wrapper
+       cannot reach `--ui-radius` at all. Reading a knob here instead lets an
+       ancestor's value flow in, which is the ordinary way an application themes
+       something. The shared token still wins on the element itself and below, so
+       the two reach in opposite directions rather than one replacing the other. */
+    test("takes its corner from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "chunky-tile"));
+
+      const measured = await page.evaluate(() => {
+        const build = (property: string) => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "chunky-tile";
+          card.className = "card";
+          ancestor.style.setProperty(property, "2rem");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const radius = getComputedStyle(card).borderTopLeftRadius;
+
+          ancestor.remove();
+          return radius;
+        };
+
+        return { sharedToken: build("--ui-radius-surface"), knob: build("--tile-radius") };
+      });
+
+      expect(measured.knob, "an ancestor's knob reaches the tile").toBe("32px");
+      /* The counterpart, asserted so the reason the knob exists stays visible: the
+         shared token set on an ancestor is outranked by the aesthetic's own
+         declaration and the tile keeps its default. */
+      expect(measured.sharedToken, "an ancestor's shared token does not").toBe("12px");
+    });
+
     /* Depth stays a per-element decision, and this aesthetic changes none of it:
        the registry rests a badge at zero, so it sits on no bar until asked. */
     test("leaves the components the registry rests flat without a bar", async ({ page }) => {

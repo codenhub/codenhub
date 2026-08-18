@@ -809,13 +809,27 @@ than for any one product.
 
 `--tile-lift` is how deep the bar is and how far a press travels, `4px` by
 default. One number drives both, so the top edge drops by exactly the bar's depth
-and the bottom edge does not move:
+and the bottom edge does not move. `--tile-radius` is the corner, `0.75rem`, and
+it is one value rather than a control/surface pair on purpose — the shared corner
+is what makes a button and the card it sits in read as the same object.
 
 ```html
-<section class="chunky-tile" style="--tile-lift: 6px">
+<section class="chunky-tile" style="--tile-lift: 6px; --tile-radius: 0.5rem">
   <button class="btn success">Continue</button>
 </section>
 ```
+
+Both can also be set on an ancestor, including `:root`, which is what the named
+knobs are for. An aesthetic declares the shared material tokens on its own class,
+and a declaration beats inheritance whatever the specificity, so `--ui-radius` set
+further up cannot reach past it; the knobs are read rather than declared, so an
+inherited value lands.
+
+They reach in opposite directions, and that is the whole difference between them.
+A knob reaches the aesthetic from above and resolves once, so setting one _inside_
+the region does nothing. `--ui-radius` and `--ui-radius-surface` are read by each
+component as it draws, so they work on the element itself and on anything below it
+— which is how you round one card differently from its neighbours.
 
 The bar is a darker shade of the element's own colour rather than a shadow under
 it, so it follows every intent: a success button sits on a dark green edge, a
@@ -1561,6 +1575,7 @@ tokens are available only where that aesthetic's stylesheet is imported.
 | `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
 | `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
 | `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
+| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.              | `0.75rem`                         |
 | `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                             |
 | `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack      |
 

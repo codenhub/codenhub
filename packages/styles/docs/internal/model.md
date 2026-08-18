@@ -1094,9 +1094,12 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 
 Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 
-- 12px on controls and surfaces alike, and 2px lines. One radius rather than a
-  pair, because the corner is what makes a 40px button and a 200px card read as
-  the same object; chips clamp it themselves at `--radius-small`.
+- `--tile-radius` at 12px on controls and surfaces alike, and 2px lines. One knob
+  rather than glass's pair, because the corner is what makes a 40px button and a
+  200px card read as the same object; chips clamp it themselves at
+  `--radius-small`. Named rather than written into `--ui-radius` directly so a
+  consumer can set it from `:root`, which a declaration on the aesthetic's own
+  class would otherwise outrank.
 - The bar is solid, unblurred, straight down, and spreadless. Zero x is what
   separates it from neobrutalism, whose two-axis offset reads as a card lifted off
   the page where this is a slab seated on it.

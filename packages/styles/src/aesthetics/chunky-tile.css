@@ -6,11 +6,30 @@
    Tier 1, plus one recorded selector list at the bottom. Load after the base
    stylesheet. */
 .chunky-tile {
-  /* One lift, and everything is a multiple of it: the bar under a resting element
-     is this deep and a press travels exactly this far, so the top edge drops by
-     the bar's depth and the bottom edge does not move. At 2px the bar reads as a
+  /* The two knobs, and the reason they are *read* here rather than declared here.
+
+     A custom property declared on an element beats an inherited one whatever the
+     specificity, so an aesthetic that declares `--tile-radius: 0.75rem` on its own
+     class has already outranked every ancestor -- including `:root`, which is where
+     an application normally themes something. Measured: with the knob declared on
+     the class, an ancestor setting it left a chunky card at its default 12px.
+
+     Reading it with a fallback instead leaves the token undeclared here, so an
+     ancestor's value inherits down and lands, and a value on the element itself
+     still wins over that. The default lives once, in the fallback.
+
+     The cost is the other direction: these resolve on `.chunky-tile`, so they
+     inherit already-resolved and a *descendant* setting one changes nothing. The
+     shared material tokens are the tool for that -- `--ui-radius` on a descendant
+     still works, because `box` reads it at whichever element draws. The two reach
+     opposite ways on purpose.
+
+     One lift, and everything is a multiple of it: the bar under a resting element
+     is this deep and a press travels exactly this far, so the top edge drops by the
+     bar's depth and the bottom edge does not move. At 2px the bar reads as a
      rendering seam; at 8px the element reads as floating rather than as seated. */
-  --tile-lift: 4px;
+  --_lift: var(--tile-lift, 4px);
+  --_radius: var(--tile-radius, 0.75rem);
 
   /* The tile grey. `--ui-ink` is the neutral line colour and, at the shadow ink
      below, also the neutral bar -- so an unclassed card draws a 2px grey line and
@@ -26,14 +45,16 @@
      grey that still leaves a field legible. */
   --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
 
-  /* One value for both, where glass splits them. A pane and a button inside it do
-     not scale together; a tile and a button do -- the corner is what makes a 40px
-     button and a 200px card read as the same object. Chips clamp it themselves:
-     `kbd`, `code`, `.checkbox` and `.radio` take
+  /* One knob feeding both, where glass publishes a pair. A pane and a button
+     inside it do not scale together, so glass splits them; a tile and a button do
+     -- the corner is what makes a 40px button and a 200px card read as the same
+     object, and letting them drift apart is the one way to lose it.
+
+     Chips clamp it themselves: `kbd`, `code`, `.checkbox` and `.radio` take
      `min(var(--ui-radius), var(--radius-small))`, so this lands as 4px there
      rather than turning a 16px checkbox into a circle. */
-  --ui-radius: 0.75rem;
-  --ui-radius-surface: 0.75rem;
+  --ui-radius: var(--_radius);
+  --ui-radius-surface: var(--_radius);
 
   /* Half the tile. A 1px border under a 4px bar reads as a shadow with a hairline
      rather than as a slab with an edge. The ceiling is restated so a chunky region
@@ -76,7 +97,7 @@
      this one is a slab seated on it. Spread stays zero so the bar cannot widen past
      the element's own silhouette and put its corners out of step with the radius. */
   --ui-shadow-x: 0px;
-  --ui-shadow-y: var(--tile-lift);
+  --ui-shadow-y: var(--_lift);
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
@@ -87,13 +108,13 @@
      inside a neobrutalist one does not inherit that aesthetic's collapse and lose
      its bar under the pointer. */
   --ui-hover-shadow-x: 0px;
-  --ui-hover-shadow-y: var(--tile-lift);
+  --ui-hover-shadow-y: var(--_lift);
   --ui-hover-transform: none;
 
   /* The press, and the reason the lift is one number. */
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
-  --ui-active-transform: translateY(var(--tile-lift));
+  --ui-active-transform: translateY(var(--_lift));
 
   /* Nothing here clips, blurs, thins its fill, or draws its edge as a ring, and an
      aesthetic nested inside one that does has to say so rather than inherit it.
