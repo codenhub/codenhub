@@ -11,7 +11,17 @@
    Load after the base stylesheet. Aesthetics override the neutral defaults the
    shared reset declares at zero specificity, so source order decides. */
 .neobrutalism {
-  --neo-offset: 4px;
+  /* The offset, read with a fallback rather than declared, which is what lets an
+     ancestor set it. A custom property declared on an element beats an inherited
+     one whatever the specificity, so declaring `--neo-offset` here would outrank
+     every ancestor including `:root`, which is where an application normally
+     themes something. The private carries the resolved value to the six places
+     below, so the default lives once.
+
+     It resolves here, on `.neobrutalism`, and inherits down already-resolved: a
+     descendant setting `--neo-offset` on itself changes nothing, and the shared
+     material tokens are the tool for reaching in that direction. */
+  --_neo-offset: var(--neo-offset, 4px);
 
   /* Pure black reads as ink on a light page and disappears on a dark one, so the
      ink follows the theme rather than the palette. A thick border in the neutral
@@ -30,8 +40,8 @@
      is the whole look, so this aesthetic asks for the intent instead of the
      neutral depth colour every other shadow uses. */
   --ui-shadow-ink: 100%;
-  --ui-shadow-x: var(--neo-offset);
-  --ui-shadow-y: var(--neo-offset);
+  --ui-shadow-x: var(--_neo-offset);
+  --ui-shadow-y: var(--_neo-offset);
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
@@ -39,10 +49,10 @@
      replace a nine-selector `:hover` list, and R3 stays intact. */
   --ui-hover-shadow-x: 0px;
   --ui-hover-shadow-y: 0px;
-  --ui-hover-transform: translate(var(--neo-offset), var(--neo-offset));
+  --ui-hover-transform: translate(var(--_neo-offset), var(--_neo-offset));
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
-  --ui-active-transform: translate(var(--neo-offset), var(--neo-offset));
+  --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
 
   /* Nothing here clips or blurs, and an aesthetic nested inside another has to
      say so rather than inherit it. */

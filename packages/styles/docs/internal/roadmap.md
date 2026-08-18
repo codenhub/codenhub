@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-16
+last_updated: 2026-08-18
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -54,6 +54,14 @@ remains active.
 - **The PR is merge-ready**: all required PR checks are green and the PR is
   mergeable with no unresolved blocking review thread or finding.
 
+Publishing is a separate gate and a repository-level one. Neither trusted
+publishing from CI nor a versioning and changelog workflow exists yet -- both are
+open items under `@codenhub` in [the repository roadmap](../../../../docs/roadmap.md)
+-- so `0.1.0` goes out as a manual `npm publish`, which
+`docs/specs/packages-lifecycle.md` allows. The jump from the published `0.0.4`
+carries the whole model rewrite, so the release notes are the only place a
+consumer can find out what moved.
+
 ## Later / Possible
 
 - **WCAG AA text contrast**: Raise _filled_ success and warning component text
@@ -68,11 +76,45 @@ remains active.
   sits on the saturated base and neither is free to move without changing what
   the intent looks like.
 
+- **An interactive card that presses**: `.card.interactive` applies `box-hover`
+  and nothing else, so `--ui-active-transform` and `--ui-active-shadow-*` never
+  reach it. Under `.neobrutalism` and `.chunky-tile` an interactive card hovers
+  but cannot be pressed, which is the one place those two aesthetics are visibly
+  incomplete. The button writes the press inline in five lines; the fix is to
+  lift that into a `box-active` utility beside `box-hover` and apply it in both
+  components, so a third pressable box gets it for free.
+
+- **A primary that reads under a shade**: the shipped `.primary` is a monochrome
+  near-black, so a chunky tile's bar under a primary button lands about 10 units
+  of sRGB distance from the plate above it -- present, and almost invisible. The
+  six hue intents separate cleanly. This is a palette question rather than an
+  aesthetic one, and it is the same root as the filled-contrast item above:
+  neither is free to move without changing what the intent looks like.
+
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
   supported surface and consumer documentation are stable, because the two
   applications would otherwise drift. A demo must not show combinations the
   package does not support.
+
+## Aesthetics assessed and deferred
+
+Both were costed against the current model and neither fits it. Recorded so the
+question is not reopened from scratch.
+
+- **Liquid glass**: the refraction that defines it needs an SVG filter element in
+  the DOM, which a CSS-only package cannot ship; the specular highlight is a
+  surface-only treatment; `clip-path: path()` rejects percentages, so the
+  silhouette cannot scale with the box; and `corner-shape: squircle` is
+  Chrome-only. What is reachable without those is `.glass` with a heavier blur.
+
+- **Synthwave / retro**: its signatures are palette, which [R1](./model.md#rules-for-aesthetics)
+  bars an aesthetic from setting. The glow is `--ui-shadow-blur` scaled by
+  elevation, and 18 of the 21 components rest at zero elevation, so it would
+  reach three of them. `text-shadow` does not inherit into `<button>` or
+  `<input>`, and the grid and scanline backgrounds need a painted layer `box` does
+  not have. Shipping it would mean either breaking R1 or adding a background-image
+  slot, and neither is worth doing before `0.1.0`.
 
 ## Notes
 

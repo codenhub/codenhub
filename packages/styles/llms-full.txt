@@ -66,8 +66,9 @@ way back to a line.
 ```
 
 Aesthetics decide what a component is made of. They are opt-in, so import the
-stylesheet after the base one to make `.neobrutalism`, `.glass`, and `.pixel`
-available. They cascade to any subtree the same way.
+stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and
+`.chunky-tile` available. They cascade to any subtree the same way, and each is
+also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ```css
 @import "@codenhub/styles";

@@ -309,6 +309,40 @@ test.describe("aesthetics", () => {
       await expectPressed("card-default-none-interactive");
     });
 
+    /* The offset is read with a fallback rather than declared, which is what lets
+       an ancestor set it. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that. One knob drives the slab and the travel
+       into it, so a consumer scaling the look scales it whole. */
+    test("takes its offset from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
+
+      const measured = await page.evaluate(() => {
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "neobrutalism";
+          card.className = "card raised";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--neo-offset", "9px");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const { boxShadow } = getComputedStyle(card);
+
+          ancestor.remove();
+          return boxShadow;
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
+      });
+
+      expect(measured.ancestor, "an ancestor's knob offsets the slab").toContain("9px 9px");
+      expect(measured.self, "so does one on the element itself").toContain("9px 9px");
+    });
+
     test("lets an explicit presentation on the element win over the aesthetic", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
 
@@ -765,6 +799,47 @@ test.describe("aesthetics", () => {
          two vertices where the staircase needed four. The unit is the ring's own
          depth, so the cut and what covers it agree by construction. */
       expect(structural["clip-path"], "card clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+    });
+
+    /* The unit is read with a fallback rather than declared, which is what lets an
+       ancestor set it. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that. The corner is the whole look measured
+       in units, so if the knob reaches anything it reaches this. */
+    test("scales its whole grid from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+
+      const measured = await page.evaluate(() => {
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "pixel";
+          card.className = "card";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--pixel-unit", "6px");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const { clipPath, boxShadow } = getComputedStyle(card);
+
+          ancestor.remove();
+          return { clipPath, boxShadow };
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
+      });
+
+      expect(measured.ancestor.clipPath, "an ancestor's knob cuts the corner").toContain(
+        "polygon(0px 6px, 6px 6px, 6px 0px",
+      );
+      expect(measured.self.clipPath, "so does one on the element itself").toContain(
+        "polygon(0px 6px, 6px 6px, 6px 0px",
+      );
+      /* One knob, and the ring follows it too -- the cut and what covers it are the
+         same unit by construction, which is the reason there is only one. */
+      expect(measured.ancestor.boxShadow, "and the ring it covers with").toContain("6px");
     });
 
     /* The other half of the vocabulary: no radius at all. One unit off each

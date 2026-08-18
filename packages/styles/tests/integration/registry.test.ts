@@ -614,8 +614,42 @@ test("no aesthetic sets a presentation token or an intent slot", async () => {
   const problems = (await aestheticSources()).flatMap(({ name, source }) =>
     [...withoutComments(source).matchAll(/(--[a-z-]+)\s*:/g)]
       .map((match) => match[1])
-      .filter((property) => forbidden.has(property) || property.startsWith("--intent-"))
+      .filter(
+        (property) => forbidden.has(property) || property.startsWith("--intent-") || property.startsWith("--color-"),
+      )
       .map((property) => `${name} sets ${property}`),
+  );
+
+  expect([...new Set(problems)]).toEqual([]);
+});
+
+/* R8. An aesthetic declares only what it owns the namespace of, and a knob it
+   publishes to consumers is read rather than declared.
+
+   The reason is the cascade, not tidiness. A custom property declared on an
+   element beats an inherited one whatever the specificity, so an aesthetic that
+   writes `--tile-radius: 0.75rem` on `.chunky-tile` has already outranked every
+   ancestor -- including `:root`, which is where an application normally themes
+   something. Every knob that first shipped in that shape was unreachable from
+   the one place it would be set from: measured, an ancestor setting
+   `--glass-radius-surface` left a glass card at its stock 16px, and the tile
+   corner behaved the same. Reading the knob with its default as the
+   `var()` fallback leaves it undeclared here, so an ancestor's value inherits in
+   and a value on the element itself still wins over that.
+
+   So the three namespaces an aesthetic may declare are `--ui-*`, the shared
+   material tokens it exists to set; `--_*`, its own privates, which is where a
+   knob's resolved value lands; and `--elevation-color`, the depth colour the
+   material table records as an aesthetic's to name. Anything else is a knob
+   wearing a public name, and this fails rather than shipping it dead. */
+test("an aesthetic declares only material, privates, and the depth colour", async () => {
+  const problems = (await aestheticSources()).flatMap(({ name, source }) =>
+    [...withoutComments(source).matchAll(/(--[a-z_][\w-]*)\s*:/g)]
+      .map((match) => match[1])
+      .filter(
+        (property) => !property.startsWith("--ui-") && !property.startsWith("--_") && property !== "--elevation-color",
+      )
+      .map((property) => `${name} declares ${property}; publish it as a knob read with a fallback instead`),
   );
 
   expect([...new Set(problems)]).toEqual([]);

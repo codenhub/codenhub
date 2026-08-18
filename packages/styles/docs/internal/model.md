@@ -674,9 +674,10 @@ deliberate exception where table rows inherit their table's intent.
 
 ## Aesthetic
 
-An aesthetic declares material: lengths, shadows, shapes, font family, and the
-neutral ink. It cascades, and a component resolves each token at its own root
-with the `var()` fallback that is its default.
+An aesthetic declares material: lengths, shadows, shapes, font family, the
+neutral ink, and the colour depth is cast in. It cascades, and a component
+resolves each token at its own root with the `var()` fallback that is its
+default.
 
 ### Material tokens
 
@@ -698,6 +699,7 @@ with the `var()` fallback that is its default.
 | `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                          |
 | `--ui-active-transform` | `none`               | Transform applied while pressed.                      |
 | `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.       |
+| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.   |
 | `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.    |
 | `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.         |
 | `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.            |
@@ -708,6 +710,22 @@ with the `var()` fallback that is its default.
 | `--ui-clip`             | `none`               | Silhouette for structural components.                 |
 | `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                 |
 | `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.    |
+
+`--elevation-color` is the one row that is not a `--ui-*` slot, and it is here
+because an aesthetic legitimately names it. The theme declares it, every
+elevation composes from it, and `--ui-shadow-ink` says how far a component's own
+intent walks away from it -- so between the two they are the whole colour of
+depth, and an aesthetic that owns shadows owns both ends of that mix. Chunky tile
+is the case that proved it: at the shipped `rgb(15 23 42 / 0.08)` the mix runs
+toward something nearly transparent and its bar composites out _lighter_ than the
+plate it sits under. Naming the depth colour opaque is what makes the bar a shade
+of the element, and the [worked example](#worked-example-the-chunky-tile-look)
+records the measurement.
+
+It is deliberately the depth colour and not the palette. `--color-*` is hue, hue
+is intent's, and an aesthetic that repaints it reaches components it never meant
+to -- which is R1, and now [R8](#rules-for-aesthetics) enforces the namespace
+rather than trusting the prose.
 
 The shadow split is the second half of the ink fix. A custom property resolves
 its `var()` references on the element that declares it, so a complete shadow
@@ -758,7 +776,9 @@ behind it.
 ### Rules for aesthetics
 
 - **R1.** An aesthetic declares only material tokens. No aesthetic sets a
-  presentation token or an intent slot other than `--ui-ink`.
+  presentation token, a palette entry, or an intent slot other than `--ui-ink`.
+  Material cascades and is meant to; hue is not, and an aesthetic that writes
+  `--color-*` or `--intent-*` repaints components it never meant to reach.
 - **R2.** A component resolves a material token unconditionally. A no-op material
   value is free, which Architecture measured in all three baseline engines.
 - **R3.** An aesthetic never names a component. It sets tokens. A treatment that
@@ -776,6 +796,16 @@ behind it.
   the whole `box-shadow` becomes invalid at computed-value time, which for a
   non-inherited property means `none`. One unitless zero in an aesthetic removes
   every shadow it reaches.
+
+- **R8.** An aesthetic declares only what it owns the namespace of: `--ui-*`,
+  its own `--_*` privates, and `--elevation-color`. A knob it publishes to
+  consumers is _read_ with its default as the `var()` fallback, never declared.
+  A declaration beats an inherited value whatever the specificity, so a knob
+  declared on the aesthetic's own class outranks every ancestor including
+  `:root` -- which is where an application themes something, and so is the only
+  place the knob was ever going to be set from. All four shipped aesthetics
+  wrote a knob in the declared shape first, and all four were unreachable until
+  this rule was applied to them.
 
 R3 is new, and it is what the material additions above exist to make possible:
 without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would
@@ -961,7 +991,7 @@ things that need the list and checked against the CSS that is written by hand:
 
 ### What validation enforces
 
-Six checks, all of which fail the build:
+Seven checks, all of which fail the build:
 
 1. No duplicate class name anywhere in the package.
 2. No collision with a Tailwind static utility.
@@ -1054,8 +1084,8 @@ panel and nothing more.
   Rounder than the base geometry, because a translucent panel with a tight corner
   reads as a cut-out rather than as a pane; a full step above `--radius-surface`
   landed closer to a pill than to glass. Read with a fallback rather than
-  declared, so an ancestor can set them — see
-  [`.chunky-tile`](#chunky-tile) for why that distinction is not cosmetic.
+  declared, so an ancestor can set them — [R8](#rules-for-aesthetics), which these
+  two were the first to break.
 
 ### `.neobrutalism`
 
@@ -1063,6 +1093,9 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the
 element into its own shadow.
 
 - 2px edges, zero radius everywhere.
+- `--neo-offset` at 4px is the knob: the shadow offset and the hover travel are
+  the same number, so a consumer scaling the look scales it whole. Read with a
+  fallback per [R8](#rules-for-aesthetics), so an ancestor can set it.
 - Ink follows the theme, not the palette: near-black on light, near-white on
   dark. Pure black disappears on a dark page.
 - The offset shadow is the component's own `--intent-border`, so a success button
@@ -1077,10 +1110,13 @@ element into its own shadow.
 
 An 8-bit look built from a stepped silhouette and an inset ring.
 
-- One square grid unit is cut from each corner, and the unit is 4px. The two-step
-  staircase this replaces approximated a curve at half the unit, which is the one
-  shape a low-resolution grid cannot draw: at any size it read as a bevel that had
-  not quite committed.
+- One square grid unit is cut from each corner, and `--pixel-unit` is that unit at
+  4px. Everything is a multiple of it -- the ring is one unit thick, the corner one
+  unit square -- so it is the single knob that scales the look. Read with a
+  fallback per [R8](#rules-for-aesthetics), so an ancestor can set it.
+- The two-step staircase this replaces approximated a curve at half the unit, which
+  is the one shape a low-resolution grid cannot draw: at any size it read as a
+  bevel that had not quite committed.
 - Corners are one unit or nothing. Chips square rather than step, because one unit
   off each corner of a 24px badge is a bite rather than a corner.
 - The edge is a one-unit inset ring, the same size as the cut, so the corner is
@@ -1101,7 +1137,8 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
   200px card read as the same object; chips clamp it themselves at
   `--radius-small`. Named rather than written into `--ui-radius` directly so a
   consumer can set it from `:root`, which a declaration on the aesthetic's own
-  class would otherwise outrank.
+  class would otherwise outrank -- [R8](#rules-for-aesthetics), which this
+  aesthetic is the worked example for.
 - The bar is solid, unblurred, straight down, and spreadless. Zero x is what
   separates it from neobrutalism, whose two-axis offset reads as a card lifted off
   the page where this is a slab seated on it.
@@ -1232,6 +1269,44 @@ Set tokens, touch nothing else. This tier cascades, needs no knowledge of any
 component, and reaches bare `<button>` and `<input>` elements carrying no class at
 all. Most of an aesthetic lives here.
 
+#### Publishing a knob
+
+An aesthetic built out of one number -- pixel's grid unit, neobrutalism's offset,
+the tile's lift -- publishes that number so a consumer can scale the whole look at
+once. Read it, do not declare it. R8, and the shape is always this:
+
+```css
+.chunky-tile {
+  --_tile-lift: var(--tile-lift, 4px);
+
+  --ui-shadow-y: var(--_tile-lift);
+  --ui-active-transform: translateY(var(--_tile-lift));
+}
+```
+
+The private is not decoration. Writing `var(--tile-lift, 4px)` at each of the
+places that need it repeats the default, and two of them drifting apart is a bug
+nothing catches; resolving once into `--_tile-lift` puts the default in one place.
+The name mirrors the knob so the pair is obvious at a glance, and the underscore
+keeps it out of a namespace a component might later want.
+
+What is not obvious is why the knob is read rather than declared, and every
+aesthetic here got it wrong first. `--tile-radius: 0.75rem` on `.chunky-tile`
+looks like the declaration of a default. It is a declaration full stop, and a
+declared custom property beats an inherited one whatever the specificity -- so it
+outranks `:root`, a themed wrapper, and every other ancestor. That is the entire
+population of places a consumer would set it from. Measured before the fix: an
+ancestor setting `--glass-radius-surface` left a glass card at its stock 16px, and
+the knob had bought a name and nothing else. Undeclared, an ancestor's value
+inherits in and a value on the element itself still wins over it.
+
+The trade is real and worth stating: these resolve on the aesthetic's own class
+and inherit already-resolved, so a _descendant_ setting one changes nothing. The
+shared material tokens are the tool for that direction -- `--ui-radius` on a card
+still works, because `box` reads it at whichever element draws. Knobs reach the
+element and above; material reaches the element and below. Neither replaces the
+other.
+
 ### Tier 2 -- a slot, or a selector list you own
 
 Some aesthetics want a treatment that is not a value: a specular highlight on
@@ -1255,21 +1330,31 @@ mechanism with no users is a mechanism that will be wrong when it finally has on
 
 ### Worked example: the chunky-tile look
 
-Rounded slabs sitting on a darker shade of themselves, pressed flat on click, with
-uppercase actions. Built in the spike against a real screenshot:
+Rounded slabs sitting on a darker shade of themselves, pressed flat on click.
+Built in the spike against a real screenshot:
 
 ```css
 .chunky-tile {
-  --ui-radius: 0.75rem;
-  --ui-radius-surface: 0.75rem;
+  --_tile-radius: var(--tile-radius, 0.75rem);
+  --_tile-lift: var(--tile-lift, 4px);
+
+  --ui-radius: var(--_tile-radius);
+  --ui-radius-surface: var(--_tile-radius);
   --ui-border-width: 2px;
   --elevation-color: rgb(0 0 0);
   --ui-shadow-ink: 72%;
-  --ui-shadow-y: 4px;
+  --ui-shadow-y: var(--_tile-lift);
   --ui-active-shadow-y: 0px;
-  --ui-active-transform: translateY(4px);
+  --ui-active-transform: translateY(var(--_tile-lift));
 }
 ```
+
+The spike wrote the two lengths inline; they are knobs in the shipped file, in the
+shape [Tier 1](#publishing-a-knob) describes. The spike also wrote uppercase
+actions, which the aesthetic does not do — casing is how a label is worded, and
+silently recasing one breaks acronyms, proper nouns, and the case rules of
+languages the package does not get to know about. Weight and tracking carry the
+same emphasis and are material.
 
 **The two colour lines are a correction.** The spike wrote this block with
 `--ui-shadow-ink: 100%` and no depth colour, and claimed the result below — that a

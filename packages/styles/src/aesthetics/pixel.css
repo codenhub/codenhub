@@ -9,8 +9,15 @@
 .pixel {
   /* One pixel of the imaginary low-resolution grid. Everything else is a
      multiple of it: the ring is one unit thick and the corner is one unit
-     square, so a consumer scaling this scales the whole look at once. */
-  --pixel-unit: 4px;
+     square, so a consumer scaling this scales the whole look at once.
+
+     Read with a fallback rather than declared, which is what lets an ancestor
+     set it. A custom property declared on an element beats an inherited one
+     whatever the specificity, so declaring `--pixel-unit` here would outrank
+     every ancestor including `:root`, which is where an application normally
+     themes something. The private holds the resolved value for the eighteen
+     places below that read it, so the default lives once. */
+  --_pixel-unit: var(--pixel-unit, 4px);
 
   --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --ui-radius: 0;
@@ -47,14 +54,14 @@
      value. `box` explains why -- the percentage form nests two `color-mix()`
      results, which WebKit resolves as though the percentage were zero. */
   --ui-shadow-edge: ;
-  --ui-shadow-spread: var(--pixel-unit);
+  --ui-shadow-spread: var(--_pixel-unit);
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: 0px;
 
   /* The focus ring is a second inset layer, and shadows paint first-on-top, so it
      has to be wider than the edge to show at all. */
-  --ui-focus-inset: calc(var(--pixel-unit) + var(--focus-ring-width));
+  --ui-focus-inset: calc(var(--_pixel-unit) + var(--focus-ring-width));
 
   /* One square unit off each corner, and nothing else. The staircase this
      replaces stepped twice at half the unit to approximate a curve, which is the
@@ -62,22 +69,22 @@
      that had not quite committed. A single cut of the grid's own unit is the
      shape the look is actually made of.
 
-     The polygon resolves `--pixel-unit` here, on `.pixel`, not on whichever
-     component reads it, which is why the unit is declared above rather than
-     overridden per component. */
+     The polygon resolves the unit here, on `.pixel`, and inherits down
+     already-resolved -- so a component cannot rescale the corner by setting
+     `--pixel-unit` on itself, and the knob belongs above rather than within. */
   --ui-clip: polygon(
-    0 var(--pixel-unit),
-    var(--pixel-unit) var(--pixel-unit),
-    var(--pixel-unit) 0,
-    calc(100% - var(--pixel-unit)) 0,
-    calc(100% - var(--pixel-unit)) var(--pixel-unit),
-    100% var(--pixel-unit),
-    100% calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit)) 100%,
-    var(--pixel-unit) 100%,
-    var(--pixel-unit) calc(100% - var(--pixel-unit)),
-    0 calc(100% - var(--pixel-unit))
+    0 var(--_pixel-unit),
+    var(--_pixel-unit) var(--_pixel-unit),
+    var(--_pixel-unit) 0,
+    calc(100% - var(--_pixel-unit)) 0,
+    calc(100% - var(--_pixel-unit)) var(--_pixel-unit),
+    100% var(--_pixel-unit),
+    100% calc(100% - var(--_pixel-unit)),
+    calc(100% - var(--_pixel-unit)) calc(100% - var(--_pixel-unit)),
+    calc(100% - var(--_pixel-unit)) 100%,
+    var(--_pixel-unit) 100%,
+    var(--_pixel-unit) calc(100% - var(--_pixel-unit)),
+    0 calc(100% - var(--_pixel-unit))
   );
   /* Chips take the other half of the vocabulary: no radius at all. The cut is one
      grid unit whatever the element is, and one unit off each corner of a 24px
