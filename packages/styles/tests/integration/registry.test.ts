@@ -754,7 +754,10 @@ test("every intent maps onto the color family and fill cap the registry names", 
 
 test("documents the neutral intent fill cap in every generated reference", async () => {
   const expected = registry.intents.neutral.fillMax;
-  const sources = { "docs/tokens.md": await read("docs/tokens.md"), "llms-full.txt": await read("llms-full.txt") };
+  const sources = {
+    "docs/usage/theming.md": await read("docs/usage/theming.md"),
+    "llms-full.txt": await read("llms-full.txt"),
+  };
 
   expect(expected).toBe("20%");
   for (const [file, source] of Object.entries(sources)) {

@@ -450,4 +450,5 @@ T7, T8, T9, and T10 depend on the model doc and belong to the implementation wav
 
 - [Architecture](./architecture.md)
 - [Roadmap](./roadmap.md)
-- [Tokens](../tokens.md), the public reference this document feeds
+- [Theming](../usage/theming.md) and [Customizing](../usage/customizing.md),
+  the public references this document feeds

@@ -263,7 +263,7 @@
     },
     "helpers": {
       "type": "array",
-      "description": "Classes that carry no axis. Listed so collision checking covers them; docs/classes.md describes what each one is for.",
+      "description": "Classes that carry no axis. Listed so collision checking covers them; docs/usage/ describes what each one is for.",
       "items": {
         "type": "string",
         "pattern": "^[a-z][a-z0-9-]*$"

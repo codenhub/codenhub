@@ -46,7 +46,8 @@ to force a theme for the root or a subtree.
 ```
 
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-also supported. See [Tokens](./docs/tokens.md) for precedence details.
+also supported. See [Concepts](./docs/concepts.md#theme-selection) for
+precedence details.
 
 `.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
 and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
@@ -81,10 +82,14 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Documentation
 
-- [Documentation overview](./docs/index.md): Complete public documentation and
-  all supported import paths.
-- [Tokens](./docs/tokens.md): Color and foundation token contracts.
-- [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
+- [Documentation overview](./docs/index.md): What the package is, what it
+  does and does not do, and where to go next.
+- [Setup](./docs/setup.md): Installation, entrypoints, and configuration.
+- [Concepts](./docs/concepts.md): The three-axis model and the token system.
+- [Usage](./docs/usage/index.md): Composing, theming, customizing,
+  aesthetics, and each component family.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into
+  Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements

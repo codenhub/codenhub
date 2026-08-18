@@ -159,7 +159,9 @@ consumer use, not frozen against future semver-major changes.
 - [Model](./model.md)
 - [Architecture](./architecture.md) -- superseded, kept for its measurements
 - [Overview](../index.md)
-- [Tokens](../tokens.md)
-- [Classes](../classes.md)
+- [Setup](../setup.md)
+- [Concepts](../concepts.md)
+- [Usage](../usage/index.md)
+- [Integrating](../integrating/index.md)
 - [Accessibility](../accessibility.md)
 - [Tests](./tests.md)
