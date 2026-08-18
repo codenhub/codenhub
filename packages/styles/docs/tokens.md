@@ -357,9 +357,14 @@ tokens are available only where that aesthetic's stylesheet is imported.
 | `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                             |
 | `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack      |
 
-Set an aesthetic token on the element carrying the aesthetic class. A custom
-property resolves its own `var()` references where it is declared, so a value set
-further down the tree arrives too late for the tokens that read it.
+Set an aesthetic token on the element carrying the aesthetic class, or on any
+ancestor including `:root`. It resolves where the aesthetic reads it, so a value
+set on a descendant arrives too late — reach into a region with `--ui-radius` and
+the other material tokens above, which each component reads as it draws.
+
+`--pixel-unit` and `--neo-offset` are the exception and must be set on the element
+carrying the class. They are declared by their aesthetics rather than read with a
+fallback, and a declaration beats an inherited value whatever the specificity.
 
 Shipped aesthetics set the shared material tokens above. `.neobrutalism` and
 `.pixel` set `--ui-ink` for their neutral outline; intent classes still override

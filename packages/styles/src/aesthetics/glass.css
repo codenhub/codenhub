@@ -8,19 +8,27 @@
    compositing layer apiece, and one under every control of a dense cluster reads
    as noise. */
 .glass {
-  /* The one knob this aesthetic has, in the shape the other two already use --
-     `--neo-offset` and `--pixel-unit` are set on the element that carries the
-     aesthetic class, and so is this. Glass is softer than the base geometry
-     because a translucent panel with a tight corner reads as a cut-out rather
-     than as a pane, but it was a full step above `--radius-surface` and landed
-     closer to a pill than to glass. A pair rather than one value plus a
-     multiplier: controls and surfaces do not scale together, and 12/16 is the
-     ratio that keeps a button inside a card looking like it belongs there. */
-  --glass-radius: 0.75rem;
-  --glass-radius-surface: 1rem;
+  /* The knobs, read with a fallback rather than declared, which is what lets an
+     ancestor set them. A custom property declared on an element beats an inherited
+     one whatever the specificity, so the first version of these -- declared here,
+     then referenced -- had already outranked every ancestor including `:root`,
+     which is where an application normally themes something. Measured at the time:
+     an ancestor setting `--glass-radius-surface` left a glass card at its default
+     16px, so the knob bought a name and nothing else. Undeclared here, an inherited
+     value lands and a value on the element itself still wins over it.
 
-  --ui-radius: var(--glass-radius);
-  --ui-radius-surface: var(--glass-radius-surface);
+     The cost is the other direction. These resolve on `.glass` and inherit
+     already-resolved, so a *descendant* setting one changes nothing; `--ui-radius`
+     is the tool for that, because `box` reads it at whichever element draws.
+
+     Glass is softer than the base geometry because a translucent panel with a
+     tight corner reads as a cut-out rather than as a pane, but it was a full step
+     above `--radius-surface` and landed closer to a pill than to glass. A pair
+     rather than one value plus a multiplier: controls and surfaces do not scale
+     together, and 12/16 is the ratio that keeps a button inside a card looking
+     like it belongs there. */
+  --ui-radius: var(--glass-radius, 0.75rem);
+  --ui-radius-surface: var(--glass-radius-surface, 1rem);
   --ui-border-width: 1px;
   --ui-border-max: 100px;
 

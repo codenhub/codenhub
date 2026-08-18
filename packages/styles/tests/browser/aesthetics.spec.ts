@@ -537,31 +537,37 @@ test.describe("aesthetics", () => {
       expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
     });
 
-    /* The knob, in the shape the other two aesthetics already publish: a value
-       set on the element that carries the aesthetic class, resolved there and
-       inherited already-resolved. A consumer who wants tighter glass has one
-       place to say so and does not have to know that `--ui-radius` is what it
-       feeds. */
-    test("takes its corner from the public radius knob", async ({ page }) => {
+    /* The knob is read with a fallback rather than declared, and that is what makes
+       it worth having. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that, buying a name and no reach at all. */
+    test("takes its corner from a knob an ancestor can reach", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
       const measured = await page.evaluate(() => {
-        const host = document.createElement("div");
-        const card = document.createElement("div");
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
 
-        host.className = "glass";
-        host.style.setProperty("--glass-radius-surface", "2rem");
-        card.className = "card";
-        host.append(card);
-        document.querySelector('[data-testid="preview-root"]')!.append(host);
+          host.className = "glass";
+          card.className = "card";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--glass-radius-surface", "2rem");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
 
-        const radius = getComputedStyle(card).borderTopLeftRadius;
+          const radius = getComputedStyle(card).borderTopLeftRadius;
 
-        host.remove();
-        return radius;
+          ancestor.remove();
+          return radius;
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
       });
 
-      expect(measured, "overridden surface radius").toBe("32px");
+      expect(measured.ancestor, "an ancestor's knob reaches the pane").toBe("32px");
+      expect(measured.self, "so does one on the element itself").toBe("32px");
     });
 
     test("still applies its material tokens to controls", async ({ page }) => {

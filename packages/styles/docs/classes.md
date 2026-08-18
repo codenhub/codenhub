@@ -436,7 +436,7 @@ as a plain translucent panel.
 `--glass-radius` and `--glass-radius-surface` are the corners, at `0.75rem` and
 `1rem`. Glass is rounder than the base geometry because a translucent panel with
 a tight corner reads as a cut-out rather than as a pane. Set them on the element
-carrying the class:
+carrying the class, or on any ancestor including `:root`:
 
 ```html
 <section class="glass" style="--glass-radius-surface: 1.5rem">

@@ -80,7 +80,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/] },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius:/] },
+  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
   /* The bar is a shade of the element rather than a repeat of it, which takes the
      opaque depth colour as well as the ink amount. Both are asserted because
      either one alone leaves the bar invisible. */

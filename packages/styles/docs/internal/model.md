@@ -1053,7 +1053,9 @@ panel and nothing more.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem.
   Rounder than the base geometry, because a translucent panel with a tight corner
   reads as a cut-out rather than as a pane; a full step above `--radius-surface`
-  landed closer to a pill than to glass.
+  landed closer to a pill than to glass. Read with a fallback rather than
+  declared, so an ancestor can set them — see
+  [`.chunky-tile`](#chunky-tile) for why that distinction is not cosmetic.
 
 ### `.neobrutalism`
 
