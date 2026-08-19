@@ -23,11 +23,14 @@ test.describe("buttons", () => {
     /* A filled button is one whose fill resolves to `.solid`, which since
        presentation cascades means no quieter fill on the button or on an
        ancestor. `.btn`'s published default is solid, so the absence of a fill
-       class is the filled case. */
+       class is the filled case. `.loading` is excluded too: it forces `color`
+       to transparent and shows a spinner instead, so there is no label text to
+       read contrast on, and `getContrastRatio` does not weigh alpha -- it would
+       otherwise score that transparent black as if it were opaque. */
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .ghost)):not(:is(.soft, .ghost) *)",
+          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .ghost, .loading)):not(:is(.soft, .ghost) *)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -40,8 +43,12 @@ test.describe("buttons", () => {
       }),
     );
 
+    /* WCAG 1.4.3 asks 4.5:1 of normal text, and docs/accessibility.md promises
+       exactly that -- "every intent's .solid label meets 1.4.3 (4.5:1)...
+       lowest is success at 5.14:1". A looser bound here would let a future
+       palette change regress toward that claim without failing anything. */
     for (const button of buttonColors) {
-      expect(getContrastRatio(button.color, button.backgroundColor), button.label).toBeGreaterThanOrEqual(3);
+      expect(getContrastRatio(button.color, button.backgroundColor), button.label).toBeGreaterThanOrEqual(4.5);
     }
   });
 
