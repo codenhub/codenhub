@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -25,15 +25,9 @@ adds no support rules.
 
 ## Current Focus
 
-**`0.1.0` stabilization.** The immediate focus is to stabilize the internal
-source of truth and turn the remaining review and problem findings into a clear,
-finite release path.
-
-The existing public docs describe current behavior, but they are not yet an
-editorially useful or final consumer guide. A complete consumer-focused,
-task-oriented reformulation remains required before `0.1.0` is complete. This is
-an internal readiness condition, not a public stability warning; the package
-remains active.
+**`0.1.0` stabilization.** The public docs have had their consumer-focused,
+task-oriented reformulation. What remains is closing the current review and
+turning any outstanding problem findings into a clear, finite release path.
 
 ## Planned
 
@@ -63,18 +57,6 @@ carries the whole model rewrite, so the release notes are the only place a
 consumer can find out what moved.
 
 ## Later / Possible
-
-- **WCAG AA text contrast**: Raise _filled_ success and warning component text
-  contrast to WCAG 1.4.3's 4.5:1 threshold for normal text. Their current
-  neutral-50 foreground over emerald-600 and amber-600 backgrounds reaches only
-  about 3.5:1 and 3.1:1; the browser test currently enforces 3:1.
-
-  The unfilled half of this is done. `box` prints `--intent-strong` rather than
-  `--intent-color` wherever a fill is partial, which took soft and bare success
-  and warning text from roughly 3.5:1 and 3.1:1 to 7.3:1 and 6.8:1 in light, and
-  past 15:1 in dark. What is left is the filled case, where the contrast tone
-  sits on the saturated base and neither is free to move without changing what
-  the intent looks like.
 
 - **An interactive card that presses**: `.card.interactive` applies `box-hover`
   and nothing else, so `--ui-active-transform` and `--ui-active-shadow-*` never

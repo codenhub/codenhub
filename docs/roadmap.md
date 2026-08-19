@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-18
+last_updated: 2026-08-19
 scope: repo-wide package progress tracking
 ---
 
@@ -17,7 +17,7 @@ Track high-level progress and milestone status for foundation and utility packag
 - [x] Three-axis styling model: intent, presentation, and aesthetic
 - [x] Machine-checked contract in `registry.json`, enforced by the test suite
 - [x] Shipped aesthetics: `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`
-- [ ] Consumer-focused reformulation of the public documentation
+- [x] Consumer-focused reformulation of the public documentation
 - [ ] `0.1.0` release
 
 `packages/styles/docs/internal/roadmap.md` owns the release conditions and the
