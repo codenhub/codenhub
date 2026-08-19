@@ -510,22 +510,18 @@ test.describe("buttons", () => {
       .toBeLessThanOrEqual(2);
   });
 
-  /* The two intents whose hover token is itself a `color-mix()` rather than a
-     `light-dark()` pair, which is what makes them the interesting case: `box`
-     nests that token two levels deeper to blend the edge toward the fill, and
-     three levels of `color-mix()` over a `light-dark()` crashes the WebKit
-     renderer outright -- the same limit `progress` is written around. Asserted
-     where it can be, and skipped where the engine cannot survive the hover. */
-  test("derives the hover tint for the semantic intents", async ({ browserName, page }) => {
-    test.skip(
-      browserName === "webkit",
-      "WebKit crashes hovering `.success`/`.warning`: their hover token is a color-mix, and box nests it two deeper",
-    );
+  /* All four semantic intents' hover tokens used to be a `color-mix()`
+     themselves, which crashed the WebKit renderer outright once `box-hover`
+     nested them two levels deeper to blend the edge toward the fill -- the
+     same limit `progress` is written around. They are now baked `light-dark()`
+     pairs (see the comment above `--color-success-hover` in theme.css), so
+     this runs unskipped on every engine. */
+  test("derives the hover tint for the semantic intents", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     /* oxlint-disable no-await-in-loop -- one page, hovered in turn: hover is a
        single pointer, so the intents cannot be probed in parallel. */
-    for (const intent of ["success", "warning"] as const) {
+    for (const intent of ["success", "warning", "destructive", "info"] as const) {
       const expected = await page.evaluate((name) => {
         const probe = document.createElement("span");
         const step = getComputedStyle(document.documentElement).getPropertyValue("--hover-step").trim();
@@ -539,7 +535,10 @@ test.describe("buttons", () => {
 
         return tint;
       }, intent);
-      const outline = page.getByTestId(`btn-ghost-edged-${intent}`);
+      /* Scoped to the main matrix: `destructive` also appears in the intent-alias
+         grid under the same testid, which `getByTestId` alone resolves to two
+         elements for. */
+      const outline = page.getByTestId("btn-matrix").getByTestId(`btn-ghost-edged-${intent}`);
 
       await outline.hover();
 

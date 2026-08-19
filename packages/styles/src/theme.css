@@ -73,7 +73,15 @@
      label and leaves the hue where it was. */
   --color-success: var(--color-emerald-700);
   --color-success-contrast: var(--color-neutral-50);
-  --color-success-hover: color-mix(in srgb, var(--color-success) 82%, var(--color-success-strong));
+  /* Baked rather than mixed live. `box-hover` nests this token two `color-mix()`
+     levels deeper to compose the fill and the edge, and three levels of
+     `color-mix()` over a `light-dark()` crashes the WebKit renderer outright on
+     hover -- see docs/internal/architecture.md. Confirmed on all four semantic
+     intents, not only this one. Each pinned pair below is
+     `color-mix(in srgb, <base> 82%, <strong>)`, resolved once per theme and
+     screenshotted back so the blend stays exact; re-bake it if the base or
+     strong tone it was mixed from changes. */
+  --color-success-hover: light-dark(#007552, #008e66);
   /* The dark ground is `-900` to make room for the `-300` ink above it. `-subtle`
      is what `kbd`, `code`, `pre` and the tooltip bubble rest on, and those are the
      only places a partial fill prints text onto a tinted ground rather than onto
@@ -98,17 +106,20 @@
      contrast tone is not the page colour. */
   --color-warning: var(--color-amber-600);
   --color-warning-contrast: var(--color-neutral-950);
-  --color-warning-hover: color-mix(in srgb, var(--color-warning) 82%, var(--color-warning-strong));
+  /* Same crash, same fix as `--color-success-hover` above. */
+  --color-warning-hover: light-dark(#d46700, #e78300);
   --color-warning-subtle: light-dark(var(--color-amber-100), var(--color-amber-900));
   --color-warning-strong: light-dark(var(--color-amber-800), var(--color-amber-300));
   --color-destructive: var(--color-rose-700);
   --color-destructive-contrast: var(--color-neutral-50);
-  --color-destructive-hover: color-mix(in srgb, var(--color-destructive) 82%, var(--color-destructive-strong));
+  /* Same crash, same fix as `--color-success-hover` above. */
+  --color-destructive-hover: light-dark(#c00036, #d1054b);
   --color-destructive-subtle: light-dark(var(--color-rose-100), var(--color-rose-900));
   --color-destructive-strong: light-dark(var(--color-rose-800), var(--color-rose-300));
   --color-info: var(--color-indigo-600);
   --color-info-contrast: var(--color-neutral-50);
-  --color-info-hover: color-mix(in srgb, var(--color-info) 82%, var(--color-info-strong));
+  /* Same crash, same fix as `--color-success-hover` above. */
+  --color-info-hover: light-dark(#4b36e9, #5e4ff9);
   --color-info-subtle: light-dark(var(--color-indigo-100), var(--color-indigo-900));
   --color-info-strong: light-dark(var(--color-indigo-800), var(--color-indigo-300));
 
