@@ -5,13 +5,13 @@ import { searchDocumentation, type SearchEntry } from "./search";
 const entries: SearchEntry[] = [
   {
     packageLabel: "Styles",
-    route: "/styles/tokens/",
+    route: "/styles/usage/customizing/",
     text: "Tokens are CSS custom properties.",
     title: "Tokens",
   },
   {
     packageLabel: "Styles",
-    route: "/styles/tokens/#presentation-tokens",
+    route: "/styles/usage/customizing/#presentation-tokens",
     section: "Presentation Tokens",
     text: "Presentation tokens describe how much of an intent a component shows.",
     title: "Tokens",
@@ -52,7 +52,7 @@ describe("searchDocumentation", () => {
   });
 
   it("ranks the section that names the query above the page holding it", () => {
-    expect(routesFor("presentation")[0]).toBe("/styles/tokens/#presentation-tokens");
+    expect(routesFor("presentation")[0]).toBe("/styles/usage/customizing/#presentation-tokens");
   });
 
   it("puts a package's own document first when the query names the package", () => {

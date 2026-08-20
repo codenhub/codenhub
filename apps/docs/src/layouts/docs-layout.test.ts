@@ -155,9 +155,9 @@ describe("documentation chrome", () => {
       section?: string;
       text: string;
     }[];
-    const presentation = entries.find((entry) => entry.route === "/styles/tokens/#presentation-tokens");
+    const presentation = entries.find((entry) => entry.route === "/styles/usage/customizing/#presentation-tokens");
 
-    expect(presentation?.section).toBe("Presentation Tokens");
+    expect(presentation?.section).toBe("Presentation tokens");
     expect(presentation?.text).toContain("Presentation tokens describe");
     expect(entries.some((entry) => entry.route === "/error/")).toBe(true);
   });
