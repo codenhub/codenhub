@@ -1,94 +1,95 @@
 /* Neobrutalism: thick ink outline, a hard unblurred offset shadow, and a press
    that moves the element into its own shadow.
 
-   Load after the base stylesheet. Aesthetics override the neutral defaults that
-   `intent.css` declares at zero specificity, so source order decides. */
+   Tier 1 only. Every declaration below is a material token, and not one of them
+   names a component. What used to be two fourteen-selector lists is now
+   `--ui-ink` and four shadow parts: the ink reaches every component and every
+   bare element through the shared intent reset, and the shadow is colourless
+   geometry that each component colours against its own intent, so a success
+   button still casts a green shadow and a neutral button casts ink.
+
+   Load after the base stylesheet. Aesthetics override the neutral defaults the
+   shared reset declares at zero specificity, so source order decides. */
 .neobrutalism {
+  /* The offset, read with a fallback rather than declared, which is what lets an
+     ancestor set it. A custom property declared on an element beats an inherited
+     one whatever the specificity, so declaring `--neo-offset` here would outrank
+     every ancestor including `:root`, which is where an application normally
+     themes something. The private carries the resolved value to the six places
+     below, so the default lives once.
+
+     It resolves here, on `.neobrutalism`, and inherits down already-resolved: a
+     descendant setting `--neo-offset` on itself changes nothing, and the shared
+     material tokens are the tool for reaching in that direction. */
+  --_neo-offset: var(--neo-offset, 4px);
+
   /* Pure black reads as ink on a light page and disappears on a dark one, so the
-     ink follows the theme rather than the palette. */
-  --neo-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
-  --neo-offset: 4px;
+     ink follows the theme rather than the palette. A thick border in the neutral
+     border grey is a thick grey box, not a brutalist one. */
+  --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
 
   --ui-radius: 0;
   --ui-radius-surface: 0;
   --ui-border-width: 2px;
-  --ui-hover-transform: translate(var(--neo-offset), var(--neo-offset));
+  --ui-border-max: 100px;
+
+  /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
+     the registry decides which components sit on a slab and `.flat` takes one
+     off without this file knowing which component it landed on. */
+  /* The slab is ink, not shade: a hard offset of the element's own line colour
+     is the whole look, so this aesthetic asks for the intent instead of the
+     neutral depth colour every other shadow uses. */
+  --ui-shadow-ink: 100%;
+  --ui-shadow-x: var(--_neo-offset);
+  --ui-shadow-y: var(--_neo-offset);
+  --ui-shadow-blur: 0px;
+  --ui-shadow-spread: 0px;
+
+  /* The press: move by the offset, shrink the shadow to nothing. Two tokens
+     replace a nine-selector `:hover` list, and R3 stays intact. */
+  --ui-hover-shadow-x: 0px;
+  --ui-hover-shadow-y: 0px;
+  --ui-hover-transform: translate(var(--_neo-offset), var(--_neo-offset));
+  --ui-active-shadow-x: 0px;
+  --ui-active-shadow-y: 0px;
+  --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
+
+  /* Nothing here clips or blurs, and an aesthetic nested inside another has to
+     say so rather than inherit it. */
+  --ui-clip: none;
+  --ui-clip-tight: none;
+  --ui-shadow-inset: ;
+  /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
+     button keeps it. Cleared rather than omitted, because a neobrutalist region
+     nested inside a pixel one would otherwise inherit pixel's answer and lose the
+     slab on everything the edge axis rests at zero. */
+  --ui-shadow-edge: initial;
+  --ui-backdrop: none;
 }
 
-/* The one place an aesthetic touches the intent axis. A thick border in the
-   neutral border gray is a thick gray box, not a brutalist one, so the aesthetic
-   supplies the neutral ink.
+/* The one R3 exception this aesthetic takes, recorded in the registry as
+   `selectors`.
 
-   The shadow is declared here rather than on `.neobrutalism` for the same reason
-   presentation classes carry no color: a custom property resolves on the element
-   that declares it, so a shadow set on the container would resolve against the
-   container's intent and inherit down already-resolved. Declared on the
-   component, `--intent-border` is that component's own -- ink when it has no
-   intent, and the intent's color when it does, so a success button casts a green
-   shadow.
+   An alert rests at zero elevation because on every other aesthetic it is a
+   message inside the layout rather than something over it. Here the slab is not
+   depth -- it is a second ink line on two sides, and it is what makes a thick
+   outline read as brutalist rather than as a heavy box. An alert is the one
+   component the aesthetic wants loud that the registry rests flat, so a
+   neobrutalist alert without it is the only container on the page that looks
+   like it lost its material.
 
-   Both selectors are `:where()`, so this carries zero specificity and loses to
-   any intent class on the element: `.destructive` keeps its red edge while an
-   unintented component gets ink. It beats the neutral default in `intent.css`
-   only because it is declared later.
+   No token can say this. Elevation is a per-element decision by design, so the
+   only slots are the modifier and the component's own resting default, and an
+   aesthetic writing the modifier would beat `.flat` and take the choice away.
+   Writing the default instead leaves the modifier untouched: `box` resolves
+   `var(--ui-elevation, var(--_d-elevation, 1))`, so `.flat`, `.raised` and
+   `.floating` all still win on the element, and this only moves where an alert
+   rests when nobody has said. Reaching it with a token would mean a slot only
+   alerts resolve, which is naming the component through a longer route.
 
-   `.kbd`, `.code`, and `.pre` are deliberately absent. They are content chips
-   rather than structure, and an ink edge on one reads as a defect: a key cap
-   draws a quiet border by design and a code chip draws none at all. */
-:where(.neobrutalism)
-  :where(
-    .btn,
-    .alert,
-    .badge,
-    .card,
-    .panel,
-    .control-base,
-    .ipt,
-    .textarea,
-    .select,
-    .table,
-    .checkbox,
-    .radio,
-    .switch,
-    .tooltip
-  ),
-:where(.neobrutalism):where(
-  .btn,
-  .alert,
-  .badge,
-  .card,
-  .panel,
-  .control-base,
-  .ipt,
-  .textarea,
-  .select,
-  .table,
-  .checkbox,
-  .radio,
-  .switch,
-  .tooltip
-) {
-  --intent-border: var(--neo-ink);
-  --ui-shadow: var(--neo-offset) var(--neo-offset) 0 0 var(--intent-border);
-}
-
-/* `--ui-radius: 0` above now covers every component, including the ones that used
-   to hardcode a radius of their own: they read it with their own value as the
-   fallback, so an aesthetic that says no radius is obeyed without naming them.
-   A radio keeps its circle, which is the only thing distinguishing it from a
-   checkbox at a glance, so it reads no radius token at all. */
-
-/* Hover moves the element by the shadow offset and shrinks the shadow to
-   nothing, so it reads as the element being pressed down onto the page. Only the
-   custom property is reassigned; every component already resolves its
-   `box-shadow` through it, so none of them need a rule here. */
-:where(.neobrutalism)
-  :is(.btn, .card.interactive):hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]),
-:where(.neobrutalism):is(.btn, .card.interactive):hover:not(
-  :disabled,
-  .disabled,
-  [aria-disabled="true"],
-  [data-disabled]
-) {
-  --ui-shadow: 0 0 0 0 var(--intent-border);
+   `--_d-elevation` inherits, as every custom property does, and that is inert
+   here: the value is `box`'s own fallback, so a descendant that declares none
+   computes exactly what it computed before. */
+.neobrutalism .alert {
+  --_d-elevation: 1;
 }

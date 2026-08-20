@@ -1,12 +1,17 @@
 @reference "tailwindcss";
 @import "../theme.css";
+@reference "../box.css";
+@reference "./surface.css";
 
+/* The host is a positioning wrapper and nothing else. Its bubble is a
+   pseudo-element placed outside the host's own box, so painting the host would
+   draw a box around the trigger rather than around the message -- which is
+   exactly what a blanket surface membership did to this component once already.
+
+   The bubble is the component. It is a surface, so an aesthetic that blurs
+   surfaces blurs it too, and it rests on a ground of its own, edged, at twice a
+   card's depth. */
 @utility tooltip {
-  /* The bubble is always filled: a transparent or hairline tooltip floating
-     over arbitrary content is unreadable, so it reads intent but not the
-     presentation fill. Neutral resolves to the previous surface tone. */
-  --tooltip-bg: var(--intent-subtle);
-  --tooltip-fg: var(--intent-strong);
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
   --tooltip-right: auto;
@@ -17,15 +22,40 @@
 
   @apply relative;
 
-  /* The host is deliberately not shaped. Its bubble is a pseudo-element positioned
-     outside its box, which clipping the host would erase, so the bubble carries the
-     silhouette itself. Only the radius follows the aesthetic. */
+  /* The trigger badge, for a page with no element of its own to hang the message
+     on. Quiet on purpose: it marks that there is a message, it is not one, so it
+     stays a tinted plate rather than taking the fill its bubble takes. That is a
+     key cap's resting shape exactly -- ghost, edged, on `--intent-subtle` -- and it
+     is composed rather than hand-painted so the plate, the ink and the line come
+     from the same place they come from everywhere else.
+
+     The line is what earns its keep. A plate alone cannot tell these intents
+     apart: `--intent-subtle` is a near-page tint for the text, primary and accent
+     families alike, so a badge made of it was the same colour for neutral and
+     primary in light, the same for neutral and secondary in dark, and 1.04:1
+     against the page for secondary -- three of eight indistinguishable and one
+     invisible. `--intent-border` is the slot that differs across all three.
+
+     Painting the host is right here and wrong everywhere else on this component:
+     a `.tooltip` host is a positioning wrapper whose bubble is placed outside its
+     box, so painting one draws a box around the trigger rather than around the
+     message. `.tooltip-icon` is the opt-in that says the host *is* the badge. */
   &.tooltip-icon {
-    @apply inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
+    @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
+
+    --_d-fill: 0%;
+    --_d-fg-on-fill: 0%;
+    --_d-border: 100%;
+    --_d-elevation: 0;
+    --_d-ground: var(--intent-subtle);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
-    background-color: var(--tooltip-bg);
-    color: var(--tooltip-fg);
+    /* The one thing `box` hands it that it must refuse. An aesthetic's `clip-path`
+       clips a host's pseudo-elements along with the host, and this host's
+       pseudo-element is the bubble, positioned outside its box -- so a stepped
+       badge under `.pixel` would clip the message away entirely. The bubble
+       carries the stepped shape itself; the badge stays round. */
+    clip-path: none;
   }
 
   &[data-tooltip-position="bottom"] {
@@ -50,15 +80,82 @@
     --tooltip-transform: translate(100%, -50%);
   }
 
-  /* The bubble reads `--ui-shadow` like every other component rather than
-     hardcoding an elevation, so an aesthetic in scope shapes it too. Its default
-     is the elevation a raised surface uses: a bubble is a small transient
-     popover, not a modal. */
   &::after {
-    @apply shaped pointer-events-none absolute z-(--z-popover) w-max max-w-72 bg-(--tooltip-bg) px-2.5 py-2 text-sm font-normal whitespace-normal text-(--tooltip-fg) opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+    @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
 
+    /* Filled, on a ground of its own. The fill is what makes an intent mean
+       something here -- `.tooltip.primary` is the primary colour, black on a light
+       page and white on a dark one, the way a primary button is -- and the ground
+       is what a bubble carrying no fill lands on.
+
+       With no intent the two are the same tone. `intent.css` resolves the
+       tooltip's no-intent case onto `--color-tooltip` and lifts the neutral cap
+       with it, so an unclassed bubble is that plate at full strength rather than
+       a fifth of the page's ink over the surface tone. That derivation is what
+       made a light bubble a mid-grey slab while the dark one read as lifted; the
+       pair states each direction instead. An intent has its own colour and floods
+       the ground the same way it always did.
+
+       The ground stays the surface tone rather than following the plate. Pointed
+       at `--color-tooltip` as well, the two ends of the fill were the same colour
+       and the fill axis went inert: `.ghost`, `.soft` and `.solid` all rendered
+       the same bubble on an unclassed tooltip, which is a documented axis doing
+       nothing. `tests/browser/axes.spec.ts` caught it.
+
+       The ground also retires a bound. Presentation cascades, so a container's
+       `.ghost` reaches a bubble nobody classed; with nothing under the fill that
+       left a boundaryless bubble over arbitrary content, which the component used
+       to answer by pinning its fill at solid and refusing to read presentation at
+       all. An opaque ground answers it at every presentation instead.
+
+       The fallback order matters: glass replaces the ground of every surface with
+       a translucent one so its blur has something to show through, and a bubble
+       is one of the surfaces it names. Reading `--ui-surface-ground` first is
+       what keeps a glass tooltip glass. */
+    --_d-fill: 100%;
+    --_d-fg-on-fill: 100%;
+    --_d-border: 100%;
+    --_d-elevation: 2;
+    --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
+
+    /* A bubble's line is a boundary against content nobody chose, not a
+       silhouette around a fill, and that is the one place `box`'s edge blend is
+       wrong for it: the blend runs the line toward the plate by the fill amount,
+       so at a full fill the line *is* the plate and a near-white bubble over
+       near-white content has nothing marking where it starts. The plate carries
+       the message; the line only has to say where the message ends.
+
+       Only the colour is restated, not the amount. How much line there is still
+       comes from `--_edge-amount`, bounded by the floor below. */
+    --_line: var(--intent-border);
+
+    /* And a floor under how much of it there is, for the same reason the ground
+       is opaque: the line is the boundary, and a cascade must not be able to
+       take a boundary away from a bubble nobody classed. `.solid` answers the
+       edge question now, so a `.solid` container reached in and removed it --
+       silently, and worst in the light theme, where the plate is near-white and
+       the line is the only thing separating the message from whatever is behind
+       it.
+
+       The escape is the same idiom `text-control` uses: a class on the element is
+       a consumer describing what they want, a class on a container is a cascade
+       reaching something nobody classed. The floor answers the second, the rule
+       below answers the first, and `tests/browser/axes.spec.ts` still sees the
+       edge axis move because it probes with the class on the element. */
+    --_edge-floor: 100%;
+
+    /* The one component that draws depth with nothing asked for, because a
+       bubble is the case where depth is not decoration: it floats over content
+       nobody chose, and a flat panel over arbitrary pixels has no boundary. It
+       goes in the component's own slot rather than the modifier's, so an
+       aesthetic in scope still outranks it, and a pseudo-element has no children
+       for it to inherit onto. Elevation 2 doubles it to `0 2px 6px`. */
+    --_d-shadow-y: 1px;
+    --_d-shadow-blur: 3px;
+
+    /* A bubble is a small transient popover, not a modal, so it takes the
+       control radius rather than the surface one `surface` hands it. */
     border-radius: var(--ui-radius, var(--radius-control));
-    box-shadow: var(--shape-ring, var(--ui-shadow, var(--elevation-mid)));
     content: attr(data-tooltip);
     left: var(--tooltip-left);
     right: var(--tooltip-right);
@@ -66,6 +163,10 @@
     bottom: var(--tooltip-bottom);
     transform: var(--tooltip-transform) scale(0);
     transform-origin: var(--tooltip-origin);
+  }
+
+  &.edgeless::after {
+    --_edge-floor: 0%;
   }
 
   &:hover::after,

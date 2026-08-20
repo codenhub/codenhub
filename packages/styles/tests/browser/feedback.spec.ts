@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
+import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 
@@ -11,7 +11,7 @@ test.describe("feedback", () => {
     await expect(page.getByTestId("preview-root")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Feedback", exact: true })).toBeVisible();
 
-    const badgeStyles = await page.getByTestId("badge-plain-primary").evaluate((element) => {
+    const badgeStyles = await page.getByTestId("badge-default-primary").evaluate((element) => {
       const styles = getComputedStyle(element);
 
       return {
@@ -29,12 +29,12 @@ test.describe("feedback", () => {
   test("pads an alert around its icon and keeps a readable border", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    const alertStyles = await page.getByTestId("alert-plain-success").evaluate((element) => {
+    const alertStyles = await page.getByTestId("alert-default-success").evaluate((element) => {
       const styles = getComputedStyle(element);
       return { borderWidth: styles.borderWidth, color: styles.color };
     });
     const alertIconPaddingLeft = await page
-      .getByTestId("alert-plain-success-icon")
+      .getByTestId("alert-default-success-icon")
       .evaluate((element) => getComputedStyle(element).paddingLeft);
 
     expect(alertStyles.borderWidth).not.toBe("0px");
@@ -46,9 +46,9 @@ test.describe("feedback", () => {
     await page.goto(FEEDBACK_URL);
 
     const skeletonAnimationName = await page
-      .getByTestId("skeleton-plain-none")
+      .getByTestId("skeleton-default-none")
       .evaluate((element) => getComputedStyle(element).animationName);
-    const progressStyles = await page.getByTestId("progress-plain-none").evaluate((element) => {
+    const progressStyles = await page.getByTestId("progress-default-none").evaluate((element) => {
       const styles = getComputedStyle(element);
       return { backgroundColor: styles.backgroundColor, overflow: styles.overflow };
     });
@@ -58,39 +58,92 @@ test.describe("feedback", () => {
     expect(progressStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   });
 
-  test("renders every skeleton and loader presentation", async ({ page }) => {
+  /* A loader used to be a bordered box wrapped around a masked pseudo-element,
+     and it read every presentation class through that box. It is now the mask
+     itself: a coloured shape with no fill, no edge and no silhouette. The
+     presentation coverage is not narrowed but inverted -- what has to hold is
+     that no presentation class moves it at all. */
+  test("keeps a loader on intent alone, whatever presentation is in scope", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    const styles = await page.evaluate(() => {
-      const read = (testId: string, pseudo?: string) =>
-        getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, pseudo);
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const read = (presentation: string) => {
+        const loader = document.createElement("span");
+
+        loader.className = `loader primary ${presentation}`.trim();
+        host.append(loader);
+
+        const styles = getComputedStyle(loader);
+        const result = {
+          background: styles.backgroundColor,
+          borderWidth: styles.borderTopWidth,
+          presentation: presentation || "default",
+        };
+
+        loader.remove();
+
+        return result;
+      };
+      const probe = document.createElement("span");
+
+      probe.style.color = "var(--color-primary)";
+      host.append(probe);
+
+      const intent = getComputedStyle(probe).color;
+
+      probe.remove();
 
       return {
-        loaderFlatBackground: read("loader-flat-primary").backgroundColor,
-        loaderFlatGlyph: read("loader-flat-primary", "::before").backgroundColor,
-        loaderGhostBackground: read("loader-ghost-primary").backgroundColor,
-        loaderOutBorderWidth: read("loader-out-primary").borderTopWidth,
-        loaderPlainBorderWidth: read("loader-plain-primary").borderTopWidth,
-        loaderSoftBackground: read("loader-soft-primary").backgroundColor,
-        skeletonFlat: read("skeleton-flat-primary").backgroundImage,
-        skeletonGhost: read("skeleton-ghost-primary").backgroundImage,
-        skeletonOutBorderWidth: read("skeleton-out-primary").borderTopWidth,
-        skeletonPlain: read("skeleton-plain-primary").backgroundImage,
-        skeletonSoft: read("skeleton-soft-primary").backgroundImage,
+        intent,
+        variants: ["", "solid edged", "soft edged", "ghost edged", "ghost edgeless"].map(read),
       };
     });
 
-    expect(styles.skeletonGhost).not.toBe("none");
-    expect(styles.skeletonSoft).not.toBe(styles.skeletonPlain);
-    expect(styles.skeletonFlat).not.toBe(styles.skeletonSoft);
-    expect(Number.parseFloat(styles.skeletonOutBorderWidth)).toBeLessThanOrEqual(1);
+    for (const variant of measured.variants) {
+      expect(variant.borderWidth, `${variant.presentation} border`).toBe("0px");
+      expectSameColor(variant.background, measured.intent, `${variant.presentation} loader colour`);
+    }
+  });
 
-    expect(Number.parseFloat(styles.loaderPlainBorderWidth)).toBeGreaterThanOrEqual(1);
-    expect(Number.parseFloat(styles.loaderOutBorderWidth)).toBeLessThanOrEqual(2);
-    expect(isTransparent(styles.loaderGhostBackground)).toBe(true);
-    expect(isTransparent(styles.loaderSoftBackground)).toBe(false);
-    expect(isTransparent(styles.loaderFlatBackground)).toBe(false);
-    expect(getColorDistance(styles.loaderFlatGlyph, styles.loaderFlatBackground)).toBeGreaterThan(2);
+  /* An indicator reads intent and no presentation token at all: it stands in for
+     content rather than being a box with a look, so there is nothing a fill or an
+     edge class has to say about it. The floor that used to keep an unfilled
+     skeleton visible is gone with the `--ui-fill` read it was fighting. */
+  test("renders a skeleton from its intent alone", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const styles = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const read = (className: string) => {
+        const skeleton = document.createElement("div");
+
+        skeleton.className = `skeleton ${className}`;
+        host.append(skeleton);
+
+        const computed = getComputedStyle(skeleton);
+        const values = { border: computed.borderTopWidth, image: computed.backgroundImage };
+
+        skeleton.remove();
+
+        return values;
+      };
+
+      return {
+        ghostEdgeless: read("primary ghost edgeless"),
+        plain: read("primary"),
+        secondary: read("secondary"),
+        solidEdged: read("primary solid edged"),
+      };
+    });
+
+    expect(styles.plain.image).not.toBe("none");
+    /* Both ends of both axes land on the same pixels as no class at all. */
+    expect(styles.solidEdged.image, "solid edged").toBe(styles.plain.image);
+    expect(styles.ghostEdgeless.image, "ghost edgeless").toBe(styles.plain.image);
+    expect(styles.solidEdged.border, "no edge to draw").toBe("0px");
+    /* Intent is the one axis it does read. */
+    expect(styles.secondary.image).not.toBe(styles.plain.image);
   });
 
   test("sizes loaders and renders every loader variant", async ({ page }) => {
@@ -101,10 +154,11 @@ test.describe("feedback", () => {
         page.getByTestId(testId).evaluate((element) => getComputedStyle(element).width),
       ),
     );
+    /* The artwork is the element's own mask now, not a pseudo-element's. */
     const loaderDefaultMask = await page.getByTestId("loader-default").evaluate((element) => {
-      const styles = getComputedStyle(element, "::before");
+      const styles = getComputedStyle(element);
 
-      return styles.maskImage || styles.webkitMaskImage || "none";
+      return styles.maskImage || styles.getPropertyValue("-webkit-mask-image") || "none";
     });
     const variantIds = [
       "loader-dots-wave",
@@ -119,7 +173,7 @@ test.describe("feedback", () => {
     ];
     const variantImages = await Promise.all(
       variantIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
+        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--loader-art")),
       ),
     );
 
@@ -147,140 +201,174 @@ test.describe("feedback", () => {
     ];
     const images = await Promise.all(
       testIds.map((testId) =>
-        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--ai-image")),
+        page.getByTestId(testId).evaluate((element) => getComputedStyle(element).getPropertyValue("--loader-art")),
       ),
     );
 
     expect(new Set(images).size).toBe(testIds.length);
   });
 
-  test("renders flat and soft alert variants with correct styles", async ({ page }) => {
+  test("renders every alert fill", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    const flatInfoStyles = await page.getByTestId("alert-flat-info").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(flatInfoStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(flatInfoStyles.color, flatInfoStyles.backgroundColor)).toBeGreaterThan(2);
+    const styles = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const element = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
 
-    const softWarningStyles = await page.getByTestId("alert-soft-warning").evaluate((element) => {
-      const styles = getComputedStyle(element);
+        return {
+          background: element.backgroundColor,
+          border: element.borderTopColor,
+          color: element.color,
+        };
+      };
+
+      const probe = document.createElement("span");
+
+      probe.style.color = "var(--color-background)";
+      document.body.append(probe);
+
+      const ground = getComputedStyle(probe).color;
+
+      probe.remove();
+
       return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
+        ghost: read("alert-ghost-edged-info"),
+        ground,
+        softEdgeless: read("alert-soft-edgeless-warning"),
+        solid: read("alert-solid-info"),
       };
     });
-    expect(isTransparent(softWarningStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(softWarningStyles.color, softWarningStyles.backgroundColor)).toBeGreaterThan(2);
-    expect(isTransparent(softWarningStyles.borderColor)).toBe(true);
+
+    /* Solid fills and flips the text to the contrast tone. */
+    expect(isTransparent(styles.solid.background)).toBe(false);
+    expect(getColorDistance(styles.solid.color, styles.solid.background)).toBeGreaterThan(2);
+    /* Soft tints and keeps the intent tone; `.edgeless` drops the line. */
+    expect(isTransparent(styles.softEdgeless.background)).toBe(false);
+    expect(getColorDistance(styles.softEdgeless.color, styles.softEdgeless.background)).toBeGreaterThan(2);
+    /* `.edgeless` zeroes the line, and P3 then blends what is left toward the
+       fill: on a surface that leaves the fill's own twelve percent against the
+       opaque line an `.edged` one draws. The border box sits over the alert's own
+       background, so that reads as a seamless boundary rather than a gap. */
+    expect(readSrgb(styles.softEdgeless.border).alpha, "edgeless alert line").toBeLessThanOrEqual(0.13);
+    expect(readSrgb(styles.ghost.border).alpha, "edged alert line").toBe(1);
+    /* Bare adds no fill, so what is left is the ground every surface rests on --
+       an alert is a container, and a container is opaque. `.edged` still draws
+       the line. */
+    expectSameColor(styles.ghost.background, styles.ground, "ghost alert ground");
+    expect(isTransparent(styles.ghost.border)).toBe(false);
   });
 
-  test("renders flat and soft badge variants with correct styles", async ({ page }) => {
+  test("renders every badge fill", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    // Flat badge: background = intent color, border = intent color (non-transparent)
-    const flatBadgeStyles = await page.getByTestId("badge-flat-info").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(flatBadgeStyles.backgroundColor)).toBe(false);
-    expect(getColorDistance(flatBadgeStyles.color, flatBadgeStyles.backgroundColor)).toBeGreaterThan(2);
-    expect(isTransparent(flatBadgeStyles.borderColor)).toBe(false);
+    const styles = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const element = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
 
-    const flatPrimaryBadgeStyles = await page.getByTestId("badge-flat-primary").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
+        return {
+          background: element.backgroundColor,
+          border: element.borderTopColor,
+          color: element.color,
+        };
       };
-    });
-    const expectedPrimaryColors = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--color-primary)";
-      const probeContrast = document.createElement("span");
-      probeContrast.style.color = "var(--color-primary-contrast)";
-      document.body.append(probe, probeContrast);
-      const colors = {
-        primary: getComputedStyle(probe).color,
-        contrast: getComputedStyle(probeContrast).color,
-      };
-      probe.remove();
-      probeContrast.remove();
-      return colors;
-    });
-    expectSameColor(flatPrimaryBadgeStyles.backgroundColor, expectedPrimaryColors.primary, "flat primary badge");
-    expectSameColor(flatPrimaryBadgeStyles.color, expectedPrimaryColors.contrast, "flat primary badge text");
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
 
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+
+        const color = getComputedStyle(probe).color;
+
+        probe.remove();
+
+        return color;
+      };
+
+      /* The edge axis is not on the grid at `.solid` -- one row stands for both,
+         because they render the same box -- so the pair is built here to prove
+         that is true rather than assumed. */
+      const probe = (className: string) => {
+        const element = document.createElement("span");
+
+        element.className = className;
+        document.body.append(element);
+
+        const styles = getComputedStyle(element);
+        const values = { background: styles.backgroundColor, border: styles.borderTopColor };
+
+        element.remove();
+
+        return values;
+      };
+
+      return {
+        edgedSolid: probe("badge info solid edged"),
+        edgelessSolid: probe("badge info solid edgeless"),
+        solidInfo: read("badge-solid-info"),
+        solidPrimary: read("badge-solid-primary"),
+        solidSecondary: read("badge-solid-secondary"),
+        softSuccess: read("badge-soft-edgeless-success"),
+        tokenAccent: resolveToken("accent"),
+        tokenAccentContrast: resolveToken("accent-contrast"),
+        tokenPrimary: resolveToken("primary"),
+        tokenPrimaryContrast: resolveToken("primary-contrast"),
+      };
+    });
+
+    /* A solid badge fills with the intent and reads in the contrast tone. */
+    expect(isTransparent(styles.solidInfo.background)).toBe(false);
+    expect(getColorDistance(styles.solidInfo.color, styles.solidInfo.background)).toBeGreaterThan(2);
+    /* P3: a filled badge's edge blends all the way to its own fill, so `.edged`
+       draws the boundary in the fill and `.edgeless` draws none -- and the border
+       box shows the same fill through the gap. Two spellings, one box. */
+    expectSameColor(styles.edgedSolid.border, styles.edgedSolid.background, "solid edged badge edge");
+    expect(isTransparent(styles.edgelessSolid.border), "solid edgeless badge edge").toBe(true);
+    expectSameColor(styles.edgelessSolid.background, styles.edgedSolid.background, "solid badge fill");
+
+    expectSameColor(styles.solidPrimary.background, styles.tokenPrimary, "solid primary badge");
+    expectSameColor(styles.solidPrimary.color, styles.tokenPrimaryContrast, "solid primary badge text");
     // Secondary maps to the accent token pair.
-    const flatSecondaryBadgeStyles = await page.getByTestId("badge-flat-secondary").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        color: styles.color,
-      };
-    });
-    const expectedSecondaryColors = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--color-accent)";
-      const probeContrast = document.createElement("span");
-      probeContrast.style.color = "var(--color-accent-contrast)";
-      document.body.append(probe, probeContrast);
-      const colors = {
-        accent: getComputedStyle(probe).color,
-        contrast: getComputedStyle(probeContrast).color,
-      };
-      probe.remove();
-      probeContrast.remove();
-      return colors;
-    });
-    expectSameColor(flatSecondaryBadgeStyles.backgroundColor, expectedSecondaryColors.accent, "flat secondary badge");
-    expectSameColor(flatSecondaryBadgeStyles.color, expectedSecondaryColors.contrast, "flat secondary badge text");
+    expectSameColor(styles.solidSecondary.background, styles.tokenAccent, "solid secondary badge");
+    expectSameColor(styles.solidSecondary.color, styles.tokenAccentContrast, "solid secondary badge text");
 
-    // Soft badge: tinted background, no border
-    const softBadgeStyles = await page.getByTestId("badge-soft-success").evaluate((element) => {
-      const styles = getComputedStyle(element);
-      return {
-        backgroundColor: styles.backgroundColor,
-        borderColor: styles.borderColor,
-      };
-    });
-    expect(isTransparent(softBadgeStyles.backgroundColor)).toBe(false);
-    expect(isTransparent(softBadgeStyles.borderColor)).toBe(true);
+    /* An edgeless box draws no edge at all, so the border band shows the fill
+       through it and the boundary is the fill rather than a ring. Asserting the
+       colour matched the fill instead would pass on a band painted a second coat
+       of a translucent tint, which is the ring it is meant to rule out. */
+    expect(isTransparent(styles.softSuccess.background)).toBe(false);
+    expect(isTransparent(styles.softSuccess.border), "soft badge edge").toBe(true);
   });
 
   test("uses the neutral text tokens when no intent is set", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const values = await page.evaluate(() => {
-      const probe = document.createElement("span");
-      probe.style.color = "var(--color-text)";
-      document.body.append(probe);
-      const tokenText = getComputedStyle(probe).color;
-      probe.remove();
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
 
       const read = (testId: string, pseudo?: string) =>
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, pseudo);
 
       return {
-        alertFg: read("alert-plain-none").color,
-        badgeFg: read("badge-plain-none").color,
-        progressBg: read("progress-plain-none", "::after").backgroundColor,
-        tokenText,
+        alertFg: read("alert-default-none").color,
+        badgeFg: read("badge-default-none").color,
+        progressBg: read("progress-default-none", "::after").backgroundColor,
+        tokenText: resolveToken("text"),
+        tokenTextStrong: resolveToken("text-strong"),
       };
     });
 
-    expectSameColor(values.alertFg, values.tokenText, "no-intent alert text");
-    expectSameColor(values.badgeFg, values.tokenText, "no-intent badge text");
+    /* Text on a page is the strong tone, which for the neutral intent is the ink.
+       A progress fill is not text: it takes `--intent-color` directly, because an
+       indicator is a shape rather than something to read. */
+    expectSameColor(values.alertFg, values.tokenTextStrong, "no-intent alert text");
+    expectSameColor(values.badgeFg, values.tokenTextStrong, "no-intent badge text");
     expectSameColor(values.progressBg, values.tokenText, "no-intent progress fill");
   });
 
@@ -300,14 +388,14 @@ test.describe("feedback", () => {
         getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!, "::after").backgroundColor;
 
       return {
-        loader: getComputedStyle(document.querySelector('[data-testid="loader-plain-success"]')!, "::before")
-          .backgroundColor,
-        progressDestructive: fill("progress-plain-destructive"),
-        progressInfo: fill("progress-plain-info"),
-        progressPrimary: fill("progress-plain-primary"),
-        progressSecondary: fill("progress-plain-secondary"),
-        progressSuccess: fill("progress-plain-success"),
-        progressWarning: fill("progress-plain-warning"),
+        /* The loader is the mask, so its own background is the colour. */
+        loader: getComputedStyle(document.querySelector('[data-testid="loader-default-success"]')!).backgroundColor,
+        progressDestructive: fill("progress-default-destructive"),
+        progressInfo: fill("progress-default-info"),
+        progressPrimary: fill("progress-default-primary"),
+        progressSecondary: fill("progress-default-secondary"),
+        progressSuccess: fill("progress-default-success"),
+        progressWarning: fill("progress-default-warning"),
         tokenDestructive: resolveToken("destructive"),
         tokenInfo: resolveToken("info"),
         tokenPrimary: resolveToken("primary"),
@@ -331,7 +419,7 @@ test.describe("feedback", () => {
 
     const activeProgressStyles = await page.evaluate(() => {
       const beforeStyles = getComputedStyle(
-        document.querySelector('[data-testid="progress-plain-none-active"]')!,
+        document.querySelector('[data-testid="progress-default-none-active"]')!,
         "::before",
       );
       return {
@@ -351,7 +439,7 @@ test.describe("feedback", () => {
 
     const indeterminateProgressStyles = await page.evaluate(() => {
       const afterStyles = getComputedStyle(
-        document.querySelector('[data-testid="progress-plain-none-indeterminate"]')!,
+        document.querySelector('[data-testid="progress-default-none-indeterminate"]')!,
         "::after",
       );
       return {
@@ -366,33 +454,39 @@ test.describe("feedback", () => {
     expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 
-  test("lifts a tooltip bubble no higher than a raised surface", async ({ page }) => {
+  /* Elevation is one unitless number multiplied into the aesthetic's shadow
+     geometry, so "twice a card" is a measurement rather than a second shadow
+     token. The registry rests a bubble at 2 and a card at 1, and this is that
+     sentence read off the composited value. */
+  test("lifts a tooltip bubble to twice a raised card's depth", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
-    const shadows = await page.evaluate(() => {
-      const probe = document.createElement("span");
+    const offsets = await page.evaluate(() => {
+      /* Every engine serialises a layer as `<colour> <x> <y> <blur> <spread>`, so
+         the vertical offset is the second length after the colour closes. */
+      const verticalOffset = (shadow: string) => Number.parseFloat(shadow.split(") ")[1]!.split(" ")[1]!);
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const card = document.createElement("div");
 
-      probe.style.boxShadow = "var(--elevation-mid)";
-      document.body.append(probe);
+      /* A card rests flat now, so the unit of depth is one a consumer asked
+         for. The bubble is the one component that floats without being asked. */
+      card.className = "card raised";
+      host.append(card);
 
-      const mid = getComputedStyle(probe).boxShadow;
+      const values = {
+        bubble: verticalOffset(
+          getComputedStyle(document.querySelector('[data-testid="fallback-tooltip"]')!, "::after").boxShadow,
+        ),
+        card: verticalOffset(getComputedStyle(card).boxShadow),
+      };
 
-      probe.remove();
+      card.remove();
 
-      const bubble = getComputedStyle(
-        document.querySelector('[data-testid="fallback-tooltip"]') as Element,
-        "::after",
-      ).boxShadow;
-
-      return { bubble, mid };
+      return values;
     });
 
-    /* A bubble is a small transient popover, not a modal, so it sits at the
-       elevation a hovered card uses. `--elevation-high` stays for full
-       overlays. The bubble also carries Tailwind's empty ring layers, so this
-       asserts the elevation is present rather than that it is the whole
-       value. */
-    expect(shadows.bubble).toContain(shadows.mid);
+    expect(offsets.card, "a raised card draws a step of depth").toBeGreaterThan(0);
+    expect(offsets.bubble).toBe(offsets.card * 2);
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {
@@ -411,5 +505,83 @@ test.describe("feedback", () => {
     expect(tooltipStyles.left).not.toBe("auto");
     expect(tooltipStyles.top).not.toBe("auto");
     expect(tooltipStyles.transformOrigin).not.toBe("");
+  });
+
+  /* The bubble used to pin its fill at solid so a container's `.ghost` could not
+     reach it. It rests on a tinted ground now and reads presentation like
+     anything else, which means this is the assertion the pin used to be, stated
+     as a property rather than as a refusal: a bubble is opaque and its label
+     reads, at every presentation, whether the presentation is its own or a
+     container's.
+
+     Both directions are covered because they fail differently. The bubble's own
+     class is what a consumer writes; the container's is what our own cascade
+     does to a bubble nobody classed, and that second one is the case that
+     produced a boundaryless bubble floating over arbitrary content. */
+  test("keeps a tooltip bubble opaque and legible at every presentation", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const bubbles = await page.evaluate(() => {
+      const host = document.createElement("div");
+      document.body.append(host);
+
+      const read = ({ container, own }: { container: string; own: string }) => {
+        const wrapper = document.createElement("div");
+        wrapper.className = container;
+        const tooltip = document.createElement("span");
+        tooltip.className = `tooltip ${own}`.trim();
+        tooltip.dataset.tooltip = "Message";
+        tooltip.dataset.state = "open";
+        wrapper.append(tooltip);
+        host.append(wrapper);
+
+        const styles = getComputedStyle(tooltip, "::after");
+        const values = { background: styles.backgroundColor, foreground: styles.color, label: `${container}>${own}` };
+
+        wrapper.remove();
+
+        return values;
+      };
+
+      const presentations = ["", "ghost", "soft", "solid", "primary", "destructive", "destructive solid"];
+      const values = [
+        ...presentations.map((own) => read({ container: "", own })),
+        ...presentations.map((container) => read({ container, own: "" })),
+      ];
+
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      const tokens = { page: getComputedStyle(document.body).backgroundColor, primary: resolveToken("primary") };
+
+      host.remove();
+
+      return { tokens, values };
+    });
+
+    for (const bubble of bubbles.values) {
+      expect(readSrgb(bubble.background).alpha, `${bubble.label} bubble ground`).toBe(1);
+      expect(
+        getContrastRatio(bubble.foreground, bubble.background),
+        `${bubble.label} bubble label`,
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+
+    /* And the two looks themselves, because "legible" says neither "quiet" nor
+       "coloured", and the bubble owes both. With no intent it is a quiet plate --
+       the neutral fill stops at its cap, so it never reaches the page's ink,
+       which in a dark theme would be a white slab. With one it is that intent's
+       own colour at full strength, the way a filled button is. */
+    const resting = bubbles.values.find((bubble) => bubble.label === ">")!;
+    const primary = bubbles.values.find((bubble) => bubble.label === ">primary")!;
+
+    expect(getContrastRatio(resting.background, bubbles.tokens.page), "resting bubble is quiet").toBeLessThan(3);
+    expect(getContrastRatio(primary.background, bubbles.tokens.page), "primary bubble is not").toBeGreaterThan(5);
+    expectSameColor(primary.background, bubbles.tokens.primary, "primary bubble ground");
   });
 });

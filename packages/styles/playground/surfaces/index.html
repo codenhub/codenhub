@@ -14,9 +14,9 @@
         <p class="text-label">UI fixtures</p>
         <h1 class="text-title-lg">Surfaces</h1>
         <p class="text-body text-text-secondary">
-          Containers and the rules between them. Cards float above the layout, panels sit flush against it, and both
-          read intent, presentation, and material. Each grid is one row per presentation and one column per intent,
-          preceded by a cell with no intent class at all.
+          Containers and the rules between them. Cards and panels sit flat until depth is requested, and both read
+          intent, presentation, and material. Each grid is one row per presentation and one column per intent, preceded
+          by a cell with no intent class at all.
         </p>
       </section>
 
@@ -24,7 +24,7 @@
         <div class="stack tight">
           <h2 class="text-title">Cards</h2>
           <p class="text-body text-text-secondary">
-            A plain card is a neutral bordered container with a low elevation. Only an explicit presentation tints it.
+            A card with no presentation class is a ghost, edged, flat container. Only an explicit fill tints it.
           </p>
         </div>
         <div data-matrix="card" data-matrix-states="rest" data-testid="card-matrix"></div>
@@ -72,9 +72,7 @@
       <section class="sect-inn stack loose">
         <div class="stack tight">
           <h2 class="text-title">Panels</h2>
-          <p class="text-body text-text-secondary">
-            The same contract as a card with no elevation, for sidebars, toolbars, and wells.
-          </p>
+          <p class="text-body text-text-secondary">A soft, edgeless container for sidebars, toolbars, and wells.</p>
         </div>
         <div data-matrix="panel" data-matrix-states="rest" data-testid="panel-matrix"></div>
         <div class="stack tight">
@@ -104,16 +102,12 @@
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Empty states</h2>
-          <p class="text-body text-text-secondary">A centered, muted layout for a container with nothing in it yet.</p>
-        </div>
-        <div data-matrix="empty-state" data-matrix-states="rest" data-testid="empty-state-matrix"></div>
-      </section>
-
-      <section class="sect-inn stack loose">
-        <div class="stack tight">
           <h2 class="text-title">Dividers</h2>
-          <p class="text-body text-text-secondary">Presentation changes rule strength or width; ghost removes it.</p>
+          <p class="text-body text-text-secondary">
+            A divider takes the stronger of its fill and its edge, so only
+            <code class="code">.ghost.edgeless</code>
+            removes it.
+          </p>
         </div>
         <div data-matrix="divider" data-matrix-states="rest" data-testid="divider-matrix"></div>
         <div class="stack tight">
@@ -134,6 +128,86 @@
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
+          <h2 class="text-title">Elevation</h2>
+          <p class="text-body text-text-secondary">
+            Depth is a modifier, not an axis. Nothing is raised until an aesthetic draws depth or one of these classes
+            asks for it, and each is one unitless multiplier over whatever geometry is in scope — so the same class
+            reads as a soft blur by default and as a hard slab under
+            <code class="code">.neobrutalism</code>
+            .
+          </p>
+        </div>
+        <div class="auto-grid">
+          <div class="stack tight">
+            <p class="text-label text-text-secondary">Default</p>
+            <article class="card" data-testid="elevation-default">No depth asked for.</article>
+          </div>
+          <div class="stack tight">
+            <p class="text-label text-text-secondary">.flat</p>
+            <article class="card flat" data-testid="elevation-flat">Depth removed.</article>
+          </div>
+          <div class="stack tight">
+            <p class="text-label text-text-secondary">.raised</p>
+            <article class="card raised" data-testid="elevation-raised">One unit.</article>
+          </div>
+          <div class="stack tight">
+            <p class="text-label text-text-secondary">.floating</p>
+            <article class="card floating" data-testid="elevation-floating">Twice it, for menus and popovers.</article>
+          </div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Per component</h3>
+          <p class="text-body text-text-secondary">
+            The registry rests each component at its own level, and the multiplier scales that rather than replacing it.
+            A panel rests at zero, so
+            <code class="code">.raised</code>
+            gives it the step a card gets; a tooltip bubble rests at two and floats with nothing asked for.
+          </p>
+          <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Panel, raised</p>
+              <aside class="panel raised" data-testid="elevation-panel-raised">A well, lifted.</aside>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Panel, floating</p>
+              <aside class="panel floating" data-testid="elevation-panel-floating">Twice it.</aside>
+            </div>
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Bubble</p>
+              <span
+                class="tooltip tooltip-icon"
+                data-tooltip="A bubble rests at two"
+                data-tooltip-position="right"
+                data-testid="elevation-tooltip"
+                tabindex="0"
+                aria-label="A bubble rests at two"
+              >
+                ?
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="stack tight">
+          <h3 class="text-title-sm">Cascade</h3>
+          <p class="text-body text-text-secondary">
+            The multiplier is a plain number, so it inherits. A container can lift or flatten a whole region and any
+            element inside it still opts out on itself.
+          </p>
+          <div class="raised auto-grid" data-testid="elevation-container">
+            <article class="card" data-testid="elevation-inherited">
+              <h4 class="text-title-sm">Inherited</h4>
+              <p class="text-body">No elevation class of its own.</p>
+            </article>
+            <article class="card flat" data-testid="elevation-opt-out">
+              <h4 class="text-title-sm">Opted out</h4>
+              <p class="text-body">Flat on the element, which always wins.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="sect-inn stack loose">
+        <div class="stack tight">
           <h2 class="text-title">Presentation cascade</h2>
           <p class="text-body text-text-secondary">
             Presentation cascades and intent does not. The container below sets
@@ -147,7 +221,7 @@
             <p class="text-body">No presentation class of its own.</p>
           </article>
           <aside class="panel success" data-testid="cascade-panel-inherited">Inherited soft panel</aside>
-          <article class="card primary out" data-testid="cascade-card-override">
+          <article class="card primary ghost edged" data-testid="cascade-card-override">
             <h4 class="text-title-sm">Overridden</h4>
             <p class="text-body">Outlined on the element.</p>
           </article>

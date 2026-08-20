@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codenhub.dev/styles/registry.schema.json",
+  "title": "Codenhub styles registry",
+  "description": "The source of truth for what @codenhub/styles supports. Read by tests/integration/registry.test.ts, which checks it against the hand-written stylesheet and validates registry.json against this schema.",
+  "type": "object",
+  "required": ["version", "presentation", "intents", "modifiers", "components"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "presentation": {
+      "type": "object",
+      "required": ["fill", "edge", "hoverStep"],
+      "additionalProperties": false,
+      "properties": {
+        "fill": {
+          "type": "object",
+          "description": "Fill sub-axis. Keys are class names, values the presentation tokens they declare.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-fill", "ui-fg-on-fill"],
+            "additionalProperties": false,
+            "properties": {
+              "ui-fill": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              },
+              "ui-fg-on-fill": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              }
+            }
+          }
+        },
+        "edge": {
+          "type": "object",
+          "description": "Edge sub-axis.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-border"],
+            "additionalProperties": false,
+            "properties": {
+              "ui-border": {
+                "type": "string",
+                "pattern": "^\\d+%$"
+              }
+            }
+          }
+        },
+        "hoverStep": {
+          "type": "string",
+          "pattern": "^\\d+%$",
+          "description": "How much fill a hover adds. Hover is derived from this, never declared per class."
+        }
+      }
+    },
+    "intents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["family", "fillMax"],
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "type": "string",
+            "description": "The --color-* family this intent maps onto. Checked against intent.css."
+          },
+          "fillMax": {
+            "type": "string",
+            "pattern": "^[0-9]+%$",
+            "description": "How far this intent lets a fill go. 100% for every intent but neutral, whose color is the page ink. Checked against --intent-fill-max in intent.css."
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "modifiers": {
+      "type": "object",
+      "required": ["elevation"],
+      "properties": {
+        "elevation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["ui-elevation"],
+            "additionalProperties": false,
+            "properties": {
+              "ui-elevation": {
+                "type": "string",
+                "pattern": "^\\d+$"
+              }
+            }
+          }
+        }
+      },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "default", "native", "axes"],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "default": {
+            "type": "object",
+            "required": ["elevation"],
+            "additionalProperties": false,
+            "properties": {
+              "fill": {
+                "type": "string"
+              },
+              "edge": {
+                "type": "string"
+              },
+              "elevation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ground": {
+                "type": "string",
+                "description": "Token the component rests on at 0% fill, for tinted parts that are not transparent by default."
+              }
+            }
+          },
+          "art": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Indicator artwork variants, which are not a presentation."
+          },
+          "native": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Bare element selectors this component maps."
+          },
+          "renamedFrom": {
+            "type": "string"
+          },
+          "renameReason": {
+            "type": "string"
+          },
+          "composition": {
+            "type": "string",
+            "enum": ["frame", "none"],
+            "description": "How much of `box` the component takes. Absent means all of it; `frame` means the border, radius and clip only; `none` means it does not compose `box` at all."
+          },
+          "compositionReason": {
+            "type": "string"
+          },
+          "axes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["fill", "edge"]
+            },
+            "description": "Axes this component actually reads. An axis listed here must change the component's computed values when its class is applied; an axis left off must not. Asserted by the browser suite."
+          },
+          "bounds": {
+            "type": "array",
+            "description": "Bounds this component places on an axis input. A bound is justified only when our own composition produces the broken result, never when a consumer's own combination does.",
+            "items": {
+              "type": "object",
+              "required": ["token", "kind", "value", "reason", "escape"],
+              "additionalProperties": false,
+              "properties": {
+                "token": {
+                  "type": "string",
+                  "enum": ["--ui-fill", "--ui-border"]
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": ["cap", "floor"]
+                },
+                "value": {
+                  "type": "string"
+                },
+                "escape": {
+                  "type": ["string", "null"],
+                  "description": "What lifts the bound, or null when it is absolute."
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "The composition of ours that produces the broken result."
+                }
+              }
+            }
+          },
+          "axesTarget": {
+            "type": "string",
+            "description": "Pseudo-element the axes are read on, when the component paints somewhere other than its own box."
+          },
+          "axesTargetReason": {
+            "type": "string"
+          },
+          "unsupported": {
+            "type": "array",
+            "description": "Axis values this component does not support. The playground must not render them and the docs must publish them as unsupported.",
+            "items": {
+              "type": "object",
+              "required": ["axis", "class", "reason"],
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "type": "string",
+                  "enum": ["fill", "edge"]
+                },
+                "class": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "dependentRequired": {
+          "composition": ["compositionReason"],
+          "renamedFrom": ["renameReason"],
+          "axesTarget": ["axesTargetReason"]
+        },
+        "if": {
+          "required": ["composition"],
+          "properties": {
+            "composition": {
+              "const": "none"
+            }
+          }
+        },
+        "else": {
+          "properties": {
+            "default": {
+              "required": ["fill", "edge", "elevation"]
+            }
+          }
+        }
+      }
+    },
+    "helpers": {
+      "type": "array",
+      "description": "Classes that carry no axis. Listed so collision checking covers them; docs/usage/ describes what each one is for.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      }
+    },
+    "aesthetics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "completeShadow"],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "completeShadow": {
+            "type": "boolean",
+            "description": "True when the aesthetic gives a shadow whole rather than as parts, which opts it out of the elevation multiplier. Checked against the aesthetic's stylesheet."
+          },
+          "completeShadowReason": {
+            "type": "string"
+          },
+          "selectors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "description": "Components this aesthetic names in a selector because the treatment cannot be a token. R3 keeps this empty; every entry is a cost the registry makes countable."
+          },
+          "selectorReason": {
+            "type": "string",
+            "description": "Why each named component cannot be reached through a token. Required when `selectors` is non-empty."
+          }
+        },
+        "dependentRequired": {
+          "selectors": ["selectorReason"]
+        }
+      }
+    },
+    "removed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["class", "replacedBy"],
+        "additionalProperties": false,
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "replacedBy": {
+            "type": ["string", "null"]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

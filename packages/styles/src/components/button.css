@@ -1,31 +1,30 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@import "./loader.css";
+@reference "./loader.css";
+@reference "../box.css";
 
+/* A filled, edgeless, raised box you can press. `box` paints it; everything
+   here is what makes it a button rather than some other box.
+
+   The resting values are the published default: a button with no presentation
+   class is solid and edgeless, and that is a decision written on three lines
+   rather than a `var()` fallback buried in an expression. */
 @utility btn {
-  /* Presentation and material tokens are resolved here, against this button's
-     own intent. The fallbacks are the filled default a button keeps when no
-     presentation or aesthetic class is in scope. */
-  --button-fill: calc(var(--ui-fill, 100%) * var(--ui-bg-alpha, 1));
-  --button-hover-fill: calc(var(--ui-hover-fill, 100%) * var(--ui-bg-alpha, 1));
-  --button-bg: color-mix(in oklab, var(--intent-color) var(--button-fill), transparent);
-  --button-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 100%), var(--intent-strong));
-  --button-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 100%), transparent);
-  --button-hover-bg: color-mix(in oklab, var(--intent-hover) var(--button-hover-fill), transparent);
-  --button-hover-fg: color-mix(in oklab, var(--intent-contrast) var(--ui-hover-fg-on-fill, 100%), var(--intent-strong));
-  --button-hover-border: color-mix(in oklab, var(--intent-hover) var(--ui-border, 100%), transparent);
-  --button-spinner: var(--button-fg);
+  --_d-fill: 100%;
+  --_d-fg-on-fill: 100%;
+  --_d-border: 0%;
+  --_d-elevation: 1;
 
-  @apply shaped relative inline-flex min-h-(--control-height,2.5rem) w-fit cursor-pointer items-center justify-center gap-2 bg-(--button-bg) px-4 py-2 font-semibold whitespace-nowrap text-(--button-fg) no-underline transition-[background-color,border-color,box-shadow,color,opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease) select-none;
-  border: var(--shape-border-width) solid var(--button-border);
-  border-radius: var(--ui-radius, var(--radius-control));
-  box-shadow: var(--shape-ring, var(--ui-shadow, none));
+  @apply box box-hover relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 font-semibold whitespace-nowrap no-underline select-none;
 
-  /* An aesthetic that clips cannot show the outline from `reset.css`, so the ring
-     stack replaces it. With no such aesthetic this resolves to what a button had
-     before, and the outline does the work. */
-  &:focus-visible {
-    box-shadow: var(--shape-focus-stack, var(--ui-shadow, none));
+  min-height: var(--control-height);
+
+  /* Pressing moves the element into its own shadow, when the aesthetic has one. */
+  &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
+    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+
+    transform: var(--ui-active-transform, none);
   }
 
   &.sm {
@@ -37,10 +36,11 @@
   }
 
   &.icon {
-    @apply aspect-square min-w-(--control-height,2.5rem) p-2;
+    @apply aspect-square p-2;
+
+    min-width: var(--control-height);
   }
 
-  &.p-sm,
   &.compact {
     @apply px-2.5 py-1;
 
@@ -49,7 +49,6 @@
     }
   }
 
-  &.p-lg,
   &.spacious {
     @apply px-6 py-3;
 
@@ -62,37 +61,28 @@
     @apply rounded-full;
   }
 
-  &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-    @apply border-(--button-hover-border) bg-(--button-hover-bg) text-(--button-hover-fg);
-
-    transform: var(--ui-hover-transform, none);
-  }
-
-  &:disabled,
-  &.disabled,
-  &[aria-disabled="true"],
-  &[data-disabled] {
-    @apply cursor-not-allowed;
-
-    opacity: 0.58;
-  }
-
   &.loading {
-    /* text-transparent! forces text invisible regardless of intent color so the
-       CSS spinner (::after pseudo-element) is the only visible element while loading. */
-    @apply pointer-events-none text-transparent! transition-[opacity,transform];
+    /* `text-transparent!` forces the label invisible whatever the intent
+       resolved to, so the spinner is the only thing left to read. */
+    @apply pointer-events-none text-transparent!;
 
     & > * {
       opacity: 0 !important;
     }
 
+    /* The spinner takes the label's colour, which `box` already resolved
+       against this button's own intent and presentation. It reads `--_fg`
+       rather than `currentColor`: the rule above forces `color` to transparent
+       to hide the label, and a spinner painted in `currentColor` inherits that
+       and paints nothing at all. */
     &::after {
-      @apply absolute block size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-(--button-spinner);
+      @apply loader-mask absolute block size-4 -translate-x-1/2 -translate-y-1/2;
+
+      background-color: var(--_fg);
 
       top: calc(50% + var(--border-width));
       left: calc(50% + var(--border-width));
       content: "";
-      @apply ai;
     }
   }
 }

@@ -34,6 +34,7 @@ const AESTHETICS = [
   { label: "Neobrutalism", value: "neobrutalism" },
   { label: "Glass", value: "glass" },
   { label: "Pixel", value: "pixel" },
+  { label: "Chunky tile", value: "chunky-tile" },
 ];
 
 const aestheticParam = params.get("aesthetic");

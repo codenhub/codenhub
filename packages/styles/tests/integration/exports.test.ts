@@ -38,35 +38,85 @@ const tailwindCliPath = fileURLToPath(
 );
 const tailwindCssUrl = new URL("./index.css", import.meta.resolve("tailwindcss/package.json")).href;
 const tailwindExportContracts: Record<string, TailwindExportContract> = {
-  "./tw": { candidates: "btn", patterns: [/\.btn\{/] },
+  "./tw": {
+    candidates: "btn",
+    patterns: [/\.btn\{--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
+  },
   "./tw/theme": { patterns: [/--color-primary:/] },
-  "./tw/components": { candidates: "alert btn", patterns: [/\.alert\{/, /\.btn\{/] },
-  "./tw/surface": { candidates: "empty-state", patterns: [/\.empty-state\{/] },
-  "./tw/button": { candidates: "btn", patterns: [/\.btn\{/] },
-  "./tw/form": { candidates: "ipt radio", patterns: [/\.ipt\{/, /\.radio\{/] },
-  "./tw/feedback": { candidates: "alert progress", patterns: [/\.alert\{/, /\.progress\{/] },
+  "./tw/components": {
+    candidates: "alert btn loading",
+    patterns: [/\.alert\{--_capped:/, /\.btn\{--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
+  },
+  "./tw/surface": {
+    candidates: "panel",
+    patterns: [/\.panel\{--_capped:/, /backdrop-filter:var\(--ui-backdrop,none\)/],
+  },
+  "./tw/button": {
+    candidates: "btn loading",
+    patterns: [/\.btn\{--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
+  },
+  "./tw/form": {
+    candidates: "ipt radio",
+    patterns: [/\.ipt\{--_capped:/, /\.radio\{--_capped:/, /background-color:var\(--_bg\)/],
+  },
+  "./tw/feedback": {
+    candidates: "alert badge progress",
+    patterns: [/\.alert\{--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
+  },
   "./tw/loader": {
     candidates: "loader dots-wave",
     patterns: [/\.loader/, /\.dots-wave/, /mask-image:/],
   },
-  "./tw/tooltip": { candidates: "tooltip", patterns: [/\.tooltip\{/] },
+  "./tw/tooltip": {
+    candidates: "tooltip",
+    patterns: [/\.tooltip\{/, /\.tooltip\.tooltip-icon\{/, /--_capped:/, /background-color:var\(--_bg\)/],
+  },
   "./tw/reset": { candidates: "text-body", patterns: [/:focus-visible\{/] },
   "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
   "./tw/typography": { candidates: "text-title", patterns: [/\.text-title\{/] },
-  "./tw/utilities": { candidates: "stack table", patterns: [/\.stack\{/, /\.table\{/] },
-  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/] },
-  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow:/] },
-  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /backdrop-filter:/] },
-  /* The aesthetic publishes the silhouette as a material token; the `clip-path`
-     declaration that consumes it belongs to the components. */
-  "./tw/aesthetics/pixel": { patterns: [/\.pixel\{/, /--ui-clip:\s*polygon/, /--ui-clip-tight:\s*polygon/] },
+  "./tw/utilities": {
+    candidates: "stack data-table",
+    patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
+  },
+  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/] },
+  "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
+  "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
+  /* The bar is a shade of the element rather than a repeat of it, which takes the
+     opaque depth colour as well as the ink amount. Both are asserted because
+     either one alone leaves the bar invisible. */
+  "./tw/aesthetics/chunky-tile": {
+    patterns: [/\.chunky-tile\{/, /--tile-radius,/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
+  },
+  /* The aesthetic publishes the silhouette and the inset edge as material
+     tokens; the declarations that consume them belong to `box` and `surface`. */
+  "./tw/aesthetics/pixel": {
+    patterns: [
+      /\.pixel\{/,
+      /--ui-clip:\s*polygon/,
+      /--ui-clip-tight:\s*none/,
+      /--ui-shadow-edge:/,
+      /--ui-shadow-inset:/,
+    ],
+  },
 };
 const compiledExportContracts: Record<string, CompiledExportContract> = {
-  ".": { target: "dist/index.css", patterns: [/--color-primary:/, /\.btn\{/, /\.stack\{/] },
+  ".": {
+    target: "dist/index.css",
+    patterns: [/--color-primary:/, /\.btn\{/, /\.stack\{/, /--_capped:/],
+  },
   "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
   "./components": {
     target: "dist/components.css",
-    patterns: [/.alert\{/, /.btn\{/, /.empty-state\{/, /.field\{/, /.loader\{/, /.text-title\{/, /.tooltip\{/],
+    patterns: [
+      /\.alert\{/,
+      /\.btn\{/,
+      /\.panel\{/,
+      /\.field\{/,
+      /\.loader\{/,
+      /\.text-title\{/,
+      /\.tooltip\{/,
+      /--_capped:/,
+    ],
   },
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {
@@ -75,17 +125,19 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   },
   "./aesthetics/neobrutalism": {
     target: "dist/aesthetics/neobrutalism.css",
-    patterns: [/\.neobrutalism\{/, /--ui-shadow:/],
+    patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/],
   },
   "./aesthetics/glass": {
     target: "dist/aesthetics/glass.css",
-    patterns: [/\.glass\{/, /backdrop-filter:/, /prefers-reduced-transparency/],
+    patterns: [/\.glass\{/, /--ui-backdrop:/, /prefers-reduced-transparency/],
   },
   "./aesthetics/pixel": {
     target: "dist/aesthetics/pixel.css",
-    patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-edge:/],
+    patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-shadow-inset:/],
   },
 };
+const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
+const representativePublicRules = [".box{--_capped:"];
 
 test("every declared package export target exists after build", async () => {
   await Promise.all(
@@ -107,6 +159,21 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
     }
   });
 }
+
+test("aggregate exports emit each public rule expansion once", async () => {
+  const aggregateOutputs = await Promise.all(
+    aggregateExportTargets.map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+
+  for (const { output, target } of aggregateOutputs) {
+    for (const rule of representativePublicRules) {
+      expect(output.split(rule).length - 1, `${target} should emit ${rule} once`).toBe(1);
+    }
+  }
+});
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {

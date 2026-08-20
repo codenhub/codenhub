@@ -27,18 +27,16 @@ test("defines every intent slot on each component that reads them", async ({ pag
       "progress",
       "skeleton",
       "loader",
-      "control-base",
       "ipt",
       "textarea",
       "select",
-      "table",
+      "data-table",
       "kbd",
       "code",
       "pre",
       "quote",
       "divider",
       "tooltip",
-      "empty-state",
     ];
     const slots = [
       "--intent-color",
@@ -80,14 +78,15 @@ test("applies intent on the element without cascading it from a container", asyn
   await page.goto(PLAYGROUND_URL);
 
   const values = await page.evaluate(() => {
-    const resolveToken = (tokenName: string) => {
+    const resolveColor = (value: string) => {
       const probe = document.createElement("span");
-      probe.style.color = `var(--color-${tokenName})`;
+      probe.style.color = value;
       document.body.append(probe);
       const color = getComputedStyle(probe).color;
       probe.remove();
       return color;
     };
+    const resolveToken = (tokenName: string) => resolveColor(`var(--color-${tokenName})`);
 
     const host = document.createElement("section");
     host.className = "success";
@@ -110,6 +109,12 @@ test("applies intent on the element without cascading it from a container", asyn
       tokenDestructive: resolveToken("destructive"),
       tokenSuccess: resolveToken("success"),
       tokenText: resolveToken("text"),
+      tokenTextStrong: resolveToken("text-strong"),
+      /* The neutral fill stops at its intent's cap, so the no-intent button is a
+         translucent plate of the ink rather than the ink itself. */
+      neutralFill: resolveColor(
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(inherited).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+      ),
     };
 
     host.remove();
@@ -117,8 +122,8 @@ test("applies intent on the element without cascading it from a container", asyn
     return results;
   });
 
-  expectSameColor(values.inheritedButtonBg, values.tokenText, "button ignores container intent");
-  expectSameColor(values.inheritedBadgeFg, values.tokenText, "badge ignores container intent");
+  expectSameColor(values.inheritedButtonBg, values.neutralFill, "button ignores container intent");
+  expectSameColor(values.inheritedBadgeFg, values.tokenTextStrong, "badge ignores container intent");
   expectSameColor(values.explicitButtonBg, values.tokenDestructive, "element intent wins");
 
   expect(values.tokenSuccess).not.toBe(values.tokenText);

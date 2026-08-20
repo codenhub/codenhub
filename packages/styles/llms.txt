@@ -8,8 +8,19 @@ is the surface documented in public docs and demonstrated by the playground.
 
 ## Documentation
 
-- [Documentation](./docs/index.md): Primary entrypoint for the complete public documentation.
+- [Documentation](./docs/index.md): Primary entrypoint — what the package is, what it does and does not do, and where to go next.
 - [README](./README.md): Installation, first use, requirements, and stability notes.
-- [Tokens](./docs/tokens.md): Public CSS custom-property contract and theme-selector precedence.
-- [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
+- [Setup](./docs/setup.md): Installation, entrypoint/import-path reference, configuration, and requirements.
+- [Concepts](./docs/concepts.md): The three-axis model, the token system, and theme-selector precedence.
+- [Usage](./docs/usage/index.md): Composing, theming, customizing, aesthetics, and each component family.
+  - [Composing](./docs/usage/composing.md): Combining axes, presentation, the component axis matrix, and elevation.
+  - [Theming](./docs/usage/theming.md): Color, intent, and foundation token reference.
+  - [Customizing](./docs/usage/customizing.md): Presentation, material, and aesthetic token reference.
+  - [Aesthetics](./docs/usage/aesthetics.md): Each shipped aesthetic and its documented exceptions.
+  - [Buttons](./docs/usage/buttons.md)
+  - [Forms](./docs/usage/forms.md)
+  - [Feedback](./docs/usage/feedback.md)
+  - [Tooltips](./docs/usage/tooltips.md)
+  - [Content and layout](./docs/usage/content-and-layout.md): Layout helpers, content chips/tables, surfaces, and typography utilities.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility behavior and consumer responsibilities.

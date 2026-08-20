@@ -1,0 +1,529 @@
+{
+  "$schema": "./registry.schema.json",
+  "version": 1,
+  "presentation": {
+    "fill": {
+      "solid": {
+        "ui-fill": "100%",
+        "ui-fg-on-fill": "100%"
+      },
+      "soft": {
+        "ui-fill": "12%",
+        "ui-fg-on-fill": "0%"
+      },
+      "ghost": {
+        "ui-fill": "0%",
+        "ui-fg-on-fill": "0%"
+      }
+    },
+    "edge": {
+      "edged": {
+        "ui-border": "100%"
+      },
+      "edgeless": {
+        "ui-border": "0%"
+      }
+    },
+    "hoverStep": "14%"
+  },
+  "intents": {
+    "neutral": {
+      "family": "text",
+      "fillMax": "20%"
+    },
+    "primary": {
+      "family": "primary",
+      "fillMax": "100%"
+    },
+    "secondary": {
+      "family": "accent",
+      "fillMax": "100%"
+    },
+    "success": {
+      "family": "success",
+      "fillMax": "100%"
+    },
+    "warning": {
+      "family": "warning",
+      "fillMax": "100%"
+    },
+    "destructive": {
+      "family": "destructive",
+      "fillMax": "100%",
+      "aliases": ["danger", "error"]
+    },
+    "info": {
+      "family": "info",
+      "fillMax": "100%"
+    }
+  },
+  "modifiers": {
+    "elevation": {
+      "flat": {
+        "ui-elevation": "0"
+      },
+      "raised": {
+        "ui-elevation": "1"
+      },
+      "floating": {
+        "ui-elevation": "2"
+      }
+    },
+    "size": ["sm", "lg"],
+    "padding": ["compact", "spacious", "flush"],
+    "shape": ["pill"],
+    "state": ["loading", "disabled", "interactive", "active", "indeterminate"],
+    "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
+    "rule": ["ruled", "ruleless"]
+  },
+  "components": [
+    {
+      "class": "btn",
+      "default": {
+        "fill": "solid",
+        "edge": "edgeless",
+        "elevation": 1
+      },
+      "native": ["button", "input[type=\"submit\"]", "input[type=\"reset\"]", "input[type=\"button\"]"],
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "ipt",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": [
+        "input:not([type=\"checkbox\"], [type=\"radio\"], [type=\"submit\"], [type=\"reset\"], [type=\"button\"])"
+      ],
+      "axes": ["fill", "edge"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "6%",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
+          "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "A container's .edgeless would leave a field with no mark of where typing goes (WCAG 1.4.11)."
+        }
+      ]
+    },
+    {
+      "class": "card",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 1
+      },
+      "native": [],
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "badge",
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "loader",
+      "default": {
+        "elevation": 0
+      },
+      "art": [
+        "dots-wave",
+        "dots-fade",
+        "dots-queue",
+        "dots-rotate",
+        "dots-grow",
+        "dots-grow-alternate",
+        "dot-bounce",
+        "bars-wave",
+        "pulse-ring"
+      ],
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints only its artwork and has no box presentation.",
+      "axes": []
+    },
+    {
+      "class": "textarea",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": ["textarea"],
+      "axes": ["fill", "edge"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "6%",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
+          "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "A container's .edgeless would leave a field with no mark of where typing goes (WCAG 1.4.11)."
+        }
+      ]
+    },
+    {
+      "class": "select",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": ["select"],
+      "axes": ["fill", "edge"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "6%",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
+          "reason": "A container's .solid cascades onto a field nobody classed and fills it with its own text colour."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "A container's .edgeless would leave a field with no mark of where typing goes (WCAG 1.4.11)."
+        }
+      ]
+    },
+    {
+      "class": "checkbox",
+      "default": {
+        "fill": "solid",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": ["input[type=\"checkbox\"]"],
+      "axes": ["fill"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "20%",
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": null,
+          "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
+        }
+      ]
+    },
+    {
+      "class": "radio",
+      "default": {
+        "fill": "solid",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": ["input[type=\"radio\"]"],
+      "axes": ["fill"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "20%",
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": null,
+          "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
+        }
+      ]
+    },
+    {
+      "class": "switch",
+      "default": {
+        "fill": "solid",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "40%",
+          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
+          "reason": "A switch track is the whole component, so its three fills have to separate as fills; 40% is where they do, measured."
+        },
+        {
+          "token": "--ui-fill",
+          "kind": "floor",
+          "value": "12%",
+          "escape": null,
+          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "A container's .edgeless would leave a toggle with no silhouette (WCAG 1.4.11). A switch may opt out on the element because its knob still carries the state."
+        }
+      ],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
+        }
+      ]
+    },
+    {
+      "class": "panel",
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "alert",
+      "default": {
+        "fill": "soft",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "data-table",
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "elevation": 0
+      },
+      "native": ["table"],
+      "renamedFrom": "table",
+      "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
+      "composition": "frame",
+      "compositionReason": "Takes its border, radius and clip from `box` and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Its `overflow: hidden` over `border-separate` also does not compose with an aesthetic's `clip-path`.",
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "pre",
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "ground": "--intent-subtle",
+        "elevation": 0
+      },
+      "native": ["pre"],
+      "axes": ["fill", "edge"],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "The ground is what makes a chip a chip, so `.ghost` asks for no fill and draws the plate anyway. At zero fill that plate is `--intent-subtle` alone, which is a near-page tint: on the light page a ghost chip measured #e5e5e5 for both neutral and primary and #f5f5f5 for secondary, 1.04:1 against the page. Four intents rendering as one invisible chip is not a variation."
+        }
+      ]
+    },
+    {
+      "class": "quote",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": ["blockquote"],
+      "composition": "none",
+      "compositionReason": "Typography rather than a painted box. `box` draws a border on four sides and a quotation wants one, and its radius, clip and shadow are inert on a left bar. The cost is that the fill and the edge blend are reimplemented here and must agree with `box`: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made in both places. An edge change has two homes, not one.",
+      "axes": ["fill", "edge"]
+    },
+    {
+      "class": "tooltip",
+      "default": {
+        "fill": "solid",
+        "edge": "edged",
+        "ground": "--ui-surface-ground, var(--intent-subtle)",
+        "elevation": 2
+      },
+      "native": [],
+      "axes": ["fill", "edge"],
+      "axesTarget": "::after",
+      "axesTargetReason": "The tooltip element is a positioning wrapper; the bubble that reads intent and presentation is its ::after pseudo-element.",
+      "bounds": [
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "The bubble's line is its boundary against content nobody chose, and in the light theme its plate is near-white, so the line is the only thing separating the message from what is behind it. A container's .solid or .edgeless would take it away from a bubble nobody classed."
+        }
+      ]
+    },
+    {
+      "class": "kbd",
+      "default": {
+        "fill": "soft",
+        "edge": "edged",
+        "ground": "--intent-subtle",
+        "elevation": 0
+      },
+      "native": ["kbd"],
+      "axes": ["fill", "edge"],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "The ground is what makes a chip a chip, so `.ghost` asks for no fill and draws the plate anyway. At zero fill that plate is `--intent-subtle` alone, which is a near-page tint: on the light page a ghost chip measured #e5e5e5 for both neutral and primary and #f5f5f5 for secondary, 1.04:1 against the page. Four intents rendering as one invisible chip is not a variation."
+        }
+      ]
+    },
+    {
+      "class": "code",
+      "default": {
+        "fill": "soft",
+        "edge": "edgeless",
+        "ground": "--intent-subtle",
+        "elevation": 0
+      },
+      "native": ["code"],
+      "axes": ["fill", "edge"],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "ghost",
+          "reason": "The ground is what makes a chip a chip, so `.ghost` asks for no fill and draws the plate anyway. At zero fill that plate is `--intent-subtle` alone, which is a near-page tint: on the light page a ghost chip measured #e5e5e5 for both neutral and primary and #f5f5f5 for secondary, 1.04:1 against the page. Four intents rendering as one invisible chip is not a variation."
+        }
+      ]
+    },
+    {
+      "class": "skeleton",
+      "default": {
+        "elevation": 0
+      },
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints its own animated fill and has no box presentation.",
+      "axes": []
+    },
+    {
+      "class": "progress",
+      "default": {
+        "elevation": 0
+      },
+      "native": [],
+      "composition": "none",
+      "compositionReason": "An indicator paints its own track and fill and has no box presentation.",
+      "axes": []
+    },
+    {
+      "class": "divider",
+      "default": {
+        "elevation": 0
+      },
+      "native": ["hr"],
+      "composition": "none",
+      "compositionReason": "An indicator paints a single rule and has no box presentation.",
+      "axes": []
+    }
+  ],
+  "helpers": [
+    "field",
+    "label",
+    "hint",
+    "icon",
+    "table-wrap",
+    "quote-inline",
+    "view",
+    "stack",
+    "cluster",
+    "auto-grid",
+    "section",
+    "section-content",
+    "text-display",
+    "text-title-lg",
+    "text-title",
+    "text-title-sm",
+    "text-label-lg",
+    "text-label",
+    "text-body",
+    "selection-contrast"
+  ],
+  "aesthetics": [
+    {
+      "class": "neobrutalism",
+      "completeShadow": false,
+      "selectors": ["alert"],
+      "selectorReason": "The slab is this aesthetic's second ink line rather than depth, and an alert is the one container the registry rests flat. Elevation has only two slots -- the modifier and the component's resting default -- and an aesthetic writing the modifier would beat `.flat`. It writes `--_d-elevation` instead, so every elevation class still wins on the element; a token reaching only alerts would name the component through a longer route."
+    },
+    {
+      "class": "glass",
+      "completeShadow": true,
+      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
+    },
+    {
+      "class": "pixel",
+      "completeShadow": false
+    },
+    {
+      "class": "chunky-tile",
+      "completeShadow": false,
+      "selectors": ["btn"],
+      "selectorReason": "A heavy, slightly tracked label is what makes an action read as a tile, and neither `font-weight` nor `letter-spacing` holds a material slot -- adding two would put typography into the material vocabulary for one aesthetic. A slot buys nothing either: `.btn` is the only action the package ships, so an action-scoped token would be this same list with an indirection in front of it. Casing is left alone deliberately: how a label is worded is the application's decision, not the aesthetic's."
+    }
+  ]
+}

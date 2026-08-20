@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-12
+last_updated: 2026-08-19
 scope: repo-wide package progress tracking
 ---
 
@@ -11,6 +11,17 @@ scope: repo-wide package progress tracking
 Track high-level progress and milestone status for foundation and utility packages.
 
 ## Current focus
+
+### @codenhub/styles
+
+- [x] Three-axis styling model: intent, presentation, and aesthetic
+- [x] Machine-checked contract in `registry.json`, enforced by the test suite
+- [x] Shipped aesthetics: `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`
+- [x] Consumer-focused reformulation of the public documentation
+- [ ] `0.1.0` release
+
+`packages/styles/docs/internal/roadmap.md` owns the release conditions and the
+deferred work; this entry tracks only where the package sits.
 
 ### @codenhub/docs
 
@@ -106,6 +117,10 @@ Track high-level progress and milestone status for foundation and utility packag
   same config locally through `wrangler dev`, which is why `compatibility_date`
   tracks a date the installed runtime supports rather than the current one.
 - Unlisted packages (`router`, `store`, `theme`, `plugins`, `ui-kit`) are currently internal, WIP, deprecated, or evaluated separately.
+- `@codenhub/styles` will be the first package to publish under the delivery work
+  listed above, and none of it is in place yet: `0.1.0` goes out as a manual
+  `npm publish` from a maintainer's machine, which `docs/specs/packages-lifecycle.md`
+  allows and which the trusted-publishing item is meant to replace.
 - Continuous delivery is deferred until package adoption justifies it. `hub release` already
   covers the publish preflight, and trusted publishing only pays off once publishing runs from
   CI rather than from a maintainer's machine.

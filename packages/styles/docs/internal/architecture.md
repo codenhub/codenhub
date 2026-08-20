@@ -1,14 +1,20 @@
 ---
-status: APPROVED
-last_updated: 2026-08-12
-scope: `@codenhub/styles` styling model, token contracts, and composition rules.
+status: DRAFT
+last_updated: 2026-08-14
+scope: The `@codenhub/styles` styling model before 0.1.0. Superseded; kept for its measurements.
 ---
 
 # Architecture
 
-This document defines how `@codenhub/styles` decides what an element looks like.
-It is the source of truth for the token contracts; public documents under
-`docs/` describe the same model for consumers.
+**Superseded by [Model](./model.md).** This document described how the package
+decided what an element looked like before 0.1.0, when presentation was
+`.flat`/`.out`/`.ghost`, an edge had a scale, and a silhouette arrived through
+`shaped`. None of that is still true, so nothing here binds.
+
+It is kept, at DRAFT, for the two measurements the roadmap cites and the model
+builds on: [The cost of a no-op](#the-cost-of-a-no-op) and
+[Indirect tokens resolve once](#indirect-tokens-resolve-once). Both outlive the
+model they were made under, and re-measuring them would cost more than the page.
 
 ## The three axes
 
@@ -46,7 +52,7 @@ things:
 | **Emphasis** | `.primary` `.secondary`                                         | How much it matters on this page.               |
 | _Neutral_    | `.neutral`, or no class                                         | Neither; the default every component resets to. |
 
-They are one axis rather than two because they write the same six slots, so
+They are one axis rather than two because they write the same seven slots, so
 exactly one of them can apply. That is worth stating plainly, because the
 boundary reads as blurry until you notice it is a single slot: there is no way to
 express "the primary action, which is also destructive". You pick.
@@ -184,18 +190,26 @@ component. A row carrying its own intent class still wins.
 Set by intent classes, read by components. Public: consumers may set them
 directly to build an intent the package does not ship.
 
-| Token               | Meaning                                               |
-| ------------------- | ----------------------------------------------------- |
-| `--intent-color`    | The intent's base color.                              |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.   |
-| `--intent-hover`    | The intent's hovered base color.                      |
-| `--intent-strong`   | High-emphasis tone; readable text on subtle surfaces. |
-| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.        |
-| `--intent-border`   | Line color; the border gray when no intent is set.    |
+| Token               | Meaning                                                   |
+| ------------------- | --------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.          |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.       |
+| `--intent-hover`    | The intent's hovered base color.                          |
+| `--intent-strong`   | The intent printed on a page, wherever a fill is partial. |
+| `--intent-subtle`   | Low-emphasis tone; tinted surfaces and tracks.            |
+| `--intent-fill-max` | How far a fill of this intent may go. 100% but neutral.   |
+| `--intent-border`   | Line color; the border gray when no intent is set.        |
 
-Intent classes map a `--color-*` family onto these six slots and do nothing
-else. Adding an intent is six declarations; adding a component that supports
+Intent classes map a `--color-*` family onto these seven slots and do nothing
+else. Adding an intent is seven declarations; adding a component that supports
 every intent is zero.
+
+Every intent writes every slot, including `--intent-fill-max`, whose value is
+`100%` for six of the seven. Six identical declarations look like boilerplate
+worth deleting and are not: the reset writes neutral's cap onto every component
+root, so an intent that omits the slot silently inherits a limit it never asked
+for. `tests/integration/registry.test.ts` fails the build on an intent missing a
+slot, which is what makes this a rule rather than a habit.
 
 `--intent-border` is separate from `--intent-color` because a neutral border
 must stay the quiet border gray rather than the text color. Without it, every
@@ -205,6 +219,37 @@ Neutral maps `--intent-subtle` to `--color-surface` rather than
 `--color-text-subtle`. The tinted surface a neutral component sits on is the
 surface token, and tooltips, key caps, code, table heads, and skeletons all read
 that slot for their resting background.
+
+`--intent-fill-max` exists for the same intent and the same reason: neutral's
+color is the page's ink, which it has to be, because that ink is the text of
+every unfilled component. A hue survives the whole fill range -- pale at 12%,
+saturated at 100% -- and a grey does not: 100% of the ink is a black or white
+slab. Filled neutral was pixel for pixel filled primary in the shipped theme,
+and louder than every semantic intent. The cap lets one token stay the ink at
+the tint end while `.solid` stops at a quiet plate, which is the only way to get
+both out of a single color.
+
+The cap covers the foreground as well as the background, in a second `min()`
+beside the first. `--ui-fg-on-fill` says how much of the foreground is the
+contrast ink, and it is written for the fill the presentation asked for --
+`.solid` asks for 100% of both. Capping one and not the other prints the ink of
+a full slab onto a fifth of one, which is white on light grey. The two are
+capped together, so the ink walks toward the contrast exactly as far as the fill
+walks toward the color, and a state that lifts the cap deliberately -- a checked
+toggle is filled with its own intent by definition -- lifts both and gets the
+contrast whole.
+
+Bending `--intent-contrast` instead, so that neutral's contrast was the ink, is
+the same fix applied in the wrong place, and it was tried: it reads correctly for
+every capped fill and breaks every uncapped one. A checked checkbox came out a
+black box with a black tick.
+
+`--intent-color` and `--intent-strong` divide the other half of that problem.
+The base is a ground and the strong tone is an ink; `box` reads the base for a
+fill and the strong tone for text, so a bare component prints the tone chosen to
+be read rather than the tone chosen to be filled with. This is also what closed
+the soft and bare contrast gaps on the semantic intents, which sat near 3:1
+while printing their mid-tone base on a white page.
 
 A composed `box-shadow` must not fall back to `none`. `none` is valid only as an
 entire value, so `<shadow>, none` is invalid and drops the whole declaration,
@@ -341,8 +386,8 @@ component-scoped variables:
 ```
 
 A component may clamp a token it cannot honor, under P3. Text controls and toggles
-cap their fill with `min(var(--ui-fill, 0%), 12%)`, so a `.flat` container cannot
-put typed text on a saturated background. Clamping resolves from the value alone
+cap their fill with `min(var(--ui-fill, 0%), 6%)`, so a container's `.solid`
+cannot put typed text on a saturated background. Clamping resolves from the value alone
 and needs no per-presentation selector, which keeps the component free of axis
 branching.
 
@@ -418,13 +463,140 @@ part not every engine lets a stylesheet hide.
   calendar glyphs on one field read as a defect. Measured `false` in Firefox.
 
 The negative branch has to actively undo `.icon` rather than merely withhold it,
-using `!important` for the same reason `.no-icon` does -- `.icon.right` carries
-equal specificity, so nothing else reliably wins. Without that, an author or a
-fixture putting `.icon` on the field reserves 2.375rem of padding for artwork
-that never paints, which is the shape of the original bug.
+with `!important` -- `.icon.right` carries equal specificity, so nothing short of
+importance reliably wins. Without that, an author or a fixture putting `.icon` on
+the field reserves 2.375rem of padding for artwork that never paints, which is
+the shape of the original bug.
 
-Both branches are duplicated in `components/form.css` and in `native.css`,
-because the classed and the unclassed form of the same control have to agree.
+Both branches live in `components/form.css` alone. `native.css` maps a bare
+`input[type="date"]` to `.ipt` and stops there, the same as every other type: the
+mapping has no class in which to write an opt-in, so a native date field draws
+its own picker button and nothing of ours.
+
+### The focus ring a layer took away
+
+`text-control` carried `&:focus { @apply outline-none }`, which reads as "no ring
+when the control is clicked". It did more than that. A rule nested inside
+`@utility` lands in `@layer utilities`; `reset.css` declares its `:focus-visible`
+outline in `@layer base`; utilities beat base whatever the specificity. The
+declaration suppressed the keyboard ring along with the pointer one, and a text
+control became the only classed thing in the package that focused with no ring at
+all -- the same trap that had already killed `[aria-invalid]`.
+
+Nothing replaced it, because nothing had to. `reset.css` styles `:focus-visible`
+and not `:focus`, so a click never draws a ring on its own and the rule was
+guarding against something that could not happen. Deleting it is the whole fix.
+The line still moves to the intent on focus, which is now a second signal rather
+than the only one.
+
+An aesthetic that clips cannot show an outline, and that case was already handled:
+`--ui-focus-inset` swaps the outline for an inset ring layer, and `pixel.css`
+declares it. Restoring the ring on text controls puts them where buttons already
+were under every aesthetic.
+
+### What a text control's fill cap is for, and what it costs
+
+The cap exists because presentation cascades: `.solid` on a toolbar reaches an
+input nobody classed, and an input filled 100% with the text color has text the
+color of its own background. It was 12%.
+
+12% is also exactly what `.soft` asks for, which meant `min()` handed `.solid` and
+`.soft` the same tint. Three fill names rendered two boxes, and since the edge
+floor already makes `.edged` and `.edgeless` inert on a control, presentation had
+one working value out of five.
+
+The cap is 6% now, and it governs `.solid` and the cascade rather than every
+fill: `.soft` written on the element names the tint it wants and takes it whole,
+because a consumer naming a tint is not the case the bound was written for. So
+`.soft` is the heavier wash of the two, which inverts their usual relationship
+and is the look that was asked for.
+
+### The resting line is a fraction, so the pointer has somewhere to go
+
+Hover on a text control replaces `--intent-border` with `--intent-hover`. Drawn at
+full strength that reads as almost nothing on a colored intent, because
+`--color-success` and `--color-success-hover` are one step apart in the palette.
+Only the neutral family looked right, and by accident: its resting tone is a
+border token and its hover is the text one, which are two places apart rather
+than one.
+
+`--_line-rest` is the fix. A text control rests at 60% of its intent and takes
+the tone whole on hover and on focus, so the line **arrives** rather than shifts.
+Measured against the page, flattened:
+
+| intent      | rest   | hover  |
+| ----------- | ------ | ------ |
+| none        | 2.25:1 | 9.93:1 |
+| primary     | 5.18:1 | 9.93:1 |
+| secondary   | 2.87:1 | 9.93:1 |
+| success     | 2.10:1 | 3.95:1 |
+| warning     | 1.95:1 | 3.50:1 |
+| destructive | 3.26:1 | 6.11:1 |
+| info        | 2.87:1 | 6.70:1 |
+
+`.checkbox`, `.radio`, and `.switch` set it back to 100%. Their line is a
+silhouette rather than a field's edge, and an unchecked box has nothing else
+marking it.
+
+The cost is that a resting control boundary no longer clears the 3:1 of WCAG
+1.4.11 on most intents. `--color-control-border` is neutral-500 -- a tone that
+does clear it, on both grounds at once -- and the fraction is what takes it back
+under. The quieter field was chosen with the number known. Recorded in
+docs/accessibility.md.
+
+### `.soft` drops its line, and what that costs
+
+On the three text inputs, `.soft` draws no line at rest, on hover, or on focus.
+That is a fill class deciding an edge, which the axes forbid, and it is a
+deliberate exception recorded rather than derived.
+
+The cost is measurable and was measured before the decision. A borderless field
+identifies itself by its tint alone, and a 12% tint is 1.31:1 against the page
+where WCAG 1.4.11 asks a control boundary for 3:1. The tint would need about 44%
+fill to carry that on its own, which is not a field any more. So `.soft` does not
+meet 1.4.11 at rest, by choice: it is an opt-in presentation, never the default,
+and a consumer who needs the boundary uses the two that keep it.
+
+Three bounds keep the exception from spreading, and each is asserted:
+
+- **The class on the element, never a container's.** A `.soft` toolbar tints the
+  fields inside it and leaves their lines alone. The cascade case is precisely
+  what the edge floor was written for, and it is untouched.
+- **Text inputs only.** `.checkbox`, `.radio`, and `.switch` are excluded by name.
+  A toggle with no line has no silhouette at all, and the switch already answers
+  `.soft` its own way.
+- **Focus still shows.** The ring from `reset.css` had to be restored before this
+  could land -- a borderless field with the ring suppressed would have had no
+  focused state whatsoever.
+
+Hover moves to the fill, stepping to the cap, because the line is not there to
+answer the pointer.
+
+### Input icons are painted by the control
+
+An icon is a `background-image` on the control, not a mask on a wrapper around
+it. The two are a straight trade and the trade was made twice.
+
+A `data:` URI is a document of its own. It inherits nothing from the page, so
+`currentColor` and `var()` written inside the artwork resolve against the SVG's
+own root where neither is defined, and CSS cannot concatenate a colour into a
+`url()` string either. Artwork painted as a background therefore carries its
+colour baked in: fourteen copies for seven icons, one per theme.
+
+A mask carries no colour and needs seven. What it needs instead is an element to
+mask, and a text input is replaced content that generates no pseudo-element --
+masking the input itself would clip its border, its background and the typed text
+with it. So the mask requires a wrapper element around every field that wants an
+icon.
+
+Fourteen data URIs cost a maintainer one generated block and nothing at runtime.
+A mandatory wrapper costs every author of every form, and it is the kind of cost
+that shows up as a field with padding and no glyph when someone forgets it. The
+package pays the fourteen.
+
+The aliases that pick between the copies are the one place a theme is chosen by
+selector rather than resolved by `light-dark()` at the point of use, for the
+reason in `Theme values`: `light-dark()` takes colours, and these are images.
 
 ## Aesthetics
 

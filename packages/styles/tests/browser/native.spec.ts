@@ -42,6 +42,15 @@ test("styles native forms and buttons without utility classes", async ({ page })
 
   const input = page.locator('input[type="text"]');
   const button = page.getByRole("button", { name: "button element" });
+  const untypedInputMinHeight = await page.evaluate(() => {
+    const input = document.createElement("input");
+
+    document.body.append(input);
+    const minHeight = getComputedStyle(input).minHeight;
+    input.remove();
+
+    return minHeight;
+  });
   const inputStyles = await input.evaluate((element) => {
     const styles = getComputedStyle(element);
 
@@ -49,6 +58,8 @@ test("styles native forms and buttons without utility classes", async ({ page })
       borderColor: styles.borderTopColor,
       borderStyle: styles.borderTopStyle,
       borderWidth: styles.borderTopWidth,
+      intentBorder: styles.getPropertyValue("--intent-border"),
+      expectedIntentBorder: getComputedStyle(document.documentElement).getPropertyValue("--color-control-border"),
       token: styles.getPropertyValue("--border-width").trim(),
     };
   });
@@ -58,25 +69,33 @@ test("styles native forms and buttons without utility classes", async ({ page })
   expect(inputStyles.borderStyle).toBe("solid");
   expect(inputStyles.borderWidth).toBe("1px");
   expect(inputStyles.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+  expect(inputStyles.intentBorder.trim()).toBe(inputStyles.expectedIntentBorder.trim());
+  expect(untypedInputMinHeight).toBe("40px");
   await expect(button).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
 
-test("adds default icons and position modifiers to native inputs", async ({ page }) => {
+/* A native mapping gives the control and its icon source, and stops there. The
+   artwork is opt-in because a mapping that guessed would put a glyph on every
+   typed input on the page, and a native mapping has no class in which to write
+   the opt-in. */
+test("paints a native input icon only where the author opted in", async ({ page }) => {
   await page.goto(NATIVE_URL);
 
-  const emailInput = page.locator("#native-email");
-  const emailRightInput = page.locator("#native-email-right");
-  const searchNoIconInput = page.locator("#native-search-noicon");
+  const icons = await page.evaluate(() => {
+    const read = (id: string) => {
+      const styles = getComputedStyle(document.querySelector(`#${id}`)!);
 
-  const emailBg = await emailInput.evaluate((el) => getComputedStyle(el).backgroundImage);
-  const emailRightPos = await emailRightInput.evaluate((el) => getComputedStyle(el).backgroundPosition);
-  const searchNoIconBg = await searchNoIconInput.evaluate((el) => getComputedStyle(el).backgroundImage);
+      return { image: styles.backgroundImage, position: styles.backgroundPosition };
+    };
 
-  expect(emailBg).not.toBe("none");
-  expect(emailBg).toContain("data:image/svg+xml");
-  expect(emailRightPos).toContain("100%");
-  expect(searchNoIconBg).toBe("none");
+    return { bare: read("native-search-noicon"), left: read("native-email"), right: read("native-email-right") };
+  });
+
+  expect(icons.bare.image, "an input that did not opt in paints no artwork").toBe("none");
+  expect(icons.left.image, "opted-in artwork").toContain("data:image/svg+xml");
+  expect(icons.right.image, "right artwork is the same picture moved").toBe(icons.left.image);
+  expect(icons.right.position, "right position").not.toBe(icons.left.position);
 });
 
 /* `native.css` re-declares border and background after `@apply`, which would
@@ -87,14 +106,15 @@ test("applies intent classes to classless native elements", async ({ page }) => 
   await page.goto(NATIVE_URL);
 
   const styles = await page.evaluate(() => {
-    const resolveToken = (tokenName: string) => {
+    const resolveColor = (value: string) => {
       const probe = document.createElement("span");
-      probe.style.color = `var(--color-${tokenName})`;
+      probe.style.color = value;
       document.body.append(probe);
       const color = getComputedStyle(probe).color;
       probe.remove();
       return color;
     };
+    const resolveToken = (tokenName: string) => resolveColor(`var(--color-${tokenName})`);
 
     const host = document.createElement("div");
     host.innerHTML = `
@@ -110,9 +130,17 @@ test("applies intent classes to classless native elements", async ({ page }) => 
       intentButtonBg: getComputedStyle(host.querySelector("button.destructive")!).backgroundColor,
       keyboardText: getComputedStyle(host.querySelector("kbd")!).color,
       plainButtonBg: getComputedStyle(host.querySelector("button:not(.destructive)")!).backgroundColor,
+      neutralFill: resolveColor(
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+      ),
       tokenDestructive: resolveToken("destructive"),
-      tokenSuccess: resolveToken("success"),
-      tokenText: resolveToken("text"),
+      /* At the fraction a text control rests its line at, not the whole tone: a
+         field rests quiet so the pointer has somewhere to go, and comparing
+         against the whole tone reports that as the wrong color rather than a
+         lighter one. */
+      tokenSuccess: resolveColor(
+        `color-mix(in oklab, var(--color-success) ${getComputedStyle(host.querySelector("input")!).getPropertyValue("--_line-rest").trim()}, transparent)`,
+      ),
       tokenWarningStrong: resolveToken("warning-strong"),
     };
 
@@ -122,7 +150,9 @@ test("applies intent classes to classless native elements", async ({ page }) => 
   });
 
   expectSameColor(styles.intentButtonBg, styles.tokenDestructive, "native button intent background");
-  expectSameColor(styles.plainButtonBg, styles.tokenText, "native button neutral background");
+  /* A `<button>` nobody has styled is the most visible element in the package, and
+     the neutral cap is what keeps it a quiet plate instead of a slab of ink. */
+  expectSameColor(styles.plainButtonBg, styles.neutralFill, "native button neutral background");
   expectSameColor(styles.inputBorder, styles.tokenSuccess, "native input intent border");
   expectSameColor(styles.keyboardText, styles.tokenWarningStrong, "native kbd intent text");
 });

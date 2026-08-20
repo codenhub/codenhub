@@ -78,14 +78,13 @@
   }
 }
 
+/* An indicator: intent only, and no presentation token at all. A rule is a line,
+   and neither a fill class nor an edge class has anything to say about one -- while
+   reading both used to mean a container's `.ghost.edgeless` made every `<hr>`
+   inside it invisible. The width is the aesthetic's line width, unscaled. */
 @utility divider {
-  --divider-strength: max(var(--ui-fill, 100%), var(--ui-border, 100%));
-  --divider-color: color-mix(in oklab, var(--intent-color) var(--divider-strength), transparent);
-  --divider-width: clamp(
-    var(--border-width),
-    calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)),
-    2px
-  );
+  --divider-color: var(--intent-color);
+  --divider-width: var(--ui-border-width, var(--border-width));
 
   @apply m-0 w-full border-0 border-t;
 

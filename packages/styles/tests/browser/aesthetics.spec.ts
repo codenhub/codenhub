@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { expectSameColor, getColorDistance, readSrgb } from "./test-utils";
+import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
@@ -66,23 +66,60 @@ const resolveToken = (page: Page, token: string) =>
     return resolved;
   }, token);
 
+/* `box` composes colours with `color-mix(in oklab, ...)`, and an engine hands the
+   result back in the space it was authored in -- `oklab()`, not `rgb()` -- so a
+   luminance comparison cannot read the serialized string directly. Painting the
+   colour onto a 1x1 canvas over an opaque ground forces it through the engine's
+   own conversion, alpha included, which is the number a reader actually sees. */
+const readComposited = (page: Page, colors: readonly string[]) =>
+  page.evaluate((values: readonly string[]) => {
+    const canvas = document.createElement("canvas");
+
+    canvas.width = 1;
+    canvas.height = 1;
+
+    const context = canvas.getContext("2d", { willReadFrequently: true })!;
+
+    return values.map((value) => {
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, 1, 1);
+      context.fillStyle = value;
+      context.fillRect(0, 0, 1, 1);
+
+      const [red, green, blue] = context.getImageData(0, 0, 1, 1).data;
+      const channels = [red!, green!, blue!].map((channel) => {
+        const ratio = channel / 255;
+
+        return ratio <= 0.03928 ? ratio / 12.92 : ((ratio + 0.055) / 1.055) ** 2.4;
+      });
+
+      return {
+        luminance: 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!,
+        rgb: [red!, green!, blue!] as [number, number, number],
+      };
+    });
+  }, colors);
+
+const channelDistance = (a: readonly number[], b: readonly number[]) =>
+  Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
+
 test.describe("aesthetics", () => {
   test("applies the selected aesthetic to the ordinary fixtures", async ({ page }) => {
     await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
     await expect(page.getByTestId("preview-root")).toHaveClass(/neobrutalism/);
-    await expect(page.getByTestId("card-plain-none")).toBeVisible();
+    await expect(page.getByTestId("card-default-none")).toBeVisible();
   });
 
   test.describe("neobrutalism", () => {
     test("gives every component a hard offset shadow and a thick edge", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
 
-      const button = await readStyles(page, "btn-plain-none", ["box-shadow", "border-top-width", "border-radius"]);
+      const button = await readStyles(page, "btn-default-none", ["box-shadow", "border-top-width", "border-radius"]);
 
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
-      const card = await readStyles(page, "card-plain-none", ["box-shadow", "border-top-width", "border-radius"]);
+      const card = await readStyles(page, "card-default-none", ["box-shadow", "border-top-width", "border-radius"]);
 
       for (const [name, styles] of [
         ["button", button],
@@ -96,20 +133,52 @@ test.describe("aesthetics", () => {
       }
     });
 
+    /* The one component this aesthetic names in a selector, recorded in the
+       registry as `selectors`. The slab is a second ink line rather than depth
+       here, and an alert is the only container the registry rests flat, so
+       without it a neobrutalist alert is the one box on the page that looks like
+       it lost its material. It is written into the component's resting default
+       rather than the modifier, which is what leaves every elevation class still
+       winning on the element. */
+    test("rests an alert on the slab while every elevation class still wins", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const read = (className: string) => {
+          const alert = document.createElement("div");
+
+          alert.className = className;
+          host.append(alert);
+
+          const shadow = getComputedStyle(alert).boxShadow;
+
+          alert.remove();
+          return shadow;
+        };
+
+        return { flat: read("alert flat"), floating: read("alert floating"), resting: read("alert") };
+      });
+
+      expect(measured.resting, "resting alert").toMatch(/\b4px 4px 0px\b/);
+      expect(measured.flat, "flat alert").toMatch(/\b0px 0px 0px 0px\b/);
+      expect(measured.floating, "floating alert").toMatch(/\b8px 8px 0px\b/);
+    });
+
     test("squares the components that hardcode a radius", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "neobrutalism"));
 
-      const measured = await readAll(page, ["badge-plain-none", "progress-plain-none"], ["border-radius"]);
+      const measured = await readAll(page, ["badge-default-none", "progress-default-none"], ["border-radius"]);
 
       /* The fill is a pseudo-element, so squaring the track alone would leave a
          pill inside it. */
-      const fillRadius = await readPseudoStyle(page, "progress-plain-none", "::after", "border-radius");
+      const fillRadius = await readPseudoStyle(page, "progress-default-none", "::after", "border-radius");
 
       await page.goto(withAesthetic(TYPOGRAPHY_URL, "neobrutalism"));
 
-      const keyCap = await readStyles(page, "kbd-plain-none", ["border-radius"]);
+      const keyCap = await readStyles(page, "kbd-default-none", ["border-radius"]);
 
-      for (const [testId, styles] of [...measured, ["kbd-plain-none", keyCap] as const]) {
+      for (const [testId, styles] of [...measured, ["kbd-default-none", keyCap] as const]) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
       }
 
@@ -120,7 +189,7 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
       const [neutral, tinted] = await page.evaluate(() =>
-        ["card-plain-none", "card-plain-destructive"].map(
+        ["card-default-none", "card-default-destructive"].map(
           (testId) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).boxShadow,
         ),
       );
@@ -134,38 +203,74 @@ test.describe("aesthetics", () => {
       expectSameColor(readShadowColor(tinted), destructive, "destructive shadow");
     });
 
-    test("leaves content chips alone", async ({ page }) => {
+    /* The ink used to be a hand-written list of components, which is what let a
+       chip be left off it. It is now `--ui-ink` read through the shared intent
+       reset, so it reaches every component -- chips included -- and the two
+       fourteen-selector lists are gone. Nothing holds a chip back any more: the
+       one-pixel ceilings went with the edge scale that made them necessary, and a
+       thick chip under a thick aesthetic is two documented features combined
+       exactly as documented. */
+    test("inks content chips and lets the aesthetic set their edge", async ({ page }) => {
       await page.goto(TYPOGRAPHY_URL);
 
-      const plainCap = await readStyles(page, "kbd-plain-none", ["border-top-color"]);
+      const properties = ["border-top-color", "border-top-width"];
+      const defaultCap = await readStyles(page, "kbd-default-none", properties);
 
       await page.goto(withAesthetic(TYPOGRAPHY_URL, "neobrutalism"));
 
-      const inkedCap = await readStyles(page, "kbd-plain-none", ["border-top-color"]);
+      const inkedCap = await readStyles(page, "kbd-default-none", [...properties, "background-color"]);
+      const ink = await resolveToken(page, "--color-text");
+      /* A chip rests `soft`, and `box` blends a line toward the plate it rings by
+         the resting fill, so the ink sets the edge without being the edge whole.
+         Restating the blend here rather than loosening the comparison keeps the
+         assertion exact: what is checked is that the aesthetic's ink is the ink
+         end of that mix, not merely that the edge moved somewhere darker. */
+      const inkedEdge = await page.evaluate(
+        ([plate, tone]) => {
+          const probe = document.createElement("span");
 
-      /* A key cap is a content chip rather than structure, so the ink override
-         skips it and its edge stays the quiet border color the default uses. */
-      expectSameColor(inkedCap["border-top-color"]!, plainCap["border-top-color"]!, "key cap edge");
+          probe.style.color = `color-mix(in oklab, ${plate} 12%, ${tone})`;
+          document.body.append(probe);
+
+          const resolved = getComputedStyle(probe).color;
+
+          probe.remove();
+
+          return resolved;
+        },
+        [inkedCap["background-color"]!, ink] as const,
+      );
+
+      expectSameColor(inkedCap["border-top-color"]!, inkedEdge, "inked key cap edge");
+      expect(
+        getColorDistance(inkedCap["border-top-color"]!, defaultCap["border-top-color"]!),
+        "the ink moved the key cap edge",
+      ).toBeGreaterThan(2);
+      /* The aesthetic owns edge width, and a key cap no longer argues with it. */
+      expect(defaultCap["border-top-width"], "default key cap width").toBe("1px");
+      expect(inkedCap["border-top-width"], "inked key cap width").toBe("2px");
 
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
 
-      const code = await readStyles(page, "code-chip", ["border-top-width", "box-shadow"]);
+      const code = await readStyles(page, "code-chip", ["border-top-color", "box-shadow"]);
 
-      /* Code draws no edge by design. An ink outline and an offset shadow on one
-         read as a defect. */
-      expect(code["border-top-width"], "code border").toBe("0px");
-      expect(code["box-shadow"], "code shadow").toBe("none");
+      /* Code rests edgeless, so the ink has nothing to colour: `--ui-border` at
+         zero mixes the line away and P3 then leaves nothing behind it. It rests at
+         elevation zero too, so the slab multiplies out to a shadow whose every
+         length is zero rather than an offset one. */
+      expect(isTransparent(code["border-top-color"]!), "code border").toBe(true);
+      expect(code["box-shadow"], "code shadow").toContain("0px 0px 0px 0px");
     });
 
     test("supplies the neutral ink without overriding an intent", async ({ page }) => {
       await page.goto(SURFACES_URL);
 
-      const plain = await readStyles(page, "card-plain-none", ["border-top-color"]);
+      const plain = await readStyles(page, "card-default-none", ["border-top-color"]);
 
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
 
-      const inked = await readStyles(page, "card-plain-none", ["border-top-color"]);
-      const tinted = await readStyles(page, "card-plain-destructive", ["border-top-color"]);
+      const inked = await readStyles(page, "card-default-none", ["border-top-color"]);
+      const tinted = await readStyles(page, "card-default-destructive", ["border-top-color"]);
       const destructive = await resolveToken(page, "--color-destructive");
       const gray = await resolveToken(page, "--color-border");
       const ink = await resolveToken(page, "--color-text");
@@ -196,22 +301,70 @@ test.describe("aesthetics", () => {
       };
 
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
-      await expectPressed("btn-plain-none");
+      await expectPressed("btn-default-none");
 
       /* A card lifts only when it opts in with `.interactive`: a plain card is a
          container, not a control. */
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
-      await expectPressed("card-plain-none-interactive");
+      await expectPressed("card-default-none-interactive");
+    });
+
+    /* The offset is read with a fallback rather than declared, which is what lets
+       an ancestor set it. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that. One knob drives the slab and the travel
+       into it, so a consumer scaling the look scales it whole. */
+    test("takes its offset from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
+
+      const measured = await page.evaluate(() => {
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "neobrutalism";
+          card.className = "card raised";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--neo-offset", "9px");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const { boxShadow } = getComputedStyle(card);
+
+          ancestor.remove();
+          return boxShadow;
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
+      });
+
+      expect(measured.ancestor, "an ancestor's knob offsets the slab").toContain("9px 9px");
+      expect(measured.self, "so does one on the element itself").toContain("9px 9px");
     });
 
     test("lets an explicit presentation on the element win over the aesthetic", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
 
-      const outline = await readStyles(page, "btn-out-none", ["border-top-width"]);
+      const properties = ["border-top-width", "border-top-color", "background-color"];
+      const outline = await readStyles(page, "btn-ghost-edged-primary", properties);
+      const seamless = await readStyles(page, "btn-solid-primary", properties);
 
-      /* `.out` doubles the aesthetic's 2px material rather than replacing it:
-         the axes meet only in `--ui-border-width * --ui-border-scale`. */
-      expect(outline["border-top-width"]).toBe("4px");
+      /* The edge width is the aesthetic's and nothing else: presentation decides
+         *whether* a line reads, never how thick it is. `--ui-border-scale` is
+         gone, so no presentation doubles the material it lands on. */
+      expect(outline["border-top-width"], "edged width").toBe("2px");
+      expect(seamless["border-top-width"], "edgeless width").toBe("2px");
+
+      /* P3. `.ghost.edged` draws a line the fill cannot hide; `.solid.edgeless`
+         draws none, so the fill reaches the boundary unbroken. The width stays
+         the aesthetic's either way -- presentation decides whether a line reads,
+         never how much room it takes. */
+      expect(
+        getColorDistance(outline["border-top-color"]!, outline["background-color"]!),
+        "edged line reads against its own fill",
+      ).toBeGreaterThan(2);
+      expect(isTransparent(seamless["border-top-color"]!), "edgeless edge").toBe(true);
     });
   });
 
@@ -226,7 +379,7 @@ test.describe("aesthetics", () => {
       return host.evaluate((element) => {
         const styles = getComputedStyle(element, "::after");
 
-        return { boxShadow: styles.boxShadow, filter: styles.filter };
+        return { boxShadow: styles.boxShadow, clipPath: styles.clipPath, filter: styles.filter };
       });
     };
 
@@ -234,16 +387,19 @@ test.describe("aesthetics", () => {
     const inked = await readBubble("neobrutalism");
     const stepped = await readBubble("pixel");
 
-    /* The bubble resolves `--ui-shadow` like every other component, so an
-       aesthetic reaches it too: a blurred drop under a brutalist tooltip was the
-       one place the material stopped at a component boundary. */
-    expect(plain.boxShadow, "default bubble").toMatch(/\b0px 4px 6px -1px\b/);
-    expect(inked.boxShadow, "neobrutalist bubble").toMatch(/\b4px 4px 0px 0px\b/);
+    /* The silhouette reaches the bubble, because `--ui-clip` is a plain material
+       token the bubble resolves at its own root. */
+    expect(plain.clipPath, "default bubble clip").toBe("none");
+    expect(stepped.clipPath, "pixel bubble clip").toContain("polygon(");
 
-    /* Clipping removes an outer shadow, so the stepped bubble casts a filter
-       one: a filter applies after the clip and follows the stepped silhouette. */
-    expect(stepped.boxShadow, "pixel bubble ring").toMatch(/inset/);
-    expect(stepped.filter, "pixel bubble shadow").toMatch(/^drop-shadow\(/);
+    /* The shadow half reaches it too, now that the bubble is a surface. The
+       registry rests it at elevation 2, so the structural depth doubles, the
+       brutalist slab doubles, and the stepped one trades both for the inset ring
+       its own clip demands. */
+    expect(plain.boxShadow, "default bubble").toContain("0px 2px 6px 0px");
+    expect(inked.boxShadow, "neobrutalist bubble").toContain("8px 8px 0px 0px");
+    expect(stepped.boxShadow, "pixel bubble").toContain("inset");
+    expect(stepped.boxShadow, "pixel bubble ring").toContain("0px 0px 0px 4px");
   });
 
   test("lets a tooltip's direct aesthetic outrank an inherited aesthetic", async ({ page }) => {
@@ -284,13 +440,13 @@ test.describe("aesthetics", () => {
       };
     });
 
+    /* The point of the test is the precedence, not the material: a tooltip
+       carrying its own aesthetic reads that one, whatever an ancestor declares. */
     for (const [label, styles] of [
       ["direct pixel", bubbles.directPixel],
       ["glass ancestor, pixel tooltip", bubbles.glassOverPixel],
     ] as const) {
       expect(styles.clipPath, `${label} clip`).toContain("polygon(");
-      expect(styles.boxShadow, `${label} ring`).toContain("inset");
-      expect(styles.filter, `${label} filter`).toMatch(/^drop-shadow\(/);
       expect(styles.borderWidth, `${label} border`).toBe("0px");
       expect(styles.borderRadius, `${label} radius`).toBe("0px");
       expect(styles.backdrop === "" || styles.backdrop === "none", `${label} backdrop`).toBe(true);
@@ -302,104 +458,167 @@ test.describe("aesthetics", () => {
     ] as const) {
       expect(styles.clipPath, `${label} clip`).toBe("none");
       expect(styles.filter, `${label} filter`).toBe("none");
+      expect(styles.borderRadius, `${label} radius`).toBe("12px");
+      /* Glass declares a border width and the bubble is a box that reads it --
+         edgeless, so the line is blended into the fill rather than narrowed. The
+         backdrop is deliberately not asserted here: this test does not pin the
+         transparency preference, and glass drops the blur under `reduce`. */
       expect(styles.borderWidth, `${label} border`).toBe("1px");
-      expect(styles.borderRadius, `${label} radius`).toBe("14px");
     }
   });
 
   test.describe("glass", () => {
-    test("blurs translucent surfaces when transparency is allowed", async ({ page, browserName }) => {
-      test.skip(browserName !== "chromium", "Transparency media emulation runs once in Chromium");
+    /* Only Chromium reports `prefers-reduced-transparency: reduce` in this
+       environment, so it is also the only engine that needs the preference
+       emulated away before the translucent branch can be read. The other two
+       report no preference natively and run the same assertions unmodified --
+       which is the point: a blur declared in a form one engine cannot read is
+       exactly the defect a Chromium-only test cannot see. */
+    const allowTransparency = async (page: Page, browserName: string) => {
+      if (browserName !== "chromium") {
+        return;
+      }
+
       const session = await page.context().newCDPSession(page);
+
       await session.send("Emulation.setEmulatedMedia", {
         features: [{ name: "prefers-reduced-transparency", value: "no-preference" }],
       });
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(false);
+    };
+
+    /* `""` is "the engine has no such property"; `"none"` is "it has one and it
+       is unset". Folding them with `||` reads an unset standard property as a
+       present value and never falls through to the prefixed one. */
+    const readBackdrop = (styles: Record<string, string>) =>
+      styles["backdrop-filter"] && styles["backdrop-filter"] !== "none"
+        ? styles["backdrop-filter"]
+        : styles["-webkit-backdrop-filter"];
+
+    const BACKDROP_PROPERTIES = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
+
+    test("blurs translucent surfaces when transparency is allowed", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      const properties = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
-      const surfaces = await readAll(page, ["card-plain-none", "panel-plain-none"], properties);
+      const card = await readStyles(page, "card-default-none", BACKDROP_PROPERTIES);
+
+      expect(readBackdrop(card), "card backdrop").toContain("blur(14px)");
+      expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBeLessThan(1);
+    });
+
+    /* `--ui-backdrop` is a slot only a surface resolves, which is what keeps the
+       blur off every button and chip on the page without the aesthetic naming a
+       component. The other half of that sentence is that it must reach every
+       surface, and a panel, an alert and a tooltip bubble are all surfaces. */
+    test("reaches every surface and nothing else", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+      const panel = await readStyles(page, "panel-default-none", BACKDROP_PROPERTIES);
 
       await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
 
-      const alerts = await readAll(page, ["alert-plain-none"], properties);
+      const alert = await readStyles(page, "alert-default-none", BACKDROP_PROPERTIES);
       const tooltip = page.getByTestId("tooltip-open");
 
       await tooltip.hover();
-      const tooltipBackdrop = await tooltip.evaluate(
-        (element) =>
-          getComputedStyle(element, "::after").backdropFilter ||
-          getComputedStyle(element, "::after").getPropertyValue("-webkit-backdrop-filter"),
-      );
 
-      for (const [testId, styles] of [...surfaces, ...alerts]) {
-        const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
-        const { alpha } = readSrgb(styles["background-color"] as string);
+      const tooltipBackdrop = await tooltip.evaluate((element) => {
+        const styles = getComputedStyle(element, "::after");
 
-        expect(backdrop, `${testId} backdrop`).toContain("blur(14px)");
-        expect(alpha, `${testId} alpha`).toBeLessThan(1);
+        return (
+          (styles.backdropFilter !== "none" && styles.backdropFilter) ||
+          styles.getPropertyValue("-webkit-backdrop-filter")
+        );
+      });
+
+      for (const [label, styles] of [
+        ["panel", panel],
+        ["alert", alert],
+      ] as const) {
+        expect(readBackdrop(styles), `${label} backdrop`).toContain("blur(14px)");
+        expect(readSrgb(styles["background-color"]!).alpha, `${label} alpha`).toBeLessThan(1);
       }
 
-      expect(tooltipBackdrop).toContain("blur(14px)");
+      expect(tooltipBackdrop, "tooltip backdrop").toContain("blur(14px)");
+
+      /* And nothing else. One compositing layer under every control of a dense
+         cluster reads as noise, which is why the slot is a surface's alone. */
+      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+
+      const button = await readStyles(page, "btn-default-none", BACKDROP_PROPERTIES);
+      const buttonBackdrop = readBackdrop(button);
+
+      expect(buttonBackdrop === "" || buttonBackdrop === "none", "button backdrop").toBe(true);
     });
 
     test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {
-      test.skip(browserName !== "chromium", "Transparency media emulation runs once in Chromium");
+      test.skip(browserName !== "chromium", "Only Chromium can emulate the transparency preference");
       const session = await page.context().newCDPSession(page);
       await session.send("Emulation.setEmulatedMedia", {
         features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
       });
+      expect(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)).toBe(true);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      const properties = ["backdrop-filter", "-webkit-backdrop-filter", "background-color"];
-      const surfaces = await readAll(page, ["card-plain-none", "panel-plain-none"], properties);
+      const card = await readStyles(page, "card-default-none", BACKDROP_PROPERTIES);
+      const backdrop = readBackdrop(card);
 
-      await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
-
-      const alerts = await readAll(page, ["alert-plain-none"], properties);
-      const tooltip = page.getByTestId("tooltip-open");
-
-      await tooltip.hover();
-      const tooltipStyles = await tooltip.evaluate((element) => {
-        const styles = getComputedStyle(element, "::after");
-
-        return {
-          backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
-          background: styles.backgroundColor,
-        };
-      });
-
-      for (const [testId, styles] of [...surfaces, ...alerts]) {
-        const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
-
-        expect(backdrop, `${testId} backdrop`).toBe("none");
-        expect(readSrgb(styles["background-color"] as string).alpha, `${testId} alpha`).toBe(1);
-      }
-
-      expect(tooltipStyles.backdrop).toBe("none");
-      expect(readSrgb(tooltipStyles.background).alpha).toBe(1);
+      /* Transparency is the whole aesthetic, so the honest degradation is an
+         opaque surface rather than a softer blur. */
+      expect(backdrop === "" || backdrop === "none", "card backdrop").toBe(true);
+      expect(readSrgb(card["background-color"]!).alpha, "card alpha").toBe(1);
     });
 
-    test("leaves controls solid rather than giving each one its own blur", async ({ page }) => {
-      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+    /* The knob is read with a fallback rather than declared, and that is what makes
+       it worth having. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that, buying a name and no reach at all. */
+    test("takes its corner from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      const styles = await readStyles(page, "btn-plain-primary", ["backdrop-filter", "-webkit-backdrop-filter"]);
-      const backdrop = styles["backdrop-filter"] || styles["-webkit-backdrop-filter"];
+      const measured = await page.evaluate(() => {
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
 
-      expect(backdrop === "" || backdrop === "none").toBe(true);
+          host.className = "glass";
+          card.className = "card";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--glass-radius-surface", "2rem");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const radius = getComputedStyle(card).borderTopLeftRadius;
+
+          ancestor.remove();
+          return radius;
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
+      });
+
+      expect(measured.ancestor, "an ancestor's knob reaches the pane").toBe("32px");
+      expect(measured.self, "so does one on the element itself").toBe("32px");
     });
 
     test("still applies its material tokens to controls", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "glass"));
 
-      const styles = await readStyles(page, "btn-plain-primary", ["border-radius"]);
+      const styles = await readStyles(page, "btn-default-primary", ["border-radius"]);
 
-      expect(styles["border-radius"]).toBe("14px");
+      /* `--glass-radius`, resolved through `--ui-radius`. A bubble takes the
+         control radius rather than the surface one, so both this and the tooltip
+         above measure the same knob. */
+      expect(styles["border-radius"]).toBe("12px");
     });
 
     test("composes its shadow from the public elevation color", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      const card = page.getByTestId("card-plain-none");
+      const card = page.getByTestId("card-default-none");
       await page
         .getByTestId("preview-root")
         .evaluate((element) => element.style.setProperty("--elevation-color", "rgb(255 0 255)"));
@@ -411,6 +630,11 @@ test.describe("aesthetics", () => {
   });
 
   test.describe("pixel", () => {
+    /* The material contract stated on an arbitrary aesthetic rather than on
+       `.pixel`, so it covers what any aesthetic may declare. A `box` component
+       draws its inset edge out of the shadow parts -- `--ui-shadow-inset` plus
+       `--ui-shadow-spread` -- because a `clip-path` clips a border away and the
+       ceiling has to take the border out with it. */
     test("honors the public shape and ring material contract", async ({ page }) => {
       await page.goto(BUTTONS_URL);
 
@@ -425,17 +649,13 @@ test.describe("aesthetics", () => {
           host.append(button);
           return button;
         };
+        const ring = "--ui-shadow-inset: inset; --ui-shadow-spread: 3px";
         const complete = createButton(
-          "--ui-clip: inset(3px); --ui-edge: 3px; --ui-border-max: 0px; --ui-focus-inset: 2px; transition: none",
+          `--ui-clip: inset(3px); ${ring}; --ui-border-max: 0px; --ui-focus-inset: 2px; transition: none`,
         );
-        const clipOnly = createButton("--ui-clip: inset(3px)");
-        const edgeOnly = createButton("--ui-edge: 3px");
-        const tightFallback = document.createElement("code");
+        const clipOnly = createButton("--ui-clip: inset(3px); --ui-border-max: 0px");
+        const ringOnly = createButton(ring);
 
-        tightFallback.className = "code";
-        tightFallback.textContent = "tight";
-        tightFallback.setAttribute("style", "--ui-clip: inset(4px); --ui-edge: 4px");
-        host.append(tightFallback);
         document.body.append(host);
 
         const read = (element: Element) => {
@@ -450,13 +670,12 @@ test.describe("aesthetics", () => {
         const resting = read(complete);
 
         complete.focus();
-        const focused = read(complete);
+
         const result = {
           clipOnly: read(clipOnly),
           complete: resting,
-          edgeOnly: read(edgeOnly),
-          focused,
-          tightFallback: read(tightFallback),
+          focused: read(complete),
+          ringOnly: read(ringOnly),
         };
 
         host.remove();
@@ -466,21 +685,79 @@ test.describe("aesthetics", () => {
       expect(values.complete.clipPath).toBe("inset(3px)");
       expect(values.complete.borderWidth).toBe("0px");
       expect(values.complete.boxShadow).toMatch(/0px 0px 0px 3px inset/);
-      expect(values.focused.boxShadow).toMatch(/0px 0px 0px 5px inset/);
+      /* The focus layer is a second inset ring wider than the edge, and the
+         resting one survives beside it. */
+      expect(values.focused.boxShadow).toMatch(/0px 0px 0px 3px inset/);
+      expect(values.focused.boxShadow).toMatch(/0px 0px 0px 2px inset/);
 
+      /* Each half is independent: a silhouette with no ring, and a ring with no
+         silhouette. `--ui-border-max` is what removes the border a clip would
+         otherwise leave painting a second line beside the ring. */
       expect(values.clipOnly.clipPath).toBe("inset(3px)");
-      expect(values.clipOnly.boxShadow).toBe("none");
-      expect(values.edgeOnly.clipPath).toBe("none");
-      expect(values.edgeOnly.boxShadow).toMatch(/0px 0px 0px 3px inset/);
+      expect(values.clipOnly.borderWidth).toBe("0px");
+      expect(values.clipOnly.boxShadow).not.toMatch(/inset/);
+      expect(values.ringOnly.clipPath).toBe("none");
+      expect(values.ringOnly.boxShadow).toMatch(/0px 0px 0px 3px inset/);
+    });
 
-      expect(values.tightFallback.clipPath).toBe("inset(4px)");
-      expect(values.tightFallback.boxShadow).toMatch(/0px 0px 0px 4px inset/);
+    /* An invalid `var()` inside a `box-shadow` makes the declaration invalid at
+       computed-value time, and a non-inherited property invalid there computes
+       to its initial value -- `none`, not "the value it already had". Every box
+       therefore builds its focus stack as one custom property and substitutes
+       the whole thing, so a missing `--ui-focus-inset` costs the focus layer and
+       never the resting shadow. This broke once already. */
+    test("keeps the resting shadow when a box takes focus under every aesthetic", async ({ page }) => {
+      /* oxlint-disable no-await-in-loop -- one page, navigated in turn: the
+         aesthetics cannot be probed in parallel on a single tab. */
+      for (const aesthetic of ["", "neobrutalism", "glass", "pixel"] as const) {
+        await page.goto(aesthetic ? withAesthetic(BUTTONS_URL, aesthetic) : BUTTONS_URL);
+
+        /* Every engine gates `:focus-visible` on its own keyboard-modality
+           heuristic, and a programmatic `focus()` satisfies none of them
+           reliably. Focusing a sibling and pressing Tab is a real keyboard move,
+           which all three agree about. */
+        const resting = await page.evaluate(() => {
+          const host = document.querySelector('[data-testid="preview-root"]')!;
+          const previous = document.createElement("button");
+          const target = document.createElement("button");
+
+          previous.id = "focus-probe-previous";
+          previous.textContent = "Previous";
+          target.id = "focus-probe";
+          target.className = "btn primary";
+          target.textContent = "Probe";
+          target.style.transition = "none";
+          host.append(previous, target);
+          previous.focus();
+
+          return getComputedStyle(target).boxShadow;
+        });
+
+        await page.keyboard.press("Tab");
+
+        const focused = await page.evaluate(() => {
+          const target = document.querySelector("#focus-probe")!;
+          const styles = getComputedStyle(target);
+          const result = { focusVisible: target.matches(":focus-visible"), shadow: styles.boxShadow };
+
+          target.remove();
+          document.querySelector("#focus-probe-previous")!.remove();
+
+          return result;
+        });
+
+        const label = aesthetic || "no aesthetic";
+
+        expect(focused.focusVisible, `${label} is focus-visible`).toBe(true);
+        expect(resting, `${label} has a resting shadow`).not.toBe("none");
+        expect(focused.shadow, `${label} keeps its resting shadow`).toContain(resting);
+      }
     });
 
     test("cuts stepped corners and draws the edge as an inset ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const button = await readStyles(page, "btn-plain-none", [
+      const button = await readStyles(page, "btn-default-none", [
         "clip-path",
         "border-top-width",
         "box-shadow",
@@ -491,13 +768,13 @@ test.describe("aesthetics", () => {
 
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
-      const card = await readAll(page, ["card-plain-none"], properties);
+      const card = await readAll(page, ["card-default-none"], properties);
 
       await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
-      const input = await readAll(page, ["ipt-plain-none"], properties);
+      const input = await readAll(page, ["ipt-default-none"], properties);
 
-      for (const [testId, styles] of [["btn-plain-none", button] as const, ...card, ...input]) {
+      for (const [testId, styles] of [["btn-default-none", button] as const, ...card, ...input]) {
         expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
         /* `clip-path` clips a border away, so the element must not draw one. */
         expect(styles["border-top-width"], `${testId} border`).toBe("0px");
@@ -509,36 +786,126 @@ test.describe("aesthetics", () => {
       }
     });
 
-    test("scales the unit down for chips", async ({ page }) => {
-      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
+    /* The corner is one square grid unit and nothing else. The staircase this
+       replaces stepped twice at half a unit to approximate a curve, which is the
+       one shape a low-resolution grid cannot draw: at any size it read as a bevel
+       that had not quite committed rather than as a pixel. */
+    test("cuts one square grid unit off each corner", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
-      const styles = await readStyles(page, "badge-plain-none", ["box-shadow"]);
+      const structural = await readStyles(page, "card-default-none", ["clip-path"]);
 
-      expect(styles["box-shadow"]).toMatch(/\b0px 0px 0px 2px\b/);
+      /* Left edge to the cut, across the corner square, then up to the top edge:
+         two vertices where the staircase needed four. The unit is the ring's own
+         depth, so the cut and what covers it agree by construction. */
+      expect(structural["clip-path"], "card clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
     });
 
-    test("steps a code chip's corners without ringing it", async ({ page }) => {
+    /* The unit is read with a fallback rather than declared, which is what lets an
+       ancestor set it. Declared on the class it would outrank every ancestor --
+       including `:root`, where an application normally themes something -- and the
+       first version of it did exactly that. The corner is the whole look measured
+       in units, so if the knob reaches anything it reaches this. */
+    test("scales its whole grid from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+
+      const measured = await page.evaluate(() => {
+        const build = (where: "ancestor" | "self") => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "pixel";
+          card.className = "card";
+          (where === "ancestor" ? ancestor : host).style.setProperty("--pixel-unit", "6px");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const { clipPath, boxShadow } = getComputedStyle(card);
+
+          ancestor.remove();
+          return { clipPath, boxShadow };
+        };
+
+        return { ancestor: build("ancestor"), self: build("self") };
+      });
+
+      expect(measured.ancestor.clipPath, "an ancestor's knob cuts the corner").toContain(
+        "polygon(0px 6px, 6px 6px, 6px 0px",
+      );
+      expect(measured.self.clipPath, "so does one on the element itself").toContain(
+        "polygon(0px 6px, 6px 6px, 6px 0px",
+      );
+      /* One knob, and the ring follows it too -- the cut and what covers it are the
+         same unit by construction, which is the reason there is only one. */
+      expect(measured.ancestor.boxShadow, "and the ring it covers with").toContain("6px");
+    });
+
+    /* The other half of the vocabulary: no radius at all. One unit off each
+       corner of a 24px badge is a bite rather than a corner, and squared is still
+       on the grid this aesthetic is made of. */
+    test("squares a chip instead of stepping it", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
+
+      const chip = await readStyles(page, "badge-default-none", ["clip-path", "border-radius"]);
+
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const styles = await readStyles(page, "code-chip", ["clip-path", "box-shadow", "background-color"]);
+      const code = await readStyles(page, "code-chip", ["clip-path", "border-radius"]);
 
-      expect(styles["clip-path"]).toContain("polygon(");
-      /* Clipping needs a ring to cover the staircase, but code draws no border,
-         so the ring is its own background: the corners step and nothing rings
-         the chip. */
-      expectSameColor(readShadowColor(styles["box-shadow"]!), styles["background-color"]!, "code edge");
+      for (const [name, styles] of [
+        ["badge", chip],
+        ["code", code],
+      ] as const) {
+        expect(styles["clip-path"], `${name} clip`).toBe("none");
+        expect(styles["border-radius"], `${name} radius`).toBe("0px");
+      }
+    });
+
+    /* The ring is this aesthetic's border, drawn where a `clip-path` cannot cut
+       it, so it answers the edge axis exactly as a real border does. It did not:
+       `--ui-shadow-ink` painted it at full strength on every box the aesthetic
+       reached, so `.edged` and `.edgeless` rendered identically and the aesthetic
+       decided an axis that is not its to decide. `--ui-shadow-edge` points it at
+       `--_edge` instead, which already carries the edge amount as its alpha. */
+    test("draws the inset ring only where the edge axis asks for one", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "pixel"));
+
+      const surfaces = await readAll(page, ["card-ghost-edged-none", "card-soft-edgeless-none"], ["box-shadow"]);
+      const [edged, edgeless] = surfaces.map(([, styles]) => styles["box-shadow"]!);
+
+      /* Same geometry either way -- only the colour moves, which is what keeps
+         the aesthetic's material out of the presentation's decision. */
+      for (const shadow of [edged, edgeless]) {
+        expect(shadow).toMatch(/\b0px 0px 0px 4px\b/);
+        expect(shadow).toContain("inset");
+      }
+
+      expect(isTransparent(readShadowColor(edged!)), "edged ring").toBe(false);
+      expect(isTransparent(readShadowColor(edgeless!)), "edgeless ring").toBe(true);
+
+      /* A field floors its own edge, so a container asking for none cannot take
+         away the one mark of where typing goes (WCAG 1.4.11). */
+      await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+      const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
+
+      expect(isTransparent(readShadowColor(field["box-shadow"]!)), "field ring").toBe(false);
     });
 
     test("keeps a focus ring that clipping would otherwise remove", async ({ page }) => {
       await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
-      const input = page.getByTestId("ipt-plain-none");
+      const input = page.getByTestId("ipt-default-none");
 
       await input.focus();
 
       /* Two inset layers: the edge on top, the focus ring immediately inside it.
-         An outline or an outer ring would be clipped away entirely. The ring is
-         transitioned in, so this polls for the settled value. */
+         An outline or an outer ring would be clipped away entirely. The focus
+         layer is `--ui-focus-inset`, which pixel sizes past its own 4px ring so
+         it shows at all. The ring is transitioned in, so this polls for the
+         settled value. */
       await expect
         .poll(() => input.evaluate((element) => getComputedStyle(element).boxShadow))
         .toMatch(/\b0px 0px 0px 7px\b/);
@@ -550,37 +917,58 @@ test.describe("aesthetics", () => {
       });
 
       expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(2);
-      expect(styles.outlineStyle).toBe("none");
+      /* The outline from `reset.css` is declared and drawn, and `clip-path`
+         clips an element's whole rendering including its outline -- which is the
+         reason the inset layer exists. This used to read `none`, because
+         `text-control` carried an `outline-none` that suppressed the ring on
+         every control in the package rather than only under a clip. */
+      expect(styles.outlineStyle).toBe("solid");
     });
 
-    test("squares the components it does not clip, and keeps a radio round", async ({ page }) => {
+    test("squares what it can, squares a checkbox, and keeps a radio round", async ({ page }) => {
       await page.goto(withAesthetic(FEEDBACK_URL, "pixel"));
 
-      const track = await readAll(page, ["progress-plain-none"], ["border-radius", "clip-path"]);
-      const fillRadius = await readPseudoStyle(page, "progress-plain-none", "::after", "border-radius");
+      const track = await readAll(page, ["progress-default-none"], ["border-radius", "clip-path"]);
+      const fillRadius = await readPseudoStyle(page, "progress-default-none", "::after", "border-radius");
 
       await page.goto(withAesthetic(FORMS_URL, "pixel"));
 
-      const checkbox = await readAll(page, ["checkbox-plain-none"], ["border-radius", "clip-path"]);
+      const checkbox = await readStyles(page, "checkbox-default-none", ["border-radius", "box-shadow", "clip-path"]);
+      const radio = await readStyles(page, "radio-default-none", ["border-radius", "box-shadow", "clip-path"]);
 
-      for (const [testId, styles] of [...track, ...checkbox]) {
+      /* An indicator reads no material beyond the radius, so nothing clips it. */
+      for (const [testId, styles] of track) {
         expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["clip-path"], `${testId} clip`).toBe("none");
       }
 
       expect(fillRadius).toBe("0px");
 
-      const radio = await readStyles(page, "radio-plain-none", ["border-radius"]);
+      /* A toggle takes the chip silhouette, which this aesthetic squares, and its
+         inset edge is capped at the line width: four pixels a side on a
+         sixteen-pixel box would leave an eight-pixel hole and an unchecked box
+         reads as a filled one. */
+      expect(checkbox["border-radius"], "checkbox radius").toBe("0px");
+      expect(checkbox["clip-path"], "checkbox clip").toBe("none");
+      expect(checkbox["box-shadow"], "checkbox ring").toContain("0px 0px 0px 2px");
 
-      /* The circle is the only thing telling a radio from a checkbox at a glance. */
-      expect(radio["border-radius"]).not.toBe("0px");
+      /* The circle is the only thing telling a radio from a checkbox at a glance,
+         so the radio is the one toggle that declines the silhouette. An inset
+         shadow follows `border-radius`, so its edge stays round without one. */
+      expect(radio["border-radius"], "radio radius").not.toBe("0px");
+      expect(radio["clip-path"], "radio clip").toBe("none");
+      expect(radio["box-shadow"], "radio ring").toContain("0px 0px 0px 2px");
     });
 
     test("resolves each component's own intent through the shared ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
+      /* Probed on `.ghost.edged`, because the ring now answers the edge axis and
+         a fill would blend it toward the plate: P3 runs the line into the fill by
+         the fill amount, so a `.solid` ring is the plate's own colour by design.
+         Zero fill is where the intent reaches the line undiluted. */
       const [neutralShadow, tintedShadow] = await page.evaluate(() =>
-        ["btn-plain-none", "btn-soft-destructive"].map(
+        ["btn-ghost-edged-none", "btn-ghost-edged-destructive"].map(
           (testId) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`) as Element).boxShadow,
         ),
       );
@@ -619,21 +1007,189 @@ test.describe("aesthetics", () => {
         }),
       );
 
+      const [button, input, code] = shapes;
+
       for (const shape of shapes) {
-        expect(shape.clipped, `${shape.selector} clip`).toBe(true);
-        /* A clip removes a border, so the edge has to be the inset ring instead or
-           the element loses its outline entirely. */
-        expect(shape.ring, `${shape.selector} ring`).toContain("inset");
         expect(shape.borderTopWidth, `${shape.selector} border`).toBe("0px");
         expect(shape.borderTopLeftRadius, `${shape.selector} radius`).toBe("0px");
       }
 
-      /* A chip reads the tight slots, so its step and ring stay one unit deep
-         where a structural component uses two. */
-      const [button, , code] = shapes;
+      /* The structural silhouette on the two structural elements, and the chip
+         one -- squared, under this aesthetic -- on the content chip. Both are
+         material tokens, so both travel. */
+      expect(button!.clipped, "button clip").toBe(true);
+      expect(input!.clipped, "input clip").toBe(true);
+      expect(code!.clipped, "code clip").toBe(false);
 
-      expect(button!.ring).toContain("4px");
-      expect(code!.ring).toContain("2px");
+      /* A clip removes a border, so the edge has to be the inset ring instead or
+         the element loses its outline entirely. The ring travels through the
+         `@apply` that maps the element onto the utility, where a rule keyed on a
+         class never could. A bare `<input>` is the one probed for colour: it is
+         the element that floors its own edge, so the ring is there whatever a
+         container says, where a `<button>` is solid and edgeless and a `<code>`
+         edgeless, and neither is owed a line. */
+      for (const shape of [button!, input!, code!]) {
+        expect(shape.ring, `${shape.selector} ring`).toContain("inset");
+        expect(shape.ring, `${shape.selector} ring depth`).toContain("0px 0px 0px 4px");
+      }
+
+      expect(isTransparent(readShadowColor(input!.ring)), "input ring").toBe(false);
+    });
+  });
+  test.describe("chunky tile", () => {
+    /* The whole aesthetic in one measurement. `--intent-border` IS `--intent-color`
+       for all six hue intents, so at a full shadow ink the bar equals the plate
+       exactly -- the state this aesthetic exists to avoid, where the bar is painted
+       and invisible and the press then reads as the button spontaneously
+       shortening. An opaque `--elevation-color` plus a partial ink is what turns
+       the repeat into a shade. */
+    test("seats a filled tile on a darker shade of its own fill", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const probes = await readAll(
+        page,
+        ["btn-default-success", "btn-default-warning", "btn-default-info"],
+        ["background-color", "box-shadow"],
+      );
+
+      /* oxlint-disable-next-line no-await-in-loop -- two probes, read in turn on one page. */
+      for (const [testId, styles] of probes) {
+        // oxlint-disable-next-line no-await-in-loop
+        const [fill, bar] = await readComposited(page, [
+          styles["background-color"]!,
+          readShadowColor(styles["box-shadow"]!),
+        ]);
+
+        expect(bar!.luminance, `${testId} bar is darker than its fill`).toBeLessThan(fill!.luminance);
+        /* Far enough apart to read as a separate surface rather than as an
+           antialiasing seam. Measured, identical on both palettes because the hue
+           intents do not vary by theme: success #007a55 on #004c34 is 57, warning
+           #e17100 on #914600 is 91, info #4f39f6 on #30219f is 95. */
+        expect(channelDistance(fill!.rgb, bar!.rgb), `${testId} bar separates from its fill`).toBeGreaterThan(40);
+      }
+    });
+
+    test("drops the bar straight down and presses the element into it", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const button = await readStyles(page, "btn-default-none", [
+        "box-shadow",
+        "border-radius",
+        "border-top-width",
+        "--ui-active-shadow-y",
+        "--ui-active-transform",
+        "--ui-hover-transform",
+      ]);
+
+      /* No x offset is what separates this from neobrutalism, and no blur or spread
+         is what keeps the bar inside the element's own silhouette so its corners
+         stay in step with the radius. */
+      expect(button["box-shadow"], "resting bar").toMatch(/\b0px 4px 0px 0px\b/);
+      expect(button["border-radius"], "radius").toBe("12px");
+      expect(button["border-top-width"], "line").toBe("2px");
+
+      /* `:focus-visible` can be driven from a keyboard but `:active` cannot, so the
+         press asserts the tokens the rule reads. That the rule reads them is
+         `button.css`'s contract and the neobrutalism suite already covers it. */
+      expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
+      expect(button["--ui-active-transform"].trim(), "the element travels the bar's depth").toBe("translateY(4px)");
+      expect(button["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
+    });
+
+    /* An unfilled tile gets its bar for free and correct: the shadow ink resolves
+       `--intent-border`, which is the token that drew the line, so a card's border
+       and its bar are the same colour by construction rather than by a second
+       token kept in step with the first. */
+    test("matches an unfilled tile's bar to the line it already draws", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "chunky-tile"));
+
+      const card = await readStyles(page, "card-default-none", ["background-color", "border-top-color", "box-shadow"]);
+      const [fill, bar, line] = await readComposited(page, [
+        card["background-color"]!,
+        readShadowColor(card["box-shadow"]!),
+        card["border-top-color"]!,
+      ]);
+
+      expect(bar!.luminance, "bar is darker than the plate").toBeLessThan(fill!.luminance);
+      /* The bar is the line run toward the depth colour, so the two share a family
+         rather than a value. This asserts the family, not equality. */
+      expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
+    });
+
+    /* The recorded R3 exception. `.btn` is the only action the package ships, and
+       the bare element is named beside the class so the treatment reaches an
+       unclassed `<button>` the way every Tier 1 token already does. */
+    test("weights its action labels, including on an unclassed button", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
+
+      const classed = await readStyles(page, "btn-default-none", ["text-transform", "font-weight", "letter-spacing"]);
+
+      expect(classed["font-weight"], "classed weight").toBe("800");
+      expect(classed["letter-spacing"], "classed tracking").not.toBe("normal");
+      /* Casing is the application's decision. An aesthetic that recased a label
+         would also recase every acronym, proper noun and locale whose rules are
+         not English's, which is not a material choice at all. */
+      expect(classed["text-transform"], "casing is left alone").toBe("none");
+
+      await page.goto(withAesthetic(NATIVE_URL, "chunky-tile"));
+
+      const bare = await page.evaluate(() => {
+        const styles = getComputedStyle(document.querySelector('[data-testid="native-root"] button')!);
+
+        return { transform: styles.textTransform, weight: styles.fontWeight };
+      });
+
+      expect(bare.weight, "bare <button> weight").toBe("800");
+      expect(bare.transform, "bare <button> casing").toBe("none");
+    });
+
+    /* The knob exists for one reason, and this is it. An aesthetic declares the
+       shared material tokens on its own class, and a declaration beats inheritance
+       whatever the specificity -- so a consumer theming from `:root` or a wrapper
+       cannot reach `--ui-radius` at all. Reading a knob here instead lets an
+       ancestor's value flow in, which is the ordinary way an application themes
+       something. The shared token still wins on the element itself and below, so
+       the two reach in opposite directions rather than one replacing the other. */
+    test("takes its corner from a knob an ancestor can reach", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "chunky-tile"));
+
+      const measured = await page.evaluate(() => {
+        const build = (property: string) => {
+          const ancestor = document.createElement("div");
+          const host = document.createElement("div");
+          const card = document.createElement("div");
+
+          host.className = "chunky-tile";
+          card.className = "card";
+          ancestor.style.setProperty(property, "2rem");
+          host.append(card);
+          ancestor.append(host);
+          document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+          const radius = getComputedStyle(card).borderTopLeftRadius;
+
+          ancestor.remove();
+          return radius;
+        };
+
+        return { sharedToken: build("--ui-radius-surface"), knob: build("--tile-radius") };
+      });
+
+      expect(measured.knob, "an ancestor's knob reaches the tile").toBe("32px");
+      /* The counterpart, asserted so the reason the knob exists stays visible: the
+         shared token set on an ancestor is outranked by the aesthetic's own
+         declaration and the tile keeps its default. */
+      expect(measured.sharedToken, "an ancestor's shared token does not").toBe("12px");
+    });
+
+    /* Depth stays a per-element decision, and this aesthetic changes none of it:
+       the registry rests a badge at zero, so it sits on no bar until asked. */
+    test("leaves the components the registry rests flat without a bar", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "chunky-tile"));
+
+      const badge = await readStyles(page, "badge-default-none", ["box-shadow"]);
+
+      expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
     });
   });
 });

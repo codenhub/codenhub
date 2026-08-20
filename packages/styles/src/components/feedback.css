@@ -1,5 +1,7 @@
 @reference "tailwindcss";
 @import "../theme.css";
+@reference "../box.css";
+@reference "./surface.css";
 
 @keyframes anim-skeleton {
   0% {
@@ -25,19 +27,15 @@
   }
 }
 
+/* A soft, edged surface, so an aesthetic that blurs surfaces blurs this too: an
+   alert is a container carrying a message, not a control. */
 @utility alert {
-  /* Fallbacks are the tinted default an alert keeps with no presentation or
-     aesthetic class in scope. Mixing toward `transparent` rather than a
-     background token lets a tinted alert adapt to whatever surface it sits on. */
-  --feedback-fill: calc(var(--ui-fill, 12%) * var(--ui-bg-alpha, 1));
-  --feedback-surface: color-mix(in oklab, var(--intent-color) var(--feedback-fill), transparent);
-  --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
-  --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
+  @apply surface flex p-4 leading-5;
 
-  @apply shaped flex bg-(--feedback-surface) p-4 leading-5 text-(--feedback-text);
-  border: var(--shape-border-width) solid var(--feedback-border);
-  border-radius: var(--ui-radius-surface, var(--radius-surface));
-  box-shadow: var(--shape-ring, var(--ui-shadow, none));
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
 
   &.icon {
     @apply relative pl-11;
@@ -80,62 +78,51 @@
   }
 }
 
+/* A soft, edgeless chip. Small enough that the structural silhouette would be
+   most of its height, so it takes the tight one where an aesthetic ships a pair. */
 @utility badge {
-  --feedback-fill: calc(var(--ui-fill, 12%) * var(--ui-bg-alpha, 1));
-  --feedback-surface: color-mix(in oklab, var(--intent-color) var(--feedback-fill), transparent);
-  --feedback-text: color-mix(in oklab, var(--intent-contrast) var(--ui-fg-on-fill, 0%), var(--intent-color));
-  --feedback-border: color-mix(in oklab, var(--intent-color) var(--ui-border, 42%), transparent);
-  /* P3 ceiling: 2px of border on a 24px chip, and 4px under a 2px aesthetic,
-     reads as a box with a label in it. */
-  --shape-border-max: var(--border-width);
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
 
-  @apply shaped-tight inline-flex min-h-6 w-fit items-center gap-1 bg-(--feedback-surface) px-2.5 text-xs font-bold text-(--feedback-text);
+  @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs font-bold;
+
   /* Pill by default, but an aesthetic that declares no radius has to mean it, so
      the round corner is this component's fallback rather than a hardcoded value. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  border: var(--shape-border-width) solid var(--feedback-border);
-  box-shadow: var(--shape-ring, none);
+  clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
 
+/* An indicator reads intent and no presentation token at all. It is a stand-in
+   for content rather than a box with a look of its own, so there is nothing for
+   a container's `.solid` or `.edgeless` to say about it -- which is also what
+   removes the visibility floor that used to fight `--ui-fill` for control of the
+   base tone, and the transparent border that only ever appeared if something up
+   the tree asked for an edge. */
 @utility skeleton {
-  --skeleton-fill: max(var(--ui-fill, 0%), calc((100% - var(--ui-border, 100%)) * 0.06));
-  --skeleton-base: color-mix(in oklab, var(--intent-color) var(--skeleton-fill), var(--intent-subtle));
+  --skeleton-base: color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle));
   --skeleton-sheen: color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground));
-  --skeleton-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
 
   @apply min-h-4 w-full;
 
   animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
   background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
   background-size: 200% 100%;
-  border: min(calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)), 1px) solid
-    var(--skeleton-line);
   border-radius: var(--ui-radius, var(--radius-control));
 }
 
+/* The same: intent only. The track is 10px tall, which is most of a border under
+   any aesthetic thick enough to have an opinion, so the bar draws no edge and the
+   ceilings that used to keep one survivable are gone with it. */
 @utility progress {
   --progress-color: var(--intent-color);
   --progress-surface: color-mix(in srgb, var(--intent-subtle) 60%, transparent);
-  --progress-line: color-mix(in oklab, var(--intent-border) var(--ui-border, 0%), transparent);
-  /* P5: blended toward this component's own fill, which for a progress bar is its
-     track, so `.flat` lands on the track and disappears instead of ringing it.
-
-     Blended toward `--intent-subtle` rather than toward `--progress-surface`,
-     even though the track is built from the latter. `--progress-surface` is itself
-     a `color-mix`, and nesting one inside another inside a `light-dark()` crashes
-     the WebKit renderer outright -- reproduced on the surfaces page under
-     `.glass`. Two levels are safe; three are not. */
-  --progress-border: color-mix(in oklab, var(--intent-subtle) var(--ui-fill, 0%), var(--progress-line));
 
   @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
-  /* P3 ceiling: the track is 10px tall, so the 2x scale `.out` asks for eats 4px of
-     it a side, and 8px under a 2px aesthetic -- leaving 2px of bar. One pixel is
-     the most this box can spend on an edge. */
-  border: min(calc(var(--ui-border-width, var(--border-width)) * var(--ui-border-scale, 1)), var(--border-width)) solid
-    var(--progress-border);
 
   &::after {
     content: "";

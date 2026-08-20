@@ -1,64 +1,53 @@
-/* Intent classes map one color family onto six shared slots and do nothing
-   else. Components read the slots, so supporting every intent costs a component
-   nothing and adding an intent costs six declarations.
+/* An intent maps one color family onto seven shared slots and does nothing else.
+   Supporting every intent therefore costs a component nothing, and adding one
+   costs seven declarations.
 
    Intent does not cascade. These classes set inheritable custom properties, but
-   every component redeclares the neutral defaults at its own root, and a
-   declaration on the element beats an inherited one. A `.success` container
-   therefore cannot silently recolor a destructive button nested inside it,
-   while `.btn.success` still wins over the component's own reset through
-   specificity.
+   the reset at the bottom redeclares the neutral defaults at every component's
+   own root, and a declaration on the element beats an inherited one. A
+   `.success` container cannot silently recolor a destructive button nested
+   inside it, while `.btn.success` still wins over the reset.
 
-   Neutral maps `--intent-subtle` to `--color-surface` rather than
-   `--color-text-subtle`: the tinted surface a neutral component sits on is the
-   surface token, and tooltips, key caps, code, and table heads all read it.
+   Every intent writes every slot, including the ones whose value never varies.
+   `--intent-fill-max` is 100% for six of the seven, and stating it is what keeps
+   the reset from reaching an intent that meant to leave it alone: the reset
+   declares the neutral cap on every component root, so an intent class that
+   omitted the slot would inherit a limit it never asked for.
+   `tests/integration/registry.test.ts` fails the build on an intent that is
+   missing one.
 
-   The reset below carries zero specificity, so an intent class on the element
-   wins over it, while the reset still beats an inherited value -- any
-   declaration on an element beats inheritance regardless of specificity. That
-   single rule is what lets every component drop its own per-intent branches. */
+   Neutral maps `--intent-subtle` to `--color-surface` rather than a text tint:
+   the tinted surface a neutral component sits on is the surface token, and
+   tooltips, key caps, code, and table heads all read it. Its `--intent-border`
+   defers to `--ui-ink`, which is how an aesthetic restates the neutral line
+   color for every component and every bare element without naming one. */
 
-:where(
-  .btn,
-  .alert,
-  .badge,
-  .card,
-  .panel,
-  .checkbox,
-  .radio,
-  .switch,
-  .progress,
-  .skeleton,
-  .loader,
-  .ai,
-  .control-base,
-  .ipt,
-  .textarea,
-  .select,
-  .table,
-  .kbd,
-  .code,
-  .pre,
-  .quote,
-  .divider,
-  .tooltip,
-  .empty-state
-) {
-  --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
-  --intent-hover: var(--color-text-hover);
-  --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-surface);
-  --intent-border: var(--color-border);
-}
+/* The one intent that stops its fill short. Neutral's color is the page's ink,
+   which has to be true -- it is the text of every bare component -- and a fill
+   of it at 100% is a black or white slab. `.neutral.solid` was pixel for pixel
+   `.primary.solid` in the shipped theme, and louder than every semantic intent,
+   which is the opposite of what "no particular meaning" should look like.
 
+   20% is chosen against `.soft`, not against the page: a filled neutral has to
+   read as a step past the tint rather than a repeat of it. 12% and 20% land on
+   neutral-300 and neutral-200 territory -- distinct at a glance -- and hover
+   adds `--hover-step` on top, so the plate still deepens under the pointer.
+
+   `--intent-contrast` stays the page color. What a `.neutral.solid` badge
+   needs printed on its quiet plate is the ink, not the page, but that is
+   `box`'s question and `box` answers it by capping `--ui-fg-on-fill` with this
+   same bound. Answering it here instead -- pointing the slot at `--color-text`
+   -- looked equivalent and was not: the slot also serves the fills that lift
+   the cap on purpose, and a checked neutral checkbox came out a black box with
+   a black tick. */
 .neutral {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
   --intent-hover: var(--color-text-hover);
   --intent-strong: var(--color-text-strong);
   --intent-subtle: var(--color-surface);
-  --intent-border: var(--color-border);
+  --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 20%;
 }
 
 .primary {
@@ -68,6 +57,7 @@
   --intent-strong: var(--color-primary-strong);
   --intent-subtle: var(--color-primary-subtle);
   --intent-border: var(--color-primary);
+  --intent-fill-max: 100%;
 }
 
 .secondary {
@@ -77,6 +67,7 @@
   --intent-strong: var(--color-accent-strong);
   --intent-subtle: var(--color-accent-subtle);
   --intent-border: var(--color-accent);
+  --intent-fill-max: 100%;
 }
 
 .success {
@@ -86,6 +77,7 @@
   --intent-strong: var(--color-success-strong);
   --intent-subtle: var(--color-success-subtle);
   --intent-border: var(--color-success);
+  --intent-fill-max: 100%;
 }
 
 .warning {
@@ -95,6 +87,7 @@
   --intent-strong: var(--color-warning-strong);
   --intent-subtle: var(--color-warning-subtle);
   --intent-border: var(--color-warning);
+  --intent-fill-max: 100%;
 }
 
 .destructive,
@@ -106,6 +99,7 @@
   --intent-strong: var(--color-destructive-strong);
   --intent-subtle: var(--color-destructive-subtle);
   --intent-border: var(--color-destructive);
+  --intent-fill-max: 100%;
 }
 
 .info {
@@ -115,4 +109,116 @@
   --intent-strong: var(--color-info-strong);
   --intent-subtle: var(--color-info-subtle);
   --intent-border: var(--color-info);
+  --intent-fill-max: 100%;
+}
+
+/* Every component resolves the intent slots at its own root. Zero specificity,
+   so an intent class on the element wins over this while an inherited value
+   still loses -- any declaration on an element beats inheritance regardless of
+   specificity. That single rule is what lets every component drop its own
+   per-intent branches.
+
+   This list and the matching one in `native.css` are the package's only
+   hand-maintained selector lists, and `tests/integration/registry.test.ts`
+   fails the build when a component in the registry is missing from either.
+
+   `.text-control` and `.surface` are on it without being components. Each is a
+   utility the shipped components compose, and each is documented as usable on
+   its own -- `.text-control` for a control the package does not ship, a
+   `contenteditable` div most often, and `.surface` for a box a consumer paints
+   themselves under whichever aesthetic is in scope. Every element that reaches
+   one through a component class was already covered; an element that wears it
+   directly was not, so it resolved no intent at all and `box` collapsed on it:
+   no fill, no border, and a hover that could only make the nothing more so.
+   Measured on a bare `<div class="surface">`, which computed a transparent
+   background and a zero-width border. */
+:where(
+  .btn,
+  .ipt,
+  .text-control,
+  .surface,
+  .textarea,
+  .select,
+  .checkbox,
+  .radio,
+  .switch,
+  .card,
+  .panel,
+  .alert,
+  .data-table,
+  .pre,
+  .quote,
+  .tooltip,
+  .badge,
+  .kbd,
+  .code,
+  .loader,
+  .skeleton,
+  .progress,
+  .divider
+) {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-surface);
+  --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 20%;
+}
+
+/* The six text controls take a heavier line than everything else that rests on
+   the shared neutral. A card, a table or a divider sits on a filled surface or
+   separates content that identifies itself; a text control at rest is a
+   transparent box whose only mark is its border, and WCAG 1.4.11 asks that
+   border for 3:1. `--color-border` gives it 1.42:1.
+
+   Declared here at zero specificity for the same reason the indicators below
+   are: written inside `@utility text-control` it would land in the utilities
+   layer, the reset above lands in no layer at all, and unlayered beats layered
+   at any specificity. Written as a plain class list it would carry 0-1-0 and,
+   being later in the stylesheet, beat `.primary` -- which would make every
+   colored control draw a grey line. `:where()` keeps it under both. */
+:where(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch) {
+  --intent-border: var(--ui-ink, var(--color-control-border));
+}
+
+/* The bubble a tooltip draws is the one plate in the package that is chosen
+   rather than composed, so the tooltip resolves the no-intent case onto its own
+   pair instead of onto the shared neutral. Composed, it was 20% of the page's
+   ink over `--color-surface`, which lifts off a dark page and sinks into a light
+   one -- see `--color-tooltip` in `theme.css` for the measurements.
+
+   The cap goes with it. Neutral stops its fill at 20% because its colour is the
+   page's ink and a full fill of that is a slab; `--color-tooltip` is a plate
+   rather than an ink, so a full fill of it is the plate and there is nothing to
+   stop short of.
+
+   `--intent-subtle` stays the surface token. It is what the trigger badge rests
+   on, and a badge is a quiet marker on the page rather than the message, so it
+   keeps the tone every other unclassed component sits on.
+
+   Two selectors, because `none` and `neutral` have to agree here. `:where()`
+   loses to any intent class, so `.tooltip.primary` still floods with primary;
+   `.tooltip.neutral` carries 0-2-0 and beats `.neutral`, so writing the intent
+   out gives the same bubble as writing nothing. Without the second selector the
+   two would differ on a component where they mean the same thing. */
+:where(.tooltip),
+.tooltip.neutral {
+  --intent-color: var(--color-tooltip);
+  --intent-contrast: var(--color-tooltip-contrast);
+  --intent-hover: var(--color-tooltip);
+  --intent-strong: var(--color-tooltip-contrast);
+  --intent-subtle: var(--color-surface);
+  --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 100%;
+}
+
+/* Indicators take the color they sit in rather than the shared neutral, so a
+   loader inside filled or colored content still matches it. It has to be
+   declared here at zero specificity: written in the component's own block it
+   would carry 0-1-0 and, being later in the stylesheet, beat `.success` --
+   which silently makes every indicator ignore every intent class. */
+:where(.loader, .skeleton, .progress, .divider) {
+  --intent-color: currentColor;
+  --intent-border: currentColor;
 }

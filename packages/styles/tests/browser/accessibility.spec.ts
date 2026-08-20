@@ -4,7 +4,7 @@ const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
 const COMPONENT_STYLES_URL = "http://localhost:5184/shared/entry-components.css";
 const NATIVE_STYLES_URL = "http://localhost:5184/native/entry-vanilla.css";
-const CONTROL_CLASSES = ["control-base", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
+const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 const LOADER_VARIANTS = [
   "loader",
   "dots-wave",
@@ -25,7 +25,10 @@ test("associates every native form label with its control", async ({ page }) => 
   await expect(labels).toHaveCount(16);
   expect(
     await labels.evaluateAll((elements) =>
-      elements.every((label) => label instanceof HTMLLabelElement && label.control === label.nextElementSibling),
+      elements.every(
+        (label) =>
+          label instanceof HTMLLabelElement && label.control !== null && label.control === label.nextElementSibling,
+      ),
     ),
   ).toBe(true);
 });
@@ -82,8 +85,8 @@ test("exposes determinate and indeterminate progress semantics", async ({ page }
   const progressBars = page.getByRole("progressbar");
   await expect(progressBars.first()).toBeVisible();
 
-  await expect(page.getByTestId("progress-plain-none")).toHaveAttribute("aria-valuenow", "60");
-  await expect(page.getByTestId("progress-plain-success-active")).toHaveAttribute("aria-valuenow", "60");
+  await expect(page.getByTestId("progress-default-none")).toHaveAttribute("aria-valuenow", "60");
+  await expect(page.getByTestId("progress-default-success-active")).toHaveAttribute("aria-valuenow", "60");
 
   const semantics = await progressBars.evaluateAll((elements) =>
     elements.map((progressBar) => ({
@@ -207,6 +210,7 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   const expectSystemToggleColors = async (fixture: {
     checkboxClass: string;
+    isRadioFilled: boolean;
     radioClass: string;
     stylesUrl: string;
   }) => {
@@ -256,9 +260,9 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
     expect(colors.checkboxBackground).toBe(colors.expectedHighlight);
     expect(colors.checkboxMark).toBe(colors.expectedHighlightText);
-    expect(colors.radioBackground).toBe(colors.expectedCanvas);
+    expect(colors.radioBackground).toBe(fixture.isRadioFilled ? colors.expectedHighlight : colors.expectedCanvas);
     expect(colors.radioBorder).toBe(colors.expectedHighlight);
-    expect(colors.radioMark).toBe(colors.expectedHighlight);
+    expect(colors.radioMark).toBe(fixture.isRadioFilled ? colors.expectedHighlightText : colors.expectedHighlight);
     expect(colors.uncheckedCheckboxBackground).toBe(colors.expectedCanvas);
     expect(colors.uncheckedCheckboxBorder).toBe(colors.expectedCanvasText);
     expect(colors.uncheckedRadioBackground).toBe(colors.expectedCanvas);
@@ -267,10 +271,16 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   await expectSystemToggleColors({
     checkboxClass: "checkbox",
+    isRadioFilled: true,
     radioClass: "radio",
     stylesUrl: COMPONENT_STYLES_URL,
   });
-  await expectSystemToggleColors({ checkboxClass: "", radioClass: "", stylesUrl: NATIVE_STYLES_URL });
+  await expectSystemToggleColors({
+    checkboxClass: "",
+    isRadioFilled: false,
+    radioClass: "",
+    stylesUrl: NATIVE_STYLES_URL,
+  });
 });
 
 test("keeps the select arrow themed for every dark-mode path while light override wins", async ({ page }) => {
@@ -325,52 +335,43 @@ test("keeps the select arrow themed for every dark-mode path while light overrid
   expect(systemThemeImages.explicitLight).toBe(explicitThemeImages.light);
 });
 
+/* The motion lives inside the artwork rather than in a CSS animation on the
+   element, so `animation-name` says nothing about whether a loader moves. What
+   reduced motion swaps is `--loader-art` itself, and the still artwork is the
+   one with no `animation` declaration in its SVG. */
 test("stops every loader variant under reduced motion with the component-only stylesheet", async ({ page }) => {
+  const readArtwork = async () => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+    return page.evaluate(
+      (variants) =>
+        variants.map((variant) => {
+          const loader = document.createElement("span");
+          loader.className = variant === "loader" ? "loader" : `loader ${variant}`;
+          document.body.append(loader);
+          const art = getComputedStyle(loader).getPropertyValue("--loader-art");
+          loader.remove();
+          return { art, variant };
+        }),
+      LOADER_VARIANTS,
+    );
+  };
+
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
-
-  const reducedStyles = await page.evaluate(
-    (variants) =>
-      variants.map((variant) => {
-        const loader = document.createElement("span");
-        loader.className = variant === "loader" ? "loader" : `loader ${variant}`;
-        document.body.append(loader);
-        const styles = getComputedStyle(loader);
-        const result = {
-          animationName: styles.animationName,
-          image: styles.getPropertyValue("--ai-image"),
-          variant,
-        };
-        loader.remove();
-        return result;
-      }),
-    LOADER_VARIANTS,
-  );
-
-  for (const styles of reducedStyles) {
-    expect(styles.image, styles.variant).not.toContain("animation");
-    expect(styles.animationName, styles.variant).toBe("none");
-  }
+  const still = await readArtwork();
 
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.setContent("<!doctype html><html><body></body></html>");
-  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
-  const animatedImages = await page.evaluate(
-    (variants) =>
-      variants.map((variant) => {
-        const loader = document.createElement("span");
-        loader.className = variant === "loader" ? "loader" : `loader ${variant}`;
-        document.body.append(loader);
-        const image = getComputedStyle(loader).getPropertyValue("--ai-image");
-        loader.remove();
-        return { image, variant };
-      }),
-    LOADER_VARIANTS,
-  );
+  const moving = await readArtwork();
 
-  for (const styles of animatedImages) {
-    expect(styles.image, styles.variant).toContain("animation");
+  for (const [index, styles] of still.entries()) {
+    expect(styles.art, styles.variant).not.toContain("animation");
+    /* A variant whose still artwork equals its moving one was never stopped. */
+    expect(styles.art, styles.variant).not.toBe(moving[index]!.art);
+  }
+
+  for (const styles of moving) {
+    expect(styles.art, styles.variant).toContain("animation");
   }
 });
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-12
+last_updated: 2026-08-19
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -8,67 +8,95 @@ scope: `@codenhub/styles` package direction.
 
 ## Purpose
 
-This roadmap tracks durable direction for `@codenhub/styles`. It captures
-styling-system improvements that should guide future changes without turning
-this document into a release checklist. [Architecture](./architecture.md) owns
+This roadmap tracks durable direction and release readiness for
+`@codenhub/styles` without duplicating issue tracking. [Model](./model.md) owns
 the styling model itself.
 
-Finished work is not tracked here. The token contract, the element coverage it
-was extended to, and the three shipped aesthetics are the model that Architecture
-now describes, so the record of building them lives there and in the history
-rather than in a list of completed stages.
+Finished work is not tracked here. The current token contract, component
+coverage, and shipped aesthetics belong in the model and repository history,
+not in a completed-work checklist.
 
 ## Supported surface
 
-The package supports what it demonstrates and documents. A class combination
-that is neither shown working in the playground nor described in the public docs
-is not part of the contract, and making one behave is the consumer's concern
-rather than a defect to fix here.
-
-Two obligations follow, and they are the reason the rule is worth stating rather
-than assuming. The playground may only render combinations that are supported,
-because it is the demonstration half of that sentence: a row that resolves to
-the same values as its neighbour, or to a control with no visible border, claims
-support for something nobody maintains. And the public docs owe consumers the
-rule explicitly, so the boundary is discoverable rather than inferred.
-
-Applying this is what trimmed the playground's variant matrix down to a
-per-component presentation set. The combinations dropped there are recorded in
-[Architecture](./architecture.md#presentation-is-narrower-than-its-class-list)
-alongside why each one is degenerate, so a future change can tell a deliberate
-omission from an oversight.
+[Model](./model.md) defines the styling contract, `registry.json` records the
+supported machine-readable surface, and the public documentation owns the
+consumer contract under `docs/specs/packages-documentation.md`. This roadmap
+adds no support rules.
 
 ## Current Focus
 
-**Phase 2 -- `0.1.0` stabilization**. Close the gaps where the three axes meet a
-component that only partly implements them, one reviewable change at a time with
-`pnpm verify` green before the next begins. `0.1.0` is the first release of the
-current three-axis contract; the already-published `0.0.x` versions predate it.
-
-The rules came first, because they decide half the answers, and are now
-[Axis rules](./architecture.md#axis-rules). The shape material followed: the
-silhouette, its ring, the border ceiling, and the radius are tokens consumed
-through the `shaped` and `shaped-tight` utilities, so a bare `<button>`,
-`<input>`, `<code>`, or `<kbd>` carries the aesthetic's full silhouette. Then the
-geometry conformance fixes: the progress ceiling and fill blend, the chip border
-ceiling, the control border floor, and `.switch` reading its material.
+**`0.1.0` stabilization.** The public docs have had their consumer-focused,
+task-oriented reformulation. What remains is closing the current review and
+turning any outstanding problem findings into a clear, finite release path.
 
 ## Planned
 
-No further work is currently planned for `0.1.0` stabilization.
+`0.1.0` is complete when all of these outcomes hold:
+
+- **Internal sources are stable**: [Model](./model.md), `registry.json`, the test
+  strategy, roadmap, and applicable package exceptions agree on the current
+  contract and release direction.
+- **The current review is closed**: every review thread and finding on the
+  release PR is resolved, or explicitly dismissed after the relevant behavior or
+  document has been verified. This roadmap does not duplicate that finding list.
+- **Public docs are final**: README and public docs satisfy
+  `docs/specs/packages-readme.md` and `docs/specs/packages-documentation.md`,
+  cover every `package.json` export, and match current behavior. Running
+  `pnpm generate styles` leaves all derived documentation current.
+- **Validation is clean**: `pnpm verify --changed` passes for the release
+  candidate.
+- **The PR is merge-ready**: all required PR checks are green and the PR is
+  mergeable with no unresolved blocking review thread or finding.
+
+Publishing is a separate gate and a repository-level one. Neither trusted
+publishing from CI nor a versioning and changelog workflow exists yet -- both are
+open items under `@codenhub` in [the repository roadmap](../../../../docs/roadmap.md)
+-- so `0.1.0` goes out as a manual `npm publish`, which
+`docs/specs/packages-lifecycle.md` allows. The jump from the published `0.0.4`
+carries the whole model rewrite, so the release notes are the only place a
+consumer can find out what moved.
 
 ## Later / Possible
 
-- **WCAG AA text contrast**: Raise filled success and warning component text
-  contrast to WCAG 1.4.3's 4.5:1 threshold for normal text. Their current
-  neutral-50 foreground over emerald-600 and amber-600 backgrounds reaches only
-  about 3.5:1 and 3.1:1; the browser test currently enforces 3:1.
+- **An interactive card that presses**: `.card.interactive` applies `box-hover`
+  and nothing else, so `--ui-active-transform` and `--ui-active-shadow-*` never
+  reach it. Under `.neobrutalism` and `.chunky-tile` an interactive card hovers
+  but cannot be pressed, which is the one place those two aesthetics are visibly
+  incomplete. The button writes the press inline in five lines; the fix is to
+  lift that into a `box-active` utility beside `box-hover` and apply it in both
+  components, so a third pressable box gets it for free.
+
+- **A primary that reads under a shade**: the shipped `.primary` is a monochrome
+  near-black, so a chunky tile's bar under a primary button lands about 10 units
+  of sRGB distance from the plate above it -- present, and almost invisible. The
+  six hue intents separate cleanly. This is a palette question rather than an
+  aesthetic one, and it is the same root as the filled-contrast item above:
+  neither is free to move without changing what the intent looks like.
+
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
-  matrix has stopped moving, because the two would otherwise drift. It waits on
-  Phase 2: a demo must not show combinations the package does not support, and
-  Phase 2 is what decides whether the components under-reading presentation widen
-  or are declared intent-only.
+  supported surface and consumer documentation are stable, because the two
+  applications would otherwise drift. A demo must not show combinations the
+  package does not support.
+
+## Aesthetics assessed and deferred
+
+Both were costed against the current model and neither fits it. Recorded so the
+question is not reopened from scratch.
+
+- **Liquid glass**: the refraction that defines it needs an SVG filter element in
+  the DOM, which a CSS-only package cannot ship; the specular highlight is a
+  surface-only treatment; `clip-path: path()` rejects percentages, so the
+  silhouette cannot scale with the box; and `corner-shape: squircle` is
+  Chrome-only. What is reachable without those is `.glass` with a heavier blur.
+
+- **Synthwave / retro**: its signatures are palette, which [R1](./model.md#rules-for-aesthetics)
+  bars an aesthetic from setting. The glow is `--ui-shadow-blur` scaled by
+  elevation, and 18 of the 21 components rest at zero elevation, so it would
+  reach three of them. `text-shadow` does not inherit into `<button>` or
+  `<input>`, and the grid and scanline backgrounds need a painted layer `box` does
+  not have. Shipping it would mean either breaking R1 or adding a background-image
+  slot, and neither is worth doing before `0.1.0`.
 
 ## Notes
 
@@ -84,10 +112,9 @@ which is why a shape pair needs two token slots rather than one
 
 ## Versioning
 
-`0.1.0` is the next release. Package consumers do not gate its stability: they
-may change while this package settles. The package stays on `0.x` while the public
-contract remains young, so necessary breaking corrections stay explicit and
-cheap. Documentation status is `active`: package is supported for normal
+`0.1.0` is the next release. The package stays on `0.x` while the public contract
+remains young, so necessary breaking corrections stay explicit and cheap.
+Documentation status remains `active`: the package is supported for normal
 consumer use, not frozen against future semver-major changes.
 
 ## Not Planned
@@ -111,9 +138,12 @@ consumer use, not frozen against future semver-major changes.
 
 ## References
 
-- [Architecture](./architecture.md)
+- [Model](./model.md)
+- [Architecture](./architecture.md) -- superseded, kept for its measurements
 - [Overview](../index.md)
-- [Tokens](../tokens.md)
-- [Classes](../classes.md)
+- [Setup](../setup.md)
+- [Concepts](../concepts.md)
+- [Usage](../usage/index.md)
+- [Integrating](../integrating/index.md)
 - [Accessibility](../accessibility.md)
 - [Tests](./tests.md)

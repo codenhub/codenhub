@@ -17,39 +17,77 @@
    aesthetic, so the two differ wherever something else is in scope. */
 const INTENTS = ["none", "neutral", "primary", "secondary", "success", "warning", "destructive", "info"];
 
-/* Only combinations the package supports are rendered. A presentation whose
+/* Presentation is two independent closed sets -- a fill and an edge -- so every
+   row names both. A row naming one leaves the other at the component's registry
+   default, which makes two rows of the grid mean different things depending on
+   which component they are under.
+
+   Only combinations the package supports are rendered. A presentation whose
    tokens a component never reads, or reads to the same values as another,
    produces a row indistinguishable from its neighbour and teaches nothing; the
-   playground is the support surface, so it must not imply otherwise.
+   playground is the support surface, so it must not imply otherwise. */
+const PRESENTATIONS = [
+  "default",
+  /* One row, not two: `.solid` answers the edge question itself -- it fills the
+     box and takes the line away -- so `.solid` and `.solid.edgeless` are the same
+     box. `.solid.edged` is the documented way back to a line and is left off the
+     grid, because the edge blend still runs that line toward the fill: for every
+     intent whose fill is opaque the cell would repeat the row above. */
+  "solid",
+  "soft edged",
+  "soft edgeless",
+  "ghost edged",
+  "ghost edgeless",
+];
+/* `.checkbox` and `.radio` keep their line whatever the edge class says: an
+   unchecked box is a transparent square and an unchecked radio a transparent
+   circle, so removing the line removes the control (WCAG 1.4.11). Their edge
+   rows would be duplicates of each other, so only the fill varies. The registry
+   records the same fact as `axes: ["fill"]`, and `tests/browser/axes.spec.ts`
+   asserts it in both directions.
 
-   `.fill` is absent from every set but the button's. It declares `--ui-hover-*`
-   and nothing else, and `.btn` is the only component with a fill-based hover, so
-   `.fill` is inert everywhere else. `out fill` is the documented pairing.
-   `.flat` is absent from the button set for the opposite reason: a button's own
-   fallbacks are exactly `.flat`'s values, so the two rows are the same row. */
-const PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
-const BUTTON_PRESENTATIONS = ["plain", "out", "out fill", "soft", "ghost"];
-const TOGGLE_PRESENTATIONS = ["plain", "out", "soft", "flat", "ghost"];
-/* Components that read only `--ui-border` and `--ui-border-scale`: the tint
-   presentations land on the same values as `plain`. */
-const BORDER_PRESENTATIONS = ["plain", "flat", "out"];
-/* Components that read intent but not presentation. Spelling the axis out per
-   component keeps a page from claiming a variant the component ignores. */
-const INTENT_ONLY = ["plain"];
+   The three text inputs and the switch are no longer on this list. Their edge
+   axis used to be inert -- `text-control` rewrote the composed edge and dropped
+   `--ui-border` out of it -- and now that it composes, their edge rows show a
+   real difference.
+
+   No `ghost` row. The registry marks it unsupported on all three toggles, and
+   the playground is the support surface: rendering a row the package does not
+   maintain claims support for it. */
+const FILL_PRESENTATIONS = ["default", "solid", "soft"];
+/* The full grid minus the two `ghost` rows, for the components the registry
+   marks `.ghost` unsupported on while still reading both axes. A key cap, a
+   code chip and a code block rest on a ground, so `.ghost` draws the plate
+   anyway and the row teaches that a class does nothing -- and at zero fill the
+   plate is `--intent-subtle` alone, which renders four of the eight intents as
+   the same near-page chip. A switch is on this list for a different reason,
+   recorded beside it. */
+const NO_GHOST_PRESENTATIONS = ["default", "solid", "soft edged", "soft edgeless"];
+/* Components that read intent but not presentation: the indicators, which stand
+   in for content rather than being a box with a look, and the tooltip, whose
+   cell is the trigger badge rather than the bubble. The bubble does read
+   presentation, but it is a pseudo-element that only appears on hover, so a row
+   per fill would render four identical badges. Spelling the axis out per
+   component keeps a page from claiming a variant it ignores. */
+const INTENT_ONLY = ["default"];
 const STATES = ["rest", "disabled"];
 
 const title = (value) => value.charAt(0).toUpperCase() + value.slice(1);
 const slug = (value) => value.replace(/\s+/gu, "-");
 
-/* `plain` and `rest` are the absence of a class, not classes themselves. */
+/* `default` and `rest` are the absence of a class, not classes themselves: a
+   component with no presentation class renders the pair the registry publishes
+   for it. */
 const classesFor = (base, intent, presentation, extra) =>
-  [base, intent === "none" ? "" : intent, presentation === "plain" ? "" : presentation, extra]
+  [base, intent === "none" ? "" : intent, presentation === "default" ? "" : presentation, extra]
     .filter(Boolean)
     .join(" ");
 
-/* Toggles share an axis: the same intents, the same states, and the same bare
-   cell. Only the input type and the extra states differ. */
-const toggle = (label, type, presentations = TOGGLE_PRESENTATIONS) => ({
+/* Toggles share an axis: the same intents, the same states, and the same
+   unclassed cell. Only the input type, the label, and which axes the component
+   reads differ -- `.checkbox` and `.radio` floor their edge absolutely, and a
+   switch composes it like any other control. */
+const toggle = (label, type, presentations = FILL_PRESENTATIONS) => ({
   tag: "input",
   presentations,
   attrs: (intent) => ({ type, "aria-label": `${title(intent)} ${label}` }),
@@ -61,7 +99,8 @@ const toggle = (label, type, presentations = TOGGLE_PRESENTATIONS) => ({
 });
 
 /* A text control caps its fill rather than taking a presentation at full
-   strength, so it still reads every presentation class. */
+   strength, so it still reads every fill class -- and since the edge composes,
+   it reads every edge class too. The full grid applies. */
 const textControl = (tag, extra) => ({
   tag,
   layout: "grid",
@@ -72,7 +111,6 @@ const textControl = (tag, extra) => ({
 const COMPONENTS = {
   btn: {
     tag: "button",
-    presentations: BUTTON_PRESENTATIONS,
     text: (intent) => title(intent),
     states: { disabled: { disabled: "" }, loading: { class: "loading" } },
   },
@@ -82,20 +120,21 @@ const COMPONENTS = {
     states: {},
   },
   kbd: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "kbd",
     text: (intent) => title(intent),
     states: {},
   },
   code: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "code",
-    presentations: INTENT_ONLY,
     text: (intent) => `${intent}()`,
     states: {},
   },
   pre: {
+    presentations: NO_GHOST_PRESENTATIONS,
     tag: "pre",
     layout: "grid",
-    presentations: INTENT_ONLY,
     text: (intent) => `const intent = "${intent}";`,
     states: {},
   },
@@ -124,15 +163,12 @@ const COMPONENTS = {
     text: (intent) => `${title(intent)} panel`,
     states: {},
   },
+  /* A rule is a line. There is no fill to vary and no edge beside the one it
+     already is. */
   divider: {
     tag: "hr",
     layout: "stack",
-    states: {},
-  },
-  "empty-state": {
-    tag: "div",
-    layout: "grid",
-    html: (intent) => `<p class="text-title-sm">Nothing here</p><p class="text-body">${title(intent)} empty state.</p>`,
+    presentations: INTENT_ONLY,
     states: {},
   },
   ipt: textControl("input", {
@@ -155,10 +191,10 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  /* A switch draws its own track and knob from theme tokens and reads no
-     presentation token at all, so every presentation renders the same control. */
-  switch: toggle("switch", "checkbox", INTENT_ONLY),
-  table: {
+  /* A switch reads the edge axis where the other two floor it, so it takes the
+     full grid minus the `ghost` rows no toggle supports. */
+  switch: toggle("switch", "checkbox", NO_GHOST_PRESENTATIONS),
+  "data-table": {
     tag: "table",
     layout: "grid",
     html: (intent) =>
@@ -169,7 +205,7 @@ const COMPONENTS = {
   progress: {
     tag: "div",
     layout: "stack",
-    presentations: BORDER_PRESENTATIONS,
+    presentations: INTENT_ONLY,
     attrs: (intent) => ({
       style: "--progress-value: 60%",
       role: "progressbar",
@@ -188,11 +224,15 @@ const COMPONENTS = {
   skeleton: {
     tag: "div",
     layout: "stack",
+    presentations: INTENT_ONLY,
     attrs: () => ({ "aria-hidden": "true" }),
     states: {},
   },
+  /* A loader is a coloured mask and nothing else: no fill, no edge, no
+     silhouette. */
   loader: {
     tag: "span",
+    presentations: INTENT_ONLY,
     attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
     states: {},
   },

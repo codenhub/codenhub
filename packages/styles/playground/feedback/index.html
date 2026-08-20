@@ -50,7 +50,7 @@
           <div
             data-matrix="alert"
             data-matrix-intents="destructive,danger,error"
-            data-matrix-presentations="plain"
+            data-matrix-presentations="default"
             data-matrix-states="icon"
             data-testid="alert-alias-matrix"
           ></div>
@@ -81,7 +81,7 @@
           </p>
           <div
             data-matrix="progress"
-            data-matrix-presentations="plain"
+            data-matrix-presentations="default"
             data-matrix-states="active"
             data-testid="progress-active-matrix"
           ></div>
@@ -96,7 +96,7 @@
           </p>
           <div
             data-matrix="progress"
-            data-matrix-presentations="plain"
+            data-matrix-presentations="default"
             data-matrix-states="indeterminate"
             data-testid="progress-indeterminate-matrix"
           ></div>
@@ -179,8 +179,10 @@
         <div class="stack tight">
           <h2 class="text-title">Tooltips</h2>
           <p class="text-body text-text-secondary">
-            The bubble ignores the presentation fill: a transparent tooltip floating over arbitrary content is
-            unreadable. It does read intent and material, so an aesthetic still shapes it. Point at any cell.
+            The bubble reads every axis. Its plate is opaque at every presentation, because a transparent tooltip
+            floating over arbitrary content is unreadable, and with no intent it is
+            <code class="code">--color-tooltip</code>
+            rather than a fill of the page's ink. Point at any cell.
           </p>
         </div>
         <div data-matrix="tooltip" data-matrix-states="rest" data-testid="tooltip-matrix"></div>

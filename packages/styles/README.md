@@ -46,23 +46,28 @@ to force a theme for the root or a subtree.
 ```
 
 The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-also supported. See [Tokens](./docs/tokens.md) for precedence details.
+also supported. See [Concepts](./docs/concepts.md#theme-selection) for
+precedence details.
 
-`.flat`, `.out`, `.ghost`, and `.soft` work the same way. They set how strongly a
-component shows its intent, so a container sets the look for everything below it
-and any element can still override it.
+`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
+and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
+container sets the look below it and any element can still override it.
+`.solid` also takes the boundary away, because a filled box ringed in another
+color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the
+way back to a line.
 
 ```html
 <div class="soft">
   <button class="btn primary">Soft</button>
   <span class="badge success">Soft</span>
-  <button class="btn primary out">Outlined</button>
+  <button class="btn primary ghost edged">Outlined</button>
 </div>
 ```
 
 Aesthetics decide what a component is made of. They are opt-in, so import the
-stylesheet after the base one to make `.neobrutalism`, `.glass`, and `.pixel`
-available. They cascade to any subtree the same way.
+stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and
+`.chunky-tile` available. They cascade to any subtree the same way, and each is
+also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ```css
 @import "@codenhub/styles";
@@ -77,10 +82,14 @@ available. They cascade to any subtree the same way.
 
 ## Documentation
 
-- [Documentation overview](./docs/index.md): Complete public documentation and
-  all supported import paths.
-- [Tokens](./docs/tokens.md): Color and foundation token contracts.
-- [Classes](./docs/classes.md): Layout, content, component, and typography helper reference.
+- [Documentation overview](./docs/index.md): What the package is, what it
+  does and does not do, and where to go next.
+- [Setup](./docs/setup.md): Installation, entrypoints, and configuration.
+- [Concepts](./docs/concepts.md): The three-axis model and the token system.
+- [Usage](./docs/usage/index.md): Composing, theming, customizing,
+  aesthetics, and each component family.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into
+  Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements

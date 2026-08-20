@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-09
+last_updated: 2026-08-16
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -52,9 +52,34 @@ entry once the package no longer needs it.
 - **Why acceptable:** The package contains only CSS, so JavaScript or TypeScript
   instrumentation cannot produce meaningful code coverage. The script runs the
   package's real integration tests instead of reporting a false success or
-  generating an irrelevant report, and its cross-browser visual and
-  computed-style tests run under `pnpm test:browser`.
+  generating an irrelevant report, and its cross-browser computed-style tests
+  run under `pnpm test:browser`.
 - **Temporary or permanent:** Permanent while the package remains CSS-only.
+
+## `@codenhub/styles`: no visual regression baselines
+
+- **Rules bypassed:** `docs/specs/tests.md` (use visual regression testing for
+  style sheets and components to capture visual changes before merge).
+- **Where it applies:** `packages/styles/tests/browser/`.
+- **Why acceptable:** The package is CSS-only, and the asserted contract is
+  limited to token resolution, computed composition, state and accessibility
+  behavior, material geometry, and related DOM behavior. The browser suite
+  asserts those contracts directly in Chromium, Firefox, and WebKit, including
+  glass and reduced-transparency behavior. These assertions do not detect every
+  final-paint defect: clipping or compositing integration, font rendering,
+  antialiasing, and interactions among properties that each compute correctly
+  can still be wrong on screen. Screenshot baselines would add substantial
+  platform variance without making those failures reliably diagnostic, so the
+  current targeted assertions are the more effective gate for this package.
+- **Temporary or permanent:** Permanent while the package remains CSS-only and
+  this computed-style, cross-browser strategy remains effective.
+- **Reevaluate when:** The package stops being CSS-only; the browser suite stops
+  covering Chromium, Firefox, and WebKit or its glass and reduced-transparency
+  branches; the public contract adds a visual outcome that computed styles and
+  DOM behavior cannot assert; or a confirmed final-paint, clipping, compositing,
+  font-rendering, antialiasing, or correct-property-interaction regression passes
+  the suite. Reevaluation means choosing an effective test for the demonstrated
+  gap and updating this exception; it does not presume screenshot baselines.
 
 ## `@codenhub/error`: built-in opt-in registry presets
 

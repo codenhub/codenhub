@@ -3,4 +3,4 @@
 @import "./layout.css";
 @import "./content.css";
 
-@source inline("view vertical horizontal stack tight loose cluster between auto-grid section section-content narrow wide divider selection-contrast table-wrap table kbd quote quote-inline code pre");
+@source inline("view vertical horizontal stack tight loose cluster between auto-grid section section-content narrow wide divider selection-contrast table-wrap data-table kbd quote quote-inline code pre");

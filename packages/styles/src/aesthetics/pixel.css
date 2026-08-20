@@ -1,156 +1,103 @@
-/* Pixel: an 8-bit look built from a stepped `clip-path` corner and a border
-   drawn as an inset shadow.
+/* Pixel: an 8-bit look built from a single-step `clip-path` corner and an inset
+   ring where the border would be.
 
-   Load after the base stylesheet. Aesthetics override the neutral defaults that
-   `intent.css` declares at zero specificity, so source order decides. */
+   Tier 1 only. `clip-path` clips a border, an outline and any outer shadow, so
+   the border ceiling goes to zero and the edge becomes an inset shadow instead --
+   which is exactly what `--ui-shadow-inset`, `--ui-shadow-spread` and
+   `--ui-shadow-edge` are for. The ring is still coloured by each component's own
+   intent, because the parts carry no colour. */
 .pixel {
-  /* One screen pixel of the imaginary low-resolution grid. Corners step by this
-     unit and the border is two units thick. */
-  --pixel-unit: 2px;
-  --pixel-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+  /* One pixel of the imaginary low-resolution grid. Everything else is a
+     multiple of it: the ring is one unit thick and the corner is one unit
+     square, so a consumer scaling this scales the whole look at once.
 
+     Read with a fallback rather than declared, which is what lets an ancestor
+     set it. A custom property declared on an element beats an inherited one
+     whatever the specificity, so declaring `--pixel-unit` here would outrank
+     every ancestor including `:root`, which is where an application normally
+     themes something. The private holds the resolved value for the eighteen
+     places below that read it, so the default lives once. */
+  --_pixel-unit: var(--pixel-unit, 4px);
+
+  --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
   --ui-radius: 0;
   --ui-radius-surface: 0;
+
+  /* A border would be clipped at the straight sides and paint a second line
+     beside the ring, so the ceiling takes it out and the ring does the drawing.
+
+     The width itself stays under the unit deliberately. Its one live reader is
+     the toggle cap in `form.css`, which reads it as the thinnest line this
+     aesthetic will accept where the full ring does not fit: a 16px checkbox
+     spending four pixels a side leaves an eight-pixel hole and an unchecked box
+     reads as a filled one. */
   --ui-border-width: 2px;
-
-  /* The silhouette and its edge, as material tokens the components resolve. A
-     stepped corner cannot be drawn with `border-radius`, and `clip-path` clips a
-     border away, so the edge is an inset ring of the same depth as the cut: a
-     thinner ring leaves the staircase uncovered and the border reads as broken at
-     every corner.
-
-     Two slots because a shape token cannot reference a unit the component
-     overrides -- the polygon below resolves `--pixel-unit` here, on `.pixel`, not
-     on whichever component reads it. Chips get their own polygon at one unit
-     rather than a scaled version of this one. */
-  --ui-edge: calc(var(--pixel-unit) * 2);
-  --ui-edge-tight: 2px;
-  --ui-clip: polygon(
-    0 calc(var(--pixel-unit) * 2),
-    var(--pixel-unit) calc(var(--pixel-unit) * 2),
-    var(--pixel-unit) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) var(--pixel-unit),
-    calc(var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) 0,
-    calc(100% - var(--pixel-unit) * 2) var(--pixel-unit),
-    calc(100% - var(--pixel-unit)) var(--pixel-unit),
-    calc(100% - var(--pixel-unit)) calc(var(--pixel-unit) * 2),
-    100% calc(var(--pixel-unit) * 2),
-    100% calc(100% - var(--pixel-unit) * 2),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit) * 2),
-    calc(100% - var(--pixel-unit)) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
-    calc(100% - var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) 100%,
-    calc(var(--pixel-unit) * 2) calc(100% - var(--pixel-unit)),
-    var(--pixel-unit) calc(100% - var(--pixel-unit)),
-    var(--pixel-unit) calc(100% - var(--pixel-unit) * 2),
-    0 calc(100% - var(--pixel-unit) * 2)
-  );
-  --ui-clip-tight: polygon(
-    0 2px,
-    1px 2px,
-    1px 1px,
-    2px 1px,
-    2px 0,
-    calc(100% - 2px) 0,
-    calc(100% - 2px) 1px,
-    calc(100% - 1px) 1px,
-    calc(100% - 1px) 2px,
-    100% 2px,
-    100% calc(100% - 2px),
-    calc(100% - 1px) calc(100% - 2px),
-    calc(100% - 1px) calc(100% - 1px),
-    calc(100% - 2px) calc(100% - 1px),
-    calc(100% - 2px) 100%,
-    2px 100%,
-    2px calc(100% - 1px),
-    1px calc(100% - 1px),
-    1px calc(100% - 2px),
-    0 calc(100% - 2px)
-  );
-
-  /* The edge is a ring, so a border would be clipped at the straight sides and
-     paint a second line beside it. */
   --ui-border-max: 0px;
 
-  /* The focus ring is a second inset layer inside the edge, because `clip-path`
-     clips an outline away entirely. */
-  --ui-focus-inset: var(--focus-ring-width);
+  /* The ring is one unit deep, which is exactly the corner cut, so the staircase
+     is covered and the line does not read as broken at the corners. Spread is not
+     scaled by elevation, so a chip resting at zero keeps its edge. */
+  --ui-shadow-inset: inset;
+  /* The ring is not depth -- it is this element's border, drawn where a
+     `clip-path` cannot cut it. `--ui-shadow-edge` says so, and `box` colours it
+     from `--_edge`: the P3 blend toward the fill, with the edge axis as its
+     alpha. That is what keeps presentation intact under this aesthetic. An
+     `.edgeless` badge or a `.solid` button has no line, so it gets no ring; a
+     `.edged` card gets one; a field, which floors its own edge, keeps one
+     whatever a container asks for.
+
+     Before this the ring took `--ui-shadow-ink` and painted at full strength on
+     every box the aesthetic reached, so `.edged` and `.edgeless` rendered
+     identically and the aesthetic decided an axis that is not its to decide.
+
+     Declared empty on purpose: the token is read for its presence, not its
+     value. `box` explains why -- the percentage form nests two `color-mix()`
+     results, which WebKit resolves as though the percentage were zero. */
+  --ui-shadow-edge: ;
+  --ui-shadow-spread: var(--_pixel-unit);
+  --ui-shadow-x: 0px;
+  --ui-shadow-y: 0px;
+  --ui-shadow-blur: 0px;
+
+  /* The focus ring is a second inset layer, and shadows paint first-on-top, so it
+     has to be wider than the edge to show at all. */
+  --ui-focus-inset: calc(var(--_pixel-unit) + var(--focus-ring-width));
+
+  /* One square unit off each corner, and nothing else. The staircase this
+     replaces stepped twice at half the unit to approximate a curve, which is the
+     one thing a low-resolution grid cannot do: at any size it read as a bevel
+     that had not quite committed. A single cut of the grid's own unit is the
+     shape the look is actually made of.
+
+     The polygon resolves the unit here, on `.pixel`, and inherits down
+     already-resolved -- so a component cannot rescale the corner by setting
+     `--pixel-unit` on itself, and the knob belongs above rather than within. */
+  --ui-clip: polygon(
+    0 var(--_pixel-unit),
+    var(--_pixel-unit) var(--_pixel-unit),
+    var(--_pixel-unit) 0,
+    calc(100% - var(--_pixel-unit)) 0,
+    calc(100% - var(--_pixel-unit)) var(--_pixel-unit),
+    100% var(--_pixel-unit),
+    100% calc(100% - var(--_pixel-unit)),
+    calc(100% - var(--_pixel-unit)) calc(100% - var(--_pixel-unit)),
+    calc(100% - var(--_pixel-unit)) 100%,
+    var(--_pixel-unit) 100%,
+    var(--_pixel-unit) calc(100% - var(--_pixel-unit)),
+    0 calc(100% - var(--_pixel-unit))
+  );
+  /* Chips take the other half of the vocabulary: no radius at all. The cut is one
+     grid unit whatever the element is, and one unit off each corner of a 24px
+     badge or a 16px checkbox is a bite rather than a corner. Squared is the
+     honest small-scale answer, and it is still the pixel look -- the aesthetic is
+     a grid, and a square is on it. */
+  --ui-clip-tight: none;
+
+  --ui-hover-transform: none;
+  --ui-active-transform: none;
+  --ui-backdrop: none;
 
   /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
-     network side effect and falls back to the monospace stack. */
+     font to fall back to but a monospace stack. */
   font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 }
-
-/* Same reasoning as the neobrutalist ink, and the same zero-specificity trick so
-   an intent class on the element still wins: an outline two units thick in the
-   quiet border gray reads as a mistake rather than as pixel art.
-
-   `.kbd`, `.code`, and `.pre` are deliberately absent. They are content chips
-   rather than structure, and an ink edge on one reads as a defect: a key cap
-   draws a quiet border by design and a code chip draws none at all. */
-:where(.pixel)
-  :where(
-    .btn,
-    .alert,
-    .badge,
-    .card,
-    .panel,
-    .control-base,
-    .ipt,
-    .textarea,
-    .select,
-    .table,
-    .checkbox,
-    .radio,
-    .switch,
-    .tooltip
-  ),
-:where(.pixel):where(
-  .btn,
-  .alert,
-  .badge,
-  .card,
-  .panel,
-  .control-base,
-  .ipt,
-  .textarea,
-  .select,
-  .table,
-  .checkbox,
-  .radio,
-  .switch,
-  .tooltip
-) {
-  --intent-border: var(--pixel-ink);
-}
-
-/* `clip-path` clips an outer shadow away, so the floating bubble casts its own
-   with a filter instead: a filter applies after clipping and follows the stepped
-   silhouette. Hard and unblurred, in the aesthetic's ink.
-
-   Only the bubble. It is the one clipped component that floats over arbitrary
-   content and needs separating from it; the rest sit inline on the page, where a
-   shadow would break the flat pixel look. A filter also establishes a containing
-   block for positioned descendants, which is harmless on a leaf pseudo-element
-   and would not be on a card. */
-.tooltip.pixel::after,
-:where(.pixel) .tooltip::after {
-  backdrop-filter: none;
-  background-color: var(--tooltip-bg);
-  border: 0;
-  border-radius: 0;
-  filter: drop-shadow(var(--pixel-unit) var(--pixel-unit) 0 var(--pixel-ink));
-}
-
-/* Components whose shape carries meaning, or whose box is too thin to hold a
-   stepped corner, compose no shape utility and square themselves from
-   `--ui-radius` instead: `.table`, `.progress`, `.skeleton`, `.checkbox`,
-   `.switch`, and the tooltip host. A radio keeps its circle, which is the only
-   thing distinguishing it from a checkbox at a glance, so it reads no radius
-   token at all.
-
-   `.checkbox` and `.kbd` cap `--ui-radius` at their own, because a control radius
-   on a 16px box renders as a circle. `0` is below every cap, so this aesthetic
-   still reaches them. */

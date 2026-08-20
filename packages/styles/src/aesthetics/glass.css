@@ -1,81 +1,80 @@
-/* Glass: translucent surfaces over a blurred backdrop, with a hairline highlight
-   edge. Needs something behind it to blur -- on a flat page background it is
-   just a translucent panel.
+/* Glass: translucent surfaces over a blurred backdrop with a hairline highlight
+   edge. It needs something behind it to blur -- on a flat page background it is a
+   translucent panel and nothing more.
 
-   Load after the base stylesheet. Aesthetics override the neutral defaults that
-   `intent.css` declares at zero specificity, so source order decides. */
+   Tier 1 only. The scope that used to take a hand-written selector list is now a
+   token: only `surface` resolves `--ui-backdrop`, so blur reaches cards,
+   panels, alerts and tooltips while controls stay solid. An active blur costs a
+   compositing layer apiece, and one under every control of a dense cluster reads
+   as noise. */
 .glass {
-  --glass-blur: 14px;
-  --glass-opacity: 45%;
-  --glass-fill: 12%;
-  /* A light hairline in both themes: glass catches light from above regardless
-     of how dark the surface under it is. */
-  --glass-edge: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
-  --glass-base: color-mix(in srgb, var(--color-background) var(--glass-opacity), transparent);
+  /* The knobs, read with a fallback rather than declared, which is what lets an
+     ancestor set them. A custom property declared on an element beats an inherited
+     one whatever the specificity, so the first version of these -- declared here,
+     then referenced -- had already outranked every ancestor including `:root`,
+     which is where an application normally themes something. Measured at the time:
+     an ancestor setting `--glass-radius-surface` left a glass card at its default
+     16px, so the knob bought a name and nothing else. Undeclared here, an inherited
+     value lands and a value on the element itself still wins over it.
 
-  --ui-radius: 0.875rem;
-  --ui-radius-surface: 1.25rem;
+     The cost is the other direction. These resolve on `.glass` and inherit
+     already-resolved, so a *descendant* setting one changes nothing; `--ui-radius`
+     is the tool for that, because `box` reads it at whichever element draws.
+
+     Glass is softer than the base geometry because a translucent panel with a
+     tight corner reads as a cut-out rather than as a pane, but it was a full step
+     above `--radius-surface` and landed closer to a pill than to glass. A pair
+     rather than one value plus a multiplier: controls and surfaces do not scale
+     together, and 12/16 is the ratio that keeps a button inside a card looking
+     like it belongs there. */
+  --ui-radius: var(--glass-radius, 0.75rem);
+  --ui-radius-surface: var(--glass-radius-surface, 1rem);
   --ui-border-width: 1px;
+  --ui-border-max: 100px;
+
+  /* Glass catches light from above whatever is under it, so the edge is a light
+     hairline in both themes rather than a theme-following ink. */
+  --ui-ink: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+
   --ui-bg-alpha: 0.8;
-  /* A direct glass choice replaces inherited shape material from another
-     aesthetic rather than combining with it. */
+  --ui-backdrop: blur(14px) saturate(1.6);
+
+  /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
+     the blur, and a drop shadow under a translucent button reads as grime. All
+     general parts are explicitly zero so inherited or future geometry cannot
+     leak onto controls. `--ui-surface-shadow` below replaces the shadow of
+     surfaces only. */
+  --ui-shadow-x: 0px;
+  --ui-shadow-y: 0px;
+  --ui-shadow-blur: 0px;
+  --ui-shadow-spread: 0px;
+  /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
+     without a translucent ground the blur ends up behind an opaque background
+     and nothing shows through. */
+  --ui-surface-ground: color-mix(in srgb, var(--color-background) 45%, transparent);
+
+  /* Two layers pulling in with negative spread, so the shadow tucks under the
+     surface instead of haloing onto the backdrop. It is the one shipped aesthetic
+     that cannot be described with the parts, so it takes `surface`'s
+     complete-value slot -- which is also what keeps it off buttons and chips --
+     and the registry records that `.flat` does not reach it. */
+  --ui-surface-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
+
   --ui-clip: none;
   --ui-clip-tight: none;
-  --ui-edge: initial;
-  --ui-edge-tight: initial;
-  --ui-border-max: 100px;
-  --ui-focus-inset: 0px;
-  /* Both layers pull in with a negative spread, so the shadow stays tucked under
-     the surface rather than haloing out from it. A translucent surface shows
-     whatever is behind it, and a shadow that spreads past its edge reads as a
-     smudge on the backdrop instead of as depth. */
-  --ui-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
+  /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
+     has to say so rather than inherit it. */
+  --ui-shadow-edge: initial;
+  --ui-hover-transform: none;
+  --ui-active-transform: none;
 }
 
-/* `backdrop-filter` is applied here rather than exposed as a material token, but
-   not for the reason this comment used to give: a no-op `backdrop-filter: none`
-   costs nothing measurable in any baseline engine, layer or containing block
-   included.
-
-   The real reason is scope. Surfaces and overlays only -- an *active* blur does
-   cost a composited layer apiece, and one under every control of a dense cluster
-   reads as noise besides, so controls stay solid and sit on the glass instead. */
-.glass :is(.card, .panel, .alert),
-.glass:is(.card, .panel, .alert),
-:where(.glass) .tooltip::after,
-.tooltip.glass::after {
-  /* Surfaces mix their fill toward an opaque background token, which no material
-     token can make translucent, so the background is rebuilt here over a
-     translucent base. */
-  background-color: color-mix(in oklab, var(--intent-color) var(--glass-fill), var(--glass-base));
-  /* Unprefixed only. The build adds `-webkit-backdrop-filter` for the Safari
-     versions in the baseline; writing the prefixed form here by hand makes the
-     minifier collapse the pair down to the prefixed one alone, which leaves
-     Firefox with no blur at all. */
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
-  /* Enough intent to stay readable as an intent, over the highlight that makes
-     the edge look like glass rather than a border. */
-  border-color: color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
-}
-
-.tooltip.glass::after,
-:where(.glass) .tooltip::after {
-  border: var(--ui-border-width) solid color-mix(in oklab, var(--intent-border) 30%, var(--glass-edge));
-  border-radius: var(--ui-radius);
-  filter: none;
-}
-
-/* Transparency is the whole aesthetic, so honoring the preference means dropping
-   to an opaque surface rather than softening the blur. */
+/* Transparency is the whole aesthetic, so the honest degradation is an opaque
+   surface rather than a softer blur. */
 @media (prefers-reduced-transparency: reduce) {
   .glass {
-    --glass-opacity: 100%;
-  }
-
-  .glass :is(.card, .panel, .alert),
-  .glass:is(.card, .panel, .alert),
-  :where(.glass) .tooltip::after,
-  .tooltip.glass::after {
-    backdrop-filter: none;
+    --ui-bg-alpha: 1;
+    --ui-backdrop: none;
+    --ui-surface-ground: var(--color-background);
   }
 }

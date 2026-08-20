@@ -25,9 +25,13 @@
           <h2 class="text-title">Text inputs</h2>
           <p class="text-body text-text-secondary">
             One row per presentation, one column per intent, starting with a cell that carries no intent class at all.
-            Intent colors the resting and focus border;
-            <code class="code">.ghost</code>
-            drops the border to a bottom rule so the field keeps its affordance.
+            Intent colors the resting and focus border. Fill and edge compose independently:
+            <code class="code">.soft</code>
+            tints and keeps the line,
+            <code class="code">.soft.edgeless</code>
+            is the field sunk into the page, and a container's
+            <code class="code">.edgeless</code>
+            is floored so a field never loses the mark of where typing goes.
           </p>
         </div>
         <div data-matrix="ipt" data-matrix-states="rest" data-testid="ipt-matrix"></div>
@@ -92,10 +96,11 @@
             standard cell is the whole supported surface.
           </p>
           <p class="text-body text-text-secondary">
-            Icons are background images rather than masks, because an input has no pseudo-element to mask and masking
-            the input would clip its border, background, and text. A data URI cannot read a custom property, so each
-            icon ships light and dark artwork and the theme re-points an alias. Input icons follow the theme, not the
-            intent.
+            An icon is a
+            <code class="code">background-image</code>
+            on the control itself, so a field that wants one needs no wrapper element around it. A data URI is a
+            document of its own and inherits no color from the page, so each glyph ships a light and a dark copy and the
+            theme picks between them.
           </p>
         </div>
         <div data-fields data-testid="field-matrix"></div>
@@ -103,9 +108,8 @@
           <h3 class="text-title-sm">Overrides</h3>
           <p class="text-body text-text-secondary">
             <code class="code">--ipt-icon-src</code>
-            replaces the artwork;
-            <code class="code">.no-icon</code>
-            suppresses the ones native inputs include by default.
+            on the control replaces the artwork with any image, which is the whole of the override surface: the type
+            picks a source and this overrules it.
           </p>
           <div class="form-grid">
             <label class="field">
@@ -116,13 +120,9 @@
                 value="Custom artwork"
                 data-testid="field-custom-icon"
                 style="
-                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
+                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
                 "
               />
-            </label>
-            <label class="field">
-              <span class="label">Suppressed icon</span>
-              <input class="ipt email no-icon" type="email" value="you@example.com" data-testid="field-no-icon" />
             </label>
           </div>
         </div>
@@ -313,30 +313,32 @@ Collapsed the per-component intent blocks.</textarea
 
       <section class="sect-inn stack loose narrow">
         <div class="stack tight">
-          <h2 class="text-title">Control base</h2>
+          <h2 class="text-title">Text control</h2>
           <p class="text-body text-text-secondary">
-            <code class="code">.control-base</code>
-            is the low-level utility the three text controls compose: dimensions, border, placeholder, focus, invalid,
-            and disabled. Use it for a custom control when none of them fits.
+            <code class="code">.text-control</code>
+            is the utility all six controls above compose: the box, the field chrome, the fill cap, and the edge floor.
+            Use it for a custom control when none of them fits.
           </p>
         </div>
         <div class="stack tight">
           <div
-            class="control-base"
+            class="text-control"
+            style="padding: 0.5rem 0.75rem"
             contenteditable="true"
             role="textbox"
             aria-label="Custom control"
-            data-testid="control-base"
+            data-testid="text-control"
           >
             Editable custom control
           </div>
           <div
-            class="control-base"
+            class="text-control"
+            style="padding: 0.5rem 0.75rem"
             contenteditable="true"
             role="textbox"
             aria-label="Invalid custom control"
             aria-invalid="true"
-            data-testid="control-base-invalid"
+            data-testid="text-control-invalid"
           >
             Invalid custom control
           </div>
