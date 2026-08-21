@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-19
+last_updated: 2026-08-21
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -47,6 +47,18 @@ turning any outstanding problem findings into a clear, finite release path.
   candidate.
 - **The PR is merge-ready**: all required PR checks are green and the PR is
   mergeable with no unresolved blocking review thread or finding.
+- **The elevation scale is reworked**: `--elevation-none` now exists
+  ([Model → Elevation](./model.md#elevation)), but that is a stopgap. A
+  component's registry rest level and the raw `--elevation-low/-mid/-high`
+  scale are two vocabularies that do not currently agree -- a `card` resting
+  at elevation `1` renders identical to a `panel` at `0` under the default
+  aesthetic, because nothing supplies base shadow geometry until `.raised`,
+  `.floating`, or an aesthetic does. Before `0.1.0` ships: fold `none` into
+  the named scale properly and re-derive `low`/`mid`/`high` from it rather
+  than bolting `none` on as a fourth value; decide whether `.flat`, `.raised`,
+  and `.floating` survive as-is, get renamed to match, or get folded into the
+  same vocabulary -- undecided as of this entry. Whichever shape wins, update
+  `usage/theming.md`, `usage/composing.md#elevation`, and this document.
 
 Publishing is a separate gate and a repository-level one. Neither trusted
 publishing from CI nor a versioning and changelog workflow exists yet -- both are
@@ -101,14 +113,12 @@ question is not reopened from scratch.
 ## Notes
 
 Two measurements shaped the material tokens and outlive the change that needed
-them, so both live in Architecture rather than here. A no-op `clip-path` or
-`backdrop-filter` costs nothing in any baseline engine -- no compositing layer, no
-containing block, no stacking context, literal or behind a `var()` fallback --
-which is what made the token route possible at all
-([The cost of a no-op](./architecture.md#the-cost-of-a-no-op)). And an indirect
-token resolves its `var()` references once, on the element that declares it,
-which is why a shape pair needs two token slots rather than one
-([Indirect tokens resolve once](./architecture.md#indirect-tokens-resolve-once)).
+them, so both live in [Model](./model.md) rather than here: a no-op `clip-path`
+or `backdrop-filter` costs nothing in any baseline engine
+([The cost of a no-op](./model.md#the-cost-of-a-no-op)), and an indirect token
+resolves its `var()` references once, on the element that declares it, which is
+why a shape pair needs two token slots rather than one
+([Indirect tokens resolve once](./model.md#indirect-tokens-resolve-once)).
 
 ## Versioning
 
@@ -139,7 +149,6 @@ consumer use, not frozen against future semver-major changes.
 ## References
 
 - [Model](./model.md)
-- [Architecture](./architecture.md) -- superseded, kept for its measurements
 - [Overview](../index.md)
 - [Setup](../setup.md)
 - [Concepts](../concepts.md)

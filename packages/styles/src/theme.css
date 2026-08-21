@@ -10,8 +10,10 @@
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
    point of use against the consuming element's computed `color-scheme`. Theme
-   selectors below therefore set `color-scheme` and nothing else. See
-   docs/internal/architecture.md for the verification behind this. */
+   selectors below therefore set `color-scheme` and nothing else. Verified
+   across Chromium, Firefox, and WebKit, including resolution through
+   `color-mix()` and through Tailwind's `@theme`, which emits theme values as
+   unregistered custom properties rather than `@property` registrations. */
 @theme {
   --font-default: "Segoe UI", system-ui, sans-serif;
 
@@ -76,8 +78,8 @@
   /* Baked rather than mixed live. `box-hover` nests this token two `color-mix()`
      levels deeper to compose the fill and the edge, and three levels of
      `color-mix()` over a `light-dark()` crashes the WebKit renderer outright on
-     hover -- see docs/internal/architecture.md. Confirmed on all four semantic
-     intents, not only this one. Each pinned pair below is
+     hover. Confirmed on all four semantic intents, not only this one. Each
+     pinned pair below is
      `color-mix(in srgb, <base> 82%, <strong>)`, resolved once per theme and
      screenshotted back so the blend stays exact; re-bake it if the base or
      strong tone it was mixed from changes. */
@@ -150,6 +152,11 @@
      three elevations compose from it. Dark themes need a much heavier color to
      read at all against a dark background. */
   --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
+  /* Explicit no-shadow rung. Added so a consumer unsure which step to reach
+     for has a named "no depth" value instead of inferring it by omitting a
+     shadow declaration -- see docs/internal/roadmap.md for the fuller
+     none/low/mid/high rework this is the first step of. */
+  --elevation-none: none;
   --elevation-low: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
   --elevation-mid: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
   --elevation-high: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);

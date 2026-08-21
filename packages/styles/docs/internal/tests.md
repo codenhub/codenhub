@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-16
+last_updated: 2026-08-21
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -39,6 +39,7 @@ packages/styles/
     browser/
       accessibility.spec.ts
       aesthetics.spec.ts
+      axes.spec.ts
       buttons.spec.ts
       components.spec.ts
       environment.spec.ts

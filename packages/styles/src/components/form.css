@@ -768,12 +768,19 @@
     height: var(--switch-knob);
     width: var(--switch-knob);
     top: var(--switch-gap);
-    left: var(--switch-gap);
+    inset-inline-start: var(--switch-gap);
   }
 
   &:checked::after {
     background-color: currentcolor;
+    /* translate has no logical form, so the checked travel is named as a
+       physical x offset and mirrored under :dir(rtl) to travel toward the
+       opposite edge, matching the inset-inline-start resting position. */
     translate: var(--switch-travel);
+
+    :dir(rtl) & {
+      translate: calc(-1 * var(--switch-travel));
+    }
   }
 }
 

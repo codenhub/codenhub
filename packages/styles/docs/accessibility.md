@@ -29,6 +29,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Intent hue in dark      | `--intent-strong` is the `-300` shade in dark, so a soft or ghost label keeps its own hue instead of reading white.        |
 | Toggle marks            | A checked mark meets 3:1 as a state indicator on every plate its fill class can paint, in both themes.                     |
 | Forced colors           | `forced-colors: active` preserves visible borders and checked states using system colors.                                  |
+| Text direction          | Quote bar, alert icon, progress fill, vertical divider, and switch knob mirror under `dir="rtl"`. No class needed.         |
 
 The loader fallback is embedded in loader CSS, so focused imports that include
 loaders honor reduced motion without the reset. This includes

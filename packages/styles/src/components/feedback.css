@@ -15,14 +15,14 @@
 
 @keyframes anim-progress-indeterminate {
   0% {
-    left: -33%;
+    inset-inline-start: -33%;
     width: 33%;
   }
   50% {
     width: 40%;
   }
   100% {
-    left: 100%;
+    inset-inline-start: 100%;
     width: 33%;
   }
 }
@@ -38,10 +38,10 @@
   --_d-elevation: 0;
 
   &.icon {
-    @apply relative pl-11;
+    @apply relative ps-11;
 
     &::before {
-      @apply absolute top-4 left-4 block size-5 bg-current;
+      @apply absolute start-4 top-4 block size-5 bg-current;
 
       content: "";
       mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='M12 16v-4'/><path d='M12 8h.01'/></svg>");
@@ -126,7 +126,7 @@
 
   &::after {
     content: "";
-    @apply absolute top-0 bottom-0 left-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
+    @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
     background-color: var(--progress-color);
@@ -151,6 +151,13 @@
   &.indeterminate::after {
     width: 33%;
     animation: anim-progress-indeterminate 1.5s infinite ease-in-out;
+    /* No logical form exists for transform-origin, so the inline-start edge
+       is named directly and mirrored under :dir(rtl) to match the
+       inset-inline-start positioning above. */
     transform-origin: left;
+
+    :dir(rtl) & {
+      transform-origin: right;
+    }
   }
 }
