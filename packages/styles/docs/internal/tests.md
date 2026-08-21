@@ -135,6 +135,11 @@ the observable contract.
   pseudo-elements, is verified through computed styles.
 - `test-utils.ts` provides shared color parsing, comparison, contrast, and
   Playwright helpers.
+- Retired token and class names (from a rename or removal) are not covered by
+  a standing absence check. `docs/specs/tests.md`'s "No Permanent Absence
+  Checks" rule applies here same as anywhere else in the workspace: verifying
+  a retired name is gone is a migration-time concern for the pull request
+  that performs the rename, not a permanent entry in this suite.
 
 Screenshot and pixel baselines are intentionally not part of this package's
 test strategy. The asserted rendering contract is narrower: token resolution,

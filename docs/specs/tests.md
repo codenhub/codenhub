@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-09
+last_updated: 2026-08-21
 ---
 
 # Testing specification
@@ -10,6 +10,7 @@ This document outlines the testing strategy, architecture, and standards for thi
 ## Philosophy
 
 - **Test Behavior, Not Implementation**: Write tests that verify the observable behavior of your API or component, rather than its internal implementation details.
+- **No Permanent Absence Checks**: A test asserting only that a removed name, class, or token is gone (e.g. `not.toContain("old-name")`) verifies nothing about current behavior — it is indistinguishable from asserting the absence of a string that never existed. Such a check earns its keep only while a rename or removal is in flight, as a guard against a forgotten reference; delete it once the change is verified, in the same pull request. If the check encodes a durable rule (e.g. "no backward-compat aliases"), express that as a repository lint/check in `packages/tools`, not as a permanent unit test.
 - **Fast and Deterministic**: Tests must run quickly and yield consistent, predictable results. Flaky tests are unacceptable.
 - **Fail Fast**: Test inputs and edge cases early. Ensure error paths are tested alongside happy paths.
 
