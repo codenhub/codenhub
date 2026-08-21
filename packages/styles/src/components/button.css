@@ -41,6 +41,13 @@
     min-width: var(--control-height);
   }
 
+  /* `.p-sm`/`.p-lg` are the canonical names, matching the `sm`/`md`/`lg`
+     vocabulary the elevation modifier uses; `.compact`/`.spacious` are
+     first-class aliases, not a deprecation shim -- the same pattern
+     `.destructive`/`.danger`/`.error` uses on the intent axis. Bare `sm`/`lg`
+     are already the size modifier's class names, so `p-` prefixes here to
+     avoid colliding with a button's own size. */
+  &.p-sm,
   &.compact {
     @apply px-2.5 py-1;
 
@@ -49,6 +56,7 @@
     }
   }
 
+  &.p-lg,
   &.spacious {
     @apply px-6 py-3;
 
