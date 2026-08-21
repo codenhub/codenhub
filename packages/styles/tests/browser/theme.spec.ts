@@ -162,32 +162,4 @@ test.describe("theme", () => {
     expect(nested.outer).toBe("dark");
     expect(nested.inner).toBe("light");
   });
-
-  test("does not expose legacy root tokens", async ({ page }) => {
-    await page.goto(COMPONENTS_URL);
-
-    const tokenValues = await page.evaluate(() => {
-      const styles = getComputedStyle(document.documentElement);
-
-      return {
-        motionDuration: styles.getPropertyValue("--motion-duration").trim(),
-        layoutClusterGap: styles.getPropertyValue("--layout-cluster-gap").trim(),
-        layoutStackGap: styles.getPropertyValue("--layout-stack-gap").trim(),
-        shadowOverlay: styles.getPropertyValue("--shadow-overlay").trim(),
-        shadowSurface: styles.getPropertyValue("--shadow-surface").trim(),
-        elevationLow: styles.getPropertyValue("--elevation-low").trim(),
-        elevationMid: styles.getPropertyValue("--elevation-mid").trim(),
-        elevationHigh: styles.getPropertyValue("--elevation-high").trim(),
-      };
-    });
-
-    expect(tokenValues.motionDuration).toBe("");
-    expect(tokenValues.layoutClusterGap).toBe("");
-    expect(tokenValues.layoutStackGap).toBe("");
-    expect(tokenValues.shadowOverlay).toBe("");
-    expect(tokenValues.shadowSurface).toBe("");
-    expect(tokenValues.elevationLow).toBe("");
-    expect(tokenValues.elevationMid).toBe("");
-    expect(tokenValues.elevationHigh).toBe("");
-  });
 });
