@@ -102,8 +102,10 @@
               },
               "aliases": {
                 "type": "array",
+                "uniqueItems": true,
                 "items": {
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$"
                 }
               }
             }

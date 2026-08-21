@@ -191,11 +191,12 @@ Depth is a modifier, not an axis. Nothing is raised until an
 | `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
 | `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
 
-Both names in a row are the same class — `.elevation-sm` and `.raised` are
-aliases, not a canonical form and a deprecated one, the way `.destructive` and
-`.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw
-`--elevation-*` tokens in [Theming](./theming.md#foundation-tokens) for the
-same weight of depth, even though the two are read from different places.
+Both names in a row are equivalent, interchangeable classes — `.elevation-sm`
+and `.raised` are aliases, not a canonical form and a deprecated one, the way
+`.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md`
+naming matches the raw `--elevation-*` tokens in
+[Theming](./theming.md#foundation-tokens) for the same weight of depth, even
+though the two are read from different places.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so
 the same class reads as a soft blur on a plain page and as a hard offset slab

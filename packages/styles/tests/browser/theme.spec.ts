@@ -16,7 +16,10 @@ test.describe("theme", () => {
         motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
         motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
         radiusControl: styles.getPropertyValue("--radius-control").trim(),
+        elevationNone: styles.getPropertyValue("--elevation-none").trim(),
         elevationSm: styles.getPropertyValue("--elevation-sm").trim(),
+        elevationMd: styles.getPropertyValue("--elevation-md").trim(),
+        elevationLg: styles.getPropertyValue("--elevation-lg").trim(),
         layoutGap: styles.getPropertyValue("--layout-gap").trim(),
       };
     });
@@ -27,7 +30,10 @@ test.describe("theme", () => {
     expect(tokenValues.motionDurationFast).not.toBe("");
     expect(tokenValues.motionDurationNormal).not.toBe("");
     expect(tokenValues.radiusControl).not.toBe("");
+    expect(tokenValues.elevationNone).not.toBe("");
     expect(tokenValues.elevationSm).not.toBe("");
+    expect(tokenValues.elevationMd).not.toBe("");
+    expect(tokenValues.elevationLg).not.toBe("");
     expect(tokenValues.layoutGap).not.toBe("");
   });
 

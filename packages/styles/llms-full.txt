@@ -1109,11 +1109,12 @@ Depth is a modifier, not an axis. Nothing is raised until an
 | `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
 | `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
 
-Both names in a row are the same class — `.elevation-sm` and `.raised` are
-aliases, not a canonical form and a deprecated one, the way `.destructive` and
-`.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw
-`--elevation-*` tokens in [Theming](docs/usage/theming.md#foundation-tokens) for the
-same weight of depth, even though the two are read from different places.
+Both names in a row are equivalent, interchangeable classes — `.elevation-sm`
+and `.raised` are aliases, not a canonical form and a deprecated one, the way
+`.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md`
+naming matches the raw `--elevation-*` tokens in
+[Theming](docs/usage/theming.md#foundation-tokens) for the same weight of depth, even
+though the two are read from different places.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so
 the same class reads as a soft blur on a plain page and as a hard offset slab
@@ -1282,18 +1283,22 @@ container:
 
 ## Surfaces
 
-| Class                | Purpose                                                            |
-| -------------------- | ------------------------------------------------------------------ |
-| `.card`              | Raised container. Bordered, surface radius, low elevation, padded. |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.   |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                           |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                         |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
+| Class                | Purpose                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`. |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.    |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                            |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                          |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
 
 Both read intent, [presentation](docs/usage/composing.md#presentation), and
 [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a
-neutral bordered container; only an explicit presentation tints it.
+neutral bordered container; only an explicit presentation tints it. Resting
+at elevation `1` is not a visible shadow by itself — nothing draws depth
+until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or
+`.elevation-sm`/`.elevation-md` asks for it; see
+[Composing → Elevation](docs/usage/composing.md#elevation).
 
 ```html
 <article class="card">Neutral card</article>
