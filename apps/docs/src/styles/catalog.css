@@ -25,7 +25,7 @@
 .package-card[href]:hover {
   @apply border-border-hover bg-foreground;
   transform: var(--surface-hover-transform);
-  box-shadow: var(--elevation-mid);
+  box-shadow: var(--elevation-md);
 }
 
 .package-card-heading {

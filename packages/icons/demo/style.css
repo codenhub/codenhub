@@ -357,7 +357,7 @@ body {
   width: 200px;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-surface, 0.875rem);
-  box-shadow: var(--elevation-high);
+  box-shadow: var(--elevation-lg);
   z-index: var(--z-popover, 40);
   opacity: 0;
   transform: translateY(10px) scale(0.95);
@@ -411,7 +411,7 @@ body {
   border-radius: 50%;
   background: var(--color-primary);
   border: 2px solid var(--color-surface);
-  box-shadow: var(--elevation-low);
+  box-shadow: var(--elevation-sm);
   cursor: pointer;
   transition:
     transform var(--motion-duration-fast, 120ms) var(--motion-ease),
@@ -433,7 +433,7 @@ body {
   border-radius: 50%;
   background: var(--color-primary);
   border: 2px solid var(--color-surface);
-  box-shadow: var(--elevation-low);
+  box-shadow: var(--elevation-sm);
   cursor: pointer;
   transition:
     transform var(--motion-duration-fast, 120ms) var(--motion-ease),

@@ -92,7 +92,7 @@
 }
 
 .markdown-content .code-block {
-  @apply border-border my-5 overflow-hidden rounded-(--radius-surface) border shadow-(--elevation-low);
+  @apply border-border my-5 overflow-hidden rounded-(--radius-surface) border shadow-(--elevation-sm);
 }
 
 .code-block-header {

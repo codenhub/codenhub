@@ -15,7 +15,7 @@
 }
 
 .search-dialog {
-  @apply bg-background border-border m-0 w-[min(40rem,calc(100vw-2rem))] rounded-(--radius-surface) border p-0 shadow-(--elevation-high);
+  @apply bg-background border-border m-0 w-[min(40rem,calc(100vw-2rem))] rounded-(--radius-surface) border p-0 shadow-(--elevation-lg);
   margin-inline: auto;
   margin-top: 12vh;
 }

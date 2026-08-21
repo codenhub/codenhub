@@ -16,7 +16,7 @@ html {
 }
 
 .skip-link {
-  @apply bg-background text-text fixed top-2 left-2 z-50 flex items-center rounded-(--radius-control) px-4 font-semibold shadow-(--elevation-high);
+  @apply bg-background text-text fixed top-2 left-2 z-50 flex items-center rounded-(--radius-control) px-4 font-semibold shadow-(--elevation-lg);
   min-height: 44px;
   transform: translateY(calc(-100% - 0.5rem));
 }
@@ -256,7 +256,7 @@ html {
 }
 
 .markdown-content pre {
-  @apply pre border-border rounded-(--radius-surface) border p-5 text-sm leading-6 shadow-(--elevation-low);
+  @apply pre border-border rounded-(--radius-surface) border p-5 text-sm leading-6 shadow-(--elevation-sm);
 }
 
 /* A quotation is not a warning. Callouts that mean caution come through
