@@ -120,14 +120,28 @@ thick, so the cut and what covers it are the same size.
 
 **Exceptions:**
 
-- Corners are one unit or nothing. Chips — badges, key caps, code,
-  toggles — square instead of stepping, because one unit off each corner of
-  a 24px badge is a bite rather than a corner.
-- The outline is an inset ring, because a clip removes a real border. It is
-  the element's edge rather than a shadow, so it answers `.edged` and
-  `.edgeless` the way a border does: a `.edgeless` badge and a `.solid`
-  button draw none, a `.edged` card draws one, and a field keeps one
-  whatever a container asks for.
+- Corners are one unit or nothing. Chips square instead of stepping —
+  badges, key caps, code, checkboxes, and switches all read
+  `--ui-clip-tight`, which this aesthetic sets to none, because one unit off
+  each corner of a 24px badge is a bite rather than a corner. Tables,
+  progress bars, and skeletons square too, each for its own reason: a
+  table's `overflow: hidden` fights the clip and the corners square off
+  where the two meet, and progress and skeleton never read a clip at all —
+  a squaring aesthetic reaches them through `border-radius` alone. `.pre` is
+  the one exception that steps: it carries no clip override, so it inherits
+  the same polygon a button or a card gets, and with no border by default
+  the cut shows with no ring around it.
+- The outline is an inset ring, because a clip removes a real border — and
+  the focus ring, for the same reason, is a second inset layer rather than
+  an outline. Both are the element's own edge rather than a shadow, so the
+  border answers `.edged` and `.edgeless` the way a border does: a
+  `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws
+  one, and a field keeps one whatever a container asks for.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than
+  reached by it. `.tooltip-icon` forces `clip-path: none`, since a stepped
+  badge would clip its own bubble away with it. `.radio` forces the same,
+  because the circle is the only thing telling it from a checkbox at a
+  glance, and a stepped polygon would square it.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the
   aesthetic has no network side effect and falls back to the monospace
   stack.
@@ -181,9 +195,3 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
   if it is the call to action.
 - Nothing casts a shadow except the tooltip bubble, which needs separating
   from whatever it floats over. The rest sit flat on the page.
-- Because the stepped shape is a clip, it also clips the border and focus
-  outline, which are redrawn inside the element. `.code` and `.pre` step
-  their corners with no visible outline, since code draws no border of its
-  own. A few components are squared instead of stepped: tables, progress
-  bars, skeletons, tooltip icons, and checkboxes. Radios keep their circle,
-  which is the only thing distinguishing them from a checkbox at a glance.

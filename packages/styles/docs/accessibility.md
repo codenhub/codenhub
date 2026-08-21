@@ -23,6 +23,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Open state              | `[data-state="open"]` styles supported surfaces and tooltips.                                                              |
 | Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.        |
 | Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.         |
+| Reduced transparency    | `.glass` drops its blur and becomes an opaque surface when `prefers-reduced-transparency: reduce` matches.                 |
 | Filled labels           | Every intent's `.solid` label meets 1.4.3 (4.5:1) as normal text, in both themes. Lowest is success at 5.14:1.             |
 | Warning ink             | `--color-warning-contrast` is the near-black tone, not the page tone. Amber dark enough to carry white is not amber.       |
 | Partial fills           | Contrast ink appears only past a half fill, so a capped plate keeps `--intent-strong` rather than walking toward the page. |
