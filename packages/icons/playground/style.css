@@ -49,7 +49,7 @@ body {
   border-radius: var(--radius-surface, 0.875rem);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: var(--elevation-low);
+  box-shadow: var(--elevation-sm);
   transition:
     background-color var(--motion-duration-normal) var(--motion-ease),
     border-color var(--motion-duration-normal) var(--motion-ease);

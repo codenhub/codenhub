@@ -16,7 +16,10 @@ test.describe("theme", () => {
         motionDurationFast: styles.getPropertyValue("--motion-duration-fast").trim(),
         motionDurationNormal: styles.getPropertyValue("--motion-duration-normal").trim(),
         radiusControl: styles.getPropertyValue("--radius-control").trim(),
-        elevationLow: styles.getPropertyValue("--elevation-low").trim(),
+        elevationNone: styles.getPropertyValue("--elevation-none").trim(),
+        elevationSm: styles.getPropertyValue("--elevation-sm").trim(),
+        elevationMd: styles.getPropertyValue("--elevation-md").trim(),
+        elevationLg: styles.getPropertyValue("--elevation-lg").trim(),
         layoutGap: styles.getPropertyValue("--layout-gap").trim(),
       };
     });
@@ -27,7 +30,10 @@ test.describe("theme", () => {
     expect(tokenValues.motionDurationFast).not.toBe("");
     expect(tokenValues.motionDurationNormal).not.toBe("");
     expect(tokenValues.radiusControl).not.toBe("");
-    expect(tokenValues.elevationLow).not.toBe("");
+    expect(tokenValues.elevationNone).not.toBe("");
+    expect(tokenValues.elevationSm).not.toBe("");
+    expect(tokenValues.elevationMd).not.toBe("");
+    expect(tokenValues.elevationLg).not.toBe("");
     expect(tokenValues.layoutGap).not.toBe("");
   });
 
@@ -169,6 +175,9 @@ test.describe("theme", () => {
         layoutStackGap: styles.getPropertyValue("--layout-stack-gap").trim(),
         shadowOverlay: styles.getPropertyValue("--shadow-overlay").trim(),
         shadowSurface: styles.getPropertyValue("--shadow-surface").trim(),
+        elevationLow: styles.getPropertyValue("--elevation-low").trim(),
+        elevationMid: styles.getPropertyValue("--elevation-mid").trim(),
+        elevationHigh: styles.getPropertyValue("--elevation-high").trim(),
       };
     });
 
@@ -177,5 +186,8 @@ test.describe("theme", () => {
     expect(tokenValues.layoutStackGap).toBe("");
     expect(tokenValues.shadowOverlay).toBe("");
     expect(tokenValues.shadowSurface).toBe("");
+    expect(tokenValues.elevationLow).toBe("");
+    expect(tokenValues.elevationMid).toBe("");
+    expect(tokenValues.elevationHigh).toBe("");
   });
 });

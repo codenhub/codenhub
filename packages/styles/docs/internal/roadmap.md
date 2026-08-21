@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-19
+last_updated: 2026-08-21
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -73,6 +73,19 @@ consumer can find out what moved.
   aesthetic one, and it is the same root as the filled-contrast item above:
   neither is free to move without changing what the intent looks like.
 
+- **Elevation coupled to size**: `.sm`/`.lg` already exist as the size
+  modifier's class names; a bare `.elevation` that infers its level from a
+  sibling `.sm`/`.lg` on the same element (`.btn.sm.elevation` for a small
+  elevated button), with `.elevation-md` etc. as an explicit override
+  (`.btn.sm.elevation-md`), would read naturally. Shelved rather than built:
+  `.sm.elevation` (two classes) has higher CSS specificity than
+  `.elevation-md` (one class), so the explicit override would lose to the
+  implicit pairing without extra plumbing, and no other modifier in the
+  package currently reads a sibling modifier's class to set its own default --
+  this would be the first. A maybe, not a target: only worth doing if a clean
+  fix for the specificity problem turns up that does not make elevation a
+  special case among the modifiers.
+
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
   supported surface and consumer documentation are stable, because the two
@@ -101,14 +114,12 @@ question is not reopened from scratch.
 ## Notes
 
 Two measurements shaped the material tokens and outlive the change that needed
-them, so both live in Architecture rather than here. A no-op `clip-path` or
-`backdrop-filter` costs nothing in any baseline engine -- no compositing layer, no
-containing block, no stacking context, literal or behind a `var()` fallback --
-which is what made the token route possible at all
-([The cost of a no-op](./architecture.md#the-cost-of-a-no-op)). And an indirect
-token resolves its `var()` references once, on the element that declares it,
-which is why a shape pair needs two token slots rather than one
-([Indirect tokens resolve once](./architecture.md#indirect-tokens-resolve-once)).
+them, so both live in [Model](./model.md) rather than here: a no-op `clip-path`
+or `backdrop-filter` costs nothing in any baseline engine
+([The cost of a no-op](./model.md#the-cost-of-a-no-op)), and an indirect token
+resolves its `var()` references once, on the element that declares it, which is
+why a shape pair needs two token slots rather than one
+([Indirect tokens resolve once](./model.md#indirect-tokens-resolve-once)).
 
 ## Versioning
 
@@ -139,7 +150,6 @@ consumer use, not frozen against future semver-major changes.
 ## References
 
 - [Model](./model.md)
-- [Architecture](./architecture.md) -- superseded, kept for its measurements
 - [Overview](../index.md)
 - [Setup](../setup.md)
 - [Concepts](../concepts.md)

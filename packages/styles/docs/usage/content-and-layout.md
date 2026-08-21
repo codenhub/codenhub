@@ -151,18 +151,22 @@ container:
 
 ## Surfaces
 
-| Class          | Purpose                                                            |
-| -------------- | ------------------------------------------------------------------ |
-| `.card`        | Raised container. Bordered, surface radius, low elevation, padded. |
-| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.   |
-| `.interactive` | On `.card`. Adds pointer cursor, hover lift, and a focus ring.     |
-| `.compact`     | On `.card` or `.panel`. Reduces padding.                           |
-| `.spacious`    | On `.card` or `.panel`. Increases padding.                         |
-| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content. |
+| Class                | Purpose                                                             |
+| -------------------- | ------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`. |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.    |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                            |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                          |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
 
 Both read intent, [presentation](./composing.md#presentation), and
 [material tokens](./customizing.md#material-tokens). A plain `.card` is a
-neutral bordered container; only an explicit presentation tints it.
+neutral bordered container; only an explicit presentation tints it. Resting
+at elevation `1` is not a visible shadow by itself — nothing draws depth
+until an [aesthetic](./aesthetics.md) supplies shadow geometry or
+`.elevation-sm`/`.elevation-md` asks for it; see
+[Composing → Elevation](./composing.md#elevation).
 
 ```html
 <article class="card">Neutral card</article>

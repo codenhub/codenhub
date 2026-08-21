@@ -322,11 +322,11 @@
   --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, var(--_d-border)), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 
-  @apply my-0 border-l py-2 pl-4 italic;
+  @apply my-0 border-s py-2 ps-4 italic;
 
   background-color: var(--quote-bg);
-  border-left-color: var(--quote-edge);
-  border-left-width: var(--quote-width);
+  border-inline-start-color: var(--quote-edge);
+  border-inline-start-width: var(--quote-width);
   color: color-mix(
     in oklab,
     var(--intent-contrast) min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-fill-max, 100%)),

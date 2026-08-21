@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-16
+last_updated: 2026-08-21
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -9,9 +9,7 @@ scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 What decides how an element looks in 0.1.0.
 
 This document is the source of truth for the token contracts; public documents
-under `docs/` describe the same model for consumers. It supersedes
-[Architecture](./architecture.md), which described the model 0.1.0 replaced and is
-kept only for the measurements recorded in it.
+under `docs/` describe the same model for consumers.
 
 It is written as the argument for the model rather than as a reference to it,
 because the reasoning is the part that decides the next question. Sections that
@@ -473,12 +471,19 @@ builds the screen.
 So elevation is a **modifier**, not a fourth axis. It sits with size, above the
 three axes:
 
-| Class       | `--ui-elevation` | Means                                        |
-| ----------- | ---------------- | -------------------------------------------- |
-| `.flat`     | `0`              | No part-based depth; complete values remain. |
-| _(default)_ | `1`              | The aesthetic's depth as authored.           |
-| `.raised`   | `1`              | The same, said explicitly.                   |
-| `.floating` | `2`              | Twice it, for menus and popovers.            |
+| Class             | Alias       | `--ui-elevation` | Means                                        |
+| ----------------- | ----------- | ---------------- | -------------------------------------------- |
+| `.elevation-none` | `.flat`     | `0`              | No part-based depth; complete values remain. |
+| _(default)_       |             | `1`              | The aesthetic's depth as authored.           |
+| `.elevation-sm`   | `.raised`   | `1`              | The same, said explicitly.                   |
+| `.elevation-md`   | `.floating` | `2`              | Twice it, for menus and popovers.            |
+
+The alias pair is not a deprecation shim -- both names are first-class, the way
+`.destructive`/`.danger`/`.error` are on the intent axis. `.elevation-lg` is
+not shipped: three levels covers what the modifier needs today, and the name
+stays reserved rather than guessed at. Bare `sm`/`md`/`lg` were not an option
+here -- `sm` and `lg` are already the size modifier's class names, so a class
+here with the same bare name would collide with a component's own size.
 
 One unitless number, multiplied into the aesthetic's shadow geometry where the
 component composes it:
@@ -520,6 +525,24 @@ structural `0 1px 3px`, which put a shadow under every card on a plain page --
 and, because `--_d-*` inherits like any custom property and a button declares no
 shadow geometry of its own, under every button and chip nested inside one too.
 The geometry moved to the things that ask for depth, and the leak went with it.
+
+This modifier system shares its naming with, but not its mechanism with, the
+`--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow
+values for a consumer's own elements, read by nothing else in `src/`. A
+`.elevation-sm` card and `--elevation-sm` written on your own element mean the
+same weight of depth, but one multiplies an aesthetic's shadow parts and the
+other is a fixed value, so they are not read from the same place and will not
+always paint identically.
+
+A component's registry elevation still only says how much depth it takes _if_
+depth is drawn, which under the default aesthetic and with no
+`.elevation-sm`/`.elevation-md` (or their `.raised`/`.floating` aliases) is
+never -- so a `card` resting at elevation `1` renders identical to a `panel`
+resting at `0` with nothing else in scope. That is documented, intentional
+behavior, not a bug the naming pass above was meant to fix: giving every
+component's registry rest level real fallback geometry with no aesthetic and
+no modifier class was considered and set aside, to keep this pass to naming
+and the `none` rung rather than a visual change to every unclassed component.
 
 ### The one limitation
 
@@ -665,12 +688,26 @@ One change of ownership. The shared reset declares:
 An aesthetic sets `--ui-ink` to substitute its own neutral line color, and an
 intent class still overrides the whole slot, so a destructive control keeps its
 red edge under any aesthetic. This deleted the two fourteen-selector component
-lists in `neobrutalism.css` and closed the native-element gap Architecture
-records: under the replaced model, a bare `<input>` under `.pixel` got the
-silhouette but not the ink.
+lists in `neobrutalism.css` and closed a gap the replaced model had: a bare
+`<input>` under `.pixel` used to get the silhouette but not the ink, because the
+ink had to resolve against the component's own intent and a container-level
+token could not do that.
 
-Rules I1 through I4 from Architecture carry over unchanged, including the one
-deliberate exception where table rows inherit their table's intent.
+### What intent may not do
+
+- **I1.** Intent declares color and nothing else. No intent class may set a
+  length, a ratio, a shadow, or a shape.
+- **I2.** Exactly one intent applies, and semantic outranks emphasis.
+- **I3.** Intent does not cascade. Every component redeclares the neutral
+  defaults at its own root, at zero specificity, so an element's own intent
+  class wins and an inherited one loses.
+- **I4.** An intent class is never also a component. `.error` says destructive;
+  it must not additionally mean "helper text". Where a component needs both,
+  the component carries its own class and takes the intent alongside it.
+
+One deliberate exception to I3: table rows inherit their table's intent rather
+than resetting it, because a row is part of a table rather than an independent
+component. A row carrying its own intent class still wins.
 
 ## Aesthetic
 
@@ -732,7 +769,8 @@ its `var()` references on the element that declares it, so a complete shadow
 declared on `.neobrutalism` resolves the container's intent and inherits down
 already-resolved -- which is exactly why the replaced aesthetic implementation
 had to name every component. Colorless geometry inherits safely, and the
-component supplies the color:
+component supplies the color -- see
+[Indirect tokens resolve once](#indirect-tokens-resolve-once):
 
 ```css
 box-shadow: var(--ui-shadow-x, 0px) var(--ui-shadow-y, 0px) var(--ui-shadow-blur, 0px) var(--ui-shadow-spread, 0px)
@@ -780,7 +818,7 @@ behind it.
   Material cascades and is meant to; hue is not, and an aesthetic that writes
   `--color-*` or `--intent-*` repaints components it never meant to reach.
 - **R2.** A component resolves a material token unconditionally. A no-op material
-  value is free, which Architecture measured in all three baseline engines.
+  value is free -- see [The cost of a no-op](#the-cost-of-a-no-op).
 - **R3.** An aesthetic never names a component. It sets tokens. A treatment that
   genuinely cannot be a token -- an extra painted layer, a text transform -- is a
   selector list the aesthetic owns, recorded in the registry as `selectors` with
@@ -820,6 +858,52 @@ panels while controls stay solid, and why its two-layer drop shadow does not lan
 under every button on the page. Adding such a slot costs one line in the
 components that accept it, and it is visible in those components rather than
 inferred from a table somewhere else.
+
+### The cost of a no-op
+
+`clip-path` and `backdrop-filter` were once excluded from the material contract
+on the grounds that applying either unconditionally costs a compositing layer
+and a containing block on every component, even at its no-op value. That is
+false. Measured in Chromium, Firefox, and WebKit, literal and behind a `var()`
+fallback:
+
+| Declaration on the host                     | Containing block | Stacking context | Chromium layers, 400 hosts |
+| ------------------------------------------- | ---------------- | ---------------- | -------------------------- |
+| _(none)_                                    | no               | no               | 4                          |
+| `clip-path: none`                           | no               | no               | 4                          |
+| `clip-path: var(--ui-clip, none)`           | no               | no               | 4                          |
+| `backdrop-filter: none`                     | no               | no               | 4                          |
+| `backdrop-filter: var(--ui-backdrop, none)` | no               | no               | 4                          |
+| `clip-path: inset(4px)`                     | no               | **yes**          | 4                          |
+| `backdrop-filter: blur(2px)`                | **yes**          | **yes**          | **119**                    |
+
+The last two rows are controls: without them the probe would report "no cost"
+for a broken measurement. `clip-path` never establishes a containing block, even
+active -- only a stacking context. `backdrop-filter` is the property that does
+both, and the only one that costs layers. So a component may resolve either
+token unconditionally (R2), and the reason to keep an _active_ clip off every
+component is different and still real: it establishes a stacking context in all
+three engines and clips descendants, backgrounds, borders, shadows, and the
+focus outline.
+
+### Indirect tokens resolve once
+
+A `var()` reference inside a custom property's value resolves against the
+element that **declares** the custom property, not against the element that
+uses it. A child overriding the referenced token is ignored. Measured
+identically in Chromium, Firefox, and WebKit, with `--unit: 8px` on the parent
+and `--unit: 1px` on the child:
+
+| Declaration                                                   | Child override honored? | Result |
+| ------------------------------------------------------------- | ----------------------- | ------ |
+| `--shape: inset(var(--unit))`, then `clip-path: var(--shape)` | no                      | `8px`  |
+| `clip-path: inset(var(--unit))` directly                      | **yes**                 | `1px`  |
+
+This is the mechanism behind every case in this model where a value is declared
+per component rather than once on a container: `.neobrutalism`'s offset shadow,
+`.pixel`'s ring thickness, and `--ui-ink` all have to resolve against the
+component's own intent, so a token carrying one has to be read at the component,
+not written above it.
 
 ## Precedence
 
@@ -1189,8 +1273,8 @@ three material slots and one specificity rule were added because of what it foun
 | Q5  | Is `ghost edged` distinct from `soft edged`?   | **Yes**, at 1px. Separation is 48-52 in both themes.             |
 | Q6  | Does anything fail to resolve in WebKit?       | **No**. Every composed value resolves in all three engines.      |
 
-Q1 is the one worth stating loudly. Architecture records the missing ink on bare
-elements as a residual gap A4 could not close, because the value has to resolve
+Q1 is the one worth stating loudly. Under the replaced model, a bare element's
+ink was a residual gap nothing could close, because the value has to resolve
 against the component's own intent and a container-level token cannot. Routing it
 through `--ui-ink` in the shared reset closes it: a bare `<button>` and a bare
 `<input>` under `.neobrutalism` and `.pixel` report exactly the ink, border width,
@@ -1268,6 +1352,13 @@ cannot express it.
 Set tokens, touch nothing else. This tier cascades, needs no knowledge of any
 component, and reaches bare `<button>` and `<input>` elements carrying no class at
 all. Most of an aesthetic lives here.
+
+An aesthetic entrypoint carries no Tailwind directive and must not add
+`@reference "tailwindcss"`. A `@reference` in a file imported into a full build
+switches the whole build to reference mode: `@theme` stops emitting `:root`, and
+every foundation token such as `--border-width` is inlined with a fallback
+instead -- which invalidates the `calc()` built around them and drops whole
+`border` shorthands.
 
 #### Publishing a knob
 
@@ -1447,8 +1538,20 @@ aesthetic staying in Tier 1 works everywhere. An aesthetic writing its own
 selector list works wherever it remembered to look, which is the cost of writing
 one and the reason to prefer a slot.
 
+## Direction
+
+A component's own left/right is written as a logical property --
+`inset-inline-start`, `border-inline-start-width`, `ps-*`/`border-s` and their
+Tailwind equivalents -- so it mirrors under `dir="rtl"` for free, with no
+opt-in class. `transform-origin` and `translate` have no logical form; a
+component whose geometry depends on one mirrors it explicitly under
+`:dir(rtl)` instead.
+
+This does not apply to a class that is itself a direction choice an author
+makes on purpose, such as `.icon.left`/`.icon.right` or a tooltip's
+`data-tooltip-position`. Those name a visual side, not a text direction, and
+stay physical.
+
 ## References
 
-- [Token inventory](./tokens-inventory.md)
-- [Architecture](./architecture.md), which this supersedes on implementation
 - [Roadmap](./roadmap.md)

@@ -99,6 +99,14 @@
               "ui-elevation": {
                 "type": "string",
                 "pattern": "^\\d+$"
+              },
+              "aliases": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                }
               }
             }
           }

@@ -59,18 +59,21 @@
   },
   "modifiers": {
     "elevation": {
-      "flat": {
-        "ui-elevation": "0"
+      "elevation-none": {
+        "ui-elevation": "0",
+        "aliases": ["flat"]
       },
-      "raised": {
-        "ui-elevation": "1"
+      "elevation-sm": {
+        "ui-elevation": "1",
+        "aliases": ["raised"]
       },
-      "floating": {
-        "ui-elevation": "2"
+      "elevation-md": {
+        "ui-elevation": "2",
+        "aliases": ["floating"]
       }
     },
     "size": ["sm", "lg"],
-    "padding": ["compact", "spacious", "flush"],
+    "padding": ["p-sm", "p-lg", "compact", "spacious", "flush"],
     "shape": ["pill"],
     "state": ["loading", "disabled", "interactive", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],

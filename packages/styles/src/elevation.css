@@ -20,8 +20,19 @@
    Written on a component instead, that geometry would inherit into everything
    nested inside it, and a plain page would have a shadow under every card. */
 
+/* `.flat`/`.raised`/`.floating` are the original names and remain first-class,
+   not deprecated -- `.elevation-none`/`.elevation-sm`/`.elevation-md` are an
+   alias pair that borrows the sm/md/lg naming the raw `--elevation-*` scale in
+   theme.css uses, for a consumer who wants one vocabulary across both. Bare
+   `sm`/`md`/`lg` are not available here: `sm` and `lg` are already the size
+   modifier's class names, so a matching class here would collide with a
+   component's own size. `.elevation-lg` is not shipped -- three levels covers
+   what the modifier needs today; the name is reserved if a fourth is ever
+   added, which is why the raw scale's top rung has no modifier-class match yet. */
+
 /* No part-based depth. Complete surface shadow values, such as glass, are not
    reached by the elevation multiplier. */
+.elevation-none,
 .flat {
   --ui-elevation: 0;
 }
@@ -29,6 +40,7 @@
 /* The aesthetic's depth as authored, said explicitly. The geometry is the
    fallback for a page with no aesthetic in scope; an aesthetic that declares its
    own overrides it, and the elevation multiplies whichever one lands. */
+.elevation-sm,
 .raised {
   --ui-elevation: 1;
   --elevation-y: 1px;
@@ -36,6 +48,7 @@
 }
 
 /* Twice it, for menus and popovers. */
+.elevation-md,
 .floating {
   --ui-elevation: 2;
   --elevation-y: 1px;

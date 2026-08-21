@@ -71,7 +71,12 @@ async function sourceFiles(): Promise<{ file: string; source: string }[]> {
 
 function shippedClassNames(): string[] {
   const modifiers = Object.entries(registry.modifiers).flatMap(([group, value]) =>
-    group === "elevation" ? Object.keys(value as object) : (value as string[]),
+    group === "elevation"
+      ? Object.entries(value as Record<string, { aliases?: string[] }>).flatMap(([key, entry]) => [
+          key,
+          ...(entry.aliases ?? []),
+        ])
+      : (value as string[]),
   );
   return [
     ...Object.keys(registry.presentation.fill),
