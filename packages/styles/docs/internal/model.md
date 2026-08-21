@@ -471,12 +471,19 @@ builds the screen.
 So elevation is a **modifier**, not a fourth axis. It sits with size, above the
 three axes:
 
-| Class       | `--ui-elevation` | Means                                        |
-| ----------- | ---------------- | -------------------------------------------- |
-| `.flat`     | `0`              | No part-based depth; complete values remain. |
-| _(default)_ | `1`              | The aesthetic's depth as authored.           |
-| `.raised`   | `1`              | The same, said explicitly.                   |
-| `.floating` | `2`              | Twice it, for menus and popovers.            |
+| Class             | Alias       | `--ui-elevation` | Means                                        |
+| ----------------- | ----------- | ---------------- | -------------------------------------------- |
+| `.elevation-none` | `.flat`     | `0`              | No part-based depth; complete values remain. |
+| _(default)_       |             | `1`              | The aesthetic's depth as authored.           |
+| `.elevation-sm`   | `.raised`   | `1`              | The same, said explicitly.                   |
+| `.elevation-md`   | `.floating` | `2`              | Twice it, for menus and popovers.            |
+
+The alias pair is not a deprecation shim -- both names are first-class, the way
+`.destructive`/`.danger`/`.error` are on the intent axis. `.elevation-lg` is
+not shipped: three levels covers what the modifier needs today, and the name
+stays reserved rather than guessed at. Bare `sm`/`md`/`lg` were not an option
+here -- `sm` and `lg` are already the size modifier's class names, so a class
+here with the same bare name would collide with a component's own size.
 
 One unitless number, multiplied into the aesthetic's shadow geometry where the
 component composes it:
@@ -519,16 +526,23 @@ and, because `--_d-*` inherits like any custom property and a button declares no
 shadow geometry of its own, under every button and chip nested inside one too.
 The geometry moved to the things that ask for depth, and the leak went with it.
 
-This modifier system is unrelated to the `--elevation-low/-mid/-high` tokens in
-`theme.css`: those are raw shadow values for a consumer's own elements, read by
-nothing in `src/` except the tooltip bubble's fallback. A component's registry
-elevation says how much depth it takes _if_ depth is drawn, which under the
-default aesthetic and with no `.raised`/`.floating` is never -- so a `card`
-resting at elevation `1` currently renders identical to a `panel` resting at
-`0`. That gap between the registry's stated rest level and what actually
-paints, plus the two-vocabulary split itself, is tracked as a pre-`0.1.0` open
-item in [Roadmap](./roadmap.md); `--elevation-none` was added to the raw scale
-as the first, non-breaking step.
+This modifier system shares its naming with, but not its mechanism with, the
+`--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow
+values for a consumer's own elements, read by nothing else in `src/`. A
+`.elevation-sm` card and `--elevation-sm` written on your own element mean the
+same weight of depth, but one multiplies an aesthetic's shadow parts and the
+other is a fixed value, so they are not read from the same place and will not
+always paint identically.
+
+A component's registry elevation still only says how much depth it takes _if_
+depth is drawn, which under the default aesthetic and with no
+`.elevation-sm`/`.elevation-md` (or their `.raised`/`.floating` aliases) is
+never -- so a `card` resting at elevation `1` renders identical to a `panel`
+resting at `0` with nothing else in scope. That is documented, intentional
+behavior, not a bug the naming pass above was meant to fix: giving every
+component's registry rest level real fallback geometry with no aesthetic and
+no modifier class was considered and set aside, to keep this pass to naming
+and the `none` rung rather than a visual change to every unclassed component.
 
 ### The one limitation
 

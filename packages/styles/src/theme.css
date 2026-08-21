@@ -152,14 +152,17 @@
      three elevations compose from it. Dark themes need a much heavier color to
      read at all against a dark background. */
   --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
-  /* Explicit no-shadow rung. Added so a consumer unsure which step to reach
-     for has a named "no depth" value instead of inferring it by omitting a
-     shadow declaration -- see docs/internal/roadmap.md for the fuller
-     none/low/mid/high rework this is the first step of. */
+  /* Four rungs: no shadow, then a Tailwind-style sm/md/lg progression, so a
+     consumer unsure which step to reach for has a named "no depth" value
+     instead of inferring it by omitting a shadow declaration. The elevation
+     modifier classes (`.elevation-none`/`.elevation-sm`/`.elevation-md` in
+     elevation.css) share this naming on purpose -- same weight, same word --
+     though they multiply an aesthetic's shadow parts rather than declaring a
+     fixed value, so the two are not read from the same place. */
   --elevation-none: none;
-  --elevation-low: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
-  --elevation-mid: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
-  --elevation-high: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
+  --elevation-sm: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
+  --elevation-md: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
+  --elevation-lg: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
   --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
   /* Negative, so the ring is drawn over the edge rather than beside it: at a

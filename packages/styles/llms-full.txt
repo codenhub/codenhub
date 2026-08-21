@@ -1103,11 +1103,17 @@ classes such as `.interactive`, `.loading`, `.invalid`, `.compact`, and
 Depth is a modifier, not an axis. Nothing is raised until an
 [aesthetic](docs/usage/aesthetics.md) draws depth or one of these classes asks for it.
 
-| Class       | Depth                                                                    |
-| ----------- | ------------------------------------------------------------------------ |
-| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
-| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
-| `.floating` | Twice it, for menus and popovers.                                        |
+| Class             | Alias       | Depth                                                                    |
+| ----------------- | ----------- | ------------------------------------------------------------------------ |
+| `.elevation-none` | `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
+
+Both names in a row are the same class — `.elevation-sm` and `.raised` are
+aliases, not a canonical form and a deprecated one, the way `.destructive` and
+`.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw
+`--elevation-*` tokens in [Theming](docs/usage/theming.md#foundation-tokens) for the
+same weight of depth, even though the two are read from different places.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so
 the same class reads as a soft blur on a plain page and as a hard offset slab
@@ -1115,9 +1121,9 @@ under `.neobrutalism` — the aesthetic decides what depth looks like, the
 class decides how much of it this element takes.
 
 ```html
-<article class="card raised">Lifted</article>
-<div class="floating panel">A menu surface</div>
-<article class="card flat">Flat, whatever the page or container says</article>
+<article class="card elevation-sm">Lifted</article>
+<div class="elevation-md panel">A menu surface</div>
+<article class="card elevation-none">Flat, whatever the page or container says</article>
 ```
 
 The multiplier is a plain number, so it inherits: a container lifts or
@@ -2006,10 +2012,14 @@ Foundation tokens are not aliases for one color. They define layout, shape,
 motion, focus, depth, and layering behavior used by helper classes.
 
 The four `--elevation-*` values below are raw shadows for elements you style
-yourself. They are a separate thing from `.flat`/`.raised`/`.floating`, which
-scale a _component's own_ shadow geometry and default to no shadow at all
-until an aesthetic or one of those classes asks for depth — see
-[Composing → Elevation](docs/usage/composing.md#elevation) for that system.
+yourself. They are a separate thing from `.elevation-none`/`.elevation-sm`/
+`.elevation-md` (aliased as `.flat`/`.raised`/`.floating`), which scale a
+_component's own_ shadow geometry and default to no shadow at all until an
+aesthetic or one of those classes asks for depth — see
+[Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two
+share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a
+fixed value and the other multiplies shadow parts, so they will not always
+paint identically.
 
 | Token                       | Purpose                                                                 |
 | --------------------------- | ----------------------------------------------------------------------- |
@@ -2028,9 +2038,9 @@ until an aesthetic or one of those classes asks for depth — see
 | `--border-width`            | Default border width.                                                   |
 | `--elevation-color`         | Shadow color the four elevations compose from. Heavier in dark themes.  |
 | `--elevation-none`          | No shadow. Use on an element that should read as flat against its page. |
-| `--elevation-low`           | A light shadow for your own surface-level elements, such as cards.      |
-| `--elevation-mid`           | A shadow for your own raised elements, such as dropdowns and popovers.  |
-| `--elevation-high`          | A shadow for your own full overlays, such as modal dialogs.             |
+| `--elevation-sm`            | A light shadow for your own surface-level elements, such as cards.      |
+| `--elevation-md`            | A shadow for your own raised elements, such as dropdowns and popovers.  |
+| `--elevation-lg`            | A shadow for your own full overlays, such as modal dialogs.             |
 | `--focus-ring`              | Focus-visible ring color.                                               |
 | `--focus-ring-offset`       | Focus-visible outline offset. Negative, so the ring lands on the edge.  |
 | `--focus-ring-width`        | Focus-visible outline/ring width.                                       |

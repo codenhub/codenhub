@@ -185,11 +185,17 @@ classes such as `.interactive`, `.loading`, `.invalid`, `.compact`, and
 Depth is a modifier, not an axis. Nothing is raised until an
 [aesthetic](./aesthetics.md) draws depth or one of these classes asks for it.
 
-| Class       | Depth                                                                    |
-| ----------- | ------------------------------------------------------------------------ |
-| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
-| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
-| `.floating` | Twice it, for menus and popovers.                                        |
+| Class             | Alias       | Depth                                                                    |
+| ----------------- | ----------- | ------------------------------------------------------------------------ |
+| `.elevation-none` | `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
+
+Both names in a row are the same class — `.elevation-sm` and `.raised` are
+aliases, not a canonical form and a deprecated one, the way `.destructive` and
+`.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw
+`--elevation-*` tokens in [Theming](./theming.md#foundation-tokens) for the
+same weight of depth, even though the two are read from different places.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so
 the same class reads as a soft blur on a plain page and as a hard offset slab
@@ -197,9 +203,9 @@ under `.neobrutalism` — the aesthetic decides what depth looks like, the
 class decides how much of it this element takes.
 
 ```html
-<article class="card raised">Lifted</article>
-<div class="floating panel">A menu surface</div>
-<article class="card flat">Flat, whatever the page or container says</article>
+<article class="card elevation-sm">Lifted</article>
+<div class="elevation-md panel">A menu surface</div>
+<article class="card elevation-none">Flat, whatever the page or container says</article>
 ```
 
 The multiplier is a plain number, so it inherits: a container lifts or

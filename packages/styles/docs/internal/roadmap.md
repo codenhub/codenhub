@@ -47,18 +47,6 @@ turning any outstanding problem findings into a clear, finite release path.
   candidate.
 - **The PR is merge-ready**: all required PR checks are green and the PR is
   mergeable with no unresolved blocking review thread or finding.
-- **The elevation scale is reworked**: `--elevation-none` now exists
-  ([Model → Elevation](./model.md#elevation)), but that is a stopgap. A
-  component's registry rest level and the raw `--elevation-low/-mid/-high`
-  scale are two vocabularies that do not currently agree -- a `card` resting
-  at elevation `1` renders identical to a `panel` at `0` under the default
-  aesthetic, because nothing supplies base shadow geometry until `.raised`,
-  `.floating`, or an aesthetic does. Before `0.1.0` ships: fold `none` into
-  the named scale properly and re-derive `low`/`mid`/`high` from it rather
-  than bolting `none` on as a fourth value; decide whether `.flat`, `.raised`,
-  and `.floating` survive as-is, get renamed to match, or get folded into the
-  same vocabulary -- undecided as of this entry. Whichever shape wins, update
-  `usage/theming.md`, `usage/composing.md#elevation`, and this document.
 
 Publishing is a separate gate and a repository-level one. Neither trusted
 publishing from CI nor a versioning and changelog workflow exists yet -- both are
@@ -84,6 +72,19 @@ consumer can find out what moved.
   six hue intents separate cleanly. This is a palette question rather than an
   aesthetic one, and it is the same root as the filled-contrast item above:
   neither is free to move without changing what the intent looks like.
+
+- **Elevation coupled to size**: `.sm`/`.lg` already exist as the size
+  modifier's class names; a bare `.elevation` that infers its level from a
+  sibling `.sm`/`.lg` on the same element (`.btn.sm.elevation` for a small
+  elevated button), with `.elevation-md` etc. as an explicit override
+  (`.btn.sm.elevation-md`), would read naturally. Shelved rather than built:
+  `.sm.elevation` (two classes) has higher CSS specificity than
+  `.elevation-md` (one class), so the explicit override would lose to the
+  implicit pairing without extra plumbing, and no other modifier in the
+  package currently reads a sibling modifier's class to set its own default --
+  this would be the first. A maybe, not a target: only worth doing if a clean
+  fix for the specificity problem turns up that does not make elevation a
+  special case among the modifiers.
 
 - **Preview split**: Promote the playground to a demo application and leave a
   minimal fixture playground behind it for tests. Only worth doing once the
