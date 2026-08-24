@@ -6,6 +6,10 @@ export interface NormalizedIcon {
   width: number;
   /** viewBox height. */
   height: number;
+  /** viewBox origin on the x axis. */
+  left: number;
+  /** viewBox origin on the y axis. */
+  top: number;
 }
 
 const XML_COMMENT = /<!--[\s\S]*?-->/g;
@@ -16,6 +20,13 @@ const WHITESPACE_RUN = /\s+/g;
 
 // Attributes that describe the document rather than how the artwork is drawn.
 // Everything else is presentation the body has to keep once the wrapper is gone.
+interface ViewBox {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}
+
 const DISCARDED_ATTRIBUTES = new Set([
   "class",
   "focusable",
@@ -45,18 +56,22 @@ function readAttributes(source: string): Map<string, string> {
   return attributes;
 }
 
-function readViewBox(attributes: Map<string, string>): { width: number; height: number } | undefined {
+function readViewBox(attributes: Map<string, string>): ViewBox | undefined {
   const viewBox = attributes.get("viewBox") ?? attributes.get("viewbox");
   if (viewBox) {
     const parts = viewBox.trim().split(WHITESPACE_RUN).map(Number);
+    // The origin is kept: families such as Material Symbols draw above it, and
+    // an icon reduced to its size alone would render blank.
     if (parts.length === 4 && parts.every((part) => Number.isFinite(part))) {
-      return { height: parts[3], width: parts[2] };
+      return { height: parts[3], left: parts[0], top: parts[1], width: parts[2] };
     }
   }
 
   const width = Number(attributes.get("width"));
   const height = Number(attributes.get("height"));
-  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 ? { height, width } : undefined;
+  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+    ? { height, left: 0, top: 0, width }
+    : undefined;
 }
 
 function collapse(markup: string): string {
@@ -94,9 +109,9 @@ export function normalizeSvg(source: string, origin: string): NormalizedIcon {
 
   const presentation = [...attributes].filter(([name]) => !isDiscarded(name));
   if (presentation.length === 0) {
-    return { body, height: viewBox.height, width: viewBox.width };
+    return { body, ...viewBox };
   }
 
   const groupAttributes = presentation.map(([name, value]) => `${name}="${value}"`).join(" ");
-  return { body: `<g ${groupAttributes}>${body}</g>`, height: viewBox.height, width: viewBox.width };
+  return { body: `<g ${groupAttributes}>${body}</g>`, ...viewBox };
 }

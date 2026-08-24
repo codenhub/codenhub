@@ -5,6 +5,7 @@ import { mapConcurrent } from "../../process/concurrency.ts";
 import {
   CORE_TIER_OBLIGATIONS,
   LICENSE_OBLIGATIONS,
+  RESERVED_PREFIXES,
   type IconAttribution,
   type IconFamilyDefinition,
 } from "./family-definitions.ts";
@@ -15,6 +16,8 @@ interface IconEntry {
   body: string;
   width?: number;
   height?: number;
+  left?: number;
+  top?: number;
   tags?: string[];
 }
 
@@ -42,6 +45,8 @@ export interface IconFamilyDocument {
   };
   width: number;
   height: number;
+  left: number;
+  top: number;
   icons: Record<string, IconEntry>;
 }
 
@@ -52,6 +57,13 @@ export interface BuiltFamily {
   attributionText: string;
 }
 
+interface ViewBox {
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+}
+
 const SVG_EXTENSION = ".svg";
 const DEFAULT_SIZE = 24;
 // A family can hold tens of thousands of files, so reads are bounded rather
@@ -59,6 +71,10 @@ const DEFAULT_SIZE = 24;
 const READ_CONCURRENCY = 32;
 
 function readObligation(definition: IconFamilyDefinition): IconAttribution {
+  if (RESERVED_PREFIXES.includes(definition.prefix)) {
+    throw new Error(`Family prefix "${definition.prefix}" is reserved by the icon utility classes.`);
+  }
+
   const obligation = LICENSE_OBLIGATIONS[definition.license.spdx];
   if (!obligation) {
     throw new Error(
@@ -78,10 +94,12 @@ function readIconName(fileName: string, definition: IconFamilyDefinition): strin
     return undefined;
   }
   const base = fileName.slice(0, -SVG_EXTENSION.length);
-  if (!definition.fileSuffix) {
-    return base;
+  if (definition.fileSuffix) {
+    return base.endsWith(definition.fileSuffix) ? base.slice(0, -definition.fileSuffix.length) : undefined;
   }
-  return base.endsWith(definition.fileSuffix) ? base.slice(0, -definition.fileSuffix.length) : undefined;
+  // A directory can hold several variants, as Material Symbols does with its
+  // filled icons, so the base variant has to skip what belongs to a sibling.
+  return definition.excludedFileSuffix && base.endsWith(definition.excludedFileSuffix) ? undefined : base;
 }
 
 async function readTags(packageDirectory: string, definition: IconFamilyDefinition): Promise<Record<string, string[]>> {
@@ -92,17 +110,21 @@ async function readTags(packageDirectory: string, definition: IconFamilyDefiniti
   return JSON.parse(source) as Record<string, string[]>;
 }
 
-function pickDominantSize(sizes: Iterable<string>): { width: number; height: number } {
+function pickDominantViewBox(viewBoxes: Iterable<string>): ViewBox {
   const counts = new Map<string, number>();
-  for (const size of sizes) {
-    counts.set(size, (counts.get(size) ?? 0) + 1);
+  for (const viewBox of viewBoxes) {
+    counts.set(viewBox, (counts.get(viewBox) ?? 0) + 1);
   }
   const dominant = [...counts].toSorted((first, second) => second[1] - first[1])[0]?.[0];
   if (!dominant) {
-    return { height: DEFAULT_SIZE, width: DEFAULT_SIZE };
+    return { height: DEFAULT_SIZE, left: 0, top: 0, width: DEFAULT_SIZE };
   }
-  const [width, height] = dominant.split("x").map(Number);
-  return { height, width };
+  const [left, top, width, height] = dominant.split(" ").map(Number);
+  return { height, left, top, width };
+}
+
+function readViewBoxKey(viewBox: ViewBox): string {
+  return `${viewBox.left} ${viewBox.top} ${viewBox.width} ${viewBox.height}`;
 }
 
 function renderAttribution(document: IconFamilyDocument): string {
@@ -160,21 +182,23 @@ export async function buildFamily(
     throw new Error(`Family "${definition.prefix}" produced no icons from ${definition.upstreamPackage}.`);
   }
 
-  const familySize = pickDominantSize([...normalized.values()].map((icon) => `${icon.width}x${icon.height}`));
+  const familyViewBox = pickDominantViewBox([...normalized.values()].map(readViewBoxKey));
 
   const icons: Record<string, IconEntry> = {};
   for (const [iconName, icon] of normalized) {
     const iconTags = tags[iconName];
     icons[iconName] = {
       body: icon.body,
-      ...(icon.width === familySize.width ? {} : { width: icon.width }),
-      ...(icon.height === familySize.height ? {} : { height: icon.height }),
+      ...(icon.width === familyViewBox.width ? {} : { width: icon.width }),
+      ...(icon.height === familyViewBox.height ? {} : { height: icon.height }),
+      ...(icon.left === familyViewBox.left ? {} : { left: icon.left }),
+      ...(icon.top === familyViewBox.top ? {} : { top: icon.top }),
       ...(iconTags && iconTags.length > 0 ? { tags: iconTags } : {}),
     };
   }
 
   const document: IconFamilyDocument = {
-    height: familySize.height,
+    height: familyViewBox.height,
     icons,
     info: {
       attribution,
@@ -188,8 +212,10 @@ export async function buildFamily(
       ...(definition.style === undefined ? {} : { style: definition.style }),
       ...(definition.weight === undefined ? {} : { weight: definition.weight }),
     },
+    left: familyViewBox.left,
     prefix: definition.prefix,
-    width: familySize.width,
+    top: familyViewBox.top,
+    width: familyViewBox.width,
   };
 
   return {

@@ -30,6 +30,8 @@ export interface IconFamilyDefinition {
   weight?: string;
   /** Suffix upstream file names carry for this variant, such as `-fill`. */
   fileSuffix?: string;
+  /** Suffix marking files that belong to a sibling variant in the same directory. */
+  excludedFileSuffix?: string;
   /** JSON file inside the upstream package mapping icon names to keywords. */
   tagsFile?: string;
 }
@@ -48,6 +50,15 @@ export const LICENSE_OBLIGATIONS: Record<string, IconAttribution> = {
   MIT: "notice",
   Unlicense: "none",
 };
+
+/**
+ * Prefixes a family may not use.
+ *
+ * The utility classes reserve these words: `ic-stroke-1.5`, `ic-after`, and
+ * `ic-bg` are modifiers, so a family named after one would produce classes the
+ * scanner reads as a modifier rather than an icon.
+ */
+export const RESERVED_PREFIXES: readonly string[] = ["after", "bg", "stroke"];
 
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];
@@ -73,5 +84,160 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
     tier: "core",
     upstreamPackage: "lucide-static",
     weight: "regular",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    iconsDirectory: "assets/regular",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Regular",
+    prefix: "phosphor",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "regular",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    fileSuffix: "-thin",
+    iconsDirectory: "assets/thin",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Thin",
+    prefix: "phosphor-thin",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "thin",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    fileSuffix: "-light",
+    iconsDirectory: "assets/light",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Light",
+    prefix: "phosphor-light",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "light",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    fileSuffix: "-bold",
+    iconsDirectory: "assets/bold",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Bold",
+    prefix: "phosphor-bold",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "bold",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    fileSuffix: "-fill",
+    iconsDirectory: "assets/fill",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Regular",
+    prefix: "phosphor-fill",
+    style: "filled",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "regular",
+  },
+  {
+    author: { name: "Phosphor Icons", url: "https://phosphoricons.com" },
+    fileSuffix: "-duotone",
+    iconsDirectory: "assets/duotone",
+    license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
+    licenseFile: "LICENSE",
+    name: "Phosphor Duotone",
+    prefix: "phosphor-duotone",
+    style: "duotone",
+    tier: "core",
+    upstreamPackage: "@phosphor-icons/core",
+    weight: "regular",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    excludedFileSuffix: "-fill",
+    iconsDirectory: "outlined",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Outlined",
+    prefix: "material-symbols-outlined",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    fileSuffix: "-fill",
+    iconsDirectory: "outlined",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Outlined Filled",
+    prefix: "material-symbols-outlined-fill",
+    style: "filled",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    excludedFileSuffix: "-fill",
+    iconsDirectory: "rounded",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Rounded",
+    prefix: "material-symbols-rounded",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    fileSuffix: "-fill",
+    iconsDirectory: "rounded",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Rounded Filled",
+    prefix: "material-symbols-rounded-fill",
+    style: "filled",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    excludedFileSuffix: "-fill",
+    iconsDirectory: "sharp",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Sharp",
+    prefix: "material-symbols-sharp",
+    style: "outlined",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
+  },
+  {
+    author: { name: "Google", url: "https://fonts.google.com/icons" },
+    fileSuffix: "-fill",
+    iconsDirectory: "sharp",
+    license: { spdx: "Apache-2.0", title: "Apache License 2.0", url: "https://www.apache.org/licenses/LICENSE-2.0" },
+    licenseFile: "LICENSE",
+    name: "Material Symbols Sharp Filled",
+    prefix: "material-symbols-sharp-fill",
+    style: "filled",
+    tier: "core",
+    upstreamPackage: "@material-symbols/svg-400",
+    weight: "400",
   },
 ];
