@@ -1,5 +1,5 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 import { hasContentDrift, type GeneratedFile } from "../generators/generator.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
@@ -53,7 +53,15 @@ export function createGenerateCommand(): CommandDefinition {
         return stale.length > 0 ? EXIT_FAILURE : EXIT_SUCCESS;
       }
 
-      await Promise.all(stale.map(async ({ file }) => writeFile(resolve(root, file.path), file.contents, "utf8")));
+      await Promise.all(
+        stale.map(async ({ file }) => {
+          // A generator may own a file in a directory that does not exist yet,
+          // such as the first build of a new icon family.
+          const target = resolve(root, file.path);
+          await mkdir(dirname(target), { recursive: true });
+          await writeFile(target, file.contents, "utf8");
+        }),
+      );
 
       const rows = outcomes.map<SummaryRow>(({ file, hasDrift }) => ({
         detail: hasDrift ? "written" : "unchanged",
