@@ -1,0 +1,341 @@
+---
+status: APPROVED
+last_updated: 2026-08-24
+scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
+---
+
+# Icon registry architecture
+
+This document defines how `@codenhub/icons` stores, generates, licenses, and
+resolves icon families. It is the source of truth for the registry rewrite; the
+implementation that predates it is legacy.
+
+## Purpose
+
+The package exists to make icons **easy, fast, and free of licensing worry**.
+Everything below serves that sentence:
+
+- **Easy**: write `ic-heart` in markup, get an icon. No imports, no components,
+  no runtime.
+- **Fast**: zero runtime by default. Only the icons a project actually uses
+  reach the bundle, whatever the family size.
+- **Free of worry**: a consumer using the core catalog has every license
+  obligation satisfied by the default build, and a consumer opting into a
+  credit-required family gets that credit produced for them too.
+
+Non-goals: being an Iconify wrapper, shipping a component library, hosting an
+icon API, or bundling brand and logo sets.
+
+## Why the previous design could not scale
+
+Recorded so the constraints are not rediscovered:
+
+- `src/registry/providers/lucide/icons.ts` held ~1600 icons as a 644 KB
+  TypeScript object literal committed inside the library source. Icon content
+  and library code shared a build unit.
+- No generator existed. The dataset was produced once, by hand. There was no
+  upstream version, no checksum, no way to re-sync Lucide, and no provenance for
+  the four hand-written entries (`edit`, `filter`, `home`, `refresh`) appended to
+  the end of the file, which duplicated Lucide names that already existed
+  (`pencil`, `house`).
+- The package entrypoint and both bundler plugins imported that literal
+  statically, so every consumer paid 680 KB whether or not they used one icon.
+  Object literals do not tree-shake.
+- `IconProvider.getIcon()` was synchronous, which forbids lazy family chunks and
+  any on-demand loading.
+- Icons stored complete `<svg>` strings, repeating ~200 bytes of identical
+  attributes per icon and leaving no clean way to re-wrap an icon at a different
+  size.
+- Alias resolution existed in three places: `IconDefinition.alt`,
+  `IconSet.aliases`, and a map the Lucide provider built for itself.
+- No family metadata: no license, no upstream version, no tags, no variant
+  model, so neither legal attribution nor catalog search could be built on it.
+
+## Layers
+
+```text
+data/<prefix>/icons.json      generated family data, committed, reviewable
+        |
+        v
+src/core/                     schema, registry, resolution, aliases, loaders
+        |
+        +-- src/catalog/      family metadata, tiers, attribution notices
+        +-- src/semantic/     curated semantic name map (close -> lucide:x)
+        +-- src/adapters/     third-party set adapters (Iconify-shaped JSON)
+        |
+        v
+src/generator/ src/scanner/   CSS mask output, class extraction
+        |
+        v
+src/vite/ src/postcss/        build integrations, attribution emission
+```
+
+Direction is one-way. The core never imports a family, an integration, or the
+catalog. Family data never imports code.
+
+## Data model
+
+The on-disk schema is **structurally compatible with IconifyJSON** and the
+package takes **no dependency on Iconify**. Compatibility is a feature for
+consumers who already have icon data in that shape; it is not a foundation.
+
+```ts
+interface IconFamilyData {
+  prefix: string;
+  info: IconFamilyInfo;
+  width?: number; // family-wide viewBox width
+  height?: number; // family-wide viewBox height
+  icons: Record<string, IconData>;
+  aliases?: Record<string, IconAlias>;
+}
+
+interface IconData {
+  body: string; // inner SVG markup only
+  width?: number; // per-icon override
+  height?: number;
+  tags?: string[];
+}
+
+interface IconAlias {
+  parent: string;
+}
+```
+
+Rules:
+
+- `body` holds inner markup only. The `<svg>` wrapper is reconstructed at render
+  time from `width`/`height`, so size, color, and stroke stay controllable.
+- Every field Iconify defines and we do not use is simply absent; every field we
+  add lives under `info`, which Iconify treats as opaque. A third-party
+  IconifyJSON set therefore loads through `adapters/iconify` with no
+  transformation of icon bodies.
+- Icon names are kebab-case and unique within a prefix. An alias never points at
+  another alias.
+
+### Family info
+
+```ts
+interface IconFamilyInfo {
+  name: string; // display name
+  total: number;
+  author: { name: string; url: string };
+  license: { title: string; spdx: string; url: string };
+  attribution: "none" | "notice" | "credit"; // consumer-facing obligation
+  tier: "core" | "extended";
+  upstream: { package: string; version: string };
+  strokeWidth?: number; // present only for stroke-based families
+  style?: string; // descriptive: "outlined", "filled", "duotone"
+  weight?: string; // descriptive: "300", "regular", "bold"
+}
+```
+
+`strokeWidth` replaces the old per-icon `strokeConfigurable` boolean. A family
+whose art is stroke-based declares its authored width; its icons are
+stroke-configurable. A family of filled paths omits it and stroke classes are
+ignored for its icons. This is a family-level property because it is a property
+of how the family was drawn, not of an individual icon.
+
+`style` and `weight` are **descriptive metadata for catalog and docs only**.
+They are not a resolution axis — see below.
+
+### Variants are prefixes
+
+`phosphor`, `phosphor-fill`, `phosphor-duotone`, `material-symbols-outlined`,
+`material-symbols-outlined-fill` are separate families with separate prefixes and
+flat icon maps. Resolution stays one-dimensional: a prefix and a name.
+
+The alternative — a variant axis inside a family — would add a dimension to the
+resolver, the scanner, the CSS generator, and every cache key, to express
+something a distinct prefix already expresses. `info.style` and `info.weight`
+let the catalog group siblings for humans without the core knowing they are
+related.
+
+## Family data layout
+
+```text
+packages/icons/data/<prefix>/
+  icons.json         generated family data
+  LICENSE            upstream license text, copied verbatim
+  ATTRIBUTION.md     generated notice naming author, license, upstream version
+```
+
+All three are committed and generated. `icons.json` is the reviewable unit: one
+file per family, so an upstream bump is one diff, not thousands.
+
+The build compiles each family into `dist/data/<prefix>.js` plus declarations,
+exposed as:
+
+```json
+"./data/*": { "types": "./dist/data/*.d.ts", "import": "./dist/data/*.js" }
+```
+
+so `import lucide from "@codenhub/icons/data/lucide"` is the supported path.
+Family JSON is not published raw; `dist` is the published surface.
+
+### Why not per-icon modules on disk
+
+Per-icon ESM modules give perfect tree-shaking, and generating them for every
+family would put roughly 34,000 files in the tarball at launch scope alone,
+growing with each family. Instead the Vite plugin resolves
+`virtual:@codenhub/icons/<prefix>/<name>` to a generated module read from family
+data at build time. Same tree-shaking and code-splitting, no files shipped.
+Consumers on other bundlers import the family module and rely on the build-time
+CSS path, which is the primary path anyway.
+
+## Generation pipeline
+
+Family data is produced by a generator registered in
+`packages/tools/src/generators/`, so `pnpm generate icons` rewrites it and
+`hub generate --dry-run` proves in CI that committed data matches the pinned
+upstream. This is the same contract `llms-full.txt` already uses: generators
+return contents, the command diffs and writes.
+
+Sources are the families' own official npm packages, added to
+`packages/icons` as devDependencies and read from `node_modules` at generation
+time. Versions are pinned by the lockfile; generation is offline, reproducible,
+and adds nothing to what a consumer installs. No Iconify package participates.
+
+Per family the generator:
+
+1. Resolves the upstream package directory from the icons package.
+2. Reads its SVG files through a small source adapter that knows that family's
+   file layout and naming.
+3. Normalizes each icon: strip the `<svg>` wrapper, keep inner markup, collapse
+   whitespace, drop `xmlns`, `class`, `id`, and fixed `width`/`height`, keep
+   `currentColor`, record the viewBox at family level when uniform.
+4. Emits `icons.json` with keys sorted, so a diff shows content changes only.
+5. Copies the upstream `LICENSE` verbatim and writes `ATTRIBUTION.md`.
+6. Fails the run when the family license is not on the allowed list, when an
+   icon body is empty, or when a viewBox is missing and cannot be defaulted.
+
+Output must be deterministic: no timestamps, no generation dates, stable key
+order. A generator whose output changes without an input change breaks the CI
+drift gate.
+
+## License and attribution
+
+Two obligations, deliberately separated.
+
+**What we redistribute** is not optional. Every family directory carries its
+`LICENSE` and `ATTRIBUTION.md`, generated from family metadata, present in the
+repository and in the tarball, regardless of consumer configuration.
+
+**What lands in a consumer's build output** is configurable, because that is the
+consumer's own distribution:
+
+| `attribution`      | Behavior                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"auto"` (default) | Prepend a `/*! ... */` banner to generated CSS naming only the families the build actually used. `/*!` survives default esbuild and terser `legalComments`. |
+| `"file"`           | Emit `icons-attribution.txt` as a build asset instead of inlining.                                                                                          |
+| `"off"`            | Emit nothing. Warn once at build time, naming the families that need a notice and where the package's own notices live.                                     |
+
+Obligations come in three levels, because permissive is not the same as free of
+obligation. MIT, ISC, and Apache-2.0 all require the copyright and license notice
+to be preserved in redistributions; only CC0 and the Unlicense require nothing:
+
+- `"none"`: CC0-1.0, Unlicense. Nothing is owed.
+- `"notice"`: MIT, ISC, Apache-2.0. The notice must travel with the output, and
+  the default banner satisfies it.
+- `"credit"`: CC-BY and similar. The author must be credited visibly.
+
+Tiers make the promise machine-checkable:
+
+- **core**: `attribution` of `"none"` or `"notice"`. A default build satisfies
+  every obligation automatically, so a consumer never has to think about it.
+- **extended**: `attribution: "credit"`. Opt-in per family, marked in the catalog
+  and in docs, because a credit obligation is a design decision, not a build
+  setting.
+
+The generator refuses to write a family whose license is not on the allowed list
+for its declared tier. `attribution: "off"` is only legally free for a build
+using `"none"` families exclusively; the build warning says which families made
+it non-free. Brand and logo families are out of scope entirely:
+trademark obligations are independent of the icon license and the package cannot
+make its promise about them.
+
+A CSS comment is a defensible notice medium but a consumer minifying with
+`legalComments: "none"` strips it. That is why `"file"` exists, and the docs say
+so.
+
+## Resolution
+
+The core has **no default prefix**. A name without a prefix resolves against the
+default the consumer configured; with none configured, an unprefixed name that
+is not a semantic alias does not resolve. Dropping the hardcoded `"lucide"`
+default is what makes Lucide replaceable without a breaking change.
+
+Lookup order for `resolve(name)`:
+
+1. Semantic alias map, when the name has no prefix.
+2. Configured default prefix, when the name has no prefix.
+3. Family aliases within the prefix.
+4. Family icons within the prefix.
+5. Registered loader for the prefix, when async resolution is allowed.
+
+### Semantic aliases
+
+A curated, hand-maintained map in `src/semantic/`, independent of any family:
+
+```ts
+{ close: "lucide:x", edit: "lucide:pencil", home: "lucide:house" }
+```
+
+It is code, not generated data, because it encodes editorial judgment. Projects
+override or replace it through registry options. It is what lets a project
+switch its backing family without rewriting markup, and it is what the four
+hand-written SVG entries in the legacy dataset were reaching for — those entries
+are deleted, not migrated, because their intent was aliasing and their
+provenance is unverifiable.
+
+### Loaders
+
+`IconProvider`'s synchronous `getIcon` is replaced by a loader contract:
+
+```ts
+registry.registerFamily(family); // sync, already-loaded data
+registry.registerLoader(prefix, () => import("...")); // async, loaded on demand
+await registry.load(prefix);
+registry.resolve(name); // sync, loaded families only
+await registry.resolveAsync(name); // loads the family if needed
+```
+
+Build-time consumers — the scanner, the CSS generator, both plugins — stay on the
+synchronous path, because a build knows every family it needs before it starts.
+Runtime consumers get the async path and pay for one family chunk when they
+first touch it.
+
+## Breaking changes
+
+The package is `0.0.1` and documents itself as experimental. The rewrite breaks
+freely and documents what breaks; no compatibility shims are kept, per
+`docs/code-guidelines.md`.
+
+- `lucideIconSet` and `lucideProvider` are removed. Family data moves to
+  `@codenhub/icons/data/lucide`.
+- `IconProvider` and `registerProvider` are removed in favor of
+  `registerFamily`/`registerLoader`.
+- `IconSet`/`IconDefinition` are replaced by `IconFamilyData`/`IconData`; icons
+  hold `body`, not a full `<svg>` string.
+- `IconDefinition.alt` is removed; aliases live in `aliases`.
+- `strokeConfigurable` per icon is replaced by `info.strokeWidth` per family.
+- The default prefix `"lucide"` is removed; consumers configure their own.
+
+## Testing
+
+- Core resolution, aliasing, tiering, and loader behavior are unit tested with
+  small hand-written fixtures, never against a real family.
+- Source adapters are unit tested against a few checked-in SVG fixtures per
+  family so a layout change upstream fails loudly.
+- Generated data is validated by the generator itself, not by tests asserting
+  the presence of individual icons; a test naming `lucide:heart` fails on an
+  upstream rename that is not our bug.
+- The CI drift gate (`hub generate --dry-run`) is what proves committed data
+  matches the pinned upstream.
+
+## Open direction
+
+Not scheduled, recorded so the design leaves room:
+
+- A first-party Codenhub family owning the semantic names.
+- Per-icon virtual modules for bundlers other than Vite.
+- A searchable catalog surface in `apps/docs` built from `info` and `tags`.
