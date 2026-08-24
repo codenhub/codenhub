@@ -195,7 +195,7 @@ await registry.resolveAsync("phosphor:heart");
 
 ### Third-party icon sets
 
-Icon data in the IconifyJSON shape loads without conversion:
+`adoptIconifySet` is the adapter that converts an IconifyJSON-shaped document into this package's internal family contract:
 
 ```ts
 import { adoptIconifySet } from "@codenhub/icons";

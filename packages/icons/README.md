@@ -79,4 +79,4 @@ Nothing is bundled by default: a build only carries the families it was given an
 
 This package is licensed under the [Apache-2.0](LICENSE) license.
 
-Its icon artwork comes from third parties, under ISC, MIT, and Apache-2.0 terms. See [NOTICE](NOTICE) for the full list. By default a build emits the notices required by the families it used, so a consumer carries no separate obligation; see the documentation for the `attribution` option that controls it.
+Its bundled, generated icon artwork comes from third parties, under ISC, MIT, and Apache-2.0 terms. See [NOTICE](NOTICE) for the full list. By default a build emits the notices those families require, so a consumer carries no separate obligation for them; see the documentation for the `attribution` option that controls it. A third-party set adopted through `adoptIconifySet` is not covered — a consumer remains responsible for its license terms and attribution material.

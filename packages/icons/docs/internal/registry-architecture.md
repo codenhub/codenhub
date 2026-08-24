@@ -284,13 +284,16 @@ resolving to Lucide: they must now configure `defaultPrefix: "lucide"`
 explicitly to keep that behavior. Making the default configurable is what lets a
 future replacement of Lucide happen without another breaking change.
 
-Lookup order for `resolve(name)`:
+Lookup order for `resolve(name)`, limited to families already loaded:
 
 1. Semantic alias map, when the name has no prefix.
 2. Configured default prefix, when the name has no prefix.
 3. Family aliases within the prefix.
 4. Family icons within the prefix.
-5. Registered loader for the prefix, when async resolution is allowed.
+
+`resolveAsync(name)` follows the same order, but for each candidate prefix that
+is not yet loaded, it loads the family first — from a registered loader, or the
+already-registered data — before trying to resolve against it.
 
 ### Semantic aliases
 
