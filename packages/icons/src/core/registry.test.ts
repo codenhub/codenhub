@@ -81,6 +81,13 @@ describe("IconRegistry", () => {
     expect(registry.resolve("heart")?.iconName).toBe("x");
   });
 
+  it("falls back to the default prefix when the semantic target family is absent", () => {
+    const registry = new IconRegistry({ defaultPrefix: "test", semanticAliases: { heart: "absent:heart" } });
+    registry.registerFamily(createFamily());
+
+    expect(registry.resolve("heart")?.name).toBe("test:heart");
+  });
+
   it("falls back to the default prefix when a semantic name carries no prefix", () => {
     const registry = new IconRegistry({ defaultPrefix: "test", semanticAliases: { dismiss: "x" } });
     registry.registerFamily(createFamily());
@@ -168,6 +175,13 @@ describe("IconRegistry", () => {
     const registry = new IconRegistry();
 
     await expect(registry.load("missing")).rejects.toThrow('No icon family or loader registered for prefix "missing"');
+  });
+
+  it("falls back past an absent semantic target when resolving asynchronously", async () => {
+    const registry = new IconRegistry({ defaultPrefix: "test", semanticAliases: { heart: "absent:heart" } });
+    registry.registerLoader("test", async () => createFamily());
+
+    await expect(registry.resolveAsync("heart")).resolves.toMatchObject({ name: "test:heart" });
   });
 
   it("resolves asynchronously to undefined when the prefix has no family and no loader", async () => {

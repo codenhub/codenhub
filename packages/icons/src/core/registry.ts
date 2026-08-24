@@ -116,12 +116,14 @@ export class IconRegistry {
    * @returns The resolved icon, or `undefined` when it is not available.
    */
   public resolve(name: string): ResolvedIcon | undefined {
-    const target = this.applySemanticAliases(name);
-    if (!target.prefix) {
-      return undefined;
+    for (const candidate of this.readCandidates(name)) {
+      const family = this.families.get(candidate.prefix);
+      const resolved = family && this.resolveInFamily(family, candidate.iconName);
+      if (resolved) {
+        return resolved;
+      }
     }
-    const family = this.families.get(target.prefix);
-    return family ? this.resolveInFamily(family, target.iconName) : undefined;
+    return undefined;
   }
 
   /**
@@ -133,15 +135,7 @@ export class IconRegistry {
    * family has neither data nor a loader.
    */
   public async resolveAsync(name: string): Promise<ResolvedIcon | undefined> {
-    const target = this.applySemanticAliases(name);
-    if (!target.prefix) {
-      return undefined;
-    }
-    if (!this.families.has(target.prefix) && !this.loaders.has(target.prefix)) {
-      return undefined;
-    }
-    const family = await this.load(target.prefix);
-    return this.resolveInFamily(family, target.iconName);
+    return this.resolveCandidate(this.readCandidates(name), 0);
   }
 
   /**
@@ -198,19 +192,45 @@ export class IconRegistry {
     }
   }
 
-  private applySemanticAliases(name: string): ParsedName {
+  /**
+   * Every reading of a name, in the order they are tried.
+   *
+   * A semantic name is tried before the default prefix, but does not shadow it:
+   * a curated alias pointing at a family the project never registered has to
+   * fall through rather than fail the lookup.
+   */
+  private readCandidates(name: string): { prefix: string; iconName: string }[] {
     const parsed = parseName(name);
     if (parsed.prefix) {
-      return parsed;
+      return [{ iconName: parsed.iconName, prefix: parsed.prefix }];
     }
+
+    const candidates: { prefix: string; iconName: string }[] = [];
     const semantic = this.semanticAliases[parsed.iconName];
     if (semantic) {
-      const resolved = parseName(semantic);
-      if (resolved.prefix) {
-        return resolved;
+      const target = parseName(semantic);
+      if (target.prefix) {
+        candidates.push({ iconName: target.iconName, prefix: target.prefix });
       }
     }
-    return { iconName: parsed.iconName, prefix: this.defaultPrefix };
+    if (this.defaultPrefix) {
+      candidates.push({ iconName: parsed.iconName, prefix: this.defaultPrefix });
+    }
+    return candidates;
+  }
+
+  private async resolveCandidate(
+    candidates: readonly { prefix: string; iconName: string }[],
+    index: number,
+  ): Promise<ResolvedIcon | undefined> {
+    const candidate = candidates[index];
+    if (!candidate) {
+      return undefined;
+    }
+    const isAvailable = this.families.has(candidate.prefix) || this.loaders.has(candidate.prefix);
+    const family = isAvailable ? await this.load(candidate.prefix) : undefined;
+    const resolved = family && this.resolveInFamily(family, candidate.iconName);
+    return resolved ?? this.resolveCandidate(candidates, index + 1);
   }
 
   private resolveInFamily(family: IconFamilyData, requestedName: string): ResolvedIcon | undefined {
