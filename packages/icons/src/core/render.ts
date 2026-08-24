@@ -23,9 +23,13 @@ export interface RenderSvgOptions {
   attributes?: Record<string, string>;
 }
 
+function isSafeAttributeName(name: string): boolean {
+  return VALID_ATTRIBUTE_NAME.test(name) && !/^on/i.test(name);
+}
+
 function renderAttributes(attributes: Record<string, string>): string {
   return Object.entries(attributes)
-    .filter(([name]) => VALID_ATTRIBUTE_NAME.test(name))
+    .filter(([name]) => isSafeAttributeName(name))
     .map(([name, value]) => ` ${name}="${escapeAttributeValue(value)}"`)
     .join("");
 }

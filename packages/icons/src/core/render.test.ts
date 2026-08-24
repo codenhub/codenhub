@@ -95,4 +95,11 @@ describe("renderSvg", () => {
   it("drops an extra attribute whose name is not a valid SVG attribute name", () => {
     expect(renderSvg(filledIcon, { attributes: { '"><script>alert(1)</script': "x" } })).not.toContain("<script>");
   });
+
+  it("drops an event-handler attribute regardless of casing", () => {
+    const svg = renderSvg(filledIcon, { attributes: { onLoad: "alert(1)", onerror: "alert(1)" } });
+
+    expect(svg).not.toContain("onLoad");
+    expect(svg).not.toContain("onerror");
+  });
 });
