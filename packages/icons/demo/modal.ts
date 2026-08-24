@@ -14,8 +14,8 @@ export interface ModalHandlers {
 
 /** The demo's icon detail dialog. */
 export interface IconModal {
-  /** Opens the dialog for one icon of a family. */
-  open: (entry: IconEntry, family: IconFamilyData) => void;
+  /** Opens the dialog for one icon of a family, focusing it and remembering the triggering element. */
+  open: (entry: IconEntry, family: IconFamilyData, trigger?: HTMLElement) => void;
   /** Redraws the open dialog, after a stroke width change for instance. */
   refresh: () => void;
 }
@@ -37,8 +37,10 @@ export function createModal(handlers: ModalHandlers): IconModal {
   const subtitle = element<HTMLElement>("modal-icon-subtitle");
   const tagList = element<HTMLElement>("modal-tags");
   const snippet = element<HTMLElement>("modal-code-snippet");
+  const closeButton = element<HTMLButtonElement>("modal-close-btn");
 
   let current: { entry: IconEntry; family: IconFamilyData } | undefined;
+  let triggerElement: HTMLElement | undefined;
 
   function draw(): void {
     if (!current) {
@@ -66,9 +68,11 @@ export function createModal(handlers: ModalHandlers): IconModal {
   function close(): void {
     backdrop?.classList.remove("open");
     current = undefined;
+    triggerElement?.focus();
+    triggerElement = undefined;
   }
 
-  element<HTMLButtonElement>("modal-close-btn")?.addEventListener("click", close);
+  closeButton?.addEventListener("click", close);
   backdrop?.addEventListener("click", (event) => {
     if (event.target === backdrop) {
       close();
@@ -97,10 +101,12 @@ export function createModal(handlers: ModalHandlers): IconModal {
   });
 
   return {
-    open: (entry, family) => {
+    open: (entry, family, trigger) => {
       current = { entry, family };
+      triggerElement = trigger;
       draw();
       backdrop?.classList.add("open");
+      closeButton?.focus();
     },
     refresh: draw,
   };

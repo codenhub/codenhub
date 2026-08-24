@@ -2,7 +2,7 @@
 
 /* Custom layout and minimalist demo app styles */
 :root {
-  --demo-icon-color: currentColor;
+  --demo-icon-color: currentcolor;
 }
 
 body {
@@ -481,7 +481,7 @@ body {
   margin: 0;
   text-align: center;
   opacity: 0.65;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .icon-card .icon-preview i {

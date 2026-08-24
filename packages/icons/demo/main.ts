@@ -13,6 +13,7 @@ const DEFAULT_STROKE_WIDTH = 2;
 const TARGET_ROWS = 10;
 const CARD_SIZE = 64;
 const GRID_GAP = 8;
+const RESIZE_DEBOUNCE_MS = 150;
 
 // Every generated family, loaded only when someone selects it. This is the same
 // on-demand path a consuming app uses through `registerLoader`.
@@ -129,7 +130,10 @@ function renderGrid(): void {
   state.page = Math.min(state.page, totalPages);
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div class="empty-state">No icon matches "${state.query}"</div>`;
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = `No icon matches "${state.query}"`;
+    grid.replaceChildren(empty);
     if (pagination) {
       pagination.innerHTML = "";
     }
@@ -148,7 +152,7 @@ function renderGrid(): void {
     card.title = entry.name;
     card.setAttribute("aria-label", `View ${entry.name}`);
     card.innerHTML = `<span class="icon-preview"><i class="${entry.className}"></i></span>`;
-    card.addEventListener("click", () => openIcon(entry));
+    card.addEventListener("click", () => openIcon(entry, card));
     fragment.appendChild(card);
   }
 
@@ -199,16 +203,18 @@ function downloadSvg(entry: IconEntry): void {
   const link = document.createElement("a");
   link.href = url;
   link.download = `${entry.name}.svg`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
   showToast(`Downloaded ${entry.name}.svg`);
 }
 
-function openIcon(entry: IconEntry): void {
+function openIcon(entry: IconEntry, trigger: HTMLElement): void {
   if (!state.family) {
     return;
   }
-  modal.open(entry, state.family);
+  modal.open(entry, state.family, trigger);
 }
 
 function updateSearchPlaceholder(): void {
@@ -231,13 +237,31 @@ function updateStrokeAvailability(): void {
   }
 }
 
+let familyLoadToken = 0;
+
 async function selectFamily(prefix: string): Promise<void> {
   const grid = element<HTMLElement>("icon-grid");
   if (grid) {
     grid.innerHTML = `<div class="empty-state">Loading ${prefix}…</div>`;
   }
 
-  const family = await registry.load(prefix);
+  const token = ++familyLoadToken;
+  let family: IconFamilyData;
+  try {
+    family = await registry.load(prefix);
+  } catch {
+    if (token !== familyLoadToken) {
+      return;
+    }
+    if (grid) {
+      grid.innerHTML = `<div class="empty-state">Couldn't load ${prefix}.</div>`;
+    }
+    return;
+  }
+  if (token !== familyLoadToken) {
+    return;
+  }
+
   state.family = family;
   state.page = 1;
   state.entries = Object.entries(family.icons).map(([name, icon]) => ({
@@ -322,7 +346,11 @@ function initControls(): void {
 
   element<HTMLButtonElement>("theme-toggle")?.addEventListener("click", toggleTheme);
 
-  window.addEventListener("resize", () => renderGrid());
+  let resizeTimeout: ReturnType<typeof setTimeout> | undefined;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(renderGrid, RESIZE_DEBOUNCE_MS);
+  });
 }
 
 initTheme();
