@@ -7,21 +7,30 @@
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <div class="playground-container section-content">
-      <header class="playground-header stack tight">
-        <h1 class="text-title-lg">@codenhub/icons</h1>
-        <p class="playground-subtitle text-body">Collection of lightweight CSS mask-based SVG icons</p>
+    <div class="demo-container section-content">
+      <header class="demo-header">
+        <div class="demo-header-titles stack tight">
+          <h1 class="text-title">@codenhub/icons</h1>
+          <p class="demo-subtitle text-body-sm">
+            Every bundled family, loaded on demand. Only the icons on screen become CSS.
+          </p>
+        </div>
+        <div id="family-meta" class="family-meta cluster tight"></div>
       </header>
 
-      <div class="playground-toolbar cluster between">
-        <div class="search-input-wrapper">
-          <input
-            type="search"
-            id="search-input"
-            class="ipt icon left"
-            placeholder="Search icons..."
-            aria-label="Search icons"
-          />
+      <div class="demo-toolbar cluster between">
+        <div class="toolbar-fields cluster tight">
+          <select id="family-select" class="select" aria-label="Icon family"></select>
+          <div class="search-input-wrapper">
+            <input
+              type="search"
+              id="search-input"
+              class="ipt icon left"
+              placeholder="Search by name or keyword..."
+              aria-label="Search icons"
+            />
+          </div>
+          <span id="result-count" class="result-count text-body-sm"></span>
         </div>
 
         <div class="color-controls cluster tight">
@@ -92,7 +101,8 @@
         </div>
 
         <h2 id="modal-icon-title" class="modal-icon-title text-title-sm"></h2>
-        <div id="modal-aliases" class="modal-aliases cluster tight"></div>
+        <p id="modal-icon-subtitle" class="modal-icon-subtitle text-body-sm"></p>
+        <div id="modal-tags" class="modal-tags cluster tight"></div>
 
         <div class="code-snippet-wrapper">
           <pre class="code-snippet-container"><code id="modal-code-snippet" class="code-snippet-text code"></code></pre>
@@ -121,10 +131,10 @@
     </div>
 
     <!-- Floating Theme Toggle Control -->
-    <div class="playground-controls">
+    <div class="demo-controls">
       <button
         id="theme-toggle"
-        class="playground-control btn secondary icon pill"
+        class="demo-control btn secondary icon pill"
         type="button"
         aria-label="Toggle theme"
         title="Toggle theme"

@@ -14,6 +14,7 @@ export default defineConfig({
   plugins: [
     viteIcons({
       families: [lucide as IconFamilyData],
+      defaultPrefix: "lucide",
       content: [resolve(__dirname, "index.html"), resolve(__dirname, "main.ts")],
     }),
   ],

@@ -1,488 +1,346 @@
-import { generateBaseCss, generateIconCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
-import lucide from "@codenhub/icons/data/lucide";
+import { generateIconSetCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
+import type { IconFamilyData } from "@codenhub/icons";
 
 import "./style.css";
 
-interface IconItem {
-  name: string;
-  svg: string;
-  alt: string[];
+import { createModal } from "./modal.ts";
+import { renderPagination } from "./pagination.ts";
+import { showToast } from "./toast.ts";
+import type { IconEntry } from "./types.ts";
+
+const CLASS_PREFIX = "ic";
+const DEFAULT_STROKE_WIDTH = 2;
+const TARGET_ROWS = 10;
+const CARD_SIZE = 64;
+const GRID_GAP = 8;
+
+// Every generated family, loaded only when someone selects it. This is the same
+// on-demand path a consuming app uses through `registerLoader`.
+const familyModules = import.meta.glob<IconFamilyData>("../data/*/icons.json", { import: "default" });
+
+const registry = new IconRegistry();
+const prefixes: string[] = [];
+
+for (const [path, load] of Object.entries(familyModules)) {
+  const prefix = path.replace("../data/", "").replace("/icons.json", "");
+  registry.registerLoader(prefix, load);
+  prefixes.push(prefix);
+}
+prefixes.sort((first, second) => first.localeCompare(second));
+
+const state = {
+  entries: [] as IconEntry[],
+  family: undefined as IconFamilyData | undefined,
+  page: 1,
+  query: "",
+  strokeWidth: DEFAULT_STROKE_WIDTH,
+};
+
+const iconStyleElement = document.createElement("style");
+iconStyleElement.id = "demo-icon-styles";
+document.head.appendChild(iconStyleElement);
+
+function element<T extends HTMLElement>(id: string): T | null {
+  return document.getElementById(id) as T | null;
 }
 
-// 1. Process the generated Lucide family into renderable icons
-const registry = new IconRegistry({ defaultPrefix: lucide.prefix });
-registry.registerFamily(lucide);
-
-const icons: IconItem[] = registry.list().flatMap((name) => {
-  const resolved = registry.resolve(name);
-  return resolved ? [{ alt: lucide.icons[name]?.tags ?? [], name, svg: renderSvg(resolved) }] : [];
-});
-
-// 2. Inject CSS rules for all icons into head
-function injectIconStyles(strokeWidth?: number): void {
-  let styleEl = document.getElementById("dynamic-icons-styles") as HTMLStyleElement | null;
-  if (!styleEl) {
-    styleEl = document.createElement("style");
-    styleEl.id = "dynamic-icons-styles";
-    document.head.appendChild(styleEl);
-  }
-
-  const cssChunks: string[] = [generateBaseCss({ prefix: "ic" })];
-
-  for (const icon of icons) {
-    const selectors = [`.ic-${icon.name}`];
-    for (const alias of icon.alt) {
-      selectors.push(`.ic-${alias}`);
-    }
-
-    let svg = icon.svg;
-    if (strokeWidth !== undefined) {
-      svg = setStrokeWidth(svg, strokeWidth);
-    }
-
-    cssChunks.push(generateIconCss(selectors, svg));
-  }
-
-  styleEl.textContent = cssChunks.join("\n");
-}
-
-injectIconStyles();
-
-// 3. Theme Toggle Setup
 function initTheme(): void {
-  const storedTheme = localStorage.getItem("theme");
-  const isDark = storedTheme === "dark" || (!storedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-  document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.classList.toggle("light", !isDark);
-}
-
-function getDefaultColorForTheme(): string {
-  return document.documentElement.classList.contains("dark") ? "#ffffff" : "#0f172a";
+  const stored = localStorage.getItem("theme");
+  const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
 }
 
 function toggleTheme(): void {
-  const isDarkNow = document.documentElement.classList.contains("dark");
-  const nextDark = !isDarkNow;
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("theme", next);
+}
 
-  document.documentElement.classList.toggle("dark", nextDark);
-  document.documentElement.classList.toggle("light", !nextDark);
-  localStorage.setItem("theme", nextDark ? "dark" : "light");
+function isStrokeConfigurable(): boolean {
+  return state.family?.info.strokeWidth !== undefined;
+}
 
-  const colorPicker = document.getElementById("icon-color-picker") as HTMLInputElement | null;
-  const currentColorVal = getComputedStyle(document.documentElement).getPropertyValue("--playground-icon-color").trim();
-  if (colorPicker && (currentColorVal === "currentColor" || !currentColorVal)) {
-    colorPicker.value = getDefaultColorForTheme();
+/**
+ * Ranks a match so a name beats a keyword.
+ *
+ * Searching "heart" should not lead with an icon that merely carries
+ * "heartbeat" among its keywords while `heart` itself sits further down.
+ */
+function scoreEntry(entry: IconEntry, query: string): number {
+  if (entry.name === query) {
+    return 0;
   }
+  if (entry.name.startsWith(query)) {
+    return 1;
+  }
+  if (entry.name.includes(query)) {
+    return 2;
+  }
+  return entry.tags.some((tag) => tag.includes(query)) ? 3 : Number.POSITIVE_INFINITY;
+}
+
+function filterEntries(): IconEntry[] {
+  const query = state.query.trim().toLowerCase();
+  if (!query) {
+    return state.entries;
+  }
+
+  return state.entries
+    .flatMap((entry) => {
+      const score = scoreEntry(entry, query);
+      return Number.isFinite(score) ? [{ entry, score }] : [];
+    })
+    .sort((first, second) => first.score - second.score || first.entry.name.localeCompare(second.entry.name))
+    .map(({ entry }) => entry);
+}
+
+/**
+ * Generates mask rules for the icons on screen only.
+ *
+ * A family holds thousands of icons and each rule carries an encoded SVG, so
+ * generating the whole family would produce megabytes of CSS to show sixty
+ * icons.
+ */
+function injectPageStyles(entries: IconEntry[]): void {
+  const { css } = generateIconSetCss(
+    entries.map((entry) => entry.className),
+    registry,
+    { injectBase: false, prefix: CLASS_PREFIX, strokeWidth: state.strokeWidth },
+  );
+  iconStyleElement.textContent = css;
+}
+
+function readItemsPerPage(grid: HTMLElement): number {
+  const columns = Math.floor((grid.getBoundingClientRect().width + GRID_GAP + 0.5) / CARD_SIZE) || 8;
+  return columns * TARGET_ROWS;
+}
+
+function renderGrid(): void {
+  const grid = element<HTMLElement>("icon-grid");
+  const pagination = element<HTMLElement>("pagination-controls");
+  const resultCount = element<HTMLElement>("result-count");
+  if (!grid) {
+    return;
+  }
+
+  const filtered = filterEntries();
+  const itemsPerPage = readItemsPerPage(grid);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  state.page = Math.min(state.page, totalPages);
+
+  if (resultCount) {
+    resultCount.textContent = `${filtered.length.toLocaleString("en-US")} icons`;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state">No icon matches "${state.query}"</div>`;
+    if (pagination) {
+      pagination.innerHTML = "";
+    }
+    return;
+  }
+
+  const start = (state.page - 1) * itemsPerPage;
+  const pageEntries = filtered.slice(start, start + itemsPerPage);
+  injectPageStyles(pageEntries);
+
+  const fragment = document.createDocumentFragment();
+  for (const entry of pageEntries) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "icon-card";
+    card.title = entry.name;
+    card.setAttribute("aria-label", `View ${entry.name}`);
+    card.innerHTML = `<span class="icon-preview"><i class="${entry.className}"></i></span>`;
+    card.addEventListener("click", () => openIcon(entry));
+    fragment.appendChild(card);
+  }
+
+  grid.replaceChildren(fragment);
+
+  if (pagination) {
+    renderPagination(pagination, state.page, totalPages, (page) => {
+      state.page = page;
+      renderGrid();
+      window.scrollTo({ behavior: "smooth", top: 0 });
+    });
+  }
+}
+
+const modal = createModal({
+  onCopyHtml: (entry) => {
+    void copy(`<i class="${entry.className}"></i>`, "Copied HTML");
+  },
+  onCopySvg: (entry) => {
+    void copy(readSvg(entry), "Copied SVG");
+  },
+  onDownload: (entry) => {
+    downloadSvg(entry);
+  },
+});
+
+function readSvg(entry: IconEntry): string {
+  const resolved = registry.resolve(`${state.family?.prefix}:${entry.name}`);
+  if (!resolved) {
+    return "";
+  }
+  const svg = renderSvg(resolved);
+  return resolved.strokeWidth === undefined ? svg : setStrokeWidth(svg, state.strokeWidth);
+}
+
+async function copy(text: string, message: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast(message);
+  } catch {
+    showToast("Clipboard unavailable");
+  }
+}
+
+function downloadSvg(entry: IconEntry): void {
+  const blob = new Blob([readSvg(entry)], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${entry.name}.svg`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`Downloaded ${entry.name}.svg`);
+}
+
+function openIcon(entry: IconEntry): void {
+  if (!state.family) {
+    return;
+  }
+  modal.open(entry, state.family);
+}
+
+function updateFamilyMeta(): void {
+  const meta = element<HTMLElement>("family-meta");
+  if (!meta || !state.family) {
+    return;
+  }
+  const { attribution, license, total } = state.family.info;
+  meta.innerHTML = [
+    `<span class="badge soft">${total.toLocaleString("en-US")} icons</span>`,
+    `<span class="badge soft">${license.spdx}</span>`,
+    `<span class="badge soft">${attribution === "none" ? "no notice required" : `${attribution} required`}</span>`,
+    isStrokeConfigurable()
+      ? `<span class="badge soft">stroke ${state.family.info.strokeWidth}</span>`
+      : `<span class="badge soft">filled</span>`,
+  ].join("");
+}
+
+function updateStrokeAvailability(): void {
+  const button = element<HTMLButtonElement>("stroke-width-btn");
+  if (!button) {
+    return;
+  }
+  const enabled = isStrokeConfigurable();
+  button.disabled = !enabled;
+  button.dataset.tooltip = enabled ? "Stroke width" : "This family is drawn as filled paths";
+  if (!enabled) {
+    element<HTMLElement>("stroke-width-popover")?.classList.remove("open");
+  }
+}
+
+async function selectFamily(prefix: string): Promise<void> {
+  const grid = element<HTMLElement>("icon-grid");
+  if (grid) {
+    grid.innerHTML = `<div class="empty-state">Loading ${prefix}…</div>`;
+  }
+
+  const family = await registry.load(prefix);
+  state.family = family;
+  state.page = 1;
+  state.entries = Object.entries(family.icons).map(([name, icon]) => ({
+    className: `${CLASS_PREFIX}-${prefix}-${name}`,
+    name,
+    tags: (icon.tags ?? []).map((tag) => tag.toLowerCase()),
+  }));
+
+  localStorage.setItem("family", prefix);
+  updateFamilyMeta();
+  updateStrokeAvailability();
+  renderGrid();
+}
+
+function initFamilySelect(): void {
+  const select = element<HTMLSelectElement>("family-select");
+  if (!select) {
+    return;
+  }
+
+  select.replaceChildren(
+    ...prefixes.map((prefix) => {
+      const option = document.createElement("option");
+      option.value = prefix;
+      option.textContent = prefix;
+      return option;
+    }),
+  );
+
+  const stored = localStorage.getItem("family");
+  const initial = stored && prefixes.includes(stored) ? stored : (prefixes.find((p) => p === "lucide") ?? prefixes[0]);
+  select.value = initial;
+  select.addEventListener("change", () => {
+    void selectFamily(select.value);
+  });
+
+  void selectFamily(initial);
+}
+
+function initControls(): void {
+  element<HTMLInputElement>("search-input")?.addEventListener("input", (event) => {
+    state.query = (event.target as HTMLInputElement).value;
+    state.page = 1;
+    renderGrid();
+  });
+
+  element<HTMLInputElement>("icon-color-picker")?.addEventListener("input", (event) => {
+    document.documentElement.style.setProperty("--demo-icon-color", (event.target as HTMLInputElement).value);
+  });
+
+  element<HTMLButtonElement>("color-reset-btn")?.addEventListener("click", () => {
+    document.documentElement.style.setProperty("--demo-icon-color", "currentColor");
+    showToast("Icon color follows currentColor");
+  });
+
+  const strokeButton = element<HTMLButtonElement>("stroke-width-btn");
+  const strokePopover = element<HTMLElement>("stroke-width-popover");
+  strokeButton?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    strokePopover?.classList.toggle("open");
+  });
+  document.addEventListener("click", (event) => {
+    const target = event.target as Node;
+    if (
+      strokePopover?.classList.contains("open") &&
+      !strokePopover.contains(target) &&
+      !strokeButton?.contains(target)
+    ) {
+      strokePopover.classList.remove("open");
+    }
+  });
+
+  element<HTMLInputElement>("stroke-width-slider")?.addEventListener("input", (event) => {
+    state.strokeWidth = Number.parseFloat((event.target as HTMLInputElement).value);
+    const label = element<HTMLElement>("stroke-width-value");
+    if (label) {
+      label.textContent = `${state.strokeWidth.toFixed(2)}px`;
+    }
+    renderGrid();
+    modal.refresh();
+  });
+
+  element<HTMLButtonElement>("theme-toggle")?.addEventListener("click", toggleTheme);
+
+  window.addEventListener("resize", () => renderGrid());
 }
 
 initTheme();
-
-// 4. State
-let searchQuery = "";
-let currentSelectedIcon: IconItem | null = null;
-let currentStrokeWidth = 2.0;
-let currentPage = 1;
-const targetRows = 10;
-
-// 5. Toast Feedback
-function showToast(message: string): void {
-  let toast = document.getElementById("toast-feedback");
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "toast-feedback";
-    toast.className = "toast-feedback";
-    document.body.appendChild(toast);
-  }
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast?.classList.remove("show");
-  }, 2000);
-}
-
-// 6. DOM Elements and Rendering
 document.addEventListener("DOMContentLoaded", () => {
-  const searchInput = document.getElementById("search-input") as HTMLInputElement | null;
-  const iconGrid = document.getElementById("icon-grid") as HTMLElement | null;
-  const paginationControls = document.getElementById("pagination-controls") as HTMLElement | null;
-
-  const colorPicker = document.getElementById("icon-color-picker") as HTMLInputElement | null;
-  const colorResetBtn = document.getElementById("color-reset-btn") as HTMLButtonElement | null;
-  const strokeWidthBtn = document.getElementById("stroke-width-btn") as HTMLButtonElement | null;
-  const strokeWidthPopover = document.getElementById("stroke-width-popover") as HTMLElement | null;
-  const strokeWidthSlider = document.getElementById("stroke-width-slider") as HTMLInputElement | null;
-  const strokeWidthValue = document.getElementById("stroke-width-value") as HTMLElement | null;
-  const themeToggleBtn = document.getElementById("theme-toggle") as HTMLButtonElement | null;
-
-  // Modal elements
-  const modalBackdrop = document.getElementById("icon-modal-backdrop") as HTMLElement | null;
-  const modalCloseBtn = document.getElementById("modal-close-btn") as HTMLButtonElement | null;
-  const modalIconUpscaled = document.getElementById("modal-icon-upscaled") as HTMLElement | null;
-  const modalIconTitle = document.getElementById("modal-icon-title") as HTMLElement | null;
-  const modalAliases = document.getElementById("modal-aliases") as HTMLElement | null;
-  const modalCodeSnippet = document.getElementById("modal-code-snippet") as HTMLElement | null;
-  const copyHtmlBtn = document.getElementById("copy-html-btn") as HTMLButtonElement | null;
-  const copySvgBtn = document.getElementById("copy-svg-btn") as HTMLButtonElement | null;
-  const downloadSvgBtn = document.getElementById("download-svg-btn") as HTMLButtonElement | null;
-
-  if (colorPicker) {
-    colorPicker.value = getDefaultColorForTheme();
-  }
-
-  if (searchInput) {
-    searchInput.placeholder = `Search ${icons.length.toLocaleString("en-US")} icons...`;
-  }
-
-  function renderGrid(): void {
-    if (!iconGrid) {
-      return;
-    }
-
-    const query = searchQuery.trim().toLowerCase();
-    const filtered = icons.filter((icon) => {
-      if (!query) {
-        return true;
-      }
-      if (icon.name.toLowerCase().includes(query)) {
-        return true;
-      }
-      return icon.alt.some((alias) => alias.toLowerCase().includes(query));
-    });
-
-    // Calculate columns and items per page dynamically to ensure all rows are filled
-    const cols = Math.floor((iconGrid.getBoundingClientRect().width + 8 + 0.5) / 64) || 8;
-    const itemsPerPage = cols * targetRows;
-
-    const totalPages = Math.ceil(filtered.length / itemsPerPage);
-    if (currentPage > totalPages) {
-      currentPage = Math.max(1, totalPages);
-    }
-
-    if (filtered.length === 0) {
-      iconGrid.innerHTML = `<div class="empty-state">No icons matching "${searchQuery}"</div>`;
-      if (paginationControls) {
-        paginationControls.innerHTML = "";
-      }
-      return;
-    }
-
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-    const pageItems = filtered.slice(startIndex, endIndex);
-
-    iconGrid.innerHTML = "";
-
-    const fragment = document.createDocumentFragment();
-    for (const icon of pageItems) {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "icon-card";
-      card.setAttribute("aria-label", `View icon details for ${icon.name}`);
-      card.setAttribute("title", icon.name);
-
-      const preview = document.createElement("div");
-      preview.className = "icon-preview";
-
-      const iEl = document.createElement("i");
-      iEl.className = `ic-${icon.name}`;
-      preview.appendChild(iEl);
-
-      card.appendChild(preview);
-
-      card.addEventListener("click", () => {
-        openModal(icon);
-      });
-
-      fragment.appendChild(card);
-    }
-
-    iconGrid.appendChild(fragment);
-
-    if (paginationControls) {
-      renderPaginationControls(totalPages);
-    }
-  }
-
-  function renderPaginationControls(totalPages: number): void {
-    if (!paginationControls) {
-      return;
-    }
-
-    if (totalPages <= 1) {
-      paginationControls.innerHTML = "";
-      return;
-    }
-
-    paginationControls.innerHTML = "";
-
-    // Prev button
-    const prevBtn = document.createElement("button");
-    prevBtn.type = "button";
-    prevBtn.className = `btn ghost secondary sm icon ${currentPage === 1 ? "disabled" : ""}`;
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.setAttribute("aria-label", "Previous page");
-    prevBtn.innerHTML = `<i class="ic-chevron-left ic-stroke-3"></i>`;
-    prevBtn.addEventListener("click", () => {
-      if (currentPage > 1) {
-        currentPage--;
-        renderGrid();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
-    paginationControls.appendChild(prevBtn);
-
-    // Helper to add a page button
-    const addPageButton = (page: number) => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      if (currentPage === page) {
-        btn.className = "btn secondary sm";
-      } else {
-        btn.className = "btn ghost secondary sm";
-      }
-      btn.textContent = page.toString();
-      btn.addEventListener("click", () => {
-        currentPage = page;
-        renderGrid();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-      paginationControls.appendChild(btn);
-    };
-
-    // Helper to add ellipsis
-    const addEllipsis = () => {
-      const span = document.createElement("span");
-      span.className = "pagination-ellipsis";
-      span.textContent = "...";
-      paginationControls.appendChild(span);
-    };
-
-    const maxVisiblePages = 5;
-    if (totalPages <= maxVisiblePages + 2) {
-      for (let i = 1; i <= totalPages; i++) {
-        addPageButton(i);
-      }
-    } else {
-      addPageButton(1);
-
-      if (currentPage > 3) {
-        addEllipsis();
-      }
-
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
-
-      for (let i = start; i <= end; i++) {
-        addPageButton(i);
-      }
-
-      if (currentPage < totalPages - 2) {
-        addEllipsis();
-      }
-
-      addPageButton(totalPages);
-    }
-
-    // Next button
-    const nextBtn = document.createElement("button");
-    nextBtn.type = "button";
-    nextBtn.className = `btn ghost secondary sm icon ${currentPage === totalPages ? "disabled" : ""}`;
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.setAttribute("aria-label", "Next page");
-    nextBtn.innerHTML = `<i class="ic-chevron-right ic-stroke-3"></i>`;
-    nextBtn.addEventListener("click", () => {
-      if (currentPage < totalPages) {
-        currentPage++;
-        renderGrid();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
-    paginationControls.appendChild(nextBtn);
-  }
-
-  function openModal(icon: IconItem): void {
-    currentSelectedIcon = icon;
-    if (!modalBackdrop) {
-      return;
-    }
-
-    if (modalIconUpscaled) {
-      modalIconUpscaled.innerHTML = `<i class="ic-${icon.name}"></i>`;
-    }
-
-    if (modalIconTitle) {
-      modalIconTitle.textContent = icon.name;
-    }
-
-    if (modalAliases) {
-      if (icon.alt.length > 0) {
-        modalAliases.innerHTML = icon.alt.map((alias) => `<span class="badge soft">${alias}</span>`).join("");
-      } else {
-        modalAliases.innerHTML = "";
-      }
-    }
-
-    const htmlSnippet = `<i class="ic-${icon.name}"></i>`;
-    if (modalCodeSnippet) {
-      modalCodeSnippet.textContent = htmlSnippet;
-    }
-
-    modalBackdrop.classList.add("open");
-  }
-
-  function closeModal(): void {
-    if (!modalBackdrop) {
-      return;
-    }
-    modalBackdrop.classList.remove("open");
-    currentSelectedIcon = null;
-  }
-
-  // Event Listeners
-  if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
-      searchQuery = (e.target as HTMLInputElement).value;
-      currentPage = 1;
-      renderGrid();
-    });
-  }
-
-  if (colorPicker) {
-    colorPicker.addEventListener("input", (e) => {
-      const hexColor = (e.target as HTMLInputElement).value;
-      document.documentElement.style.setProperty("--playground-icon-color", hexColor);
-    });
-  }
-
-  if (colorResetBtn) {
-    colorResetBtn.addEventListener("click", () => {
-      if (colorPicker) {
-        colorPicker.value = getDefaultColorForTheme();
-      }
-      document.documentElement.style.setProperty("--playground-icon-color", "currentColor");
-      showToast("Reset icon color to currentColor");
-    });
-  }
-
-  if (strokeWidthBtn && strokeWidthPopover) {
-    strokeWidthBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      strokeWidthPopover.classList.toggle("open");
-    });
-  }
-
-  document.addEventListener("click", (e) => {
-    if (strokeWidthPopover && strokeWidthPopover.classList.contains("open")) {
-      const target = e.target as HTMLElement;
-      if (!strokeWidthPopover.contains(target) && strokeWidthBtn && !strokeWidthBtn.contains(target)) {
-        strokeWidthPopover.classList.remove("open");
-      }
-    }
-  });
-
-  if (strokeWidthSlider) {
-    strokeWidthSlider.addEventListener("input", (e) => {
-      const val = parseFloat((e.target as HTMLInputElement).value);
-      currentStrokeWidth = val;
-      if (strokeWidthValue) {
-        strokeWidthValue.textContent = `${val.toFixed(2)}px`;
-      }
-      injectIconStyles(val);
-    });
-
-    strokeWidthSlider.addEventListener("dblclick", () => {
-      strokeWidthSlider.value = "2.0";
-      currentStrokeWidth = 2.0;
-      if (strokeWidthValue) {
-        strokeWidthValue.textContent = "2.00px";
-      }
-      injectIconStyles(2.0);
-    });
-  }
-
-  if (themeToggleBtn) {
-    themeToggleBtn.addEventListener("click", toggleTheme);
-  }
-
-  if (modalCloseBtn) {
-    modalCloseBtn.addEventListener("click", closeModal);
-  }
-
-  if (modalBackdrop) {
-    modalBackdrop.addEventListener("click", (e) => {
-      if (e.target === modalBackdrop) {
-        closeModal();
-      }
-    });
-  }
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
-    }
-  });
-
-  if (copyHtmlBtn) {
-    copyHtmlBtn.addEventListener("click", () => {
-      if (!currentSelectedIcon) {
-        return;
-      }
-      const htmlSnippet = `<i class="ic-${currentSelectedIcon.name}"></i>`;
-      void (async () => {
-        try {
-          await navigator.clipboard.writeText(htmlSnippet);
-          showToast(`Copied HTML: ${htmlSnippet}`);
-        } catch {
-          showToast("Failed to copy HTML");
-        }
-      })();
-    });
-  }
-
-  if (copySvgBtn) {
-    copySvgBtn.addEventListener("click", () => {
-      if (!currentSelectedIcon) {
-        return;
-      }
-      const iconToCopy = currentSelectedIcon;
-      void (async () => {
-        try {
-          const svgContent = setStrokeWidth(iconToCopy.svg, currentStrokeWidth);
-          await navigator.clipboard.writeText(svgContent);
-          showToast(`Copied SVG for "${iconToCopy.name}" (${currentStrokeWidth.toFixed(2)}px)`);
-        } catch {
-          showToast("Failed to copy SVG");
-        }
-      })();
-    });
-  }
-
-  if (downloadSvgBtn) {
-    downloadSvgBtn.addEventListener("click", () => {
-      if (!currentSelectedIcon) {
-        return;
-      }
-      const svgContent = setStrokeWidth(currentSelectedIcon.svg, currentStrokeWidth);
-      const blob = new Blob([svgContent], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${currentSelectedIcon.name}.svg`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showToast(`Downloaded ${currentSelectedIcon.name}.svg (${currentStrokeWidth.toFixed(2)}px)`);
-    });
-  }
-
-  // Initial render
-  renderGrid();
-
-  // Re-render grid on window resize to ensure rows are always full
-  window.addEventListener("resize", () => {
-    renderGrid();
-  });
+  initControls();
+  initFamilySelect();
 });
