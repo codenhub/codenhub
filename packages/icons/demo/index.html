@@ -3,85 +3,173 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <title>@codenhub/icons Demo</title>
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <div class="demo-container section-content">
-      <header class="demo-header stack tight">
-        <h1 class="text-title-lg">@codenhub/icons</h1>
-        <p class="demo-subtitle text-body">Collection of lightweight CSS mask-based SVG icons</p>
-      </header>
-
-      <div class="demo-toolbar cluster between">
-        <div class="toolbar-fields cluster tight">
-          <select id="family-select" class="select" aria-label="Icon family"></select>
-          <div class="search-input-wrapper">
-            <input
-              type="search"
-              id="search-input"
-              class="ipt icon left"
-              placeholder="Search by name or keyword..."
-              aria-label="Search icons"
+    <header class="site-header">
+      <div class="site-header-content cluster between">
+        <div class="header-start cluster loose">
+          <a class="brand" href="/" aria-label="@codenhub/icons home">
+            <img
+              class="brand-logo brand-logo-on-light"
+              src="/logo-dark.svg"
+              alt="@codenhub/icons"
+              width="984"
+              height="255"
             />
-          </div>
+            <img
+              class="brand-logo brand-logo-on-dark"
+              src="/logo-light.svg"
+              alt="@codenhub/icons"
+              width="984"
+              height="255"
+            />
+          </a>
+
+          <nav class="primary-navigation" aria-label="Primary">
+            <a href="https://docs.codenhub.dev/icons">Docs</a>
+            <a href="https://github.com/codenhub/codenhub">CodenHub</a>
+          </nav>
         </div>
 
-        <div class="color-controls cluster tight">
-          <input
-            type="color"
-            id="icon-color-picker"
-            class="color-picker-input"
-            value="#000000"
-            title="Custom icon color"
-            aria-label="Icon color picker"
-          />
-          <button
-            type="button"
-            id="color-reset-btn"
-            class="btn ghost secondary sm icon tooltip"
-            data-tooltip="Reset color"
-            data-tooltip-position="top"
-            aria-label="Reset color"
+        <nav class="header-actions" aria-label="Site actions">
+          <a
+            class="header-icon-link"
+            href="https://github.com/codenhub/codenhub/tree/main/packages/icons"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="@codenhub/icons on GitHub"
           >
-            <i class="ic-rotate-ccw ic-stroke-2.5"></i>
+            <svg aria-hidden="true" viewBox="0 0 16 16">
+              <path
+                d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z"
+              />
+            </svg>
+          </a>
+          <a
+            class="header-icon-link"
+            href="https://www.npmjs.com/package/@codenhub/icons"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="@codenhub/icons on npm"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path
+                d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"
+              />
+            </svg>
+          </a>
+          <button
+            id="theme-toggle"
+            class="theme-toggle"
+            type="button"
+            role="switch"
+            aria-checked="false"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            <span class="theme-toggle-knob">
+              <i class="ic-moon theme-icon theme-icon-moon" aria-hidden="true"></i>
+              <i class="ic-sun theme-icon theme-icon-sun" aria-hidden="true"></i>
+            </span>
           </button>
-          <div class="popover-wrapper">
+        </nav>
+      </div>
+    </header>
+
+    <main class="demo-main" id="main-content">
+      <div class="demo-container section-content">
+        <h1 class="demo-title text-title-sm">@codenhub/icons</h1>
+
+        <div class="demo-toolbar cluster between">
+          <div class="toolbar-fields cluster tight">
+            <select id="family-select" class="select" aria-label="Icon family"></select>
+            <div class="search-input-wrapper">
+              <input
+                type="search"
+                id="search-input"
+                class="ipt icon left"
+                placeholder="Search by name or keyword..."
+                aria-label="Search icons"
+              />
+            </div>
+          </div>
+
+          <div class="color-controls cluster tight">
+            <input
+              type="color"
+              id="icon-color-picker"
+              class="color-picker-input"
+              value="#000000"
+              title="Custom icon color"
+              aria-label="Icon color picker"
+            />
             <button
               type="button"
-              id="stroke-width-btn"
-              class="btn ghost secondary sm icon tooltip"
-              data-tooltip="Stroke width"
+              id="color-reset-btn"
+              class="btn soft sm icon tooltip"
+              data-tooltip="Reset color"
               data-tooltip-position="top"
-              aria-label="Stroke width"
+              aria-label="Reset color"
             >
-              <i class="ic-settings ic-stroke-2.5"></i>
+              <i class="ic-rotate-ccw ic-stroke-2.5"></i>
             </button>
-            <div id="stroke-width-popover" class="stroke-width-popover">
-              <div class="popover-content stack tight">
-                <div class="label-wrapper cluster between">
-                  <span class="text-body-sm font-semibold">Stroke Width</span>
-                  <span id="stroke-width-value" class="text-body-sm opacity-70">2.0px</span>
+            <div class="popover-wrapper">
+              <button
+                type="button"
+                id="stroke-width-btn"
+                class="btn soft sm icon tooltip"
+                data-tooltip="Stroke width"
+                data-tooltip-position="top"
+                aria-label="Stroke width"
+              >
+                <i class="ic-settings ic-stroke-2.5"></i>
+              </button>
+              <div id="stroke-width-popover" class="stroke-width-popover">
+                <div class="popover-content stack tight">
+                  <div class="label-wrapper cluster between">
+                    <span class="text-body-sm font-semibold">Stroke Width</span>
+                    <span id="stroke-width-value" class="text-body-sm opacity-70">2.0px</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="stroke-width-slider"
+                    min="0.5"
+                    max="4"
+                    step="0.25"
+                    value="2"
+                    class="stroke-width-slider"
+                    aria-label="Stroke width slider"
+                  />
                 </div>
-                <input
-                  type="range"
-                  id="stroke-width-slider"
-                  min="0.5"
-                  max="4"
-                  step="0.25"
-                  value="2"
-                  class="stroke-width-slider"
-                  aria-label="Stroke width slider"
-                />
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div id="icon-grid" class="icon-grid"></div>
-      <div id="pagination-controls" class="pagination-controls cluster center tight"></div>
-    </div>
+        <div id="icon-grid" class="icon-grid"></div>
+        <div id="pagination-controls" class="pagination-controls cluster center tight"></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="site-footer-content cluster between">
+        <p class="footer-copyright">
+          ©
+          <span id="footer-year"></span>
+          Coden
+        </p>
+
+        <p class="footer-credit">
+          Made with
+          <i class="ic-heart" aria-hidden="true"></i>
+          by
+          <a href="https://coden.agency" target="_blank" rel="noopener noreferrer">Coden</a>
+        </p>
+      </div>
+    </footer>
 
     <!-- Icon Details Modal -->
     <div id="icon-modal-backdrop" class="icon-modal-backdrop" role="dialog" aria-modal="true">
@@ -90,13 +178,28 @@
           <i class="ic-x"></i>
         </button>
 
-        <div class="modal-icon-container">
-          <div id="modal-icon-upscaled" class="modal-icon-upscaled"></div>
-        </div>
+        <div class="modal-columns">
+          <div class="modal-icon-container">
+            <div id="modal-icon-upscaled" class="modal-icon-upscaled"></div>
+          </div>
 
-        <h2 id="modal-icon-title" class="modal-icon-title text-title-sm"></h2>
-        <p id="modal-icon-subtitle" class="modal-icon-subtitle text-body-sm"></p>
-        <div id="modal-tags" class="modal-tags cluster tight"></div>
+          <div class="modal-info stack tight">
+            <h2 id="modal-icon-title" class="modal-icon-title text-title-sm"></h2>
+
+            <div class="modal-meta cluster tight">
+              <a id="modal-family-badge" class="badge soft modal-meta-badge" target="_blank" rel="noopener noreferrer">
+                <i class="ic-package"></i>
+                <span></span>
+              </a>
+              <a id="modal-license-badge" class="badge soft modal-meta-badge" target="_blank" rel="noopener noreferrer">
+                <i class="ic-scale"></i>
+                <span></span>
+              </a>
+            </div>
+
+            <p id="modal-tags" class="modal-tags"></p>
+          </div>
+        </div>
 
         <div class="code-snippet-wrapper">
           <pre class="code-snippet-container"><code id="modal-code-snippet" class="code-snippet-text code"></code></pre>
@@ -122,30 +225,6 @@
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- Floating Theme Toggle Control -->
-    <div class="demo-controls">
-      <button
-        id="theme-toggle"
-        class="demo-control btn secondary icon pill"
-        type="button"
-        aria-label="Toggle theme"
-        title="Toggle theme"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
-        </svg>
-      </button>
     </div>
   </body>
 </html>

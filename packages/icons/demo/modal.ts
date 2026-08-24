@@ -43,7 +43,8 @@ export function createModal(handlers: ModalHandlers): IconModal {
   const backdrop = element<HTMLElement>("icon-modal-backdrop");
   const preview = element<HTMLElement>("modal-icon-upscaled");
   const title = element<HTMLElement>("modal-icon-title");
-  const subtitle = element<HTMLElement>("modal-icon-subtitle");
+  const familyBadge = element<HTMLAnchorElement>("modal-family-badge");
+  const licenseBadge = element<HTMLAnchorElement>("modal-license-badge");
   const tagList = element<HTMLElement>("modal-tags");
   const snippet = element<HTMLElement>("modal-code-snippet");
   const closeButton = element<HTMLButtonElement>("modal-close-btn");
@@ -65,18 +66,22 @@ export function createModal(handlers: ModalHandlers): IconModal {
     if (title) {
       title.textContent = entry.name;
     }
-    if (subtitle) {
-      subtitle.textContent = `${family.prefix}:${entry.name} · ${family.info.name} · ${family.info.license.spdx}`;
+    if (familyBadge) {
+      familyBadge.href = family.info.author.url;
+      const label = familyBadge.querySelector<HTMLSpanElement>("span");
+      if (label) {
+        label.textContent = family.info.name;
+      }
+    }
+    if (licenseBadge) {
+      licenseBadge.href = family.info.license.url;
+      const label = licenseBadge.querySelector<HTMLSpanElement>("span");
+      if (label) {
+        label.textContent = family.info.license.spdx;
+      }
     }
     if (tagList) {
-      tagList.replaceChildren(
-        ...entry.tags.map((tag) => {
-          const badge = document.createElement("span");
-          badge.className = "badge soft";
-          badge.textContent = tag;
-          return badge;
-        }),
-      );
+      tagList.textContent = entry.tags.join(", ");
     }
     if (snippet) {
       snippet.textContent = `<i class="${entry.className}"></i>`;

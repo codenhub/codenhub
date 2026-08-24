@@ -45,10 +45,23 @@ function element<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
 }
 
+function updateThemeToggleLabel(): void {
+  const button = element<HTMLButtonElement>("theme-toggle");
+  if (!button) {
+    return;
+  }
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const label = `Switch to ${isDark ? "light" : "dark"} theme`;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-checked", String(isDark));
+  button.title = label;
+}
+
 function initTheme(): void {
   const stored = localStorage.getItem("theme");
   const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  updateThemeToggleLabel();
 }
 
 function toggleTheme(): void {
@@ -56,6 +69,7 @@ function toggleTheme(): void {
   const next = isDark ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem("theme", next);
+  updateThemeToggleLabel();
 }
 
 function isStrokeConfigurable(): boolean {
@@ -378,8 +392,16 @@ function initControls(): void {
   });
 }
 
+function initFooterYear(): void {
+  const year = element<HTMLElement>("footer-year");
+  if (year) {
+    year.textContent = String(new Date().getFullYear());
+  }
+}
+
 initTheme();
 document.addEventListener("DOMContentLoaded", () => {
   initControls();
   initFamilySelect();
+  initFooterYear();
 });
