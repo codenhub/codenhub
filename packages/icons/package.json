@@ -36,13 +36,17 @@
     "./vite": {
       "types": "./dist/vite.d.ts",
       "import": "./dist/vite.js"
+    },
+    "./data/*": {
+      "types": "./dist/data/*.d.ts",
+      "import": "./dist/data/*.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle",
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
@@ -58,6 +62,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "lucide-static": "1.33.0",
     "postcss": "^8.4.0",
     "tsdown": "catalog:",
     "typescript": "catalog:",

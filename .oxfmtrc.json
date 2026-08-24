@@ -9,7 +9,8 @@
     "**/coverage/**",
     "test-results/**",
     "**/test-results/**",
-    "**/tests/**/output.css"
+    "**/tests/**/output.css",
+    "packages/icons/data/**"
   ],
   "printWidth": 120,
   "semi": true,
