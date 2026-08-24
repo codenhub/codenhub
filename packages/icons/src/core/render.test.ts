@@ -36,6 +36,12 @@ describe("setStrokeWidth", () => {
   it("leaves markup without a stroke width unchanged", () => {
     expect(setStrokeWidth('<path fill="currentColor" />', 3)).toBe('<path fill="currentColor" />');
   });
+
+  it("escapes a quote in the stroke width so it cannot break out of the attribute", () => {
+    expect(setStrokeWidth('<path stroke-width="2" />', '2" onclick="x')).toBe(
+      '<path stroke-width="2&quot; onclick=&quot;x" />',
+    );
+  });
 });
 
 const offsetIcon: ResolvedIcon = {
@@ -78,5 +84,15 @@ describe("renderSvg", () => {
     expect(renderSvg(strokeIcon, { attributes: { "aria-hidden": "true", class: "icon" } })).toContain(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" class="icon">',
     );
+  });
+
+  it("escapes a quote in an extra attribute value so it cannot break out of the attribute", () => {
+    expect(renderSvg(filledIcon, { attributes: { "aria-label": '" onclick="x' } })).toContain(
+      'aria-label="&quot; onclick=&quot;x"',
+    );
+  });
+
+  it("drops an extra attribute whose name is not a valid SVG attribute name", () => {
+    expect(renderSvg(filledIcon, { attributes: { '"><script>alert(1)</script': "x" } })).not.toContain("<script>");
   });
 });

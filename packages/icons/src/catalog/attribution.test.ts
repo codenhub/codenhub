@@ -51,6 +51,13 @@ describe("renderAttributionNotice", () => {
   it("returns nothing when every family owes nothing", () => {
     expect(renderAttributionNotice([createFamily("public", "none")])).toBeUndefined();
   });
+
+  it("neutralizes a comment terminator in adopted metadata", () => {
+    const family = createFamily("evil", "notice");
+    family.info.author.name = "*/ } body { color: red; } /*";
+
+    expect(renderAttributionNotice([family])).not.toContain("*/ }");
+  });
 });
 
 describe("renderAttributionBanner", () => {

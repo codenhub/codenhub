@@ -13,7 +13,9 @@ function hasObligation(family: IconFamilyData): boolean {
 
 function describeFamily(family: IconFamilyData): string {
   const { author, license, name, upstream } = family.info;
-  return `${name} (${family.prefix}) ${upstream.version} — ${license.title} (${license.spdx}) — ${author.name} ${author.url}`;
+  const line = `${name} (${family.prefix}) ${upstream.version} — ${license.title} (${license.spdx}) — ${author.name} ${author.url}`;
+  // Metadata for an adopted set is consumer-supplied; a "*/" in it must not close the /*! ... */ comment early.
+  return line.replace(/\*\//g, "*\\/");
 }
 
 /**

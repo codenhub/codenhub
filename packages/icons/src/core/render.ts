@@ -2,6 +2,11 @@ import type { ResolvedIcon } from "./types.js";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const STROKE_WIDTH_ATTRIBUTE = /stroke-width="[^"]*"/g;
+const VALID_ATTRIBUTE_NAME = /^[a-zA-Z_:][-a-zA-Z0-9_:.]*$/;
+
+function escapeAttributeValue(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 /**
  * Options for rendering a resolved icon into an SVG element.
@@ -20,7 +25,8 @@ export interface RenderSvgOptions {
 
 function renderAttributes(attributes: Record<string, string>): string {
   return Object.entries(attributes)
-    .map(([name, value]) => ` ${name}="${value}"`)
+    .filter(([name]) => VALID_ATTRIBUTE_NAME.test(name))
+    .map(([name, value]) => ` ${name}="${escapeAttributeValue(value)}"`)
     .join("");
 }
 
@@ -37,7 +43,8 @@ function renderAttributes(attributes: Record<string, string>): string {
  * declares none.
  */
 export function setStrokeWidth(body: string, strokeWidth: number | string): string {
-  return body.replace(STROKE_WIDTH_ATTRIBUTE, `stroke-width="${strokeWidth}"`);
+  const value = escapeAttributeValue(String(strokeWidth));
+  return body.replace(STROKE_WIDTH_ATTRIBUTE, `stroke-width="${value}"`);
 }
 
 /**

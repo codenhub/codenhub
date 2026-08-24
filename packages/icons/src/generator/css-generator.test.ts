@@ -135,6 +135,14 @@ describe("generateIconSetCss", () => {
     expect(css).not.toContain('i[class^="ic-"]');
     expect(css).toContain(".ic-heart {");
   });
+
+  it("applies the requested strokeWidth to the base icon rule", () => {
+    const registry = createRegistry();
+    const atOne = generateIconSetCss(["ic-heart"], registry, { strokeWidth: 1 });
+    const atThree = generateIconSetCss(["ic-heart"], registry, { strokeWidth: 3 });
+
+    expect(atOne.css).not.toBe(atThree.css);
+  });
 });
 
 describe("getIconMaskUrl", () => {
@@ -151,6 +159,14 @@ describe("getIconMaskUrl", () => {
   it("returns nothing for a name that resolves to no icon", () => {
     expect(getIconMaskUrl("absent", createRegistry())).toBeUndefined();
     expect(getIconMaskUrl("heart")).toBeUndefined();
+  });
+
+  it("differs when a different strokeWidth is requested", () => {
+    const registry = createRegistry();
+
+    expect(getIconMaskUrl("heart", registry, { strokeWidth: 1 })).not.toBe(
+      getIconMaskUrl("heart", registry, { strokeWidth: 3 }),
+    );
   });
 });
 

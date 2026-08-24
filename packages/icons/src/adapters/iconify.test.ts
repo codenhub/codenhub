@@ -56,4 +56,20 @@ describe("adoptIconifySet", () => {
     expect(family.info.total).toBe(1);
     expect(family.info.license.spdx).toBe("Unknown");
   });
+
+  it("keeps a set-level viewBox offset", () => {
+    const family = adoptIconifySet({ ...source, left: -8, top: -960 });
+
+    expect(family.left).toBe(-8);
+    expect(family.top).toBe(-960);
+  });
+
+  it("keeps an icon-level viewBox offset", () => {
+    const family = adoptIconifySet({
+      icons: { shifted: { body: "<path />", left: -4, top: -8 } },
+      prefix: "bare",
+    });
+
+    expect(family.icons.shifted).toMatchObject({ left: -4, top: -8 });
+  });
 });

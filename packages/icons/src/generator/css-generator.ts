@@ -242,14 +242,14 @@ export function generateIconSetCss(
     usedPrefixes.add(icon.prefix);
 
     const isStrokeConfigurable = icon.strokeWidth !== undefined;
-    addRule(renderSvg(icon, { strokeWidth: options?.strokeWidth }), `.${className}`);
+    addRule(renderSvg(icon, { strokeWidth: options?.strokeWidth }), `.${escapeSelectorClass(className)}`);
 
     if (!isStrokeConfigurable) {
       continue;
     }
     for (const strokeValue of strokeValues) {
       const strokeClass = escapeSelectorClass(`${prefix}-stroke-${strokeValue}`);
-      addRule(renderSvg(icon, { strokeWidth: strokeValue }), `.${className}.${strokeClass}`);
+      addRule(renderSvg(icon, { strokeWidth: strokeValue }), `.${escapeSelectorClass(className)}.${strokeClass}`);
     }
   }
 

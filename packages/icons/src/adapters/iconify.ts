@@ -8,10 +8,12 @@ import type { IconAlias, IconData, IconFamilyData, IconFamilyInfo } from "../cor
  */
 export interface IconifyJson {
   prefix: string;
-  icons: Record<string, { body: string; width?: number; height?: number }>;
+  icons: Record<string, { body: string; width?: number; height?: number; left?: number; top?: number }>;
   aliases?: Record<string, { parent: string }>;
   width?: number;
   height?: number;
+  left?: number;
+  top?: number;
   info?: {
     name?: string;
     total?: number;
@@ -48,6 +50,8 @@ function adoptIcons(icons: IconifyJson["icons"]): Record<string, IconData> {
         body: icon.body,
         ...(icon.width === undefined ? {} : { width: icon.width }),
         ...(icon.height === undefined ? {} : { height: icon.height }),
+        ...(icon.left === undefined ? {} : { left: icon.left }),
+        ...(icon.top === undefined ? {} : { top: icon.top }),
       },
     ]),
   );
@@ -96,5 +100,7 @@ export function adoptIconifySet(source: IconifyJson, options?: IconifyAdapterOpt
     ...(aliases === undefined ? {} : { aliases }),
     ...(source.width === undefined ? {} : { width: source.width }),
     ...(source.height === undefined ? {} : { height: source.height }),
+    ...(source.left === undefined ? {} : { left: source.left }),
+    ...(source.top === undefined ? {} : { top: source.top }),
   };
 }
