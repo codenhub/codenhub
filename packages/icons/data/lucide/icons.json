@@ -23659,6 +23659,8 @@
     "style": "outlined",
     "weight": "regular"
   },
+  "left": 0,
   "prefix": "lucide",
+  "top": 0,
   "width": 24
 }
