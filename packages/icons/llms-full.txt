@@ -103,15 +103,15 @@ import phosphorFill from "@codenhub/icons/data/phosphor-fill";
 
 Available families:
 
-| Prefix | Icons | Style | License |
-| --- | --- | --- | --- |
-| `lucide` | 2034 | outlined, stroke-based | ISC |
-| `phosphor` | 1512 | outlined | MIT |
-| `phosphor-thin`, `phosphor-light`, `phosphor-bold` | 1512 each | outlined, other weights | MIT |
-| `phosphor-fill` | 1512 | filled | MIT |
-| `phosphor-duotone` | 1512 | duotone | MIT |
-| `material-symbols-outlined`, `-rounded`, `-sharp` | 3899 each | outlined | Apache-2.0 |
-| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled | Apache-2.0 |
+| Prefix                                                           | Icons     | Style                   | License    |
+| ---------------------------------------------------------------- | --------- | ----------------------- | ---------- |
+| `lucide`                                                         | 2034      | outlined, stroke-based  | ISC        |
+| `phosphor`                                                       | 1512      | outlined                | MIT        |
+| `phosphor-thin`, `phosphor-light`, `phosphor-bold`               | 1512 each | outlined, other weights | MIT        |
+| `phosphor-fill`                                                  | 1512      | filled                  | MIT        |
+| `phosphor-duotone`                                               | 1512      | duotone                 | MIT        |
+| `material-symbols-outlined`, `-rounded`, `-sharp`                | 3899 each | outlined                | Apache-2.0 |
+| `material-symbols-outlined-fill`, `-rounded-fill`, `-sharp-fill` | 3899 each | filled                  | Apache-2.0 |
 
 Variants are separate families rather than options on one, so resolution stays a prefix and a name.
 
@@ -199,16 +199,16 @@ viteIcons({
 });
 ```
 
-| Option | Purpose |
-| --- | --- |
-| `families` | Families to resolve against. Nothing is bundled by default. |
-| `defaultPrefix` | Family an unprefixed name falls back to. |
-| `content` | Extra files to scan, beyond what the build transforms. |
-| `prefix` | Class prefix. Defaults to `ic`. |
-| `strokeWidth` | Applied to stroke-based families only. |
-| `mode` | `css` serves mask rules; `svg` replaces `<i class="ic-...">` with inline SVG at build time. |
-| `attribution` | `auto`, `file`, or `off`. See [Licensing](#licensing). |
-| `registry` | A prepared `IconRegistry`, replacing `families`. |
+| Option          | Purpose                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `families`      | Families to resolve against. Nothing is bundled by default.                                 |
+| `defaultPrefix` | Family an unprefixed name falls back to.                                                    |
+| `content`       | Extra files to scan, beyond what the build transforms.                                      |
+| `prefix`        | Class prefix. Defaults to `ic`.                                                             |
+| `strokeWidth`   | Applied to stroke-based families only.                                                      |
+| `mode`          | `css` serves mask rules; `svg` replaces `<i class="ic-...">` with inline SVG at build time. |
+| `attribution`   | `auto`, `file`, or `off`. See [Licensing](#licensing).                                      |
+| `registry`      | A prepared `IconRegistry`, replacing `families`.                                            |
 
 The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet is replaced with it.
 
@@ -294,11 +294,11 @@ Every family ships the license text and attribution notice its artwork requires;
 
 What reaches your own output is the `attribution` option:
 
-| Mode | Behavior |
-| --- | --- |
+| Mode             | Behavior                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------- |
 | `auto` (default) | Prepends a `/*! … */` banner to the generated CSS, naming only the families the build used. |
-| `file` | Emits `icons-attribution.txt` as a build asset instead. Vite only. |
-| `off` | Emits nothing, and warns when a family used still requires a notice. |
+| `file`           | Emits `icons-attribution.txt` as a build asset instead. Vite only.                          |
+| `off`            | Emits nothing, and warns when a family used still requires a notice.                        |
 
 Obligations come in three levels, because permissive is not the same as free of obligation:
 

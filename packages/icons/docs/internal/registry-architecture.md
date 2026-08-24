@@ -150,6 +150,14 @@ something a distinct prefix already expresses. `info.style` and `info.weight`
 let the catalog group siblings for humans without the core knowing they are
 related.
 
+### Reserved prefixes
+
+`stroke`, `after`, and `bg` are words the utility classes own: `ic-stroke-1.5`,
+`ic-after`, and `ic-bg` are modifiers, so a family named after one would produce
+classes the scanner reads as a modifier rather than an icon. Generation refuses
+such a family rather than leaving the collision to be discovered as an icon that
+silently fails to render.
+
 ## Family data layout
 
 ```text
@@ -160,7 +168,9 @@ packages/icons/data/<prefix>/
 ```
 
 All three are committed and generated. `icons.json` is the reviewable unit: one
-file per family, so an upstream bump is one diff, not thousands.
+file per family, so an upstream bump is one diff, not thousands. Thirteen
+families currently occupy about 17 MB, which git stores compressed and which
+churns only when an upstream version moves.
 
 The build compiles each family into `dist/data/<prefix>.js` plus declarations,
 exposed as:
@@ -179,6 +189,13 @@ family would put roughly 34,000 files in the tarball at launch scope alone,
 growing with each family. Instead the Vite plugin resolves
 `virtual:@codenhub/icons/<prefix>/<name>` to a generated module read from family
 data at build time. Same tree-shaking and code-splitting, no files shipped.
+
+Each module exports the rendered markup as `svg` and as its default export, and
+the resolved icon as `icon`. An unresolvable name throws during the build rather
+than producing an empty module, because a typo in a dynamic icon name is
+otherwise invisible until someone looks at the page. A family reached only
+through such a module still counts toward the attribution notice.
+
 Consumers on other bundlers import the family module and rely on the build-time
 CSS path, which is the primary path anyway.
 
@@ -337,5 +354,6 @@ freely and documents what breaks; no compatibility shims are kept, per
 Not scheduled, recorded so the design leaves room:
 
 - A first-party Codenhub family owning the semantic names.
-- Per-icon virtual modules for bundlers other than Vite.
+- Per-icon virtual modules for bundlers other than Vite; only the Vite plugin
+  serves them today.
 - A searchable catalog surface in `apps/docs` built from `info` and `tags`.
