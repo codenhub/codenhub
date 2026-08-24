@@ -168,6 +168,53 @@ describe("viteIcons", () => {
   });
 });
 
+describe("viteIcons virtual icon modules", () => {
+  it("resolves a per-icon module id", () => {
+    const { resolveId } = createPlugin();
+
+    expect(resolveId("virtual:@codenhub/icons/test/user")).toBe("\0virtual:@codenhub/icons/test/user");
+  });
+
+  it("serves the icon and its rendered markup", () => {
+    const { load } = createPlugin();
+
+    const code = load("\0virtual:@codenhub/icons/test/user");
+
+    expect(code).toContain('export const icon = {"body"');
+    expect(code).toContain("export const svg =");
+    expect(code).toContain("export default svg;");
+    expect(code).toContain('viewBox=\\"0 0 24 24\\"');
+  });
+
+  it("resolves a bare name through aliases and the default prefix", () => {
+    const { load } = createPlugin();
+
+    expect(load("\0virtual:@codenhub/icons/cancel")).toContain('"iconName":"x"');
+  });
+
+  it("applies the configured stroke width", () => {
+    const { load } = createPlugin({ strokeWidth: 1.5 });
+
+    expect(load("\0virtual:@codenhub/icons/test/user")).toContain('stroke-width=\\"1.5\\"');
+  });
+
+  it("names the icon it could not resolve", () => {
+    const { load } = createPlugin();
+
+    expect(() => load("\0virtual:@codenhub/icons/test/absent")).toThrow('Unknown icon "test/absent"');
+  });
+
+  it("counts a family reached only through an icon module toward attribution", () => {
+    const { generateBundle, load } = createPlugin({ attribution: "file" });
+    load("\0virtual:@codenhub/icons/test/user");
+
+    const { context, files } = createBundleContext();
+    generateBundle.call(context);
+
+    expect(files[0]?.source).toContain("Test Family");
+  });
+});
+
 describe("viteIcons in svg mode", () => {
   it("replaces an icon tag with inline SVG in markup", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
