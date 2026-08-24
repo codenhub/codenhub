@@ -203,6 +203,8 @@ import { adoptIconifySet } from "@codenhub/icons";
 registry.registerFamily(adoptIconifySet(someIconifySet, { attribution: "notice" }));
 ```
 
+Pass `attribution: "credit"` instead when the adopted set's license requires visible authorship credit, such as CC-BY.
+
 Adopted sets are `extended` tier: the licensing promise this package makes covers the families it generates, not data a consumer supplies.
 
 ---
