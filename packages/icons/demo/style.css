@@ -20,20 +20,8 @@ body {
   gap: 1.25rem;
 }
 
-.demo-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-}
-
 .demo-header h1 {
   margin: 0;
-}
-
-.demo-header-titles {
-  min-width: 0;
 }
 
 .demo-subtitle {
@@ -43,13 +31,7 @@ body {
 
 /* Control bar */
 .demo-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
   width: 100%;
-  padding: 0.75rem 0;
-  background-color: var(--color-background);
-  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -493,19 +475,6 @@ body {
 .toolbar-fields .select {
   flex: 0 0 auto;
   max-width: 16rem;
-}
-
-.result-count {
-  flex-shrink: 0;
-  opacity: 0.6;
-  font-variant-numeric: tabular-nums;
-}
-
-.family-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-top: 0.25rem;
 }
 
 .modal-icon-subtitle {

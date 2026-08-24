@@ -119,7 +119,6 @@ function readItemsPerPage(grid: HTMLElement): number {
 function renderGrid(): void {
   const grid = element<HTMLElement>("icon-grid");
   const pagination = element<HTMLElement>("pagination-controls");
-  const resultCount = element<HTMLElement>("result-count");
   if (!grid) {
     return;
   }
@@ -128,10 +127,6 @@ function renderGrid(): void {
   const itemsPerPage = readItemsPerPage(grid);
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   state.page = Math.min(state.page, totalPages);
-
-  if (resultCount) {
-    resultCount.textContent = `${filtered.length.toLocaleString("en-US")} icons`;
-  }
 
   if (filtered.length === 0) {
     grid.innerHTML = `<div class="empty-state">No icon matches "${state.query}"</div>`;
@@ -216,20 +211,11 @@ function openIcon(entry: IconEntry): void {
   modal.open(entry, state.family);
 }
 
-function updateFamilyMeta(): void {
-  const meta = element<HTMLElement>("family-meta");
-  if (!meta || !state.family) {
-    return;
+function updateSearchPlaceholder(): void {
+  const search = element<HTMLInputElement>("search-input");
+  if (search && state.family) {
+    search.placeholder = `Search ${state.family.info.total.toLocaleString("en-US")} icons...`;
   }
-  const { attribution, license, total } = state.family.info;
-  meta.innerHTML = [
-    `<span class="badge soft">${total.toLocaleString("en-US")} icons</span>`,
-    `<span class="badge soft">${license.spdx}</span>`,
-    `<span class="badge soft">${attribution === "none" ? "no notice required" : `${attribution} required`}</span>`,
-    isStrokeConfigurable()
-      ? `<span class="badge soft">stroke ${state.family.info.strokeWidth}</span>`
-      : `<span class="badge soft">filled</span>`,
-  ].join("");
 }
 
 function updateStrokeAvailability(): void {
@@ -261,7 +247,7 @@ async function selectFamily(prefix: string): Promise<void> {
   }));
 
   localStorage.setItem("family", prefix);
-  updateFamilyMeta();
+  updateSearchPlaceholder();
   updateStrokeAvailability();
   renderGrid();
 }
