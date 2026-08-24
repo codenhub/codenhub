@@ -209,7 +209,7 @@ Adopted sets are `extended` tier: the licensing promise this package makes cover
 
 ## Licensing
 
-Every family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does.
+Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does. A third-party set adopted through `adoptIconifySet` is not covered by that promise — bring your own licensing material for it.
 
 What reaches your own output is the `attribution` option:
 

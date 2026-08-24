@@ -142,7 +142,7 @@ export const ICON_FAMILIES: readonly IconFamilyDefinition[] = [
     iconsDirectory: "assets/fill",
     license: { spdx: "MIT", title: "MIT License", url: "https://github.com/phosphor-icons/core/blob/main/LICENSE" },
     licenseFile: "LICENSE",
-    name: "Phosphor Regular",
+    name: "Phosphor Fill",
     prefix: "phosphor-fill",
     style: "filled",
     tier: "core",

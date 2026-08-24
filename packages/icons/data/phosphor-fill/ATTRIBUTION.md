@@ -1,6 +1,6 @@
-# Phosphor Regular
+# Phosphor Fill
 
-Icon artwork in `phosphor-fill` comes from Phosphor Regular, generated from
+Icon artwork in `phosphor-fill` comes from Phosphor Fill, generated from
 `@phosphor-icons/core@2.1.1`.
 
 - Author: [Phosphor Icons](https://phosphoricons.com)

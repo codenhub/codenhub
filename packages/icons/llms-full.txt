@@ -25,6 +25,7 @@ Declare the families you want, then write icon classes:
 ```ts
 // vite.config.ts
 import lucide from "@codenhub/icons/data/lucide";
+import phosphorFill from "@codenhub/icons/data/phosphor-fill";
 import viteIcons from "@codenhub/icons/vite";
 import { defineConfig } from "vite";
 
@@ -32,7 +33,7 @@ export default defineConfig({
   plugins: [
     viteIcons({
       content: ["./src/**/*.{html,ts,tsx,vue,svelte}"],
-      families: [lucide],
+      families: [lucide, phosphorFill],
       defaultPrefix: "lucide",
     }),
   ],
@@ -290,7 +291,7 @@ Adopted sets are `extended` tier: the licensing promise this package makes cover
 
 ## Licensing
 
-Every family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does.
+Every bundled, generated family ships the license text and attribution notice its artwork requires; those files travel with the package whatever a build does. A third-party set adopted through `adoptIconifySet` is not covered by that promise — bring your own licensing material for it.
 
 What reaches your own output is the `attribution` option:
 

@@ -279,7 +279,10 @@ so.
 The core has **no default prefix**. A name without a prefix resolves against the
 default the consumer configured; with none configured, an unprefixed name that
 is not a semantic alias does not resolve. Dropping the hardcoded `"lucide"`
-default is what makes Lucide replaceable without a breaking change.
+default is itself a breaking change for consumers who relied on unprefixed names
+resolving to Lucide: they must now configure `defaultPrefix: "lucide"`
+explicitly to keep that behavior. Making the default configurable is what lets a
+future replacement of Lucide happen without another breaking change.
 
 Lookup order for `resolve(name)`:
 

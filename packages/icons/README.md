@@ -23,6 +23,7 @@ Declare the families you want, then write icon classes:
 ```ts
 // vite.config.ts
 import lucide from "@codenhub/icons/data/lucide";
+import phosphorFill from "@codenhub/icons/data/phosphor-fill";
 import viteIcons from "@codenhub/icons/vite";
 import { defineConfig } from "vite";
 
@@ -30,7 +31,7 @@ export default defineConfig({
   plugins: [
     viteIcons({
       content: ["./src/**/*.{html,ts,tsx,vue,svelte}"],
-      families: [lucide],
+      families: [lucide, phosphorFill],
       defaultPrefix: "lucide",
     }),
   ],
