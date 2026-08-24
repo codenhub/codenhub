@@ -217,11 +217,17 @@ function openIcon(entry: IconEntry, trigger: HTMLElement): void {
   modal.open(entry, state.family, trigger);
 }
 
+let defaultSearchPlaceholder: string | undefined;
+
 function updateSearchPlaceholder(): void {
   const search = element<HTMLInputElement>("search-input");
-  if (search && state.family) {
-    search.placeholder = `Search ${state.family.info.total.toLocaleString("en-US")} icons...`;
+  if (!search) {
+    return;
   }
+  defaultSearchPlaceholder ??= search.placeholder;
+  search.placeholder = state.family
+    ? `Search ${state.family.info.total.toLocaleString("en-US")} icons...`
+    : defaultSearchPlaceholder;
 }
 
 function updateStrokeAvailability(): void {
@@ -251,6 +257,8 @@ async function selectFamily(prefix: string): Promise<void> {
   const token = ++familyLoadToken;
   state.family = undefined;
   state.entries = [];
+  updateSearchPlaceholder();
+  updateStrokeAvailability();
 
   const grid = element<HTMLElement>("icon-grid");
   if (grid) {
@@ -266,6 +274,8 @@ async function selectFamily(prefix: string): Promise<void> {
     }
     state.family = undefined;
     state.entries = [];
+    updateSearchPlaceholder();
+    updateStrokeAvailability();
     if (grid) {
       grid.innerHTML = `<div class="empty-state">Couldn't load ${prefix}.</div>`;
     }
