@@ -240,6 +240,8 @@ function updateStrokeAvailability(): void {
 let familyLoadToken = 0;
 
 async function selectFamily(prefix: string): Promise<void> {
+  modal.close();
+
   const grid = element<HTMLElement>("icon-grid");
   if (grid) {
     grid.innerHTML = `<div class="empty-state">Loading ${prefix}…</div>`;

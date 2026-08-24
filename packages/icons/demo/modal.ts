@@ -18,6 +18,8 @@ export interface IconModal {
   open: (entry: IconEntry, family: IconFamilyData, trigger?: HTMLElement) => void;
   /** Redraws the open dialog, after a stroke width change for instance. */
   refresh: () => void;
+  /** Closes the dialog, such as when the icon it shows no longer belongs to the selected family. */
+  close: () => void;
 }
 
 function element<T extends HTMLElement>(id: string): T | null {
@@ -109,5 +111,6 @@ export function createModal(handlers: ModalHandlers): IconModal {
       closeButton?.focus();
     },
     refresh: draw,
+    close,
   };
 }
