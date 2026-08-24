@@ -2,6 +2,7 @@ import { SEMANTIC_ALIASES } from "../semantic/semantic-aliases.js";
 import type { IconFamilyData, IconFamilyLoader, IconRegistryOptions, ResolvedIcon } from "./types.js";
 
 const DEFAULT_VIEWBOX_SIZE = 24;
+const DEFAULT_VIEWBOX_ORIGIN = 0;
 const PREFIX_SEPARATOR = ":";
 
 interface ParsedName {
@@ -244,8 +245,10 @@ export class IconRegistry {
       body: icon.body,
       height: icon.height ?? family.height ?? DEFAULT_VIEWBOX_SIZE,
       iconName,
+      left: icon.left ?? family.left ?? DEFAULT_VIEWBOX_ORIGIN,
       name: `${family.prefix}${PREFIX_SEPARATOR}${iconName}`,
       prefix: family.prefix,
+      top: icon.top ?? family.top ?? DEFAULT_VIEWBOX_ORIGIN,
       width: icon.width ?? family.width ?? DEFAULT_VIEWBOX_SIZE,
       ...(family.info.strokeWidth === undefined ? {} : { strokeWidth: family.info.strokeWidth }),
     };

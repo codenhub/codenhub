@@ -44,7 +44,9 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
  * Renders a resolved icon as a complete, self-contained SVG element.
  *
  * The element carries only a namespace and a viewBox, leaving size and color to
- * CSS. A stroke width is applied only when the icon's family is stroke-based.
+ * CSS. The viewBox keeps the icon's own origin, because families such as
+ * Material Symbols draw above it. A stroke width is applied only when the
+ * icon's family is stroke-based.
  *
  * @param icon - Icon to render.
  * @param options - Stroke width and extra element attributes.
@@ -57,5 +59,5 @@ export function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions): strin
       : icon.body;
   const extra = options?.attributes ? renderAttributes(options.attributes) : "";
 
-  return `<svg xmlns="${SVG_NAMESPACE}" viewBox="0 0 ${icon.width} ${icon.height}"${extra}>${body}</svg>`;
+  return `<svg xmlns="${SVG_NAMESPACE}" viewBox="${icon.left} ${icon.top} ${icon.width} ${icon.height}"${extra}>${body}</svg>`;
 }

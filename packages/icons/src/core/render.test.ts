@@ -7,9 +7,11 @@ const strokeIcon: ResolvedIcon = {
   body: '<g stroke-width="2"><path d="M0 0" /></g>',
   height: 24,
   iconName: "heart",
+  left: 0,
   name: "test:heart",
   prefix: "test",
   strokeWidth: 2,
+  top: 0,
   width: 24,
 };
 
@@ -17,8 +19,10 @@ const filledIcon: ResolvedIcon = {
   body: '<path fill="currentColor" d="M0 0" />',
   height: 20,
   iconName: "star",
+  left: 0,
   name: "filled:star",
   prefix: "filled",
+  top: 0,
   width: 20,
 };
 
@@ -33,6 +37,17 @@ describe("setStrokeWidth", () => {
     expect(setStrokeWidth('<path fill="currentColor" />', 3)).toBe('<path fill="currentColor" />');
   });
 });
+
+const offsetIcon: ResolvedIcon = {
+  body: '<path d="M0 0" />',
+  height: 960,
+  iconName: "home",
+  left: 0,
+  name: "offset:home",
+  prefix: "offset",
+  top: -960,
+  width: 960,
+};
 
 describe("renderSvg", () => {
   it("wraps the body in an element carrying only namespace and viewBox", () => {
@@ -53,6 +68,10 @@ describe("renderSvg", () => {
     expect(renderSvg(filledIcon, { strokeWidth: 1 })).toBe(
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M0 0" /></svg>',
     );
+  });
+
+  it("keeps a viewBox that does not start at the origin", () => {
+    expect(renderSvg(offsetIcon)).toContain('viewBox="0 -960 960 960"');
   });
 
   it("places extra attributes on the element", () => {

@@ -89,7 +89,9 @@ describe("generated family data", () => {
 
     for (const name of sampled) {
       const resolved = registry.resolve(`${family.prefix}:${name}`);
-      expect(renderSvg(resolved!)).toContain(`viewBox="0 0 ${resolved!.width} ${resolved!.height}"`);
+      expect(renderSvg(resolved!)).toContain(
+        `viewBox="${resolved!.left} ${resolved!.top} ${resolved!.width} ${resolved!.height}"`,
+      );
     }
   });
 });

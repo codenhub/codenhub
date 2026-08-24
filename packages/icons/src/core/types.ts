@@ -156,6 +156,16 @@ export interface IconData {
   height?: number;
 
   /**
+   * viewBox origin on the x axis, when it differs from the family default.
+   */
+  left?: number;
+
+  /**
+   * viewBox origin on the y axis, when it differs from the family default.
+   */
+  top?: number;
+
+  /**
    * Search keywords for catalog and documentation surfaces.
    */
   tags?: string[];
@@ -198,6 +208,19 @@ export interface IconFamilyData {
    * Default viewBox height for icons that do not override it. Defaults to `24`.
    */
   height?: number;
+
+  /**
+   * Default viewBox origin on the x axis. Defaults to `0`.
+   */
+  left?: number;
+
+  /**
+   * Default viewBox origin on the y axis. Defaults to `0`.
+   *
+   * Families such as Material Symbols draw above the origin, so an icon that
+   * kept only its size would render blank.
+   */
+  top?: number;
 
   /**
    * Icons by primary name.
@@ -273,6 +296,16 @@ export interface ResolvedIcon {
    * viewBox height to render the icon at.
    */
   height: number;
+
+  /**
+   * viewBox origin on the x axis.
+   */
+  left: number;
+
+  /**
+   * viewBox origin on the y axis.
+   */
+  top: number;
 
   /**
    * Authored stroke width, present only when the icon's family is stroke-based

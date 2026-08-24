@@ -37,9 +37,11 @@ describe("IconRegistry", () => {
       body: "<path d='heart' />",
       height: 24,
       iconName: "heart",
+      left: 0,
       name: "test:heart",
       prefix: "test",
       strokeWidth: 2,
+      top: 0,
       width: 24,
     });
   });
@@ -100,6 +102,13 @@ describe("IconRegistry", () => {
     registry.registerFamily(createFamily());
 
     expect(registry.resolve("test:large-mark")).toMatchObject({ height: 48, width: 48 });
+  });
+
+  it("takes the viewBox origin from the family when an icon does not override it", () => {
+    const registry = new IconRegistry();
+    registry.registerFamily(createFamily({ top: -960 }));
+
+    expect(registry.resolve("test:heart")).toMatchObject({ left: 0, top: -960 });
   });
 
   it("omits stroke width for a family that is not stroke-based", () => {
