@@ -18,8 +18,15 @@ export interface IconModal {
   open: (entry: IconEntry, family: IconFamilyData, trigger?: HTMLElement) => void;
   /** Redraws the open dialog, after a stroke width change for instance. */
   refresh: () => void;
-  /** Closes the dialog, such as when the icon it shows no longer belongs to the selected family. */
-  close: () => void;
+  /**
+   * Closes the dialog, such as when the icon it shows no longer belongs to the
+   * selected family.
+   *
+   * @param options - Set `restoreFocus: false` when the triggering element is
+   * about to be removed, such as during a family switch.
+   * @returns Whether the dialog was open.
+   */
+  close: (options?: { restoreFocus?: boolean }) => boolean;
 }
 
 function element<T extends HTMLElement>(id: string): T | null {
@@ -51,7 +58,9 @@ export function createModal(handlers: ModalHandlers): IconModal {
     const { entry, family } = current;
 
     if (preview) {
-      preview.innerHTML = `<i class="${entry.className}"></i>`;
+      const icon = document.createElement("i");
+      icon.className = entry.className;
+      preview.replaceChildren(icon);
     }
     if (title) {
       title.textContent = entry.name;
@@ -60,18 +69,29 @@ export function createModal(handlers: ModalHandlers): IconModal {
       subtitle.textContent = `${family.prefix}:${entry.name} · ${family.info.name} · ${family.info.license.spdx}`;
     }
     if (tagList) {
-      tagList.innerHTML = entry.tags.map((tag) => `<span class="badge soft">${tag}</span>`).join("");
+      tagList.replaceChildren(
+        ...entry.tags.map((tag) => {
+          const badge = document.createElement("span");
+          badge.className = "badge soft";
+          badge.textContent = tag;
+          return badge;
+        }),
+      );
     }
     if (snippet) {
       snippet.textContent = `<i class="${entry.className}"></i>`;
     }
   }
 
-  function close(): void {
+  function close(options?: { restoreFocus?: boolean }): boolean {
+    const wasOpen = current !== undefined;
     backdrop?.classList.remove("open");
     current = undefined;
-    triggerElement?.focus();
+    if (wasOpen && options?.restoreFocus !== false) {
+      triggerElement?.focus();
+    }
     triggerElement = undefined;
+    return wasOpen;
   }
 
   closeButton?.addEventListener("click", close);

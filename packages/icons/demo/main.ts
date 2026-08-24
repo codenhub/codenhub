@@ -239,15 +239,24 @@ function updateStrokeAvailability(): void {
 
 let familyLoadToken = 0;
 
+function focusAfterFamilySwitch(modalWasOpen: boolean): void {
+  if (modalWasOpen) {
+    element<HTMLSelectElement>("family-select")?.focus();
+  }
+}
+
 async function selectFamily(prefix: string): Promise<void> {
-  modal.close();
+  const modalWasOpen = modal.close({ restoreFocus: false });
+
+  const token = ++familyLoadToken;
+  state.family = undefined;
+  state.entries = [];
 
   const grid = element<HTMLElement>("icon-grid");
   if (grid) {
     grid.innerHTML = `<div class="empty-state">Loading ${prefix}…</div>`;
   }
 
-  const token = ++familyLoadToken;
   let family: IconFamilyData;
   try {
     family = await registry.load(prefix);
@@ -255,9 +264,12 @@ async function selectFamily(prefix: string): Promise<void> {
     if (token !== familyLoadToken) {
       return;
     }
+    state.family = undefined;
+    state.entries = [];
     if (grid) {
       grid.innerHTML = `<div class="empty-state">Couldn't load ${prefix}.</div>`;
     }
+    focusAfterFamilySwitch(modalWasOpen);
     return;
   }
   if (token !== familyLoadToken) {
@@ -276,6 +288,7 @@ async function selectFamily(prefix: string): Promise<void> {
   updateSearchPlaceholder();
   updateStrokeAvailability();
   renderGrid();
+  focusAfterFamilySwitch(modalWasOpen);
 }
 
 function initFamilySelect(): void {
