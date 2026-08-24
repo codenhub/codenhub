@@ -21,7 +21,12 @@ export default family;
 `;
 
 async function readFamilies() {
-  const entries = await readdir(dataDirectory, { withFileTypes: true }).catch(() => []);
+  const entries = await readdir(dataDirectory, { withFileTypes: true }).catch((error) => {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  });
   return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
 }
 
