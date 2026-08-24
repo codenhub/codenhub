@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vite";
 
+import lucide from "../dist/data/lucide.js";
 import { viteIcons } from "../dist/vite.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -11,6 +12,7 @@ export default defineConfig({
   root: resolve(__dirname, "../playground"),
   plugins: [
     viteIcons({
+      families: [lucide],
       content: [resolve(__dirname, "../playground/index.html"), resolve(__dirname, "../playground/main.ts")],
     }),
   ],

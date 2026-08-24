@@ -1,5 +1,11 @@
-import type { IconRegistry } from "../registry/registry.js";
+import { resolveIconClassName } from "../core/class-names.js";
+import type { IconRegistry } from "../core/registry.js";
+import { renderSvg } from "../core/render.js";
+import type { IconFamilyData } from "../core/types.js";
 import { svgToDataUri } from "./svg-encoder.js";
+
+const DEFAULT_PREFIX = "ic";
+const STROKE_VALUE = /^[0-9]+(?:\.[0-9]+)?$/;
 
 /**
  * Options for generating base CSS icon rules.
@@ -12,7 +18,7 @@ export interface BaseCssOptions {
 }
 
 /**
- * Options for generating icon CSS rules.
+ * Options for generating the CSS rule of a single icon.
  */
 export interface GenerateIconCssOptions {
   /**
@@ -26,52 +32,56 @@ export interface GenerateIconCssOptions {
  */
 export interface GenerateIconSetCssOptions extends BaseCssOptions {
   /**
-   * Whether to include base CSS container rules (`.ic`). Defaults to `true`.
+   * Whether to include the base container rules (`.ic`). Defaults to `true`.
    */
   injectBase?: boolean;
 
   /**
-   * Default global stroke width for configurable icons.
+   * Stroke width applied to icons of stroke-based families. Icons of families
+   * drawn as filled paths are unaffected.
    */
   strokeWidth?: number | string;
 }
 
 /**
- * Modifies an SVG string to change its stroke-width attributes.
- * If stroke-width is not defined on the SVG, it will be added to the root element.
- *
- * @param svg - The original SVG string content.
- * @param strokeWidth - The new stroke width to apply.
- * @returns The modified SVG string.
+ * Generated icon CSS together with the families it drew from.
  */
-export function setSvgStrokeWidth(svg: string, strokeWidth: number | string): string {
-  if (svg.includes("stroke-width=")) {
-    return svg.replace(/stroke-width="[^"]*"/g, `stroke-width="${strokeWidth}"`);
-  }
-  return svg.replace(/<svg([^>]*)>/i, (_, attrs) => `<svg${attrs} stroke-width="${strokeWidth}">`);
+export interface IconSetCssResult {
+  /**
+   * The generated stylesheet.
+   */
+  css: string;
+
+  /**
+   * Families the generated rules resolved icons from, so callers can emit the
+   * license notices those families require.
+   */
+  families: IconFamilyData[];
 }
 
 /**
- * Escapes characters in a CSS class name so it can be safely used in a selector.
- * Especially escapes dots in floating point stroke width classes (e.g. `ic-stroke-1.5` -> `ic-stroke-1\.5`).
+ * Escapes characters in a CSS class name so it can be used in a selector.
  *
- * @param cls - The class name to escape.
- * @returns The escaped selector part.
+ * Stroke width classes carry a dot, as in `ic-stroke-1.5`, which a selector
+ * would otherwise read as a second class.
+ *
+ * @param className - Class name to escape.
+ * @returns The escaped selector fragment.
  */
-export function escapeSelectorClass(cls: string): string {
-  return cls.replace(/\./g, "\\.");
+export function escapeSelectorClass(className: string): string {
+  return className.replace(/\./g, "\\.");
 }
 
 /**
- * Generates base CSS rules for icon containers using CSS mask and background properties.
- * Supports standalone elements (`<i>`, `<span>`), pseudo-elements (`::before`, `::after`),
- * and direct `background-image` integration for form inputs (`<input>`, `<select>`).
+ * Generates the base rules every icon class builds on, covering standalone
+ * elements, `::before` and `::after` pseudo-elements, and form controls that
+ * take a `background-image`.
  *
- * @param options - Options object specifying icon prefix.
- * @returns Generated CSS rule string for base icon styling.
+ * @param options - Class prefix.
+ * @returns The base stylesheet.
  */
 export function generateBaseCss(options?: BaseCssOptions): string {
-  const p = options?.prefix ?? "ic";
+  const p = options?.prefix ?? DEFAULT_PREFIX;
   return `i[class^="${p}-"],
 i[class*=" ${p}-"],
 .${p} {
@@ -146,152 +156,152 @@ textarea[class*=" ${p}-"],
 }
 
 /**
- * Generates CSS custom property rules (`--ic-uri` and `--ic-mask`) for icon selectors.
+ * Generates the custom property rule that carries one icon's artwork.
  *
- * @param selectors - Single CSS selector or array of selectors (e.g. `".ic-close"` or `[".ic-close", ".ic-x"]`).
- * @param svg - The SVG string content for the icon.
- * @param options - Options object specifying icon prefix.
- * @returns Generated CSS rule string.
+ * @param selectors - Selector or selectors the rule applies to.
+ * @param svg - Complete SVG markup for the icon.
+ * @param options - Class prefix.
+ * @returns The generated rule.
  */
 export function generateIconCss(selectors: string | string[], svg: string, options?: GenerateIconCssOptions): string {
   const selectorList = Array.isArray(selectors) ? selectors.join(",\n") : selectors;
-  const uri = svgToDataUri(svg);
-  const prefix = options?.prefix ?? "ic";
+  const prefix = options?.prefix ?? DEFAULT_PREFIX;
   return `${selectorList} {
-  --${prefix}-uri: url("${uri}");
+  --${prefix}-uri: url("${svgToDataUri(svg)}");
   --${prefix}-mask: var(--${prefix}-uri);
 }`;
 }
 
+interface ScannedClasses {
+  iconClasses: Set<string>;
+  strokeValues: Set<string>;
+}
+
+function partitionClasses(classes: Iterable<string>, prefix: string): ScannedClasses {
+  const prefixDash = `${prefix}-`;
+  const strokePrefix = `${prefixDash}stroke-`;
+  const iconClasses = new Set<string>();
+  const strokeValues = new Set<string>();
+
+  for (const className of classes) {
+    if (!className.startsWith(prefixDash)) {
+      continue;
+    }
+    if (className.startsWith(strokePrefix)) {
+      const value = className.slice(strokePrefix.length);
+      if (STROKE_VALUE.test(value)) {
+        strokeValues.add(value);
+      }
+      continue;
+    }
+    iconClasses.add(className);
+  }
+
+  return { iconClasses, strokeValues };
+}
+
 /**
- * Generates combined CSS rules for a collection of scanned icon class names using an `IconRegistry`.
- * Groups icon class selectors sharing identical SVG content to maximize CSS mask deduplication.
+ * Generates the stylesheet for a set of scanned icon classes.
  *
- * @param classes - Iterable collection of icon class names (e.g. `["ic-close", "ic-user"]`).
- * @param registry - `IconRegistry` instance used to resolve icon definitions.
- * @param options - Configuration options for class prefix and base style injection.
- * @returns Generated CSS string containing base container styles and icon mask rules.
+ * Icons sharing identical markup are grouped into one rule, so a class and its
+ * aliases cost a selector rather than a second copy of the artwork. Classes
+ * that resolve to no icon are skipped silently, because a scanner reports every
+ * prefixed class it sees, including ones that are not icons.
+ *
+ * @param classes - Scanned class names, including stroke width classes.
+ * @param registry - Registry holding the loaded families.
+ * @param options - Class prefix, base rule injection, and stroke width.
+ * @returns The stylesheet and the families it drew from.
  */
 export function generateIconSetCss(
   classes: Iterable<string>,
   registry: IconRegistry,
   options?: GenerateIconSetCssOptions,
-): string {
-  const prefix = options?.prefix ?? "ic";
+): IconSetCssResult {
+  const prefix = options?.prefix ?? DEFAULT_PREFIX;
   const injectBase = options?.injectBase ?? true;
+  const { iconClasses, strokeValues } = partitionClasses(classes, prefix);
 
-  const svgToSelectorsMap = new Map<string, string[]>();
-  const prefixDash = `${prefix}-`;
-  const strokePrefix = `${prefixDash}stroke-`;
+  const rulesBySvg = new Map<string, string[]>();
+  const usedPrefixes = new Set<string>();
 
-  const strokeValues = new Set<string>();
-  const iconClasses = new Set<string>();
+  function addRule(svg: string, selector: string): void {
+    const selectors = rulesBySvg.get(svg);
+    if (selectors) {
+      selectors.push(selector);
+      return;
+    }
+    rulesBySvg.set(svg, [selector]);
+  }
 
-  for (const cls of classes) {
-    if (!cls.startsWith(prefixDash)) {
+  for (const className of iconClasses) {
+    const icon = resolveIconClassName(registry, className.slice(prefix.length + 1));
+    if (!icon) {
       continue;
     }
-    if (cls.startsWith(strokePrefix)) {
-      const valStr = cls.slice(strokePrefix.length);
-      if (/^[0-9]+(?:\.[0-9]+)?$/.test(valStr)) {
-        strokeValues.add(valStr);
-      }
-    } else {
-      iconClasses.add(cls);
+    usedPrefixes.add(icon.prefix);
+
+    const isStrokeConfigurable = icon.strokeWidth !== undefined;
+    addRule(renderSvg(icon, { strokeWidth: options?.strokeWidth }), `.${className}`);
+
+    if (!isStrokeConfigurable) {
+      continue;
+    }
+    for (const strokeValue of strokeValues) {
+      const strokeClass = escapeSelectorClass(`${prefix}-stroke-${strokeValue}`);
+      addRule(renderSvg(icon, { strokeWidth: strokeValue }), `.${className}.${strokeClass}`);
     }
   }
 
-  for (const cls of iconClasses) {
-    const iconName = cls.slice(prefixDash.length);
-    const resolved = registry.resolve(iconName);
-
-    if (resolved) {
-      // 1. Base rule with default / global override stroke width
-      let baseSvg = resolved.svg;
-      if (resolved.strokeConfigurable) {
-        const defaultStrokeWidth = options?.strokeWidth ?? registry.options?.strokeWidth;
-        if (defaultStrokeWidth !== undefined) {
-          baseSvg = setSvgStrokeWidth(baseSvg, defaultStrokeWidth);
-        }
-      }
-
-      const selector = `.${cls}`;
-      const existing = svgToSelectorsMap.get(baseSvg);
-      if (existing) {
-        existing.push(selector);
-      } else {
-        svgToSelectorsMap.set(baseSvg, [selector]);
-      }
-
-      // 2. Combined rules for other stroke-widths if icon is stroke-configurable
-      if (resolved.strokeConfigurable) {
-        for (const strokeVal of strokeValues) {
-          const strokeClass = `${strokePrefix}${strokeVal}`;
-          const combinedSelector = `.${cls}.${escapeSelectorClass(strokeClass)}`;
-          const strokeSvg = setSvgStrokeWidth(resolved.svg, strokeVal);
-
-          const existingStroke = svgToSelectorsMap.get(strokeSvg);
-          if (existingStroke) {
-            existingStroke.push(combinedSelector);
-          } else {
-            svgToSelectorsMap.set(strokeSvg, [combinedSelector]);
-          }
-        }
-      }
-    }
+  const chunks = injectBase ? [generateBaseCss({ prefix })] : [];
+  for (const [svg, selectors] of rulesBySvg) {
+    chunks.push(generateIconCss(selectors, svg, { prefix }));
   }
 
-  const cssChunks: string[] = [];
-
-  if (injectBase) {
-    cssChunks.push(generateBaseCss({ prefix }));
-  }
-
-  for (const [svg, selectors] of svgToSelectorsMap.entries()) {
-    cssChunks.push(generateIconCss(selectors, svg, { prefix }));
-  }
-
-  return cssChunks.join("\n\n");
+  return {
+    css: chunks.join("\n\n"),
+    families: [...usedPrefixes]
+      .toSorted((first, second) => first.localeCompare(second))
+      .flatMap((usedPrefix) => registry.getFamily(usedPrefix) ?? []),
+  };
 }
 
 /**
- * Helper to get formatted CSS `url("data:image/svg+xml,...")` for an SVG string or registered icon name.
+ * Resolves an icon name or raw SVG into a CSS `url()` carrying its artwork.
  *
- * @param iconNameOrSvg - Raw SVG string or icon name registered in the registry.
- * @param registry - Optional IconRegistry instance if resolving by icon name.
- * @param options - Additional options like strokeWidth.
- * @returns CSS url() string or undefined if icon could not be resolved.
+ * @param iconNameOrSvg - Icon name, class-style name, or complete SVG markup.
+ * @param registry - Registry used when a name has to be resolved.
+ * @param options - Stroke width for stroke-based families.
+ * @returns The `url()` value, or `undefined` when the name resolves to no icon.
  */
 export function getIconMaskUrl(
   iconNameOrSvg: string,
   registry?: IconRegistry,
   options?: { strokeWidth?: number | string },
 ): string | undefined {
-  let svg: string | undefined;
   if (iconNameOrSvg.startsWith("<svg")) {
-    svg = iconNameOrSvg;
-  } else if (registry) {
-    const resolved = registry.resolve(iconNameOrSvg);
-    if (resolved) {
-      svg = resolved.svg;
-      if (resolved.strokeConfigurable && options?.strokeWidth !== undefined) {
-        svg = setSvgStrokeWidth(svg, options.strokeWidth);
-      }
-    }
+    return `url("${svgToDataUri(iconNameOrSvg)}")`;
   }
-  if (!svg) {
+  if (!registry) {
     return undefined;
   }
-  return `url("${svgToDataUri(svg)}")`;
+
+  const icon = resolveIconClassName(registry, iconNameOrSvg);
+  if (!icon) {
+    return undefined;
+  }
+
+  return `url("${svgToDataUri(renderSvg(icon, { strokeWidth: options?.strokeWidth }))}")`;
 }
 
 /**
- * Helper to get CSS style object with custom properties (`--ic-uri` and `--ic-mask`) for inline styles.
+ * Resolves an icon into the custom properties an inline `style` attribute or a
+ * CSS-in-JS object needs to render it.
  *
- * @param iconNameOrSvg - Raw SVG string or icon name registered in the registry.
- * @param registry - Optional IconRegistry instance if resolving by icon name.
- * @param options - Additional options like prefix and strokeWidth.
- * @returns Record of CSS custom property names to values, or undefined if unresolved.
+ * @param iconNameOrSvg - Icon name, class-style name, or complete SVG markup.
+ * @param registry - Registry used when a name has to be resolved.
+ * @param options - Class prefix and stroke width.
+ * @returns The custom properties, or `undefined` when the name resolves to no icon.
  */
 export function getIconCssProps(
   iconNameOrSvg: string,
@@ -302,9 +312,7 @@ export function getIconCssProps(
   if (!maskUrl) {
     return undefined;
   }
-  const prefix = options?.prefix ?? "ic";
-  return {
-    [`--${prefix}-uri`]: maskUrl,
-    [`--${prefix}-mask`]: `var(--${prefix}-uri)`,
-  };
+
+  const prefix = options?.prefix ?? DEFAULT_PREFIX;
+  return { [`--${prefix}-mask`]: `var(--${prefix}-uri)`, [`--${prefix}-uri`]: maskUrl };
 }

@@ -1,8 +1,16 @@
 import type { Plugin } from "vite";
 
-import { generateIconSetCss, setSvgStrokeWidth } from "../generator/css-generator.js";
-import { lucideProvider } from "../registry/providers/lucide/index.js";
-import { IconRegistry } from "../registry/registry.js";
+import {
+  renderAttributionBanner,
+  renderAttributionNotice,
+  renderSuppressedAttributionWarning,
+} from "../catalog/attribution.js";
+import type { AttributionMode } from "../catalog/attribution.js";
+import { resolveIconClassName } from "../core/class-names.js";
+import { IconRegistry } from "../core/registry.js";
+import { renderSvg } from "../core/render.js";
+import type { IconFamilyData } from "../core/types.js";
+import { generateIconSetCss } from "../generator/css-generator.js";
 import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
 
 /**
@@ -10,39 +18,75 @@ import { scanFiles, scanIconClasses } from "../scanner/class-scanner.js";
  */
 export interface ViteIconsOptions {
   /**
-   * List of file paths or glob patterns to scan for icon class names.
+   * File paths or globs to scan for icon class names.
    */
   content?: string[];
 
   /**
-   * Prefix for icon class names (e.g. `"ic"` for `.ic-close`). Defaults to `"ic"`.
+   * Prefix for icon class names, as in `"ic"` for `.ic-close`. Defaults to `"ic"`.
    */
   prefix?: string;
 
   /**
-   * Custom `IconRegistry` instance used to resolve icons.
-   * Defaults to a registry instance initialized with `lucideProvider`.
+   * Icon families to make resolvable, such as the default export of
+   * `@codenhub/icons/data/lucide`.
+   *
+   * No family is bundled by default: a project declares the families it wants,
+   * so nothing it did not ask for reaches its output.
+   */
+  families?: IconFamilyData[];
+
+  /**
+   * Family prefix that unprefixed icon names resolve against.
+   */
+  defaultPrefix?: string;
+
+  /**
+   * Registry to resolve icons with, replacing the one built from
+   * {@link ViteIconsOptions.families}.
    */
   registry?: IconRegistry;
 
   /**
-   * Default stroke width for configurable icons.
+   * Stroke width applied to icons of stroke-based families.
    */
   strokeWidth?: number | string;
 
   /**
-   * Delivery mode for icon rendering.
-   * - `"css"` (default): Serves generated CSS rules via `virtual:icons.css` using CSS masks.
-   * - `"svg"`: Replaces `<i class="...ic-<name>...">` tags directly with inline SVG elements at build time.
+   * Delivery mode.
+   *
+   * `"css"` serves generated mask rules through `virtual:icons.css`. `"svg"`
+   * replaces `<i class="ic-...">` tags with inline SVG at build time.
    */
   mode?: "css" | "svg";
+
+  /**
+   * How license notices for the families used reach the build output.
+   *
+   * `"auto"` prepends a preserved CSS comment, `"file"` emits
+   * `icons-attribution.txt` as an asset, and `"off"` emits nothing and warns
+   * when a used family still requires a notice. Defaults to `"auto"`.
+   */
+  attribution?: AttributionMode;
 }
 
 const VIRTUAL_ID = "virtual:icons.css";
 const RESOLVED_VIRTUAL_ID = "\0" + VIRTUAL_ID;
+const ATTRIBUTION_FILE = "icons-attribution.txt";
+const SOURCE_FILE = /\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i;
+const MARKUP_FILE = /\.(html|jsx?|tsx?|vue|svelte)$/i;
+const STYLE_FILE = /\.(css|scss|sass|less)$/i;
 
-const defaultRegistry = new IconRegistry();
-defaultRegistry.registerProvider(lucideProvider);
+function createRegistry(options: ViteIconsOptions): IconRegistry {
+  if (options.registry) {
+    return options.registry;
+  }
+  const registry = new IconRegistry({ defaultPrefix: options.defaultPrefix });
+  for (const family of options.families ?? []) {
+    registry.registerFamily(family);
+  }
+  return registry;
+}
 
 function isRegexStart(chars: string[] | string, index: number): boolean {
   let i = index - 1;
@@ -233,12 +277,15 @@ function getEnclosingQuote(code: string, matchIndex: number): string | null {
   return null;
 }
 
-function replaceIconTagsWithSvg(
-  source: string,
-  registry: IconRegistry,
-  options: { prefix: string; strokeWidth?: number | string; isJsContext?: boolean },
-): string {
-  const { prefix, strokeWidth, isJsContext = false } = options;
+interface ReplaceIconTagsOptions {
+  prefix: string;
+  strokeWidth?: number | string;
+  isJsContext?: boolean;
+  onFamilyUsed: (family: IconFamilyData) => void;
+}
+
+function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
+  const { isJsContext = false, onFamilyUsed, prefix, strokeWidth } = options;
   const prefixDash = `${prefix}-`;
   const strokePrefix = `${prefixDash}stroke-`;
 
@@ -258,7 +305,7 @@ function replaceIconTagsWithSvg(
       offset: number,
     ) => {
       const classes = classValue.split(/\s+/).filter(Boolean);
-      let foundIconName: string | null = null;
+      let icon: ReturnType<typeof resolveIconClassName>;
       let strokeValFromClass: string | null = null;
       const leftoverClasses: string[] = [];
 
@@ -273,47 +320,33 @@ function replaceIconTagsWithSvg(
             continue;
           }
         }
-        if (!foundIconName && cls.startsWith(prefixDash)) {
-          const candidateName = cls.slice(prefixDash.length);
-          if (registry.has(candidateName)) {
-            foundIconName = candidateName;
+        if (!icon && cls.startsWith(prefixDash)) {
+          const resolved = resolveIconClassName(registry, cls.slice(prefixDash.length));
+          if (resolved) {
+            icon = resolved;
             continue;
           }
         }
         leftoverClasses.push(cls);
       }
 
-      if (!foundIconName) {
+      if (!icon) {
         return match;
       }
 
-      const resolved = registry.resolve(foundIconName);
-      if (!resolved) {
-        return match;
+      const family = registry.getFamily(icon.prefix);
+      if (family) {
+        onFamilyUsed(family);
       }
 
-      let svg = resolved.svg.trim();
-      const effectiveStrokeWidth = strokeValFromClass ?? strokeWidth ?? registry.options?.strokeWidth;
-      if (resolved.strokeConfigurable && effectiveStrokeWidth !== undefined) {
-        svg = setSvgStrokeWidth(svg, effectiveStrokeWidth);
-      }
+      const effectiveStrokeWidth = strokeValFromClass ?? strokeWidth;
+      let svg = renderSvg(icon, { strokeWidth: effectiveStrokeWidth });
 
       const extraClassesStr = leftoverClasses.join(" ");
       const passthroughAttrs = [before.trim(), after.trim()].filter(Boolean).join(" ");
       const passthroughStr = passthroughAttrs ? ` ${passthroughAttrs}` : "";
 
-      const hasClassInSvg = /^(<svg\b[^>]*?\b(class|className))=/i.test(svg);
-      if (hasClassInSvg) {
-        if (extraClassesStr) {
-          svg = svg.replace(
-            /^(<svg\b[^>]*?\b(class|className))=((['"])(.*?)\4|([^\s>]+))/i,
-            (_, attrPrefix, _name, _q, qChar, existing) => {
-              const quoteChar = qChar || '"';
-              return `${attrPrefix}=${quoteChar}${existing ? existing + " " : ""}${extraClassesStr}${quoteChar}`;
-            },
-          );
-        }
-      } else if (extraClassesStr) {
+      if (extraClassesStr) {
         const fullQuote = backslash + quote;
         svg = svg.replace(/^<svg\b/i, `<svg ${attrName}=${fullQuote}${extraClassesStr}${fullQuote}`);
       }
@@ -329,7 +362,7 @@ function replaceIconTagsWithSvg(
         } else if (enclosingQuote === "'") {
           svg = svg.replace(/'/g, "\\'");
         } else if (enclosingQuote === "`") {
-          svg = svg.replace(/`/g, "\\`").replace(/\${/g, "\\${");
+          svg = svg.replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
         }
       }
 
@@ -339,37 +372,51 @@ function replaceIconTagsWithSvg(
 }
 
 /**
- * Vite plugin that serves generated icon CSS through virtual module `virtual:icons.css`
- * or replaces `@import "@codenhub/icons";` / `@import "@codenhub/icons/style.css";` directives,
- * or embeds inline SVG elements directly into markup when `options.mode === "svg"`.
+ * Vite plugin that turns icon utility classes into CSS mask rules, or into
+ * inline SVG when `mode` is `"svg"`.
  *
- * @param options - Configuration options for content scanning, class prefix, delivery mode, and icon registry.
- * @returns Vite plugin object.
+ * In CSS mode it serves the generated stylesheet through `virtual:icons.css`
+ * and replaces `@import "@codenhub/icons";` in stylesheets. In both modes it
+ * emits the license notices required by the families the build actually used.
+ *
+ * @param options - Families, scanning, class prefix, delivery mode, and attribution.
+ * @returns The Vite plugin.
  */
 export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const prefix = options.prefix ?? "ic";
-  const registry = options.registry ?? defaultRegistry;
+  const registry = createRegistry(options);
   const contentPaths = options.content ?? [];
   const mode = options.mode ?? "css";
+  const attributionMode = options.attribution ?? "auto";
 
   const scannedFiles = new Set<string>();
   const inMemoryClasses = new Set<string>();
   const resolvedVirtualIds = new Set<string>();
+  const usedFamilies = new Map<string, IconFamilyData>();
+
+  function rememberFamily(family: IconFamilyData): void {
+    usedFamilies.set(family.prefix, family);
+  }
 
   function generateCssFromContent(): string {
     const foundClasses = new Set<string>(inMemoryClasses);
-
-    // 1. Scan files specified in options.content
     scanFiles(contentPaths, { prefix }, foundClasses);
-
-    // 2. Scan tracked runtime files in Vite project
     scanFiles(scannedFiles, { prefix }, foundClasses);
 
-    return generateIconSetCss(foundClasses, registry, {
-      prefix,
+    const { css, families } = generateIconSetCss(foundClasses, registry, {
       injectBase: true,
+      prefix,
       strokeWidth: options.strokeWidth,
     });
+    for (const family of families) {
+      rememberFamily(family);
+    }
+
+    if (attributionMode !== "auto") {
+      return css;
+    }
+    const banner = renderAttributionBanner(families);
+    return banner === undefined ? css : `${banner}\n${css}`;
   }
 
   return {
@@ -408,9 +455,10 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     transformIndexHtml(html, ctx) {
       if (mode === "svg") {
         return replaceIconTagsWithSvg(html, registry, {
+          isJsContext: false,
+          onFamilyUsed: rememberFamily,
           prefix,
           strokeWidth: options.strokeWidth,
-          isJsContext: false,
         });
       }
 
@@ -434,29 +482,24 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     transform(code, id) {
       if (mode === "svg") {
-        if (id && /\.(css|scss|sass|less)$/i.test(id)) {
+        if (id && STYLE_FILE.test(id)) {
           const importPattern =
             /@import\s+["'](?:@codenhub\/icons|@codenhub\/icons\/style\.css|virtual:icons\.css)["'];?/g;
           if (code.includes("@codenhub/icons") || code.includes("virtual:icons.css")) {
-            return {
-              code: code.replace(importPattern, ""),
-              map: null,
-            };
+            return { code: code.replace(importPattern, ""), map: null };
           }
           return null;
         }
 
-        if (id && !id.includes("node_modules") && !id.startsWith("\0") && /\.(html|jsx?|tsx?|vue|svelte)$/i.test(id)) {
+        if (id && !id.includes("node_modules") && !id.startsWith("\0") && MARKUP_FILE.test(id)) {
           const replaced = replaceIconTagsWithSvg(code, registry, {
+            isJsContext: true,
+            onFamilyUsed: rememberFamily,
             prefix,
             strokeWidth: options.strokeWidth,
-            isJsContext: true,
           });
           if (replaced !== code) {
-            return {
-              code: replaced,
-              map: null,
-            };
+            return { code: replaced, map: null };
           }
         }
         return null;
@@ -467,35 +510,44 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         inMemoryClasses.add(cls);
       }
 
-      // Track source files for scanning if id is provided
-      if (
-        id &&
-        !id.includes("node_modules") &&
-        !id.startsWith("\0") &&
-        /\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i.test(id)
-      ) {
+      if (id && !id.includes("node_modules") && !id.startsWith("\0") && SOURCE_FILE.test(id)) {
         scannedFiles.add(id);
       }
 
-      // Replace `@import "@codenhub/icons";` or `@import "@codenhub/icons/style.css";`
-      if (id && /\.(css|scss|sass|less)$/i.test(id)) {
+      if (id && STYLE_FILE.test(id)) {
         const importPattern =
           /@import\s+["'](?:@codenhub\/icons|@codenhub\/icons\/style\.css|virtual:icons\.css)["'];?/g;
         if (code.includes("@codenhub/icons") || code.includes("virtual:icons.css")) {
-          const generated = generateCssFromContent();
-          return {
-            code: code.replace(importPattern, generated),
-            map: null,
-          };
+          return { code: code.replace(importPattern, generateCssFromContent()), map: null };
         }
       }
 
       return null;
     },
 
+    generateBundle() {
+      const families = [...usedFamilies.values()];
+      if (attributionMode === "off") {
+        const warning = renderSuppressedAttributionWarning(families);
+        if (warning) {
+          this.warn(warning);
+        }
+        return;
+      }
+      // Inline SVG output has no stylesheet to carry a banner, so the notice
+      // becomes an asset in both explicit "file" mode and svg mode.
+      if (attributionMode !== "file" && mode !== "svg") {
+        return;
+      }
+      const notice = renderAttributionNotice(families);
+      if (notice) {
+        this.emitFile({ fileName: ATTRIBUTION_FILE, source: `${notice}\n`, type: "asset" });
+      }
+    },
+
     configureServer(server) {
       const handleFileChange = (filePath: string) => {
-        if (filePath.includes("node_modules") || !/\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i.test(filePath)) {
+        if (filePath.includes("node_modules") || !SOURCE_FILE.test(filePath)) {
           return;
         }
 
@@ -528,7 +580,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 }
 
 /**
- * Named alias for `viteIcons` plugin creator.
+ * Named alias for {@link viteIcons}.
  */
 export const viteIconsPlugin = viteIcons;
 

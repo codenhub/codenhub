@@ -1,4 +1,5 @@
-import { generateBaseCss, generateIconCss, lucideIconSet, setSvgStrokeWidth } from "@codenhub/icons";
+import { generateBaseCss, generateIconCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
+import lucide from "@codenhub/icons/data/lucide";
 
 import "./style.css";
 
@@ -8,16 +9,13 @@ interface IconItem {
   alt: string[];
 }
 
-// 1. Process dataset from lucideIconSet
-const icons: IconItem[] = Object.entries(lucideIconSet.icons).map(([name, entry]) => {
-  if (typeof entry === "string") {
-    return { name, svg: entry, alt: [] };
-  }
-  return {
-    name,
-    svg: entry.svg,
-    alt: entry.alt ?? [],
-  };
+// 1. Process the generated Lucide family into renderable icons
+const registry = new IconRegistry({ defaultPrefix: lucide.prefix });
+registry.registerFamily(lucide);
+
+const icons: IconItem[] = registry.list().flatMap((name) => {
+  const resolved = registry.resolve(name);
+  return resolved ? [{ alt: lucide.icons[name]?.tags ?? [], name, svg: renderSvg(resolved) }] : [];
 });
 
 // 2. Inject CSS rules for all icons into head
@@ -39,7 +37,7 @@ function injectIconStyles(strokeWidth?: number): void {
 
     let svg = icon.svg;
     if (strokeWidth !== undefined) {
-      svg = setSvgStrokeWidth(svg, strokeWidth);
+      svg = setStrokeWidth(svg, strokeWidth);
     }
 
     cssChunks.push(generateIconCss(selectors, svg));
@@ -451,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const iconToCopy = currentSelectedIcon;
       void (async () => {
         try {
-          const svgContent = setSvgStrokeWidth(iconToCopy.svg, currentStrokeWidth);
+          const svgContent = setStrokeWidth(iconToCopy.svg, currentStrokeWidth);
           await navigator.clipboard.writeText(svgContent);
           showToast(`Copied SVG for "${iconToCopy.name}" (${currentStrokeWidth.toFixed(2)}px)`);
         } catch {
@@ -466,7 +464,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!currentSelectedIcon) {
         return;
       }
-      const svgContent = setSvgStrokeWidth(currentSelectedIcon.svg, currentStrokeWidth);
+      const svgContent = setStrokeWidth(currentSelectedIcon.svg, currentStrokeWidth);
       const blob = new Blob([svgContent], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
