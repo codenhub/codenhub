@@ -2,17 +2,27 @@
 
 /* Custom layout and minimalist demo app styles */
 :root {
-  --playground-icon-color: currentColor;
+  --demo-icon-color: currentcolor;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-main {
+  flex: 1 1 auto;
   padding: 2rem 1.5rem;
-  min-height: 100vh;
   box-sizing: border-box;
 }
 
-.playground-container {
+.demo-container {
   max-width: 1100px;
   margin: 0 auto;
   display: flex;
@@ -20,17 +30,234 @@ body {
   gap: 1.25rem;
 }
 
-.playground-header h1 {
+.demo-title {
   margin: 0;
 }
 
-.playground-subtitle {
+/* The side gutter lives on the outer header/footer (like `.demo-main`'s),
+   not on their centered content, so that content lines up flush with the
+   icon grid's edges instead of sitting inset inside its own 1100px box. */
+.site-header,
+.site-footer {
+  padding-inline: 1.5rem;
+  box-sizing: border-box;
+}
+
+.site-header-content,
+.site-footer-content {
+  max-width: 1100px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+/* Site header */
+.site-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 4rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-header-content {
+  height: 100%;
+  gap: 1rem;
+}
+
+.header-start {
+  gap: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.brand-logo {
+  height: 1.75rem;
+  width: auto;
+}
+
+.brand-logo-on-dark {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-on-light {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-on-dark {
+  display: block;
+}
+
+.primary-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.primary-navigation a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  text-decoration: none;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.primary-navigation a:hover {
+  color: var(--color-text);
+}
+
+.header-icon-link {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.header-icon-link:hover {
+  color: var(--color-text);
+}
+
+.header-icon-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentcolor;
+}
+
+/* Sliding theme switch, track + knob, like vite.dev's */
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.375rem;
+  /* `@codenhub/styles/native` auto-applies `.btn` to every bare `<button>`,
+     which sets `min-height: var(--control-height)` (2.5rem) — without this,
+     that clamps our shorter height back up to a 2.5rem square, rendering as
+     a circle instead of a pill. */
+  min-height: 0;
+  min-width: 0;
+  padding: 0.125rem;
+  box-sizing: border-box;
+  border-radius: calc(infinity * 1px);
+  /* A real, always-defined token (unlike `--color-surface-elevated`, which
+     has no theme.css definition and silently falls back to a near-invisible
+     tint), so the track reliably reads as a pill instead of disappearing
+     into the page background. */
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.theme-toggle:hover {
+  background: var(--color-border-hover);
+}
+
+.theme-toggle-knob {
+  position: absolute;
+  /* `top`/`bottom: 0` plus `margin-block: auto` centers the knob vertically
+     against the track's actual content box, rather than relying on getting
+     `top` and the track/knob heights to sum up exactly right by hand. */
+  top: 0;
+  bottom: 0;
+  left: 0.125rem;
+  margin-block: auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  /* Ink-colored knob (near-black on light, near-white on dark) so it always
+     contrasts clearly against the neutral `--color-border` track. */
+  background: var(--color-text);
+  color: var(--color-text-contrast);
+  box-shadow: var(--elevation-sm);
+  transition: translate var(--motion-duration-normal, 200ms) var(--motion-ease);
+}
+
+[data-theme="dark"] .theme-toggle-knob {
+  translate: 1.125rem;
+}
+
+.theme-toggle .theme-icon {
+  font-size: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+/* Extra class nesting (rather than a single class) is needed here to outrank
+   the icon system's own `i[class^="ic-"]` base rule, which otherwise keeps
+   forcing `display: inline-block` on both icons regardless of theme. */
+.theme-toggle .theme-icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .theme-icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .theme-icon-sun {
+  display: block;
+}
+
+/* Site footer */
+.site-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.site-footer-content {
+  padding-block: 1.25rem;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
+}
+
+.footer-copyright {
   margin: 0;
-  opacity: 0.7;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.footer-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.footer-credit i {
+  font-size: 1rem;
+}
+
+.footer-credit a {
+  color: inherit;
+  text-decoration: underline;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.footer-credit a:hover {
+  color: var(--color-text);
 }
 
 /* Control bar */
-.playground-toolbar {
+.demo-toolbar {
   width: 100%;
   display: flex;
   align-items: center;
@@ -115,7 +342,7 @@ body {
   font-size: 28px;
   width: 28px;
   height: 28px;
-  color: var(--playground-icon-color);
+  color: var(--demo-icon-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,13 +381,13 @@ body {
   color: var(--color-text, #0f172a);
   border-radius: var(--radius-xl, 12px);
   padding: 1.75rem;
-  max-width: 440px;
+  max-width: 640px;
   width: 90%;
   box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.2));
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 1rem;
   transform: scale(0.95);
   transition: transform 0.2s ease;
@@ -182,11 +409,25 @@ body {
   line-height: 1;
 }
 
+/* Icon preview left, name/badges/tags right */
+.modal-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.modal-info {
+  flex: 1;
+  min-width: 0;
+  align-items: flex-start;
+}
+
 /* Modal 1:1 Aspect Ratio Icon Preview Container with background */
 .modal-icon-container {
   width: 120px;
   height: 120px;
   aspect-ratio: 1 / 1;
+  flex-shrink: 0;
   border-radius: var(--radius-xl, 12px);
   background-color: var(--color-surface-elevated, rgba(125, 125, 125, 0.08));
   display: flex;
@@ -202,22 +443,35 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--playground-icon-color);
+  color: var(--demo-icon-color);
 }
 
 .modal-icon-title {
   margin: 0;
-  text-align: center;
   font-size: 1.1rem;
   font-weight: 600;
 }
 
-/* Alias tags */
-.modal-aliases {
-  display: flex;
-  flex-wrap: wrap;
+.modal-meta-badge {
+  display: inline-flex;
+  align-items: center;
   gap: 0.35rem;
-  justify-content: center;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.modal-meta-badge:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+/* Keywords, plain text (not badges) */
+.modal-tags {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
 }
 
 /* Code Snippet Outer Box Container */
@@ -296,30 +550,8 @@ body {
   gap: 0.5rem;
 }
 
-/* Floating controls bottom right */
-.playground-controls {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  display: flex;
-  gap: 0.5rem;
-  z-index: 900;
-}
-
-.playground-control {
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.playground-control svg {
-  width: 20px;
-  height: 20px;
-}
-
 /* Toast feedback */
-.toast-feedback {
+.demo-toast {
   position: fixed;
   bottom: 5rem;
   right: 1.5rem;
@@ -339,7 +571,7 @@ body {
   z-index: 1100;
 }
 
-.toast-feedback.show {
+.demo-toast.open {
   opacity: 1;
   transform: translateY(0);
 }
@@ -461,4 +693,52 @@ body {
   opacity: 0.5;
   user-select: none;
   font-weight: 500;
+}
+
+/* Family switcher, result count, and family metadata badges */
+.toolbar-fields {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.toolbar-fields .select {
+  flex: 0 0 auto;
+  max-width: 16rem;
+}
+
+.icon-card .icon-preview i {
+  display: block;
+}
+
+@media (max-width: 40rem) {
+  .toolbar-fields {
+    flex-wrap: wrap;
+  }
+
+  .toolbar-fields .select,
+  .search-input-wrapper {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .icon-modal {
+    max-width: 440px;
+  }
+
+  .modal-columns {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .modal-info {
+    align-items: center;
+    text-align: center;
+  }
+
+  .modal-meta {
+    justify-content: center;
+  }
 }

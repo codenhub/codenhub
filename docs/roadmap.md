@@ -33,10 +33,12 @@ deferred work; this entry tracks only where the package sits.
 - [x] Icon registry, SVG scanner module & CSS mask generator
 - [x] PostCSS & Vite build plugins (`/postcss`, `/vite`)
 - [x] Add simple mask-image helper for maximum compatibility with other packages
+- [x] Registry improvement and stabilization
+- [x] Registry population
+- [x] Dynamic icon bundle optimization
 - [ ] Playground and demo polish
-- [ ] Registry improvement and stabilization
-- [ ] Registry population
-- [ ] Dynamic icon bundle optimization
+- [ ] Searchable icon catalog in the documentation site
+- [ ] First-party family owning the semantic names
 
 ### @codenhub/i18n
 

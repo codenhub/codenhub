@@ -1,128 +1,183 @@
 import { describe, expect, it } from "vitest";
 
-import { IconRegistry } from "../registry/registry.js";
+import { IconRegistry } from "../core/registry.js";
+import type { IconFamilyData } from "../core/types.js";
 import {
+  escapeSelectorClass,
   generateBaseCss,
   generateIconCss,
   generateIconSetCss,
   getIconCssProps,
   getIconMaskUrl,
 } from "./css-generator.js";
-import { svgToDataUri } from "./svg-encoder.js";
 
-describe("svgToDataUri", () => {
-  it("should convert SVG to UTF-8 data URI", () => {
-    const svg = '<svg><path d="M12 2"/></svg>';
-    const uri = svgToDataUri(svg);
-    expect(uri).toContain("data:image/svg+xml;charset=utf-8,");
-    expect(uri).toContain("xmlns=%22http://www.w3.org/2000/svg%22");
-    expect(uri).not.toContain('"');
+function createQuillFamily(): IconFamilyData {
+  return {
+    aliases: { cancel: { parent: "x" } },
+    icons: {
+      heart: { body: '<g stroke-width="2"><path d="heart" /></g>' },
+      x: { body: '<g stroke-width="2"><path d="x" /></g>' },
+    },
+    info: {
+      attribution: "notice",
+      author: { name: "Quill Authors", url: "https://quill.test" },
+      license: { spdx: "ISC", title: "ISC License", url: "https://quill.test/license" },
+      name: "Quill Family",
+      strokeWidth: 2,
+      tier: "core",
+      total: 2,
+      upstream: { package: "quill-icons", version: "1.0.0" },
+    },
+    prefix: "quill",
+  };
+}
+
+function createFilledFamily(): IconFamilyData {
+  return {
+    icons: { star: { body: '<path fill="currentColor" d="star" />' } },
+    info: {
+      attribution: "none",
+      author: { name: "Filled Authors", url: "https://filled.test" },
+      license: { spdx: "CC0-1.0", title: "CC0 1.0", url: "https://filled.test/license" },
+      name: "Filled Family",
+      tier: "core",
+      total: 1,
+      upstream: { package: "filled-icons", version: "1.0.0" },
+    },
+    prefix: "filled",
+  };
+}
+
+function createRegistry(): IconRegistry {
+  const registry = new IconRegistry({ defaultPrefix: "quill" });
+  registry.registerFamily(createQuillFamily());
+  registry.registerFamily(createFilledFamily());
+  return registry;
+}
+
+describe("generateBaseCss", () => {
+  it("covers standalone elements, pseudo-elements, and form controls", () => {
+    const css = generateBaseCss();
+
+    expect(css).toContain('i[class^="ic-"]');
+    expect(css).toContain(".ic-after::after");
+    expect(css).toContain('input[class^="ic-"]');
   });
 
-  it("encodes SVG string with hex colors and removes linebreaks", () => {
-    const rawSvg = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
-        <circle cx="12" cy="12" r="10" fill="#ff0000"/>
-      </svg>
-    `;
-    const uri = svgToDataUri(rawSvg);
-
-    expect(uri).toContain("data:image/svg+xml;charset=utf-8,");
-    expect(uri.match(/xmlns/g)?.length).toBe(1);
-    expect(uri).toContain("%23ff0000");
-    expect(uri).not.toContain("\n");
+  it("honors a custom class prefix", () => {
+    expect(generateBaseCss({ prefix: "ux" })).toContain('i[class^="ux-"]');
   });
 });
 
-describe("css-generator", () => {
-  it("should generate base CSS with default prefix", () => {
-    const css = generateBaseCss();
-    expect(css).toContain('i[class^="ic-"],');
-    expect(css).toContain(".ic {");
-    expect(css).toContain("mask-image: var(--ic-mask);");
-    expect(css).toContain("background-color: var(--ic-color, currentColor);");
-    expect(css).toContain("::before {");
-    expect(css).toContain(".ic-after::after");
-    expect(css).toContain('input[class^="ic-"],');
-    expect(css).toContain("background-image: var(--ic-uri);");
-  });
+describe("generateIconCss", () => {
+  it("emits the mask custom properties for one selector", () => {
+    const css = generateIconCss(".ic-x", "<svg></svg>");
 
-  it("should generate base CSS with custom prefix", () => {
-    const css = generateBaseCss({ prefix: "icon" });
-    expect(css).toContain('i[class^="icon-"],');
-    expect(css).toContain(".icon {");
-    expect(css).toContain("mask-image: var(--icon-mask);");
-    expect(css).toContain("background-image: var(--icon-uri);");
-  });
-
-  it("should generate icon CSS with custom properties for single selector", () => {
-    const css = generateIconCss(".ic-close", "<svg></svg>");
-    expect(css).toContain(".ic-close {");
-    expect(css).toContain("--ic-uri: url(");
+    expect(css).toContain(".ic-x {");
+    expect(css).toContain('--ic-uri: url("data:image/svg+xml;charset=utf-8,');
     expect(css).toContain("--ic-mask: var(--ic-uri);");
   });
 
-  it("should generate icon CSS for multiple selectors", () => {
-    const css = generateIconCss([".ic-close", ".ic-x"], "<svg></svg>");
-    expect(css).toContain(".ic-close,\n.ic-x {");
-    expect(css).toContain("--ic-uri: url(");
+  it("groups several selectors on one rule", () => {
+    expect(generateIconCss([".ic-x", ".ic-cancel"], "<svg></svg>")).toContain(".ic-x,\n.ic-cancel {");
+  });
+});
+
+describe("escapeSelectorClass", () => {
+  it("escapes the dot in a fractional stroke class", () => {
+    expect(escapeSelectorClass("ic-stroke-1.5")).toBe("ic-stroke-1\\.5");
+  });
+});
+
+describe("generateIconSetCss", () => {
+  it("generates a rule for each resolved class and reports the families used", () => {
+    const { css, families } = generateIconSetCss(["ic-heart", "ic-filled-star"], createRegistry());
+
+    expect(css).toContain(".ic-heart {");
+    expect(css).toContain(".ic-filled-star {");
+    expect(families.map(({ prefix }) => prefix)).toEqual(["filled", "quill"]);
   });
 
-  it("should generate combined icon set CSS grouping duplicate SVGs", () => {
-    const registry = new IconRegistry();
-    const svg1 = '<svg><path d="1"/></svg>';
-    registry.registerIcon("home", svg1);
-    registry.registerIcon("main", svg1);
-    registry.registerIcon("user", '<svg><path d="2"/></svg>');
+  it("skips classes that resolve to no icon", () => {
+    const { css, families } = generateIconSetCss(["ic-absent"], createRegistry());
 
-    const css = generateIconSetCss(["ic-home", "ic-main", "ic-user"], registry);
-    expect(css).toContain(".ic {");
-    expect(css).toContain(".ic-home,\n.ic-main {");
-    expect(css).toContain(".ic-user {");
-    expect(css).toContain("--ic-uri: url(");
+    expect(css).not.toContain(".ic-absent");
+    expect(families).toEqual([]);
   });
 
-  it("should generate custom global stroke width CSS", () => {
-    const registry = new IconRegistry();
-    registry.registerIcon("home", '<svg stroke-width="2"><path d="1"/></svg>');
-    const css = generateIconSetCss(["ic-home"], registry, { strokeWidth: 1.5 });
-    expect(css).toContain("stroke-width=%221.5%22");
-    expect(css).not.toContain("stroke-width=%222%22");
+  it("ignores classes that do not carry the icon prefix", () => {
+    const { css } = generateIconSetCss(["btn-primary"], createRegistry());
+
+    expect(css).toBe(generateBaseCss());
   });
 
-  it("should generate combined rules for per-icon stroke override classes", () => {
-    const registry = new IconRegistry();
-    registry.registerIcon("home", '<svg stroke-width="2"><path d="1"/></svg>');
-    registry.registerIcon("static", {
-      svg: '<svg stroke-width="2"><path d="2"/></svg>',
-      strokeConfigurable: false,
-    });
+  it("groups an alias and its parent into one rule", () => {
+    const { css } = generateIconSetCss(["ic-quill-x", "ic-quill-cancel"], createRegistry());
 
-    const css = generateIconSetCss(["ic-home", "ic-static", "ic-stroke-1.5", "ic-stroke-3"], registry);
-
-    expect(css).toContain(".ic-home.ic-stroke-1\\.5 {");
-    expect(css).toContain(".ic-home.ic-stroke-3 {");
-    expect(css).toContain("stroke-width=%221.5%22");
-    expect(css).toContain("stroke-width=%223%22");
-
-    expect(css).not.toContain(".ic-static.ic-stroke-1\\.5 {");
-    expect(css).not.toContain(".ic-static.ic-stroke-3 {");
+    expect(css).toContain(".ic-quill-x,\n.ic-quill-cancel {");
   });
 
-  it("should provide getIconMaskUrl and getIconCssProps helpers", () => {
-    const registry = new IconRegistry();
-    const svg = '<svg stroke-width="2"><path d="1"/></svg>';
-    registry.registerIcon("check", svg);
+  it("emits a combined rule for each scanned stroke width", () => {
+    const { css } = generateIconSetCss(["ic-heart", "ic-stroke-1.5"], createRegistry());
 
-    const maskUrlFromSvg = getIconMaskUrl(svg);
-    expect(maskUrlFromSvg).toContain('url("data:image/svg+xml');
+    expect(css).toContain(".ic-heart.ic-stroke-1\\.5 {");
+  });
 
-    const maskUrlFromName = getIconMaskUrl("check", registry, { strokeWidth: 3 });
-    expect(maskUrlFromName).toContain("stroke-width=%223%22");
+  it("does not emit stroke rules for a family drawn as filled paths", () => {
+    const { css } = generateIconSetCss(["ic-filled-star", "ic-stroke-1.5"], createRegistry());
 
-    const cssProps = getIconCssProps("check", registry);
-    expect(cssProps).toBeDefined();
-    expect(cssProps?.["--ic-uri"]).toContain('url("data:image/svg+xml');
-    expect(cssProps?.["--ic-mask"]).toBe("var(--ic-uri)");
+    expect(css).not.toContain(".ic-filled-star.ic-stroke-1\\.5");
+  });
+
+  it("omits the base rules when they are not wanted", () => {
+    const { css } = generateIconSetCss(["ic-heart"], createRegistry(), { injectBase: false });
+
+    expect(css).not.toContain('i[class^="ic-"]');
+    expect(css).toContain(".ic-heart {");
+  });
+
+  it("applies the requested strokeWidth to the base icon rule", () => {
+    const registry = createRegistry();
+    const atOne = generateIconSetCss(["ic-heart"], registry, { strokeWidth: 1 });
+    const atThree = generateIconSetCss(["ic-heart"], registry, { strokeWidth: 3 });
+
+    expect(atOne.css).not.toBe(atThree.css);
+  });
+});
+
+describe("getIconMaskUrl", () => {
+  it("resolves a registered icon into a data URI", () => {
+    expect(getIconMaskUrl("heart", createRegistry())?.startsWith('url("data:image/svg+xml')).toBe(true);
+  });
+
+  it("encodes raw SVG markup without a registry", () => {
+    expect(getIconMaskUrl("<svg></svg>")).toBe(
+      'url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22%3E%3C/svg%3E")',
+    );
+  });
+
+  it("returns nothing for a name that resolves to no icon", () => {
+    expect(getIconMaskUrl("absent", createRegistry())).toBeUndefined();
+    expect(getIconMaskUrl("heart")).toBeUndefined();
+  });
+
+  it("differs when a different strokeWidth is requested", () => {
+    const registry = createRegistry();
+
+    expect(getIconMaskUrl("heart", registry, { strokeWidth: 1 })).not.toBe(
+      getIconMaskUrl("heart", registry, { strokeWidth: 3 }),
+    );
+  });
+});
+
+describe("getIconCssProps", () => {
+  it("returns the custom properties an inline style needs", () => {
+    const props = getIconCssProps("heart", createRegistry());
+
+    expect(Object.keys(props ?? {}).toSorted()).toEqual(["--ic-mask", "--ic-uri"]);
+  });
+
+  it("returns nothing for a name that resolves to no icon", () => {
+    expect(getIconCssProps("absent", createRegistry())).toBeUndefined();
   });
 });

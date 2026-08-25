@@ -1,10 +1,19 @@
 # @codenhub/icons
 
-> Icon registry, CSS mask generator, and scanner module for Codenhub icon system.
+> Zero-runtime icon system: icon classes in markup become CSS mask rules at build time, drawn from generated icon families that carry their own license notices.
 
-- Core API provides IconRegistry, Lucide provider integration, SVG mask generation, and static class scanning.
-- Framework integrations support Vite and PostCSS plugins.
+- An icon is `prefix:name`, written `ic-prefix-name` as a class. Unprefixed names resolve through a curated semantic map, then through the configured default prefix.
+- Families are data, imported from `@codenhub/icons/data/<prefix>` and passed to a plugin. Nothing is bundled by default.
+- Variants such as filled or duotone are separate families with their own prefixes, never options on one family.
+- Stroke width applies only to families drawn with strokes; filled families ignore it.
+- `stroke`, `after`, and `bg` are reserved words in the class syntax and cannot be family prefixes.
+- The build emits the license notices required by the families it used, controlled by the `attribution` option.
 
 ## Documentation
 
-- [Overview](docs/index.md): Package architecture, setup, and usage guidance.
+- [Overview](docs/index.md): families, name resolution, the Vite and PostCSS plugins, the JavaScript API, and licensing.
+- [README](README.md): purpose, installation, and the shortest working setup.
+
+## Optional
+
+- [NOTICE](NOTICE): third-party copyright and license notices for the bundled artwork.

@@ -1,4 +1,15 @@
-import { generateBaseCss, generateIconCss, getIconCssProps, getIconMaskUrl, registry } from "@codenhub/icons";
+import {
+  generateBaseCss,
+  generateIconCss,
+  getIconCssProps,
+  getIconMaskUrl,
+  IconRegistry,
+  renderSvg,
+} from "@codenhub/icons";
+import lucide from "@codenhub/icons/data/lucide";
+
+const registry = new IconRegistry({ defaultPrefix: lucide.prefix });
+registry.registerFamily(lucide);
 
 /**
  * Initializes icon CSS rules, theme toggle, and JS helper tests.
@@ -14,7 +25,7 @@ function initPlayground(): void {
   for (const name of testIcons) {
     const resolved = registry.resolve(name);
     if (resolved) {
-      cssChunks.push(generateIconCss([`.ic-${name}`], resolved.svg));
+      cssChunks.push(generateIconCss([`.ic-${name}`], renderSvg(resolved)));
     }
   }
 

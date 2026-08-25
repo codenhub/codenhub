@@ -1,9 +1,5 @@
 @import "@codenhub/styles/native";
 
-:root {
-  color-scheme: light dark;
-}
-
 body {
   margin: 0;
   padding: 2rem 1rem;
