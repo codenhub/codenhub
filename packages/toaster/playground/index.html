@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@codenhub/toaster Playground</title>
+    <!-- Inline FOUC script to set initial classes/attributes -->
+    <script>
+      (function () {
+        try {
+          const key = "playground-theme-pref";
+          const attribute = "data-theme";
+          let theme = "light";
+          if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+            theme = "dark";
+          }
+          const stored = localStorage.getItem(key);
+          if (stored === "dark" || stored === "light") {
+            theme = stored;
+          }
+          document.documentElement.setAttribute(attribute, theme);
+          const isDark = theme === "dark";
+          document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+          document.documentElement.classList.toggle("dark", isDark);
+        } catch (_) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./index.ts"></script>
+  </head>
+  <body>
+    <div class="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-8">
+      <h1>Toast Playground</h1>
+
+      <main class="flex flex-col gap-8">
+        <!-- Toast Configuration Options -->
+        <section class="flex flex-col gap-4">
+          <h2>1. Dispatch Options</h2>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="select-position">Position</label>
+              <select id="select-position">
+                <option value="top-right">Top Right</option>
+                <option value="top-left">Top Left</option>
+                <option value="bottom-right" selected>Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="select-appearance">Appearance</label>
+              <select id="select-appearance">
+                <option value="flat">Flat</option>
+                <option value="soft">Soft</option>
+                <option value="soft-bordered" selected>Soft Bordered</option>
+                <option value="left-accent">Left Accent</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-text-secondary text-xs font-semibold" for="input-duration">Duration (ms)</label>
+              <input type="number" id="input-duration" value="4000" />
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-4 pt-2">
+            <label class="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" id="check-auto-dismiss" checked />
+              <span>Auto Dismiss</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm font-medium">
+              <input type="checkbox" id="check-dismissable" checked />
+              <span>Dismiss Button</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Semantic & Custom Triggers -->
+        <section class="flex flex-col gap-4">
+          <h2>2. Triggers</h2>
+
+          <div class="flex flex-col gap-2">
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">Semantic Notifications</span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-success" class="btn success sm">Success Toast</button>
+              <button id="btn-error" class="btn destructive sm">Error Toast</button>
+              <button id="btn-warning" class="btn warning sm">Warning Toast</button>
+              <button id="btn-info" class="btn primary sm">Info Toast</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">
+              Interactive Dialogs (Promise-based)
+            </span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-alert" class="btn out sm">Alert Dialog</button>
+              <button id="btn-confirm" class="btn out sm">Confirm Dialog</button>
+              <button id="btn-prompt" class="btn out sm">Prompt Dialog</button>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-2 pt-2">
+            <span class="text-text-secondary text-xs font-bold tracking-wider uppercase">Async Loaders</span>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-loading" class="btn secondary sm">Show Persistent Loader</button>
+              <button id="btn-loading-sim" class="btn primary sm">Simulate Async Work (2s)</button>
+              <button id="btn-clear-all" class="btn out sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20">
+                Clear All Toasts
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Theme Toggle Floating Button -->
+    <div
+      style="
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        display: inline-flex;
+        gap: 0.5rem;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <button
+        id="btn-toggle-theme"
+        class="tooltip"
+        data-tooltip="Toggle theme"
+        data-tooltip-position="left"
+        style="
+          height: 2.5rem;
+          width: 2.5rem;
+          padding: 0.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-surface);
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--color-text);
+          border: 1px solid var(--color-border);
+        "
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          style="width: 100%; height: 100%"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
+        </svg>
+      </button>
+    </div>
+  </body>
+</html>

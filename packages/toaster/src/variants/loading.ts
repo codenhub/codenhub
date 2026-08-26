@@ -1,0 +1,30 @@
+import { TOAST_SHAPE_CLASS } from "../options";
+import type { ResolvedToastConfig } from "../options";
+import { Toast } from "../toast-base";
+import type { LoadingToastOptions } from "../types";
+
+const LOADING_ROOT_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
+
+/**
+ * Toast variant for progress/loading status alerts.
+ * By default, loading toasts are not auto-dismissed.
+ */
+export class LoadingToast extends Toast {
+  protected static override getPresetOptions() {
+    return {
+      shouldAutoDismiss: false,
+      icon: "loader",
+      role: "status",
+      rootClassName: LOADING_ROOT_CLASS,
+    } as const;
+  }
+
+  /**
+   * Constructs a new LoadingToast instance.
+   *
+   * @param params Parameter object containing options, config, and parent.
+   */
+  public constructor(params: { options: LoadingToastOptions; config: ResolvedToastConfig; parent: HTMLElement }) {
+    super(params);
+  }
+}

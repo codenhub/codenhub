@@ -1,0 +1,75 @@
+{
+  "name": "@codenhub/toaster",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/toaster",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/toaster"
+  },
+  "files": [
+    "dist",
+    "NOTICE",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles": "./dist/styles/index.css"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "pnpm --filter=@codenhub/toaster-dev dev",
+    "debug": "pnpm build && pnpm --filter=@codenhub/toaster-debug dev",
+    "build": "pnpm build:scripts && pnpm build:styles",
+    "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
+    "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/toaster version dist-tags time --json && npm dist-tag ls @codenhub/toaster && npm access get status @codenhub/toaster",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@codenhub/styles": "workspace:*",
+    "@playwright/test": "catalog:",
+    "@tailwindcss/cli": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "jsdom": "catalog:",
+    "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@codenhub/styles": ">=0.0.4"
+  },
+  "peerDependenciesMeta": {
+    "@codenhub/styles": {
+      "optional": true
+    }
+  },
+  "codenhub": {
+    "docs": {
+      "label": "Toaster",
+      "status": "experimental"
+    }
+  }
+}

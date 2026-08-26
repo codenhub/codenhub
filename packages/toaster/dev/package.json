@@ -1,0 +1,16 @@
+{
+  "name": "@codenhub/toaster-dev",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite"
+  },
+  "devDependencies": {
+    "@codenhub/styles": "workspace:*",
+    "@codenhub/toaster": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
+    "vite": "catalog:"
+  }
+}
