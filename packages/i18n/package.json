@@ -59,7 +59,7 @@
   },
   "codenhub": {
     "docs": {
-      "label": "Internationalization",
+      "label": "i18n",
       "status": "experimental"
     }
   }
