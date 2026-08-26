@@ -46,7 +46,7 @@ deferred work; this entry tracks only where the package sits.
 - [x] Browser & locale-path routing subpath exports (`/browser`, `/routing`)
 - [ ] Pluralization & ICU formatting extensions
 
-### @codenhub/toast
+### @codenhub/toaster
 
 - [x] Instance-based toast & native dialog manager
 - [x] Playwright integration tests & default stylesheet (`/styles`)
