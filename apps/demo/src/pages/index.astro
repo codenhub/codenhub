@@ -1,0 +1,29 @@
+---
+import BaseLayout from "../layouts/base-layout.astro";
+import { demoPackages } from "../lib/catalog";
+import { siteConfig } from "../site-config";
+---
+
+<BaseLayout>
+  <main class="demo-main" id="main-content">
+    <section class="demo-hero stack">
+      <h1>{siteConfig.title}</h1>
+      <p class="demo-lede">{siteConfig.description}</p>
+    </section>
+
+    {
+      demoPackages.length === 0 ? (
+        <p class="demo-empty">No package demos are published yet.</p>
+      ) : (
+        <div class="demo-grid auto-grid" role="list">
+          {demoPackages.map((demoPackage) => (
+            <a class="card demo-card" href={`/demo/${demoPackage.slug}/`} role="listitem">
+              <h2>{demoPackage.label}</h2>
+              <p>Open the {demoPackage.label} demo</p>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </main>
+</BaseLayout>

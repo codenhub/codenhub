@@ -9,6 +9,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 ### Applications
 
 - `apps/debug`: Private local debug workspace to run, test, and verify packages in integration.
+- `apps/demo`: Deployed app aggregating every package's demo/ output into one surface.
 - `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
 
 ### Libraries & Primitives

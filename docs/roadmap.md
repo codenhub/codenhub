@@ -75,11 +75,13 @@ deferred work; this entry tracks only where the package sits.
 
 ### @codenhub/demo
 
-- [ ] Shared, deployed app aggregating every package's `demo/` output —
-      general contract in `docs/specs/packages-demo.md`, this app's own
-      architecture in `apps/demo/docs/internal/architecture.md`
+- [x] `apps/demo` shell and build pipeline aggregating every package's
+      `demo/` output into `dist/demo/<package>/` — general contract in
+      `docs/specs/packages-demo.md`, this app's own architecture in
+      `apps/demo/docs/internal/architecture.md`
 - [ ] Second Cloudflare Workers Builds project, connected from the dashboard
-      like `apps/docs`'s, with its own watch-path excludes
+      like `apps/docs`'s, with its own watch-path excludes, so the app above
+      is actually deployed
 - [x] Migrate `apps/docs` and `packages/icons/demo` off hand-duplicated
       `favicon.ico`/`logo-*.svg` onto the shared `assets/` build-time copy
       step `docs/specs/packages-demo.md` defines
