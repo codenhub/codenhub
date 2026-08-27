@@ -8,7 +8,10 @@ describe("Astro configuration", () => {
     expect(config.site).toBe(siteConfig.baseUrl);
   });
 
-  it("installs the package demo aggregation integration", () => {
-    expect(config.integrations).toEqual([expect.objectContaining({ name: "codenhub-package-demos" })]);
+  it("installs the package demo aggregation integrations", () => {
+    expect(config.integrations).toEqual([
+      expect.objectContaining({ name: "codenhub-package-demos" }),
+      expect.objectContaining({ name: "codenhub-package-demos-dev-proxy" }),
+    ]);
   });
 });

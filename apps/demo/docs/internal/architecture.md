@@ -42,7 +42,7 @@ instead, outside that bundle, so it uses `readdirSync` directly.
   and a display `label` derived from its manifest `name`.
 - `src/lib/demo-integration.ts` re-discovers the same directories with
   `readdirSync`, at `astro:build:done`, and copies each one's `dist/` into
-  `apps/demo/dist/demo/<slug>/`. It fails the build if a discovered demo has
+  `apps/demo/dist/<slug>/`. It fails the build if a discovered demo has
   no built `dist/` yet, rather than silently mounting a stale or missing
   one.
 
@@ -55,6 +55,22 @@ still means adding one line to `apps/demo/package.json`, which is what lets
 `hub`'s dependency-level build ordering (`docs/tooling.md`, "Execution
 order") build that demo, and the package it demonstrates, before `apps/demo`
 builds.
+
+## Dev mode
+
+`astro:build:done` only fires on `astro build`, so the copy step above has no
+dev-mode equivalent — `astro dev` cannot serve output that does not exist
+yet. `src/lib/demo-dev-server.ts` and `src/lib/dev-proxy-integration.ts` give
+`pnpm dev` its own path to the same result: at `astro:config:setup`, when the
+Astro command is `dev`, the integration discovers the same
+`packages/*/demo` directories, starts each one's own `dev` script with its
+Vite `--base` flag set to `/<slug>/`, reads the port it reports listening on
+from its stdout, and registers a Vite dev-server proxy from `/<slug>` to
+that port. A demo keeps its own dev server's hot reload; the aggregator only
+routes to it. A demo whose dev server fails to start is skipped with a
+warning rather than failing `apps/demo`'s own dev server — that demo's path
+serves a 404 until its dev server can start, the same as before this
+integration existed.
 
 ## CI and deployment
 
