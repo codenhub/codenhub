@@ -1,7 +1,7 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
-scope: Optional workspace package development and consumer-debug workflows.
+last_updated: 2026-08-27
+scope: Optional workspace package development, consumer-debug, and deployable demo workflows.
 ---
 
 # Package development spec
@@ -20,6 +20,8 @@ Use this workflow when a package needs one or more of these:
 - Manual or exploratory debugging with real package imports.
 - Pre-ship confidence that public imports and bundled output behave like consumer code expects.
 - Separate local environments for different runtimes or dependency sets.
+- A real, deployed surface that lets people try the package in a browser,
+  aggregated by a shared demo app; see `docs/specs/packages-demo.md`.
 
 ## Directory Roles
 
@@ -32,11 +34,13 @@ packages/example/
   debug/package.json
   debug/node/package.json
   debug/cf/package.json
+  demo/package.json
 ```
 
 - `playground`: Shared real-usage scenario source. This is leaf code, not a workspace package. It imports the package like a consumer, for example `import { createStore } from "@codenhub/store";`, then runs realistic use cases.
 - `dev`: Private workspace package or app that runs playground scenarios against live package source from `src/` for fast iteration.
 - `debug`: Private workspace package or app that runs playground scenarios through package public exports and built output before shipping.
+- `demo`: Private workspace package that runs playground scenarios through package public exports and built output as a real, deployable app. A shared demo app aggregates every package's `demo` output into one deployed surface rather than one deployment per package; see `docs/specs/packages-demo.md` for the contract it expects from `demo`.
 - `tests`: Automated unit, integration, end-to-end, and visual tests. Follow `docs/specs/tests.md` for automated test placement and execution.
 
 `dev` and `debug` may be one level deeper when dependency sets or runtimes need separation, such as `packages/example/debug/node/package.json` and `packages/example/debug/cf/package.json`.
@@ -66,13 +70,15 @@ Environment-specific setup belongs in `dev` or `debug`. The scenario should stay
 
 Until every relevant package is published or external package installs are practical, `debug` MAY depend on the package under inspection with `workspace:*`. This is acceptable only when `debug` still resolves through package public exports and built output. Build the package before running `debug` when its exports point to `dist`.
 
+`demo` follows the same rule as `debug` and for the same reason: it MUST NOT resolve the package under inspection to source files. `debug` stays local, but `demo` output can be deployed publicly by `apps/demo`, so a demo silently running against `src/` would show a consumer a package that does not exist yet. `demo` MAY depend on the package under inspection with `workspace:*` under the same interim allowance as `debug`, and MUST build the package before running or building `demo` when its exports point to `dist`.
+
 ## Workspace Matching
 
 Repository workspace globs include package-local `dev` and `debug` environments at these depths:
 
 ```text
-packages/*/{dev,debug}/package.json
-packages/*/{dev,debug}/*/package.json
+packages/*/{dev,debug,demo}/package.json
+packages/*/{dev,debug,demo}/*/package.json
 packages/plugins/**
 ```
 
