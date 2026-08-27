@@ -43,6 +43,16 @@ function getAssetEntry(value: unknown, index: number, manifestPath: string): Ass
   };
 }
 
+function checkNoDuplicateDestinations(entries: readonly AssetEntry[], manifestPath: string): void {
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (seen.has(entry.to)) {
+      throw new Error(`Invalid codenhub.assets in ${manifestPath}: "to": "${entry.to}" is declared more than once.`);
+    }
+    seen.add(entry.to);
+  }
+}
+
 /**
  * Reads the `codenhub.assets` entries a package declares.
  *
@@ -51,7 +61,8 @@ function getAssetEntry(value: unknown, index: number, manifestPath: string): Ass
  * @param value Parsed package manifest.
  * @param manifestPath Manifest path used in error messages.
  * @returns Declared entries, or an empty array when the package declares none.
- * @throws When `codenhub.assets` is present but malformed.
+ * @throws When `codenhub.assets` is present but malformed, or when two entries
+ * declare the same `to` — copying both would race for the same destination.
  */
 export function parseAssetEntries(value: unknown, manifestPath: string): AssetEntry[] {
   if (!isRecord(value)) {
@@ -67,5 +78,7 @@ export function parseAssetEntries(value: unknown, manifestPath: string): AssetEn
     throw new Error(`Invalid codenhub.assets in ${manifestPath}: expected an array.`);
   }
 
-  return assets.map((entry, index) => getAssetEntry(entry, index, manifestPath));
+  const entries = assets.map((entry, index) => getAssetEntry(entry, index, manifestPath));
+  checkNoDuplicateDestinations(entries, manifestPath);
+  return entries;
 }

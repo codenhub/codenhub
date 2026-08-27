@@ -57,4 +57,16 @@ describe("parseAssetEntries", () => {
     const manifest = { codenhub: { assets: [{ from: "favicon\\favicon.ico", to: "public/favicon.ico" }] } };
     expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/forward slashes/);
   });
+
+  it("shouldRejectTwoEntriesDeclaringTheSameTo", () => {
+    const manifest = {
+      codenhub: {
+        assets: [
+          { from: "favicon/favicon-32.ico", to: "public/favicon.ico" },
+          { from: "favicon/favicon-64.ico", to: "public/favicon.ico" },
+        ],
+      },
+    };
+    expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/declared more than once/);
+  });
 });
