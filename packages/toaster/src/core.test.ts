@@ -641,7 +641,7 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     toaster.destroy();
   });
 
-  it("should render title in interactive dialogs when provided", () => {
+  it("should render title in interactive dialogs when provided", async () => {
     const toaster = createToaster();
 
     const h1 = toaster.interactive.confirm("Message 1", { title: "Title 1" });
@@ -649,12 +649,14 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 1");
     h1.dismiss();
+    await h1.settled;
 
     const h2 = toaster.interactive.prompt("Message 2", { title: "Title 2" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 2");
     h2.dismiss();
+    await h2.settled;
 
     const h3 = toaster.interactive.alert("Message 3", { title: "Title 3" });
     titleEl = document.body.querySelector(".toast-dialog-title");

@@ -113,7 +113,7 @@ Branded and neutral packages will use different words by design, but the
 resolved display name should still render consistently everywhere it
 appears. The shape:
 
-```
+```text
 <Name>, <one-line functional description using the naming vocabulary>.
 ```
 
