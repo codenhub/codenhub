@@ -6,12 +6,12 @@ export default defineConfig({
   reporter: "list",
   webServer: [
     {
-      command: "pnpm --filter=@codenhub/toast-dev dev",
+      command: "pnpm --filter=@codenhub/toaster-dev dev",
       url: "http://localhost:5189",
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: "pnpm --filter=@codenhub/toast-debug dev",
+      command: "pnpm --filter=@codenhub/toaster-debug dev",
       url: "http://localhost:5190",
       reuseExistingServer: !process.env.CI,
     },

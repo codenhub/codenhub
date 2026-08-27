@@ -619,7 +619,7 @@ importers:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
-  packages/toast:
+  packages/toaster:
     devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
@@ -649,12 +649,12 @@ importers:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
-  packages/toast/debug:
+  packages/toaster/debug:
     devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
-      '@codenhub/toast':
+      '@codenhub/toaster':
         specifier: workspace:*
         version: link:..
       '@tailwindcss/vite':
@@ -667,12 +667,12 @@ importers:
         specifier: 'catalog:'
         version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
 
-  packages/toast/dev:
+  packages/toaster/dev:
     devDependencies:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles
-      '@codenhub/toast':
+      '@codenhub/toaster':
         specifier: workspace:*
         version: link:..
       '@tailwindcss/vite':

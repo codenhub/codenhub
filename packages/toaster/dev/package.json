@@ -1,5 +1,5 @@
 {
-  "name": "@codenhub/toast-debug",
+  "name": "@codenhub/toaster-dev",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@codenhub/styles": "workspace:*",
-    "@codenhub/toast": "workspace:*",
+    "@codenhub/toaster": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:"

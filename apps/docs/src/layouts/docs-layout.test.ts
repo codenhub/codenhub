@@ -19,7 +19,7 @@ describe("documentation chrome", () => {
   it("includes the package label in package document browser titles", async () => {
     const html = await readOutput("error/index.html");
 
-    expect(html).toContain("<title>Overview | Error | CodenHub</title>");
+    expect(html).toContain("<title>Overview | ErrorKit | CodenHub</title>");
   });
 
   it("renders the authored Markdown heading without injecting the frontmatter title", async () => {
@@ -43,9 +43,7 @@ describe("documentation chrome", () => {
     const html = await readOutput("i18n/index.html");
     // The badge renders as an icon, so its accessible name is what carries the
     // status to a screen reader and is what this asserts.
-    const chromeLabels = html.match(
-      /class="package-navigation-title"[^>]*>.*?Internationalization.*?Experimental.*?<\/div>/g,
-    );
+    const chromeLabels = html.match(/class="package-navigation-title"[^>]*>.*?i18n.*?Experimental.*?<\/div>/g);
 
     expect(chromeLabels).toHaveLength(2);
     expect(html).toContain('<span class="sr-only">Experimental</span>');

@@ -1,14 +1,14 @@
 {
-  "name": "@codenhub/toast",
+  "name": "@codenhub/toaster",
   "version": "0.0.1",
   "private": false,
   "description": "Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.",
-  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/toast",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/toaster",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/codenhub/codenhub.git",
-    "directory": "packages/toast"
+    "directory": "packages/toaster"
   },
   "files": [
     "dist",
@@ -32,13 +32,13 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "pnpm --filter=@codenhub/toast-dev dev",
-    "debug": "pnpm build && pnpm --filter=@codenhub/toast-debug dev",
+    "dev": "pnpm --filter=@codenhub/toaster-dev dev",
+    "debug": "pnpm build && pnpm --filter=@codenhub/toaster-debug dev",
     "build": "pnpm build:scripts && pnpm build:styles",
     "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
     "prepublishOnly": "pnpm build && pnpm typecheck",
-    "status:npm": "npm view @codenhub/toast version dist-tags time --json && npm dist-tag ls @codenhub/toast && npm access get status @codenhub/toast",
+    "status:npm": "npm view @codenhub/toaster version dist-tags time --json && npm dist-tag ls @codenhub/toaster && npm access get status @codenhub/toaster",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
     "test:browser": "playwright test",
@@ -68,7 +68,7 @@
   },
   "codenhub": {
     "docs": {
-      "label": "Toast",
+      "label": "Toaster",
       "status": "experimental"
     }
   }

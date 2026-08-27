@@ -1,9 +1,9 @@
-# @codenhub/toast
+# @codenhub/toaster
 
 > Experimental instance-based browser toasts and native dialogs with required
 > CSS, isolated DOM/queues/tokens, and explicit lifecycle handles.
 
-Import `@codenhub/toast/styles`, dispatch only in a browser, treat custom nodes
+Import `@codenhub/toaster/styles`, dispatch only in a browser, treat custom nodes
 as trusted content, and call `destroy()` to release all owned resources.
 
 ## Documentation

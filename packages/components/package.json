@@ -91,7 +91,7 @@
   },
   "codenhub": {
     "docs": {
-      "label": "Components",
+      "label": "ComponentSystem",
       "status": "experimental",
       "listed": false
     }

@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-// Shared Vitest test utilities for @codenhub/toast.
+// Shared Vitest test utilities for @codenhub/toaster.
 export interface MockAnimation {
   onfinish: (() => void) | null;
   oncancel: (() => void) | null;

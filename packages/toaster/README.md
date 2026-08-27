@@ -1,4 +1,4 @@
-# @codenhub/toast
+# @codenhub/toaster
 
 Instance-based browser toasts and native interactive dialogs with isolated DOM,
 configuration, queues, and token styles.
@@ -10,7 +10,7 @@ configuration, queues, and token styles.
 ## Installation
 
 ```sh
-pnpm add @codenhub/toast
+pnpm add @codenhub/toaster
 ```
 
 ## Usage
@@ -18,8 +18,8 @@ pnpm add @codenhub/toast
 Import the required stylesheet once in the browser entrypoint.
 
 ```ts
-import { createToaster } from "@codenhub/toast";
-import "@codenhub/toast/styles";
+import { createToaster } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
 
 const toaster = createToaster();
 const saving = toaster.loading.show({ message: "Saving..." });
@@ -40,7 +40,7 @@ toaster.destroy();
 
 ## Requirements
 
-- Rendering requires a browser DOM and `@codenhub/toast/styles`.
+- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
 - Interactive APIs require native `<dialog>` support. Construction is SSR-safe,
   but rendering operations throw without a document.
 - `@codenhub/styles >=0.0.4` is an optional peer; standalone fallback colors are

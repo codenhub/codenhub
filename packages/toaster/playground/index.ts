@@ -1,5 +1,5 @@
-import { createToaster } from "@codenhub/toast";
-import type { ToastPosition, ToastAppearance } from "@codenhub/toast";
+import { createToaster } from "@codenhub/toaster";
+import type { ToastPosition, ToastAppearance } from "@codenhub/toaster";
 
 const toaster = createToaster();
 

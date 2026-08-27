@@ -1,4 +1,4 @@
-/* @codenhub/toast consumer stylesheet. Every element selector is instance-scoped. */
+/* @codenhub/toaster consumer stylesheet. Every element selector is instance-scoped. */
 
 :where([data-toast-instance].coden-toast-stack) {
   position: fixed;

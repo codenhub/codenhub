@@ -1,6 +1,6 @@
 <!-- Source: README.md -->
 
-# @codenhub/toast
+# @codenhub/toaster
 
 Instance-based browser toasts and native interactive dialogs with isolated DOM,
 configuration, queues, and token styles.
@@ -12,7 +12,7 @@ configuration, queues, and token styles.
 ## Installation
 
 ```sh
-pnpm add @codenhub/toast
+pnpm add @codenhub/toaster
 ```
 
 ## Usage
@@ -20,8 +20,8 @@ pnpm add @codenhub/toast
 Import the required stylesheet once in the browser entrypoint.
 
 ```ts
-import { createToaster } from "@codenhub/toast";
-import "@codenhub/toast/styles";
+import { createToaster } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
 
 const toaster = createToaster();
 const saving = toaster.loading.show({ message: "Saving..." });
@@ -42,7 +42,7 @@ toaster.destroy();
 
 ## Requirements
 
-- Rendering requires a browser DOM and `@codenhub/toast/styles`.
+- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
 - Interactive APIs require native `<dialog>` support. Construction is SSR-safe,
   but rendering operations throw without a document.
 - `@codenhub/styles >=0.0.4` is an optional peer; standalone fallback colors are
@@ -63,7 +63,7 @@ Bundled Lucide SVG icons use the ISC License. See [NOTICE](NOTICE).
 
 # Show toasts and dialogs
 
-`@codenhub/toast` creates isolated managers for semantic, loading, and custom
+`@codenhub/toaster` creates isolated managers for semantic, loading, and custom
 browser toasts plus native confirm, prompt, and alert dialogs. Each manager owns
 its stacks, queues, DOM, timers, listeners, and token stylesheet.
 
@@ -72,7 +72,7 @@ its stacks, queues, DOM, timers, listeners, and token stylesheet.
 ### Installation
 
 ```sh
-pnpm add @codenhub/toast
+pnpm add @codenhub/toaster
 ```
 
 ### Quick start
@@ -80,8 +80,8 @@ pnpm add @codenhub/toast
 Import the required global stylesheet once in the browser entrypoint:
 
 ```ts
-import { createToaster } from "@codenhub/toast";
-import "@codenhub/toast/styles";
+import { createToaster } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
 
 const toaster = createToaster();
 const saving = toaster.loading.show({ message: "Saving..." });
@@ -106,7 +106,7 @@ Configuration values are validated and invalid values throw synchronously.
 
 ## Requirements
 
-- Rendering requires a browser DOM and `@codenhub/toast/styles`.
+- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
 - Construction is SSR-safe unless initial tokens need the DOM. Rendering and
   DOM-dependent configuration throw without a document.
 - Interactive APIs require native `<dialog>` support. No polyfill or non-modal
@@ -172,8 +172,8 @@ as an explicit trusted-code boundary.
 
 ## Public Entrypoints
 
-- `@codenhub/toast` exports `createToaster` and all public types.
-- `@codenhub/toast/styles` exports required prebuilt CSS for layout, variants,
+- `@codenhub/toaster` exports `createToaster` and all public types.
+- `@codenhub/toaster/styles` exports required prebuilt CSS for layout, variants,
   dialogs, animation, and responsive behavior.
 
 Import the stylesheet once. The optional `@codenhub/styles >=0.0.4` peer can

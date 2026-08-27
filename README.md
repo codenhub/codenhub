@@ -23,7 +23,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
 - `packages/styles`: CSS-only Codenhub design tokens, base styles, and composable UI helper classes.
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
-- `packages/toast`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
+- `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
 - `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
 - `packages/validation`: Zero-dependency validation and primitive coercion helpers for TypeScript apps.
 

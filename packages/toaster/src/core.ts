@@ -224,8 +224,10 @@ class ToastManager implements Toaster {
       this.modalController = null;
     }
 
-    const parent = this.getParent();
-    removeInstanceContainers({ parent, instanceId: this.instanceId });
+    if (this.config.container || typeof document !== "undefined") {
+      const parent = this.getParent();
+      removeInstanceContainers({ parent, instanceId: this.instanceId });
+    }
     removeGlobalTokens(this.instanceId);
   }
 

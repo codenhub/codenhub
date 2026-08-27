@@ -4,7 +4,7 @@ title: Overview
 
 # Show toasts and dialogs
 
-`@codenhub/toast` creates isolated managers for semantic, loading, and custom
+`@codenhub/toaster` creates isolated managers for semantic, loading, and custom
 browser toasts plus native confirm, prompt, and alert dialogs. Each manager owns
 its stacks, queues, DOM, timers, listeners, and token stylesheet.
 
@@ -13,7 +13,7 @@ its stacks, queues, DOM, timers, listeners, and token stylesheet.
 ### Installation
 
 ```sh
-pnpm add @codenhub/toast
+pnpm add @codenhub/toaster
 ```
 
 ### Quick start
@@ -21,8 +21,8 @@ pnpm add @codenhub/toast
 Import the required global stylesheet once in the browser entrypoint:
 
 ```ts
-import { createToaster } from "@codenhub/toast";
-import "@codenhub/toast/styles";
+import { createToaster } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
 
 const toaster = createToaster();
 const saving = toaster.loading.show({ message: "Saving..." });
@@ -47,7 +47,7 @@ Configuration values are validated and invalid values throw synchronously.
 
 ## Requirements
 
-- Rendering requires a browser DOM and `@codenhub/toast/styles`.
+- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
 - Construction is SSR-safe unless initial tokens need the DOM. Rendering and
   DOM-dependent configuration throw without a document.
 - Interactive APIs require native `<dialog>` support. No polyfill or non-modal

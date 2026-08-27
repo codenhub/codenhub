@@ -6,8 +6,8 @@ title: Reference
 
 ## Public Entrypoints
 
-- `@codenhub/toast` exports `createToaster` and all public types.
-- `@codenhub/toast/styles` exports required prebuilt CSS for layout, variants,
+- `@codenhub/toaster` exports `createToaster` and all public types.
+- `@codenhub/toaster/styles` exports required prebuilt CSS for layout, variants,
   dialogs, animation, and responsive behavior.
 
 Import the stylesheet once. The optional `@codenhub/styles >=0.0.4` peer can
