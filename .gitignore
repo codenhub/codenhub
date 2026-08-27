@@ -24,10 +24,16 @@ playwright-report
 **/playwright-report
 **/tests/**/output.css
 
-# Build-time copies of root assets/
+# Build-time copies of root assets/ (docs/specs/packages-demo.md)
 /apps/docs/public/assets/
+/apps/docs/public/favicon.ico
+/apps/docs/.codenhub-assets.json
 /apps/demo/public/assets/
+/apps/demo/public/favicon.ico
+/apps/demo/.codenhub-assets.json
 /packages/*/demo/public/assets/
+/packages/*/demo/public/favicon.ico
+/packages/*/demo/.codenhub-assets.json
 
 # AI agents
 .agents

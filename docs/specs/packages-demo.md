@@ -45,11 +45,11 @@ it.
 
 ## URL scheme
 
-| Path                              | Owner                                                                   |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `{DEMO_BASE_URL}/`                | the aggregator's own shell: its index page, `robots.txt`, `sitemap.xml` |
-| `{DEMO_BASE_URL}/assets/`         | copied once from repository root `assets/` at build time                |
-| `{DEMO_BASE_URL}/demo/<package>/` | that package's own `demo/` build output, mounted verbatim               |
+| Path                                                        | Owner                                                                       |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `{DEMO_BASE_URL}/`                                          | the aggregator's own shell: its index page, `robots.txt`, `sitemap.xml`     |
+| `{DEMO_BASE_URL}/favicon.ico`, `{DEMO_BASE_URL}/assets/...` | `codenhub.assets` entries placed at build time, see "Assets boundary" below |
+| `{DEMO_BASE_URL}/demo/<package>/`                           | that package's own `demo/` build output, mounted verbatim                   |
 
 `robots.txt` and `sitemap.xml` belong to the aggregator's own root, not to
 any individual package demo, because the aggregator is the only place that
@@ -59,12 +59,33 @@ list.
 ## Assets boundary
 
 `assets/` (`docs/assets.md`) is Coden brand identity: logos, favicons,
-fonts. Every deployed surface under `apps/` — not only a demo aggregator —
-copies it into its own `dist/assets/` at build time rather than
-hand-maintaining a duplicate. The copy still exists once per deployed
-origin, since separate Cloudflare Workers on separate origins cannot share
-bytes at runtime, but it stops existing once per package. `assets/` stays
-the only place the files are committed.
+fonts. It only catalogs what each file is and how it is meant to be used —
+it says nothing about where a consumer places it, because a web app, a
+demo, and a future non-web consumer each have their own placement
+conventions.
+
+A package that needs one or more of these files declares exactly which
+ones, and exactly where, in its own `package.json`:
+
+```json
+"codenhub": {
+  "assets": [
+    { "from": "favicon/favicon.ico", "to": "public/favicon.ico" },
+    { "from": "logo/logo-dark.svg", "to": "public/assets/logo/logo-dark.svg" }
+  ]
+}
+```
+
+`from` is a path relative to root `assets/`; `to` is relative to the
+package's own directory and is entirely that package's decision — `hub`
+never assumes or derives it. `pnpm hub assets` (`docs/tooling.md`) is the
+one shared implementation every consumer reuses: it copies each declared
+`from` to its `to`, and removes a destination once its entry is dropped, so
+a consumer only ever ships the specific files it actually references rather
+than a verbatim copy of the whole `assets/` tree. `hub check` validates
+that every declared `from` still exists. `assets/` stays the only place the
+files are committed; `codenhub.assets` destinations are build output and
+stay out of git.
 
 A package's own `demo/public/` is for content specific to that one demo and
 nothing else: a fixture, a sample image the demo needs to illustrate the
@@ -72,14 +93,9 @@ package's own behavior. The test is whether deleting that demo would leave
 another surface wanting the file — if so, it belongs in `assets/`, not in
 that demo's `public/`.
 
-This also applies to `apps/docs`, which today hand-duplicates
-`favicon.ico`/`logo-*.svg` under `apps/docs/public/` rather than building
-them from `assets/`, and to `packages/icons/demo/public/`, which does the
-same. Both are legacy under this rule and should migrate to the shared
-build-time copy step; `docs/roadmap.md` tracks the migration.
-
-A single `/assets/favicon/favicon.ico` is enough even though browsers also
-probe `/favicon.ico` at the origin root by default: every page in this
-repository declares `<link rel="icon" href="/assets/favicon/favicon.ico">`
-explicitly rather than relying on the implicit root lookup, so no per-path
-favicon file is ever needed.
+Placing `favicon.ico` at a deployed surface's own serving root (`to:
+"public/favicon.ico"` for an Astro or Vite app) is what every consumer in
+this repository does for the default favicon: browsers probe `/favicon.ico`
+at the origin root by default, so no page needs a `<link rel="icon">` for
+it. A page only declares one explicitly when it needs a specific
+non-default size from `assets/favicon/`.

@@ -1,12 +1,14 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseAssetEntries } from "../assets/manifest.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { hasDocumentationMetadata } from "../workspace/package-policy.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
 const LICENSE_LOCATION = "LICENSE";
+const ASSETS_DIRECTORY = "assets";
 const REQUIRED_STRING_FIELDS = ["name", "version", "main", "module", "types"];
 const REQUIRED_SCRIPTS = [
   "build",
@@ -42,12 +44,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function hasFile(workspacePackage: WorkspacePackage, name: string): Promise<boolean> {
+async function isFile(path: string): Promise<boolean> {
   try {
-    return (await stat(join(workspacePackage.directory, name))).isFile();
+    return (await stat(path)).isFile();
   } catch {
     return false;
   }
+}
+
+async function hasFile(workspacePackage: WorkspacePackage, name: string): Promise<boolean> {
+  return isFile(join(workspacePackage.directory, name));
 }
 
 async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Finding[]> {
@@ -192,11 +198,53 @@ async function checkBrowserScripts(workspacePackage: WorkspacePackage): Promise<
   return findings;
 }
 
+function declaresAssetsField(workspacePackage: WorkspacePackage): boolean {
+  const codenhub = workspacePackage.manifest.codenhub;
+  return isRecord(codenhub) && codenhub.assets !== undefined;
+}
+
+/**
+ * Checks that a package's `codenhub.assets` entries resolve to real files.
+ *
+ * A `from` that does not exist would otherwise fail silently at build time, deep
+ * inside `hub assets`, on whichever machine happens to run it next.
+ * @param workspacePackage Package to inspect.
+ * @param root Absolute repository root.
+ * @returns Findings for malformed entries or a missing source file.
+ */
+async function checkAssets(workspacePackage: WorkspacePackage, root: string): Promise<Finding[]> {
+  const manifestPath = join(workspacePackage.directory, MANIFEST_LOCATION);
+  let entries: ReturnType<typeof parseAssetEntries>;
+  try {
+    entries = parseAssetEntries(workspacePackage.manifest, manifestPath);
+  } catch (cause) {
+    return [
+      { code: "assets/invalid", location: MANIFEST_LOCATION, message: (cause as Error).message, severity: "error" },
+    ];
+  }
+
+  const missing = await Promise.all(
+    entries.map(async (entry) => ({
+      entry,
+      exists: await isFile(join(root, ASSETS_DIRECTORY, entry.from)),
+    })),
+  );
+  return missing
+    .filter(({ exists }) => !exists)
+    .map(({ entry }) => ({
+      code: "assets/missing-source",
+      location: MANIFEST_LOCATION,
+      message: `codenhub.assets references "${entry.from}", which does not exist under ${ASSETS_DIRECTORY}/.`,
+      severity: "error" as const,
+    }));
+}
+
 /**
  * Creates the rules that check package manifests against the lifecycle spec.
+ * @param root Absolute repository root, used to resolve `codenhub.assets` sources.
  * @returns Manifest rules ready for registration.
  */
-export function createManifestRules(): CheckRule[] {
+export function createManifestRules(root: string): CheckRule[] {
   return [
     {
       appliesTo: (workspacePackage) => !workspacePackage.isPrivate,
@@ -212,6 +260,12 @@ export function createManifestRules(): CheckRule[] {
         ...(await checkBrowserScripts(workspacePackage)),
       ],
       summary: "Package scripts exist, stay unchained, and keep browser tests out of the unit loop.",
+    },
+    {
+      appliesTo: declaresAssetsField,
+      name: "assets",
+      run: async ({ package: workspacePackage }) => checkAssets(workspacePackage, root),
+      summary: "codenhub.assets entries resolve to real files under root assets/.",
     },
   ];
 }
