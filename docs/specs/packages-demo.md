@@ -78,8 +78,8 @@ them from `assets/`, and to `packages/icons/demo/public/`, which does the
 same. Both are legacy under this rule and should migrate to the shared
 build-time copy step; `docs/roadmap.md` tracks the migration.
 
-A single `/assets/favicon.ico` is enough even though browsers also probe
-`/favicon.ico` at the origin root by default: every page in this repository
-declares `<link rel="icon" href="/assets/favicon.ico">` explicitly rather
-than relying on the implicit root lookup, so no per-path favicon file is
-ever needed.
+A single `/assets/favicon/favicon.ico` is enough even though browsers also
+probe `/favicon.ico` at the origin root by default: every page in this
+repository declares `<link rel="icon" href="/assets/favicon/favicon.ico">`
+explicitly rather than relying on the implicit root lookup, so no per-path
+favicon file is ever needed.

@@ -80,7 +80,7 @@ deferred work; this entry tracks only where the package sits.
       architecture in `apps/demo/docs/internal/architecture.md`
 - [ ] Second Cloudflare Workers Builds project, connected from the dashboard
       like `apps/docs`'s, with its own watch-path excludes
-- [ ] Migrate `apps/docs` and `packages/icons/demo` off hand-duplicated
+- [x] Migrate `apps/docs` and `packages/icons/demo` off hand-duplicated
       `favicon.ico`/`logo-*.svg` onto the shared `assets/` build-time copy
       step `docs/specs/packages-demo.md` defines
 

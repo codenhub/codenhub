@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node scripts/copy-assets.mjs",
     "build": "vite build",
+    "prebuild": "node scripts/copy-assets.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
