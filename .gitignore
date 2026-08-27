@@ -23,7 +23,11 @@ test-results
 playwright-report
 **/playwright-report
 **/tests/**/output.css
-**/public/assets/
+
+# Build-time copies of root assets/
+/apps/docs/public/assets/
+/apps/demo/public/assets/
+/packages/*/demo/public/assets/
 
 # AI agents
 .agents
