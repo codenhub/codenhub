@@ -6,7 +6,7 @@ export function buildRobotsTxt(baseUrl: string): string {
 
 export function buildSitemapXml(baseUrl: string, demoPackages: DemoPackage[]): string {
   const urlEntry = (routePath: string) => `  <url><loc>${baseUrl}${routePath}</loc></url>`;
-  const urls = [urlEntry("/"), ...demoPackages.map((demoPackage) => urlEntry(`/demo/${demoPackage.slug}/`))];
+  const urls = [urlEntry("/"), ...demoPackages.map((demoPackage) => urlEntry(`/${demoPackage.slug}/`))];
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

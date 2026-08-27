@@ -49,12 +49,17 @@ it.
 | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `{DEMO_BASE_URL}/`                                          | the aggregator's own shell: its index page, `robots.txt`, `sitemap.xml`     |
 | `{DEMO_BASE_URL}/favicon.ico`, `{DEMO_BASE_URL}/assets/...` | `codenhub.assets` entries placed at build time, see "Assets boundary" below |
-| `{DEMO_BASE_URL}/demo/<package>/`                           | that package's own `demo/` build output, mounted verbatim                   |
+| `{DEMO_BASE_URL}/<package>/`                                | that package's own `demo/` build output, mounted verbatim                   |
+
+`{DEMO_BASE_URL}` is itself a dedicated subdomain for demos, so a package
+mounts directly at its own path segment rather than under a redundant
+`/demo/` prefix. A package's slug therefore MUST NOT collide with a path the
+aggregator's own shell owns (`assets`, `favicon.ico`, `robots.txt`,
+`sitemap.xml`).
 
 `robots.txt` and `sitemap.xml` belong to the aggregator's own root, not to
 any individual package demo, because the aggregator is the only place that
-knows the full set of mounted `/demo/<package>/` paths a sitemap needs to
-list.
+knows the full set of mounted `/<package>/` paths a sitemap needs to list.
 
 ## Assets boundary
 

@@ -18,14 +18,14 @@ describe("buildSitemapXml", () => {
     ]);
 
     expect(body).toContain("<loc>https://demo.codenhub.dev/</loc>");
-    expect(body).toContain("<loc>https://demo.codenhub.dev/demo/icons/</loc>");
-    expect(body).toContain("<loc>https://demo.codenhub.dev/demo/error/</loc>");
+    expect(body).toContain("<loc>https://demo.codenhub.dev/icons/</loc>");
+    expect(body).toContain("<loc>https://demo.codenhub.dev/error/</loc>");
   });
 
   it("lists only the shell root when no demo is mounted", () => {
     const body = buildSitemapXml("https://demo.codenhub.dev", []);
 
-    expect(body).toContain("<loc>https://demo.codenhub.dev/</loc>");
-    expect(body).not.toContain("/demo/");
+    expect(body).toContain("<url><loc>https://demo.codenhub.dev/</loc></url>");
+    expect(body.match(/<url>/g)).toHaveLength(1);
   });
 });

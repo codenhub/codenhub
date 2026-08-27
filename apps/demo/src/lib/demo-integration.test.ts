@@ -24,7 +24,7 @@ describe("discoverBuiltDemos", () => {
 });
 
 describe("createDemoIntegration", () => {
-  it("copies every discovered demo's dist/ into dist/demo/<slug>/", async () => {
+  it("copies every discovered demo's dist/ into dist/<slug>/", async () => {
     const demoDist = await mkdtemp(path.join(tmpdir(), "codenhub-demo-source-"));
     await writeFile(path.join(demoDist, "index.html"), "<p>icons demo</p>");
     const outputRoot = await mkdtemp(path.join(tmpdir(), "codenhub-demo-output-"));
@@ -35,7 +35,7 @@ describe("createDemoIntegration", () => {
 
     await integration.hooks["astro:build:done"]!({ dir: pathToFileURL(`${outputRoot}/`) } as never);
 
-    const copied = await readdir(path.join(outputRoot, "demo", "icons"));
+    const copied = await readdir(path.join(outputRoot, "icons"));
     expect(copied).toEqual(["index.html"]);
   });
 

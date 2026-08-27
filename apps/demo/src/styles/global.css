@@ -4,28 +4,35 @@
   --demo-header-height: 4rem;
 }
 
-html,
-body {
-  height: 100%;
-}
-
 body {
   margin: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 50;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 1rem;
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: var(--elevation-lg);
+  transform: translateY(calc(-100% - 0.5rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .site-header,
 .site-footer {
   padding-inline: 1.5rem;
   box-sizing: border-box;
-}
-
-.site-header-content,
-.site-footer-content {
-  max-width: 1100px;
-  width: 100%;
-  margin-inline: auto;
 }
 
 .site-header {
@@ -40,6 +47,9 @@ body {
 }
 
 .site-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   height: 100%;
   gap: 1rem;
 }
@@ -158,6 +168,10 @@ body {
   display: block;
 }
 
+.site-main {
+  flex: 1 1 auto;
+}
+
 .site-footer {
   flex-shrink: 0;
   border-top: 1px solid var(--color-border);
@@ -169,15 +183,8 @@ body {
   row-gap: 0.75rem;
 }
 
-.demo-main {
-  flex: 1 1 auto;
-  padding: 3rem 1.5rem;
-  box-sizing: border-box;
-}
-
 .demo-hero {
-  max-width: 1100px;
-  margin: 0 auto 2.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .demo-lede {
@@ -186,9 +193,12 @@ body {
 }
 
 .demo-grid {
-  max-width: 1100px;
-  margin: 0 auto;
-  --layout-grid-min: 16rem;
+  --layout-grid-min: 20rem;
+  /* `auto-fit` (the shared `.auto-grid` default) collapses empty tracks and
+     hands their space to whatever is left, so a lone card stretches to fill
+     the row. `auto-fill` keeps unused tracks in reserve instead, so a card
+     stays its natural column width regardless of how many others exist. */
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--layout-grid-min), 100%), 1fr));
 }
 
 .demo-card {
@@ -197,7 +207,5 @@ body {
 }
 
 .demo-empty {
-  max-width: 1100px;
-  margin: 0 auto;
   color: var(--color-text-secondary);
 }

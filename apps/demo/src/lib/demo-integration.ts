@@ -33,7 +33,7 @@ export function discoverBuiltDemos(packagesRoot: string): BuiltDemo[] {
 /**
  * Mounts every discovered package demo under this app's build output. Astro
  * builds its own shell to `dist/`; this integration copies each demo's
- * already-built `dist/` beside it, at `dist/demo/<slug>/`, once Astro's own
+ * already-built `dist/` beside it, at `dist/<slug>/`, once Astro's own
  * build finishes.
  */
 export function createDemoIntegration(options: IntegrationOptions): AstroIntegration {
@@ -49,7 +49,7 @@ export function createDemoIntegration(options: IntegrationOptions): AstroIntegra
               `${builtDemo.slug} demo has no built dist/ output. Build packages/${builtDemo.slug}/demo before building apps/demo.`,
             );
           }
-          cpSync(builtDemo.distPath, path.join(outputRoot, "demo", builtDemo.slug), { recursive: true });
+          cpSync(builtDemo.distPath, path.join(outputRoot, builtDemo.slug), { recursive: true });
         }
       },
     },
