@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
@@ -18,6 +18,28 @@ export interface RunningDemoDevServer {
 const READY_PATTERN = /Local:\s+https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):(\d+)/;
 const ANSI_ESCAPE_PATTERN = new RegExp(String.fromCharCode(27) + "\\[[0-9;]*m", "g");
 const START_TIMEOUT_MS = 20_000;
+
+/**
+ * Kills the spawned shell and every process it started, not just the shell
+ * itself — `shell: true` makes `child` a shell wrapping `pnpm run dev`, which
+ * spawns its own descendants (pnpm, then the demo's dev server); killing only
+ * the shell would orphan the rest.
+ * @param child Shell process started with `shell: true`.
+ */
+function killDemoDevServer(child: ChildProcess): void {
+  if (child.pid === undefined) {
+    return;
+  }
+  if (process.platform === "win32") {
+    spawn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
+    return;
+  }
+  try {
+    process.kill(-child.pid);
+  } catch {
+    child.kill();
+  }
+}
 
 /**
  * Discovers every `packages/*\/demo`, the same directory role
@@ -59,6 +81,10 @@ export function startDemoDevServer(
     cwd: target.demoDir,
     shell: true,
     stdio: ["ignore", "pipe", "pipe"],
+    // A POSIX process group leader, so `killDemoDevServer` can signal the
+    // whole tree via its negative pid. Windows has no such mechanism and
+    // `taskkill /t` there doesn't need it.
+    detached: process.platform !== "win32",
   });
 
   return new Promise((resolve, reject) => {
@@ -73,7 +99,7 @@ export function startDemoDevServer(
     };
     const timer = setTimeout(() => {
       settle(() => {
-        child.kill();
+        killDemoDevServer(child);
         reject(new Error(`${target.slug} demo dev server did not report a listening port within ${timeoutMs}ms.`));
       });
     }, timeoutMs);
@@ -82,15 +108,18 @@ export function startDemoDevServer(
     child.stdout?.on("data", forward(`[demo:${target.slug}] `));
     // Buffered rather than matched chunk-by-chunk: Node's stdout pipe can
     // split one printed line — including the "Local:" line this waits for —
-    // across multiple `data` events.
+    // across multiple `data` events. The listener removes itself once matched
+    // so `output` stops growing for the rest of the (long-lived) dev session.
     let output = "";
-    child.stdout?.on("data", (chunk: Buffer) => {
+    const matchReadyLine = (chunk: Buffer) => {
       output += chunk.toString().replace(ANSI_ESCAPE_PATTERN, "");
       const match = READY_PATTERN.exec(output);
       if (match !== null) {
-        settle(() => resolve({ port: Number(match[1]), slug: target.slug, stop: () => child.kill() }));
+        child.stdout?.off("data", matchReadyLine);
+        settle(() => resolve({ port: Number(match[1]), slug: target.slug, stop: () => killDemoDevServer(child) }));
       }
-    });
+    };
+    child.stdout?.on("data", matchReadyLine);
     child.stderr?.on("data", forward(`[demo:${target.slug}] `));
     child.once("error", (error) => settle(() => reject(error)));
     child.once("exit", (code) => {
