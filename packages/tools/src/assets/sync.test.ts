@@ -1,6 +1,6 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -120,6 +120,28 @@ describe("syncPackageAssets", () => {
     await syncPackageAssets(createPackage(packageDirectory, { name: "@fixture/example" }), root);
 
     await expect(readFile(join(packageDirectory, ASSET_STATE_FILE), "utf8")).rejects.toThrow("ENOENT");
+  });
+
+  it("shouldNotDeleteAFileOutsideThePackageDirectoryFromACorruptedStateFile", async () => {
+    const { packageDirectory, root } = await createFixture();
+    const sentinelPath = join(packageDirectory, "..", `codenhub-assets-sentinel-${basename(packageDirectory)}.txt`);
+    await writeFile(sentinelPath, "do not delete me");
+    try {
+      // Not a destination any manifest declared: a corrupted or hand-edited
+      // state file smuggling a traversal path in, the way an attacker or a
+      // bad merge could.
+      await writeFile(
+        join(packageDirectory, ASSET_STATE_FILE),
+        JSON.stringify({ placed: [`../${basename(sentinelPath)}`] }),
+      );
+
+      const result = await syncPackageAssets(createPackage(packageDirectory, { name: "@fixture/example" }), root);
+
+      expect(result.removed).toEqual([]);
+      await expect(readFile(sentinelPath, "utf8")).resolves.toBe("do not delete me");
+    } finally {
+      await rm(sentinelPath, { force: true });
+    }
   });
 
   it("shouldThrowWhenADeclaredSourceDoesNotExist", async () => {

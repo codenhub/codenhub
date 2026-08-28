@@ -1,5 +1,3 @@
-const UNSAFE_SEGMENT = /(?:^|\/)\.\.(?:\/|$)/;
-
 /** One file a package pulls from root `assets/` and where it places it. */
 export interface AssetEntry {
   /** Path relative to root `assets/`, forward-slashed. */
@@ -18,6 +16,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function hasUnsafePathSegment(value: string): boolean {
+  // Rejects "." and empty segments too, not just "..": both let a path alias
+  // another ("public/./favicon.ico", "public//favicon.ico") past the literal
+  // string comparison `checkNoDuplicateDestinations` relies on.
+  return value.split("/").some((segment) => segment === "" || segment === "." || segment === "..");
+}
+
+/**
+ * Reports whether `value` is a safe forward-slashed relative path: no leading
+ * slash, no backslashes, and no ".", "..", or empty segments.
+ * @param value Path to check.
+ * @returns `true` when the path is safe to resolve under a package directory.
+ */
+export function isValidRelativeAssetPath(value: string): boolean {
+  return value.trim() !== "" && !value.includes("\\") && !value.startsWith("/") && !hasUnsafePathSegment(value);
+}
+
 function getPathField(value: unknown, field: string, index: number, manifestPath: string): string {
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`Invalid codenhub.assets[${index}].${field} in ${manifestPath}: expected a non-empty string.`);
@@ -25,9 +40,9 @@ function getPathField(value: unknown, field: string, index: number, manifestPath
   if (value.includes("\\")) {
     throw new Error(`Invalid codenhub.assets[${index}].${field} in ${manifestPath}: use forward slashes only.`);
   }
-  if (value.startsWith("/") || UNSAFE_SEGMENT.test(value)) {
+  if (!isValidRelativeAssetPath(value)) {
     throw new Error(
-      `Invalid codenhub.assets[${index}].${field} in ${manifestPath}: must be a relative path with no "..".`,
+      `Invalid codenhub.assets[${index}].${field} in ${manifestPath}: must be a relative path with no ".", "..", or empty segments.`,
     );
   }
   return value;

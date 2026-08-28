@@ -58,6 +58,16 @@ describe("parseAssetEntries", () => {
     expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/forward slashes/);
   });
 
+  it("shouldRejectAToWithADotSegment", () => {
+    const manifest = { codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/./favicon.ico" }] } };
+    expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/relative path/);
+  });
+
+  it("shouldRejectAToWithAnEmptySegment", () => {
+    const manifest = { codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public//favicon.ico" }] } };
+    expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/relative path/);
+  });
+
   it("shouldRejectTwoEntriesDeclaringTheSameTo", () => {
     const manifest = {
       codenhub: {

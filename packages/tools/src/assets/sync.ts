@@ -2,7 +2,7 @@ import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises
 import { dirname, join } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { parseAssetEntries } from "./manifest.ts";
+import { isValidRelativeAssetPath, parseAssetEntries } from "./manifest.ts";
 
 const ASSETS_DIRECTORY = "assets";
 const MANIFEST_LOCATION = "package.json";
@@ -25,7 +25,12 @@ async function isFile(path: string): Promise<boolean> {
 async function readPlaced(packageDirectory: string): Promise<string[]> {
   try {
     const raw = JSON.parse(await readFile(join(packageDirectory, ASSET_STATE_FILE), "utf8")) as AssetState;
-    return Array.isArray(raw.placed) ? raw.placed.filter((entry): entry is string => typeof entry === "string") : [];
+    // Validated the same as a manifest's own `to`: cleanup below joins these
+    // straight onto `packageDirectory` and deletes the result, so a corrupted
+    // or hand-edited state file must not be able to smuggle a traversal path in.
+    return Array.isArray(raw.placed)
+      ? raw.placed.filter((entry): entry is string => typeof entry === "string" && isValidRelativeAssetPath(entry))
+      : [];
   } catch {
     return [];
   }
