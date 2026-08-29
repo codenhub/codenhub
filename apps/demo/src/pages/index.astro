@@ -1,23 +1,195 @@
 ---
 import BaseLayout from "../layouts/base-layout.astro";
-import { demoPackages } from "../lib/catalog";
+import { demoPackages, type DemoPackage } from "../lib/catalog";
+
+function toSearchHaystack(demoPackage: DemoPackage): string {
+  return `${demoPackage.label} ${demoPackage.description ?? ""}`.toLowerCase();
+}
 ---
 
 <BaseLayout>
-  <main class="site-main section section-content wide" id="main-content">
+  <main class="site-main" id="main-content">
+   <div class="section-content wide">
     {
       demoPackages.length === 0 ? (
         <p class="demo-empty">No package demos are published yet.</p>
       ) : (
-        <div class="demo-grid auto-grid" role="list">
-          {demoPackages.map((demoPackage) => (
-            <a class="card interactive demo-card" href={`/${demoPackage.slug}/`} role="listitem">
-              <h2>{demoPackage.label}</h2>
-              <p>Open the {demoPackage.label} demo</p>
-            </a>
-          ))}
-        </div>
+        <Fragment>
+          <div class="packages-toolbar">
+            <h2 class="packages-toolbar-title">Packages</h2>
+            <div class="packages-toolbar-controls">
+              <input
+                aria-label="Search packages"
+                class="icon package-search"
+                id="package-search"
+                placeholder="Search packages…"
+                type="search"
+              />
+              <button
+                aria-label="Sort by name, ascending"
+                aria-pressed="false"
+                class="btn icon ghost edged neutral"
+                data-sort-direction="asc"
+                id="package-sort"
+                type="button"
+              >
+                <i
+                  aria-hidden="true"
+                  class="ic-lucide-arrow-up-narrow-wide"
+                  data-sort-icon="asc"
+                />
+                <i
+                  aria-hidden="true"
+                  class="ic-lucide-arrow-down-wide-narrow"
+                  data-sort-icon="desc"
+                  hidden
+                />
+              </button>
+            </div>
+          </div>
+          <div class="demo-grid auto-grid" id="package-grid" role="list">
+            {demoPackages.map((demoPackage) => (
+              <div
+                class="card interactive demo-card"
+                data-label={demoPackage.label}
+                data-search={toSearchHaystack(demoPackage)}
+                role="listitem"
+              >
+                <a
+                  class="demo-card-open stack tight"
+                  href={`/${demoPackage.slug}/`}
+                >
+                  <div class="demo-card-heading cluster between tight">
+                    <h3>{demoPackage.label}</h3>
+                    {demoPackage.status !== undefined &&
+                      demoPackage.status !== "active" && (
+                        <span aria-label={demoPackage.status} class="demo-card-status warning" title={demoPackage.status}>
+                          <i aria-hidden="true" class="ic-warning" />
+                        </span>
+                      )}
+                  </div>
+                  {demoPackage.description !== undefined && (
+                    <p class="demo-card-description">
+                      {demoPackage.description}
+                    </p>
+                  )}
+                </a>
+                <div class="demo-card-links cluster">
+                  {demoPackage.githubUrl !== undefined && (
+                    <a
+                      aria-label={`${demoPackage.label} on GitHub`}
+                      class="demo-card-link"
+                      href={demoPackage.githubUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <i aria-hidden="true" class="ic-phosphor-github-logo" />
+                    </a>
+                  )}
+                  {demoPackage.npmUrl !== undefined && (
+                    <a
+                      aria-label={`${demoPackage.label} on npm`}
+                      class="demo-card-link"
+                      href={demoPackage.npmUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <i aria-hidden="true" class="ic-lucide-package" />
+                    </a>
+                  )}
+                  {demoPackage.docsUrl !== undefined && (
+                    <a
+                      aria-label={`${demoPackage.label} documentation`}
+                      class="demo-card-link"
+                      href={demoPackage.docsUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <i aria-hidden="true" class="ic-lucide-book-open" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p class="demo-empty" data-empty-filtered hidden>
+            No packages match your search.
+          </p>
+        </Fragment>
       )
     }
+   </div>
   </main>
 </BaseLayout>
+
+<script>
+  const searchInput = document.getElementById("package-search");
+  const sortButton = document.getElementById("package-sort");
+  const grid = document.getElementById("package-grid");
+  const emptyMessage = document.querySelector("[data-empty-filtered]");
+  const cards = grid ? Array.from(grid.querySelectorAll(".demo-card")) : [];
+
+  function applyFilter() {
+    if (!(searchInput instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const query = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+    for (const card of cards) {
+      const matches =
+        query === "" || (card.dataset.search ?? "").includes(query);
+      card.hidden = !matches;
+      if (matches) {
+        visibleCount += 1;
+      }
+    }
+
+    if (emptyMessage instanceof HTMLElement) {
+      emptyMessage.hidden = visibleCount !== 0;
+    }
+  }
+
+  function applySort() {
+    if (!(sortButton instanceof HTMLElement) || grid === null) {
+      return;
+    }
+
+    const direction = sortButton.dataset.sortDirection === "desc" ? -1 : 1;
+    const sorted = [...cards].sort(
+      (left, right) =>
+        direction *
+        (left.dataset.label ?? "").localeCompare(right.dataset.label ?? ""),
+    );
+    for (const card of sorted) {
+      grid.appendChild(card);
+    }
+  }
+
+  function toggleSortDirection() {
+    if (!(sortButton instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextDirection =
+      sortButton.dataset.sortDirection === "desc" ? "asc" : "desc";
+    sortButton.dataset.sortDirection = nextDirection;
+    sortButton.setAttribute("aria-pressed", String(nextDirection === "desc"));
+    sortButton.setAttribute(
+      "aria-label",
+      nextDirection === "desc"
+        ? "Sort by name, descending"
+        : "Sort by name, ascending",
+    );
+    for (const icon of sortButton.querySelectorAll("[data-sort-icon]")) {
+      if (icon instanceof HTMLElement) {
+        icon.hidden = icon.dataset.sortIcon !== nextDirection;
+      }
+    }
+
+    applySort();
+  }
+
+  searchInput?.addEventListener("input", applyFilter);
+  sortButton?.addEventListener("click", toggleSortDirection);
+</script>

@@ -14,8 +14,10 @@
     "typecheck": "astro sync && tsc --noEmit"
   },
   "devDependencies": {
+    "@codenhub/icons": "workspace:*",
     "@codenhub/icons-demo": "workspace:*",
     "@codenhub/styles": "workspace:*",
+    "@codenhub/tools": "workspace:*",
     "@types/node": "catalog:",
     "astro": "catalog:",
     "typescript": "catalog:",

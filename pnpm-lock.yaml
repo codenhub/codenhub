@@ -110,12 +110,18 @@ importers:
 
   apps/demo:
     devDependencies:
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@codenhub/icons-demo':
         specifier: workspace:*
         version: link:../../packages/icons/demo
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../packages/styles
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../../packages/tools
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1

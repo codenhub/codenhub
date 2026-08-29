@@ -1,4 +1,5 @@
 @import "@codenhub/styles/native";
+@import "@codenhub/icons";
 
 :root {
   --demo-header-height: 4rem;
@@ -103,6 +104,10 @@ body {
   fill: currentcolor;
 }
 
+.header-icon-link i {
+  font-size: 1.1rem;
+}
+
 .theme-toggle {
   position: relative;
   display: inline-flex;
@@ -170,6 +175,8 @@ body {
 
 .site-main {
   flex: 1 1 auto;
+  padding-block: 2rem;
+  padding-inline: 1.5rem;
 }
 
 .site-footer {
@@ -192,6 +199,39 @@ body {
   max-width: 40rem;
 }
 
+.packages-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.packages-toolbar-title {
+  margin: 0;
+}
+
+.packages-toolbar-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+}
+
+/* `@codenhub/icons`'s own base rule (`i[class^="ic-"] { display: inline-block; }`)
+   outranks the browser's default `[hidden] { display: none; }` — same cascade
+   origin, higher specificity — so the sort button's inactive direction icon needs
+   an explicit, higher-specificity override to actually disappear. */
+[data-sort-icon][hidden] {
+  display: none;
+}
+
+.package-search {
+  width: 16rem;
+  max-width: 100%;
+}
+
 .demo-grid {
   --layout-grid-min: 20rem;
   /* `auto-fit` (the shared `.auto-grid` default) collapses empty tracks and
@@ -202,8 +242,60 @@ body {
 }
 
 .demo-card {
-  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+}
+
+.demo-card-open {
   color: inherit;
+  text-decoration: none;
+}
+
+/* Stretches the primary link over the whole card, so the card reads as one
+   click target even though the footer's own links must stay outside it —
+   nesting an <a> inside an <a> is invalid. `.demo-card-links` paints over it
+   because it comes later in the same stacking context. */
+.demo-card-open::after {
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.demo-card-description {
+  color: var(--color-text-secondary);
+}
+
+.demo-card-status {
+  color: var(--intent-color);
+  display: grid;
+  place-items: center;
+}
+
+.demo-card-status i {
+  font-size: 1rem;
+}
+
+.demo-card-links {
+  --layout-gap: 0.75rem;
+
+  position: relative;
+}
+
+.demo-card-link {
+  color: var(--color-text-secondary);
+  display: grid;
+  place-items: center;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.demo-card-link:hover {
+  color: var(--color-text);
+}
+
+.demo-card-link i {
+  font-size: 1rem;
 }
 
 .demo-empty {
