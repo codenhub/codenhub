@@ -55,20 +55,21 @@ check of that commit.
 
 ## Jobs
 
-The jobs are independent and run in parallel, so a stale generated file is
-reported without waiting for the slowest test suite.
+The jobs run in parallel and only `browser-result` waits on another, so a stale
+generated file is reported without waiting for the slowest test suite.
 
-| Job       | Runs                                                                                                                  |
-| --------- | --------------------------------------------------------------------------------------------------------------------- |
-| `verify`  | `pnpm verify --skip=test:browser <selector>`                                                                          |
-| `browser` | `pnpm hub browsers --with-deps <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
-| `drift`   | `pnpm generate --dry-run`, then `git diff --exit-code`                                                                |
+| Job              | Runs                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                          |
+| `browser`        | `pnpm hub browsers --with-deps <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
+| `drift`          | `pnpm generate --dry-run`, then `git diff --exit-code`                                                                |
+| `browser-result` | Nothing; it passes only when every `browser` job passed                                                               |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in
 both would double the slowest part of the run for no extra signal.
 
 `browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` —
-so the workflow runs five jobs in total. The browser suites are by far the
+so the workflow runs six jobs in total. The browser suites are by far the
 slowest thing in a run and the three engines share nothing, so splitting them
 trades runner minutes, which are cheap, for wall-clock time, which is what
 anyone waits on. The engines are far from equal: on the `styles` suite, which
@@ -81,6 +82,18 @@ question of why Firefox is that much slower.
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are
 different findings, and cancelling one to report the other hides half of what a
 run was started to learn.
+
+`browser-result` exists because a protected `main` requires a check by name, and
+a matrix reports one check per engine rather than the single one the rule names.
+It carries that name and passes only when every engine job passed, so the branch
+rule keeps working without naming the engines: adding or removing one is a change
+to `ci.yml` and to nothing else. Encoding the engines in the branch rule instead
+would put half of this design into settings nobody can review in a diff.
+
+It runs under `always()`, which is what makes it a gate rather than a formality.
+A job that runs only on success is skipped when an engine fails, and a skipped
+required check blocks a pull request exactly as an unreported one does, with the
+difference that nobody can tell why. Reporting the failure is the point.
 
 Each job installs only its own engine and selects it with one glob. That works
 because every Playwright project in the repository is named after the engine it
