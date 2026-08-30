@@ -90,6 +90,7 @@ neutral and bordered.
 | `.kbd`                                          | Fill, text, border, and border width.       |
 | `.data-table`                                   | Header fill and text, border, border width. |
 | `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
+| `.input-group`                                  | Border, border width, and a capped fill.    |
 | `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
 | `.switch`                                       | Border, border width, and a capped fill.    |
 | `.quote`                                        | Fill, text, border, and width.              |
@@ -158,6 +159,7 @@ directions: an axis marked `Yes` must move, and an axis marked `No` must not.
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
 | `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes  | Yes  | Shape              |
+| `.input-group`                                            | Yes    | Yes  | Yes  | Shape              |
 | `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |

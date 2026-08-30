@@ -512,13 +512,22 @@ Zero lengths are written `0px` rather than `0` in the fallbacks, because
 
 The registry gives each component its default level, and the level says how much
 depth a component takes _when depth is drawn_ -- not that it rests above the
-page. Nothing is raised until an aesthetic draws depth, `.raised` or `.floating`
-asks for it, or the component is the one thing that floats without being asked.
+page. Nothing is raised until an aesthetic draws depth, or `.raised` or
+`.floating` asks for it. No component is exempt from that, the tooltip bubble
+included.
 
-That last case is the tooltip bubble and only the bubble: it is placed over
-content nobody chose, so a flat panel there has no boundary at all. It supplies
-its geometry in the component's own slot, one below the aesthetic's, so an
-aesthetic in scope still outranks it.
+The bubble was the one exception until 0.1.0: it is placed over content nobody
+chose, and the argument was that a flat panel there has no boundary at all, so it
+supplied `0 1px 3px` in the component's own slot and rested at elevation `2`.
+That shadow was ugly under most aesthetics and structural under none, and the
+boundary it was defending is already held by the bubble's floored edge -- a
+near-white plate in the light theme needs a line whatever the shadow does, and
+[the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)
+keeps one there. So the geometry is gone, the bubble rests at `0`, and
+`.tooltip.raised` / `.tooltip.floating` add depth the same way they do anywhere
+else. An aesthetic in scope still shapes and shadows the bubble as the surface it
+is; zeroing the default only takes back the part the component was drawing on its
+own.
 
 Depth used to be a property of the component instead. `surface` carried a
 structural `0 1px 3px`, which put a shadow under every card on a plain page --
@@ -734,7 +743,7 @@ default.
 | `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                          |
 | `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                          |
 | `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                          |
-| `--ui-active-transform` | `none`               | Transform applied while pressed.                      |
+| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion. |
 | `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.       |
 | `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.   |
 | `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.    |
@@ -805,8 +814,9 @@ agreeing with the spec. Declaring the token empty and selecting between two
 single mixes with the guaranteed-invalid fallback idiom keeps all three engines
 in agreement. An aesthetic nested inside one that declares it clears it with
 `initial`.
-`--ui-hover-shadow-*` lets neobrutalism collapse its shadow on hover without the
-`:hover` selector R3 forbids. `--ui-surface-ground` exists because
+`--ui-hover-shadow-x` and `-y` let an aesthetic move or hold its shadow between
+rest and hover without the `:hover` selector R3 forbids. `--ui-surface-ground`
+exists because
 `--ui-bg-alpha` multiplies the _fill_, and a surface's default fill is 0%: with no
 ground token a glass card keeps an opaque background and its own blur is invisible
 behind it.
@@ -962,6 +972,7 @@ the registry names for it, and that pair is published.
 | -------------------------------------------- | -------------- |
 | `.btn`                                       | solid edgeless |
 | `.ipt` `.textarea` `.select`                 | ghost edged    |
+| `.input-group`                               | ghost edged    |
 | `.checkbox` `.radio`                         | solid edged    |
 | `.switch`                                    | solid edged    |
 | `.card`                                      | ghost edged    |
@@ -988,6 +999,31 @@ tooltip stays glass. The registry records the ground beside the pair.
 These authored defaults are implemented decisions, not derivations -- there is no
 rule that produces them, and there should not be. Each is stated in one place
 rather than hidden as a `var()` fallback in the middle of a component.
+
+### `.input-group` owns the box; the control inside gives it up
+
+The package shipped an input icon per type, painted as a `background-image` data
+URI on the control itself. A data URI resolves no custom property, so each glyph
+shipped a light and a dark copy chosen by a theme selector -- the one
+theme-by-selector branch in a system that themes everything else with
+`light-dark()` -- and the artwork did not fit every aesthetic. Both are gone.
+Icons are the consumer's, and `.input-group` is the composition that carries one.
+
+It is a wrapper that takes the whole of `box` through `text-control`: the group
+draws the border, radius, fill, focus treatment, invalid and disabled state. The
+control inside it then switches its own paint off -- `--_fill-cap: 0%`,
+`border: none`, no background, no shadow, and its `:focus-visible` ring
+suppressed -- so the boundary is drawn once, by the group. It reads the same
+axes and the same bounds a lone `.ipt` does, so `.input-group.soft.edgeless` is
+the sunk field and a `.solid` container is still capped at `6%`.
+
+Two deviations from a lone field, both because a `<div>` is not a control.
+`:focus-within` stands in for `:focus-visible`, so the ring also shows on a
+mouse click. And `:has()` bridges an inner control's `aria-invalid` or
+`disabled` to the group, because a wrapper cannot see a descendant's state
+otherwise; `:has(:focus-visible)` was tried for the ring and dropped -- the
+inner control only matches `:focus-visible` while the document itself has focus,
+which made the ring flicker out whenever focus left the page.
 
 ### Components that do not take the whole of `box`
 
@@ -1120,13 +1156,14 @@ can type, whether or not we document it, so the honest position is to publish th
 as a small composition API rather than to pretend they are internal and be
 surprised when someone uses one.
 
-| Utility        | What applying it gives an element                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.           |
-| `box-hover`    | The derived hover tone, for something you press rather than type into.                          |
-| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                            |
-| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share. |
-| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                             |
+| Utility        | What applying it gives an element                                                                                           |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.                                       |
+| `box-hover`    | The derived hover tone, for something you press rather than type into.                                                      |
+| `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn` and `.card.interactive`. |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                        |
+| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                             |
+| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                                                         |
 
 They are the seam the components are built from, and a consumer composing a
 component we do not ship is better served by them than by copying a component's
@@ -1141,12 +1178,15 @@ What each aesthetic must look like, so a change can be judged against something.
 
 No aesthetic class in scope. 1px edges, 0.5rem control radius, 0.875rem surface
 radius, no silhouette, and no component depth by default. The default is the
-absence of material declarations, not a set of root values -- which is why a card
-gets surface radius and a button gets control radius from the same unset token.
+absence of material declarations rather than a set of root values -- which is why
+a card gets surface radius and a button gets control radius from the same unset
+token. The one material value it does declare at `:root` is
+`--ui-active-transform: scale(0.97)`, so a press on `.btn` or `.card.interactive`
+still registers on a plain page; reduced motion drops it.
 `.raised` and `.floating` opt an element into the foundation shadow geometry, and
-an aesthetic can supply different geometry. The tooltip bubble is the sole
-component-owned exception: it carries explicit depth because it floats over
-arbitrary content and needs a boundary there.
+an aesthetic can supply different geometry. No component carries depth on its own
+under the default -- the tooltip bubble was the last one to, and stopped in
+0.1.0; see [Elevation](#elevation).
 
 ### `.glass`
 
@@ -1177,14 +1217,16 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the
 element into its own shadow.
 
 - 2px edges, zero radius everywhere.
-- `--neo-offset` at 4px is the knob: the shadow offset and the hover travel are
+- `--neo-offset` at 4px is the knob: the shadow offset and the press travel are
   the same number, so a consumer scaling the look scales it whole. Read with a
   fallback per [R8](#rules-for-aesthetics), so an ancestor can set it.
 - Ink follows the theme, not the palette: near-black on light, near-white on
   dark. Pure black disappears on a dark page.
 - The offset shadow is the component's own `--intent-border`, so a success button
   casts a green shadow and a neutral button casts ink.
-- Hover moves the element by the shadow offset and shrinks the shadow to nothing.
+- The press moves the element by the shadow offset and shrinks the shadow to
+  nothing. Hover holds the slab still; the derived fill tint is its whole
+  response.
 - An alert rests on the slab, which is the one component this aesthetic names in a
   selector. Here the slab is a second ink line rather than depth, and an alert is
   the only container the registry rests flat. Written into the component's resting
@@ -1231,8 +1273,8 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
   correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both
   resolve `--intent-border`.
-- Hover holds still and the press moves, which is the opposite of neobrutalism and
-  deliberate — a seated slab has one gesture.
+- Hover holds still and the press moves: a seated slab has one gesture and it
+  belongs to the press.
 - Actions are heavier and slightly tracked, through the one recorded selector
   list. Casing is left to the application.
 
@@ -1305,9 +1347,9 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
 1. `--ui-shadow-inset`, because pixel's inset ring cannot be expressed by offset,
    blur, and spread alone, and writing it as a complete value costs the
    component's own intent.
-2. `--ui-hover-shadow-x` and `-y`, because neobrutalism's press-into-the-shadow
-   hover otherwise needs a `:hover` selector inside the aesthetic, which R3
-   forbids.
+2. `--ui-hover-shadow-x` and `-y`, because an aesthetic that moves or holds its
+   shadow between rest and hover otherwise needs a `:hover` selector inside the
+   aesthetic, which R3 forbids.
 3. `--ui-surface-ground`, because a glass card rendered opaque: `--ui-bg-alpha`
    multiplies the fill, a surface's default fill is 0%, and the blur sat behind a
    solid background. This is the one finding that would have shipped as a visible
@@ -1547,10 +1589,9 @@ opt-in class. `transform-origin` and `translate` have no logical form; a
 component whose geometry depends on one mirrors it explicitly under
 `:dir(rtl)` instead.
 
-This does not apply to a class that is itself a direction choice an author
-makes on purpose, such as `.icon.left`/`.icon.right` or a tooltip's
-`data-tooltip-position`. Those name a visual side, not a text direction, and
-stay physical.
+This does not apply to a class or attribute that is itself a direction choice
+an author makes on purpose, such as a tooltip's `data-tooltip-position`. Those
+name a visual side, not a text direction, and stay physical.
 
 ## References
 

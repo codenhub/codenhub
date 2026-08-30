@@ -74,29 +74,6 @@ test("styles native forms and buttons without utility classes", async ({ page })
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
 
-/* A native mapping gives the control and its icon source, and stops there. The
-   artwork is opt-in because a mapping that guessed would put a glyph on every
-   typed input on the page, and a native mapping has no class in which to write
-   the opt-in. */
-test("paints a native input icon only where the author opted in", async ({ page }) => {
-  await page.goto(NATIVE_URL);
-
-  const icons = await page.evaluate(() => {
-    const read = (id: string) => {
-      const styles = getComputedStyle(document.querySelector(`#${id}`)!);
-
-      return { image: styles.backgroundImage, position: styles.backgroundPosition };
-    };
-
-    return { bare: read("native-search-noicon"), left: read("native-email"), right: read("native-email-right") };
-  });
-
-  expect(icons.bare.image, "an input that did not opt in paints no artwork").toBe("none");
-  expect(icons.left.image, "opted-in artwork").toContain("data:image/svg+xml");
-  expect(icons.right.image, "right artwork is the same picture moved").toBe(icons.left.image);
-  expect(icons.right.position, "right position").not.toBe(icons.left.position);
-});
-
 /* `native.css` re-declares border and background after `@apply`, which would
    defeat the intent contract if those declarations outranked the utilities.
    They sit in the base layer and the utilities win, so intent still reaches

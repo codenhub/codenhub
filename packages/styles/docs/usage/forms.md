@@ -5,65 +5,71 @@ description: Field, text control, and toggle class reference.
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                         |
-| --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                         |
-| `.label`                                                              | Form label text.                                                |
-| `.hint`                                                               | Secondary helper text.                                          |
-| `.hint.error`                                                         | Helper text with destructive intent.                            |
-| `.surface`                                                            | Shared public container composition utility.                    |
-| `.text-control`                                                       | Shared public text-control composition utility.                 |
-| `.ipt`                                                                | Input control styling.                                          |
-| `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
-| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
-| `.email`, `.password`, `.url`, `.tel`, `.search`, `.date`, etc.       | Input type icon selectors (class or matching `type` attribute). |
-| `.textarea`                                                           | Textarea control styling.                                       |
-| `.select`                                                             | Select control styling.                                         |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                   |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                  |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                             |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
+| Class or Selector                                                     | Purpose                                                       |
+| --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                       |
+| `.label`                                                              | Form label text.                                              |
+| `.hint`                                                               | Secondary helper text.                                        |
+| `.hint.error`                                                         | Helper text with destructive intent.                          |
+| `.surface`                                                            | Shared public container composition utility.                  |
+| `.text-control`                                                       | Shared public text-control composition utility.               |
+| `.ipt`                                                                | Input control styling.                                        |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry icons. |
+| `.textarea`                                                           | Textarea control styling.                                     |
+| `.select`                                                             | Select control styling.                                       |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                              |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                 |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                           |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                             |
 
-## Input icons
+## Icons
 
-`.ipt` input icons are opt-in via `.icon` (e.g.
-`<input class="ipt email icon left">`). Native inputs mapped in `native.css`
-get the same icon source from their type, and the same opt-in: the artwork
-is drawn only where the element also carries `.icon`.
+The package ships no icons. It used to paint one per input type as a
+`background-image` — a `data:` URI, which cannot read `currentColor` or a
+custom property, so every glyph shipped a light and a dark copy and a theme
+selector chose between them. That put icon artwork, and the package's only
+theme-by-selector branch, inside a CSS-only design system whose glyphs did
+not fit every aesthetic. Icons are the consumer's to choose now.
 
-`date` and `datetime-local` depend on the engine, because their picker
-button is the one browsers do not all let a stylesheet hide. Where it can be
-hidden, the type opts itself into `.icon` and shows the themed calendar in
-its place. Where it cannot, the native button stays and no custom icon is
-drawn, since two calendar glyphs on one field read as a defect. `.icon`,
-`.left`, and `.right` are inert on these two types in that case rather than
-reserving space for artwork that never paints. Native WebKit search
-decorations are suppressed on `search` inputs to prevent placeholder overlap
-when `.icon` is omitted.
-
-An input icon is a `background-image` on the control itself, so a field that
-wants one needs no wrapper element around it.
+`.input-group` is the wrapper for a control that carries one. It owns the
+field box — border, radius, fill, focus ring, invalid and disabled state —
+and the control inside it goes flush, so the boundary is drawn once. Any
+icon element works, placed before the control for a leading icon or after it
+for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon
+set such as `@codenhub/icons`.
 
 ```html
 <label class="field">
   <span class="label">Email</span>
-  <input class="ipt email icon" type="email" />
+  <div class="input-group">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true">
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+    </svg>
+    <input class="ipt" type="email" />
+  </div>
+</label>
+<label class="field">
+  <span class="label">Search</span>
+  <div class="input-group">
+    <input class="ipt" type="search" />
+    <i class="ic-search" aria-hidden="true"></i>
+  </div>
 </label>
 ```
 
-A `data:` URI is a document of its own and inherits nothing from the page,
-so the artwork can read neither `currentColor` nor a custom property and
-each glyph ships a light and a dark copy that a theme selector picks
-between. That is the one place in the package where a theme is chosen by
-selector rather than resolved by `light-dark()` at the point of use, because
-`light-dark()` takes colors and these are images.
+The group reads intent and both [presentation](./composing.md#presentation)
+axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the
+sunk variant, `.input-group.primary` colors the boundary — and follows
+whichever [aesthetic](./aesthetics.md) is in scope. `aria-invalid` or
+`disabled` on the control inside propagates to the group; so does either on
+the group itself. Focus is shown with `:focus-within`, so unlike a lone
+field the ring also appears on a mouse click.
 
-`--ipt-icon-src` on the control replaces the artwork with any image.
-
-```html
-<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
-```
+Non-icon input types keep the browser's native `date` and `datetime-local`
+pickers. WebKit's native `search` decorations are still suppressed on
+`.text-control` to keep them from overlapping the value.
 
 ## Toggles
 
@@ -150,7 +156,7 @@ when they fit.
 ```html
 <label class="field">
   <span class="label">Email</span>
-  <input class="ipt email icon" type="email" aria-invalid="true" aria-describedby="email-error" />
+  <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
   <span class="hint error" id="email-error">Enter a valid email.</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">

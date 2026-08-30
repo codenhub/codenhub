@@ -66,5 +66,9 @@ it with disabled behavior so users cannot trigger duplicate work. Loading
 buttons keep only opacity and transform transitions active so spinner and
 surface colors stay synchronized when theme tokens change.
 
+On the base look a press scales the button down a little
+(`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap
+in their own press gesture, and `prefers-reduced-motion` turns it off.
+
 Use `<button>` for actions or an accessible link for navigation; see
 [Accessibility](../accessibility.md).

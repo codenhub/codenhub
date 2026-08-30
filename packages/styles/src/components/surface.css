@@ -10,42 +10,26 @@
 @utility surface {
   @apply box block;
 
-  /* Bare and edged: the resting geometry of a container that has declared no
-     material. `box` reads these three with no fallback on purpose -- that is
-     what makes a component state its whole look in one place -- so a utility
-     that leaves one out renders with the declaration reading it dropped, not
-     with a default. `surface` is typeable on its own, so it owes all three;
-     `card` restates them because a component states its own. */
+  /* Bare and edged. `box` reads these three with no fallback, so `surface` --
+     typeable on its own -- owes all three; `card` restates its own. No shadow
+     geometry: depth is asked for (`.raised`/`.floating`, an aesthetic, the
+     registry elevation) rather than carried, so a plain card is flat. */
   --_d-fill: 0%;
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
 
   --_d-ground: var(--ui-surface-ground, var(--color-background));
 
-  /* No shadow geometry here, and that absence is the point. A surface used to
-     carry a structural 1px/3px so a card read as raised with no material
-     declared, which put a shadow under every card on a plain page and -- because
-     `--_d-shadow-*` inherits like any custom property, and a button declares
-     none of its own -- under every button and chip nested inside one too.
-
-     Depth is now something asked for rather than something a component has:
-     `.raised` and `.floating` carry the geometry for a consumer who wants it, an
-     aesthetic supplies its own, and the registry's per-component elevation says
-     how much depth a component takes when depth is drawn at all. */
-
-  /* The surface's own complete-shadow slot. A shadow that cannot be described as
-     one layer -- glass tucks two under the surface with negative spread -- has to
-     be given whole, and giving it through `--ui-shadow` would put an 18px drop
-     shadow under every button and chip on the page as well. Only `surface` reads
-     it, the same way only it reads the backdrop. */
+  /* The complete-shadow slot for a shadow that is not one layer (glass tucks two
+     under with negative spread). Only `surface` reads it -- through `--ui-shadow`
+     it would land an 18px drop under every button and chip -- like the backdrop. */
   --_shadow: var(--ui-surface-shadow, var(--_shadow-parts));
 
   border-radius: var(--ui-radius-surface, var(--radius-surface));
-  /* The prefixed property is written first deliberately. Written second, the
-     minifier folds the pair into the prefixed one alone and the standard
-     property never reaches `dist/` -- which removes the blur entirely in Firefox,
-     the one engine that implements `backdrop-filter` and not the `-webkit-`
-     alias. Measured on the built stylesheet, not inferred. */
+  /* Prefixed property first, deliberately: written second the minifier folds the
+     pair into the prefixed one alone, and the standard property never reaches
+     `dist/` -- which drops the blur in Firefox (the one engine with
+     `backdrop-filter` and not the `-webkit-` alias). Measured on the built CSS. */
   -webkit-backdrop-filter: var(--ui-backdrop, none);
   backdrop-filter: var(--ui-backdrop, none);
 }
@@ -79,10 +63,11 @@
   }
 
   /* Opt-in, because a card is only sometimes a control. Applications still owe
-     it a real interactive element and an accessible name. Hover is the derived
-     one every other pressable box gets; there is nothing card-specific about it. */
+     it a real interactive element and an accessible name. Hover and press are
+     the derived ones every other pressable box gets; there is nothing
+     card-specific about either. */
   &.interactive {
-    @apply box-hover cursor-pointer;
+    @apply box-hover box-active cursor-pointer;
   }
 }
 

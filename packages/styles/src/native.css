@@ -10,15 +10,10 @@
 @import "./components/index.css";
 @import "./reset.css";
 
-/* The intent reset in `intent.css` keys on class names, and these mappings
-   target bare elements. Without a matching reset an element would read an
-   undefined `--intent-*`, which makes any `color-mix()` referencing it invalid
-   at computed-value time and silently drops the whole declaration. Zero
-   specificity for the same reason as the class reset: an intent class on the
-   element must still win, and an inherited value must still lose.
-
-   The values match `intent.css` slot for slot. A bare `<code>` and a `.code`
-   chip are the same component reached two ways. */
+/* `intent.css`'s reset keys on class names; these bare elements need the same,
+   or a `color-mix()` reading an undefined `--intent-*` drops silently. Zero
+   specificity like the class reset, values matching it slot for slot -- a bare
+   `<code>` and a `.code` chip are one component reached two ways. */
 :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
@@ -134,17 +129,12 @@
     @apply divider;
   }
 
-  /* Form controls */
+  /* Form controls. Every text-like type maps onto `.ipt` for the shared chrome
+     and nothing else -- an icon is a wrapper composition (`.input-group`), not a
+     property of the type, so no type paints one. */
   input:not([type]),
   input[type="text"],
-  input[type="number"] {
-    @apply ipt;
-  }
-
-  /* The mapping gives the control and its icon source, and stops there. A form
-     full of glyphs is a design choice rather than a property of the types in it,
-     so the artwork waits for `.icon` on the element -- which a native mapping
-     cannot write, because there is no class to write it in. */
+  input[type="number"],
   input[type="email"],
   input[type="password"],
   input[type="url"],

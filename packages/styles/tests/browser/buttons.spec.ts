@@ -572,4 +572,39 @@ test.describe("buttons", () => {
     expect(await readPadding("btn-icon-default", "padding")).toBe("8px");
     expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");
   });
+
+  /* No aesthetic is in scope, so `box-active` falls back to the `:root`
+     `--ui-active-transform` the base look declares. A held pointer is what drives
+     `:active`; no keyboard move can. Reduced motion drops the transform entirely. */
+  test("scales a pressed button on the base look, and holds still under reduced motion", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const button = page.getByTestId("btn-default-none");
+    const pressedScale = async () => {
+      const transform = await button.evaluate((node) => getComputedStyle(node).transform);
+
+      return transform === "none" ? 1 : Number.parseFloat(transform.slice("matrix(".length).split(",")[0]!);
+    };
+
+    await button.hover();
+    await page.mouse.down();
+    try {
+      /* The transform is transitioned, so this polls for the settled value. */
+      await expect.poll(pressedScale, "pressed on the base look").toBeCloseTo(0.97, 2);
+    } finally {
+      await page.mouse.up();
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await button.hover();
+    await page.mouse.down();
+    try {
+      await expect
+        .poll(() => button.evaluate((node) => getComputedStyle(node).transform), "pressed under reduced motion")
+        .toBe("none");
+    } finally {
+      await page.mouse.up();
+      await page.emulateMedia({ reducedMotion: null });
+    }
+  });
 });

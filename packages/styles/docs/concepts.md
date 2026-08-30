@@ -82,13 +82,13 @@ explicit selector overrides it.
   dark declaration wins because it appears later with equal specificity. Do
   not rely on this conflict behavior; apply one theme per element.
 - Component colors resolve from tokens or `currentColor`, so they follow the
-  theme without separate dark-variant rules. Input icons are the one
-  exception: they are `background-image` data URIs, which cannot read a
-  custom property, so they ship a light and a dark artwork and the theme
-  re-points an alias. See [Usage → Forms](./usage/forms.md#input-icons).
+  theme without separate dark-variant rules, with no exception: every glyph
+  the package draws is a `currentColor` mask. Icon artwork a consumer brings
+  is theirs to theme.
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below
 it, because that is the only signal the palette reads. This also themes native
 UI such as scrollbars and form-control internals to match.
 
-This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package
+overall requires Firefox 121 for `:has()` (see [Setup](./setup.md#requirements)).

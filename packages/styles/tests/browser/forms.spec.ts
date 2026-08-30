@@ -310,7 +310,7 @@ test.describe("forms", () => {
       return value;
     });
 
-    const input = page.getByTestId("field-email-icon-left");
+    const input = page.getByTestId("field-email-standard");
     const restingLine = await input.evaluate((element) => getComputedStyle(element).borderTopColor);
 
     await input.focus();
@@ -808,94 +808,132 @@ test.describe("forms", () => {
     await expectUnmoved("switch-default-none-disabled");
   });
 
-  /* A data URI is a document of its own and inherits nothing from the page, so
-     the artwork cannot read `currentColor` or a custom property and ships one
-     copy per theme. What the copies buy is that the icon is painted by the
-     control itself: no wrapper element, and nothing between a field and its
-     glyph. */
-  test("paints a field icon on the control itself and swaps it with the theme", async ({ page }) => {
+  /* No icons ship. `.input-group` is the wrapper that owns the field box so a
+     control can carry an icon element beside it -- any element, from
+     `@codenhub/icons` or an inline `<svg>`. These build the markup and read what
+     the group draws against what the control inside it does. */
+  test("draws the box on the group and flushes the control inside it", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const read = (testId: string) =>
-      page.getByTestId(testId).evaluate((node) => {
-        const styles = getComputedStyle(node);
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const group = document.createElement("div");
 
-        return { image: styles.backgroundImage, position: styles.backgroundPosition };
-      });
+      group.className = "input-group";
+      group.innerHTML = `<span class="probe-affix">i</span><input class="ipt" type="email" />`;
+      host.append(group);
 
-    const email = await read("field-email-icon-left");
-    const password = await read("field-password-icon-left");
-    const right = await read("field-email-icon-right");
-    const standard = await read("field-search-standard");
+      const groupStyles = getComputedStyle(group);
+      const inputStyles = getComputedStyle(group.querySelector("input")!);
+      const affixStyles = getComputedStyle(group.querySelector(".probe-affix")!);
+      const values = {
+        groupBorder: groupStyles.borderTopWidth,
+        groupBorderColor: groupStyles.borderTopColor,
+        inputBorder: inputStyles.borderTopWidth,
+        inputBg: inputStyles.backgroundColor,
+        inputShadow: inputStyles.boxShadow,
+        inputPadLeft: inputStyles.paddingLeft,
+        inputGrows: inputStyles.flexGrow,
+        affixGrows: affixStyles.flexGrow,
+      };
 
-    expect(email.image, "email artwork").toContain("data:image/svg+xml");
-    /* One picture per type, and the type is what chooses it. */
-    expect(password.image, "password artwork").not.toBe(email.image);
-    /* `.right` moves the same artwork rather than swapping it. */
-    expect(right.image, "right artwork").toBe(email.image);
-    expect(right.position, "right position").not.toBe(email.position);
-    /* A typed control with no `.icon` paints nothing, so the class stays opt-in
-       and a field never reserves room for artwork it will not draw. */
-    expect(standard.image, "a control that did not opt in").toBe("none");
-
-    /* The copies are the whole reason the theme blocks exist: a colour would
-       resolve at the point of use through `light-dark()`, an image cannot. */
-    await page.evaluate(() => document.documentElement.classList.add("dark"));
-
-    const dark = await read("field-email-icon-left");
-
-    expect(dark.image, "the dark copy").toContain("data:image/svg+xml");
-    expect(dark.image, "the theme picks between two copies").not.toBe(email.image);
-  });
-
-  /* Seven typed rules set `--ipt-icon-src`, and `.icon` can be written on a
-     control outside those seven. Without a fallback the declaration is invalid
-     at computed-value time, which lands on the same `none` -- the fallback is
-     there so the rule says what it does rather than relying on that. Either way
-     the control must paint no artwork while still reserving its room. */
-  test("paints no artwork on a control the seven typed rules do not name", async ({ page }) => {
-    await page.goto(FORMS_URL);
-
-    const uncovered = await page.evaluate(() => {
-      const host = document.createElement("div");
-
-      host.innerHTML = `<input type="text" class="ipt icon" />`;
-      document.body.append(host);
-
-      const styles = getComputedStyle(host.querySelector("input")!);
-      const values = { image: styles.backgroundImage, paddingLeft: styles.paddingLeft };
-
-      host.remove();
+      group.remove();
 
       return values;
     });
 
-    expect(uncovered.image, "an uncovered control paints nothing").toBe("none");
-    expect(Number.parseFloat(uncovered.paddingLeft), "and still reserves its room").toBeGreaterThan(12);
+    /* The group draws the boundary. */
+    expect(Number.parseFloat(measured.groupBorder), "group border").toBeGreaterThan(0);
+    expect(isTransparent(measured.groupBorderColor), "group border colour").toBe(false);
+    /* The control inside paints none of it and gives its horizontal padding up. */
+    expect(measured.inputBorder, "input border").toBe("0px");
+    expect(isTransparent(measured.inputBg), "input background").toBe(true);
+    expect(measured.inputShadow, "input shadow").toBe("none");
+    expect(measured.inputPadLeft, "input horizontal padding").toBe("0px");
+    /* The control stretches; the adornment does not. */
+    expect(measured.inputGrows, "input grows").toBe("1");
+    expect(measured.affixGrows, "affix does not grow").toBe("0");
   });
 
-  test("reserves room for a field icon only when the control opts in", async ({ page }) => {
+  test("rings the group on focus-within and does not double the ring on the control", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const padding = await page.evaluate(() => {
-      const read = (testId: string) => {
-        const styles = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const group = document.createElement("div");
 
-        return { left: styles.paddingLeft, right: styles.paddingRight };
+      group.className = "input-group";
+      group.innerHTML = `<input class="ipt" type="text" />`;
+      host.append(group);
+
+      const input = group.querySelector("input")!;
+      const rest = getComputedStyle(group).outlineStyle;
+
+      input.focus();
+
+      const values = {
+        rest,
+        groupFocused: getComputedStyle(group).outlineStyle,
+        inputFocused: getComputedStyle(input).outlineStyle,
       };
 
+      group.remove();
+
+      return values;
+    });
+
+    expect(measured.rest, "group outline at rest").toBe("none");
+    expect(measured.groupFocused, "the group rings on focus-within").toBe("solid");
+    expect(measured.inputFocused, "the inner control's own ring is suppressed").toBe("none");
+  });
+
+  test("propagates an inner control's invalid and disabled state to the group", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const measured = await page.evaluate(() => {
+      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+
+      const read = (className: string, inner: string) => {
+        const element = document.createElement("div");
+
+        element.className = className;
+        element.innerHTML = inner;
+        host.append(element);
+
+        const styles = getComputedStyle(element);
+        const values = { border: styles.borderTopColor, cursor: styles.cursor, opacity: styles.opacity };
+
+        element.remove();
+
+        return values;
+      };
+
+      /* The group's line is `text-control`'s -- the intent drawn at
+         `--_line-rest` -- so a lone `.ipt.destructive` is the reference for what
+         a reddened line looks like, no fraction to reconstruct. */
       return {
-        left: read("field-email-icon-left"),
-        right: read("field-email-icon-right"),
-        standard: read("field-search-standard"),
+        destructiveLine: read("ipt destructive", "").border,
+        neutralLine: read("ipt", "").border,
+        plain: read("input-group", `<input class="ipt" />`),
+        invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
+        disabled: read("input-group", `<input class="ipt" disabled />`),
       };
     });
 
-    // A search input without `.icon` keeps the plain control padding.
-    expect(padding.standard.left).toBe("12px");
-    expect(Number.parseFloat(padding.left.left)).toBeGreaterThan(12);
-    expect(Number.parseFloat(padding.right.right)).toBeGreaterThan(12);
-    expect(padding.right.left).toBe("12px");
+    expect(
+      getColorDistance(measured.invalid.border, measured.destructiveLine),
+      "an inner aria-invalid reddens the group line",
+    ).toBeLessThan(2);
+    expect(
+      getColorDistance(measured.invalid.border, measured.neutralLine),
+      "and the reddened line is not the neutral one",
+    ).toBeGreaterThan(2);
+    expect(
+      getColorDistance(measured.plain.border, measured.neutralLine),
+      "a valid group keeps the neutral line",
+    ).toBeLessThan(2);
+    expect(Number.parseFloat(measured.disabled.opacity), "an inner disabled dims the group").toBeLessThan(1);
+    expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
   });
 
   test("styles only hint error messages as field helper text", async ({ page }) => {

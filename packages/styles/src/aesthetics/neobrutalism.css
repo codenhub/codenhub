@@ -1,26 +1,12 @@
 /* Neobrutalism: thick ink outline, a hard unblurred offset shadow, and a press
-   that moves the element into its own shadow.
-
-   Tier 1 only. Every declaration below is a material token, and not one of them
-   names a component. What used to be two fourteen-selector lists is now
-   `--ui-ink` and four shadow parts: the ink reaches every component and every
-   bare element through the shared intent reset, and the shadow is colourless
-   geometry that each component colours against its own intent, so a success
-   button still casts a green shadow and a neutral button casts ink.
-
-   Load after the base stylesheet. Aesthetics override the neutral defaults the
-   shared reset declares at zero specificity, so source order decides. */
+   that moves the element into its own shadow. Material tokens only, no component
+   named -- the ink reaches everything through the intent reset, the shadow is
+   colourless geometry each component colours against its own intent. Load after
+   the base stylesheet; source order decides against the zero-specificity reset. */
 .neobrutalism {
-  /* The offset, read with a fallback rather than declared, which is what lets an
-     ancestor set it. A custom property declared on an element beats an inherited
-     one whatever the specificity, so declaring `--neo-offset` here would outrank
-     every ancestor including `:root`, which is where an application normally
-     themes something. The private carries the resolved value to the six places
-     below, so the default lives once.
-
-     It resolves here, on `.neobrutalism`, and inherits down already-resolved: a
-     descendant setting `--neo-offset` on itself changes nothing, and the shared
-     material tokens are the tool for reaching in that direction. */
+  /* Read with a fallback, not declared, so an ancestor (`:root`, where an app
+     themes) can set `--neo-offset`; the private carries the resolved value to
+     the six places below. See model.md#rules-for-aesthetics (R8). */
   --_neo-offset: var(--neo-offset, 4px);
 
   /* Pure black reads as ink on a light page and disappears on a dark one, so the
@@ -45,11 +31,10 @@
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
-  /* The press: move by the offset, shrink the shadow to nothing. Two tokens
-     replace a nine-selector `:hover` list, and R3 stays intact. */
-  --ui-hover-shadow-x: 0px;
-  --ui-hover-shadow-y: 0px;
-  --ui-hover-transform: translate(var(--_neo-offset), var(--_neo-offset));
+  /* The press: travel the offset, shrink the shadow to nothing, so the element
+     lands flat where its slab was. Hover keeps the slab still under the pointer;
+     `box-hover`'s derived fill tint is the whole hover response. One token pair,
+     no `:hover` list, R3 intact. */
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
@@ -67,29 +52,12 @@
   --ui-backdrop: none;
 }
 
-/* The one R3 exception this aesthetic takes, recorded in the registry as
-   `selectors`.
-
-   An alert rests at zero elevation because on every other aesthetic it is a
-   message inside the layout rather than something over it. Here the slab is not
-   depth -- it is a second ink line on two sides, and it is what makes a thick
-   outline read as brutalist rather than as a heavy box. An alert is the one
-   component the aesthetic wants loud that the registry rests flat, so a
-   neobrutalist alert without it is the only container on the page that looks
-   like it lost its material.
-
-   No token can say this. Elevation is a per-element decision by design, so the
-   only slots are the modifier and the component's own resting default, and an
-   aesthetic writing the modifier would beat `.flat` and take the choice away.
-   Writing the default instead leaves the modifier untouched: `box` resolves
-   `var(--ui-elevation, var(--_d-elevation, 1))`, so `.flat`, `.raised` and
-   `.floating` all still win on the element, and this only moves where an alert
-   rests when nobody has said. Reaching it with a token would mean a slot only
-   alerts resolve, which is naming the component through a longer route.
-
-   `--_d-elevation` inherits, as every custom property does, and that is inert
-   here: the value is `box`'s own fallback, so a descendant that declares none
-   computes exactly what it computed before. */
+/* The one R3 exception, recorded in the registry as `selectors`. The slab here
+   is a second ink line, not depth, and an alert -- the one loud container the
+   registry rests flat -- looks unfinished without it. It writes the component's
+   resting default rather than the modifier, so `.flat`/`.raised`/`.floating`
+   still win on the element; a token would name the component through a longer
+   route. `--_d-elevation` inheriting is inert -- it equals `box`'s own fallback. */
 .neobrutalism .alert {
   --_d-elevation: 1;
 }

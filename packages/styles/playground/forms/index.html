@@ -74,56 +74,175 @@
 
       <section class="sect-inn stack loose">
         <div class="stack tight">
-          <h2 class="text-title">Input types and icons</h2>
+          <h2 class="text-title">Input types</h2>
           <p class="text-body text-text-secondary">
-            On
+            Every text-like type maps onto
             <code class="code">.ipt</code>
-            the icon is opt-in through
-            <code class="code">.icon</code>
-            .
-            <code class="code">text</code>
-            and
-            <code class="code">number</code>
-            have no icon to show.
-          </p>
-          <p class="text-body text-text-secondary">
+            for the shared chrome and nothing else. No type ships an icon;
             <code class="code">date</code>
             and
             <code class="code">datetime-local</code>
-            depend on the engine. Where the native picker button can be hidden they opt themselves in and show the
-            themed calendar in its place; where it cannot, the native button stays and no custom icon is drawn, because
-            two calendar glyphs on one field read as a defect. They show no alignment cells for that reason: the
-            standard cell is the whole supported surface.
-          </p>
-          <p class="text-body text-text-secondary">
-            An icon is a
-            <code class="code">background-image</code>
-            on the control itself, so a field that wants one needs no wrapper element around it. A data URI is a
-            document of its own and inherits no color from the page, so each glyph ships a light and a dark copy and the
-            theme picks between them.
+            keep the browser's native picker.
           </p>
         </div>
         <div data-fields data-testid="field-matrix"></div>
+      </section>
+
+      <section class="sect-inn stack loose narrow">
         <div class="stack tight">
-          <h3 class="text-title-sm">Overrides</h3>
+          <h2 class="text-title">Icons</h2>
           <p class="text-body text-text-secondary">
-            <code class="code">--ipt-icon-src</code>
-            on the control replaces the artwork with any image, which is the whole of the override surface: the type
-            picks a source and this overrules it.
+            Icons are not shipped.
+            <code class="code">.input-group</code>
+            is the wrapper that owns the field box, so any icon element sits flush beside the control — a leading child
+            for a leading icon, a trailing child for a trailing one. The glyphs below are inline
+            <code class="code">&lt;svg&gt;</code>
+            ; a real project would more likely reach for
+            <code class="code">@codenhub/icons</code>
+            or another set.
           </p>
-          <div class="form-grid">
-            <label class="field">
-              <span class="label">Custom icon</span>
+        </div>
+        <div class="stack loose">
+          <label class="field" data-testid="input-group-leading">
+            <span class="label">Email</span>
+            <div class="input-group">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+              </svg>
+              <input class="ipt" type="email" value="you@example.com" />
+            </div>
+          </label>
+          <label class="field" data-testid="input-group-trailing">
+            <span class="label">Search</span>
+            <div class="input-group">
+              <input class="ipt" type="search" value="styles" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+            </div>
+          </label>
+          <label class="field" data-testid="input-group-invalid">
+            <span class="label">Email</span>
+            <div class="input-group">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+              </svg>
               <input
-                class="ipt icon"
-                type="text"
-                value="Custom artwork"
-                data-testid="field-custom-icon"
-                style="
-                  --ipt-icon-src: url(&quot;data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2'><circle cx='12' cy='8' r='4'/><path d='M4 21a8 8 0 0 1 16 0'/></svg>&quot;);
-                "
+                class="ipt"
+                type="email"
+                value="not-an-email"
+                aria-invalid="true"
+                aria-describedby="input-group-error"
               />
-            </label>
+            </div>
+            <span class="hint error" id="input-group-error">Enter a valid email.</span>
+          </label>
+          <label class="field" data-testid="input-group-disabled">
+            <span class="label">Email</span>
+            <div class="input-group">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+              </svg>
+              <input class="ipt" type="email" value="you@example.com" disabled />
+            </div>
+          </label>
+          <div class="stack tight">
+            <h3 class="text-title-sm">Presentation and aesthetic</h3>
+            <p class="text-body text-text-secondary">
+              The group reads the same axes a lone field does; the control inside stays flush.
+            </p>
+            <div class="form-grid">
+              <label class="field">
+                <span class="label">Soft, sunk</span>
+                <div class="input-group soft edgeless">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                  </svg>
+                  <input class="ipt" type="email" value="you@example.com" />
+                </div>
+              </label>
+              <label class="field">
+                <span class="label">Primary</span>
+                <div class="input-group primary">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+                  </svg>
+                  <input class="ipt" type="email" value="you@example.com" />
+                </div>
+              </label>
+            </div>
           </div>
         </div>
       </section>
@@ -201,13 +320,13 @@
           </label>
           <label class="field" data-testid="field-complete">
             <span class="label">Email</span>
-            <input class="ipt email icon" type="email" value="you@example.com" aria-describedby="field-hint" />
+            <input class="ipt" type="email" value="you@example.com" aria-describedby="field-hint" />
             <span class="hint" id="field-hint" data-testid="field-hint">We only use this to send build failures.</span>
           </label>
           <label class="field" data-testid="field-with-error">
             <span class="label">Email</span>
             <input
-              class="ipt email icon"
+              class="ipt"
               type="email"
               value="not-an-email"
               aria-invalid="true"
@@ -219,7 +338,7 @@
           <label class="field" data-testid="field-hint-and-error">
             <span class="label">Email</span>
             <input
-              class="ipt email icon"
+              class="ipt"
               type="email"
               value="not-an-email"
               aria-invalid="true"
@@ -230,13 +349,7 @@
           </label>
           <label class="field" data-testid="field-disabled">
             <span class="label">Email</span>
-            <input
-              class="ipt email icon"
-              type="email"
-              value="you@example.com"
-              disabled
-              aria-describedby="field-disabled-hint"
-            />
+            <input class="ipt" type="email" value="you@example.com" disabled aria-describedby="field-disabled-hint" />
             <span class="hint" id="field-disabled-hint">
               A disabled control dims itself; the label and hint keep full contrast so the field stays readable.
             </span>

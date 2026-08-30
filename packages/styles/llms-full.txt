@@ -96,12 +96,12 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Requirements
 
-| Requirement   | Details                                                                         |
-| ------------- | ------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                              |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 120 and newer, for `light-dark()` theming.  |
-| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.               |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management. |
+| Requirement   | Details                                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                             |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 121 and newer (`light-dark()` theming; `:has()` for `.input-group` state). |
+| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                              |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                |
 
 ## Notes
 
@@ -338,16 +338,16 @@ explicit selector overrides it.
   dark declaration wins because it appears later with equal specificity. Do
   not rely on this conflict behavior; apply one theme per element.
 - Component colors resolve from tokens or `currentColor`, so they follow the
-  theme without separate dark-variant rules. Input icons are the one
-  exception: they are `background-image` data URIs, which cannot read a
-  custom property, so they ship a light and a dark artwork and the theme
-  re-points an alias. See [Usage → Forms](docs/usage/forms.md#input-icons).
+  theme without separate dark-variant rules, with no exception: every glyph
+  the package draws is a `currentColor` mask. Icon artwork a consumer brings
+  is theirs to theme.
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below
 it, because that is the only signal the palette reads. This also themes native
 UI such as scrollbars and form-control internals to match.
 
-This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package
+overall requires Firefox 121 for `:has()` (see [Setup](docs/setup.md#requirements)).
 
 <!-- Source: docs/integrating/astro.md -->
 
@@ -649,8 +649,10 @@ page needs.
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
-- Chrome 123, Safari 17.5, or Firefox 120 and newer. Color tokens are declared
-  with `light-dark()` and selected by `color-scheme`.
+- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared
+  with `light-dark()` and selected by `color-scheme` (Firefox 120), and
+  `.input-group` propagates a nested control's invalid and disabled state with
+  `:has()` (Firefox 121).
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML,
   ARIA, keyboard behavior, focus management, validation, and announcements;
@@ -684,7 +686,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 
 | Class           | Look                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.                     |
+| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a press that moves the element into it.                     |
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
@@ -714,8 +716,8 @@ a green shadow and a destructive card a red one. With no intent, both the
 outline and the shadow use the ink, which follows the theme rather than the
 palette.
 
-`--neo-offset` is the knob: the shadow offset and the distance hover travels
-are the same number, so scaling the look scales both at once.
+`--neo-offset` is the knob: the shadow offset and the distance the press
+travels are the same number, so scaling the look scales both at once.
 
 ```html
 <section class="neobrutalism" style="--neo-offset: 6px">
@@ -728,9 +730,9 @@ are the same number, so scaling the look scales both at once.
 - Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content
   rather than structure, and an ink edge on one reads as a defect: a key cap
   keeps the quiet border color and a code chip keeps no border at all.
-- Only `.btn` and `.card.interactive` move on hover. A card lifts when it
-  opts in with `.interactive`; a plain card, an alert, or a panel is a
-  container rather than a control and stays put.
+- Only `.btn` and `.card.interactive` respond to hover and press. A card
+  becomes a control when it opts in with `.interactive`; a plain card, an
+  alert, or a panel is a container and stays put.
 - An alert rests on the slab under this aesthetic and nowhere else. Here the
   slab is a second ink line rather than depth, and an alert is the only
   container the package rests flat, so without it a neobrutalist alert is
@@ -829,8 +831,8 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
 
 **Exceptions:**
 
-- Only what the registry rests above zero sits on a bar — buttons, cards and
-  tooltips. A badge, chip or field is flat until it asks for depth with
+- Only what the registry rests above zero sits on a bar — buttons and cards.
+  A badge, chip, field, or tooltip is flat until it asks for depth with
   `.raised`, and `.flat` takes the bar off anything:
 
   ```html
@@ -843,13 +845,13 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
 - Action labels are drawn heavier and slightly tracked. Casing is left
   alone: how a label is worded is the application's decision, so if you want
   uppercase buttons, write that rule in your own stylesheet.
-- `.card.interactive` hovers but does not press — the press is a `.btn`
-  behavior — so a chunky answer tile does not travel into its bar.
+- `.card.interactive` presses like a `.btn`, so a chunky answer tile drops
+  onto its bar on click. A plain `.card` stays put.
 - The shipped `.primary` is a near-black monochrome, which leaves a primary
   button's bar almost invisible against its own plate; give `.primary` a hue
   if it is the call to action.
-- Nothing casts a shadow except the tooltip bubble, which needs separating
-  from whatever it floats over. The rest sit flat on the page.
+- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything
+  the registry rests flat sits flush on the page.
 
 <!-- Source: docs/usage/buttons.md -->
 
@@ -915,6 +917,10 @@ Examples:
 it with disabled behavior so users cannot trigger duplicate work. Loading
 buttons keep only opacity and transform transitions active so spinner and
 surface colors stay synchronized when theme tokens change.
+
+On the base look a press scales the button down a little
+(`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap
+in their own press gesture, and `prefers-reduced-motion` turns it off.
 
 Use `<button>` for actions or an accessible link for navigation; see
 [Accessibility](docs/accessibility.md).
@@ -1008,6 +1014,7 @@ neutral and bordered.
 | `.kbd`                                          | Fill, text, border, and border width.       |
 | `.data-table`                                   | Header fill and text, border, border width. |
 | `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
+| `.input-group`                                  | Border, border width, and a capped fill.    |
 | `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
 | `.switch`                                       | Border, border width, and a capped fill.    |
 | `.quote`                                        | Fill, text, border, and width.              |
@@ -1076,6 +1083,7 @@ directions: an axis marked `Yes` must move, and an axis marked `No` must not.
 | `.quote`                                                  | Yes    | Yes  | Yes  | Edge width         |
 | `.divider`, `.skeleton`                                   | Yes    | No   | No   | No                 |
 | `.ipt`, `.textarea`, `.select`, `.text-control`           | Yes    | Yes  | Yes  | Shape              |
+| `.input-group`                                            | Yes    | Yes  | Yes  | Shape              |
 | `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
@@ -1283,14 +1291,14 @@ container:
 
 ## Surfaces
 
-| Class                | Purpose                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`. |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.    |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                            |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                          |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
+| Class                | Purpose                                                                      |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |
 
 Both read intent, [presentation](docs/usage/composing.md#presentation), and
 [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a
@@ -1300,11 +1308,15 @@ until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or
 `.elevation-sm`/`.elevation-md` asks for it; see
 [Composing → Elevation](docs/usage/composing.md#elevation).
 
+On the base look, `.card.interactive` scales down slightly on press
+(`--ui-active-transform`, `scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md)
+substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
+
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card interactive" href="/package">Lifts on hover</a>
+<a class="card interactive" href="/package">Responds to hover and press</a>
 <aside class="panel">Flush panel</aside>
 ```
 
@@ -1405,7 +1417,7 @@ include their own colors.
 | `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`      |
 | `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`      |
 | `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`      |
-| `--ui-active-transform` | Transform while pressed.                                                                                      | `none`               |
+| `--ui-active-transform` | Transform while pressed. `none` under `prefers-reduced-motion`.                                               | `scale(0.97)`        |
 | `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                 |
 | `--ui-shadow-edge`      | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                |
 | `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                  |
@@ -1477,7 +1489,7 @@ imported.
 
 | Token                    | Aesthetic       | Purpose                                                     | Default                           |
 | ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                             |
 | `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                         |
 | `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
 | `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
@@ -1657,65 +1669,71 @@ announced; see [Accessibility](docs/accessibility.md).
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                         |
-| --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                         |
-| `.label`                                                              | Form label text.                                                |
-| `.hint`                                                               | Secondary helper text.                                          |
-| `.hint.error`                                                         | Helper text with destructive intent.                            |
-| `.surface`                                                            | Shared public container composition utility.                    |
-| `.text-control`                                                       | Shared public text-control composition utility.                 |
-| `.ipt`                                                                | Input control styling.                                          |
-| `.ipt.icon`                                                           | Opts-in to displaying an input icon.                            |
-| `.left` / `.right` (on `.ipt.icon` or native inputs)                  | Icon alignment (left by default).                               |
-| `.email`, `.password`, `.url`, `.tel`, `.search`, `.date`, etc.       | Input type icon selectors (class or matching `type` attribute). |
-| `.textarea`                                                           | Textarea control styling.                                       |
-| `.select`                                                             | Select control styling.                                         |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                   |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                  |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                             |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                               |
+| Class or Selector                                                     | Purpose                                                       |
+| --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                       |
+| `.label`                                                              | Form label text.                                              |
+| `.hint`                                                               | Secondary helper text.                                        |
+| `.hint.error`                                                         | Helper text with destructive intent.                          |
+| `.surface`                                                            | Shared public container composition utility.                  |
+| `.text-control`                                                       | Shared public text-control composition utility.               |
+| `.ipt`                                                                | Input control styling.                                        |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry icons. |
+| `.textarea`                                                           | Textarea control styling.                                     |
+| `.select`                                                             | Select control styling.                                       |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                              |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                 |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                           |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                             |
 
-## Input icons
+## Icons
 
-`.ipt` input icons are opt-in via `.icon` (e.g.
-`<input class="ipt email icon left">`). Native inputs mapped in `native.css`
-get the same icon source from their type, and the same opt-in: the artwork
-is drawn only where the element also carries `.icon`.
+The package ships no icons. It used to paint one per input type as a
+`background-image` — a `data:` URI, which cannot read `currentColor` or a
+custom property, so every glyph shipped a light and a dark copy and a theme
+selector chose between them. That put icon artwork, and the package's only
+theme-by-selector branch, inside a CSS-only design system whose glyphs did
+not fit every aesthetic. Icons are the consumer's to choose now.
 
-`date` and `datetime-local` depend on the engine, because their picker
-button is the one browsers do not all let a stylesheet hide. Where it can be
-hidden, the type opts itself into `.icon` and shows the themed calendar in
-its place. Where it cannot, the native button stays and no custom icon is
-drawn, since two calendar glyphs on one field read as a defect. `.icon`,
-`.left`, and `.right` are inert on these two types in that case rather than
-reserving space for artwork that never paints. Native WebKit search
-decorations are suppressed on `search` inputs to prevent placeholder overlap
-when `.icon` is omitted.
-
-An input icon is a `background-image` on the control itself, so a field that
-wants one needs no wrapper element around it.
+`.input-group` is the wrapper for a control that carries one. It owns the
+field box — border, radius, fill, focus ring, invalid and disabled state —
+and the control inside it goes flush, so the boundary is drawn once. Any
+icon element works, placed before the control for a leading icon or after it
+for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon
+set such as `@codenhub/icons`.
 
 ```html
 <label class="field">
   <span class="label">Email</span>
-  <input class="ipt email icon" type="email" />
+  <div class="input-group">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true">
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+    </svg>
+    <input class="ipt" type="email" />
+  </div>
+</label>
+<label class="field">
+  <span class="label">Search</span>
+  <div class="input-group">
+    <input class="ipt" type="search" />
+    <i class="ic-search" aria-hidden="true"></i>
+  </div>
 </label>
 ```
 
-A `data:` URI is a document of its own and inherits nothing from the page,
-so the artwork can read neither `currentColor` nor a custom property and
-each glyph ships a light and a dark copy that a theme selector picks
-between. That is the one place in the package where a theme is chosen by
-selector rather than resolved by `light-dark()` at the point of use, because
-`light-dark()` takes colors and these are images.
+The group reads intent and both [presentation](docs/usage/composing.md#presentation)
+axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the
+sunk variant, `.input-group.primary` colors the boundary — and follows
+whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or
+`disabled` on the control inside propagates to the group; so does either on
+the group itself. Focus is shown with `:focus-within`, so unlike a lone
+field the ring also appears on a mouse click.
 
-`--ipt-icon-src` on the control replaces the artwork with any image.
-
-```html
-<input class="ipt icon" style="--ipt-icon-src: url('/icons/user.svg')" />
-```
+Non-icon input types keep the browser's native `date` and `datetime-local`
+pickers. WebKit's native `search` decorations are still suppressed on
+`.text-control` to keep them from overlapping the value.
 
 ## Toggles
 
@@ -1802,7 +1820,7 @@ when they fit.
 ```html
 <label class="field">
   <span class="label">Email</span>
-  <input class="ipt email icon" type="email" aria-invalid="true" aria-describedby="email-error" />
+  <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
   <span class="hint error" id="email-error">Enter a valid email.</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
@@ -2026,37 +2044,36 @@ share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a
 fixed value and the other multiplies shadow parts, so they will not always
 paint identically.
 
-| Token                       | Purpose                                                                 |
-| --------------------------- | ----------------------------------------------------------------------- |
-| `--font-default`            | Default app font family.                                                |
-| `--container-narrow`        | Narrow content width.                                                   |
-| `--container-max`           | Default content width.                                                  |
-| `--container-wide`          | Wide content width.                                                     |
-| `--layout-gutter`           | Responsive inline page padding.                                         |
-| `--layout-section-block`    | Responsive section vertical padding.                                    |
-| `--layout-gap`              | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.         |
-| `--layout-grid-min`         | Minimum column width for `.auto-grid`.                                  |
-| `--radius-small`            | Small radius for compact utility surfaces such as code elements.        |
-| `--radius-control`          | Radius for buttons, inputs, tooltips, and compact UI.                   |
-| `--radius-surface`          | Radius for cards, panels, and alerts.                                   |
-| `--control-height`          | Default minimum height for controls.                                    |
-| `--border-width`            | Default border width.                                                   |
-| `--elevation-color`         | Shadow color the four elevations compose from. Heavier in dark themes.  |
-| `--elevation-none`          | No shadow. Use on an element that should read as flat against its page. |
-| `--elevation-sm`            | A light shadow for your own surface-level elements, such as cards.      |
-| `--elevation-md`            | A shadow for your own raised elements, such as dropdowns and popovers.  |
-| `--elevation-lg`            | A shadow for your own full overlays, such as modal dialogs.             |
-| `--focus-ring`              | Focus-visible ring color.                                               |
-| `--focus-ring-offset`       | Focus-visible outline offset. Negative, so the ring lands on the edge.  |
-| `--focus-ring-width`        | Focus-visible outline/ring width.                                       |
-| `--motion-duration-fast`    | Fast transition for buttons and input interactions (`120ms`).           |
-| `--motion-duration-normal`  | Normal transition for layout and modals (`200ms`).                      |
-| `--motion-duration-slow`    | Slow animation for skeleton loaders and progress bars (`400ms`).        |
-| `--motion-ease`             | Default easing curve.                                                   |
-| `--z-popover`               | Popover/tooltip z-index.                                                |
-| `--surface-hover-transform` | The transform applied on interactive card/panel hover.                  |
-| `--breakpoint-xs`           | Extra-small Tailwind responsive breakpoint.                             |
-| `--breakpoint-2xl`          | Extended large Tailwind responsive breakpoint.                          |
+| Token                      | Purpose                                                                 |
+| -------------------------- | ----------------------------------------------------------------------- |
+| `--font-default`           | Default app font family.                                                |
+| `--container-narrow`       | Narrow content width.                                                   |
+| `--container-max`          | Default content width.                                                  |
+| `--container-wide`         | Wide content width.                                                     |
+| `--layout-gutter`          | Responsive inline page padding.                                         |
+| `--layout-section-block`   | Responsive section vertical padding.                                    |
+| `--layout-gap`             | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.         |
+| `--layout-grid-min`        | Minimum column width for `.auto-grid`.                                  |
+| `--radius-small`           | Small radius for compact utility surfaces such as code elements.        |
+| `--radius-control`         | Radius for buttons, inputs, tooltips, and compact UI.                   |
+| `--radius-surface`         | Radius for cards, panels, and alerts.                                   |
+| `--control-height`         | Default minimum height for controls.                                    |
+| `--border-width`           | Default border width.                                                   |
+| `--elevation-color`        | Shadow color the four elevations compose from. Heavier in dark themes.  |
+| `--elevation-none`         | No shadow. Use on an element that should read as flat against its page. |
+| `--elevation-sm`           | A light shadow for your own surface-level elements, such as cards.      |
+| `--elevation-md`           | A shadow for your own raised elements, such as dropdowns and popovers.  |
+| `--elevation-lg`           | A shadow for your own full overlays, such as modal dialogs.             |
+| `--focus-ring`             | Focus-visible ring color.                                               |
+| `--focus-ring-offset`      | Focus-visible outline offset. Negative, so the ring lands on the edge.  |
+| `--focus-ring-width`       | Focus-visible outline/ring width.                                       |
+| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).           |
+| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                      |
+| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).        |
+| `--motion-ease`            | Default easing curve.                                                   |
+| `--z-popover`              | Popover/tooltip z-index.                                                |
+| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                             |
+| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                          |
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material
 tokens — how much of an intent shows, and what a component is made of.
@@ -2065,21 +2082,29 @@ tokens — how much of an intent shows, and what a component is made of.
 
 # Tooltips
 
-| Class or Attribute                 | Purpose                                                      |
-| ---------------------------------- | ------------------------------------------------------------ |
-| `.tooltip`                         | Tooltip host. Uses `data-tooltip` as pseudo-element content. |
-| `.tooltip.tooltip-icon`            | Circular icon-style tooltip host.                            |
-| `[data-tooltip-position="top"]`    | Positions tooltip above host.                                |
-| `[data-tooltip-position="bottom"]` | Positions tooltip below host.                                |
-| `[data-tooltip-position="left"]`   | Positions tooltip left of host.                              |
-| `[data-tooltip-position="right"]`  | Positions tooltip right of host.                             |
-| No `data-tooltip-position`         | Defaults to top placement.                                   |
-| `[data-state="open"]`              | Shows tooltip without hover.                                 |
+| Class or Attribute                      | Purpose                                                        |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `.tooltip`                              | Tooltip host. Uses `data-tooltip` as pseudo-element content.   |
+| `.tooltip.tooltip-icon`                 | Circular icon-style tooltip host.                              |
+| `[data-tooltip-position="top"]`         | Positions tooltip above host.                                  |
+| `[data-tooltip-position="bottom"]`      | Positions tooltip below host.                                  |
+| `[data-tooltip-position="left"]`        | Positions tooltip left of host.                                |
+| `[data-tooltip-position="right"]`       | Positions tooltip right of host.                               |
+| No `data-tooltip-position`              | Defaults to top placement.                                     |
+| `[data-state="open"]`                   | Shows tooltip without hover.                                   |
+| `.tooltip.raised` / `.tooltip.floating` | Adds one or two units of depth. The bubble is flat by default. |
 
 A tooltip bubble's fill, ground color, and floor behavior are covered in
 [Composing → Presentation](docs/usage/composing.md#presentation), and its material
 follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope, including the
 pseudo-element itself.
+
+The bubble rests flat. It draws no shadow of its own on a plain page, and
+zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the
+same way `.flat` does elsewhere. Add [`.raised` or
+`.floating`](docs/usage/composing.md#elevation) to lift it — `.tooltip.floating` is the
+pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`,
+still reaches the bubble as it reaches any surface.
 
 ```html
 <button

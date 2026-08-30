@@ -1,34 +1,17 @@
-/* Elevation is a modifier, not an axis. Depth is not uniform within an
-   aesthetic: the same aesthetic wants raised option tiles beside a flat promo
-   panel, and that is a per-element decision made by whoever builds the screen,
-   not a property of what kind of thing the element is.
+/* Elevation is a modifier, not an axis: depth is a per-element decision (raised
+   tiles beside a flat panel in one aesthetic), so one unitless number multiplies
+   the aesthetic's shadow geometry where the component composes it. Unitless so
+   it inherits -- a container flattens a region, an element opts back in -- and
+   so `.flat` removes a part-based slab or blur without a conditional (complete
+   surface shadows like glass remain). The two classes that ask for depth carry
+   the geometry themselves; on a component it would inherit into everything
+   nested and a plain page would have a shadow under every card. See
+   model.md#elevation.
 
-   The division of labour is the point. The aesthetic decides what depth looks
-   like -- a hard bottom slab, a soft ambient blur, a stepped ring -- and
-   elevation decides how much part-based geometry this element gets. Neither
-   needs to know the other, so `.flat` removes a part-based slab or blur without a
-   conditional. Complete surface shadows such as glass remain.
-
-   One unitless number, multiplied into the aesthetic's shadow geometry where the
-   component composes it. Being unitless is also what makes it safe to inherit, so
-   a container can flatten a whole toolbar and any element inside can opt back in.
-
-   Each component's resting level comes from the registry, and it says how much
-   depth a component takes when depth is drawn -- not that it rests above the
-   page. Nothing is raised until an aesthetic draws depth or one of these classes
-   asks for it, which is why the two that ask carry the geometry to draw with.
-   Written on a component instead, that geometry would inherit into everything
-   nested inside it, and a plain page would have a shadow under every card. */
-
-/* `.flat`/`.raised`/`.floating` are the original names and remain first-class,
-   not deprecated -- `.elevation-none`/`.elevation-sm`/`.elevation-md` are an
-   alias pair that borrows the sm/md/lg naming the raw `--elevation-*` scale in
-   theme.css uses, for a consumer who wants one vocabulary across both. Bare
-   `sm`/`md`/`lg` are not available here: `sm` and `lg` are already the size
-   modifier's class names, so a matching class here would collide with a
-   component's own size. `.elevation-lg` is not shipped -- three levels covers
-   what the modifier needs today; the name is reserved if a fourth is ever
-   added, which is why the raw scale's top rung has no modifier-class match yet. */
+   `.flat`/`.raised`/`.floating` and `.elevation-none`/`-sm`/`-md` are
+   interchangeable aliases, the second borrowing the raw `--elevation-*` scale's
+   naming. Bare `sm`/`md`/`lg` would collide with the size modifier;
+   `.elevation-lg` is reserved, not shipped. */
 
 /* No part-based depth. Complete surface shadow values, such as glass, are not
    reached by the elevation multiplier. */

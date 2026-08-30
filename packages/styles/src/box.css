@@ -1,102 +1,47 @@
 @reference "tailwindcss";
 
-/* How a box is painted, in one place. Intent supplies the colour, presentation
-   how much of it, the aesthetic the material, and this composes the three.
-
-   Every value is composed inside the utility rather than declared on a
-   container, because a custom property resolves its `var()` references on the
-   element that declares it: a token referencing an intent would resolve against
-   the container's intent and inherit down already-resolved. That is why an
-   aesthetic ships colourless geometry and the colour is mixed here.
-
-   A component's own resting values arrive as `--_d-*`, declared in that
-   component's file next to its geometry. They are the only per-component input
-   this file takes; everything else is the three axes. */
+/* How a box is painted, in one place: intent supplies the colour, presentation
+   how much of it, the aesthetic the material, and this composes the three. It
+   composes here, not on a container, because a custom property resolves its
+   `var()` on the element that declares it -- a token referencing an intent would
+   inherit down already-resolved against the wrong one. So the aesthetic ships
+   colourless geometry and the colour is mixed here. A component's resting values
+   arrive as `--_d-*`; everything else is the three axes. */
 @utility box {
-  /* Presentation, resolved against this component's own registry default, then
-     capped by how far the intent lets a fill go.
-
-     The cap exists for one intent. A hue is legible at both ends of the fill
-     range: pale at 12%, saturated at 100%. Grey is not -- neutral's colour is
-     the page's ink, so 12% is the tint every neutral badge and panel is made of
-     while 100% is a black or white slab, which makes the intent that means
-     *nothing in particular* the loudest thing the package can draw. One colour
-     cannot serve both, so the intent says where its own fill stops instead, and
-     neutral stops early. Everything else leaves it at 100% and computes exactly
-     as it did before.
-
-     The cap lands before the hover step rather than after it, so a capped
-     intent still deepens when you hover it. Capping afterwards would pin rest
-     and hover to the same value and silently remove the feedback. */
+  /* Presentation resolved against the component's registry default, then capped
+     by `--intent-fill-max` -- neutral stops early because a full fill of the
+     page's ink is a slab. The cap lands before the hover step, so a capped
+     intent still deepens on hover instead of pinning rest and hover together.
+     See model.md#the-ink-is-gated-by-the-plate-not-tied-to-the-fill. */
   --_capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
   --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
-  /* How much of the foreground is the contrast ink. `--ui-fg-on-fill` is what
-     the presentation asks for -- `.solid` asks for all of it -- and the second
-     term is how much the plate can actually carry.
-
-     Contrast ink is for a plate dark enough to need it. It appears once the
-     fill is past halfway and reaches full at a full fill, so a partial plate
-     keeps `--intent-strong`, which is the tone picked to be read.
-
-     This used to be `min(asked, --intent-fill-max)`, which tied the ink to the
-     fill linearly and read plausibly: cap them together and the ink walks
-     toward the contrast exactly as far as the fill walks toward the colour. It
-     is wrong at the bottom of the range, because legibility is not linear. A
-     capped neutral `.solid` fills to 20% and stays a light plate, so the best
-     ink available is the darkest one -- and the old form walked 20% away from
-     it, toward the page. Measured on the light page, a neutral `.solid` button
-     printed 61 on 202 for 6.63:1 where the strong tone gives 10.9:1, and a
-     neutral tooltip printed 61 on 179 for 5.18:1. Both were the same line.
-
-     The cap it replaces is still doing its original job. Uncapped, a neutral
-     `.solid` prints near-white on light grey and loses its label entirely;
-     the ramp gives that case 0%, which is the answer the cap was reaching for.
-
-     `--ui-fg-on-fill` stays the ceiling rather than becoming the result, so the
-     presentation token still decides and `.soft` still asks for none. Deriving
-     the ink from the fill alone would leave the slot declared and unread, which
-     is the failure `--ui-border` already had. */
+  /* How much of the foreground is the contrast ink: what the presentation asks
+     for, gated by how much the plate can carry. The second term ramps in past a
+     half fill and reaches full at a full fill -- below that a partial plate
+     keeps `--intent-strong`, the tone picked to be read on the page. Legibility
+     is not linear, so this is not `min(asked, --intent-fill-max)`: a capped
+     neutral `.solid` fills to 20% and needs the darkest ink, not one walked 20%
+     toward the page (measured 6.63:1 where strong gives 10.9:1). `--ui-fg-on-fill`
+     stays the ceiling, not the result, or the slot is declared and unread. */
   --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_capped) * 2 - 100%)));
 
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
-  /* The ink end is `--intent-strong` and not `--intent-color`, because the two
-     ends of this mix are answering different questions. `--intent-contrast` is
-     a colour to print *on* the fill; the other end is a colour to print on the
-     page, and `--intent-strong` is the slot for exactly that -- "readable text,
-     icon, or border on subtle fills".
-
-     Reading `--intent-color` here made every colour do double duty as both a
-     ground and an ink, which is what forced neutral's hand: it had to be the
-     page's ink so a ghost card's body copy was legible, and that left `.solid`
-     no choice but the slab. It also printed ghost and soft components in the
-     mid-tone base -- amber-600 on a white page is 3.1:1 -- where the strong
-     tone is the one picked to be read.
-
-     `kbd`, `code` and `pre` already wrote this mix by hand for their own tinted
-     grounds. They no longer have to.
-
-     `--intent-contrast` keeps its own meaning -- the ink for a *full* fill of
-     `--intent-color` -- because `--_on-fill` above is what reconciles it with a
-     capped intent. Bending the slot itself instead, so that neutral's contrast
-     was the ink, made every full fill of neutral illegible: a checked checkbox
-     lifts the cap by definition, and it came out as a black box with a black
-     tick. */
+  /* The two ends answer different questions: `--intent-contrast` prints *on* the
+     fill, `--intent-strong` prints on the page (the slot for readable ink on a
+     subtle fill). Reading `--intent-color` at the page end instead makes every
+     colour do double duty and prints a soft amber component at 3.1:1.
+     `--intent-contrast` keeps its own meaning -- `--_on-fill` reconciles it with
+     a capped intent -- rather than being bent so neutral's contrast is the ink,
+     which rendered a checked neutral checkbox black-on-black. */
   --_fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
   /* P3: the line blends toward the fill by the fill amount, so a filled box has
-     a seamless edge instead of a stray ring of another colour.
-
-     The blend is the line's colour, and how much line there is comes after it.
-     Written the other way round -- how much line, then blend the fill into it --
-     `.edgeless` lands on the fill colour rather than on nothing, and the border
-     box paints that over the fill it already drew: two coats of a translucent
-     tint, which is a visible ring around an element that asked for no edge.
-
-     The blend runs toward `--_bg` rather than toward `--intent-color`, so a full
-     fill lands on the background the box actually painted -- alpha included. Run
-     against the raw intent instead, an aesthetic that thins the fill keeps an
-     opaque ring around a translucent box, and `.solid.edged` stops meaning what
-     `.solid.edgeless` means for that one aesthetic alone. */
+     a seamless edge. Blend first, amount after (`--_edge-amount` below) -- the
+     other order lands `.edgeless` on the fill colour, which the border box then
+     paints as a second translucent coat: a ring around an element that asked for
+     no edge. The blend runs toward `--_bg`, not raw `--intent-color`, so under
+     an aesthetic that thins the fill a translucent box does not keep an opaque
+     ring. */
   --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
@@ -118,13 +63,11 @@
      and a shadow position needs a length. */
   --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
   --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_elevation));
-  /* Three slots, most specific first: the aesthetic in scope, then the depth a
-     component draws when it is the thing that floats, then the plain step
-     `.raised` and `.floating` supply for a page with no aesthetic at all. The
-     order is what lets a raised card inside a neobrutalist page keep the slab
-     instead of trading it for a soft blur. Nothing declares the last slot until
-     something asks for depth, which is why a page with no aesthetic and no
-     modifier has no shadow anywhere. */
+  /* Three slots, most specific first: the aesthetic, then a component that draws
+     its own depth, then the plain step `.raised`/`.floating` supply on a page
+     with no aesthetic. The order lets a raised card under `.neobrutalism` keep
+     the slab. Nothing declares the last slot until something asks for depth, so
+     a plain unmodified page has no shadow anywhere. */
   --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px))) * var(--_elevation));
   --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--elevation-blur, 0px))) * var(--_elevation));
   /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
@@ -132,43 +75,25 @@
      the edge of every component the registry rests at zero. Elevation is depth:
      offset and blur. */
   --_ss: var(--ui-shadow-spread, var(--_d-shadow-spread, 0px));
-  /* A shadow is a neutral depth cue by default and the intent's own ink only
-     where an aesthetic says so. The amount is a bare percentage, so it inherits
-     safely and the mix happens where the intent lives -- which is the whole
-     reason this is composed here rather than declared on a container.
-
-     Defaulting to the neutral is what keeps depth from reading as colour: an
-     intent-coloured shadow at full opacity is a smear of the component's own
-     hue, not a shadow. An aesthetic whose depth *is* ink -- neobrutalism's slab
-     -- asks for it by name. */
+  /* A shadow is a neutral depth cue by default, the intent's own ink only where
+     an aesthetic asks (`--ui-shadow-ink`, a bare percentage so it inherits and
+     mixes where the intent lives). An intent-coloured shadow at full opacity is
+     a smear of the component's hue, not depth; neobrutalism's slab, which *is*
+     ink, asks for it by name. */
   --_depth-color: color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink, 0%), var(--elevation-color));
-  /* Or the shadow is not depth at all. An aesthetic that draws its line as an
-     inset ring is drawing the border somewhere a `clip-path` cannot cut it, so
-     that ring has to answer the edge axis exactly as a real border does --
-     otherwise the aesthetic decides an axis that is not its to decide, which is
-     what `.pixel` did: `.edged` and `.edgeless` rendered identically.
+  /* Or the shadow *is* the edge. An aesthetic that draws its line as an inset
+     ring (`.pixel`) puts the border where `clip-path` cannot cut it, so that
+     ring must answer the edge axis like a real border -- `--_edge` already does,
+     carrying P3's blend and `--_edge-amount` as its alpha, transparent at
+     `.edgeless`. Kept separate from `--ui-shadow-ink`, which means the opposite:
+     neobrutalism's slab is depth in ink and stays under `.edgeless`.
 
-     `--_edge` is the whole answer, because it already carries both halves: P3's
-     blend toward the fill, and `--_edge-amount` as its alpha. At `.edgeless` it
-     is transparent and the ring disappears on its own, with no second percentage
-     to keep in step.
-
-     Separate from `--ui-shadow-ink` rather than folded into it, because the two
-     mean opposite things. Neobrutalism's slab is depth cast in ink and stays
-     under an `.edgeless` button; pixel's ring is the line itself and must not.
-     Pointing `--ui-shadow-ink` at `--_edge` instead would have taken the slab off
-     every edgeless neobrutalist element on the page.
-
-     The switch is presence rather than a percentage, and that is not a style
-     choice. Written as `color-mix(in oklab, var(--_edge) var(--ui-shadow-edge),
-     var(--_depth-color))` both ends are themselves `color-mix()` results, and
-     WebKit resolves that nesting as though the percentage were zero: every ring
-     came out in `--elevation-color` at 8% alpha, in that engine only, with
-     Chromium and Firefox agreeing with the spec. So the aesthetic declares the
-     token empty to mean "my shadow is my edge", and each branch stays a single
-     mix. An undeclared token makes the line below invalid at computed-value
-     time, which is what hands the `var()` its fallback -- the same idiom
-     `--_focus-stack` uses at the bottom of this utility. */
+     The switch is presence, not a percentage, and that is measured: written as
+     `color-mix(... var(--_edge) var(--ui-shadow-edge), var(--_depth-color))`,
+     WebKit alone resolves the nested `color-mix()` as though the percentage were
+     zero. So the aesthetic declares the token empty to mean "my shadow is my
+     edge", and an undeclared token makes the line invalid at computed-value time
+     and hands `var()` its fallback -- the idiom `--_focus-stack` also uses. */
   --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
   --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
   --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
@@ -240,5 +165,21 @@
     );
 
     transform: var(--ui-hover-transform, none);
+  }
+}
+
+/* The press, beside the hover for the same reason: moving on `:active` is right
+   for something you click and meaningless on something you type into, so a
+   component opts in. `btn` and `.card.interactive` both do. The gesture is the
+   aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
+   onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
+   `theme.css`, dropped under reduced motion. The `--ui-active-shadow-*` slots
+   stay no-ops until an aesthetic sets them. */
+@utility box-active {
+  &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
+    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
+    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+
+    transform: var(--ui-active-transform, none);
   }
 }

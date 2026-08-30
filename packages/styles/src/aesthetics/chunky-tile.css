@@ -6,53 +6,23 @@
    Tier 1, plus one recorded selector list at the bottom. Load after the base
    stylesheet. */
 .chunky-tile {
-  /* The two knobs, and the reason they are *read* here rather than declared here.
-
-     A custom property declared on an element beats an inherited one whatever the
-     specificity, so an aesthetic that declares `--tile-radius: 0.75rem` on its own
-     class has already outranked every ancestor -- including `:root`, which is where
-     an application normally themes something. Measured: with the knob declared on
-     the class, an ancestor setting it left a chunky card at its default 12px.
-
-     Reading it with a fallback instead leaves the token undeclared here, so an
-     ancestor's value inherits down and lands, and a value on the element itself
-     still wins over that. The default lives once, in the fallback.
-
-     The cost is the other direction: these resolve on `.chunky-tile`, so they
-     inherit already-resolved and a *descendant* setting one changes nothing. The
-     shared material tokens are the tool for that -- `--ui-radius` on a descendant
-     still works, because `box` reads it at whichever element draws. The two reach
-     opposite ways on purpose.
-
-     One lift, and everything is a multiple of it: the bar under a resting element
-     is this deep and a press travels exactly this far, so the top edge drops by the
-     bar's depth and the bottom edge does not move. At 2px the bar reads as a
-     rendering seam; at 8px the element reads as floating rather than as seated. */
+  /* Two knobs, read with a fallback so an ancestor can set them -- declared here
+     they would outrank `:root` (R8; see model.md#rules-for-aesthetics). One lift
+     drives everything: the bar is this deep and a press travels exactly this
+     far. 2px reads as a rendering seam, 8px as floating rather than seated. */
   --_tile-lift: var(--tile-lift, 4px);
   --_tile-radius: var(--tile-radius, 0.75rem);
 
-  /* The tile grey. `--ui-ink` is the neutral line colour and, at the shadow ink
-     below, also the neutral bar -- so an unclassed card draws a 2px grey line and
-     sits on a bar of the same grey, which is how the original draws an option
-     tile.
-
-     Deliberately not the lighter greys the look actually uses. `--ui-ink` is also
-     every text control's boundary: `intent.css` resolves a field's
-     `--intent-border` to it ahead of `--color-control-border`, and a field draws
-     that at `--_line-rest: 60%`. Measured against the light page, neutral-200 is
-     1.21:1 and neutral-300 is 1.42:1 -- a field with no visible boundary, which
-     WCAG 1.4.11 asks 3:1 of. neutral-400 is 2.48:1 whole and is the heaviest tile
-     grey that still leaves a field legible. */
+  /* The tile grey -- also the neutral bar, at the shadow ink below. Darker than
+     the look's own greys because `--ui-ink` is every text control's boundary,
+     drawn at `--_line-rest: 60%`: neutral-200/300 measure 1.21:1/1.42:1 against
+     the light page where WCAG 1.4.11 asks 3:1, and neutral-400 (2.48:1 whole) is
+     the heaviest grey that still leaves a field legible. */
   --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
 
-  /* One knob feeding both, where glass publishes a pair. A pane and a button
-     inside it do not scale together, so glass splits them; a tile and a button do
-     -- the corner is what makes a 40px button and a 200px card read as the same
-     object, and letting them drift apart is the one way to lose it.
-
-     Chips clamp it themselves: `kbd`, `code`, `.checkbox` and `.radio` take
-     `min(var(--ui-radius), var(--radius-small))`, so this lands as 4px there
-     rather than turning a 16px checkbox into a circle. */
+  /* One knob for both radii, where glass splits them: a tile and the button
+     inside it share a corner, and drifting apart loses the single-object read.
+     Chips clamp it to `--radius-small` themselves. */
   --ui-radius: var(--_tile-radius);
   --ui-radius-surface: var(--_tile-radius);
 
@@ -62,33 +32,18 @@
   --ui-border-width: 2px;
   --ui-border-max: 100px;
 
-  /* The depth colour, and the one token that makes the bar a *shade* rather than a
-     repeat. `box` composes the bar as
+  /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
      `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,
-     and `--intent-border` IS `--intent-color` for all six hue intents -- so at
-     100% ink the bar equals the plate exactly. Measured before this line existed:
-     `.btn.success` printed #007a55 on #007a55, an sRGB distance of 0, on both
-     palettes. The bar was painted and invisible, and the press then read as the
-     button spontaneously shortening.
-
-     Lowering the ink alone cannot fix it, because the other end of that mix is
-     `--elevation-color`, which ships at `rgb(15 23 42 / 0.08)` on light: the mix
-     runs toward something nearly transparent, composites against the page, and the
-     bar comes out *lighter* than the plate. Naming the depth colour opaque points
-     the same mix at black instead, and one value then darkens on both palettes.
-
-     Measured at 72%, in sRGB: `.btn.success` #007a55 on #004c34, `.btn.destructive`
-     #c70036 on #7f001f, a neutral `.card` #fafafa on #888888. On the dark palette a
-     near-black card cannot go darker, so the bar lands lighter and reads as a rim,
-     which is what the original does in its own dark mode.
-
-     This is material rather than palette -- depth has a colour, and an aesthetic
-     saying what its depth is made of is the same kind of statement as saying how
-     far it is offset. It is worth knowing that `.glass` resolves `--elevation-color`
-     inside its own `--ui-surface-shadow`, so a glass region nested inside a chunky
-     one inherits this opaque black and draws a harder drop shadow than it would on
-     its own. Nesting two aesthetics is already a per-token negotiation; this is one
-     more entry in it. */
+     and `--intent-border` is `--intent-color` for the hue intents, so at 100%
+     ink the bar equalled the plate exactly (`.btn.success` #007a55 on #007a55).
+     Lowering the ink alone fails: the shipped `--elevation-color` is nearly
+     transparent, so the mix composites *lighter* than the plate. Naming the
+     depth colour opaque points it at black; 72% is measured (`.btn.success`
+     #007a55 on #004c34, neutral `.card` #fafafa on #888888). On a near-black
+     dark card the bar lands lighter and reads as a rim, as the original does.
+     `.glass` resolves `--elevation-color` in its own `--ui-surface-shadow`, so a
+     nested glass region inherits this opaque black -- one entry in the per-token
+     negotiation nesting two aesthetics already is. */
   --elevation-color: rgb(0 0 0);
   --ui-shadow-ink: 72%;
 
@@ -101,17 +56,11 @@
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
-  /* Hover holds still, and that is a choice against precedent rather than an
-     omission: neobrutalism spends its hover on the press because travelling into a
-     two-axis shadow is the gesture. A seated slab has one gesture and it belongs to
-     the press. Restated rather than left to the fallback, so a chunky region nested
-     inside a neobrutalist one does not inherit that aesthetic's collapse and lose
-     its bar under the pointer. */
-  --ui-hover-shadow-x: 0px;
-  --ui-hover-shadow-y: var(--_tile-lift);
-  --ui-hover-transform: none;
-
-  /* The press, and the reason the lift is one number. */
+  /* The press, and the reason the lift is one number: the element travels exactly
+     the bar's depth and lands flat on the page. Hover holds still -- a seated slab
+     has one gesture and it belongs to the press -- and the resting shadow tokens
+     above already hold the bar under the pointer, so hover needs nothing of its
+     own. */
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translateY(var(--_tile-lift));
