@@ -7,12 +7,12 @@ runs:
     # No version input: the action reads `packageManager` from package.json, which
     # is the same field pnpm itself reads locally.
     - name: Install pnpm
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
     # pnpm has to exist before this step, because the store cache it keys on is
     # resolved through the pnpm binary.
     - name: Install Node
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
       with:
         node-version-file: .nvmrc
         cache: pnpm
