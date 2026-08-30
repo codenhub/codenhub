@@ -4,9 +4,10 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 
 import {
-  CODEX_IDENTIFIER,
   EXCLUDE_FOLDER_AGENTS,
-  HARNESS_MAPPING,
+  findHarnessByLabel,
+  getHarnessesForScope,
+  groupByDest,
   PromptExitError,
   EXIT_CODE_CANCELLED,
   clearScreen,
@@ -192,43 +193,30 @@ async function main() {
     }
 
     // Resolve harnesses based on scope
-    const filteredHarnessMapping: Record<string, string> = {};
-    for (const name of Object.keys(HARNESS_MAPPING)) {
-      const isGlobal = name.includes("Global");
-      const isWorkspace = name.includes("Workspace");
-      if (
-        state.scope === "both" ||
-        (state.scope === "global" && isGlobal) ||
-        (state.scope === "local" && isWorkspace)
-      ) {
-        filteredHarnessMapping[name] = HARNESS_MAPPING[name];
-      }
-    }
+    const scopedHarnesses = getHarnessesForScope(state.scope);
 
     if (shouldInstallAllHarnesses) {
-      state.selectedHarnesses = Object.keys(filteredHarnessMapping);
+      state.selectedHarnesses = scopedHarnesses.map((harness) => harness.label);
     } else if (harnessOptions) {
       state.selectedHarnesses = [];
-      const keys = Object.keys(filteredHarnessMapping);
       for (const inputName of harnessOptions) {
-        const matchedKey = keys.find((k) => k.toLowerCase() === inputName.toLowerCase());
-        if (matchedKey) {
-          state.selectedHarnesses.push(matchedKey);
+        const harness = findHarnessByLabel(inputName, state.scope);
+        if (harness) {
+          state.selectedHarnesses.push(harness.label);
         } else {
           console.error(
             `${ANSI.RED}Error: Harness "${inputName}" is not valid for scope "${state.scope}".${ANSI.RESET}`,
           );
-          console.error(`Available for this scope: ${keys.join(", ")}`);
+          console.error(`Available for this scope: ${scopedHarnesses.map((h) => h.label).join(", ")}`);
           process.exit(1);
         }
       }
     } else {
       const detectedHarnesses: string[] = [];
-      for (const name of Object.keys(filteredHarnessMapping)) {
-        const destBaseDir = filteredHarnessMapping[name];
-        const isPathExisting = destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
+      for (const harness of scopedHarnesses) {
+        const isPathExisting = fs.existsSync(harness.dest) || fs.existsSync(path.dirname(harness.dest));
         if (isPathExisting) {
-          detectedHarnesses.push(name);
+          detectedHarnesses.push(harness.label);
         }
       }
       if (detectedHarnesses.length === 0) {
@@ -243,17 +231,23 @@ async function main() {
 
   const skillsToInstall = state.shouldInstallAll ? skills.map((s) => s.id) : state.selectedSkills;
 
+  // Harnesses that read the same directory share one copy (and one cleanup).
+  const destinationGroups = groupByDest(
+    state.selectedHarnesses
+      .map((label) => findHarnessByLabel(label, state.scope))
+      .filter((harness) => harness !== undefined),
+  );
+
   if (state.shouldCleanupFirst) {
     console.log(`${ANSI.YELLOW}Cleaning up target directories...${ANSI.RESET}`);
-    for (const harness of state.selectedHarnesses) {
-      const destBaseDir = HARNESS_MAPPING[harness];
-      if (destBaseDir && fs.existsSync(destBaseDir)) {
+    for (const group of destinationGroups) {
+      if (fs.existsSync(group.dest)) {
         try {
-          fs.rmSync(destBaseDir, { recursive: true, force: true });
-          console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Cleaned: ${destBaseDir}`);
+          fs.rmSync(group.dest, { recursive: true, force: true });
+          console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Cleaned: ${group.dest}`);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed cleaning ${destBaseDir}: ${msg}`);
+          console.error(`  ${ANSI.RED}✘${ANSI.RESET} Failed cleaning ${group.dest}: ${msg}`);
         }
       }
     }
@@ -264,13 +258,8 @@ async function main() {
 
   let hasFailures = false;
 
-  for (const harness of state.selectedHarnesses) {
-    const destBaseDir = HARNESS_MAPPING[harness];
-    if (!destBaseDir) {
-      continue;
-    }
-    const isCodex = harness.includes(CODEX_IDENTIFIER);
-    console.log(`${ANSI.BLUE}→ Installing to ${harness}...${ANSI.RESET}`);
+  for (const group of destinationGroups) {
+    console.log(`${ANSI.BLUE}→ Installing to ${group.labels.join(", ")}...${ANSI.RESET}`);
 
     for (const skillId of skillsToInstall) {
       const skill = skills.find((s) => s.id === skillId);
@@ -278,12 +267,12 @@ async function main() {
         continue;
       }
 
-      const destSkillDir = path.join(destBaseDir, skillId);
+      const destSkillDir = path.join(group.dest, skillId);
       try {
         copyRecursiveSync({
           src: skill.path,
           dest: destSkillDir,
-          ignoreList: isCodex ? [] : [EXCLUDE_FOLDER_AGENTS],
+          ignoreList: group.includeAgentsFolder ? [] : [EXCLUDE_FOLDER_AGENTS],
         });
         console.log(`  ${ANSI.GREEN}✔${ANSI.RESET} Copied: ${skill.name}`);
       } catch (err: unknown) {

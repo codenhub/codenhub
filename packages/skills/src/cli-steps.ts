@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-import { PromptExitError, HARNESS_MAPPING, type State, type Step } from "./cli-helpers.js";
+import { getHarnessesForScope, PromptExitError, type State, type Step } from "./cli-helpers.js";
 import { type Skill } from "./index.js";
 import { BACK, promptCheckbox, promptConfirm, promptSelect, type Choice, type SelectChoice } from "./prompts.js";
 
@@ -84,30 +84,18 @@ export function createWizardSteps(state: State, skills: Skill[]): Step[] {
       title: "Select Harnesses",
       summarize: () => state.selectedHarnesses.join(", "),
       run: async (canGoBack) => {
-        const filteredHarnessMapping: Record<string, string> = {};
-        for (const name of Object.keys(HARNESS_MAPPING)) {
-          const isGlobal = name.includes("Global");
-          const isWorkspace = name.includes("Workspace");
-          if (
-            state.scope === "both" ||
-            (state.scope === "global" && isGlobal) ||
-            (state.scope === "local" && isWorkspace)
-          ) {
-            filteredHarnessMapping[name] = HARNESS_MAPPING[name];
-          }
-        }
+        const scopedHarnesses = getHarnessesForScope(state.scope);
 
-        const harnessChoices: Choice[] = Object.keys(filteredHarnessMapping).map((name) => {
-          const destBaseDir = filteredHarnessMapping[name];
-          const isPathExisting =
-            destBaseDir && (fs.existsSync(destBaseDir) || fs.existsSync(path.dirname(destBaseDir)));
+        const harnessChoices: Choice[] = scopedHarnesses.map((harness) => {
+          const isPathExisting = fs.existsSync(harness.dest) || fs.existsSync(path.dirname(harness.dest));
           const isDefaultChecked = !!isPathExisting;
 
           return {
-            name,
-            value: name,
-            isChecked: state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(name) : isDefaultChecked,
-            description: destBaseDir,
+            name: harness.label,
+            value: harness.label,
+            isChecked:
+              state.selectedHarnesses.length > 0 ? state.selectedHarnesses.includes(harness.label) : isDefaultChecked,
+            description: harness.dest,
           };
         });
 
