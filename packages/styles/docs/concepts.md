@@ -90,4 +90,5 @@ Setting `color-scheme` yourself on an element also re-themes the tokens below
 it, because that is the only signal the palette reads. This also themes native
 UI such as scrollbars and form-control internals to match.
 
-This mechanism requires Chrome 123, Safari 17.5, or Firefox 120 and newer.
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package
+overall requires Firefox 121 for `:has()` (see [Setup](./setup.md#requirements)).

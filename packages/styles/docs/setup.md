@@ -106,8 +106,10 @@ page needs.
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
-- Chrome 123, Safari 17.5, or Firefox 120 and newer. Color tokens are declared
-  with `light-dark()` and selected by `color-scheme`.
+- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared
+  with `light-dark()` and selected by `color-scheme` (Firefox 120), and
+  `.input-group` propagates a nested control's invalid and disabled state with
+  `:has()` (Firefox 121).
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML,
   ARIA, keyboard behavior, focus management, validation, and announcements;
