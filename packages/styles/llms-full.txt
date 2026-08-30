@@ -1713,6 +1713,9 @@ set such as `@codenhub/icons`.
     </svg>
     <input class="ipt" type="email" />
   </div>
+</label>
+<label class="field">
+  <span class="label">Search</span>
   <div class="input-group">
     <input class="ipt" type="search" />
     <i class="ic-search" aria-hidden="true"></i>
