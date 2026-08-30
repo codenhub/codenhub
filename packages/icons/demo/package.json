@@ -12,5 +12,21 @@
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "vite": "catalog:"
+  },
+  "codenhub": {
+    "assets": [
+      {
+        "from": "favicon/favicon.ico",
+        "to": "public/favicon.ico"
+      },
+      {
+        "from": "logo/logo-dark.svg",
+        "to": "public/assets/logo/logo-dark.svg"
+      },
+      {
+        "from": "logo/logo-light.svg",
+        "to": "public/assets/logo/logo-light.svg"
+      }
+    ]
   }
 }

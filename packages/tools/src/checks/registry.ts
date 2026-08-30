@@ -17,7 +17,7 @@ import type { CheckRule } from "./rule.ts";
  */
 export function createCheckRules(workspace: Workspace): CheckRule[] {
   return [
-    ...createManifestRules(),
+    ...createManifestRules(workspace.root),
     ...createDependencyRules(workspace.packages),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),

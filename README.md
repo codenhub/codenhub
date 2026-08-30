@@ -9,6 +9,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 ### Applications
 
 - `apps/debug`: Private local debug workspace to run, test, and verify packages in integration.
+- `apps/demo`: Deployed app aggregating every package's demo/ output into one surface.
 - `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
 
 ### Libraries & Primitives
@@ -109,7 +110,9 @@ Read these before changing package behavior, public APIs, or project conventions
 - `docs/tooling.md`: root scripts, the `hub` CLI, and package script rules.
 - `docs/ci.md`: the pinned toolchain and the pull-request workflow.
 - `docs/code-guidelines.md`: coding conventions and enforceable quality rules.
-- `docs/specs/packages-development.md`: optional package-local playground, dev, and debug workflow for real usage scenarios.
+- `docs/specs/packages-demo.md`: general contract for package demos and the
+  app that aggregates them into one deployed surface.
+- `docs/specs/packages-development.md`: optional package-local playground, dev, debug, and demo workflow for real usage scenarios and deployable demos.
 - `docs/specs/packages-documentation.md`: public and internal package
   documentation requirements.
 - `docs/specs/packages-exceptions.md`: package-specific exception register.

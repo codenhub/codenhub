@@ -1,4 +1,6 @@
+import { planAssetSyncs } from "../assets/prepare.ts";
 import { planBrowserInstalls } from "../browsers/playwright.ts";
+import { createAssetsCommand } from "./assets-command.ts";
 import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
 import { createCleanCommand } from "./clean-command.ts";
@@ -14,10 +16,21 @@ import { createVerifyCommand } from "./verify-command.ts";
 
 const CLOC_EXCLUDED_DIRECTORIES = "node_modules,dist,coverage,test-results,.git";
 const CLOC_EXCLUDED_EXTENSIONS = "md,yaml,json";
-const INTERACTIVE_PACKAGE_SCRIPTS = new Set(["debug", "dev", "preview"]);
+const INTERACTIVE_PACKAGE_SCRIPTS = new Set(["debug", "preview"]);
 
 const COMMANDS: readonly CommandDefinition[] = [
-  createScriptCommand({ includesDependencies: true, name: "build", summary: "Build the selected packages." }),
+  createScriptCommand({
+    includesDependencies: true,
+    name: "build",
+    prepare: async (context, packages) => planAssetSyncs(context.workspace.root, packages),
+    summary: "Build the selected packages.",
+  }),
+  createScriptCommand({
+    isInteractive: true,
+    name: "dev",
+    prepare: async (context, packages) => planAssetSyncs(context.workspace.root, packages),
+    summary: `Run the "dev" package script.`,
+  }),
   createScriptCommand({
     forwardsPaths: true,
     name: "test",
@@ -88,6 +101,7 @@ const COMMANDS: readonly CommandDefinition[] = [
   createGenerateCommand(),
   createCleanCommand(),
   createBrowsersCommand(),
+  createAssetsCommand(),
   createNewCommand(),
   createListCommand(),
 ];
@@ -104,8 +118,8 @@ export function listCommands(): readonly CommandDefinition[] {
  * Resolves a command name to its definition.
  *
  * Names without a dedicated definition fall back to running a package script of
- * the same name, so package-specific scripts such as `dev` and `debug` work
- * without being registered.
+ * the same name, so package-specific scripts such as `debug` work without being
+ * registered.
  * @param name Command or package script name.
  * @returns Command definition to run.
  */

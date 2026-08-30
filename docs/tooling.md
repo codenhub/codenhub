@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-12
+last_updated: 2026-08-30
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -57,9 +57,9 @@ Root scripts map directly onto it:
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
 
-`hub browsers`, `hub new`, `hub release`, and `hub preview:deploy` have no root
-script of their own. They are occasional commands rather than part of a change
-loop, and they read as what they are through `pnpm hub <command>`.
+`hub browsers`, `hub assets`, `hub new`, `hub release`, and `hub preview:deploy`
+have no root script of their own. They are occasional commands rather than part
+of a change loop, and they read as what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name,
 so package-specific scripts such as `dev` and `debug` work without registration.
@@ -276,6 +276,45 @@ one install, and the command only downloads once for all of them. Extra argument
 reach Playwright, which is how CI asks for the system libraries a headless browser
 needs on a runner with `--with-deps`.
 
+## Asset placement
+
+Root `assets/` (`docs/assets.md`) catalogs Coden's brand artwork and fonts,
+but says nothing about where any consumer places a file — that stays each
+package's own decision, since a web app, a demo, and a future non-web
+consumer each place things differently. A package declares exactly which
+files it needs and exactly where in its own manifest:
+
+```json
+"codenhub": {
+  "assets": [
+    { "from": "favicon/favicon.ico", "to": "public/favicon.ico" },
+    { "from": "logo/logo-dark.svg", "to": "public/assets/logo/logo-dark.svg" }
+  ]
+}
+```
+
+`from` is relative to root `assets/`; `to` is relative to the package's own
+directory. `pnpm hub assets` reads that declaration and syncs it:
+
+```sh
+pnpm hub assets
+pnpm hub assets demo
+```
+
+It is the one place root `assets/` gets copied from, so every consumer
+reuses the same implementation instead of carrying its own copy script.
+`build` and `dev` run it automatically through their `prepare` step for any
+package that declares `codenhub.assets`, so a package's own scripts need no
+`predev`/`prebuild` step of their own. A destination is remembered per
+package (a gitignored `.codenhub-assets.json` beside its manifest), so a
+later run can tell a file it placed apart from one it never touched — that
+is what lets a dropped entry's old file be removed without risking anything
+the mechanism did not itself place. Sync fails before changing files when a
+destination already exists without that ownership record, a declared source
+is invalid, or a source or destination escapes its boundary through a symbolic
+link. `hub check` validates that every declared `from` resolves to a real file
+under `assets/`.
+
 ## Creating a package
 
 `hub new <name>` scaffolds a public package under `packages/<name>`:
@@ -467,6 +506,7 @@ fail the run; `warning` covers SHOULD-level rules such as the recommended
 | `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
 | `llms-full`     | `llms-full.txt` still matches the documents it compiles.                                                                |
 | `readme`        | README status notices agree with `codenhub.docs.status`.                                                                |
+| `assets`        | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
 
 The `exports` rule reads import statements, not prose: naming a path in a
 sentence is not a promise that it resolves, but showing it in an `import` is.

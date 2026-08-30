@@ -203,3 +203,11 @@ work must stay a maintainer-triggered workflow rather than publish-on-merge.
 Neither the documentation deployment nor its previews are an exception: one runs
 from dashboard state and the other from a maintainer's machine, and neither
 carries a credential here.
+
+A second deployed surface, `apps/demo`, is designed in
+`docs/specs/packages-demo.md` (the general contract) and
+`apps/demo/docs/internal/architecture.md` (this app's own implementation),
+and tracked in `docs/roadmap.md` under `@codenhub/demo`. It follows the same
+dashboard-connected, credential-free pattern as the documentation deployment
+above, but no Cloudflare project for it exists yet, so this section will
+gain a second subsection once one does.

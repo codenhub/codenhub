@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -66,8 +66,8 @@ function createPackage(overrides: Partial<WorkspacePackage> = {}): WorkspacePack
   };
 }
 
-async function runRules(workspacePackage: WorkspacePackage): Promise<Finding[]> {
-  const applicable = createManifestRules().filter((rule) => rule.appliesTo(workspacePackage));
+async function runRules(workspacePackage: WorkspacePackage, root = "/repo"): Promise<Finding[]> {
+  const applicable = createManifestRules(root).filter((rule) => rule.appliesTo(workspacePackage));
   const findings = await Promise.all(
     applicable.map(async (rule) => rule.run({ includePack: false, package: workspacePackage })),
   );
@@ -237,5 +237,63 @@ describe("manifest rules", () => {
     });
 
     await expect(runRules(workspacePackage)).resolves.toEqual([]);
+  });
+
+  it("shouldAcceptAssetEntriesThatResolveToRealFiles", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
+    await mkdir(join(root, "assets", "favicon"), { recursive: true });
+    await writeFile(join(root, "assets", "favicon", "favicon.ico"), "");
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: {
+        codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+        name: "@fixture/private",
+      },
+    });
+
+    await expect(runRules(workspacePackage, root)).resolves.toEqual([]);
+  });
+
+  it("shouldReportAnAssetEntryWhoseSourceDoesNotExist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: {
+        codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+        name: "@fixture/private",
+      },
+    });
+
+    expect((await runRules(workspacePackage, root)).map(({ code }) => code)).toEqual(["assets/missing-source"]);
+  });
+
+  it("shouldReportAnAssetSourceThatResolvesOutsideTheAssetsDirectory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
+    const outsideDirectory = await mkdtemp(join(tmpdir(), "codenhub-manifest-outside-"));
+    await mkdir(join(root, "assets"), { recursive: true });
+    await writeFile(join(outsideDirectory, "secret.txt"), "secret");
+    await symlink(outsideDirectory, join(root, "assets", "linked"), "junction");
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: {
+        codenhub: { assets: [{ from: "linked/secret.txt", to: "public/secret.txt" }] },
+        name: "@fixture/private",
+      },
+    });
+
+    expect((await runRules(workspacePackage, root)).map(({ code }) => code)).toEqual(["assets/missing-source"]);
+  });
+
+  it("shouldReportAMalformedAssetsField", async () => {
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: { codenhub: { assets: [{ from: "favicon/favicon.ico" }] }, name: "@fixture/private" },
+    });
+
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["assets/invalid"]);
   });
 });

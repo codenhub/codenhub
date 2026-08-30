@@ -65,6 +65,16 @@ describe("viteIcons", () => {
     expect(resolveId("some-other-module.css")).toBeNull();
   });
 
+  it("leaves another plugin's resolved virtual module alone", () => {
+    // "\0virtual:" is a generic Vite/Rollup convention for a resolved virtual
+    // module id, not something unique to this plugin — Astro's own internal
+    // pages module uses it too. `load` must only serve ids this plugin itself
+    // resolved, or it corrupts modules it was never asked to handle.
+    const { load } = createPlugin();
+
+    expect(load("\0virtual:astro:pages")).toBeNull();
+  });
+
   it("serves CSS for the classes it scanned during transform", () => {
     const { load, transform } = createPlugin();
 

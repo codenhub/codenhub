@@ -1,0 +1,303 @@
+@import "@codenhub/styles/native";
+@import "@codenhub/icons";
+
+:root {
+  --demo-header-height: 4rem;
+}
+
+body {
+  margin: 0;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 1rem;
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-weight: 600;
+  box-shadow: var(--elevation-lg);
+  transform: translateY(calc(-100% - 0.5rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.site-header,
+.site-footer {
+  padding-inline: 1.5rem;
+  box-sizing: border-box;
+}
+
+.site-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--demo-header-height);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.site-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.brand-logo {
+  height: 1.75rem;
+  width: auto;
+}
+
+.brand-logo-on-dark {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-on-light {
+  display: none;
+}
+
+[data-theme="dark"] .brand-logo-on-dark {
+  display: block;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-icon-link {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.header-icon-link:hover {
+  color: var(--color-text);
+}
+
+.header-icon-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: currentcolor;
+}
+
+.header-icon-link i {
+  font-size: 1.1rem;
+}
+
+.theme-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.375rem;
+  min-height: 0;
+  min-width: 0;
+  padding: 0.125rem;
+  box-sizing: border-box;
+  border-radius: calc(infinity * 1px);
+  background: var(--color-border);
+  cursor: pointer;
+  transition: background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.theme-toggle:hover {
+  background: var(--color-border-hover);
+}
+
+.theme-toggle-knob {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.125rem;
+  margin-block: auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--color-text);
+  color: var(--color-text-contrast);
+  box-shadow: var(--elevation-sm);
+  transition: translate var(--motion-duration-normal, 200ms) var(--motion-ease);
+}
+
+[data-theme="dark"] .theme-toggle-knob {
+  translate: 1.125rem;
+}
+
+.theme-toggle .theme-icon {
+  font-size: 0.7rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-toggle .theme-icon-sun {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .theme-icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .theme-toggle .theme-icon-sun {
+  display: block;
+}
+
+.site-main {
+  flex: 1 1 auto;
+  padding-block: 2rem;
+  padding-inline: 1.5rem;
+}
+
+.site-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.site-footer-content {
+  padding-block: 1.25rem;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
+}
+
+.demo-hero {
+  margin-bottom: 2.5rem;
+}
+
+.demo-lede {
+  color: var(--color-text-secondary);
+  max-width: 40rem;
+}
+
+.packages-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.packages-toolbar-title {
+  margin: 0;
+}
+
+.packages-toolbar-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem;
+}
+
+/* `@codenhub/icons`'s own base rule (`i[class^="ic-"] { display: inline-block; }`)
+   outranks the browser's default `[hidden] { display: none; }` — same cascade
+   origin, higher specificity — so the sort button's inactive direction icon needs
+   an explicit, higher-specificity override to actually disappear. */
+[data-sort-icon][hidden] {
+  display: none;
+}
+
+.package-search {
+  width: 16rem;
+  max-width: 100%;
+}
+
+.demo-grid {
+  --layout-grid-min: 20rem;
+  /* `auto-fit` (the shared `.auto-grid` default) collapses empty tracks and
+     hands their space to whatever is left, so a lone card stretches to fill
+     the row. `auto-fill` keeps unused tracks in reserve instead, so a card
+     stays its natural column width regardless of how many others exist. */
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--layout-grid-min), 100%), 1fr));
+}
+
+.demo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+}
+
+.demo-card-open {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Stretches the primary link over the whole card, so the card reads as one
+   click target even though the footer's own links must stay outside it —
+   nesting an <a> inside an <a> is invalid. `.demo-card-links` paints over it
+   because it comes later in the same stacking context. */
+.demo-card-open::after {
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.demo-card-description {
+  color: var(--color-text-secondary);
+}
+
+.demo-card-status {
+  color: var(--intent-color);
+  display: grid;
+  place-items: center;
+}
+
+.demo-card-status i {
+  font-size: 1rem;
+}
+
+.demo-card-links {
+  --layout-gap: 0.75rem;
+
+  position: relative;
+}
+
+.demo-card-link {
+  color: var(--color-text-secondary);
+  display: grid;
+  place-items: center;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.demo-card-link:hover {
+  color: var(--color-text);
+}
+
+.demo-card-link i {
+  font-size: 1rem;
+}
+
+.demo-empty {
+  color: var(--color-text-secondary);
+}

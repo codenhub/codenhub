@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-07-17
+last_updated: 2026-08-27
 scope: Repository-wide static assets under root `assets/`.
 ---
 
@@ -61,9 +61,11 @@ when available space cannot accommodate full logo. Example:
 <img src="/assets/logo/logo-light.svg" alt="Coden" width="246" height="64" />
 ```
 
-This URL assumes deployment exposes repository `assets/` as `/assets/`.
-Otherwise, copy or import file through application's asset pipeline and use
-resulting URL.
+This URL assumes a consumer placed the file at `/assets/logo/logo-light.svg`
+in its own deployment, which is a placement choice that consumer makes, not
+something this document assumes. `docs/specs/packages-demo.md`'s "Assets
+boundary" section and `docs/tooling.md`'s `hub assets` describe how a
+package declares which files it needs and exactly where they go.
 
 ## Favicons
 
@@ -78,19 +80,18 @@ consumers requiring explicit dimensions.
 | `assets/favicon/favicon-128.ico` | 128 px  | Explicit 128 x 128 icon requirement. |
 | `assets/favicon/favicon-256.ico` | 256 px  | Explicit 256 x 256 icon requirement. |
 
-Default browser usage:
-
-```html
-<link rel="icon" href="/assets/favicon/favicon.ico" sizes="any" />
-```
-
-Explicit-size usage:
+`favicon.ico` needs no `<link>` tag when a consumer places it at its own
+serving root — browsers probe `/favicon.ico` at the origin root by default,
+which is what every deployed surface in this repository does
+(`docs/specs/packages-demo.md`, "Assets boundary"). Reach for an explicit
+`<link>` only for a specific non-default size:
 
 ```html
 <link rel="icon" href="/assets/favicon/favicon-32.ico" sizes="32x32" type="image/x-icon" />
 ```
 
-URLs assume same `/assets/` deployment mapping described for logos.
+The URL depends on where the consuming package places the file, the same as
+for logos above.
 
 ## Fonts
 
@@ -169,7 +170,7 @@ Load regular face and apply it only to display, brand, or special text:
 }
 ```
 
-URLs in font examples assume same `/assets/` deployment mapping described for
+URLs in font examples assume the same consumer-chosen placement described for
 logos.
 
 ### Font licenses
