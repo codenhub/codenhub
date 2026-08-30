@@ -183,8 +183,6 @@
 
   --z-popover: 40;
 
-  --surface-hover-transform: translateY(-1px);
-
   /* The one number the derived-hover formula spends: how much fill a hover adds
      on top of whatever the element rests at. */
   --hover-step: 14%;
