@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./fixtures";
 import { expectSameColor, getColorDistance, isTransparent } from "./test-utils";
 
 const SURFACES_URL = "http://localhost:5184/surfaces/?env=vanilla";

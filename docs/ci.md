@@ -72,12 +72,13 @@ both would double the slowest part of the run for no extra signal.
 so the workflow runs six jobs in total. The browser suites are by far the
 slowest thing in a run and the three engines share nothing, so splitting them
 trades runner minutes, which are cheap, for wall-clock time, which is what
-anyone waits on. The engines are far from equal: on the `styles` suite, which
-dominates the browser job, Firefox costs roughly five times what Chromium does
-for the same tests, and that cost is spread evenly across the suite rather than
-concentrated in a few slow tests. A single job therefore always waited for
-Firefox with two engines already finished. `docs/roadmap.md` tracks the open
-question of why Firefox is that much slower.
+anyone waits on. The engines are no longer far apart. Firefox once cost roughly
+five times what Chromium did on the `styles` suite, which was a fixture
+problem rather than an engine one: every test took a fresh browser context, and
+Firefox charges far more for one than the others do. `packages/styles` now
+shares a context per worker, which brought that suite from 285s to 84s on
+Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps
+the slowest one off everybody else’s critical path.
 
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are
 different findings, and cancelling one to report the other hides half of what a

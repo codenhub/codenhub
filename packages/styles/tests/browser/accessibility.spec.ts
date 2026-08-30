@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";
