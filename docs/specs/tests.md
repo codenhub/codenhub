@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-21
+last_updated: 2026-08-30
 ---
 
 # Testing specification
@@ -53,6 +53,8 @@ E2E tests verify full user journeys, page transitions, rendering, and visual reg
   - Since E2E tests are slower and require browser environments, configure them separately to avoid blocking fast unit test loops.
   - Browser suites MUST be reachable only through `test:browser`. A package that declares a Playwright config MUST define that script, and `test`, `test:coverage`, and `test:watch` MUST NOT reach a browser suite, directly or through another script. `hub check` reports both.
   - Browsers are installed by `hub browsers`, which `hub test:browser` runs first. A package MUST NOT install browsers from its own scripts, because two packages doing that would download into one shared cache twice.
+  - Every Playwright project name MUST end in the engine it runs on — `chromium`, `firefox`, or `webkit` — optionally prefixed to distinguish surfaces, as `@codenhub/toaster` does with `source-chromium` and `package-chromium`. CI runs one engine per job and selects it across every package with `--project='*<engine>*'`, so a project named anything else drops out of that job silently rather than failing it. See `docs/ci.md`.
+  - A package with a browser suite SHOULD cover all three engines. The suites exist to catch what one engine does differently from another, which a single-engine run cannot do.
 
 ## Configuration Requirements
 

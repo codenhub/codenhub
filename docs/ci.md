@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-12
+last_updated: 2026-08-30
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -55,22 +55,63 @@ check of that commit.
 
 ## Jobs
 
-The three jobs are independent and run in parallel, so a stale generated file is
-reported without waiting for the slowest test suite.
+The jobs run in parallel and only `browser-result` waits on another, so a stale
+generated file is reported without waiting for the slowest test suite.
 
-| Job       | Runs                                                                |
-| --------- | ------------------------------------------------------------------- |
-| `verify`  | `pnpm verify --skip=test:browser <selector>`                        |
-| `browser` | `pnpm hub browsers --with-deps` then `pnpm test:browser <selector>` |
-| `drift`   | `pnpm generate --dry-run`, then `git diff --exit-code`              |
+| Job              | Runs                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                          |
+| `browser`        | `pnpm hub browsers --with-deps <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
+| `drift`          | `pnpm generate --dry-run`, then `git diff --exit-code`                                                                |
+| `browser-result` | Nothing; it passes only when every `browser` job passed                                                               |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in
 both would double the slowest part of the run for no extra signal.
 
-`browser` installs its browsers through `hub browsers`, the same command a
-contributor uses, and adds `--with-deps` for the system libraries a runner lacks.
-Playwright artifacts are uploaded only when the job fails, which is the only time
-anyone reads them.
+`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` —
+so the workflow runs six jobs in total. The browser suites are by far the
+slowest thing in a run and the three engines share nothing, so splitting them
+trades runner minutes, which are cheap, for wall-clock time, which is what
+anyone waits on. The engines are far from equal: on the `styles` suite, which
+dominates the browser job, Firefox costs roughly five times what Chromium does
+for the same tests, and that cost is spread evenly across the suite rather than
+concentrated in a few slow tests. A single job therefore always waited for
+Firefox with two engines already finished. `docs/roadmap.md` tracks the open
+question of why Firefox is that much slower.
+
+`fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are
+different findings, and cancelling one to report the other hides half of what a
+run was started to learn.
+
+`browser-result` exists because a protected `main` requires a check by name, and
+a matrix reports one check per engine rather than the single one the rule names.
+It carries that name and passes only when every engine job passed, so the branch
+rule keeps working without naming the engines: adding or removing one is a change
+to `ci.yml` and to nothing else. Encoding the engines in the branch rule instead
+would put half of this design into settings nobody can review in a diff.
+
+It runs under `always()`, which is what makes it a gate rather than a formality.
+A job that runs only on success is skipped when an engine fails, and a skipped
+required check blocks a pull request exactly as an unreported one does, with the
+difference that nobody can tell why. Reporting the failure is the point.
+
+Each job installs only its own engine and selects it with one glob. That works
+because every Playwright project in the repository is named after the engine it
+runs on; `docs/specs/tests.md` carries the rule, and a package free to name a
+project anything would silently drop out of an engine's job. `hub browsers` and
+`hub test:browser` both forward what follows `--` to Playwright, so neither the
+matrix nor the selector needed new tooling.
+
+Browsers are restored from `actions/cache` before the install, keyed on the
+runner, the engine, and `pnpm-lock.yaml` — the lockfile being what pins the
+Playwright version the browsers belong to. `--with-deps` runs on a cache hit as
+well, because the system libraries it installs live outside the cached
+directory and a runner never has them.
+
+The install runs through `hub browsers`, the same command a contributor uses, so
+CI and a laptop resolve the same browser versions. Playwright artifacts are
+uploaded only when a job fails, which is the only time anyone reads them, and are
+named per engine so three jobs cannot overwrite each other's.
 
 The gate also catches what an install itself writes. A tracked `bin` target has to
 be committed with its executable bit: pnpm chmods the file it links, so a mode
@@ -87,7 +128,7 @@ being regenerated by a bot: the author is the one who knows whether the source
 change was intended.
 
 Workspace setup — pnpm, Node, and a frozen-lockfile install — lives in
-`.github/actions/setup` so all three jobs cannot drift apart.
+`.github/actions/setup` so no job can drift apart from the others.
 
 ## Changing the workflow
 

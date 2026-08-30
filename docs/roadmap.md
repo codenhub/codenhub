@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-19
+last_updated: 2026-08-30
 scope: repo-wide package progress tracking
 ---
 
@@ -72,6 +72,20 @@ deferred work; this entry tracks only where the package sits.
 - [ ] Publish public packages from CI with npm trusted publishing (OIDC) and provenance
 - [ ] Versioning and changelog workflow, weighing Changesets against `hub release`
 - [ ] Documentation MCP server
+- [ ] Find out why Firefox runs the `styles` browser suite about five times
+      slower than Chromium. Measured on the same suite: chromium 56s, firefox
+      285s, webkit 77s. The cost is uniform, not a few slow tests — across 173
+      Firefox results the median was 2.9s and the fifteen slowest accounted for
+      only 16% of the total, so there is no single test to fix. The engine
+      matrix in `docs/ci.md` hides the wall-clock cost but does not remove it,
+      and Firefox is still the longest job in every run. One untested
+      hypothesis: the suites load pages from a Vite **dev** server, which serves
+      each module as its own request, and Firefox may handle that far worse than
+      Chromium. Serving a production build instead was tried and was
+      inconclusive — `packages/styles/playground` is multi-page and does not
+      survive a static build without work, so the comparison never ran clean.
+      Confirming or killing that hypothesis is the next step; if it holds, the
+      fix is a buildable playground rather than anything in CI.
 
 ### @codenhub/demo
 

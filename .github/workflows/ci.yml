@@ -49,9 +49,18 @@ jobs:
         run: pnpm verify --skip=test:browser $SELECTOR
 
   browser:
-    name: Browser tests
+    # One engine per job. The suites are the slowest thing in a run and the three
+    # engines are independent, so running them side by side costs runner minutes
+    # rather than wall-clock time. `fail-fast` is off because "Firefox broke" and
+    # "WebKit broke" are different findings and cancelling one to report the other
+    # hides half the answer.
+    name: Browser tests (${{ matrix.engine }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
     steps:
       - name: Check out the repository
         uses: actions/checkout@v5
@@ -65,25 +74,62 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
 
-      # `--with-deps` adds the system libraries a headless browser needs on a
-      # runner. The install is the same command a contributor runs locally, so the
-      # two resolve the same browser versions.
-      - name: Install browsers
-        run: pnpm hub browsers --with-deps $SELECTOR
+      # Browsers are downloaded once per engine and lockfile rather than on every
+      # run. The key includes the lockfile because that is what pins the Playwright
+      # version the browsers belong to, and the engine because each job installs
+      # only its own. A miss costs the download the cache was meant to save, which
+      # is what the run did before this step existed.
+      - name: Restore the browser cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('pnpm-lock.yaml') }}
 
+      # Only this job's engine is installed; the other two would be downloaded and
+      # never launched. `--with-deps` adds the system libraries a headless browser
+      # needs on a runner, and runs even on a cache hit because the packages it
+      # installs live outside the cached directory. The install is the same command
+      # a contributor runs locally, so the two resolve the same browser versions.
+      - name: Install browsers
+        run: pnpm hub browsers --with-deps $SELECTOR -- ${{ matrix.engine }}
+
+      # Every package names its Playwright projects after the engine they run on,
+      # so one glob selects this job's engine across all of them. See
+      # `docs/specs/tests.md` for the naming rule.
       - name: Run browser tests
-        run: pnpm test:browser $SELECTOR
+        run: pnpm test:browser $SELECTOR -- --project='*${{ matrix.engine }}*'
 
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.engine }}
           path: |
             packages/*/test-results/**
             packages/*/playwright-report/**
           if-no-files-found: ignore
           retention-days: 7
+
+  # The name a protected `main` requires. A matrix reports one check per engine,
+  # so the single check the branch rule names would never arrive and every pull
+  # request would wait on it forever. This job carries that name and passes only
+  # when every engine job did, which keeps the rule satisfied without it naming
+  # the engines: adding or removing one changes this file and nothing else.
+  #
+  # `always()` is what makes it a gate rather than a formality. Without it a
+  # failing engine job skips this one, and a skipped required check blocks a pull
+  # request just as an unreported one does — reporting the failure is the point.
+  browser-result:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: browser
+    if: always()
+    steps:
+      - name: Report the engine jobs
+        run: |
+          echo "Engine jobs finished with: ${{ needs.browser.result }}"
+          test "${{ needs.browser.result }}" = "success"
 
   drift:
     name: Generated files
