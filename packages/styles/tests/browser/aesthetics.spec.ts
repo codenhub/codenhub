@@ -1113,6 +1113,33 @@ test.describe("aesthetics", () => {
       expect(button["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
     });
 
+    /* `box-active` reaches `.card.interactive`, not only `.btn`. Under a
+       hover-holds-still aesthetic the press is the one gesture an interactive
+       tile has, and before the utility was applied the card sat inert on
+       mousedown. A held pointer is what drives `:active`, which no keyboard
+       move can. */
+    test("presses an interactive card into its bar", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "chunky-tile"));
+
+      const card = page.getByTestId("card-default-none-interactive");
+
+      await card.hover();
+      await page.mouse.down();
+
+      try {
+        /* translateY(4px) serializes as a matrix with the y offset last. Both
+           properties are transitioned, so these poll for the settled value. */
+        await expect
+          .poll(() => card.evaluate((node) => getComputedStyle(node).transform), "the tile travels the bar's depth")
+          .toBe("matrix(1, 0, 0, 1, 0, 4)");
+        await expect
+          .poll(() => card.evaluate((node) => getComputedStyle(node).boxShadow), "the bar collapses under it")
+          .toMatch(/\b0px 0px 0px 0px\b/);
+      } finally {
+        await page.mouse.up();
+      }
+    });
+
     /* An unfilled tile gets its bar for free and correct: the shadow ink resolves
        `--intent-border`, which is the token that drew the line, so a card's border
        and its bar are the same colour by construction rather than by a second

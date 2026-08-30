@@ -424,10 +424,10 @@ function rootDeclarations(block: string): string {
    registry does not list them, because they publish no per-component default for
    it to hold. Two of them -- `text-control` and `surface` -- are documented all
    the same, as the low-level boxes a consumer builds on when the package ships
-   no component for what they are making; the other three are internal. Both
+   no component for what they are making; the other four are internal. Both
    documented ones are in the intent reset, which is what a typeable class needs
    to paint at all. */
-const composition = new Set(["box", "box-hover", "surface", "text-control", "loader-mask"]);
+const composition = new Set(["box", "box-hover", "box-active", "surface", "text-control", "loader-mask"]);
 
 /* The registry is the list of what the package supports, so a utility it does
    not name is either drift or an accidental part of the public surface. `.table`

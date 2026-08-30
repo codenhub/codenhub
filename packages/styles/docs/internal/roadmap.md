@@ -58,14 +58,6 @@ consumer can find out what moved.
 
 ## Later / Possible
 
-- **An interactive card that presses**: `.card.interactive` applies `box-hover`
-  and nothing else, so `--ui-active-transform` and `--ui-active-shadow-*` never
-  reach it. Under `.neobrutalism` and `.chunky-tile` an interactive card hovers
-  but cannot be pressed, which is the one place those two aesthetics are visibly
-  incomplete. The button writes the press inline in five lines; the fix is to
-  lift that into a `box-active` utility beside `box-hover` and apply it in both
-  components, so a third pressable box gets it for free.
-
 - **A primary that reads under a shade**: the shipped `.primary` is a monochrome
   near-black, so a chunky tile's bar under a primary button lands about 10 units
   of sRGB distance from the plate above it -- present, and almost invisible. The

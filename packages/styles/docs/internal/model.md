@@ -1129,13 +1129,14 @@ can type, whether or not we document it, so the honest position is to publish th
 as a small composition API rather than to pretend they are internal and be
 surprised when someone uses one.
 
-| Utility        | What applying it gives an element                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.           |
-| `box-hover`    | The derived hover tone, for something you press rather than type into.                          |
-| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                            |
-| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share. |
-| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                             |
+| Utility        | What applying it gives an element                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.            |
+| `box-hover`    | The derived hover tone, for something you press rather than type into.                           |
+| `box-active`   | The `:active` press: the aesthetic's active shadow and transform. `btn` and `.card.interactive`. |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                             |
+| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.  |
+| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                              |
 
 They are the seam the components are built from, and a consumer composing a
 component we do not ship is better served by them than by copying a component's

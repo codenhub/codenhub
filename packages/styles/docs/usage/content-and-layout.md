@@ -151,14 +151,14 @@ container:
 
 ## Surfaces
 
-| Class                | Purpose                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`. |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.    |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover lift, and a focus ring.      |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                            |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                          |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.  |
+| Class                | Purpose                                                                      |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |
 
 Both read intent, [presentation](./composing.md#presentation), and
 [material tokens](./customizing.md#material-tokens). A plain `.card` is a
@@ -172,7 +172,7 @@ until an [aesthetic](./aesthetics.md) supplies shadow geometry or
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card interactive" href="/package">Lifts on hover</a>
+<a class="card interactive" href="/package">Responds to hover and press</a>
 <aside class="panel">Flush panel</aside>
 ```
 

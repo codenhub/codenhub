@@ -73,9 +73,9 @@ are the same number, so scaling the look scales both at once.
 - Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content
   rather than structure, and an ink edge on one reads as a defect: a key cap
   keeps the quiet border color and a code chip keeps no border at all.
-- Only `.btn` and `.card.interactive` move on hover. A card lifts when it
-  opts in with `.interactive`; a plain card, an alert, or a panel is a
-  container rather than a control and stays put.
+- Only `.btn` and `.card.interactive` respond to hover and press. A card
+  becomes a control when it opts in with `.interactive`; a plain card, an
+  alert, or a panel is a container and stays put.
 - An alert rests on the slab under this aesthetic and nowhere else. Here the
   slab is a second ink line rather than depth, and an alert is the only
   container the package rests flat, so without it a neobrutalist alert is
@@ -174,8 +174,8 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
 
 **Exceptions:**
 
-- Only what the registry rests above zero sits on a bar — buttons, cards and
-  tooltips. A badge, chip or field is flat until it asks for depth with
+- Only what the registry rests above zero sits on a bar — buttons and cards.
+  A badge, chip, field, or tooltip is flat until it asks for depth with
   `.raised`, and `.flat` takes the bar off anything:
 
   ```html
@@ -188,10 +188,10 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
 - Action labels are drawn heavier and slightly tracked. Casing is left
   alone: how a label is worded is the application's decision, so if you want
   uppercase buttons, write that rule in your own stylesheet.
-- `.card.interactive` hovers but does not press — the press is a `.btn`
-  behavior — so a chunky answer tile does not travel into its bar.
+- `.card.interactive` presses like a `.btn`, so a chunky answer tile drops
+  onto its bar on click. A plain `.card` stays put.
 - The shipped `.primary` is a near-black monochrome, which leaves a primary
   button's bar almost invisible against its own plate; give `.primary` a hue
   if it is the call to action.
-- Nothing casts a shadow except the tooltip bubble, which needs separating
-  from whatever it floats over. The rest sit flat on the page.
+- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything
+  the registry rests flat sits flush on the page.

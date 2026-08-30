@@ -79,10 +79,11 @@
   }
 
   /* Opt-in, because a card is only sometimes a control. Applications still owe
-     it a real interactive element and an accessible name. Hover is the derived
-     one every other pressable box gets; there is nothing card-specific about it. */
+     it a real interactive element and an accessible name. Hover and press are
+     the derived ones every other pressable box gets; there is nothing
+     card-specific about either. */
   &.interactive {
-    @apply box-hover cursor-pointer;
+    @apply box-hover box-active cursor-pointer;
   }
 }
 
