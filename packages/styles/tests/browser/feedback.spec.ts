@@ -453,11 +453,11 @@ test.describe("feedback", () => {
     expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 
-  /* Elevation is one unitless number multiplied into the aesthetic's shadow
-     geometry, so "twice a card" is a measurement rather than a second shadow
-     token. The registry rests a bubble at 2 and a card at 1, and this is that
-     sentence read off the composited value. */
-  test("lifts a tooltip bubble to twice a raised card's depth", async ({ page }) => {
+  /* The bubble rests flat in 0.1.0: no depth of its own with no aesthetic in
+     scope. Depth is opt-in through the elevation modifier like any other
+     component, and `.tooltip.floating` -- two units against a raised card's one
+     -- is the pre-0.1.0 look. */
+  test("rests a tooltip bubble flat and lifts it only when asked", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const offsets = await page.evaluate(() => {
@@ -465,27 +465,38 @@ test.describe("feedback", () => {
          the vertical offset is the second length after the colour closes. */
       const verticalOffset = (shadow: string) => Number.parseFloat(shadow.split(") ")[1]!.split(" ")[1]!);
       const host = document.querySelector('[data-testid="preview-root"]')!;
-      const card = document.createElement("div");
 
-      /* A card rests flat now, so the unit of depth is one a consumer asked
-         for. The bubble is the one component that floats without being asked. */
+      const bubble = (className: string) => {
+        const wrapper = document.createElement("span");
+        wrapper.className = className;
+        wrapper.dataset.tooltip = "Message";
+        wrapper.dataset.state = "open";
+        host.append(wrapper);
+        return wrapper;
+      };
+
+      const flat = bubble("tooltip");
+      const floating = bubble("tooltip floating");
+      const card = document.createElement("div");
       card.className = "card raised";
       host.append(card);
 
       const values = {
-        bubble: verticalOffset(
-          getComputedStyle(document.querySelector('[data-testid="fallback-tooltip"]')!, "::after").boxShadow,
-        ),
+        flat: verticalOffset(getComputedStyle(flat, "::after").boxShadow),
+        floating: verticalOffset(getComputedStyle(floating, "::after").boxShadow),
         card: verticalOffset(getComputedStyle(card).boxShadow),
       };
 
+      flat.remove();
+      floating.remove();
       card.remove();
 
       return values;
     });
 
+    expect(offsets.flat, "a bare tooltip bubble draws no depth of its own").toBe(0);
     expect(offsets.card, "a raised card draws a step of depth").toBeGreaterThan(0);
-    expect(offsets.bubble).toBe(offsets.card * 2);
+    expect(offsets.floating, "a floating tooltip is twice a raised card").toBe(offsets.card * 2);
   });
 
   test("uses a default tooltip position when no position attribute is set", async ({ page }) => {

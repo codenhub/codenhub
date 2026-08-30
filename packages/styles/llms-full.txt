@@ -2065,21 +2065,29 @@ tokens — how much of an intent shows, and what a component is made of.
 
 # Tooltips
 
-| Class or Attribute                 | Purpose                                                      |
-| ---------------------------------- | ------------------------------------------------------------ |
-| `.tooltip`                         | Tooltip host. Uses `data-tooltip` as pseudo-element content. |
-| `.tooltip.tooltip-icon`            | Circular icon-style tooltip host.                            |
-| `[data-tooltip-position="top"]`    | Positions tooltip above host.                                |
-| `[data-tooltip-position="bottom"]` | Positions tooltip below host.                                |
-| `[data-tooltip-position="left"]`   | Positions tooltip left of host.                              |
-| `[data-tooltip-position="right"]`  | Positions tooltip right of host.                             |
-| No `data-tooltip-position`         | Defaults to top placement.                                   |
-| `[data-state="open"]`              | Shows tooltip without hover.                                 |
+| Class or Attribute                      | Purpose                                                        |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `.tooltip`                              | Tooltip host. Uses `data-tooltip` as pseudo-element content.   |
+| `.tooltip.tooltip-icon`                 | Circular icon-style tooltip host.                              |
+| `[data-tooltip-position="top"]`         | Positions tooltip above host.                                  |
+| `[data-tooltip-position="bottom"]`      | Positions tooltip below host.                                  |
+| `[data-tooltip-position="left"]`        | Positions tooltip left of host.                                |
+| `[data-tooltip-position="right"]`       | Positions tooltip right of host.                               |
+| No `data-tooltip-position`              | Defaults to top placement.                                     |
+| `[data-state="open"]`                   | Shows tooltip without hover.                                   |
+| `.tooltip.raised` / `.tooltip.floating` | Adds one or two units of depth. The bubble is flat by default. |
 
 A tooltip bubble's fill, ground color, and floor behavior are covered in
 [Composing → Presentation](docs/usage/composing.md#presentation), and its material
 follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope, including the
 pseudo-element itself.
+
+The bubble rests flat. It draws no shadow of its own on a plain page, and
+zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the
+same way `.flat` does elsewhere. Add [`.raised` or
+`.floating`](docs/usage/composing.md#elevation) to lift it — `.tooltip.floating` is the
+pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`,
+still reaches the bubble as it reaches any surface.
 
 ```html
 <button

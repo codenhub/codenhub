@@ -368,35 +368,53 @@ test.describe("aesthetics", () => {
   });
 
   test("shapes the tooltip bubble with the aesthetic in scope", async ({ page }) => {
-    const readBubble = async (aesthetic: string) => {
+    const readBubble = async (aesthetic: string, extraClass = "") => {
       await page.goto(withAesthetic(FEEDBACK_URL, aesthetic));
 
       const host = page.getByTestId("fallback-tooltip");
 
       await host.hover();
 
-      return host.evaluate((element) => {
+      return host.evaluate((element, extra) => {
+        if (extra) {
+          element.classList.add(extra);
+        }
+
         const styles = getComputedStyle(element, "::after");
 
         return { boxShadow: styles.boxShadow, clipPath: styles.clipPath, filter: styles.filter };
-      });
+      }, extraClass);
     };
 
     const plain = await readBubble("");
     const inked = await readBubble("neobrutalism");
     const stepped = await readBubble("pixel");
+    const inkedFloating = await readBubble("neobrutalism", "floating");
 
     /* The silhouette reaches the bubble, because `--ui-clip` is a plain material
        token the bubble resolves at its own root. */
     expect(plain.clipPath, "default bubble clip").toBe("none");
     expect(stepped.clipPath, "pixel bubble clip").toContain("polygon(");
 
-    /* The shadow half reaches it too, now that the bubble is a surface. The
-       registry rests it at elevation 2, so the structural depth doubles, the
-       brutalist slab doubles, and the stepped one trades both for the inset ring
-       its own clip demands. */
-    expect(plain.boxShadow, "default bubble").toContain("0px 2px 6px 0px");
-    expect(inked.boxShadow, "neobrutalist bubble").toContain("8px 8px 0px 0px");
+    /* Shape and edge material reach the bubble; part-based depth does not, because
+       the bubble rests flat and depth is opt-in. The plain and brutalist bubbles
+       draw no offset slab until `.floating` asks for one, and then it is the
+       aesthetic's -- doubled. The pixel ring is the edge rather than depth
+       -- spread, not offset -- so it reaches the bubble whatever the elevation. */
+    const offsets = (shadow: string) => (shadow.split(") ")[1] ?? "0 0 0 0").split(" ").map(Number.parseFloat);
+    expect(
+      offsets(plain.boxShadow)
+        .slice(0, 3)
+        .every((length) => length === 0),
+      "default bubble flat",
+    ).toBe(true);
+    expect(
+      offsets(inked.boxShadow)
+        .slice(0, 3)
+        .every((length) => length === 0),
+      "brutalist bubble flat",
+    ).toBe(true);
+    expect(inkedFloating.boxShadow, "brutalist bubble lifted").toContain("8px 8px 0px 0px");
     expect(stepped.boxShadow, "pixel bubble").toContain("inset");
     expect(stepped.boxShadow, "pixel bubble ring").toContain("0px 0px 0px 4px");
   });

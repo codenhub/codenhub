@@ -512,13 +512,22 @@ Zero lengths are written `0px` rather than `0` in the fallbacks, because
 
 The registry gives each component its default level, and the level says how much
 depth a component takes _when depth is drawn_ -- not that it rests above the
-page. Nothing is raised until an aesthetic draws depth, `.raised` or `.floating`
-asks for it, or the component is the one thing that floats without being asked.
+page. Nothing is raised until an aesthetic draws depth, or `.raised` or
+`.floating` asks for it. No component is exempt from that, the tooltip bubble
+included.
 
-That last case is the tooltip bubble and only the bubble: it is placed over
-content nobody chose, so a flat panel there has no boundary at all. It supplies
-its geometry in the component's own slot, one below the aesthetic's, so an
-aesthetic in scope still outranks it.
+The bubble was the one exception until 0.1.0: it is placed over content nobody
+chose, and the argument was that a flat panel there has no boundary at all, so it
+supplied `0 1px 3px` in the component's own slot and rested at elevation `2`.
+That shadow was ugly under most aesthetics and structural under none, and the
+boundary it was defending is already held by the bubble's floored edge -- a
+near-white plate in the light theme needs a line whatever the shadow does, and
+[the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)
+keeps one there. So the geometry is gone, the bubble rests at `0`, and
+`.tooltip.raised` / `.tooltip.floating` add depth the same way they do anywhere
+else. An aesthetic in scope still shapes and shadows the bubble as the surface it
+is; zeroing the default only takes back the part the component was drawing on its
+own.
 
 Depth used to be a property of the component instead. `surface` carried a
 structural `0 1px 3px`, which put a shadow under every card on a plain page --
@@ -1144,9 +1153,9 @@ radius, no silhouette, and no component depth by default. The default is the
 absence of material declarations, not a set of root values -- which is why a card
 gets surface radius and a button gets control radius from the same unset token.
 `.raised` and `.floating` opt an element into the foundation shadow geometry, and
-an aesthetic can supply different geometry. The tooltip bubble is the sole
-component-owned exception: it carries explicit depth because it floats over
-arbitrary content and needs a boundary there.
+an aesthetic can supply different geometry. No component carries depth on its own
+under the default -- the tooltip bubble was the last one to, and stopped in
+0.1.0; see [Elevation](#elevation).
 
 ### `.glass`
 

@@ -9,8 +9,10 @@
    exactly what a blanket surface membership did to this component once already.
 
    The bubble is the component. It is a surface, so an aesthetic that blurs
-   surfaces blurs it too, and it rests on a ground of its own, edged, at twice a
-   card's depth. */
+   surfaces blurs it too, and it rests on a ground of its own, edged, and flat.
+   Depth is opt-in through `.raised` and `.floating` like every other component;
+   its boundary against arbitrary content is the floored edge below, not a
+   shadow. See model.md#elevation. */
 @utility tooltip {
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
@@ -115,7 +117,11 @@
     --_d-fill: 100%;
     --_d-fg-on-fill: 100%;
     --_d-border: 100%;
-    --_d-elevation: 2;
+    /* Flat, and stated rather than left to `box`'s fallback of 1: the bubble is
+       a surface, so an aesthetic's part-based depth would otherwise reach it
+       unasked -- `.neobrutalism`'s slab in particular. `.raised`/`.floating`
+       opt back in. */
+    --_d-elevation: 0;
     --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
 
     /* A bubble's line is a boundary against content nobody chose, not a
@@ -143,15 +149,6 @@
        below answers the first, and `tests/browser/axes.spec.ts` still sees the
        edge axis move because it probes with the class on the element. */
     --_edge-floor: 100%;
-
-    /* The one component that draws depth with nothing asked for, because a
-       bubble is the case where depth is not decoration: it floats over content
-       nobody chose, and a flat panel over arbitrary pixels has no boundary. It
-       goes in the component's own slot rather than the modifier's, so an
-       aesthetic in scope still outranks it, and a pseudo-element has no children
-       for it to inherit onto. Elevation 2 doubles it to `0 2px 6px`. */
-    --_d-shadow-y: 1px;
-    --_d-shadow-blur: 3px;
 
     /* A bubble is a small transient popover, not a modal, so it takes the
        control radius rather than the surface one `surface` hands it. */

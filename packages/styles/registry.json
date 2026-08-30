@@ -401,7 +401,7 @@
         "fill": "solid",
         "edge": "edged",
         "ground": "--ui-surface-ground, var(--intent-subtle)",
-        "elevation": 2
+        "elevation": 0
       },
       "native": [],
       "axes": ["fill", "edge"],
