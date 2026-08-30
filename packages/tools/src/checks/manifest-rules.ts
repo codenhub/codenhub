@@ -1,5 +1,5 @@
-import { stat } from "node:fs/promises";
-import { join } from "node:path";
+import { realpath, stat } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 import { parseAssetEntries } from "../assets/manifest.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -47,6 +47,21 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function isFile(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
+  } catch {
+    return false;
+  }
+}
+
+async function isFileWithin(root: string, path: string): Promise<boolean> {
+  if (!(await isFile(path))) {
+    return false;
+  }
+  try {
+    const relativePath = relative(await realpath(root), await realpath(path));
+    return (
+      relativePath === "" ||
+      (!isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
+    );
   } catch {
     return false;
   }
@@ -226,7 +241,7 @@ async function checkAssets(workspacePackage: WorkspacePackage, root: string): Pr
   const missing = await Promise.all(
     entries.map(async (entry) => ({
       entry,
-      exists: await isFile(join(root, ASSETS_DIRECTORY, entry.from)),
+      exists: await isFileWithin(join(root, ASSETS_DIRECTORY), join(root, ASSETS_DIRECTORY, entry.from)),
     })),
   );
   return missing

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-28
+last_updated: 2026-08-30
 scope: Optional workspace package development, consumer-debug, and deployable demo workflows.
 ---
 
@@ -74,11 +74,11 @@ Until every relevant package is published or external package installs are pract
 
 ## Workspace Matching
 
-Repository workspace globs include package-local `dev`, `debug`, and `demo` environments at these depths:
+Repository workspace globs include package-local development environments at the depths their directory roles support:
 
 ```text
 packages/*/{dev,debug,demo}/package.json
-packages/*/{dev,debug,demo}/*/package.json
+packages/*/{dev,debug}/*/package.json
 packages/plugins/**
 ```
 

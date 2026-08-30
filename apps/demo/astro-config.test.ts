@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import config from "./astro.config";
@@ -13,5 +15,13 @@ describe("Astro configuration", () => {
       expect.objectContaining({ name: "codenhub-package-demos" }),
       expect.objectContaining({ name: "codenhub-package-demos-dev-proxy" }),
     ]);
+  });
+
+  it("matches demos only at the depth supported by the aggregator", () => {
+    const workspaceConfig = readFileSync(new URL("../../pnpm-workspace.yaml", import.meta.url), "utf8");
+
+    expect(workspaceConfig).toContain('"packages/*/{dev,debug,demo}"');
+    expect(workspaceConfig).toContain('"packages/*/{dev,debug}/*"');
+    expect(workspaceConfig).not.toContain('"packages/*/{dev,debug,demo}/*"');
   });
 });

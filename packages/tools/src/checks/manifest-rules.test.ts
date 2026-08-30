@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -262,6 +262,24 @@ describe("manifest rules", () => {
       isPrivate: true,
       manifest: {
         codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+        name: "@fixture/private",
+      },
+    });
+
+    expect((await runRules(workspacePackage, root)).map(({ code }) => code)).toEqual(["assets/missing-source"]);
+  });
+
+  it("shouldReportAnAssetSourceThatResolvesOutsideTheAssetsDirectory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codenhub-manifest-root-"));
+    const outsideDirectory = await mkdtemp(join(tmpdir(), "codenhub-manifest-outside-"));
+    await mkdir(join(root, "assets"), { recursive: true });
+    await writeFile(join(outsideDirectory, "secret.txt"), "secret");
+    await symlink(outsideDirectory, join(root, "assets", "linked"), "junction");
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory([]),
+      isPrivate: true,
+      manifest: {
+        codenhub: { assets: [{ from: "linked/secret.txt", to: "public/secret.txt" }] },
         name: "@fixture/private",
       },
     });

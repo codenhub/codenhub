@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -152,5 +152,64 @@ describe("syncPackageAssets", () => {
     });
 
     await expect(syncPackageAssets(workspacePackage, root)).rejects.toThrow(/does not exist under assets\//);
+  });
+
+  it("shouldRejectAnExistingDestinationItDidNotPlace", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await mkdir(join(packageDirectory, "public"), { recursive: true });
+    await writeFile(join(packageDirectory, "public", "favicon.ico"), "hand-authored");
+    const workspacePackage = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+      name: "@fixture/example",
+    });
+
+    await expect(syncPackageAssets(workspacePackage, root)).rejects.toThrow(/did not place/);
+    await expect(readFile(join(packageDirectory, "public", "favicon.ico"), "utf8")).resolves.toBe("hand-authored");
+  });
+
+  it("shouldValidateAllSourcesBeforeRemovingDroppedAssets", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+    const invalidUpdate = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "favicon/missing.ico", to: "public/favicon.ico" }] },
+      name: "@fixture/example",
+    });
+
+    await expect(syncPackageAssets(invalidUpdate, root)).rejects.toThrow(/does not exist under assets\//);
+    await expect(readFile(join(packageDirectory, "public", "logo.svg"), "utf8")).resolves.toBe("logo-bytes");
+  });
+
+  it("shouldRejectASourceThatResolvesOutsideTheAssetsDirectory", async () => {
+    const { packageDirectory, root } = await createFixture();
+    const outsideDirectory = await mkdtemp(join(tmpdir(), "codenhub-assets-outside-source-"));
+    await writeFile(join(outsideDirectory, "secret.txt"), "secret");
+    await symlink(outsideDirectory, join(root, "assets", "linked"), "junction");
+    const workspacePackage = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "linked/secret.txt", to: "public/secret.txt" }] },
+      name: "@fixture/example",
+    });
+
+    await expect(syncPackageAssets(workspacePackage, root)).rejects.toThrow(/resolves outside assets\//);
+  });
+
+  it("shouldRejectADestinationThroughASymbolicLinkParent", async () => {
+    const { packageDirectory, root } = await createFixture();
+    const firstManifest = createPackage(packageDirectory, {
+      codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+      name: "@fixture/example",
+    });
+    await syncPackageAssets(firstManifest, root);
+    await rm(join(packageDirectory, "public"), { recursive: true });
+    const outsideDirectory = await mkdtemp(join(tmpdir(), "codenhub-assets-outside-destination-"));
+    await symlink(outsideDirectory, join(packageDirectory, "public"), "junction");
+
+    await expect(syncPackageAssets(firstManifest, root)).rejects.toThrow(/symbolic link/);
+    await expect(readFile(join(outsideDirectory, "favicon.ico"), "utf8")).rejects.toThrow("ENOENT");
   });
 });
