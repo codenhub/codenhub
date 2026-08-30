@@ -303,9 +303,10 @@ most harnesses read natively; prefer them when a harness appears in both lists.
 | ZCode        | `.zcode/skills`       | `~/.zcode/skills`            |
 
 Several labels resolve to the same directory because the harnesses read it too:
-`Agent Skills`, `Antigravity`, and `Codex` share `.agents/skills`. Selecting
-several of them installs each skill once into the shared destination rather than
-copying it repeatedly.
+`Agent Skills Workspace`, `Antigravity Workspace`, and `Codex Workspace` share
+`.agents/skills`; `Agent Skills Global` and `Codex Global` share
+`~/.agents/skills`. Selecting labels that share a destination installs each skill
+once rather than copying it repeatedly.
 
 The installer creates a child directory named after each skill ID. By default,
 it merges into existing directories and overwrites files with matching paths;
