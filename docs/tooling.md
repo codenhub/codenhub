@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-27
+last_updated: 2026-08-30
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -309,8 +309,11 @@ package that declares `codenhub.assets`, so a package's own scripts need no
 package (a gitignored `.codenhub-assets.json` beside its manifest), so a
 later run can tell a file it placed apart from one it never touched — that
 is what lets a dropped entry's old file be removed without risking anything
-the mechanism did not itself place. `hub check` validates that every
-declared `from` resolves to a real file under `assets/`.
+the mechanism did not itself place. Sync fails before changing files when a
+destination already exists without that ownership record, a declared source
+is invalid, or a source or destination escapes its boundary through a symbolic
+link. `hub check` validates that every declared `from` resolves to a real file
+under `assets/`.
 
 ## Creating a package
 

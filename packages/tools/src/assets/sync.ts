@@ -1,5 +1,5 @@
-import { copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { copyFile, lstat, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isValidRelativeAssetPath, parseAssetEntries } from "./manifest.ts";
@@ -20,6 +20,48 @@ async function isFile(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+function isWithin(root: string, candidate: string): boolean {
+  const relativePath = relative(root, candidate);
+  return (
+    relativePath === "" || (!isAbsolute(relativePath) && relativePath !== ".." && !relativePath.startsWith(`..${sep}`))
+  );
+}
+
+async function assertNoSymbolicLink(packageDirectory: string, destination: string): Promise<void> {
+  const relativeDestination = relative(packageDirectory, destination);
+  let current = packageDirectory;
+  const paths = relativeDestination.split(sep).map((segment) => {
+    current = join(current, segment);
+    return current;
+  });
+  await Promise.all(
+    paths.map(async (path) => {
+      try {
+        if ((await lstat(path)).isSymbolicLink()) {
+          throw new Error(`Refusing to place an asset through symbolic link ${path}.`);
+        }
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return;
+        }
+        throw error;
+      }
+    }),
+  );
 }
 
 async function readPlaced(packageDirectory: string): Promise<string[]> {
@@ -76,15 +118,14 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
   const manifestPath = join(workspacePackage.directory, MANIFEST_LOCATION);
   const entries = parseAssetEntries(workspacePackage.manifest, manifestPath);
   const assetsRoot = join(root, ASSETS_DIRECTORY);
+  const resolvedAssetsRoot = await realpath(assetsRoot);
   const declared = [...new Set(entries.map((entry) => entry.to))];
 
   const previouslyPlaced = await readPlaced(workspacePackage.directory);
+  const previouslyPlacedSet = new Set(previouslyPlaced);
   const removed = previouslyPlaced.filter((destination) => !declared.includes(destination));
-  await Promise.all(
-    removed.map(async (destination) => rm(join(workspacePackage.directory, destination), { force: true })),
-  );
 
-  await Promise.all(
+  const preparedEntries = await Promise.all(
     entries.map(async (entry) => {
       const source = join(assetsRoot, entry.from);
       if (!(await isFile(source))) {
@@ -92,7 +133,35 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
           `${workspacePackage.name} declares codenhub.assets "${entry.from}", which does not exist under ${ASSETS_DIRECTORY}/.`,
         );
       }
+      const resolvedSource = await realpath(source);
+      if (!isWithin(resolvedAssetsRoot, resolvedSource)) {
+        throw new Error(
+          `${workspacePackage.name} declares codenhub.assets "${entry.from}", which resolves outside ${ASSETS_DIRECTORY}/.`,
+        );
+      }
+
       const destination = join(workspacePackage.directory, entry.to);
+      await assertNoSymbolicLink(workspacePackage.directory, destination);
+      if (!previouslyPlacedSet.has(entry.to) && (await pathExists(destination))) {
+        throw new Error(
+          `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
+        );
+      }
+      return { destination, source: resolvedSource };
+    }),
+  );
+
+  await Promise.all(
+    removed.map(async (destination) =>
+      assertNoSymbolicLink(workspacePackage.directory, join(workspacePackage.directory, destination)),
+    ),
+  );
+  await Promise.all(
+    removed.map(async (destination) => rm(join(workspacePackage.directory, destination), { force: true })),
+  );
+
+  await Promise.all(
+    preparedEntries.map(async ({ destination, source }) => {
       await mkdir(dirname(destination), { recursive: true });
       await copyFile(source, destination);
     }),

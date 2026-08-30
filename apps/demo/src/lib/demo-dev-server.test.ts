@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { discoverDemoDirs, startDemoDevServer } from "./demo-dev-server";
+import { appendStartupOutput, discoverDemoDirs, startDemoDevServer } from "./demo-dev-server";
 
 describe("discoverDemoDirs", () => {
   it("finds only packages with a demo/package.json, sorted by slug", async () => {
@@ -30,6 +30,13 @@ async function writeFixtureDemo(script: string): Promise<string> {
 }
 
 describe("startDemoDevServer", () => {
+  it("keeps only the tail needed to detect the readiness line", () => {
+    const output = appendStartupOutput("x".repeat(70_000), Buffer.from("Local: http://localhost:59123/"));
+
+    expect(output.length).toBeLessThanOrEqual(64 * 1024);
+    expect(output).toContain("Local: http://localhost:59123/");
+  });
+
   it("resolves with the port the demo server reports listening on", async () => {
     const demoDir = await writeFixtureDemo(
       "console.log('Local: http://localhost:59123/fixture/'); setInterval(() => {}, 1000);",

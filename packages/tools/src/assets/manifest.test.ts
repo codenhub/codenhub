@@ -79,4 +79,17 @@ describe("parseAssetEntries", () => {
     };
     expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/declared more than once/);
   });
+
+  it("shouldRejectDestinationsWhereOneIsAnAncestorOfAnother", () => {
+    const manifest = {
+      codenhub: {
+        assets: [
+          { from: "logo/logo-dark.svg", to: "public/assets" },
+          { from: "favicon/favicon.ico", to: "public/assets/favicon.ico" },
+        ],
+      },
+    };
+
+    expect(() => parseAssetEntries(manifest, MANIFEST_PATH)).toThrow(/conflicts with/);
+  });
 });

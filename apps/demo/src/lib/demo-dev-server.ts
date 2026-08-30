@@ -17,7 +17,19 @@ export interface RunningDemoDevServer {
 
 const READY_PATTERN = /Local:\s+https?:\/\/(?:localhost|127\.0\.0\.1|\[::1\]):(\d+)/;
 const ANSI_ESCAPE_PATTERN = new RegExp(String.fromCharCode(27) + "\\[[0-9;]*m", "g");
+const MAX_STARTUP_OUTPUT_LENGTH = 64 * 1024;
 const START_TIMEOUT_MS = 20_000;
+
+/**
+ * Retains enough recent process output to match a readiness line split across
+ * chunks without letting a noisy startup consume memory until timeout.
+ * @param output Output retained from previous chunks.
+ * @param chunk New stdout chunk.
+ * @returns The bounded, ANSI-free output tail.
+ */
+export function appendStartupOutput(output: string, chunk: Buffer): string {
+  return (output + chunk.toString().replace(ANSI_ESCAPE_PATTERN, "")).slice(-MAX_STARTUP_OUTPUT_LENGTH);
+}
 
 /**
  * Kills the spawned shell and every process it started, not just the shell
@@ -112,7 +124,7 @@ export function startDemoDevServer(
     // so `output` stops growing for the rest of the (long-lived) dev session.
     let output = "";
     const matchReadyLine = (chunk: Buffer) => {
-      output += chunk.toString().replace(ANSI_ESCAPE_PATTERN, "");
+      output = appendStartupOutput(output, chunk);
       const match = READY_PATTERN.exec(output);
       if (match !== null) {
         child.stdout?.off("data", matchReadyLine);

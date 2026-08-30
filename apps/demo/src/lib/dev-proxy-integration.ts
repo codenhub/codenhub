@@ -27,6 +27,20 @@ export function createDemoDevProxyIntegration(options: IntegrationOptions): Astr
   const discover = options.discoverDemoDirs ?? discoverDemoDirs;
   const start = options.startDemoDevServer ?? startDemoDevServer;
   let servers: RunningDemoDevServer[] = [];
+  let isExitHandlerRegistered = false;
+
+  const stopServers = () => {
+    const runningServers = servers;
+    servers = [];
+    for (const server of runningServers) {
+      server.stop();
+    }
+  };
+
+  const stopServersOnExit = () => {
+    stopServers();
+    isExitHandlerRegistered = false;
+  };
 
   return {
     hooks: {
@@ -35,6 +49,7 @@ export function createDemoDevProxyIntegration(options: IntegrationOptions): Astr
           return;
         }
 
+        stopServers();
         const targets = discover(options.packagesRoot);
         const started = await Promise.all(
           targets.map(async (target) => {
@@ -50,6 +65,11 @@ export function createDemoDevProxyIntegration(options: IntegrationOptions): Astr
         );
         servers = started.filter(isRunning);
 
+        if (!isExitHandlerRegistered) {
+          process.once("exit", stopServersOnExit);
+          isExitHandlerRegistered = true;
+        }
+
         updateConfig({
           vite: {
             server: {
@@ -62,12 +82,11 @@ export function createDemoDevProxyIntegration(options: IntegrationOptions): Astr
             },
           },
         });
-
-        process.once("exit", () => {
-          for (const server of servers) {
-            server.stop();
-          }
-        });
+      },
+      "astro:server:done": () => {
+        stopServers();
+        process.off("exit", stopServersOnExit);
+        isExitHandlerRegistered = false;
       },
     },
     name: "codenhub-package-demos-dev-proxy",

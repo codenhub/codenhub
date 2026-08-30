@@ -2,7 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/*/{dev,debug,demo}"
-  - "packages/*/{dev,debug,demo}/*"
+  - "packages/*/{dev,debug}/*"
   - "packages/plugins/**"
 
 catalog:
