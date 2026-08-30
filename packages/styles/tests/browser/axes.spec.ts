@@ -2,8 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, test, type Page } from "@playwright/test";
-
+import { expect, test, type Page } from "./fixtures";
 import { getColorDistance, readSrgb } from "./test-utils";
 
 /* The registry says which axes each component reads. This asserts it, in both

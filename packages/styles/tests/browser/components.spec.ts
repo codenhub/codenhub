@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./fixtures";
 import { expectSameColor } from "./test-utils";
 
 /* Contracts that belong to no single component, asserted on elements this spec

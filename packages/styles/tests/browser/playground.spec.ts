@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const PLAYGROUND_URL = "http://localhost:5184/";
 const BUTTONS_URL = "http://localhost:5184/buttons/?env=vanilla";

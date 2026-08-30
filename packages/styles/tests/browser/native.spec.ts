@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./fixtures";
 import { expectSameColor } from "./test-utils";
 
 const NATIVE_URL = "http://localhost:5184/native/?env=vanilla";

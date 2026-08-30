@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-
+import { expect, test } from "./fixtures";
 import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";

@@ -1,5 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
-
+import { expect, test, type Page } from "./fixtures";
 import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so

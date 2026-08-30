@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const COMPONENTS_URL = "http://localhost:5184/components/?env=vanilla";
 
