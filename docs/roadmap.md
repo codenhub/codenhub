@@ -72,20 +72,41 @@ deferred work; this entry tracks only where the package sits.
 - [ ] Publish public packages from CI with npm trusted publishing (OIDC) and provenance
 - [ ] Versioning and changelog workflow, weighing Changesets against `hub release`
 - [ ] Documentation MCP server
-- [ ] Find out why Firefox runs the `styles` browser suite about five times
-      slower than Chromium. Measured on the same suite: chromium 56s, firefox
-      285s, webkit 77s. The cost is uniform, not a few slow tests — across 173
-      Firefox results the median was 2.9s and the fifteen slowest accounted for
-      only 16% of the total, so there is no single test to fix. The engine
-      matrix in `docs/ci.md` hides the wall-clock cost but does not remove it,
-      and Firefox is still the longest job in every run. One untested
-      hypothesis: the suites load pages from a Vite **dev** server, which serves
-      each module as its own request, and Firefox may handle that far worse than
-      Chromium. Serving a production build instead was tried and was
-      inconclusive — `packages/styles/playground` is multi-page and does not
-      survive a static build without work, so the comparison never ran clean.
-      Confirming or killing that hypothesis is the next step; if it holds, the
-      fix is a buildable playground rather than anything in CI.
+- [ ] Find out how much slower Firefox really is on the browser suites, then why.
+      Two measurements disagree and neither settles it, because they differ in
+      both scope and operating system. On a maintainer's Windows machine, the
+      `styles` suite alone ran chromium 56s, firefox 285s, webkit 77s — Firefox
+      about five times Chromium. On an Ubuntu CI runner over the whole workspace
+      (run `33300704947`), the same three engines ran chromium 59.4s, webkit
+      98.5s, firefox 133.6s — Firefox about 2.25 times Chromium. A gap that
+      large between the two suggests part of the cost is Windows-specific and
+      that CI may never have had the problem the larger figure describes.
+      Re-measuring one scope on one machine across all three engines is
+      therefore the first step, before any of the explanations below are worth
+      pursuing.
+      What the Windows run did establish is that the cost is uniform rather than
+      a few slow tests: across 173 Firefox results the median was 2.9s and the
+      fifteen slowest accounted for only 16% of the total, so there is no single
+      test to fix.
+      The prize is bounded, and worth sizing before spending a session on it.
+      The engine matrix in `docs/ci.md` runs the engines side by side, so only
+      the slowest one is on the critical path: in the run above, Firefox was
+      220s of a 232s wall clock. Bringing Firefox down to Chromium's speed
+      would hand the critical path to WebKit at 174s, which is a saving of
+      roughly 50s rather than of minutes.
+      One untested hypothesis: the suites load pages from a Vite **dev** server,
+      which serves each module as its own request, and Firefox may handle that
+      far worse than Chromium. The cheap way to test it is a Playwright trace of
+      a single Firefox test — module-per-request would show as a long tail of
+      module requests that Chromium's trace does not have. Serving a
+      production build instead was tried and was inconclusive:
+      `packages/styles/playground` is multi-page and does not survive a static
+      build without work, so the comparison never ran clean. Making the
+      playground buildable is the expensive fix and is only worth doing once a
+      trace says the hypothesis holds.
+      Playwright's `workers` count is a separate, unmeasured knob: it
+      defaults to half the CPUs, so two on a four-vCPU runner. Test it on its
+      own rather than alongside the above, or neither result can be attributed.
 
 ### @codenhub/demo
 
