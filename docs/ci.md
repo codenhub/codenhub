@@ -138,6 +138,39 @@ CI can run is a step no one can reproduce before pushing; `hub verify`,
 what keeps CI from becoming a separate build system. See `docs/tooling.md` for the
 command surface.
 
+### Pinning third-party actions
+
+Every action from another repository is referenced by full commit SHA, with the
+release it corresponds to in a trailing comment:
+
+```yaml
+uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+```
+
+A tag is a mutable pointer. `@v5` resolves to whatever its owner last pointed it
+at, so a compromised or simply retagged release changes what runs here without any
+change landing in this repository. A SHA cannot move, which turns an action upgrade
+into a reviewable diff rather than something that happens to a run. The comment
+carries the human-readable version, because a bare SHA says nothing about how far
+behind it is.
+
+The rule is all or nothing on purpose. Pinning some actions and not others is worse
+than pinning none: a reader cannot tell a reference that was reviewed and accepted
+from one that was missed, so the unpinned ones stop being visible as a decision.
+Adding an action means resolving its SHA in the same change.
+
+`./.github/actions/setup` is deliberately not pinned. It is a path in this
+repository, so it is already versioned by the commit under test; pinning it would
+mean a run could use a setup step other than the one it is checking.
+
+Nothing updates these automatically. That is the cost of the rule, accepted rather
+than overlooked: upgrades are manual, and a pin left alone is a pin going stale.
+Resolve the new SHA with `gh` and update the comment alongside it:
+
+```sh
+gh api repos/actions/checkout/commits/v5 --jq .sha
+```
+
 ## The documentation deployment check
 
 A second check reports on pull requests without living in this repository. The
