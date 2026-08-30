@@ -168,6 +168,10 @@ until an [aesthetic](./aesthetics.md) supplies shadow geometry or
 `.elevation-sm`/`.elevation-md` asks for it; see
 [Composing → Elevation](./composing.md#elevation).
 
+On the base look, `.card.interactive` scales down slightly on press
+(`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md)
+substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
+
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>

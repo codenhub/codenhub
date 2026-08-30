@@ -286,4 +286,32 @@ test.describe("surfaces", () => {
     expect(styles.panelFill).toBe("12%");
     expect(styles.overriddenFill).toBe("0%");
   });
+
+  /* `.card.interactive` applies `box-active`, so on the base look a press takes
+     the `:root` `--ui-active-transform`. A plain `.card` opts out and stays put.
+     `:active` needs a held pointer, which no keyboard move drives. */
+  test("presses an interactive card on the base look and leaves a plain card alone", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const readScale = (testId: string) =>
+      page.getByTestId(testId).evaluate((node) => {
+        const transform = getComputedStyle(node).transform;
+
+        return transform === "none" ? 1 : Number.parseFloat(transform.slice("matrix(".length).split(",")[0]!);
+      });
+
+    const interactive = page.getByTestId("card-default-none-interactive");
+
+    await interactive.hover();
+    await page.mouse.down();
+    try {
+      /* The transform is transitioned, so this polls for the settled value. */
+      await expect
+        .poll(() => readScale("card-default-none-interactive"), "interactive card pressed")
+        .toBeCloseTo(0.97, 2);
+      expect(await readScale("card-default-none"), "plain card unmoved").toBe(1);
+    } finally {
+      await page.mouse.up();
+    }
+  });
 });

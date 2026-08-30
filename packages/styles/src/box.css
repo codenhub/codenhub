@@ -170,10 +170,11 @@
 
 /* The press, beside the hover for the same reason: moving on `:active` is right
    for something you click and meaningless on something you type into, so a
-   component opts in. `btn` and `.card.interactive` both do. The aesthetic
-   supplies the gesture -- neobrutalism travels into its offset shadow,
-   chunky-tile drops onto its bar -- and with no aesthetic `--ui-active-*` are
-   no-ops, so applying this changes nothing on a plain page. */
+   component opts in. `btn` and `.card.interactive` both do. The gesture is the
+   aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
+   onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
+   `theme.css`, dropped under reduced motion. The `--ui-active-shadow-*` slots
+   stay no-ops until an aesthetic sets them. */
 @utility box-active {
   &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));

@@ -190,6 +190,21 @@
   --hover-step: 14%;
 }
 
+/* The base look answers a press with a small scale-in. `box-active` applies it on
+   `.btn` and `.card.interactive`; every aesthetic sets its own
+   `--ui-active-transform` on its class, loaded after this file, so those win.
+   Reduced motion opts out. Kept outside `@theme` because a media query cannot go
+   inside it. */
+:root {
+  --ui-active-transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-active-transform: none;
+  }
+}
+
 .light,
 .theme-light,
 [data-theme="light"] {

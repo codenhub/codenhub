@@ -79,7 +79,7 @@ include their own colors.
 | `--ui-hover-shadow-y`   | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`      |
 | `--ui-active-shadow-x`  | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`      |
 | `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`      |
-| `--ui-active-transform` | Transform while pressed.                                                                                      | `none`               |
+| `--ui-active-transform` | Transform while pressed. `none` under `prefers-reduced-motion`.                                               | `scale(0.97)`        |
 | `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                 |
 | `--ui-shadow-edge`      | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                |
 | `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                  |
