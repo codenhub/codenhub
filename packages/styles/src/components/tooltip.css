@@ -24,24 +24,15 @@
 
   @apply relative;
 
-  /* The trigger badge, for a page with no element of its own to hang the message
-     on. Quiet on purpose: it marks that there is a message, it is not one, so it
-     stays a tinted plate rather than taking the fill its bubble takes. That is a
-     key cap's resting shape exactly -- ghost, edged, on `--intent-subtle` -- and it
-     is composed rather than hand-painted so the plate, the ink and the line come
-     from the same place they come from everywhere else.
-
-     The line is what earns its keep. A plate alone cannot tell these intents
-     apart: `--intent-subtle` is a near-page tint for the text, primary and accent
-     families alike, so a badge made of it was the same colour for neutral and
-     primary in light, the same for neutral and secondary in dark, and 1.04:1
-     against the page for secondary -- three of eight indistinguishable and one
-     invisible. `--intent-border` is the slot that differs across all three.
-
-     Painting the host is right here and wrong everywhere else on this component:
-     a `.tooltip` host is a positioning wrapper whose bubble is placed outside its
-     box, so painting one draws a box around the trigger rather than around the
-     message. `.tooltip-icon` is the opt-in that says the host *is* the badge. */
+  /* The trigger badge, for a page with no element to hang the message on. Quiet
+     -- ghost, edged, on `--intent-subtle`, a key cap's resting shape -- because
+     it marks that there is a message, it is not one. The line earns its keep:
+     `--intent-subtle` is a near-page tint that reads the same across families,
+     so a plate alone left three of eight intents indistinguishable;
+     `--intent-border` is the slot that differs. Painting the host is right only
+     here -- everywhere else the bubble is outside the host's box, so painting it
+     boxes the trigger. `.tooltip-icon` is the opt-in that says the host *is* the
+     badge. */
   &.tooltip-icon {
     @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
 
@@ -85,35 +76,15 @@
   &::after {
     @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
 
-    /* Filled, on a ground of its own. The fill is what makes an intent mean
-       something here -- `.tooltip.primary` is the primary colour, black on a light
-       page and white on a dark one, the way a primary button is -- and the ground
-       is what a bubble carrying no fill lands on.
-
-       With no intent the two are the same tone. `intent.css` resolves the
-       tooltip's no-intent case onto `--color-tooltip` and lifts the neutral cap
-       with it, so an unclassed bubble is that plate at full strength rather than
-       a fifth of the page's ink over the surface tone. That derivation is what
-       made a light bubble a mid-grey slab while the dark one read as lifted; the
-       pair states each direction instead. An intent has its own colour and floods
-       the ground the same way it always did.
-
-       The ground stays the surface tone rather than following the plate. Pointed
-       at `--color-tooltip` as well, the two ends of the fill were the same colour
-       and the fill axis went inert: `.ghost`, `.soft` and `.solid` all rendered
-       the same bubble on an unclassed tooltip, which is a documented axis doing
-       nothing. `tests/browser/axes.spec.ts` caught it.
-
-       The ground also retires a bound. Presentation cascades, so a container's
-       `.ghost` reaches a bubble nobody classed; with nothing under the fill that
-       left a boundaryless bubble over arbitrary content, which the component used
-       to answer by pinning its fill at solid and refusing to read presentation at
-       all. An opaque ground answers it at every presentation instead.
-
-       The fallback order matters: glass replaces the ground of every surface with
-       a translucent one so its blur has something to show through, and a bubble
-       is one of the surfaces it names. Reading `--ui-surface-ground` first is
-       what keeps a glass tooltip glass. */
+    /* Filled, over a ground of its own. An intent floods the fill
+       (`.tooltip.primary` is the primary colour); with no intent `intent.css`
+       resolves the bubble onto `--color-tooltip` and lifts the neutral cap, a
+       plate stated per theme because the derived version was a mid-grey slab in
+       light and lifted in dark. The ground stays the surface tone, not the
+       plate -- pointed at both, the fill axis went inert and `axes.spec.ts`
+       caught it. An opaque ground is also what keeps a cascaded `.ghost` from
+       leaving the bubble boundaryless, retiring the old pinned-fill bound.
+       `--ui-surface-ground` is read first so a glass tooltip stays glass. */
     --_d-fill: 100%;
     --_d-fg-on-fill: 100%;
     --_d-border: 100%;
@@ -124,30 +95,16 @@
     --_d-elevation: 0;
     --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
 
-    /* A bubble's line is a boundary against content nobody chose, not a
-       silhouette around a fill, and that is the one place `box`'s edge blend is
-       wrong for it: the blend runs the line toward the plate by the fill amount,
-       so at a full fill the line *is* the plate and a near-white bubble over
-       near-white content has nothing marking where it starts. The plate carries
-       the message; the line only has to say where the message ends.
-
-       Only the colour is restated, not the amount. How much line there is still
-       comes from `--_edge-amount`, bounded by the floor below. */
+    /* The bubble's line is a boundary against content nobody chose, so `box`'s
+       edge blend is wrong here: at a full fill the line *is* the plate. Restate
+       the colour only; how much line comes from `--_edge-amount`, floored below. */
     --_line: var(--intent-border);
 
-    /* And a floor under how much of it there is, for the same reason the ground
-       is opaque: the line is the boundary, and a cascade must not be able to
-       take a boundary away from a bubble nobody classed. `.solid` answers the
-       edge question now, so a `.solid` container reached in and removed it --
-       silently, and worst in the light theme, where the plate is near-white and
-       the line is the only thing separating the message from whatever is behind
-       it.
-
-       The escape is the same idiom `text-control` uses: a class on the element is
-       a consumer describing what they want, a class on a container is a cascade
-       reaching something nobody classed. The floor answers the second, the rule
-       below answers the first, and `tests/browser/axes.spec.ts` still sees the
-       edge axis move because it probes with the class on the element. */
+    /* Floored, for the same reason the ground is opaque: a cascade must not take
+       the boundary from a bubble nobody classed (worst in light, where the plate
+       is near-white). The element's own `.edgeless` lowers it -- same
+       element-vs-cascade idiom `text-control` uses -- and `axes.spec.ts` still
+       sees the edge move because it probes with the class on the element. */
     --_edge-floor: 100%;
 
     /* A bubble is a small transient popover, not a modal, so it takes the

@@ -2,29 +2,16 @@
 @import "../theme.css";
 @reference "../box.css";
 
-/* What all six text controls share: the box, the chrome, and two bounds. The
-   three text inputs are on it for the chrome; `.checkbox`, `.radio` and
-   `.switch` are on it for the bounds, which are the same two either way.
+/* What all six text controls share: the box, the chrome, and two bounds that
+   exist because presentation cascades -- a cascaded-fill cap so a container's
+   `.solid` cannot fill a field with its own text colour, and an edge floor so a
+   container's `.edgeless` cannot leave a field or an unchecked toggle with no
+   boundary (WCAG 1.4.11). `switch` opts out of the floor on two of its own
+   fills, the only component that can, because its knob still carries the state;
+   `.checkbox` and `.radio` have nothing outside their line and cannot.
 
-   The first bound is the fill cap, and it is not there to stop a consumer
-   combining classes we never documented. Presentation cascades on purpose -- that
-   is how a container sets the look of a subtree -- so `.solid` on a toolbar
-   reaches the inputs inside it, and an input filled 100% with the text colour has
-   text the same colour as its background. Our own cascade produced that, so our
-   own `min()` answers it.
-
-   The second is the edge floor: the line is drawn whatever the presentation says,
-   because a container's `.edgeless` would otherwise leave a field with no mark of
-   where typing goes, and an unchecked toggle with no silhouette at all
-   (WCAG 1.4.11). `switch` opts out of the floor for two of its own fills, and it
-   is the only component that can: a switch paints a knob whatever its track does,
-   in `--color-text-secondary` at full strength -- past 9:1 against the page in
-   both themes -- and the knob's position is what carries the state. A checkbox
-   and a radio have nothing outside their line, which is why the floor is
-   absolute for them.
-
-   No derived hover. Tinting the box on hover is right for something you press
-   and wrong for something you type into, so only the line responds. */
+   No derived hover: on something you type into, only the line responds to a
+   pointer. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
 @utility text-control {
   @apply box;
 
@@ -127,37 +114,19 @@
     --_line-tone: var(--intent-hover);
   }
 
-  /* The focus ring is the one in `reset.css`, and it took a layer bug to lose
-     it. This block used to be `&:focus { @apply outline-none }`, which reads as
-     "no outline when clicked" -- but a rule nested in `@utility` lands in the
-     utilities layer, `reset.css` declares `:focus-visible` in `@layer base`, and
-     utilities beat base. It suppressed the keyboard ring along with the mouse
-     one, and a text control was the only classed thing in the package focusing
-     with no ring at all. The same trap as the invalid rule above.
-
-     Nothing replaces it, because nothing has to: `reset.css` styles
-     `:focus-visible` alone, so a click never draws a ring on its own. The line
-     still moves to the intent on top of it, which is a second signal rather than
-     the only one. */
+  /* The line moves to the intent on top of the `reset.css` `:focus-visible`
+     outline -- a second signal, not a replacement. This must NOT suppress the
+     outline: `&:focus { outline-none }` nested here lands in the utilities layer
+     and beats `reset.css`'s `@layer base` ring, killing the keyboard ring too. */
   &:focus-visible {
     --_line-tone: var(--intent-color);
   }
 
-  /* R8, and P6. The state lifts the bounds and lets the fill compose, rather
-     than writing a fill of its own.
-
-     It used to write `--_fill: 100%` and `--_fg: var(--intent-contrast)`, which
-     is a composed result twice over, and it is why every checked toggle rendered
-     identically no matter what presentation it carried. Raising the cap instead
-     leaves the fill class deciding: `.solid` reaches the 100% it asks for,
-     `.soft` stays at the 12% it asks for, and the ink follows the plate through
-     `--_on-fill` without being told.
-
-     The floor is the other half. It is the bound that keeps a mark on a ground
-     when a container's fill class would otherwise take the ground away.
-
-     This lives here rather than on the three toggles because a text input is
-     never `:checked` and the rule is inert on one. */
+  /* R8, P6: `:checked` lifts the bounds and lets the fill class compose, rather
+     than pinning `--_fill`/`--_fg` (which made every checked toggle render
+     identically). The floor keeps a mark on a ground when a container's `.ghost`
+     would take it away. Lives here, not on the toggles, because a text input is
+     never `:checked`. */
   &:checked {
     --_fill-cap: 100%;
     --_fill-floor: 12%;
@@ -180,50 +149,15 @@
   }
 }
 
-/* `.soft` on a text control is a tint and nothing else. It used to be a tint
-   *and* the removal of the line, which made a fill class decide an edge -- the
-   one thing the axes say it may not do -- and left the sunk-field look with no
-   spelling of its own. It is now `.soft.edgeless`, which is two classes saying
-   two things instead of one class saying both.
+/* A fill class on the element names its own cap; the 6% cascade cap in the
+   utility is for a container reaching a field nobody classed. Both raise
+   `--_fill-cap` rather than writing `--_fill` (P6), which is also what keeps
+   `.soft` < `.solid` -- written as a rewrite the louder name rendered the
+   quieter box, measured and inverted on `.ipt`, `.checkbox` and `.radio`.
+   20% clears `.soft`'s 12% and matches the plate a `.solid` badge draws.
 
-   What survives from that rule is the part that was never about the edge: `.soft`
-   on the element takes the published 12% fill whole. The cap below it exists to
-   stop a container's `.solid` from filling a field nobody classed, and `.soft` on
-   the element is not that case -- it is a consumer naming the tint they want.
-   Only `--intent-fill-max` still applies, because a neutral tint is the text
-   colour and that one is ours to bound.
-
-   Matching the class on the element and never a container's is what separates the
-   two. A `.soft` toolbar still tints the fields inside it at the cap; a field
-   wearing `.soft` itself gets the tint it asked for.
-
-   Both raise `--_fill-cap` rather than writing `--_fill`, which is P6 and is
-   also what keeps the two orderable. Written as a rewrite -- which is how the
-   `.soft` half shipped -- `.soft` took 12% while `.solid` was left on the 6%
-   cascade cap, so the louder fill name rendered the quieter box: 236 against
-   soft's 220 on the light page, inverted on `.ipt`, `.checkbox` and `.radio`
-   alike. Naming a cap per class puts them back in order and leaves one
-   expression composing the fill.
-
-   20% rather than something larger because a text control is a thing you type
-   into: the typed line is `--intent-color` at full strength, and the plate has
-   to stay far enough under it to read. It also has to clear `.soft`'s 12%, and
-   it lands on the same plate a `.solid` badge draws, so a filled field and a
-   filled chip agree.
-
-   `.switch` is left off the `.solid` rule. Its track is the whole component
-   rather than a backdrop for text, so it caps at 40% in its own utility, where
-   its three fills separate far enough to read. Adding it here would quietly
-   overrule that -- an unlayered declaration beats a layered one -- and drop
-   `.soft` and `.solid` back to eight steps apart.
-
-   `:not(:checked)` is the layer trap this file keeps meeting from new
-   directions. The checked states live inside `@utility` and land in the
-   utilities layer; these rules are unlayered and win at any specificity.
-   Without the exclusion a checked `.soft` toggle kept the tint instead of
-   filling -- a checked switch came out a pale track with the knob at the far
-   end, and a checked checkbox a pale square with a tick the colour of its own
-   ground. */
+   `.switch` is deliberately absent: its track caps at 40% in its own utility,
+   and an unlayered rule here would overrule that. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
 :is(.text-control, .ipt, .textarea, .select, .input-group).soft {
   --_fill-cap: 12%;
 }
@@ -232,55 +166,31 @@
   --_fill-cap: 20%;
 }
 
-/* A checked toggle is filled with its own intent by definition, so the one
-   intent that stops its fill short has to let go of it here. `.neutral` caps at
-   20% because a neutral fill is the page's own ink and a full one is a slab --
-   true of a badge, and not true of the one component whose whole job is to be
-   unmistakably on.
-
-   Declared where the intents are, at 0-2-0, for the reason the invalid rule
-   below carries: a rule nested in `@utility` lands in the utilities layer, the
-   intent reset lands in no layer at all, and unlayered beats layered whatever
-   the specificity. Written inside `text-control` this would be overruled by
-   `.neutral` and a checked toggle would fill to a fifth of its colour. */
+/* A checked toggle fills with its own intent, so neutral has to drop its 20%
+   cap here. Declared where the intents are (0-2-0, unlayered): inside
+   `text-control` `.neutral` would overrule it and a checked toggle would fill to
+   a fifth of its colour. */
 :is(.text-control, .checkbox, .radio, .switch, input):checked {
   --intent-fill-max: 100%;
 }
 
-/* The element's own `.edgeless`, lowering the floor `text-control` raises.
-   Same idiom, same reason: a class on the element is a consumer describing what
-   they want, and a class on a container is a cascade reaching something nobody
-   classed. The floor answers the second and this answers the first.
-
-   `.checkbox` and `.radio` are deliberately absent. Every other control has
-   something left when the line goes -- a field keeps its focus ring and its
-   text, a switch keeps a knob drawn in `--color-text-secondary` at past 9:1 --
-   but an unchecked checkbox is a transparent square and an unchecked radio is a
-   transparent circle. Removing their line removes the control, so for those two
-   the floor stays absolute and the combination is published as unsupported.
-
-   `.input-group` is on it because the group is the field boundary now, so its
-   own `.edgeless` has to reach past `text-control`'s floor exactly as a lone
-   field's does. */
+/* The element's own `.edgeless` lowers the floor `text-control` raises -- a
+   class on the element is a consumer's request, a class on a container is a
+   cascade. `.checkbox` and `.radio` are absent: an unchecked one is a
+   transparent square/circle with nothing but its line, so the floor is absolute
+   and `.edgeless` on them is published unsupported. `.input-group` is on it
+   because the group is the field boundary now. */
 :is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
   --_edge-floor: 0%;
 }
 
-/* An invalid control carries the destructive intent, and this is a plain rule
-   rather than a `&[aria-invalid="true"]` inside `text-control` because a rule
-   inside `@utility` lands in the utilities layer and the intent reset does not
-   land in a layer at all. Unlayered beats layered whatever the specificity, so
-   the nested version was overruled by the reset the moment the control classes
-   joined it: every invalid field drew a plain grey line, and the only thing that
-   still marked the error was the hint underneath.
-
-   `:is()` takes the specificity of its heaviest argument, so this is 0-2-0 and
-   outranks an intent class on the same element by more than source order. An
-   invalid control is destructive whatever else it was asked to be.
-
-   Hover is redirected with the other two. The hover rule reads `--intent-hover`,
-   which the reset fills from the text family, and a red-lined control that turns
-   grey under the pointer reads as the error clearing itself. */
+/* An invalid control is destructive whatever else it was asked to be. A plain
+   unlayered rule, not `&[aria-invalid]` inside `@utility`: the intent reset is
+   unlayered too and would overrule a layered version (leaving a grey line and
+   only the hint marking the error). `:is()` gives it 0-2-0 to outrank an intent
+   class. `--intent-hover` is redirected with the others so the line does not go
+   grey under the pointer. The `:has()` arm bridges an inner control's state to
+   an `.input-group`. */
 :is(
   .text-control,
   .ipt,
@@ -312,10 +222,9 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength. This lives on the three
-     text inputs rather than on `text-control`, because a toggle's foreground is
-     its mark and a mark has to read on whatever ground the fill class paints --
-     which is `box`'s composed `--_fg`, not a pin. */
+  /* Typed text is the intent colour at full strength -- on the three text
+     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
+     `--_fg` instead. */
   --_fg: var(--intent-color);
 
   min-height: var(--control-height);
@@ -354,10 +263,9 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength. This lives on the three
-     text inputs rather than on `text-control`, because a toggle's foreground is
-     its mark and a mark has to read on whatever ground the fill class paints --
-     which is `box`'s composed `--_fg`, not a pin. */
+  /* Typed text is the intent colour at full strength -- on the three text
+     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
+     `--_fg` instead. */
   --_fg: var(--intent-color);
 
   @apply min-h-28 resize-y;
@@ -374,10 +282,9 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Typed text is the intent colour at full strength. This lives on the three
-     text inputs rather than on `text-control`, because a toggle's foreground is
-     its mark and a mark has to read on whatever ground the fill class paints --
-     which is `box`'s composed `--_fg`, not a pin. */
+  /* Typed text is the intent colour at full strength -- on the three text
+     inputs, not `text-control`, because a toggle's mark takes `box`'s composed
+     `--_fg` instead. */
   --_fg: var(--intent-color);
 
   min-height: var(--control-height);
@@ -475,23 +382,14 @@
   }
 }
 
-/* The three toggles are text controls too, and they are on the utility for the
-   bounds it carries rather than for the chrome. The edge floor keeps a
-   container's `.edgeless` from erasing the closed silhouette that is the only
-   unchecked affordance there is (WCAG 1.4.11), and `text-control` is where the
-   checked state that lifts the fill bounds lives.
-
-   They raise the fill cap, because the 6% one is not their bound. It is written
-   to keep *typed text* legible over its own field, and a toggle has no typed
-   text -- it inherited the number along with the utility. 20% is the plate a
-   `.solid` badge draws, so a filled toggle and a filled chip agree, and it is
-   also what the three fills need to separate: 250, 220 and 202 unchecked.
-
-   `.ghost` is not supported on a toggle. Its unchecked state is the silhouette
-   every toggle already has, and its checked state is a mark on nothing -- a tick
-   floating on the page, a dot with no ring around it. The registry records it,
-   the playground does not render it, and the checked fill floor in
-   `text-control` keeps a container that cascades one from producing it. */
+/* The three toggles compose `text-control` for its bounds, not its chrome: the
+   edge floor keeps a container's `.edgeless` from erasing the closed silhouette
+   (WCAG 1.4.11), and the checked state that lifts the fill bounds lives there.
+   They raise the fill cap to 20% -- the 6% one keeps typed text legible and a
+   toggle has none; 20% is a `.solid` badge's plate and separates the three
+   fills. `.ghost` is unsupported (an unchecked ghost toggle is the silhouette
+   it already has, a checked one a mark on nothing); the registry records it and
+   the checked fill floor clamps a cascaded one. See model.md#unsupported-values. */
 @utility checkbox {
   @apply text-control inline-grid size-4 cursor-pointer place-content-center;
 
@@ -574,20 +472,12 @@
     content: "";
   }
 
-  /* A checked radio thickens its ring and takes the intent whole on the line.
-     The fill is left to the presentation like every other toggle's.
-
-     It used to pin `--_fill: 0%` and `--_fg: var(--intent-color)`, because with
-     the foreground fixed to the intent a filled circle left a disc with the dot
-     invisible inside it. That is no longer the trade: the mark takes `box`'s
-     composed foreground, which walks to the contrast tone exactly as the plate
-     fills, so a filled circle carries a readable dot and an unfilled one carries
-     the strong tone. `.soft` is the classic ring-and-dot radio.
-
-     `--_line-tone` rather than `--_edge`, so it hands the colour to the same
-     seam the resting and hovered states use and `text-control`'s edge floor
-     still draws it -- a checked radio keeps its ring under a container's
-     `.edgeless` exactly as an unchecked one does. */
+  /* A checked radio thickens its ring and takes the intent whole on the line;
+     the fill is left to the presentation. The dot takes `box`'s composed
+     foreground, which walks to the contrast tone as the plate fills, so a
+     filled circle still carries a readable dot. `--_line-tone` rather than
+     `--_edge`, so `text-control`'s edge floor still draws the ring under a
+     container's `.edgeless`. */
   &:checked {
     --_line-tone: var(--intent-color);
 
@@ -602,13 +492,9 @@
   }
 }
 
-/* A2: every dimension is derived from the border width the box resolved, so the
-   knob cannot drift out of a thicker track. It used to be a fixed 16px pinned at
-   1px, which overflowed as soon as an aesthetic asked for 2px.
-
-   All three toggles rest at `solid` and none of them supports `.ghost`, for the
-   reason given on `checkbox`. A switch caps higher than the other two because
-   its track is the whole component rather than a mark's ground. */
+/* A2: every dimension derives from the border width `box` resolved, so the knob
+   cannot drift out of a track a thick aesthetic widened. A switch caps its fill
+   higher than the other toggles because its track is the whole component. */
 @utility switch {
   @apply text-control relative cursor-pointer;
 
@@ -618,33 +504,13 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* A switch raises the fill cap it inherits, and that is what lets it read the
-     fill axis like everything else does.
-
-     At `text-control`'s 6% the three fills landed on two looks -- `.solid` and
-     `.soft` were the same wash -- so the component varied the *line* per fill
-     class instead. That was the only place in the package where a fill class
-     decided an edge, and it made `.soft` mean something different on a switch
-     than on every other component. Raising the cap retires it: the fill names
-     now name fills here too.
-
-     The cap cannot go to 100%. A checked switch lifts `--_fill` to 100% whole,
-     so an unchecked `.solid` at the same value would be pixel-for-pixel a
-     checked one, and the knob's position would be the only thing left saying
-     which.
-
-     40% is measured rather than picked. On the light page, the four tracks
-     composite to 250, 221, 154 and 10, which is 29 steps from `ghost` to
-     `soft`, 67 from `soft` to `solid`, and 144 from an unchecked `solid` to a
-     checked track -- against roughly 20 for a clearly visible step, the same
-     threshold the hover step was measured against. `tests/browser/axes.spec.ts`
-     asserts all three so the number cannot drift back.
-
-     `--intent-fill-max` still applies underneath, so neutral stops at 20% and a
-     neutral switch is quieter than a coloured one by design.
-
-     A cap rather than a resting value, because the case it answers is still the
-     cascade: a `.solid` toolbar reaching a switch nobody classed. */
+  /* 40%, measured: at `text-control`'s 6% the three fills collapsed to two looks
+     and the switch had to vary its *line* per fill class -- the one place a fill
+     class decided an edge. 40% separates all three (29/67/144 sRGB steps on the
+     light page, against ~20 for a visible one) without reaching a checked
+     track's 100%, so the knob's position still says which. `axes.spec.ts`
+     asserts all three. `--intent-fill-max` still caps neutral at 20%. A cap
+     rather than a resting value, because it answers the cascade case. */
   --_fill-cap: 40%;
 
   --switch-height: 1.25rem;

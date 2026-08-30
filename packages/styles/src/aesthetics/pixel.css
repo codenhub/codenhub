@@ -7,16 +7,10 @@
    `--ui-shadow-edge` are for. The ring is still coloured by each component's own
    intent, because the parts carry no colour. */
 .pixel {
-  /* One pixel of the imaginary low-resolution grid. Everything else is a
-     multiple of it: the ring is one unit thick and the corner is one unit
-     square, so a consumer scaling this scales the whole look at once.
-
-     Read with a fallback rather than declared, which is what lets an ancestor
-     set it. A custom property declared on an element beats an inherited one
-     whatever the specificity, so declaring `--pixel-unit` here would outrank
-     every ancestor including `:root`, which is where an application normally
-     themes something. The private holds the resolved value for the eighteen
-     places below that read it, so the default lives once. */
+  /* One pixel of the imaginary grid; the ring is one unit thick and the corner
+     one unit square, so scaling it scales the whole look. Read with a fallback
+     so an ancestor can set `--pixel-unit` -- declared here it outranks `:root`
+     (R8; see model.md#rules-for-aesthetics). */
   --_pixel-unit: var(--pixel-unit, 4px);
 
   --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
@@ -38,21 +32,12 @@
      is covered and the line does not read as broken at the corners. Spread is not
      scaled by elevation, so a chip resting at zero keeps its edge. */
   --ui-shadow-inset: inset;
-  /* The ring is not depth -- it is this element's border, drawn where a
-     `clip-path` cannot cut it. `--ui-shadow-edge` says so, and `box` colours it
-     from `--_edge`: the P3 blend toward the fill, with the edge axis as its
-     alpha. That is what keeps presentation intact under this aesthetic. An
-     `.edgeless` badge or a `.solid` button has no line, so it gets no ring; a
-     `.edged` card gets one; a field, which floors its own edge, keeps one
-     whatever a container asks for.
-
-     Before this the ring took `--ui-shadow-ink` and painted at full strength on
-     every box the aesthetic reached, so `.edged` and `.edgeless` rendered
-     identically and the aesthetic decided an axis that is not its to decide.
-
-     Declared empty on purpose: the token is read for its presence, not its
-     value. `box` explains why -- the percentage form nests two `color-mix()`
-     results, which WebKit resolves as though the percentage were zero. */
+  /* The ring is this element's border, not depth, drawn where `clip-path` cannot
+     cut it. `--ui-shadow-edge` says so and `box` colours it from `--_edge`, so
+     the edge axis still decides: an `.edgeless` badge or `.solid` button gets no
+     ring, an `.edged` card does, a field keeps one whatever a container asks.
+     Declared empty because it is read for presence -- the percentage form nests
+     two `color-mix()` results that WebKit resolves as zero (see `box`). */
   --ui-shadow-edge: ;
   --ui-shadow-spread: var(--_pixel-unit);
   --ui-shadow-x: 0px;

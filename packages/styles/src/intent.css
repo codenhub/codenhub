@@ -1,45 +1,20 @@
-/* An intent maps one color family onto seven shared slots and does nothing else.
-   Supporting every intent therefore costs a component nothing, and adding one
-   costs seven declarations.
+/* An intent maps one colour family onto seven shared slots and nothing else.
+   It does not cascade: the reset at the bottom redeclares the neutral defaults
+   at every component's own root, so a `.success` container cannot recolour a
+   nested destructive button while `.btn.success` still wins. Every intent writes
+   every slot, `--intent-fill-max` included -- omitting it inherits the reset's
+   neutral cap, and `tests/integration/registry.test.ts` fails the build on one
+   that does. Neutral maps `--intent-subtle` to `--color-surface` (the tone
+   tooltips, key caps, code and table heads sit on) and `--intent-border` to
+   `--ui-ink` (how an aesthetic restates the neutral line without naming one). */
 
-   Intent does not cascade. These classes set inheritable custom properties, but
-   the reset at the bottom redeclares the neutral defaults at every component's
-   own root, and a declaration on the element beats an inherited one. A
-   `.success` container cannot silently recolor a destructive button nested
-   inside it, while `.btn.success` still wins over the reset.
-
-   Every intent writes every slot, including the ones whose value never varies.
-   `--intent-fill-max` is 100% for six of the seven, and stating it is what keeps
-   the reset from reaching an intent that meant to leave it alone: the reset
-   declares the neutral cap on every component root, so an intent class that
-   omitted the slot would inherit a limit it never asked for.
-   `tests/integration/registry.test.ts` fails the build on an intent that is
-   missing one.
-
-   Neutral maps `--intent-subtle` to `--color-surface` rather than a text tint:
-   the tinted surface a neutral component sits on is the surface token, and
-   tooltips, key caps, code, and table heads all read it. Its `--intent-border`
-   defers to `--ui-ink`, which is how an aesthetic restates the neutral line
-   color for every component and every bare element without naming one. */
-
-/* The one intent that stops its fill short. Neutral's color is the page's ink,
-   which has to be true -- it is the text of every bare component -- and a fill
-   of it at 100% is a black or white slab. `.neutral.solid` was pixel for pixel
-   `.primary.solid` in the shipped theme, and louder than every semantic intent,
-   which is the opposite of what "no particular meaning" should look like.
-
-   20% is chosen against `.soft`, not against the page: a filled neutral has to
-   read as a step past the tint rather than a repeat of it. 12% and 20% land on
-   neutral-300 and neutral-200 territory -- distinct at a glance -- and hover
-   adds `--hover-step` on top, so the plate still deepens under the pointer.
-
-   `--intent-contrast` stays the page color. What a `.neutral.solid` badge
-   needs printed on its quiet plate is the ink, not the page, but that is
-   `box`'s question and `box` answers it by capping `--ui-fg-on-fill` with this
-   same bound. Answering it here instead -- pointing the slot at `--color-text`
-   -- looked equivalent and was not: the slot also serves the fills that lift
-   the cap on purpose, and a checked neutral checkbox came out a black box with
-   a black tick. */
+/* Neutral stops its fill short: its colour is the page's ink, so a full fill is
+   a slab and `.neutral.solid` was pixel-for-pixel `.primary.solid`. 20% is
+   chosen against `.soft`'s 12% -- a step past the tint, not a repeat.
+   `--intent-contrast` stays the page colour; a `.neutral.solid` badge's ink is
+   `box`'s question, answered by the same `--ui-fg-on-fill` cap. Pointing this
+   slot at `--color-text` instead rendered a checked neutral checkbox
+   black-on-black. */
 .neutral {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
@@ -112,26 +87,15 @@
   --intent-fill-max: 100%;
 }
 
-/* Every component resolves the intent slots at its own root. Zero specificity,
-   so an intent class on the element wins over this while an inherited value
-   still loses -- any declaration on an element beats inheritance regardless of
-   specificity. That single rule is what lets every component drop its own
-   per-intent branches.
-
-   This list and the matching one in `native.css` are the package's only
-   hand-maintained selector lists, and `tests/integration/registry.test.ts`
-   fails the build when a component in the registry is missing from either.
-
-   `.text-control` and `.surface` are on it without being components. Each is a
-   utility the shipped components compose, and each is documented as usable on
-   its own -- `.text-control` for a control the package does not ship, a
-   `contenteditable` div most often, and `.surface` for a box a consumer paints
-   themselves under whichever aesthetic is in scope. Every element that reaches
-   one through a component class was already covered; an element that wears it
-   directly was not, so it resolved no intent at all and `box` collapsed on it:
-   no fill, no border, and a hover that could only make the nothing more so.
-   Measured on a bare `<div class="surface">`, which computed a transparent
-   background and a zero-width border. */
+/* Every component resolves the neutral defaults at its own root, at zero
+   specificity, so an intent class on the element wins while an inherited value
+   loses -- the one rule that lets every component drop its per-intent branches.
+   This list and the one in `native.css` are the package's only hand-maintained
+   selector lists; `tests/integration/registry.test.ts` fails the build on a
+   registry component missing from either. `.text-control` and `.surface` are on
+   it though they are not components: both are documented as typeable on their
+   own, and a bare `<div class="surface">` with no intent resolved computes a
+   transparent background and a zero-width border -- `box` collapses. */
 :where(
   .btn,
   .ipt,
