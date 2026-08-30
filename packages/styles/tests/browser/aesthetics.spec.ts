@@ -282,30 +282,44 @@ test.describe("aesthetics", () => {
       expectSameColor(tinted["border-top-color"]!, destructive, "neobrutalism intent card border");
     });
 
-    test("moves a hovered button, and an interactive card, into its own shadow", async ({ page }) => {
-      const expectPressed = async (testId: string) => {
+    test("holds its slab under a hover and travels it on the press", async ({ page }) => {
+      const expectHeldThenPressed = async (testId: string) => {
         const element = page.getByTestId(testId);
 
+        /* Hover keeps the resting offset slab and does not move the element:
+           `box-hover`'s derived fill tint is the whole hover response. */
         await element.hover();
+        await expect
+          .poll(() => element.evaluate((node) => getComputedStyle(node).transform), `${testId} hover`)
+          .toBe("none");
+        await expect
+          .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} hover`)
+          .toMatch(/\b4px 4px 0px 0px\b/);
 
-        /* Both the shadow and the transform are transitioned, so these poll for
-           the settled value rather than reading mid-flight. */
-        await expect
-          .poll(() => element.evaluate((node) => getComputedStyle(node).transform), testId)
-          /* translate(4px, 4px) serializes as a matrix with the offsets last. */
-          .toBe("matrix(1, 0, 0, 1, 4, 4)");
-        await expect
-          .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), testId)
-          .toMatch(/\b0px 0px 0px 0px\b/);
+        /* The press travels the offset and collapses the shadow. A held pointer is
+           what drives `:active`, which no keyboard move can. Both properties are
+           transitioned, so these poll for the settled value. */
+        await page.mouse.down();
+        try {
+          await expect
+            .poll(() => element.evaluate((node) => getComputedStyle(node).transform), `${testId} press`)
+            /* translate(4px, 4px) serializes as a matrix with the offsets last. */
+            .toBe("matrix(1, 0, 0, 1, 4, 4)");
+          await expect
+            .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} press`)
+            .toMatch(/\b0px 0px 0px 0px\b/);
+        } finally {
+          await page.mouse.up();
+        }
       };
 
       await page.goto(withAesthetic(BUTTONS_URL, "neobrutalism"));
-      await expectPressed("btn-default-none");
+      await expectHeldThenPressed("btn-default-none");
 
-      /* A card lifts only when it opts in with `.interactive`: a plain card is a
-         container, not a control. */
+      /* A card responds only when it opts in with `.interactive`: a plain card is
+         a container, not a control. */
       await page.goto(withAesthetic(SURFACES_URL, "neobrutalism"));
-      await expectPressed("card-default-none-interactive");
+      await expectHeldThenPressed("card-default-none-interactive");
     });
 
     /* The offset is read with a fallback rather than declared, which is what lets
@@ -1110,7 +1124,9 @@ test.describe("aesthetics", () => {
          `button.css`'s contract and the neobrutalism suite already covers it. */
       expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
       expect(button["--ui-active-transform"].trim(), "the element travels the bar's depth").toBe("translateY(4px)");
-      expect(button["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
+      /* Chunky tile declares no hover transform, so `box-hover` falls back to
+         `none` and the tile holds still under the pointer. */
+      expect(button["--ui-hover-transform"].trim(), "no hover transform declared").toBe("");
     });
 
     /* `box-active` reaches `.card.interactive`, not only `.btn`. Under a

@@ -151,7 +151,7 @@ imported.
 
 | Token                    | Aesthetic       | Purpose                                                     | Default                           |
 | ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                             |
 | `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                         |
 | `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
 | `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |

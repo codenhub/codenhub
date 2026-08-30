@@ -31,11 +31,10 @@
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
-  /* The press: move by the offset, shrink the shadow to nothing. Two tokens
-     replace a nine-selector `:hover` list, and R3 stays intact. */
-  --ui-hover-shadow-x: 0px;
-  --ui-hover-shadow-y: 0px;
-  --ui-hover-transform: translate(var(--_neo-offset), var(--_neo-offset));
+  /* The press: travel the offset, shrink the shadow to nothing, so the element
+     lands flat where its slab was. Hover keeps the slab still under the pointer;
+     `box-hover`'s derived fill tint is the whole hover response. One token pair,
+     no `:hover` list, R3 intact. */
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));

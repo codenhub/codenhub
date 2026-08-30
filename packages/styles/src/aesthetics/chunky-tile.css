@@ -56,17 +56,11 @@
   --ui-shadow-blur: 0px;
   --ui-shadow-spread: 0px;
 
-  /* Hover holds still, and that is a choice against precedent rather than an
-     omission: neobrutalism spends its hover on the press because travelling into a
-     two-axis shadow is the gesture. A seated slab has one gesture and it belongs to
-     the press. Restated rather than left to the fallback, so a chunky region nested
-     inside a neobrutalist one does not inherit that aesthetic's collapse and lose
-     its bar under the pointer. */
-  --ui-hover-shadow-x: 0px;
-  --ui-hover-shadow-y: var(--_tile-lift);
-  --ui-hover-transform: none;
-
-  /* The press, and the reason the lift is one number. */
+  /* The press, and the reason the lift is one number: the element travels exactly
+     the bar's depth and lands flat on the page. Hover holds still -- a seated slab
+     has one gesture and it belongs to the press -- and the resting shadow tokens
+     above already hold the bar under the pointer, so hover needs nothing of its
+     own. */
   --ui-active-shadow-x: 0px;
   --ui-active-shadow-y: 0px;
   --ui-active-transform: translateY(var(--_tile-lift));

@@ -814,8 +814,9 @@ agreeing with the spec. Declaring the token empty and selecting between two
 single mixes with the guaranteed-invalid fallback idiom keeps all three engines
 in agreement. An aesthetic nested inside one that declares it clears it with
 `initial`.
-`--ui-hover-shadow-*` lets neobrutalism collapse its shadow on hover without the
-`:hover` selector R3 forbids. `--ui-surface-ground` exists because
+`--ui-hover-shadow-x` and `-y` let an aesthetic move or hold its shadow between
+rest and hover without the `:hover` selector R3 forbids. `--ui-surface-ground`
+exists because
 `--ui-bg-alpha` multiplies the _fill_, and a surface's default fill is 0%: with no
 ground token a glass card keeps an opaque background and its own blur is invisible
 behind it.
@@ -1213,14 +1214,16 @@ Thick ink outline, a hard unblurred offset shadow, and a press that moves the
 element into its own shadow.
 
 - 2px edges, zero radius everywhere.
-- `--neo-offset` at 4px is the knob: the shadow offset and the hover travel are
+- `--neo-offset` at 4px is the knob: the shadow offset and the press travel are
   the same number, so a consumer scaling the look scales it whole. Read with a
   fallback per [R8](#rules-for-aesthetics), so an ancestor can set it.
 - Ink follows the theme, not the palette: near-black on light, near-white on
   dark. Pure black disappears on a dark page.
 - The offset shadow is the component's own `--intent-border`, so a success button
   casts a green shadow and a neutral button casts ink.
-- Hover moves the element by the shadow offset and shrinks the shadow to nothing.
+- The press moves the element by the shadow offset and shrinks the shadow to
+  nothing. Hover holds the slab still; the derived fill tint is its whole
+  response.
 - An alert rests on the slab, which is the one component this aesthetic names in a
   selector. Here the slab is a second ink line rather than depth, and an alert is
   the only container the registry rests flat. Written into the component's resting
@@ -1267,8 +1270,8 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
   correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both
   resolve `--intent-border`.
-- Hover holds still and the press moves, which is the opposite of neobrutalism and
-  deliberate — a seated slab has one gesture.
+- Hover holds still and the press moves: a seated slab has one gesture and it
+  belongs to the press.
 - Actions are heavier and slightly tracked, through the one recorded selector
   list. Casing is left to the application.
 
@@ -1341,9 +1344,9 @@ pixel of border, so dropping `--ui-border-scale` costs nothing legible.
 1. `--ui-shadow-inset`, because pixel's inset ring cannot be expressed by offset,
    blur, and spread alone, and writing it as a complete value costs the
    component's own intent.
-2. `--ui-hover-shadow-x` and `-y`, because neobrutalism's press-into-the-shadow
-   hover otherwise needs a `:hover` selector inside the aesthetic, which R3
-   forbids.
+2. `--ui-hover-shadow-x` and `-y`, because an aesthetic that moves or holds its
+   shadow between rest and hover otherwise needs a `:hover` selector inside the
+   aesthetic, which R3 forbids.
 3. `--ui-surface-ground`, because a glass card rendered opaque: `--ui-bg-alpha`
    multiplies the fill, a surface's default fill is 0%, and the blur sat behind a
    solid background. This is the one finding that would have shipped as a visible

@@ -683,7 +683,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 
 | Class           | Look                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a hover that moves the element into it.                     |
+| `.neobrutalism` | No radius, a thick ink outline, a hard unblurred offset shadow, and a press that moves the element into it.                     |
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
@@ -713,8 +713,8 @@ a green shadow and a destructive card a red one. With no intent, both the
 outline and the shadow use the ink, which follows the theme rather than the
 palette.
 
-`--neo-offset` is the knob: the shadow offset and the distance hover travels
-are the same number, so scaling the look scales both at once.
+`--neo-offset` is the knob: the shadow offset and the distance the press
+travels are the same number, so scaling the look scales both at once.
 
 ```html
 <section class="neobrutalism" style="--neo-offset: 6px">
@@ -1478,7 +1478,7 @@ imported.
 
 | Token                    | Aesthetic       | Purpose                                                     | Default                           |
 | ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance hover travels.              | `4px`                             |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                             |
 | `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                         |
 | `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
 | `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
