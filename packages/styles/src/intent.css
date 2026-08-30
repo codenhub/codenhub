@@ -139,6 +139,7 @@
   .surface,
   .textarea,
   .select,
+  .input-group,
   .checkbox,
   .radio,
   .switch,
@@ -178,7 +179,7 @@
    at any specificity. Written as a plain class list it would carry 0-1-0 and,
    being later in the stylesheet, beat `.primary` -- which would make every
    colored control draw a grey line. `:where()` keeps it under both. */
-:where(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch) {
+:where(.text-control, .ipt, .textarea, .select, .input-group, .checkbox, .radio, .switch) {
   --intent-border: var(--ui-ink, var(--color-control-border));
 }
 

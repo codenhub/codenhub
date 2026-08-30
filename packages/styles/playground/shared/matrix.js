@@ -342,41 +342,33 @@ const renderMatrix = (host) => {
   }
 };
 
-/* Input type is a second axis with nothing to do with intent: each type brings
-   its own icon, and some bring none. Every cell is a whole field -- label,
-   control, and hint -- because that is the shape the package documents; the
-   invalid cell swaps the hint for an error. Pages declare the axis the same way
-   as a matrix:
+/* Input type is a second axis with nothing to do with intent. Every cell is a
+   whole field -- label, control, and hint -- because that is the shape the
+   package documents; the invalid cell swaps the hint for an error. Pages declare
+   the axis the same way as a matrix:
 
      <div data-fields="email,password,search"></div>
 
-   Cells are addressable as `field-<type>-<variant>`.
-
-   `icon: false` drops the icon-left and icon-right cells. `text` and `number`
-   have no artwork to show. Date and datetime-local opt themselves into `.icon`
-   where the native picker button can be hidden and show nothing at all where it
-   cannot, so an explicit alignment cell would be padding around an empty slot in
-   one engine and a second calendar glyph in the other. Their standard cell is
-   the whole supported surface. */
+   Cells are addressable as `field-<type>-<variant>`. Icons are not part of this
+   axis: the package ships none, and `.input-group` composes any icon element
+   beside a control -- shown in its own playground section. */
 const FIELD_TYPES = {
   email: { value: "you@example.com", hint: "Used for build notifications." },
   password: { value: "correct horse battery", hint: "At least twelve characters." },
   url: { value: "https://coden.agency", hint: "Include the scheme." },
   tel: { value: "+55 11 90000-0000", hint: "Country code first." },
   search: { value: "styles", hint: "Matches package names." },
-  date: { value: "2026-08-10", hint: "Native picker button, themed where it can be replaced.", icon: false },
-  "datetime-local": { value: "2026-08-10T09:30", hint: "Local time, no zone.", icon: false },
+  date: { value: "2026-08-10", hint: "Native picker, unstyled." },
+  "datetime-local": { value: "2026-08-10T09:30", hint: "Local time, no zone." },
   month: { value: "2026-08", hint: "Billing period." },
   week: { value: "2026-W33", hint: "ISO week number." },
   time: { value: "09:30", hint: "Twenty-four hour clock." },
-  text: { value: "Plain text", hint: "No icon for this type.", icon: false },
-  number: { value: "42", hint: "No icon for this type.", icon: false },
+  text: { value: "Plain text", hint: "The default type." },
+  number: { value: "42", hint: "Numeric entry." },
 };
 
 const FIELD_VARIANTS = {
   standard: { label: "Standard", classes: "" },
-  "icon-left": { label: "Icon left", classes: "icon", icon: true },
-  "icon-right": { label: "Icon right", classes: "icon right", icon: true },
   invalid: { label: "Invalid", classes: "", attrs: { "aria-invalid": "true" }, error: "Enter a valid value." },
   disabled: { label: "Disabled", classes: "", attrs: { disabled: "" } },
 };
@@ -439,10 +431,8 @@ const renderFields = (host) => {
     heading.textContent = type;
     grid.className = "form-grid";
 
-    for (const [variant, variantSpec] of Object.entries(FIELD_VARIANTS)) {
-      if (!variantSpec.icon || spec.icon !== false) {
-        grid.append(buildField(type, variant));
-      }
+    for (const variant of Object.keys(FIELD_VARIANTS)) {
+      grid.append(buildField(type, variant));
     }
 
     group.append(heading, grid);

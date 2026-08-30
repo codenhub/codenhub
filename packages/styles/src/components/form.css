@@ -2,86 +2,6 @@
 @import "../theme.css";
 @reference "../box.css";
 
-/* Fourteen pictures, seven icons. A `data:` URI is a document of its own: it
-   inherits nothing from the page, so `currentColor` and `var()` written inside
-   the artwork resolve against the SVG's own root where neither is defined, and
-   CSS cannot concatenate a colour into a `url()` string either. Artwork painted
-   as a `background-image` therefore carries its colour baked in, which is one
-   copy per theme.
-
-   That is the price of painting on the input itself, and it is the cheaper
-   price. The alternative reads the page's colour and needs seven copies rather
-   than fourteen, but only by masking a pseudo-element, and an input is replaced
-   content that generates none -- so it needs a wrapper element around every
-   field that wants an icon. Fourteen data URIs cost a maintainer nothing at
-   runtime; a mandatory wrapper costs every author of every form.
-
-   The aliases below are the one place in the package that still branches on a
-   theme selector. `theme.css` resolves colour with `light-dark()` and leaves the
-   selectors setting `color-scheme` alone, but `light-dark()` takes colours and
-   these are images, so the choice has to be made by selector. Explicit aliases
-   rather than a fallback chain, because a fallback cannot override a dark value
-   inherited into a light subtree. */
-:root {
-  --ipt-icon-email-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-  --ipt-icon-email-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7'/></svg>");
-
-  --ipt-icon-password-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-  --ipt-icon-password-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
-
-  --ipt-icon-url-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-  --ipt-icon-url-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg>");
-
-  --ipt-icon-tel-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-  --ipt-icon-tel-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/></svg>");
-
-  --ipt-icon-search-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-  --ipt-icon-search-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg>");
-
-  --ipt-icon-calendar-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-  --ipt-icon-calendar-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='4' rx='2'/><path d='M8 2v4'/><path d='M16 2v4'/><path d='M3 10h18'/></svg>");
-
-  --ipt-icon-clock-light: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23737373' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
-  --ipt-icon-clock-dark: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a3a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><polyline points='12 6 12 12 16 14'/></svg>");
-}
-
-:root,
-.light,
-.theme-light,
-[data-theme="light"] {
-  --ipt-icon-email: var(--ipt-icon-email-light);
-  --ipt-icon-password: var(--ipt-icon-password-light);
-  --ipt-icon-url: var(--ipt-icon-url-light);
-  --ipt-icon-tel: var(--ipt-icon-tel-light);
-  --ipt-icon-search: var(--ipt-icon-search-light);
-  --ipt-icon-calendar: var(--ipt-icon-calendar-light);
-  --ipt-icon-clock: var(--ipt-icon-clock-light);
-}
-
-.dark,
-.theme-dark,
-[data-theme="dark"] {
-  --ipt-icon-email: var(--ipt-icon-email-dark);
-  --ipt-icon-password: var(--ipt-icon-password-dark);
-  --ipt-icon-url: var(--ipt-icon-url-dark);
-  --ipt-icon-tel: var(--ipt-icon-tel-dark);
-  --ipt-icon-search: var(--ipt-icon-search-dark);
-  --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
-  --ipt-icon-clock: var(--ipt-icon-clock-dark);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light, .theme-light, [data-theme="light"]) {
-    --ipt-icon-email: var(--ipt-icon-email-dark);
-    --ipt-icon-password: var(--ipt-icon-password-dark);
-    --ipt-icon-url: var(--ipt-icon-url-dark);
-    --ipt-icon-tel: var(--ipt-icon-tel-dark);
-    --ipt-icon-search: var(--ipt-icon-search-dark);
-    --ipt-icon-calendar: var(--ipt-icon-calendar-dark);
-    --ipt-icon-clock: var(--ipt-icon-clock-dark);
-  }
-}
-
 /* What all six text controls share: the box, the chrome, and two bounds. The
    three text inputs are on it for the chrome; `.checkbox`, `.radio` and
    `.switch` are on it for the bounds, which are the same two either way.
@@ -304,11 +224,11 @@
    filling -- a checked switch came out a pale track with the knob at the far
    end, and a checked checkbox a pale square with a tick the colour of its own
    ground. */
-:is(.text-control, .ipt, .textarea, .select).soft {
+:is(.text-control, .ipt, .textarea, .select, .input-group).soft {
   --_fill-cap: 12%;
 }
 
-:is(.text-control, .ipt, .textarea, .select).solid {
+:is(.text-control, .ipt, .textarea, .select, .input-group).solid {
   --_fill-cap: 20%;
 }
 
@@ -337,8 +257,12 @@
    text, a switch keeps a knob drawn in `--color-text-secondary` at past 9:1 --
    but an unchecked checkbox is a transparent square and an unchecked radio is a
    transparent circle. Removing their line removes the control, so for those two
-   the floor stays absolute and the combination is published as unsupported. */
-:is(.text-control, .ipt, .textarea, .select, .switch).edgeless {
+   the floor stays absolute and the combination is published as unsupported.
+
+   `.input-group` is on it because the group is the field boundary now, so its
+   own `.edgeless` has to reach past `text-control`'s floor exactly as a lone
+   field's does. */
+:is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
   --_edge-floor: 0%;
 }
 
@@ -357,7 +281,20 @@
    Hover is redirected with the other two. The hover rule reads `--intent-hover`,
    which the reset fills from the text family, and a red-lined control that turns
    grey under the pointer reads as the error clearing itself. */
-:is(.text-control, .ipt, .textarea, .select, .checkbox, .radio, .switch, input, textarea, select)[aria-invalid="true"] {
+:is(
+  .text-control,
+  .ipt,
+  .textarea,
+  .select,
+  .checkbox,
+  .radio,
+  .switch,
+  .input-group,
+  input,
+  textarea,
+  select
+)[aria-invalid="true"],
+.input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
   --intent-color: var(--color-destructive);
   --intent-hover: var(--color-destructive-hover);
   --intent-border: var(--color-destructive);
@@ -382,112 +319,6 @@
   --_fg: var(--intent-color);
 
   min-height: var(--control-height);
-
-  /* Which picture a field wants is decided by what the field is, and a text
-     input can read that off itself: the source is set here, and `.icon` is what
-     decides whether it is painted. The class stays opt-in because a form full
-     of glyphs is a design choice, not a property of the input types in it.
-
-     Both spellings are matched. The attribute is the truth for a real input; the
-     class is for an element that is not one, or one whose type the author has
-     changed under a class that has to keep the icon. */
-  &.email,
-  &[type="email"] {
-    --ipt-icon-src: var(--ipt-icon-email);
-  }
-
-  &.password,
-  &[type="password"] {
-    --ipt-icon-src: var(--ipt-icon-password);
-  }
-
-  &.url,
-  &[type="url"] {
-    --ipt-icon-src: var(--ipt-icon-url);
-  }
-
-  &.tel,
-  &[type="tel"] {
-    --ipt-icon-src: var(--ipt-icon-tel);
-  }
-
-  &.search,
-  &[type="search"] {
-    --ipt-icon-src: var(--ipt-icon-search);
-  }
-
-  &.month,
-  &.week,
-  &[type="month"],
-  &[type="week"] {
-    --ipt-icon-src: var(--ipt-icon-calendar);
-  }
-
-  &.time,
-  &[type="time"] {
-    --ipt-icon-src: var(--ipt-icon-clock);
-  }
-}
-
-/* Date and datetime-local are the two types whose picker button cannot be hidden
-   everywhere. Where it can, the themed calendar replaces it and the type opts
-   itself into `.icon` rather than waiting to be asked -- a date field with no
-   glyph at all is the one case where the opt-in rule would leave a hole rather
-   than a clean field.
-
-   Where it cannot, the native button stays and the custom icon is taken back
-   off, because two calendar glyphs on one field read as a defect. That branch
-   has to actively undo `.icon` rather than merely withhold it: an author can
-   still write the class, and it would otherwise reserve padding for artwork that
-   never paints. `!important` because `.icon.right` carries equal specificity, so
-   nothing short of importance reliably wins. */
-@supports selector(input::-webkit-calendar-picker-indicator) {
-  .ipt.date,
-  .ipt.datetime,
-  .ipt[type="date"],
-  .ipt[type="datetime-local"] {
-    --ipt-icon-src: var(--ipt-icon-calendar);
-
-    @apply icon;
-  }
-}
-
-@supports not selector(input::-webkit-calendar-picker-indicator) {
-  .ipt.date,
-  .ipt.datetime,
-  .ipt[type="date"],
-  .ipt[type="datetime-local"] {
-    background-image: none !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-}
-
-/* The icon itself, painted by the control rather than beside it. It has to be
-   declared after `ipt`, because its padding and `ipt`'s `px-3` carry equal
-   specificity and the later one wins.
-
-   The `none` fallback matters on a control the seven rules above do not name:
-   without it the declaration is invalid at computed-value time, which is the
-   same `none` by a longer route, but stating it keeps the rule readable. */
-@utility icon {
-  background-image: var(--ipt-icon-src, none);
-  background-position: 0.75rem center;
-  background-repeat: no-repeat;
-  background-size: 1rem 1rem;
-  padding-left: 2.375rem;
-
-  &.left {
-    background-position: 0.75rem center;
-    padding-left: 2.375rem;
-    padding-right: 0.75rem;
-  }
-
-  &.right {
-    background-position: calc(100% - 0.75rem) center;
-    padding-left: 0.75rem;
-    padding-right: 2.375rem;
-  }
 }
 
 @utility field {
@@ -558,6 +389,90 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
+}
+
+/* A wrapper that owns the field box so a control can carry adornments beside it
+   -- a leading or trailing icon today, an affix or an in-field button later. It
+   composes `text-control` for the border, radius, fill cap, aesthetic shape,
+   and the invalid and disabled handling a lone field carries; `:focus-within`
+   stands in for the `:focus-visible` a wrapper cannot have. The control inside
+   goes flush: its own box paint is switched off below, so the boundary is drawn
+   once, by the group.
+
+   No icons ship. Any element works in a slot -- an inline `<svg>`, an `<img>`,
+   or a class from an icon set such as `@codenhub/icons` -- placed before the
+   control for a leading adornment and after it for a trailing one. See
+   docs/usage/forms.md#icons. */
+@utility input-group {
+  @apply text-control flex w-full items-center gap-2;
+
+  /* After the `@apply`, for the reason `ipt` states it: `text-control` inlines
+     its own resting geometry there, so a default written above it loses to the
+     utility meant to specialise it. Ghost, edged, flat -- a field boundary and
+     nothing more. */
+  --_d-fill: 0%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 100%;
+  --_d-elevation: 0;
+
+  --input-group-pad: 0.75rem;
+
+  min-height: var(--control-height);
+  padding-inline: var(--input-group-pad);
+
+  /* The focus ring the wrapper cannot get from `:focus-visible` -- a `<div>` is
+     not focusable, and `:has(:focus-visible)` is unreliable because the inner
+     control only matches `:focus-visible` while the document itself has focus.
+     `:focus-within` is the honest stand-in: the `reset.css` outline every
+     control draws, plus `box`'s inset layer when a clipping aesthetic asks for
+     one, and the focus line tone a field states for itself. The control inside
+     drops its own ring below so the group shows one. The cost is that the ring
+     also shows on a mouse click, which a lone field's does not. */
+  &:focus-within {
+    --_line-tone: var(--intent-color);
+
+    outline: var(--focus-ring-width) solid var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: var(--_focus-stack, var(--_shadow));
+  }
+
+  /* A disabled control inside dims the whole group. `.input-group.disabled` and
+     the aria/data spellings are already handled by `box`'s own rule, carried in
+     by `text-control`; this is the child-driven case a wrapper cannot see
+     without `:has()`. */
+  &:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select):disabled) {
+    @apply cursor-not-allowed;
+
+    opacity: 0.58;
+  }
+
+  /* The control goes flush: the group drew the box, so the control paints no
+     fill, no line and no ring, and gives its horizontal padding to the group.
+     `border: none` rather than a transparent 1px, so the control does not add
+     its own width inside the group. */
+  & > :is(.ipt, .textarea, .select, .text-control, input, textarea, select) {
+    --_fill-cap: 0%;
+
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 0;
+    border: none;
+    background-color: transparent;
+    box-shadow: none;
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+  }
+
+  /* Anything else in the group -- an icon, affix text -- does not stretch and
+     reads as secondary. A nested `<button>` keeps its own styling. */
+  & > :not(.ipt, .textarea, .select, .text-control, input, textarea, select, button) {
+    @apply inline-flex flex-none items-center;
+
+    color: var(--color-text-secondary);
+  }
 }
 
 /* The three toggles are text controls too, and they are on the utility for the

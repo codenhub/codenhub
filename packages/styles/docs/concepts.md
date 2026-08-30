@@ -82,10 +82,9 @@ explicit selector overrides it.
   dark declaration wins because it appears later with equal specificity. Do
   not rely on this conflict behavior; apply one theme per element.
 - Component colors resolve from tokens or `currentColor`, so they follow the
-  theme without separate dark-variant rules. Input icons are the one
-  exception: they are `background-image` data URIs, which cannot read a
-  custom property, so they ship a light and a dark artwork and the theme
-  re-points an alias. See [Usage → Forms](./usage/forms.md#input-icons).
+  theme without separate dark-variant rules, with no exception: every glyph
+  the package draws is a `currentColor` mask. Icon artwork a consumer brings
+  is theirs to theme.
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below
 it, because that is the only signal the palette reads. This also themes native

@@ -971,6 +971,7 @@ the registry names for it, and that pair is published.
 | -------------------------------------------- | -------------- |
 | `.btn`                                       | solid edgeless |
 | `.ipt` `.textarea` `.select`                 | ghost edged    |
+| `.input-group`                               | ghost edged    |
 | `.checkbox` `.radio`                         | solid edged    |
 | `.switch`                                    | solid edged    |
 | `.card`                                      | ghost edged    |
@@ -997,6 +998,31 @@ tooltip stays glass. The registry records the ground beside the pair.
 These authored defaults are implemented decisions, not derivations -- there is no
 rule that produces them, and there should not be. Each is stated in one place
 rather than hidden as a `var()` fallback in the middle of a component.
+
+### `.input-group` owns the box; the control inside gives it up
+
+The package shipped an input icon per type, painted as a `background-image` data
+URI on the control itself. A data URI resolves no custom property, so each glyph
+shipped a light and a dark copy chosen by a theme selector -- the one
+theme-by-selector branch in a system that themes everything else with
+`light-dark()` -- and the artwork did not fit every aesthetic. Both are gone.
+Icons are the consumer's, and `.input-group` is the composition that carries one.
+
+It is a wrapper that takes the whole of `box` through `text-control`: the group
+draws the border, radius, fill, focus treatment, invalid and disabled state. The
+control inside it then switches its own paint off -- `--_fill-cap: 0%`,
+`border: none`, no background, no shadow, and its `:focus-visible` ring
+suppressed -- so the boundary is drawn once, by the group. It reads the same
+axes and the same bounds a lone `.ipt` does, so `.input-group.soft.edgeless` is
+the sunk field and a `.solid` container is still capped at `6%`.
+
+Two deviations from a lone field, both because a `<div>` is not a control.
+`:focus-within` stands in for `:focus-visible`, so the ring also shows on a
+mouse click. And `:has()` bridges an inner control's `aria-invalid` or
+`disabled` to the group, because a wrapper cannot see a descendant's state
+otherwise; `:has(:focus-visible)` was tried for the ring and dropped -- the
+inner control only matches `:focus-visible` while the document itself has focus,
+which made the ring flicker out whenever focus left the page.
 
 ### Components that do not take the whole of `box`
 
@@ -1557,10 +1583,9 @@ opt-in class. `transform-origin` and `translate` have no logical form; a
 component whose geometry depends on one mirrors it explicitly under
 `:dir(rtl)` instead.
 
-This does not apply to a class that is itself a direction choice an author
-makes on purpose, such as `.icon.left`/`.icon.right` or a tooltip's
-`data-tooltip-position`. Those name a visual side, not a text direction, and
-stay physical.
+This does not apply to a class or attribute that is itself a direction choice
+an author makes on purpose, such as a tooltip's `data-tooltip-position`. Those
+name a visual side, not a text direction, and stay physical.
 
 ## References
 

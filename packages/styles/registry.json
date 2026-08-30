@@ -212,6 +212,32 @@
       ]
     },
     {
+      "class": "input-group",
+      "default": {
+        "fill": "ghost",
+        "edge": "edged",
+        "elevation": 0
+      },
+      "native": [],
+      "axes": ["fill", "edge"],
+      "bounds": [
+        {
+          "token": "--ui-fill",
+          "kind": "cap",
+          "value": "6%",
+          "escape": "the element's own fill class, which names its own cap: .soft 12%, .solid 20%",
+          "reason": "A container's .solid cascades onto a group nobody classed and floods the field boundary."
+        },
+        {
+          "token": "--ui-border",
+          "kind": "floor",
+          "value": "100%",
+          "escape": "the element's own .edgeless",
+          "reason": "A container's .edgeless would leave the field with no boundary at all (WCAG 1.4.11)."
+        }
+      ]
+    },
+    {
       "class": "checkbox",
       "default": {
         "fill": "solid",
@@ -488,7 +514,6 @@
     "field",
     "label",
     "hint",
-    "icon",
     "table-wrap",
     "quote-inline",
     "view",
