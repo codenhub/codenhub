@@ -268,7 +268,8 @@ body > main.sect {
 }
 
 /* Desktop first; keep it usable once the header row can no longer sit on one
-   line. */
+   line. Docs and CodenHub drop to their own wrapped row rather than being
+   hidden -- Docs is the only link to the package's own documentation. */
 @media (max-width: 48rem) {
   .site-header-content {
     flex-wrap: wrap;
@@ -276,17 +277,12 @@ body > main.sect {
   }
 
   .header-start {
-    gap: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
   }
 
   .primary-navigation {
     order: 3;
     width: 100%;
-  }
-}
-
-@media (max-width: 30rem) {
-  .primary-navigation {
-    display: none;
   }
 }
