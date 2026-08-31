@@ -97,19 +97,23 @@ test.describe("surfaces", () => {
 
     const button = page.locator('[data-testid="card-nested-ghost-button"]');
     const card = page.locator('[data-testid="card-nested-ghost"]');
+    const background = (locator: typeof card) =>
+      locator.evaluate((element) => getComputedStyle(element).backgroundColor);
 
-    const restBackground = await button.evaluate((element) => getComputedStyle(element).backgroundColor);
-    expect(isTransparent(restBackground), `ghost button at rest: ${restBackground}`).toBe(true);
+    const restButtonBackground = await background(button);
+    const restCardBackground = await background(card);
+    expect(isTransparent(restButtonBackground), `ghost button at rest: ${restButtonBackground}`).toBe(true);
 
     await card.hover();
 
-    const hoveredCardBackground = await card.evaluate((element) => getComputedStyle(element).backgroundColor);
-    const hoveredButtonBackground = await button.evaluate((element) => getComputedStyle(element).backgroundColor);
+    /* The card's fill is transitioned, so poll for it to actually move -- an
+       assertion that only checks the hovered card is non-transparent would pass
+       on the resting soft fill without the hover doing anything. */
+    await expect.poll(() => background(card), "soft card deepens on hover").not.toBe(restCardBackground);
 
-    expect(isTransparent(hoveredButtonBackground), `ghost button on card hover: ${hoveredButtonBackground}`).toBe(true);
-    /* The card itself still responds to the hover, so the test is proving the
-       button opted out rather than that nothing moved. */
-    expect(isTransparent(hoveredCardBackground)).toBe(false);
+    /* The button opted out: its fill stays transparent while the card behind it
+       tints, rather than inheriting the card's surface ground. */
+    expect(isTransparent(await background(button)), "ghost button while the card is hovered").toBe(true);
   });
 
   /* A divider is an indicator: it reads intent and no presentation token at all.
