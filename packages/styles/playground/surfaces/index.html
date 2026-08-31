@@ -35,10 +35,22 @@
             adds a pointer, a hover lift, and a focus ring. It is styling only — use a real control and give it a name.
           </p>
           <div data-matrix="card" data-matrix-states="interactive" data-testid="card-interactive-matrix"></div>
+          <p class="text-body text-text-secondary">
+            A nested control keeps its own presentation: the
+            <code class="code">.ghost</code>
+            button below stays unfilled at rest and while the card is hovered, rather than inheriting the card's surface
+            ground.
+          </p>
+          <article class="card soft interactive primary" data-testid="card-nested-ghost">
+            <p class="text-body">Interactive soft card.</p>
+            <button class="btn ghost" type="button" data-testid="card-nested-ghost-button">Ghost action</button>
+          </article>
         </div>
         <div class="stack tight">
           <h3 class="text-title-sm">Padding</h3>
           <p class="text-body text-text-secondary">
+            <code class="code">.dense</code>
+            ,
             <code class="code">.compact</code>
             ,
             <code class="code">.spacious</code>
@@ -47,6 +59,10 @@
             change padding without touching anything else.
           </p>
           <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Dense</p>
+              <article class="card dense" data-testid="card-dense">Tightest padding.</article>
+            </div>
             <div class="stack tight">
               <p class="text-label text-text-secondary">Compact</p>
               <article class="card compact" data-testid="card-compact">Reduced padding.</article>
@@ -76,6 +92,10 @@
         <div class="stack tight">
           <h3 class="text-title-sm">Padding</h3>
           <div class="auto-grid">
+            <div class="stack tight">
+              <p class="text-label text-text-secondary">Dense</p>
+              <aside class="panel dense" data-testid="panel-dense">Tightest padding.</aside>
+            </div>
             <div class="stack tight">
               <p class="text-label text-text-secondary">Compact</p>
               <aside class="panel compact" data-testid="panel-compact">Reduced padding.</aside>

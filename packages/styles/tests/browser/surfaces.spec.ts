@@ -54,16 +54,66 @@ test.describe("surfaces", () => {
     await page.goto(SURFACES_URL);
 
     const padding = await page.evaluate(() =>
-      ["card-compact", "card-default-padding", "card-spacious", "card-flush"].map((testId) =>
+      [
+        "card-dense",
+        "card-compact",
+        "card-default-padding",
+        "card-spacious",
+        "card-flush",
+        "panel-dense",
+        "panel-compact",
+      ].map((testId) =>
         Number.parseFloat(getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).paddingTop),
       ),
     );
 
-    const [compact, base, spacious, flush] = padding as [number, number, number, number];
+    const [dense, compact, base, spacious, flush, panelDense, panelCompact] = padding as [
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+      number,
+    ];
 
     expect(flush).toBe(0);
+    expect(dense).toBeLessThan(compact);
     expect(compact).toBeLessThan(base);
     expect(spacious).toBeGreaterThan(base);
+    /* The alias resolves on a panel too, one step below `.compact`. */
+    expect(panelDense).toBeGreaterThan(0);
+    expect(panelDense).toBeLessThan(panelCompact);
+  });
+
+  /* `--_d-ground` is a custom property, so it inherits: a `surface` sets it to
+     its own opaque plate and every box nested inside would resolve a partial
+     fill over that plate rather than over what it visually sits on. `box`
+     declares `--_d-ground: transparent` on itself so a nested control keeps its
+     own ground -- without it a `.ghost` button in a card painted an opaque slab
+     of the page colour, and the slab stayed put while the card tinted on hover. */
+  test("a nested ghost control stays unfilled at rest and while the card is hovered", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const button = page.locator('[data-testid="card-nested-ghost-button"]');
+    const card = page.locator('[data-testid="card-nested-ghost"]');
+    const background = (locator: typeof card) =>
+      locator.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+    const restButtonBackground = await background(button);
+    const restCardBackground = await background(card);
+    expect(isTransparent(restButtonBackground), `ghost button at rest: ${restButtonBackground}`).toBe(true);
+
+    await card.hover();
+
+    /* The card's fill is transitioned, so poll for it to actually move -- an
+       assertion that only checks the hovered card is non-transparent would pass
+       on the resting soft fill without the hover doing anything. */
+    await expect.poll(() => background(card), "soft card deepens on hover").not.toBe(restCardBackground);
+
+    /* The button opted out: its fill stays transparent while the card behind it
+       tints, rather than inheriting the card's surface ground. */
+    expect(isTransparent(await background(button)), "ghost button while the card is hovered").toBe(true);
   });
 
   /* A divider is an indicator: it reads intent and no presentation token at all.

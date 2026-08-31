@@ -46,8 +46,13 @@
   --_d-border: 100%;
   --_d-elevation: 1;
 
-  /* `.p-sm`/`.p-lg` are the canonical names; `.compact`/`.spacious` are
-     first-class aliases -- see the identical note in `button.css`. */
+  /* `.p-xs`/`.p-sm`/`.p-lg` are the canonical names; `.dense`/`.compact`/`.spacious`
+     are first-class aliases -- see the identical note in `button.css`. */
+  &.p-xs,
+  &.dense {
+    --surface-padding: 0.5rem;
+  }
+
   &.p-sm,
   &.compact {
     --surface-padding: 0.75rem;
@@ -81,6 +86,11 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 0%;
   --_d-elevation: 0;
+
+  &.p-xs,
+  &.dense {
+    --surface-padding: 0.25rem;
+  }
 
   &.p-sm,
   &.compact {

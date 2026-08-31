@@ -102,12 +102,15 @@
           <div class="stack tight">
             <h3 class="text-title-sm">Padding</h3>
             <p class="text-body text-text-secondary">
+              <code class="code">dense</code>
+              ,
               <code class="code">compact</code>
               and
               <!-- prettier-ignore -->
               <span><code class="code">spacious</code>, the padding modifiers the registry publishes.</span>
             </p>
             <div class="cluster">
+              <button class="btn primary dense" data-testid="btn-dense">Dense</button>
               <button class="btn primary compact" data-testid="btn-compact">Compact</button>
               <button class="btn primary" data-testid="btn-default-padding">Default</button>
               <button class="btn primary spacious" data-testid="btn-spacious">Spacious</button>
@@ -130,6 +133,19 @@
                 >
                   <path d="M18 6 6 18" />
                   <path d="m6 6 12 12" />
+                </svg>
+              </button>
+              <button class="btn icon primary dense" aria-label="Dense Create" data-testid="btn-icon-dense">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
                 </svg>
               </button>
               <button class="btn icon primary compact" aria-label="Compact Create" data-testid="btn-icon-compact">

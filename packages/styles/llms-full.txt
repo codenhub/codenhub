@@ -896,8 +896,9 @@ Size and shape classes:
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).     |
 | `.sm`                                                                  | Smaller button.                                             |
 | `.lg`                                                                  | Larger button.                                              |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                   |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                    |
+| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`).    |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).       |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).        |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.         |
 | `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator. |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                           |
@@ -1296,6 +1297,7 @@ container:
 | `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
 | `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
 | `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
+| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.             |
 | `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
 | `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
 | `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |
