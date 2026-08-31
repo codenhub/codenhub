@@ -18,6 +18,7 @@ const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const playgroundRoot = resolve(__dirname, "../playground");
 const pages = globSync("**/*.html", { cwd: playgroundRoot }).map((file) => resolve(playgroundRoot, file));
 
+/** Normalise a filesystem path to forward slashes, so it compares against Vite ids on Windows. */
 const posix = (path: string): string => path.replace(/\\/g, "/");
 const chromeEntry = resolve(__dirname, "chrome.ts");
 const sharedEntryCss = resolve(playgroundRoot, "shared/entry-vanilla.css");
@@ -30,6 +31,7 @@ const entryCssPaths = new Set([posix(sharedEntryCss), posix(nativeEntryCss)]);
    `playground.js` also cannot become a module, because it `document.write`s its
    stylesheet link. Inlining both verbatim keeps them in every built page with
    no fork to drift. */
+/** Make a script body safe to drop between literal `<script>` tags. */
 const inlineScript = (source: string): string => source.replace(/<\/script/gi, "<\\/script");
 const playgroundJs = inlineScript(readFileSync(resolve(playgroundRoot, "shared/playground.js"), "utf8"));
 const matrixJs = inlineScript(readFileSync(resolve(playgroundRoot, "shared/matrix.js"), "utf8"));
@@ -38,6 +40,7 @@ const CHROME_IDS = {
   native: "virtual:styles-demo-chrome-native",
   standard: "virtual:styles-demo-chrome",
 } as const;
+/** The `\0`-prefixed internal id Rollup uses for a resolved virtual module. */
 const resolvedChromeId = (id: string): string => `\0${id}`;
 
 /**
