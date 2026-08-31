@@ -572,11 +572,11 @@ surface, chip, indicator -- that every component belonged to, with membership in
 the registry and an invariant per role. It was built, measured, and removed. The
 reasoning is kept here because the question will come back.
 
-**What was right.** Twenty-two components paint a box the same way, so the five
+**What was right.** Twenty-one components paint a box the same way, so the five
 expressions that mix intent x presentation x aesthetic live in exactly one place:
 `@utility box`. Components that share more than that share more: the six text
-controls share `@utility text-control`, and the five containers -- card, panel,
-alert, empty state, and the tooltip's bubble -- share `@utility surface`. Those are
+controls share `@utility text-control`, and the four containers -- card, panel,
+alert, and the tooltip's bubble -- share `@utility surface`. Those are
 shared code, named for what they are. Nothing else needs a name: a key cap, a code
 chip and a table take `box` and say the rest themselves.
 
@@ -589,13 +589,12 @@ broke two components -- `.tooltip` is a positioning wrapper whose bubble is a
 pseudo-element, and `.quote` is a left bar, and the surface role painted both as
 bordered boxes because the registry said they were surfaces.
 
-**What replaced the invariants.** The seven per-component clamps the roles were
+**What replaced the invariants.** The six per-component clamps the roles were
 invented to absorb:
 
 | Clamp                                             | What actually removed it        |
 | ------------------------------------------------- | ------------------------------- |
 | Progress caps its border at 1px                   | Deleting `--ui-border-scale`    |
-| Empty state caps its border at 2px                | Deleting `--ui-border-scale`    |
 | Quote clamps its bar to 1-4px                     | Deleting `--ui-border-scale`    |
 | Badge and key cap cap their border at 1px         | Nothing. See below.             |
 | Skeleton keeps a 6% fill floor                    | Indicators read no presentation |
