@@ -74,6 +74,7 @@ Nothing is bundled by default: a build only carries the families it was given an
 - `stroke`, `after`, and `bg` are reserved: `ic-stroke-1.5`, `ic-after`, and `ic-bg` are modifiers, so no family may use them as a prefix.
 - Stroke width is configurable only for families drawn with strokes, such as Lucide. Families drawn as filled paths ignore it.
 - Icon data is generated from upstream packages and committed; `pnpm generate icons` rebuilds it and CI fails on drift.
+- `@import "@codenhub/icons"` resolves to a static base stylesheet (`.ic` rules only) for pipelines that resolve the import themselves, such as `@tailwindcss/vite`. The Vite and PostCSS plugins replace that import with the full set scanned from your markup.
 
 ## License
 

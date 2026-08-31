@@ -7,6 +7,7 @@
     "dev": "vite"
   },
   "devDependencies": {
+    "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "tailwindcss": "catalog:",

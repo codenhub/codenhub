@@ -76,6 +76,7 @@ Nothing is bundled by default: a build only carries the families it was given an
 - `stroke`, `after`, and `bg` are reserved: `ic-stroke-1.5`, `ic-after`, and `ic-bg` are modifiers, so no family may use them as a prefix.
 - Stroke width is configurable only for families drawn with strokes, such as Lucide. Families drawn as filled paths ignore it.
 - Icon data is generated from upstream packages and committed; `pnpm generate icons` rebuilds it and CI fails on drift.
+- `@import "@codenhub/icons"` resolves to a static base stylesheet (`.ic` rules only) for pipelines that resolve the import themselves, such as `@tailwindcss/vite`. The Vite and PostCSS plugins replace that import with the full set scanned from your markup.
 
 ## License
 
@@ -211,7 +212,9 @@ viteIcons({
 | `attribution`   | `auto`, `file`, or `off`. See [Licensing](#licensing).                                      |
 | `registry`      | A prepared `IconRegistry`, replacing `families`.                                            |
 
-The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet is replaced with it.
+The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet the plugin transforms is replaced with it.
+
+When the CSS pipeline resolves that import itself rather than leaving it to the plugin — `@tailwindcss/vite`, or a plain `<link rel="stylesheet" href="@codenhub/icons">` — it reaches the package's `style` export condition, a static `dist/style.css` carrying only the base `.ic` rules. Add the Vite or PostCSS plugin to turn the icon classes in your markup into mask rules on top of it.
 
 ### One module per icon
 
