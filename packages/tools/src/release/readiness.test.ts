@@ -121,6 +121,16 @@ describe("readPackageReadiness", () => {
     expect(check.detail).toContain("1 uncommitted change(s)");
   });
 
+  it("scopes the working-tree check to the package directory", async () => {
+    const runner = createRunner("1.1.0");
+
+    await readPackageReadiness(createPackage(), { readPack: packed, run: runner });
+
+    // The pathspec resolves against the working directory git runs in, so it
+    // must stay `.` and the working directory must be the package itself.
+    expect(runner).toHaveBeenCalledWith("git", ["status", "--porcelain", "--", "."], "/repo/packages/example");
+  });
+
   it("blocks a tarball missing an entry point", async () => {
     const readPack = async (): Promise<Set<string>> => new Set(["README.md"]);
 
@@ -128,6 +138,36 @@ describe("readPackageReadiness", () => {
 
     expect(check.status).toBe("blocked");
     expect(check.detail).toContain("dist/index.js");
+  });
+
+  it("accepts a wildcard entry target the tarball has a match for", async () => {
+    const workspacePackage = createPackage({
+      exports: {
+        ".": { import: "./dist/index.js", types: "./dist/index.d.ts" },
+        "./data/*": { import: "./dist/data/*.js", types: "./dist/data/*.d.ts" },
+      },
+    });
+    const readPack = async (): Promise<Set<string>> =>
+      new Set(["dist/index.js", "dist/index.d.ts", "dist/data/lucide.js", "dist/data/lucide.d.ts"]);
+
+    const check = await checkFor(workspacePackage, { readPack, run: createRunner("1.1.0") }, "tarball");
+
+    expect(check.status).toBe("ready");
+  });
+
+  it("blocks a wildcard entry target with no matching file in the tarball", async () => {
+    const workspacePackage = createPackage({
+      exports: {
+        ".": { import: "./dist/index.js", types: "./dist/index.d.ts" },
+        "./data/*": { import: "./dist/data/*.js", types: "./dist/data/*.d.ts" },
+      },
+    });
+    const readPack = async (): Promise<Set<string>> => new Set(["dist/index.js", "dist/index.d.ts"]);
+
+    const check = await checkFor(workspacePackage, { readPack, run: createRunner("1.1.0") }, "tarball");
+
+    expect(check.status).toBe("blocked");
+    expect(check.detail).toContain("dist/data/*.js");
   });
 
   it("reports an unreadable tarball as unresolved rather than ready", async () => {

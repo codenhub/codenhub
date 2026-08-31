@@ -455,7 +455,9 @@ Cloudflare that other people can open.
 `verify` first, then checks the three preconditions a build and a test run
 cannot answer: whether the local version is ahead of the registry, whether the
 package has uncommitted changes, and whether `npm pack --dry-run` includes every
-file the manifest's entry points name.
+file the manifest's entry points name. A wildcard subpath export such as
+`./data/*` is satisfied when the tarball carries at least one file its pattern
+matches.
 
 ```sh
 pnpm hub release error

@@ -26,6 +26,10 @@ const runCommand: ReleaseRunner = async (command, args, cwd) => {
   return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "" };
 };
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function comparePreRelease(left: readonly string[], right: readonly string[]): number {
   // A version with a pre-release tag sorts below the same version without one.
   if (left.length === 0 || right.length === 0) {
@@ -71,9 +75,13 @@ export function compareVersions(left: string, right: string): number {
 }
 
 /**
- * Lists the published files a package's entry points point at.
+ * Lists the published targets a package's entry points point at.
+ *
+ * A target is normally a package-relative POSIX path. It may also be an
+ * `exports` subpath pattern carrying a single `*`, which {@link checkTarball}
+ * matches against the tarball rather than looking up literally.
  * @param manifest Parsed package manifest.
- * @returns Package-relative POSIX paths, without duplicates.
+ * @returns Targets as written in the manifest, without duplicates.
  */
 export function listEntryTargets(manifest: Readonly<Record<string, unknown>>): string[] {
   const found: string[] = [];
@@ -123,11 +131,11 @@ async function checkVersion(workspacePackage: WorkspacePackage, run: ReleaseRunn
 }
 
 async function checkWorkingTree(workspacePackage: WorkspacePackage, run: ReleaseRunner): Promise<ReadinessCheck> {
-  const result = await run(
-    "git",
-    ["status", "--porcelain", "--", workspacePackage.location],
-    workspacePackage.directory,
-  );
+  // The pathspec is resolved against the command's working directory, which is
+  // the package directory itself, so it must be `.` — passing the repo-relative
+  // location here would look for it nested under the package and silently match
+  // nothing, reporting every tree as clean.
+  const result = await run("git", ["status", "--porcelain", "--", "."], workspacePackage.directory);
   if (!result.isSuccess) {
     return { detail: "git could not report the working tree", name: "worktree", status: "unknown" };
   }
@@ -151,6 +159,25 @@ const readPack: PackReader = async (packageRoot, timeoutMs) => {
   return readNpmPackInventory({ packageRoot, timeoutMs });
 };
 
+/**
+ * Whether the tarball carries a file for one entry target.
+ *
+ * A plain target has to be present by name. A wildcard target — an `exports`
+ * subpath pattern such as `dist/data/*.js` — is met when at least one packed
+ * file matches the pattern, because that is all a consumer resolving the
+ * subpath can rely on.
+ * @param target Entry target from {@link listEntryTargets}.
+ * @param packed Package-relative POSIX paths in the tarball.
+ * @returns True when the target resolves to a packed file.
+ */
+function isEntryTargetPacked(target: string, packed: ReadonlySet<string>): boolean {
+  if (!target.includes("*")) {
+    return packed.has(target);
+  }
+  const pattern = new RegExp(`^${target.split("*").map(escapeRegExp).join(".+")}$`);
+  return [...packed].some((file) => pattern.test(file));
+}
+
 async function checkTarball(
   workspacePackage: WorkspacePackage,
   read: PackReader,
@@ -162,7 +189,7 @@ async function checkTarball(
   } catch (cause) {
     return { detail: (cause as Error).message, name: "tarball", status: "unknown" };
   }
-  const missing = listEntryTargets(workspacePackage.manifest).filter((target) => !packed.has(target));
+  const missing = listEntryTargets(workspacePackage.manifest).filter((target) => !isEntryTargetPacked(target, packed));
   return missing.length === 0
     ? { detail: `${packed.size} file(s), every entry point included`, name: "tarball", status: "ready" }
     : { detail: `missing from the tarball: ${missing.join(", ")}`, name: "tarball", status: "blocked" };
