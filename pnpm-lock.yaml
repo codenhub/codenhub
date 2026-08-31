@@ -119,6 +119,9 @@ importers:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../packages/styles
+      '@codenhub/styles-demo':
+        specifier: workspace:*
+        version: link:../../packages/styles/demo
       '@codenhub/tools':
         specifier: workspace:*
         version: link:../../packages/tools
@@ -560,6 +563,24 @@ importers:
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
 
   packages/styles/debug:
+    devDependencies:
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../icons
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:..
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)
+
+  packages/styles/demo:
     devDependencies:
       '@codenhub/icons':
         specifier: workspace:*

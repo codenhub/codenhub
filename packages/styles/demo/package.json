@@ -1,0 +1,34 @@
+{
+  "name": "@codenhub/styles-demo",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@codenhub/icons": "workspace:*",
+    "@codenhub/styles": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "tailwindcss": "catalog:",
+    "vite": "catalog:"
+  },
+  "codenhub": {
+    "assets": [
+      {
+        "from": "favicon/favicon.ico",
+        "to": "public/favicon.ico"
+      },
+      {
+        "from": "logo/logo-dark.svg",
+        "to": "public/assets/logo/logo-dark.svg"
+      },
+      {
+        "from": "logo/logo-light.svg",
+        "to": "public/assets/logo/logo-light.svg"
+      }
+    ]
+  }
+}

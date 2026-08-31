@@ -78,11 +78,12 @@ consumer can find out what moved.
   fix for the specificity problem turns up that does not make elevation a
   special case among the modifiers.
 
-- **Preview split**: Promote the playground to a demo application and leave a
-  minimal fixture playground behind it for tests. Only worth doing once the
-  supported surface and consumer documentation are stable, because the two
-  applications would otherwise drift. A demo must not show combinations the
-  package does not support.
+- **Fixture-only playground**: `demo/` now reuses the playground pages as a
+  branded, deployable reference, aggregated by `apps/demo`. The playground still
+  doubles as the test-fixture surface for `tests/browser/`; trimming it to a
+  minimal fixture set behind the demo is still open, and only worth doing once
+  the supported surface and consumer documentation are stable, because the two
+  would otherwise drift.
 
 ## Aesthetics assessed and deferred
 

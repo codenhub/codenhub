@@ -1,12 +1,16 @@
 @reference "tailwindcss";
 @import "./theme.css";
 
+/* `text-6xl` and up bundle `line-height: 1`, which sets a heading's line box to
+   the font size exactly: descenders reach the box edge and a wrapped heading's
+   lines collide. The two largest steps set an explicit leading that still
+   tightens as the type grows -- 1.1 under 1.15 under `text-3xl`'s 1.2. */
 @utility text-display {
-  @apply text-6xl font-bold tracking-tight md:text-8xl;
+  @apply text-6xl leading-[1.1] font-bold tracking-tight md:text-8xl;
 }
 
 @utility text-title-lg {
-  @apply text-5xl font-bold tracking-tight md:text-6xl;
+  @apply text-5xl leading-[1.15] font-bold tracking-tight md:text-6xl;
 }
 
 @utility text-title {
