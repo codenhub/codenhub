@@ -730,9 +730,10 @@ travels are the same number, so scaling the look scales both at once.
 - Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content
   rather than structure, and an ink edge on one reads as a defect: a key cap
   keeps the quiet border color and a code chip keeps no border at all.
-- Only `.btn` and `.card.interactive` respond to hover and press. A card
-  becomes a control when it opts in with `.interactive`; a plain card, an
-  alert, or a panel is a container and stays put.
+- Only `.btn` and an opted-in `.card` respond to hover and press. A card
+  opts in with `.interactive`, or with one of its halves — `.hoverable` for
+  the hover response alone, `.pressable` for the press alone; a plain card,
+  an alert, or a panel is a container and stays put.
 - An alert rests on the slab under this aesthetic and nowhere else. Here the
   slab is a second ink line rather than depth, and an alert is the only
   container the package rests flat, so without it a neobrutalist alert is
@@ -846,7 +847,8 @@ surface cannot go darker, so its bar lands lighter and reads as a rim.
   alone: how a label is worded is the application's decision, so if you want
   uppercase buttons, write that rule in your own stylesheet.
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops
-  onto its bar on click. A plain `.card` stays put.
+  onto its bar on click; `.card.pressable` gets the same press on its own. A
+  plain `.card` stays put.
 - The shipped `.primary` is a near-black monochrome, which leaves a primary
   button's bar almost invisible against its own plate; give `.primary` a hue
   if it is the call to action.
@@ -1104,8 +1106,9 @@ a `.edgeless` toolbar will not erase the line of a field nobody classed, while
 
 Intent aliases such as `.danger` and `.error` occupy the same intent axis as
 `.destructive`; they do not add component behavior. State and modifier
-classes such as `.interactive`, `.loading`, `.invalid`, `.compact`, and
-`.vertical` sit above this map and are documented with their component.
+classes such as `.interactive`, `.hoverable`, `.pressable`, `.loading`,
+`.invalid`, `.compact`, and `.vertical` sit above this map and are documented
+with their component.
 
 ## Elevation
 
@@ -1292,15 +1295,17 @@ container:
 
 ## Surfaces
 
-| Class                | Purpose                                                                      |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
-| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.             |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |
+| Class                | Purpose                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.                      |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
+| `.hoverable`         | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
+| `.pressable`         | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
+| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.                      |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                              |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
 Both read intent, [presentation](docs/usage/composing.md#presentation), and
 [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a
@@ -1314,17 +1319,24 @@ On the base look, `.card.interactive` scales down slightly on press
 (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md)
 substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
+`.interactive` is the pair `.hoverable` (hover response only, no pointer
+cursor) and `.pressable` (press response and pointer cursor) applied
+together. Take one half for a card that answers a single gesture: a card
+that warms on hover but holds its own action in a nested button takes
+`.hoverable`, so pressing that button does not dip the whole card.
+
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
 <a class="card interactive" href="/package">Responds to hover and press</a>
+<article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```
 
-`.interactive` is styling only. Use a real interactive element and give it
-an accessible name; a `<div class="card interactive">` is not focusable or
-operable by keyboard.
+`.interactive` and `.pressable` are styling only. Use a real interactive
+element and give it an accessible name; a `<div class="card interactive">`
+is not focusable or operable by keyboard.
 
 ## Typography utilities
 

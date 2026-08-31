@@ -155,7 +155,11 @@ const COMPONENTS = {
     layout: "grid",
     html: (intent) =>
       `<h4 class="text-title-sm">${title(intent)}</h4><p class="text-body">A surface reading this intent.</p>`,
-    states: { interactive: { class: "interactive" } },
+    states: {
+      interactive: { class: "interactive" },
+      hoverable: { class: "hoverable" },
+      pressable: { class: "pressable" },
+    },
   },
   panel: {
     tag: "div",

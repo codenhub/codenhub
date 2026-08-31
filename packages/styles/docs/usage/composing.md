@@ -179,8 +179,9 @@ a `.edgeless` toolbar will not erase the line of a field nobody classed, while
 
 Intent aliases such as `.danger` and `.error` occupy the same intent axis as
 `.destructive`; they do not add component behavior. State and modifier
-classes such as `.interactive`, `.loading`, `.invalid`, `.compact`, and
-`.vertical` sit above this map and are documented with their component.
+classes such as `.interactive`, `.hoverable`, `.pressable`, `.loading`,
+`.invalid`, `.compact`, and `.vertical` sit above this map and are documented
+with their component.
 
 ## Elevation
 

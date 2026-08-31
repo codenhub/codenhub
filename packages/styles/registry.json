@@ -75,7 +75,7 @@
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "dense", "compact", "spacious", "flush"],
     "shape": ["pill"],
-    "state": ["loading", "disabled", "interactive", "active", "indeterminate"],
+    "state": ["loading", "disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
   },

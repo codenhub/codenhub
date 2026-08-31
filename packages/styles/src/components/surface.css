@@ -70,9 +70,23 @@
   /* Opt-in, because a card is only sometimes a control. Applications still owe
      it a real interactive element and an accessible name. Hover and press are
      the derived ones every other pressable box gets; there is nothing
-     card-specific about either. */
-  &.interactive {
-    @apply box-hover box-active cursor-pointer;
+     card-specific about either.
+
+     `.interactive` is the whole opt-in and stays that way; `.hoverable` and
+     `.pressable` are its halves, for a card that answers one gesture and not
+     the other. A card with its own nested controls takes `.hoverable` for the
+     hover warmth without the press-scale that reads as "you activated the
+     card" when the click really landed on a nested button. `.hoverable` alone
+     does not set the pointer cursor: that travels with being a click target,
+     i.e. with `.pressable` / `.interactive`. */
+  &.interactive,
+  &.hoverable {
+    @apply box-hover;
+  }
+
+  &.interactive,
+  &.pressable {
+    @apply box-active cursor-pointer;
   }
 }
 

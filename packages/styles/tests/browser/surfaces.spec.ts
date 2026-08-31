@@ -364,4 +364,66 @@ test.describe("surfaces", () => {
       await page.mouse.up();
     }
   });
+
+  /* `.hoverable` is the hover half of `.interactive`: it applies `box-hover` and
+     nothing else, so the card warms on hover, does not take the press scale, and
+     is not a pointer target. */
+  test("hovers a `.hoverable` card without giving it the press or the pointer", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const card = page.getByTestId("card-hoverable");
+    const background = () => card.evaluate((node) => getComputedStyle(node).backgroundColor);
+    const scale = () =>
+      card.evaluate((node) => {
+        const transform = getComputedStyle(node).transform;
+
+        return transform === "none" ? 1 : Number.parseFloat(transform.slice("matrix(".length).split(",")[0]!);
+      });
+
+    expect(await card.evaluate((node) => getComputedStyle(node).cursor), "no pointer cursor").not.toBe("pointer");
+
+    const restBackground = await background();
+
+    await card.hover();
+
+    /* The fill is transitioned, so poll for it to actually move. */
+    await expect.poll(background, "hoverable card deepens on hover").not.toBe(restBackground);
+
+    await page.mouse.down();
+    try {
+      expect(await scale(), "hoverable card does not take the press scale").toBe(1);
+    } finally {
+      await page.mouse.up();
+    }
+  });
+
+  /* `.pressable` is the press half: it applies `box-active` and the pointer, so
+     the card scales on press and shows a pointer, but does not warm on hover. */
+  test("presses a `.pressable` card without warming it on hover", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const card = page.getByTestId("card-pressable");
+    const background = () => card.evaluate((node) => getComputedStyle(node).backgroundColor);
+    const scale = () =>
+      card.evaluate((node) => {
+        const transform = getComputedStyle(node).transform;
+
+        return transform === "none" ? 1 : Number.parseFloat(transform.slice("matrix(".length).split(",")[0]!);
+      });
+
+    expect(await card.evaluate((node) => getComputedStyle(node).cursor), "pointer cursor").toBe("pointer");
+
+    const restBackground = await background();
+
+    await card.hover();
+    expect(await background(), "pressable card does not warm on hover").toBe(restBackground);
+
+    await page.mouse.down();
+    try {
+      /* The transform is transitioned, so this polls for the settled value. */
+      await expect.poll(scale, "pressable card pressed").toBeCloseTo(0.97, 2);
+    } finally {
+      await page.mouse.up();
+    }
+  });
 });

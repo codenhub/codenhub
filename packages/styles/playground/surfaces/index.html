@@ -34,7 +34,25 @@
             <code class="code">.interactive</code>
             adds a pointer, a hover lift, and a focus ring. It is styling only — use a real control and give it a name.
           </p>
-          <div data-matrix="card" data-matrix-states="interactive" data-testid="card-interactive-matrix"></div>
+          <p class="text-body text-text-secondary">
+            <code class="code">.hoverable</code>
+            and
+            <code class="code">.pressable</code>
+            are its halves.
+            <code class="code">.hoverable</code>
+            takes the hover warmth only, with no pointer cursor, for a card that is not itself a click target;
+            <code class="code">.pressable</code>
+            takes the press-scale and the pointer.
+            <code class="code">.hoverable.pressable</code>
+            is the same as
+            <code class="code">.interactive</code>
+            .
+          </p>
+          <div
+            data-matrix="card"
+            data-matrix-states="interactive, hoverable, pressable"
+            data-testid="card-interactive-matrix"
+          ></div>
           <p class="text-body text-text-secondary">
             A nested control keeps its own presentation: the
             <code class="code">.ghost</code>
@@ -44,6 +62,14 @@
           <article class="card soft interactive primary" data-testid="card-nested-ghost">
             <p class="text-body">Interactive soft card.</p>
             <button class="btn ghost" type="button" data-testid="card-nested-ghost-button">Ghost action</button>
+          </article>
+          <article class="card soft hoverable primary" data-testid="card-hoverable">
+            <p class="text-body">Hoverable soft card.</p>
+            <button class="btn ghost" type="button">Ghost action</button>
+          </article>
+          <article class="card soft pressable primary" data-testid="card-pressable">
+            <p class="text-body">Pressable soft card.</p>
+            <button class="btn ghost" type="button">Ghost action</button>
           </article>
         </div>
         <div class="stack tight">
