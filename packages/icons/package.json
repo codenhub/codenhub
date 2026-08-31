@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/icons",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
   "description": "Icon registry, CSS mask generator, and scanner module for Codenhub icon system.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
@@ -28,19 +28,23 @@
     ".": {
       "types": "./dist/index.d.ts",
       "style": "./dist/style.css",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./postcss": {
       "types": "./dist/postcss.d.ts",
-      "import": "./dist/postcss.js"
+      "import": "./dist/postcss.js",
+      "default": "./dist/postcss.js"
     },
     "./vite": {
       "types": "./dist/vite.d.ts",
-      "import": "./dist/vite.js"
+      "import": "./dist/vite.js",
+      "default": "./dist/vite.js"
     },
     "./data/*": {
       "types": "./dist/data/*.d.ts",
-      "import": "./dist/data/*.js"
+      "import": "./dist/data/*.js",
+      "default": "./dist/data/*.js"
     }
   },
   "publishConfig": {

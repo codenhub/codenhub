@@ -329,7 +329,7 @@ first touch it.
 
 ## Breaking changes
 
-The package is `0.0.1` and documents itself as experimental. The rewrite breaks
+The package is pre-1.0 and documents itself as experimental. The rewrite breaks
 freely and documents what breaks; no compatibility shims are kept, per
 `docs/code-guidelines.md`.
 
