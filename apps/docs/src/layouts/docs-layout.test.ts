@@ -29,15 +29,12 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("<h1>Overview</h1>");
   });
 
-  it.each(["index.html", "packages/index.html", "error/index.html"])(
-    "provides a skip link and main-content target in %s",
-    async (path) => {
-      const html = await readOutput(path);
+  it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
+    const html = await readOutput(path);
 
-      expect(html).toContain('class="skip-link" href="#main-content"');
-      expect(html).toMatch(/<main[^>]*id="main-content"/);
-    },
-  );
+    expect(html).toContain('class="skip-link" href="#main-content"');
+    expect(html).toMatch(/<main[^>]*id="main-content"/);
+  });
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
     const html = await readOutput("i18n/index.html");
@@ -49,21 +46,43 @@ describe("documentation chrome", () => {
     expect(html).toContain('<span class="sr-only">Experimental</span>');
   });
 
+  it("groups a package's folder pages into collapsible sections, open on the active one", async () => {
+    const html = await readOutput("styles/usage/buttons/index.html");
+
+    // The folder holding the current page is expanded; a sibling folder is not.
+    expect(html).toContain('<details class="nav-group" open>');
+    expect(html).toContain('<details class="nav-group">');
+    expect(html).toMatch(/<summary>\s*Usage[\s\S]*?nav-group-caret[\s\S]*?<\/summary>/);
+
+    // Root pages still render as plain links, before any group.
+    const listStart = html.slice(html.indexOf('class="document-list"'));
+    expect(listStart.search(/>\s*Introduction\s*</)).toBeLessThan(listStart.indexOf("nav-group"));
+
+    // The folder index sits inside its group under its own title, not at the root.
+    expect(listStart).toMatch(/nav-group[\s\S]*?href="\/styles\/usage\/"[^>]*>\s*Usage\s*<\/a>/);
+  });
+
+  it("renders a Markdown table with the Codenhub table styling and an overflow wrapper", async () => {
+    const html = await readOutput("styles/usage/buttons/index.html");
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+
+    expect(html).toMatch(/<div class="table-wrap">\s*<table>\s*<thead>/);
+    expect(css).toMatch(/\.markdown-content table\s*\{\s*@apply data-table;\s*\}/s);
+  });
+
   it("gives every header target a 44px minimum hit area", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
     expect(css).toMatch(
-      /\.brand,\s*\.primary-navigation a,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*min-height:\s*44px;[^}]*min-width:\s*44px;/s,
+      /\.brand,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*min-height:\s*44px;[^}]*min-width:\s*44px;/s,
     );
   });
 
   it("uses equal horizontal spacing around every header item", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
-    expect(css).toMatch(
-      /\.header-actions,\s*\.header-end,\s*\.primary-navigation\s*\{\s*@apply flex items-center gap-0;\s*\}/s,
-    );
-    expect(css).toMatch(/\.primary-navigation a,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
+    expect(css).toMatch(/\.header-actions,\s*\.header-end\s*\{\s*@apply flex items-center gap-0;\s*\}/s);
+    expect(css).toMatch(/\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
   });
 
   it("uses color and weight only for the active package document", async () => {

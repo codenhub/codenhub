@@ -16,7 +16,6 @@ const pageTitle =
     : sectionTitle === undefined
       ? `${title} | ${siteConfig.title}`
       : `${title} | ${sectionTitle} | ${siteConfig.title}`;
-const isHome = Astro.url.pathname === "/";
 ---
 
 <!doctype html>
@@ -71,10 +70,6 @@ const isHome = Astro.url.pathname === "/";
           />
         </a>
         <div class="header-end">
-          <nav aria-label="Primary" class="primary-navigation">
-            <a aria-current={isHome ? "page" : undefined} href="/">Home</a>
-            <a aria-current={!isHome ? "page" : undefined} href="/packages/">Packages</a>
-          </nav>
           <SearchPalette />
           <nav aria-label="Site actions" class="header-actions">
             <a aria-label="CodenHub on GitHub" class="header-icon-link" href={siteConfig.githubUrl}>
@@ -98,11 +93,22 @@ const isHome = Astro.url.pathname === "/";
       </div>
     </header>
     <slot />
+    <footer class="site-footer">
+      <div class="site-footer-content section-content wide">
+        <p>&copy; <span id="footer-year">2026</span> CodenHub</p>
+        <p>Built by <a href="https://coden.agency/" rel="noopener noreferrer" target="_blank">coden</a>.</p>
+      </div>
+    </footer>
     <script>
       import { createCodeCopyController, findCodeCopyStatus } from "../lib/markdown/code-copy";
 
       const storageKey = "codenhub-docs-theme";
       const themeToggle = document.querySelector("[data-theme-toggle]");
+      const footerYear = document.getElementById("footer-year");
+
+      if (footerYear !== null) {
+        footerYear.textContent = String(new Date().getFullYear());
+      }
 
       const updateThemeToggle = () => {
         if (!(themeToggle instanceof HTMLButtonElement)) {

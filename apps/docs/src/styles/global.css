@@ -1,6 +1,5 @@
 @import "@codenhub/styles/tw";
 @import "./catalog.css";
-@import "./landing.css";
 @import "./markdown.css";
 @import "./search.css";
 @source "../**/*.{astro,ts}";
@@ -13,6 +12,10 @@
 
 html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
+}
+
+body {
+  @apply flex min-h-dvh flex-col;
 }
 
 .skip-link {
@@ -38,7 +41,6 @@ html {
 }
 
 .brand,
-.primary-navigation a,
 .header-icon-link,
 .theme-toggle {
   min-height: 44px;
@@ -62,23 +64,13 @@ html {
 }
 
 .header-actions,
-.header-end,
-.primary-navigation {
+.header-end {
   @apply flex items-center gap-0;
 }
 
-.primary-navigation a,
 .header-icon-link,
 .theme-toggle {
   @apply px-3;
-}
-
-.primary-navigation a {
-  @apply text-text-secondary hover:text-text flex items-center justify-center text-sm no-underline transition-colors;
-}
-
-.primary-navigation a[aria-current="page"] {
-  @apply font-semibold;
 }
 
 .header-icon-link,
@@ -175,6 +167,31 @@ html {
   @apply text-text font-semibold;
 }
 
+.nav-group summary {
+  @apply text-text hover:text-text flex cursor-pointer list-none items-center justify-between gap-1.5 py-1.5 font-semibold transition-colors;
+}
+
+.nav-group summary::-webkit-details-marker {
+  @apply hidden;
+}
+
+.nav-group-caret {
+  @apply text-text-secondary size-3.5 shrink-0 fill-none stroke-current stroke-2 transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-group[open] > summary .nav-group-caret {
+  @apply rotate-90;
+}
+
+/* The rule aligns with the caret, so the folder's pages read as one indented
+   column hanging off the group they belong to. */
+.document-sublist {
+  @apply border-border m-0 list-none border-l py-0.5 pl-4;
+  margin-left: 0.4375rem;
+}
+
 /* Transparent by default so the rail's rule shows through underneath. The
    current heading is therefore a stronger stretch of one continuous line rather
    than a mark that appears and disappears. */
@@ -229,7 +246,7 @@ html {
 .markdown-content ul,
 .markdown-content ol,
 .markdown-content pre,
-.markdown-content table,
+.markdown-content .table-wrap,
 .markdown-content blockquote {
   @apply my-5;
 }
@@ -265,8 +282,11 @@ html {
   @apply quote border-border bg-foreground/60 rounded-r-(--radius-control) py-3 pr-4;
 }
 
+/* `data-table` is the Codenhub table component (renamed from `table`); it styles
+   the head, cells, rules, and row hover of a plain `<table>`. `.table-wrap` is
+   added around the table by `rehypeMarkdownEnhancements` for horizontal overflow. */
 .markdown-content table {
-  @apply block table overflow-x-auto;
+  @apply data-table;
 }
 
 .markdown-content hr {
@@ -331,12 +351,27 @@ html {
   }
 
   .header-end,
-  .header-actions,
-  .primary-navigation {
+  .header-actions {
     @apply gap-0;
   }
 
   .brand-logo {
     @apply h-5;
   }
+}
+
+.site-footer {
+  @apply border-border mt-auto w-full border-t;
+}
+
+.site-footer-content {
+  @apply flex flex-col gap-3 px-(--layout-gutter) py-8 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.site-footer p {
+  @apply text-text-secondary text-sm;
+}
+
+.site-footer a {
+  @apply text-text hover:text-primary-strong text-sm font-medium underline underline-offset-4 transition-colors;
 }

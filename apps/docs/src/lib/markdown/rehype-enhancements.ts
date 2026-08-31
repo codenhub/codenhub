@@ -125,12 +125,22 @@ function wrapCodeBlock(node: AstNode, context: TransformContext): AstNode {
   ]);
 }
 
+/* A GFM table renders as a bare `<table>`. `data-table` (the Codenhub table
+   component) styles it through CSS; `table-wrap` is the package's wrapper that
+   lets a table wider than its column scroll rather than overflow the page. */
+function wrapTable(node: AstNode): AstNode {
+  if (node.tagName !== "table") {
+    return node;
+  }
+  return element("div", { className: ["table-wrap"] }, [node]);
+}
+
 function transformChildren(node: AstNode, context: TransformContext): void {
   node.children = node.children?.map((child) => {
     transformChildren(child, context);
     appendHeadingAnchor(child);
     enhanceExternalLink(child, context.siteOrigin);
-    return wrapCodeBlock(child, context);
+    return wrapTable(wrapCodeBlock(child, context));
   });
 }
 
