@@ -1165,14 +1165,14 @@ can type, whether or not we document it, so the honest position is to publish th
 as a small composition API rather than to pretend they are internal and be
 surprised when someone uses one.
 
-| Utility        | What applying it gives an element                                                                                           |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.                                       |
-| `box-hover`    | The derived hover tone, for something you press rather than type into.                                                      |
-| `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn` and `.card.interactive`. |
-| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                        |
-| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                             |
-| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                                                         |
+| Utility        | What applying it gives an element                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.                                                            |
+| `box-hover`    | The derived hover tone, for something you press rather than type into. `btn`, and `.card.interactive` / `.card.hoverable`.                       |
+| `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn`, and `.card.interactive` / `.card.pressable`. |
+| `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                                             |
+| `text-control` | `box` plus the fill cap, the edge floor, and the field affordances all six text controls share.                                                  |
+| `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                                                                              |
 
 They are the seam the components are built from, and a consumer composing a
 component we do not ship is better served by them than by copying a component's
@@ -1191,7 +1191,8 @@ absence of material declarations rather than a set of root values -- which is wh
 a card gets surface radius and a button gets control radius from the same unset
 token. The one material value it does declare at `:root` is
 `--ui-active-transform: scale(0.97)`, so a press on `.btn` or `.card.interactive`
-still registers on a plain page; reduced motion drops it.
+(equivalently `.card.pressable`, its press half) still registers on a plain
+page; reduced motion drops it.
 `.raised` and `.floating` opt an element into the foundation shadow geometry, and
 an aesthetic can supply different geometry. No component carries depth on its own
 under the default -- the tooltip bubble was the last one to, and stopped in

@@ -151,15 +151,17 @@ container:
 
 ## Surfaces
 
-| Class                | Purpose                                                                      |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
-| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.             |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |
+| Class                | Purpose                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
+| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.                      |
+| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
+| `.hoverable`         | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
+| `.pressable`         | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
+| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.                      |
+| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                              |
+| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
+| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
 Both read intent, [presentation](./composing.md#presentation), and
 [material tokens](./customizing.md#material-tokens). A plain `.card` is a
@@ -173,17 +175,24 @@ On the base look, `.card.interactive` scales down slightly on press
 (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md)
 substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
+`.interactive` is the pair `.hoverable` (hover response only, no pointer
+cursor) and `.pressable` (press response and pointer cursor) applied
+together. Take one half for a card that answers a single gesture: a card
+that warms on hover but holds its own action in a nested button takes
+`.hoverable`, so pressing that button does not dip the whole card.
+
 ```html
 <article class="card">Neutral card</article>
 <article class="card success soft">Tinted success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
 <a class="card interactive" href="/package">Responds to hover and press</a>
+<article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```
 
-`.interactive` is styling only. Use a real interactive element and give it
-an accessible name; a `<div class="card interactive">` is not focusable or
-operable by keyboard.
+`.interactive` and `.pressable` are styling only. Use a real interactive
+element and give it an accessible name; a `<div class="card interactive">`
+is not focusable or operable by keyboard.
 
 ## Typography utilities
 
