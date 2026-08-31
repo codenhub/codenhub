@@ -17,6 +17,7 @@
     "@codenhub/icons": "workspace:*",
     "@codenhub/icons-demo": "workspace:*",
     "@codenhub/styles": "workspace:*",
+    "@codenhub/styles-demo": "workspace:*",
     "@codenhub/tools": "workspace:*",
     "@types/node": "catalog:",
     "astro": "catalog:",
