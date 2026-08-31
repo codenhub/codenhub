@@ -5,6 +5,7 @@ import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
 import { createCleanCommand } from "./clean-command.ts";
 import type { CommandDefinition } from "./definition.ts";
+import { createFormatCommand } from "./format-command.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createNewCommand } from "./new-command.ts";
@@ -83,12 +84,7 @@ const COMMANDS: readonly CommandDefinition[] = [
     name: "lint",
     summary: "Lint the selected paths, or the whole repository.",
   }),
-  createRootToolCommand({
-    checkArgs: ["--check"],
-    command: "oxfmt",
-    name: "format",
-    summary: "Check formatting of the selected paths, or fix it with --fix.",
-  }),
+  createFormatCommand(),
   createRootToolCommand({
     baseArgs: [`--exclude-dir=${CLOC_EXCLUDED_DIRECTORIES}`, `--exclude-ext=${CLOC_EXCLUDED_EXTENSIONS}`],
     command: "cloc",

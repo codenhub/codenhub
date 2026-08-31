@@ -10,7 +10,8 @@
     "test-results/**",
     "**/test-results/**",
     "**/tests/**/output.css",
-    "packages/icons/data/**"
+    "packages/icons/data/**",
+    "**/*.md"
   ],
   "printWidth": 120,
   "semi": true,

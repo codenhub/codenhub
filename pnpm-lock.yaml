@@ -39,6 +39,9 @@ catalogs:
     oxlint:
       specifier: ^1.72.0
       version: 1.74.0
+    prettier:
+      specifier: ^3.6.0
+      version: 3.9.6
     tailwindcss:
       specifier: ^4.3.2
       version: 4.3.2
@@ -77,6 +80,9 @@ importers:
       oxlint:
         specifier: 'catalog:'
         version: 1.74.0
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -3287,6 +3293,11 @@ packages:
     resolution: {integrity: sha512-Mz8SaolMd8nB+G13WkORcxQKHZ/NE4xXevtkJHVuG+guo9/wYKlIMTKAqGdEmYOXR2ijPjTYNHssizdaVSUNdQ==}
     engines: {node: ^10 || ^12 || >=14}
 
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   prismjs@1.30.0:
     resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
     engines: {node: '>=6'}
@@ -6161,6 +6172,8 @@ snapshots:
       nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prettier@3.9.6: {}
 
   prismjs@1.30.0: {}
 
