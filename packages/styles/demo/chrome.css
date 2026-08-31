@@ -2,19 +2,17 @@
    `shared/playground.css`; it is never part of @codenhub/styles. Theme-dependent
    rules key off the `.dark` class `shared/playground.js` toggles on <html>. */
 
-html,
-body {
-  min-height: 100%;
-}
-
 body {
   margin: 0;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* The reused fixture pages put their content straight in `<main class="sect">`.
-   Let it take the slack so the footer rests at the bottom on short pages. */
+   Let it take the slack so the footer rests at the bottom of the viewport on
+   short pages instead of floating up under the content. */
 body > main.sect {
   flex: 1 0 auto;
 }
