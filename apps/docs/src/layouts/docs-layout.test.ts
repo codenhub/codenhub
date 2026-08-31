@@ -46,6 +46,22 @@ describe("documentation chrome", () => {
     expect(html).toContain('<span class="sr-only">Experimental</span>');
   });
 
+  it("groups a package's folder pages into collapsible sections, open on the active one", async () => {
+    const html = await readOutput("styles/usage/buttons/index.html");
+
+    // The folder holding the current page is expanded; a sibling folder is not.
+    expect(html).toContain('<details class="nav-group" open>');
+    expect(html).toContain('<details class="nav-group">');
+    expect(html).toMatch(/<summary>\s*Usage[\s\S]*?nav-group-caret[\s\S]*?<\/summary>/);
+
+    // Root pages still render as plain links, before any group.
+    const listStart = html.slice(html.indexOf('class="document-list"'));
+    expect(listStart.search(/>\s*Introduction\s*</)).toBeLessThan(listStart.indexOf("nav-group"));
+
+    // The folder index sits inside its group under its own title, not at the root.
+    expect(listStart).toMatch(/nav-group[\s\S]*?href="\/styles\/usage\/"[^>]*>\s*Usage\s*<\/a>/);
+  });
+
   it("gives every header target a 44px minimum hit area", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 

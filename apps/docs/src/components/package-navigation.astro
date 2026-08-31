@@ -1,6 +1,7 @@
 ---
-import StatusBadge from "./status-badge.astro";
 import type { PublicPackage } from "../lib/catalog";
+import { buildNavigationTree, groupContainsRoute } from "../lib/package-navigation";
+import StatusBadge from "./status-badge.astro";
 
 interface Props {
   currentPackage: PublicPackage;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 const { currentPackage, currentRoute } = Astro.props;
+const navigation = buildNavigationTree(currentPackage.documents);
 ---
 
 <nav aria-label={`${currentPackage.label} documentation`}>
@@ -17,13 +19,35 @@ const { currentPackage, currentRoute } = Astro.props;
   </div>
   <ul class="document-list">
     {
-      currentPackage.documents.map((document) => (
-        <li>
-          <a aria-current={document.route === currentRoute ? "page" : undefined} href={document.route}>
-            {document.title}
-          </a>
-        </li>
-      ))
+      navigation.map((node) =>
+        node.kind === "link" ? (
+          <li>
+            <a aria-current={node.route === currentRoute ? "page" : undefined} href={node.route}>
+              {node.title}
+            </a>
+          </li>
+        ) : (
+          <li>
+            <details class="nav-group" open={groupContainsRoute(node, currentRoute)}>
+              <summary>
+                {node.title}
+                <svg aria-hidden="true" class="nav-group-caret" viewBox="0 0 24 24">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </summary>
+              <ul class="document-sublist">
+                {node.items.map((item) => (
+                  <li>
+                    <a aria-current={item.route === currentRoute ? "page" : undefined} href={item.route}>
+                      {item.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </li>
+        ),
+      )
     }
   </ul>
 </nav>

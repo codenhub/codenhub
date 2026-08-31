@@ -167,6 +167,31 @@ body {
   @apply text-text font-semibold;
 }
 
+.nav-group summary {
+  @apply text-text hover:text-text flex cursor-pointer list-none items-center justify-between gap-1.5 py-1.5 font-semibold transition-colors;
+}
+
+.nav-group summary::-webkit-details-marker {
+  @apply hidden;
+}
+
+.nav-group-caret {
+  @apply text-text-secondary size-3.5 shrink-0 fill-none stroke-current stroke-2 transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-group[open] > summary .nav-group-caret {
+  @apply rotate-90;
+}
+
+/* The rule aligns with the caret, so the folder's pages read as one indented
+   column hanging off the group they belong to. */
+.document-sublist {
+  @apply border-border m-0 list-none border-l py-0.5 pl-4;
+  margin-left: 0.4375rem;
+}
+
 /* Transparent by default so the rail's rule shows through underneath. The
    current heading is therefore a stronger stretch of one continuous line rather
    than a mark that appears and disappears. */
