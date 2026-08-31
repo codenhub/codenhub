@@ -2,11 +2,9 @@
 
 # @codenhub/validation
 
-Zero-dependency validation and primitive coercion helpers for TypeScript
-application boundaries.
+Zero-dependency validation and primitive coercion helpers for TypeScript application boundaries.
 
-> **Experimental:** Validator coverage, normalization rules, error details, and
-> the public API may change before a stable release.
+> **Experimental:** Validator coverage, normalization rules, error details, and the public API may change before a stable release.
 
 ## Installation
 
@@ -16,8 +14,7 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-Validators and coercers return discriminated results instead of throwing for
-invalid input.
+Validators and coercers return discriminated results instead of throwing for invalid input.
 
 ```ts
 import { coerce, val } from "@codenhub/validation";
@@ -44,8 +41,7 @@ if (!port.ok) {
 
 ## Notes
 
-- `includeInput` defaults to `false`; enable it only when retaining input is
-  safe.
+- `includeInput` defaults to `false`; enable it only when retaining input is safe.
 - URL and email validators intentionally accept public host shapes only.
 
 ## License
@@ -56,10 +52,7 @@ Licensed under Apache-2.0.
 
 # Validate Application Inputs
 
-`@codenhub/validation` validates unknown boundary values and performs explicit
-primitive coercion without runtime dependencies. It is useful when request
-parameters, environment values, form input, or other unknown data needs a typed
-success-or-failure result before entering application logic.
+`@codenhub/validation` validates unknown boundary values and performs explicit primitive coercion without runtime dependencies. It is useful when request parameters, environment values, form input, or other unknown data needs a typed success-or-failure result before entering application logic.
 
 ## Setup
 
@@ -71,8 +64,7 @@ pnpm add @codenhub/validation
 
 ### Quick start
 
-Validators and coercers return a discriminated `ValidationResult` rather than
-throwing for ordinary invalid input:
+Validators and coercers return a discriminated `ValidationResult` rather than throwing for ordinary invalid input:
 
 ```ts
 import { coerce, val } from "@codenhub/validation";
@@ -85,8 +77,7 @@ if (!port.ok) {
 }
 ```
 
-Coercion only converts primitive values; follow it with a validator when the
-result must satisfy a domain constraint such as a valid port range.
+Coercion only converts primitive values; follow it with a validator when the result must satisfy a domain constraint such as a valid port range.
 
 ## Requirements
 
@@ -94,18 +85,12 @@ result must satisfy a domain constraint such as a valid port range.
 - Browser, Node.js, and SSR runtimes are supported.
 - No runtime dependencies.
 
-All public symbols are imported from `@codenhub/validation`; there are no public
-subpath exports. Error input is omitted by default; enable `includeInput` only
-when retaining the original value is safe. URL and email validators
-intentionally accept public host shapes only.
+All public symbols are imported from `@codenhub/validation`; there are no public subpath exports. Error input is omitted by default; enable `includeInput` only when retaining the original value is safe. URL and email validators intentionally accept public host shapes only.
 
 ## Next steps
 
-- [Results and coercion](docs/results-and-coercion.md) explains error shapes, result
-  construction, custom validators, primitive conversion, and safe input
-  retention.
-- [Validator reference](docs/validators.md) documents the string, number, object,
-  and array validators with their defaults and constraints.
+- [Results and coercion](docs/results-and-coercion.md) explains error shapes, result construction, custom validators, primitive conversion, and safe input retention.
+- [Validator reference](docs/validators.md) documents the string, number, object, and array validators with their defaults and constraints.
 
 <!-- Source: docs/results-and-coercion.md -->
 
@@ -113,34 +98,19 @@ intentionally accept public host shapes only.
 
 ## Result Model
 
-`ValidationResult<T>` is `ValidationOk<T> | ValidationErr`. Success contains
-`{ ok: true, value }`; failure contains `{ ok: false, error }`.
+`ValidationResult<T>` is `ValidationOk<T> | ValidationErr`. Success contains `{ ok: true, value }`; failure contains `{ ok: false, error }`.
 
-`ValidationError` extends `ValidationIssue` with optional child `issues`. Both
-contain a `code`, `message`, and `path`, plus optional `input`, `expected`, and
-`received`. A `ValidationPathSegment` is a string or number. Stable
-`ValidationErrorCode` values are `invalid_type`, `invalid_value`,
-`invalid_format`, `too_small`, `too_big`, `missing_key`, and `custom`.
+`ValidationError` extends `ValidationIssue` with optional child `issues`. Both contain a `code`, `message`, and `path`, plus optional `input`, `expected`, and `received`. A `ValidationPathSegment` is a string or number. Stable `ValidationErrorCode` values are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `missing_key`, and `custom`.
 
-`ValidationOptions` accepts `path` and `includeInput`. Paths default to `[]`.
-Original input is omitted by validators and coercers unless `includeInput` is
-`true`; retain it only when safe.
+`ValidationOptions` accepts `path` and `includeInput`. Paths default to `[]`. Original input is omitted by validators and coercers unless `includeInput` is `true`; retain it only when safe.
 
-`ok(value)` creates `ValidationOk<T>`. `err(input)` creates `ValidationErr` from
-a string, `ValidationIssue`, or `ValidationErrorOptions`. String failures use
-`code: "custom"` and an empty path. Unknown codes normalize to `custom`, invalid
-path segments are removed, and missing messages become `"Invalid value"`.
+`ok(value)` creates `ValidationOk<T>`. `err(input)` creates `ValidationErr` from a string, `ValidationIssue`, or `ValidationErrorOptions`. String failures use `code: "custom"` and an empty path. Unknown codes normalize to `custom`, invalid path segments are removed, and missing messages become `"Invalid value"`.
 
-`parseResult<T>(value)` accepts success/failure result-like objects,
-`ValidationErrorOptions`, `Error`, and string values. Unrecognized values become
-a custom `"Invalid value"` failure. It does not throw for normal unknown input,
-though hostile property access can still throw.
+`parseResult<T>(value)` accepts success/failure result-like objects, `ValidationErrorOptions`, `Error`, and string values. Unrecognized values become a custom `"Invalid value"` failure. It does not throw for normal unknown input, though hostile property access can still throw.
 
 ## Custom Validators
 
-`custom<T>(value, validator, options?)` calls the validator and normalizes its
-returned or thrown value with `parseResult`. Failure paths are replaced by the
-path in `options` when supplied.
+`custom<T>(value, validator, options?)` calls the validator and normalizes its returned or thrown value with `parseResult`. Failure paths are replaced by the path in `options` when supplied.
 
 ```ts
 import { custom, err, ok } from "@codenhub/validation";
@@ -166,30 +136,19 @@ The `coerce` object returns `ValidationResult` values:
 | `bool(value, options?)`   | Booleans or case-insensitive strings `true`, `false`, `1`, `0`, `yes`, `no`, `on`, and `off`. Other primitives fail with `invalid_format`.                    |
 | `string(value, options?)` | Stringifies defined primitives. `null`, `undefined`, objects, functions, and failed string conversion return `invalid_type`.                                  |
 
-Objects and functions are rejected by all coercers. Symbols may be converted to
-strings, but are not accepted by numeric or boolean format checks. Coercion does
-not perform subsequent domain validation; for example, pass an integer result
-to `val.number(value).port()` to enforce the port range.
+Objects and functions are rejected by all coercers. Symbols may be converted to strings, but are not accepted by numeric or boolean format checks. Coercion does not perform subsequent domain validation; for example, pass an integer result to `val.number(value).port()` to enforce the port range.
 
-The public type exports `ValidationErrorInput`, `ValidationErrorOptions`,
-`ValidationIssue`, `ValidationError`, `ValidationOptions`, `ValidationOk`,
-`ValidationErr`, `ValidationResult`, `ValidationErrorCode`, and
-`ValidationPathSegment` describe these workflows.
+The public type exports `ValidationErrorInput`, `ValidationErrorOptions`, `ValidationIssue`, `ValidationError`, `ValidationOptions`, `ValidationOk`, `ValidationErr`, `ValidationResult`, `ValidationErrorCode`, and `ValidationPathSegment` describe these workflows.
 
 <!-- Source: docs/validators.md -->
 
 # Validator Reference
 
-The `val` object exposes `string`, `number`, `object`, and `array` factories.
-Each accepts `unknown` plus optional `ValidationOptions`. A base-type failure is
-created immediately and every method on that returned validator reports the
-same failure. Validators return results and do not throw for ordinary invalid
-input.
+The `val` object exposes `string`, `number`, `object`, and `array` factories. Each accepts `unknown` plus optional `ValidationOptions`. A base-type failure is created immediately and every method on that returned validator reports the same failure. Validators return results and do not throw for ordinary invalid input.
 
 ## Strings
 
-`val.string(value, options?)` returns `StringValidators`. Non-string input fails
-with `invalid_type`.
+`val.string(value, options?)` returns `StringValidators`. Non-string input fails with `invalid_type`.
 
 | Method                                 | Success and constraints                                                                                                                                                           |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -203,38 +162,21 @@ with `invalid_type`.
 
 ## Numbers
 
-`val.number(value, options?)` returns `NumberValidators`. Non-number and `NaN`
-input returns `invalid_type`; infinities return `invalid_value` before any
-method-specific check.
+`val.number(value, options?)` returns `NumberValidators`. Non-number and `NaN` input returns `invalid_type`; infinities return `invalid_value` before any method-specific check.
 
-`positive`, `negative`, `nonNegative`, `nonPositive`, `nonZero`, `int`, and
-`safeInt` enforce their named constraint and return `invalid_value` on failure.
-`finite()` succeeds because non-finite input is rejected by the factory.
-`port()` accepts integers from 1 through 65535.
+`positive`, `negative`, `nonNegative`, `nonPositive`, `nonZero`, `int`, and `safeInt` enforce their named constraint and return `invalid_value` on failure. `finite()` succeeds because non-finite input is rejected by the factory. `port()` accepts integers from 1 through 65535.
 
-`range({ min?, max? })` uses inclusive bounds. Non-finite bounds or `min > max`
-return `invalid_value`; values outside valid bounds return `too_small` or
-`too_big`.
+`range({ min?, max? })` uses inclusive bounds. Non-finite bounds or `min > max` return `invalid_value`; values outside valid bounds return `too_small` or `too_big`.
 
 ## Objects
 
-`val.object(value, options?)` returns `ObjectValidators`. Only objects with
-`Object.prototype` or a null prototype are accepted; arrays, `null`, functions,
-and class instances return `invalid_type`.
+`val.object(value, options?)` returns `ObjectValidators`. Only objects with `Object.prototype` or a null prototype are accepted; arrays, `null`, functions, and class instances return `invalid_type`.
 
 - `plain()` returns the original `PlainObject`.
-- `hasKeys(keys)` requires each string as an own property. The first missing key
-  returns `missing_key` and is appended to the error path. Inherited properties
-  do not satisfy the check.
+- `hasKeys(keys)` requires each string as an own property. The first missing key returns `missing_key` and is appended to the error path. Inherited properties do not satisfy the check.
 
 ## Arrays
 
-`val.array<T>(value, options?)` returns `ArrayValidators<T>`. Non-arrays return
-`invalid_type`. `minLength(length)` and `maxLength(length)` require finite,
-non-negative limits; invalid limits return `invalid_value`, while length
-failures return `too_small` or `too_big`. `notEmpty()` returns `too_small` for an
-empty array. Successful array validators return the original array, not a copy.
+`val.array<T>(value, options?)` returns `ArrayValidators<T>`. Non-arrays return `invalid_type`. `minLength(length)` and `maxLength(length)` require finite, non-negative limits; invalid limits return `invalid_value`, while length failures return `too_small` or `too_big`. `notEmpty()` returns `too_small` for an empty array. Successful array validators return the original array, not a copy.
 
-`StringValidators`, `NumberValidators`, `ObjectValidators`,
-`ArrayValidators<T>`, and `PlainObject` are exported for reusable consumer type
-boundaries.
+`StringValidators`, `NumberValidators`, `ObjectValidators`, `ArrayValidators<T>`, and `PlainObject` are exported for reusable consumer type boundaries.

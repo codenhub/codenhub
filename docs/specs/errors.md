@@ -23,39 +23,21 @@ Packages that do not expose errors do not need to follow this spec.
 - i18n-ready error messages via `messageKey`
 - Retry signaling via `isRetryable`
 - Composable registry presets that consumers can merge into their own registry
-- Diagnostic access through `AppError.originalError` while default JSON
-  serialization retains normalized fields without including raw input
+- Diagnostic access through `AppError.originalError` while default JSON serialization retains normalized fields without including raw input
 
-`isAppError()` recognizes `AppError` instances created by the current
-`@codenhub/error` package runtime. It is an identity guard, not a mechanism for
-recognizing serialized errors or instances created by another package copy or
-runtime.
+`isAppError()` recognizes `AppError` instances created by the current `@codenhub/error` package runtime. It is an identity guard, not a mechanism for recognizing serialized errors or instances created by another package copy or runtime.
 
 ## `@codenhub/error` runtime contract
 
-`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT
-be writable, configurable, added, or removed after construction. The referenced
-`originalError` value is diagnostic input and is not recursively frozen.
-Default JSON serialization MUST include `name`, `message`, `type`, `messageKey`,
-`source`, and `isRetryable`, and MUST omit diagnostic `cause` and
-`originalError` values.
+`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values.
 
-Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth`
-MUST be an integer from `0` through `3`; all other values are programmer errors
-and MUST throw `TypeError` before traversal begins.
+Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins.
 
-Raw strings passed to `err()` MUST be treated as untrusted error values. They
-MUST NOT become user-facing messages unless the caller explicitly supplies a
-safe `fallbackMessage`.
+Raw strings passed to `err()` MUST be treated as untrusted error values. They MUST NOT become user-facing messages unless the caller explicitly supplies a safe `fallbackMessage`.
 
-`freezeRegistry()` MUST return an immutable snapshot rather than a live view.
-The returned registry and buckets MUST expose only their documented read
-methods at runtime. Reflection MUST NOT reveal mutation methods from the source
-or snapshot registry.
+`freezeRegistry()` MUST return an immutable snapshot rather than a live view. The returned registry and buckets MUST expose only their documented read methods at runtime. Reflection MUST NOT reveal mutation methods from the source or snapshot registry.
 
-Registry feedback MUST be copied into plain data before storage. Each feedback
-field MUST be read at most once, and inaccessible or invalid fields MUST produce
-a `TypeError` rather than allowing invalid data into a bucket.
+Registry feedback MUST be copied into plain data before storage. Each feedback field MUST be read at most once, and inaccessible or invalid fields MUST produce a `TypeError` rather than allowing invalid data into a bucket.
 
 ## Providing error mappings (not registries)
 
@@ -108,10 +90,7 @@ Use the bucket that matches the most stable identifier available for the error:
 
 Prefer `codes` over `names` over `messages`. Prefer `messages` over `prefixes`. Prefer `prefixes` over `patterns`.
 
-Code and name identifiers are exact machine identifiers after trimming leading
-and trailing whitespace. Their punctuation MUST remain significant. Message and
-prefix identifiers are human-readable text; implementations MAY ignore trailing
-sentence punctuation consistently during registration and matching.
+Code and name identifiers are exact machine identifiers after trimming leading and trailing whitespace. Their punctuation MUST remain significant. Message and prefix identifiers are human-readable text; implementations MAY ignore trailing sentence punctuation consistently during registration and matching.
 
 Avoid registering message patterns unless no stable code or name exists. Pattern matches are heuristic by nature and classified as `"unexpected"`, which signals lower confidence to consumers.
 
@@ -155,12 +134,9 @@ Rules:
 
 - All segments lowercase camelCase, except `error` root which is always lowercase.
 - The key must match the `message` fallback in meaning and tone.
-- A key MAY be backed by bundled translations or defined as a documented, stable
-  integration key for consumer-owned translations.
-- Packages that define stable integration keys MUST treat them as public API and
-  preserve their meaning across non-breaking releases.
-- Omit `messageKey` when neither bundled translations nor a consumer translation
-  contract exists.
+- A key MAY be backed by bundled translations or defined as a documented, stable integration key for consumer-owned translations.
+- Packages that define stable integration keys MUST treat them as public API and preserve their meaning across non-breaking releases.
+- Omit `messageKey` when neither bundled translations nor a consumer translation contract exists.
 
 ## `isRetryable` guidance
 
@@ -175,11 +151,7 @@ Set `isRetryable: true` only when retrying the same operation **without user int
 
 When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively.
 
-Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD
-remain non-retryable because they can represent permanent failures such as CORS,
-invalid URLs, or TLS errors. More specific transient signals, such as connection
-refusal, DNS failure, or timeout, MAY be marked retryable when package behavior
-supports retrying without user intervention.
+Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. More specific transient signals, such as connection refusal, DNS failure, or timeout, MAY be marked retryable when package behavior supports retrying without user intervention.
 
 ## Error-propagation pattern (throwing vs. returning Results)
 
@@ -213,13 +185,7 @@ export const myPackageErrors = {
 };
 ```
 
-**Do not ship preset registries from general library packages.** Presets MUST
-NOT instantiate `createErrorRegistry()` or `freezeRegistry()` in packages that
-only expose error definitions, because doing so forces a runtime dependency.
-Export raw dictionary objects instead. `@codenhub/error` is the designated owner
-of built-in, opt-in presets and MAY export frozen registry snapshots alongside
-their raw mappings; those presets MUST NOT mutate the global registry on import.
-This exception is recorded in `docs/specs/packages-exceptions.md`.
+**Do not ship preset registries from general library packages.** Presets MUST NOT instantiate `createErrorRegistry()` or `freezeRegistry()` in packages that only expose error definitions, because doing so forces a runtime dependency. Export raw dictionary objects instead. `@codenhub/error` is the designated owner of built-in, opt-in presets and MAY export frozen registry snapshots alongside their raw mappings; those presets MUST NOT mutate the global registry on import. This exception is recorded in `docs/specs/packages-exceptions.md`.
 
 **Do not rely on message matching when a stable code or name exists.** Message strings change across library versions; codes and names are generally more stable.
 
@@ -227,7 +193,6 @@ This exception is recorded in `docs/specs/packages-exceptions.md`.
 
 ## Exceptions
 
-Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in
-`docs/specs/packages-exceptions.md`.
+Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
 
 A valid exception MUST name the package, the skipped rule, and why the package remains safe to publish.

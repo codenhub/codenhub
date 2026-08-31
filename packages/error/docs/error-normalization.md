@@ -6,9 +6,7 @@ title: Error Normalization
 
 ## Normalize Unknown Values
 
-`createAppError(error, options?)` returns an `AppError`. It traverses the input
-and wrapper fields `cause`, `originalError`, `error`, `err`, `inner`, and
-`innerError` to find classifications.
+`createAppError(error, options?)` returns an `AppError`. It traverses the input and wrapper fields `cause`, `originalError`, `error`, `err`, `inner`, and `innerError` to find classifications.
 
 ```ts
 import { createAppError } from "@codenhub/error";
@@ -27,40 +25,20 @@ const error = createAppError(new Error("Request failed"), {
 | `registry`        | `getErrorRegistry()`        | Classification source; must expose the read-facing registry surface. |
 | `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`.      |
 
-`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`.
-`isAppError(value)` identifies errors created by the current package runtime.
-Structurally similar or serialized values are not accepted. Passing an `AppError`
-to `createAppError` returns the same object when no custom options are supplied;
-custom options cause it to be normalized again.
+`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`. `isAppError(value)` identifies errors created by the current package runtime. Structurally similar or serialized values are not accepted. Passing an `AppError` to `createAppError` returns the same object when no custom options are supplied; custom options cause it to be normalized again.
 
 An `AppError` is frozen, implements `Error`, and exposes:
 
-- `type: AppErrorType`, where deterministic matches are `"known"`, pattern
-  matches are `"unexpected"`, and unmatched values are `"unknown"`.
+- `type: AppErrorType`, where deterministic matches are `"known"`, pattern matches are `"unexpected"`, and unmatched values are `"unknown"`.
 - `message`, plus nullable `messageKey` and `source: AppErrorSource` metadata.
 - `originalError`, preserving the original top-level input as a non-enumerable diagnostic value.
 - `isRetryable`, which defaults to `false` unless matched feedback sets it.
 
-Normalization does not throw for ordinary unknown input, including objects or
-proxies whose inspected properties throw. An explicit `toJSON()` defines
-serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`,
-`messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw
-`cause` and `originalError` diagnostic values, preventing sensitive fields and
-cyclic wrapper objects from being serialized through the normalized error.
-Registry configuration errors throw `TypeError` at their configuration
-boundary. Invalid options are programmer errors and throw `TypeError` before
-traversal begins: a non-object `options` value, an empty or non-string
-`fallbackMessage`, a `registry` that does not expose the read-facing registry
-surface, and a `maxDepth` outside the integer range from `0` through `3`.
+Normalization does not throw for ordinary unknown input, including objects or proxies whose inspected properties throw. An explicit `toJSON()` defines serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`, `messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw `cause` and `originalError` diagnostic values, preventing sensitive fields and cyclic wrapper objects from being serialized through the normalized error. Registry configuration errors throw `TypeError` at their configuration boundary. Invalid options are programmer errors and throw `TypeError` before traversal begins: a non-object `options` value, an empty or non-string `fallbackMessage`, a `registry` that does not expose the read-facing registry surface, and a `maxDepth` outside the integer range from `0` through `3`.
 
 ## Configure A Registry
 
-`getErrorRegistry()` returns the active mutable global `ErrorRegistry`.
-`setErrorRegistry(registry)` replaces it and throws `TypeError` when the value
-does not implement the mutable registry interface. `createErrorRegistry(presets?)`
-creates an isolated, empty registry and merges optional presets in order; it
-throws `TypeError` when `presets` is not a list. `merge()` throws `TypeError`
-when its source does not expose the read-facing registry surface.
+`getErrorRegistry()` returns the active mutable global `ErrorRegistry`. `setErrorRegistry(registry)` replaces it and throws `TypeError` when the value does not implement the mutable registry interface. `createErrorRegistry(presets?)` creates an isolated, empty registry and merges optional presets in order; it throws `TypeError` when `presets` is not a list. `merge()` throws `TypeError` when its source does not expose the read-facing registry surface.
 
 ```ts
 import { createAppError, createErrorRegistry } from "@codenhub/error";
@@ -76,39 +54,15 @@ registry.codes.add("E_RATE_LIMIT", {
 const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
 ```
 
-`ErrorFeedback` requires a non-empty `message` and optionally accepts
-`messageKey`, `source`, and `isRetryable`. A `messageKey` must be a dot-separated
-key under the `error` namespace with lower-camel-case segments, such as
-`error.myApp.api.rateLimit`. A `source` must use dot-separated lowercase
-kebab-case segments, such as `my-app.api`. Invalid formats throw `TypeError`.
+`ErrorFeedback` requires a non-empty `message` and optionally accepts `messageKey`, `source`, and `isRetryable`. A `messageKey` must be a dot-separated key under the `error` namespace with lower-camel-case segments, such as `error.myApp.api.rateLimit`. A `source` must use dot-separated lowercase kebab-case segments, such as `my-app.api`. Invalid formats throw `TypeError`.
 
-An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus
-`prefixes` and regex `patterns`. It also provides `clear()` and `merge()`.
-Bucket contents are mutable, but the bucket references are read-only and cannot
-be replaced.
-Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and
-`values`. Prefix and pattern buckets omit `get`; their `values()` methods return
-`ErrorPrefixDefinition` and `ErrorPatternDefinition` values.
+An `ErrorRegistry` contains exact `codes`, `names`, and `messages` buckets, plus `prefixes` and regex `patterns`. It also provides `clear()` and `merge()`. Bucket contents are mutable, but the bucket references are read-only and cannot be replaced. Exact buckets implement `add`, `addList`, `get`, `delete`, `clear`, and `values`. Prefix and pattern buckets omit `get`; their `values()` methods return `ErrorPrefixDefinition` and `ErrorPatternDefinition` values.
 
-Entries are validated and frozen when they are registered, and read methods
-return those frozen values directly instead of rebuilding a copy per lookup.
-Returned feedback objects, definitions, definition lists, and stored `RegExp`
-instances are all frozen, so writing to them throws `TypeError` in strict mode
-and cannot affect registry state. Prefix definitions are returned ordered from
-longest to shortest prefix; pattern definitions keep insertion order.
+Entries are validated and frozen when they are registered, and read methods return those frozen values directly instead of rebuilding a copy per lookup. Returned feedback objects, definitions, definition lists, and stored `RegExp` instances are all frozen, so writing to them throws `TypeError` in strict mode and cannot affect registry state. Prefix definitions are returned ordered from longest to shortest prefix; pattern definitions keep insertion order.
 
-Code and name identifiers are trimmed but otherwise exact, so punctuation
-remains significant. Message and prefix identifiers are trimmed and trailing
-`.`, `!`, and `?` are removed. Adding or deleting empty identifiers, adding
-inaccessible or invalid feedback fields, and adding or deleting non-`RegExp`
-patterns throw `TypeError`; exact-bucket `get` returns `undefined` for an empty
-or non-string identifier. Feedback fields are read once and copied into plain
-data. Duplicate exact identifiers, prefixes, or equivalent regexes are
-replaced. Global and sticky flags are removed from registered regexes.
+Code and name identifiers are trimmed but otherwise exact, so punctuation remains significant. Message and prefix identifiers are trimmed and trailing `.`, `!`, and `?` are removed. Adding or deleting empty identifiers, adding inaccessible or invalid feedback fields, and adding or deleting non-`RegExp` patterns throw `TypeError`; exact-bucket `get` returns `undefined` for an empty or non-string identifier. Feedback fields are read once and copied into plain data. Duplicate exact identifiers, prefixes, or equivalent regexes are replaced. Global and sticky flags are removed from registered regexes.
 
-`addList` validates the complete batch before adding entries. `merge` stages and
-validates the complete source before changing its target. Either operation
-leaves its target unchanged when validation fails.
+`addList` validates the complete batch before adding entries. `merge` stages and validates the complete source before changing its target. Either operation leaves its target unchanged when validation fails.
 
 Classification priority is:
 
@@ -117,20 +71,11 @@ Classification priority is:
 3. Any remaining `AppError`.
 4. An unknown error using the fallback message.
 
-The longest matching normalized prefix wins, including for custom registry
-implementations whose prefix definitions are not ordered. Pattern insertion
-order determines the first heuristic match. `AppErrorType`, `AppErrorSource`,
-`ErrorRegistryBucket`, `ErrorPrefixRegistryBucket`,
-`ErrorPatternRegistryBucket`, `ErrorPrefixDefinition`, and
-`ErrorPatternDefinition` are exported for consumers typing registry workflows.
+The longest matching normalized prefix wins, including for custom registry implementations whose prefix definitions are not ordered. Pattern insertion order determines the first heuristic match. `AppErrorType`, `AppErrorSource`, `ErrorRegistryBucket`, `ErrorPrefixRegistryBucket`, `ErrorPatternRegistryBucket`, `ErrorPrefixDefinition`, and `ErrorPatternDefinition` are exported for consumers typing registry workflows.
 
 ## Read-Only Presets
 
-`freezeRegistry(registry)` returns an immutable `ReadonlyErrorRegistry` snapshot.
-Its frozen bucket facades expose only read methods at runtime; mutation methods
-are absent, including through reflection. Later mutations to the source registry
-do not affect the snapshot. Use frozen registries as presets passed to
-`createErrorRegistry` or `merge`.
+`freezeRegistry(registry)` returns an immutable `ReadonlyErrorRegistry` snapshot. Its frozen bucket facades expose only read methods at runtime; mutation methods are absent, including through reflection. Later mutations to the source registry do not affect the snapshot. Use frozen registries as presets passed to `createErrorRegistry` or `merge`.
 
 ```ts
 import { getErrorRegistry } from "@codenhub/error";
@@ -147,51 +92,20 @@ Public preset exports are:
 | `@codenhub/error/registries/browser`  | `browserErrorRegistry`, `browserErrorNames`, `browserErrorPatterns`                                                                      |
 | `@codenhub/error/registries/supabase` | `supabaseErrorRegistry`, `supabaseErrorCodes`, `supabaseErrorNames`                                                                      |
 
-The raw name/code records and browser pattern tuples are read-only exports; the
-prebuilt registry values are read-only. Browser mappings cover common
-`DOMException` names and network-message patterns. Ambiguous browser fetch and
-network-message matches are not marked retryable; connection refusal and DNS
-matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus
-Edge Function error names. Built-in `messageKey` values are stable integration
-keys for consumer-owned translations. The package does not yet ship a canonical
-translation map, so consumers must provide translations when using these keys.
-Each key maps to exactly one fallback message. Preset coverage is not
-exhaustive, and message patterns are heuristic.
+The raw name/code records and browser pattern tuples are read-only exports; the prebuilt registry values are read-only. Browser mappings cover common `DOMException` names and network-message patterns. Ambiguous browser fetch and network-message matches are not marked retryable; connection refusal and DNS matches are. Supabase mappings cover selected Auth and PostgreSQL codes plus Edge Function error names. Built-in `messageKey` values are stable integration keys for consumer-owned translations. The package does not yet ship a canonical translation map, so consumers must provide translations when using these keys. Each key maps to exactly one fallback message. Preset coverage is not exhaustive, and message patterns are heuristic.
 
-Registered patterns run against arbitrary error text, so a pattern that
-backtracks catastrophically will stall classification. Keep custom patterns
-linear and prefer `codes`, `names`, `messages`, or `prefixes` whenever a stable
-identifier exists. The built-in preset patterns are simple alternations.
+Registered patterns run against arbitrary error text, so a pattern that backtracks catastrophically will stall classification. Keep custom patterns linear and prefer `codes`, `names`, `messages`, or `prefixes` whenever a stable identifier exists. The built-in preset patterns are simple alternations.
 
 ## Migrations
 
 ### To 0.3
 
-- Bucket `get()` and `values()` return frozen values and frozen lists. Writing to
-  a returned feedback object, definition, definition list, or stored `RegExp`
-  throws `TypeError` in strict mode instead of mutating a private copy. Copy
-  explicitly with a spread when a mutable object is needed.
-- Invalid `createAppError` and `err()` options throw `TypeError`:
-  `fallbackMessage` must be a non-empty string, `registry` must expose the
-  read-facing registry surface, and `options` must be an object. An invalid
-  registry previously surfaced only when the error carried a code, name, or
-  message.
-- `merge()` throws `TypeError` when its source does not expose the read-facing
-  registry surface, and `createErrorRegistry(presets)` throws when `presets` is
-  not a list.
-- Strings are classified against the registry at every wrapper depth, including
-  the top-level value passed to `err()`. Unmatched strings still resolve to the
-  fallback message, so raw text is never surfaced. Registering a message,
-  prefix, or pattern that matches a string previously had no effect at the top
-  level and now produces a `known` or `unexpected` result.
-- The browser pattern for generic fetch and network messages uses
-  `error.browser.requestFailed` instead of sharing `error.browser.network` with
-  the `NetworkError` name mapping.
+- Bucket `get()` and `values()` return frozen values and frozen lists. Writing to a returned feedback object, definition, definition list, or stored `RegExp` throws `TypeError` in strict mode instead of mutating a private copy. Copy explicitly with a spread when a mutable object is needed.
+- Invalid `createAppError` and `err()` options throw `TypeError`: `fallbackMessage` must be a non-empty string, `registry` must expose the read-facing registry surface, and `options` must be an object. An invalid registry previously surfaced only when the error carried a code, name, or message.
+- `merge()` throws `TypeError` when its source does not expose the read-facing registry surface, and `createErrorRegistry(presets)` throws when `presets` is not a list.
+- Strings are classified against the registry at every wrapper depth, including the top-level value passed to `err()`. Unmatched strings still resolve to the fallback message, so raw text is never surfaced. Registering a message, prefix, or pattern that matches a string previously had no effect at the top level and now produces a `known` or `unexpected` result.
+- The browser pattern for generic fetch and network messages uses `error.browser.requestFailed` instead of sharing `error.browser.network` with the `NetworkError` name mapping.
 
 ### To 0.2
 
-Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are
-frozen, `isAppError` recognizes only values created by the current package
-runtime, `originalError` is non-enumerable, frozen registries are isolated
-snapshots without runtime mutators, code and name punctuation remains
-significant, and invalid `maxDepth` values throw.
+Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are frozen, `isAppError` recognizes only values created by the current package runtime, `originalError` is non-enumerable, frozen registries are isolated snapshots without runtime mutators, code and name punctuation remains significant, and invalid `maxDepth` values throw.

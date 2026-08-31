@@ -30,18 +30,13 @@ theme.destroy({ revertDom: true });
 
 ## Requirements
 
-- Browser integration uses `document.documentElement`, `localStorage`,
-  `matchMedia`, `storage` events, and `CustomEvent`.
-- SSR is supported by skipping unavailable browser work and using the configured
-  default theme.
-- Consumers provide CSS selectors, variables, visual tokens, and any pre-paint
-  script needed to prevent a theme flash.
+- Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`.
+- SSR is supported by skipping unavailable browser work and using the configured default theme.
+- Consumers provide CSS selectors, variables, visual tokens, and any pre-paint script needed to prevent a theme flash.
 
 ## Notes
 
-Construction validates theme names, mappings, attributes, classes, and token
-schemas and throws on invalid configuration. Storage failures are reported to
-the console and treated as unavailable storage.
+Construction validates theme names, mappings, attributes, classes, and token schemas and throws on invalid configuration. Storage failures are reported to the console and treated as unavailable storage.
 
 ## License
 

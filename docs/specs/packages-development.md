@@ -20,8 +20,7 @@ Use this workflow when a package needs one or more of these:
 - Manual or exploratory debugging with real package imports.
 - Pre-ship confidence that public imports and bundled output behave like consumer code expects.
 - Separate local environments for different runtimes or dependency sets.
-- A real, deployed surface that lets people try the package in a browser,
-  aggregated by a shared demo app; see `docs/specs/packages-demo.md`.
+- A real, deployed surface that lets people try the package in a browser, aggregated by a shared demo app; see `docs/specs/packages-demo.md`.
 
 ## Directory Roles
 

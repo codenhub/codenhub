@@ -7,26 +7,18 @@ description: Layout helpers, content chips and tables, surfaces, and typography 
 
 ## Layout
 
-Layout helpers use the shared `--layout-gap` token. `.tight` sets it to
-`0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or
-auto-grid.
+Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.
 
-- `.view` is a flex container; `.vertical` and `.horizontal` set its
-  direction, and horizontal views wrap with centered cross-axis alignment.
+- `.view` is a flex container; `.vertical` and `.horizontal` set its direction, and horizontal views wrap with centered cross-axis alignment.
 - `.stack` is a vertical flex stack.
-- `.cluster` is a wrapping horizontal flex row; `.between` adds
-  `space-between` alignment.
+- `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
 - `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
-- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views,
-  stacks, clusters, and auto-grids.
+- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
 - `.section` adds responsive block padding and an inline gutter.
-- `.section-content` centers content at `--container-max`; `.narrow` and
-  `.wide` select the corresponding container tokens.
-- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It
-  takes intent, but presentation classes do not affect it.
+- `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
+- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
 
-The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no
-compatibility aliases.
+The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
 ## Content
 
@@ -44,8 +36,7 @@ compatibility aliases.
 
 ### Table rules
 
-A table draws three kinds of line, and `.ruled` and `.ruleless` move all of
-them together:
+A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them together:
 
 | Class       | Head and foot boundaries | Rules between body rows |
 | ----------- | ------------------------ | ----------------------- |
@@ -54,36 +45,32 @@ them together:
 | `.ruled`    | Yes                      | Yes                     |
 
 ```html
-<table class="data-table">Head and foot boundaries only</table>
-<table class="data-table ruled">Every row separated</table>
-<table class="data-table ruleless">No lines inside the table at all</table>
+<table class="data-table">
+  Head and foot boundaries only
+</table>
+<table class="data-table ruled">
+  Every row separated
+</table>
+<table class="data-table ruleless">
+  No lines inside the table at all
+</table>
 ```
 
-The boundaries under a head and above a foot separate the parts of a table
-from each other, so they are drawn by default where the row rules are not.
-Rules between body rows used to arrive on their own, because the
-component's published edge default is `edged` and the edge axis wrote the
-rules along with the boundary — so whether you got them depended on a
-registry default rather than on anything in your markup.
+The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows used to arrive on their own, because the component's published edge default is `edged` and the edge axis wrote the rules along with the boundary — so whether you got them depended on a registry default rather than on anything in your markup.
 
-`--ui-rule` is the token behind both classes, so a container can set the
-answer for a whole region without classing each table:
+`--ui-rule` is the token behind both classes, so a container can set the answer for a whole region without classing each table:
 
 ```html
 <section style="--ui-rule: 100%">
-  <table class="data-table">Ruled by the region</table>
+  <table class="data-table">
+    Ruled by the region
+  </table>
 </section>
 ```
 
-The frame around the table is the edge axis and is asked for the same way:
-`.data-table` publishes `edgeless`, so `.edged` draws one. None of the
-three switches reaches the others — `.data-table.ruleless.edged` is a
-framed table with no lines inside it, and `.data-table.ruled` is a
-frameless one with every row separated.
+The frame around the table is the edge axis and is asked for the same way: `.data-table` publishes `edgeless`, so `.edged` draws one. None of the three switches reaches the others — `.data-table.ruleless.edged` is a framed table with no lines inside it, and `.data-table.ruled` is a frameless one with every row separated.
 
-A table's rows deliberately inherit its intent instead of resetting it, so
-`.data-table.success` tints throughout. A row carrying its own intent still
-wins:
+A table's rows deliberately inherit its intent instead of resetting it, so `.data-table.success` tints throughout. A row carrying its own intent still wins:
 
 ```html
 <table class="data-table success">
@@ -98,37 +85,28 @@ wins:
 </table>
 ```
 
-This is the one place intent cascades, because a table's rows are parts of
-the table rather than independent components.
+This is the one place intent cascades, because a table's rows are parts of the table rather than independent components.
 
-`.data-table`, `.kbd`, `.code`, and `.pre` also read
-[presentation](./composing.md#presentation). A table applies it to its
-header, its rules and its border; a chip to its whole plate:
+`.data-table`, `.kbd`, `.code`, and `.pre` also read [presentation](./composing.md#presentation). A table applies it to its header, its rules and its border; a chip to its whole plate:
 
 ```html
-<table class="data-table success soft edged">...</table>
-<table class="data-table">A ghost table: rules and type, no header plate</table>
+<table class="data-table success soft edged">
+  ...
+</table>
+<table class="data-table">
+  A ghost table: rules and type, no header plate
+</table>
 <kbd class="kbd primary solid">Ctrl</kbd>
 <kbd class="kbd primary soft edged">Shift</kbd>
 ```
 
-`.ghost` means two different things on these components, and both are worth
-knowing before you reach for it.
+`.ghost` means two different things on these components, and both are worth knowing before you reach for it.
 
-On `.data-table` it removes the header plate along with the body tint, so
-`.data-table.ghost` is boundaries and type alone. The component rests at
-`soft`, so that is something to ask for rather than the default.
+On `.data-table` it removes the header plate along with the body tint, so `.data-table.ghost` is boundaries and type alone. The component rests at `soft`, so that is something to ask for rather than the default.
 
-On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on
-`--intent-subtle`, and that ground draws the plate whatever the fill says —
-so `.ghost` took the fill away and changed nothing visible. Worse, the
-ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5`
-for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against
-it for secondary. All three rest at `.soft` instead, which puts a real `12%`
-of the intent over the ground and separates them.
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All three rest at `.soft` instead, which puts a real `12%` of the intent over the ground and separates them.
 
-Use `.table-wrap` around `.data-table` when table width may exceed its
-container:
+Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
 ```html
 <div class="table-wrap">
@@ -163,23 +141,11 @@ container:
 | `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
 | `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
-Both read intent, [presentation](./composing.md#presentation), and
-[material tokens](./customizing.md#material-tokens). A plain `.card` is a
-neutral bordered container; only an explicit presentation tints it. Resting
-at elevation `1` is not a visible shadow by itself — nothing draws depth
-until an [aesthetic](./aesthetics.md) supplies shadow geometry or
-`.elevation-sm`/`.elevation-md` asks for it; see
-[Composing → Elevation](./composing.md#elevation).
+Both read intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](./aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](./composing.md#elevation).
 
-On the base look, `.card.interactive` scales down slightly on press
-(`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md)
-substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
+On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
-`.interactive` is the pair `.hoverable` (hover response only, no pointer
-cursor) and `.pressable` (press response and pointer cursor) applied
-together. Take one half for a card that answers a single gesture: a card
-that warms on hover but holds its own action in a nested button takes
-`.hoverable`, so pressing that button does not dip the whole card.
+`.interactive` is the pair `.hoverable` (hover response only, no pointer cursor) and `.pressable` (press response and pointer cursor) applied together. Take one half for a card that answers a single gesture: a card that warms on hover but holds its own action in a nested button takes `.hoverable`, so pressing that button does not dip the whole card.
 
 ```html
 <article class="card">Neutral card</article>
@@ -190,9 +156,7 @@ that warms on hover but holds its own action in a nested button takes
 <aside class="panel">Flush panel</aside>
 ```
 
-`.interactive` and `.pressable` are styling only. Use a real interactive
-element and give it an accessible name; a `<div class="card interactive">`
-is not focusable or operable by keyboard.
+`.interactive` and `.pressable` are styling only. Use a real interactive element and give it an accessible name; a `<div class="card interactive">` is not focusable or operable by keyboard.
 
 ## Typography utilities
 

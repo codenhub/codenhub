@@ -5,13 +5,11 @@ description: Browser, routed hydration, SSR, SSG, and locale loader patterns.
 
 # Use i18n across runtimes
 
-The examples below use consumer-owned configuration. Replace the sample loader
-with the transport appropriate to the runtime.
+The examples below use consumer-owned configuration. Replace the sample loader with the transport appropriate to the runtime.
 
 ## Browser application
 
-The browser helper initializes core and optionally owns persistence, document
-attributes, safe leaf translation, and mutation observation.
+The browser helper initializes core and optionally owns persistence, document attributes, safe leaf translation, and mutation observation.
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -40,14 +38,11 @@ console.log(i18n.translate("home.title"));
 binding.disconnect();
 ```
 
-With a `root`, leaves such as
-`<h1 data-i18n="home.title">Fallback title</h1>` are translated. Frameworks
-that render translated values themselves should omit `root` and `observe`.
+With a `root`, leaves such as `<h1 data-i18n="home.title">Fallback title</h1>` are translated. Frameworks that render translated values themselves should omit `root` and `observe`.
 
 ## Routed hydration
 
-Pass the route locale explicitly. It is authoritative over persisted and
-navigator preferences, preventing server/client locale disagreement.
+Pass the route locale explicitly. It is authoritative over persisted and navigator preferences, preventing server/client locale disagreement.
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -101,13 +96,11 @@ export async function renderPage(requestLocale: string) {
 }
 ```
 
-Do not share mutable manager state across concurrent requests. Immutable
-dictionary modules and runtime-level import caches may still be shared.
+Do not share mutable manager state across concurrent requests. Immutable dictionary modules and runtime-level import caches may still be shared.
 
 ## SSG
 
-Use routing output to drive the framework's static path API. Keep a separate
-manager for every concurrently rendered page.
+Use routing output to drive the framework's static path API. Keep a separate manager for every concurrently rendered page.
 
 ```ts
 import { createI18n } from "@codenhub/i18n";
@@ -136,8 +129,7 @@ await Promise.all(
 );
 ```
 
-Loader and dictionary failures reject, allowing the build to fail rather than
-publishing silently untranslated pages.
+Loader and dictionary failures reject, allowing the build to fail rather than publishing silently untranslated pages.
 
 ## Loader patterns
 
@@ -183,6 +175,4 @@ async function loadLocale(locale: "en" | "pt"): Promise<unknown> {
 }
 ```
 
-The loader owns URLs, timeouts, retries, credentials, filesystem access, and all
-other transport policy. Rejected loaders are wrapped in `I18nError`; invalid
-resolved payloads remain native `TypeError` failures.
+The loader owns URLs, timeouts, retries, credentials, filesystem access, and all other transport policy. Rejected loaders are wrapped in `I18nError`; invalid resolved payloads remain native `TypeError` failures.

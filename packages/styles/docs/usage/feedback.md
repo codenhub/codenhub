@@ -32,11 +32,7 @@ Activity indicator modifier classes compose with `.loader`:
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-These variants retain their embedded SVG animations normally. Under
-`prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding
-static mask. This fallback is part of focused loader, button, and components
-imports; it does not depend on the global reset. See
-[Accessibility](../accessibility.md).
+These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback is part of focused loader, button, and components imports; it does not depend on the global reset. See [Accessibility](../accessibility.md).
 
 Loader size modifiers:
 
@@ -46,27 +42,17 @@ Loader size modifiers:
 | `.sm`    | Small (`1.5rem`). |
 | `.lg`    | Large (`2.5rem`). |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`,
-`.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`,
-and `.info`. Without an intent, they use the text palette, except `.loader`,
-which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
-Skeletons, loaders, progress bars, and dividers are indicators. They read
-intent but ignore fill and edge [presentation](./composing.md#presentation).
+Skeletons, loaders, progress bars, and dividers are indicators. They read intent but ignore fill and edge [presentation](./composing.md#presentation).
 
 ```html
-<span class="loader success" aria-hidden="true"></span>
-<span class="skeleton info"></span>
+<span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
 ```
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it
-increases the left padding and adds an embedded SVG. Success, warning, and
-destructive intents use corresponding symbols; other intents use the
-information symbol.
+`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
 
-Alerts and badges read the shared [presentation](./composing.md#presentation)
-classes. Without one they use a tinted surface, intent-colored text, and a
-mixed intent border.
+Alerts and badges read the shared [presentation](./composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border.
 
 ## Example
 
@@ -84,34 +70,9 @@ mixed intent border.
 <span class="loader bars-wave" aria-hidden="true"></span>
 <span class="loader pulse-ring sm" aria-hidden="true"></span>
 <span class="loader dots-grow lg" aria-hidden="true"></span>
-<div
-  class="progress"
-  role="progressbar"
-  aria-label="Upload progress"
-  aria-valuemin="0"
-  aria-valuemax="100"
-  aria-valuenow="64"
-  style="--progress-value: 64%"
-></div>
-<div
-  class="progress secondary active"
-  role="progressbar"
-  aria-label="Upload progress"
-  aria-valuemin="0"
-  aria-valuemax="100"
-  aria-valuenow="64"
-  style="--progress-value: 64%"
-></div>
-<div
-  class="progress info indeterminate"
-  role="progressbar"
-  aria-label="Loading"
-  aria-valuemin="0"
-  aria-valuemax="100"
-></div>
+<div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress info indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"></div>
 ```
 
-Add `role="status"` or `role="alert"` to alerts based on announcement
-urgency, mark decorative loading visuals with `aria-hidden="true"`, and use
-semantic progress elements or ARIA values when numeric progress must be
-announced; see [Accessibility](../accessibility.md).
+Add `role="status"` or `role="alert"` to alerts based on announcement urgency, mark decorative loading visuals with `aria-hidden="true"`, and use semantic progress elements or ARIA values when numeric progress must be announced; see [Accessibility](../accessibility.md).

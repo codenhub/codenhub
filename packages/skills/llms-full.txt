@@ -2,11 +2,9 @@
 
 # @codenhub/skills
 
-A curated collection of AI agent skill assets, an installer for supported agent
-harnesses, and utilities for discovering and copying skill directories.
+A curated collection of AI agent skill assets, an installer for supported agent harnesses, and utilities for discovering and copying skill directories.
 
-> **Experimental:** The CLI workflow, harness support, install destinations, and
-> bundled skill content may change as agent skill conventions evolve.
+> **Experimental:** The CLI workflow, harness support, install destinations, and bundled skill content may change as agent skill conventions evolve.
 
 ## Installation
 
@@ -20,8 +18,7 @@ The equivalent npm command is `npx @codenhub/skills@latest`.
 
 ## Usage
 
-Use the library entrypoint to discover skill directories and copy one into a
-destination:
+Use the library entrypoint to discover skill directories and copy one into a destination:
 
 ```ts
 import { copyRecursiveSync, getSkills } from "@codenhub/skills";
@@ -33,17 +30,14 @@ if (skill) {
 }
 ```
 
-The CLI is interactive only when invoked without arguments in a TTY. Before
-using `--cleanup`, review its destructive behavior in the
-[CLI guide](docs/cli.md#destructive-cleanup).
+The CLI is interactive only when invoked without arguments in a TTY. Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): Complete package documentation.
 - [Programmatic API](docs/api.md): Public exports, path rules, and failures.
 - [CLI installer](docs/cli.md): Options, destinations, and harness behavior.
-- [Skill format and catalog](docs/skills.md): Supported assets and bundled
-  inventory.
+- [Skill format and catalog](docs/skills.md): Supported assets and bundled inventory.
 
 ## Requirements
 
@@ -53,23 +47,18 @@ using `--cleanup`, review its destructive behavior in the
 
 ## Notes
 
-- Existing files are merged and overwritten by default; stale files are not
-  removed unless `--cleanup` is used.
-- `--cleanup` recursively removes each selected harness's entire skills
-  directory before installation.
+- Existing files are merged and overwritten by default; stale files are not removed unless `--cleanup` is used.
+- `--cleanup` recursively removes each selected harness's entire skills directory before installation.
 
 ## License
 
-Licensed under Apache-2.0. Bundled skills include adapted third-party
-material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
+Licensed under Apache-2.0. Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
 
 <!-- Source: docs/index.md -->
 
 # Install and manage agent skills
 
-`@codenhub/skills` provides a curated collection of AI agent skills, a CLI that
-installs them into supported harnesses, and Node.js utilities for discovering
-and copying skill directories.
+`@codenhub/skills` provides a curated collection of AI agent skills, a CLI that installs them into supported harnesses, and Node.js utilities for discovering and copying skill directories.
 
 ## Setup
 
@@ -85,56 +74,38 @@ The npm equivalent is `npx @codenhub/skills@latest`.
 
 ### Quick start
 
-Run the command from the workspace where the skills should be installed. With no
-arguments in a TTY, the wizard lets you choose scope, skills, harnesses, and
-cleanup behavior.
+Run the command from the workspace where the skills should be installed. With no arguments in a TTY, the wizard lets you choose scope, skills, harnesses, and cleanup behavior.
 
-For automation, provide explicit options. This installs two skills into every
-supported workspace harness without prompting:
+For automation, provide explicit options. This installs two skills into every supported workspace harness without prompting:
 
 ```sh
 pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,test-driven-development
 ```
 
-Review the [CLI installer](docs/cli.md) before choosing destinations or automating
-cleanup.
+Review the [CLI installer](docs/cli.md) before choosing destinations or automating cleanup.
 
 ### Configuration
 
-Use `--local`, `--global`, or `--both` to select scope. Select skills with
-`--skills` or `--all-skills`, and destinations with `--harnesses` or
-`--all-harnesses`. Without arguments outside a TTY, the CLI installs all skills
-to detected harnesses in the local scope and fails if none are detected.
+Use `--local`, `--global`, or `--both` to select scope. Select skills with `--skills` or `--all-skills`, and destinations with `--harnesses` or `--all-harnesses`. Without arguments outside a TTY, the CLI installs all skills to detected harnesses in the local scope and fails if none are detected.
 
 ## Requirements
 
 - Node.js 18.0.0 or newer.
-- Filesystem permission to read source skills and modify every selected
-  destination.
+- Filesystem permission to read source skills and modify every selected destination.
 - A TTY for the interactive wizard. Explicit CLI options support automation.
 
 ## Filesystem safety
 
-Installation and copying write directly to local filesystem trees and are not
-transactional. Existing files are merged and overwritten by default. The
-`--cleanup` option first removes each selected harness's entire skills directory,
-including content not managed by this package. Cleanup failures do not by
-themselves produce a nonzero exit code.
+Installation and copying write directly to local filesystem trees and are not transactional. Existing files are merged and overwritten by default. The `--cleanup` option first removes each selected harness's entire skills directory, including content not managed by this package. Cleanup failures do not by themselves produce a nonzero exit code.
 
-Read [Security and failure behavior](docs/security-and-failures.md) for path and
-symlink constraints, partial-write behavior, cleanup risks, and CLI exit
-semantics before copying untrusted trees or automating installation.
+Read [Security and failure behavior](docs/security-and-failures.md) for path and symlink constraints, partial-write behavior, cleanup risks, and CLI exit semantics before copying untrusted trees or automating installation.
 
 ## Next steps
 
-- [CLI installer](docs/cli.md): Review interactive and automated modes, options,
-  destinations, harness behavior, and destructive cleanup.
-- [Programmatic API](docs/api.md): Use synchronous parsing, discovery, and recursive
-  copy utilities in custom Node.js workflows.
-- [Skill format and catalog](docs/skills.md): Evaluate or author compatible
-  `SKILL.md` assets and inspect the bundled inventory.
-- [Skill provenance](docs/provenance.md): Review origins, licenses, package notices,
-  and the per-skill `NOTICE` files copied during installation.
+- [CLI installer](docs/cli.md): Review interactive and automated modes, options, destinations, harness behavior, and destructive cleanup.
+- [Programmatic API](docs/api.md): Use synchronous parsing, discovery, and recursive copy utilities in custom Node.js workflows.
+- [Skill format and catalog](docs/skills.md): Evaluate or author compatible `SKILL.md` assets and inspect the bundled inventory.
+- [Skill provenance](docs/provenance.md): Review origins, licenses, package notices, and the per-skill `NOTICE` files copied during installation.
 
 <!-- Source: docs/api.md -->
 
@@ -143,13 +114,7 @@ semantics before copying untrusted trees or automating installation.
 Import all public symbols from `@codenhub/skills`:
 
 ```ts
-import {
-  copyRecursiveSync,
-  getSkills,
-  parseFrontmatter,
-  type CopyRecursiveOptions,
-  type Skill,
-} from "@codenhub/skills";
+import { copyRecursiveSync, getSkills, parseFrontmatter, type CopyRecursiveOptions, type Skill } from "@codenhub/skills";
 ```
 
 All operations are synchronous and require Node.js 18.0.0 or newer.
@@ -160,17 +125,11 @@ All operations are synchronous and require Node.js 18.0.0 or newer.
 function parseFrontmatter(content: string): Record<string, string>;
 ```
 
-Parses a limited, flat frontmatter block at the beginning of a Markdown string.
-An optional leading byte-order mark is accepted. The opening and closing `---`
-delimiters must occupy their own lines.
+Parses a limited, flat frontmatter block at the beginning of a Markdown string. An optional leading byte-order mark is accepted. The opening and closing `---` delimiters must occupy their own lines.
 
-Each line is split at its first colon. Values remain strings. Matching single or
-double quotes are removed, and an unquoted value drops a trailing comment that
-starts with whitespace followed by `#`. Nested YAML, arrays, multiline values,
-type coercion, escapes, and general YAML syntax are not supported.
+Each line is split at its first colon. Values remain strings. Matching single or double quotes are removed, and an unquoted value drops a trailing comment that starts with whitespace followed by `#`. Nested YAML, arrays, multiline values, type coercion, escapes, and general YAML syntax are not supported.
 
-It returns an empty object when there is no matching frontmatter block. Lines
-without a colon are ignored.
+It returns an empty object when there is no matching frontmatter block. Lines without a colon are ignored.
 
 ## `getSkills`
 
@@ -178,9 +137,7 @@ without a colon are ignored.
 function getSkills(srcDir: string): Skill[];
 ```
 
-Reads the immediate child directories of `srcDir`. A child is included only when
-it contains a file named exactly `SKILL.md`. Other files and nested skills are
-ignored.
+Reads the immediate child directories of `srcDir`. A child is included only when it contains a file named exactly `SKILL.md`. Other files and nested skills are ignored.
 
 For each included directory, the function parses `SKILL.md` and returns:
 
@@ -196,12 +153,9 @@ interface Skill {
 - `id` is the child directory name.
 - `name` is frontmatter `name`, falling back to `id` when absent or empty.
 - `description` is frontmatter `description`, falling back to an empty string.
-- `path` is the path formed by joining `srcDir` and `id`; it is absolute only
-  when `srcDir` is absolute.
+- `path` is the path formed by joining `srcDir` and `id`; it is absolute only when `srcDir` is absolute.
 
-The function returns an empty array when `srcDir` does not exist. Results follow
-the filesystem's directory enumeration order and are not explicitly sorted.
-Unreadable directories or files and other filesystem failures throw.
+The function returns an empty array when `srcDir` does not exist. Results follow the filesystem's directory enumeration order and are not explicitly sorted. Unreadable directories or files and other filesystem failures throw.
 
 ## `copyRecursiveSync`
 
@@ -215,51 +169,31 @@ interface CopyRecursiveOptions {
 function copyRecursiveSync(options: CopyRecursiveOptions): void;
 ```
 
-Copies one file or a directory tree from `src` to `dest`. Missing destination
-directories are created. Existing files at matching paths are overwritten;
-existing directories are merged. Entries that exist only at the destination are
-left in place.
+Copies one file or a directory tree from `src` to `dest`. Missing destination directories are created. Existing files at matching paths are overwritten; existing directories are merged. Entries that exist only at the destination are left in place.
 
-`ignoreList` contains exact base names to skip at every directory depth. It does
-not accept path patterns or globs. Matching uses the platform's JavaScript string
-comparison and is case-sensitive.
+`ignoreList` contains exact base names to skip at every directory depth. It does not accept path patterns or globs. Matching uses the platform's JavaScript string comparison and is case-sensitive.
 
-The copy follows source symlinks that remain within the source tree and copies
-their resolved contents. It rejects a symlink that resolves outside the source
-tree. It also rejects destinations that resolve to the source itself or inside
-the source. See [Security and failure behavior](docs/security-and-failures.md) before
-copying untrusted trees.
+The copy follows source symlinks that remain within the source tree and copies their resolved contents. It rejects a symlink that resolves outside the source tree. It also rejects destinations that resolve to the source itself or inside the source. See [Security and failure behavior](docs/security-and-failures.md) before copying untrusted trees.
 
-The function throws when `src` does not exist, a path constraint is violated, or
-another filesystem operation fails. It does not roll back files copied before a
-failure.
+The function throws when `src` does not exist, a path constraint is violated, or another filesystem operation fails. It does not roll back files copied before a failure.
 
 <!-- Source: docs/cli.md -->
 
 # CLI Installer
 
-The `codenhub-skills` executable copies bundled skill directories into supported
-agent harness locations. Run it through a package executor:
+The `codenhub-skills` executable copies bundled skill directories into supported agent harness locations. Run it through a package executor:
 
 ```sh
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 18.0.0 or newer
-is required.
+Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 18.0.0 or newer is required.
 
 ## Modes
 
-With no arguments and a TTY, the CLI opens a wizard for scope, skills,
-harnesses, and cleanup. Existing harness paths are preselected, but the user can
-change the selection.
+With no arguments and a TTY, the CLI opens a wizard for scope, skills, harnesses, and cleanup. Existing harness paths are preselected, but the user can change the selection.
 
-When stdin is not a TTY, or when any argument is supplied, the CLI does not
-prompt. It installs all skills unless `--skills` selects a subset. Without an
-explicit harness selection, it installs to harnesses detected for the selected
-scope. Detection succeeds when the destination or its parent directory exists.
-If none are detected, the command fails rather than writing to every possible
-destination; use `--all-harnesses` to opt into all destinations.
+When stdin is not a TTY, or when any argument is supplied, the CLI does not prompt. It installs all skills unless `--skills` selects a subset. Without an explicit harness selection, it installs to harnesses detected for the selected scope. Detection succeeds when the destination or its parent directory exists. If none are detected, the command fails rather than writing to every possible destination; use `--all-harnesses` to opt into all destinations.
 
 ## Options
 
@@ -275,16 +209,11 @@ destination; use `--all-harnesses` to opt into all destinations.
 | `--cleanup`          | Remove selected destination roots before copying.                      |
 | `--help`, `-h`       | Print command help.                                                    |
 
-Harness labels include their scope, for example `OpenCode Workspace` and
-`OpenCode Global`. A label supplied to `--harnesses` must be valid for the
-selected scope.
+Harness labels include their scope, for example `OpenCode Workspace` and `OpenCode Global`. A label supplied to `--harnesses` must be valid for the selected scope.
 
 ## Install Destinations
 
-Workspace paths resolve from the process's current working directory. Global
-paths resolve from the current user's home directory. The `Agent Skills`
-destinations are the cross-harness standard locations (`.agents/skills`) that
-most harnesses read natively; prefer them when a harness appears in both lists.
+Workspace paths resolve from the process's current working directory. Global paths resolve from the current user's home directory. The `Agent Skills` destinations are the cross-harness standard locations (`.agents/skills`) that most harnesses read natively; prefer them when a harness appears in both lists.
 
 | Harness      | Workspace destination | Global destination           |
 | ------------ | --------------------- | ---------------------------- |
@@ -302,42 +231,21 @@ most harnesses read natively; prefer them when a harness appears in both lists.
 | Windsurf     | `.windsurf/skills`    | `~/.codeium/windsurf/skills` |
 | ZCode        | `.zcode/skills`       | `~/.zcode/skills`            |
 
-Several labels resolve to the same directory because the harnesses read it too:
-`Agent Skills Workspace`, `Antigravity Workspace`, and `Codex Workspace` share
-`.agents/skills`; `Agent Skills Global` and `Codex Global` share
-`~/.agents/skills`. Selecting labels that share a destination installs each skill
-once rather than copying it repeatedly.
+Several labels resolve to the same directory because the harnesses read it too: `Agent Skills Workspace`, `Antigravity Workspace`, and `Codex Workspace` share `.agents/skills`; `Agent Skills Global` and `Codex Global` share `~/.agents/skills`. Selecting labels that share a destination installs each skill once rather than copying it repeatedly.
 
-The installer creates a child directory named after each skill ID. By default,
-it merges into existing directories and overwrites files with matching paths;
-it does not remove stale files.
+The installer creates a child directory named after each skill ID. By default, it merges into existing directories and overwrites files with matching paths; it does not remove stale files.
 
 ## Harness Behavior
 
-Destinations selected through a Codex label receive the complete bundled skill
-directory, including an `agents` directory when a skill has one. Every other
-destination excludes entries whose base name is exactly `agents` at any depth.
-When a Codex label shares a destination with other selected labels, the shared
-copy keeps the `agents` directory. Other references, examples, notices, and
-supporting files are copied unchanged.
+Destinations selected through a Codex label receive the complete bundled skill directory, including an `agents` directory when a skill has one. Every other destination excludes entries whose base name is exactly `agents` at any depth. When a Codex label shares a destination with other selected labels, the shared copy keeps the `agents` directory. Other references, examples, notices, and supporting files are copied unchanged.
 
-The package does not validate that a harness can interpret every bundled file.
-Harness conventions and bundled skill contents are part of the package's
-experimental surface.
+The package does not validate that a harness can interpret every bundled file. Harness conventions and bundled skill contents are part of the package's experimental surface.
 
 ## Destructive Cleanup
 
-`--cleanup` recursively removes each selected harness's entire skills
-destination before installation. This deletes all content in that directory,
-including skills and files not managed by `@codenhub/skills`. For example,
-selecting `OpenCode Workspace` removes `.opencode/skills` as a whole. Labels
-that share a destination, such as `Codex Workspace` and `Agent Skills
-Workspace`, remove that one directory.
+`--cleanup` recursively removes each selected harness's entire skills destination before installation. This deletes all content in that directory, including skills and files not managed by `@codenhub/skills`. For example, selecting `OpenCode Workspace` removes `.opencode/skills` as a whole. Labels that share a destination, such as `Codex Workspace` and `Agent Skills Workspace`, remove that one directory.
 
-Cleanup occurs before any skill is copied. A cleanup failure is printed and the
-installer continues, so the affected destination may contain a mixture of old
-and newly copied content. Do not use this option on a shared or manually managed
-skills directory without a backup.
+Cleanup occurs before any skill is copied. A cleanup failure is printed and the installer continues, so the affected destination may contain a mixture of old and newly copied content. Do not use this option on a shared or manually managed skills directory without a backup.
 
 ## Automation Example
 
@@ -347,17 +255,13 @@ Install two skills into every workspace harness without prompts:
 pnpm dlx @codenhub/skills@latest --local --all-harnesses --skills=brainstorming,test-driven-development
 ```
 
-For validation errors, cancellation codes, partial writes, and filesystem
-failures, see [Security and failure behavior](docs/security-and-failures.md).
+For validation errors, cancellation codes, partial writes, and filesystem failures, see [Security and failure behavior](docs/security-and-failures.md).
 
 <!-- Source: docs/provenance.md -->
 
 # Skill Provenance
 
-This page records the origin and license context of skill assets shipped by
-`@codenhub/skills`. The package-level legal terms are in [NOTICE](NOTICE).
-Each adapted skill also carries a `NOTICE` file in its own directory so its
-attribution is copied during installation.
+This page records the origin and license context of skill assets shipped by `@codenhub/skills`. The package-level legal terms are in [NOTICE](NOTICE). Each adapted skill also carries a `NOTICE` file in its own directory so its attribution is copied during installation.
 
 | Skill                     | Origin                                                     | License    |
 | ------------------------- | ---------------------------------------------------------- | ---------- |
@@ -371,10 +275,7 @@ attribution is copied during installation.
 | `test-driven-development` | Adapted from [obra/superpowers]                            | MIT        |
 | `writing-skills`          | Adapted from [obra/superpowers]                            | MIT        |
 
-The package `NOTICE` contains the applicable attribution blocks and bundled MIT
-license text. Per-skill notices are product assets and remain included when the
-installer copies an individual skill. For the current shipped inventory and
-format, see [Skill format and catalog](docs/skills.md).
+The package `NOTICE` contains the applicable attribution blocks and bundled MIT license text. Per-skill notices are product assets and remain included when the installer copies an individual skill. For the current shipped inventory and format, see [Skill format and catalog](docs/skills.md).
 
 [anthropic's official frontend-design plugin]: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design
 [juliusbrussee/caveman]: https://github.com/JuliusBrussee/caveman
@@ -384,27 +285,15 @@ format, see [Skill format and catalog](docs/skills.md).
 
 # Security And Failure Behavior
 
-The package reads and writes local filesystem trees synchronously. Callers and
-CLI users must choose trusted sources and destinations and grant only the
-required filesystem permissions.
+The package reads and writes local filesystem trees synchronously. Callers and CLI users must choose trusted sources and destinations and grant only the required filesystem permissions.
 
 ## Path Constraints
 
-`copyRecursiveSync` canonicalizes the source and as much of the destination as
-currently exists. It rejects a destination that resolves to the source itself
-or within the source, preventing recursive self-copying through ordinary paths
-or existing destination symlinks.
+`copyRecursiveSync` canonicalizes the source and as much of the destination as currently exists. It rejects a destination that resolves to the source itself or within the source, preventing recursive self-copying through ordinary paths or existing destination symlinks.
 
-During directory copies, a source symlink must resolve within the canonical
-source tree. A symlink that resolves outside that tree throws a directory
-traversal error. Accepted symlinks are followed and their resolved file or
-directory contents are copied. Revisited canonical directories are skipped to
-avoid symlink cycles.
+During directory copies, a source symlink must resolve within the canonical source tree. A symlink that resolves outside that tree throws a directory traversal error. Accepted symlinks are followed and their resolved file or directory contents are copied. Revisited canonical directories are skipped to avoid symlink cycles.
 
-These checks constrain reads performed through source symlinks. They do not turn
-the API into a sandbox or validate that caller-provided destinations are
-appropriate. Avoid copying attacker-controlled trees into sensitive locations.
-Filesystem state can also change between synchronous checks and operations.
+These checks constrain reads performed through source symlinks. They do not turn the API into a sandbox or validate that caller-provided destinations are appropriate. Avoid copying attacker-controlled trees into sensitive locations. Filesystem state can also change between synchronous checks and operations.
 
 ## Copy Failure Behavior
 
@@ -415,50 +304,31 @@ The programmatic API throws when:
 - A source symlink resolves outside the source tree.
 - Reading, resolving, creating, deleting, or writing a filesystem entry fails.
 
-Copies are not transactional. Files written before an error remain at the
-destination, and overwritten files are not restored. Existing destination-only
-files remain unless the CLI cleanup option removes the whole destination first.
+Copies are not transactional. Files written before an error remain at the destination, and overwritten files are not restored. Existing destination-only files remain unless the CLI cleanup option removes the whole destination first.
 
 ## CLI Failure Behavior
 
-The CLI exits with code `1` for invalid arguments, unknown skill IDs, harnesses
-that do not match the selected scope, no detected harness, missing bundled
-skills, unhandled exceptions, or any skill copy failure. Copy failures are
-reported individually, and installation continues for the remaining selected
-skills and harnesses before the final nonzero exit.
+The CLI exits with code `1` for invalid arguments, unknown skill IDs, harnesses that do not match the selected scope, no detected harness, missing bundled skills, unhandled exceptions, or any skill copy failure. Copy failures are reported individually, and installation continues for the remaining selected skills and harnesses before the final nonzero exit.
 
-Pressing Ctrl+C in the interactive wizard exits with code `130`. Leaving the
-wizard with no selected skills or harnesses prints a message and exits with code
-`0` without installing.
+Pressing Ctrl+C in the interactive wizard exits with code `130`. Leaving the wizard with no selected skills or harnesses prints a message and exits with code `0` without installing.
 
-Cleanup failures are reported but do not by themselves set a nonzero exit code.
-The installer continues to copy into that destination. Consumers automating
-`--cleanup` must inspect output as well as the final exit code.
+Cleanup failures are reported but do not by themselves set a nonzero exit code. The installer continues to copy into that destination. Consumers automating `--cleanup` must inspect output as well as the final exit code.
 
 ## Destructive Cleanup
 
-The CLI's `--cleanup` option uses recursive forced removal on every selected
-harness skills root. It removes unmanaged content as well as previously
-installed package content. Destination paths are fixed by the selected harness
-and scope, but workspace destinations are resolved from the current working
-directory. Confirm both before running cleanup.
+The CLI's `--cleanup` option uses recursive forced removal on every selected harness skills root. It removes unmanaged content as well as previously installed package content. Destination paths are fixed by the selected harness and scope, but workspace destinations are resolved from the current working directory. Confirm both before running cleanup.
 
-See the [CLI installer](docs/cli.md#destructive-cleanup) for destinations and safe-use
-guidance.
+See the [CLI installer](docs/cli.md#destructive-cleanup) for destinations and safe-use guidance.
 
 <!-- Source: docs/skills.md -->
 
 # Skill Format And Catalog
 
-The `skills/` tree is shipped product content. Its Markdown files are executable
-instructions and supporting material consumed by agent harnesses, not canonical
-package-documentation pages. The package documentation describes how those
-assets are discovered and installed without republishing every skill body.
+The `skills/` tree is shipped product content. Its Markdown files are executable instructions and supporting material consumed by agent harnesses, not canonical package-documentation pages. The package documentation describes how those assets are discovered and installed without republishing every skill body.
 
 ## Supported Format
 
-Each skill occupies one immediate child directory under a source skills
-directory and must contain `SKILL.md` with that exact casing:
+Each skill occupies one immediate child directory under a source skills directory and must contain `SKILL.md` with that exact casing:
 
 ```text
 skills/
@@ -469,12 +339,9 @@ skills/
     references/
 ```
 
-The programmatic discovery API recognizes the directory solely by the presence
-of `SKILL.md`. The installer copies the whole directory subject to its
-harness-specific `agents` exclusion.
+The programmatic discovery API recognizes the directory solely by the presence of `SKILL.md`. The installer copies the whole directory subject to its harness-specific `agents` exclusion.
 
-The supported metadata is a flat frontmatter block at the beginning of
-`SKILL.md`:
+The supported metadata is a flat frontmatter block at the beginning of `SKILL.md`:
 
 ```markdown
 ---
@@ -483,14 +350,9 @@ description: Use when an agent needs the example workflow.
 ---
 ```
 
-`name` and `description` are the fields consumed by current package tooling.
-`name` falls back to the directory ID, and `description` falls back to an empty
-string. The parser is intentionally narrower than YAML; see the
-[programmatic API](docs/api.md#parsefrontmatter) for exact parsing rules.
+`name` and `description` are the fields consumed by current package tooling. `name` falls back to the directory ID, and `description` falls back to an empty string. The parser is intentionally narrower than YAML; see the [programmatic API](docs/api.md#parsefrontmatter) for exact parsing rules.
 
-Supporting Markdown, YAML, notices, examples, and reference files may accompany
-`SKILL.md`. Their meaning is harness- or skill-specific and is not interpreted
-by the package.
+Supporting Markdown, YAML, notices, examples, and reference files may accompany `SKILL.md`. Their meaning is harness- or skill-specific and is not interpreted by the package.
 
 ## Bundled Inventory
 
@@ -506,12 +368,8 @@ by the package.
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
 | `writing-skills`          | Creates, reviews, tests, and validates skill bundles.          |
 
-Skill wording and support files may change while the package is experimental.
-Use the installed `SKILL.md` and accompanying assets as the authoritative skill
-content for the installed package version.
+Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
 
 ## Third-Party Material
 
-Most bundled skills adapt third-party material. Package and per-skill notices
-travel with the relevant assets. See [Skill provenance](docs/provenance.md) and the
-package [NOTICE](NOTICE) before redistributing or modifying them.
+Most bundled skills adapt third-party material. Package and per-skill notices travel with the relevant assets. See [Skill provenance](docs/provenance.md) and the package [NOTICE](NOTICE) before redistributing or modifying them.

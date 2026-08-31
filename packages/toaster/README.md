@@ -1,11 +1,8 @@
 # @codenhub/toaster
 
-Instance-based browser toasts and native interactive dialogs with isolated DOM,
-configuration, queues, and token styles.
+Instance-based browser toasts and native interactive dialogs with isolated DOM, configuration, queues, and token styles.
 
-> [!WARNING]
-> This package is experimental. Its API, rendering behavior, CSS, and support
-> level may change before a stable release.
+> [!WARNING] This package is experimental. Its API, rendering behavior, CSS, and support level may change before a stable release.
 
 ## Installation
 
@@ -41,15 +38,12 @@ toaster.destroy();
 ## Requirements
 
 - Rendering requires a browser DOM and `@codenhub/toaster/styles`.
-- Interactive APIs require native `<dialog>` support. Construction is SSR-safe,
-  but rendering operations throw without a document.
-- `@codenhub/styles >=0.0.4` is an optional peer; standalone fallback colors are
-  included.
+- Interactive APIs require native `<dialog>` support. Construction is SSR-safe, but rendering operations throw without a document.
+- `@codenhub/styles >=0.0.4` is an optional peer; standalone fallback colors are included.
 
 ## Notes
 
-Configuration, messages, durations, positions, and color tokens are validated
-and may throw synchronously. Calls after `destroy()` throw.
+Configuration, messages, durations, positions, and color tokens are validated and may throw synchronously. Calls after `destroy()` throw.
 
 ## License
 

@@ -1,7 +1,6 @@
 # @codenhub/error
 
-Typed error normalization, result helpers, and opt-in registry presets for
-TypeScript applications.
+Typed error normalization, result helpers, and opt-in registry presets for TypeScript applications.
 
 ## Installation
 
@@ -11,8 +10,7 @@ pnpm add @codenhub/error
 
 ## Usage
 
-The default global registry starts empty. Register application mappings during
-initialization, then normalize unknown values into `AppError` instances.
+The default global registry starts empty. Register application mappings during initialization, then normalize unknown values into `AppError` instances.
 
 ```ts
 import { createAppError, getErrorRegistry } from "@codenhub/error";
@@ -26,8 +24,7 @@ const error = createAppError({ code: "invalid_credentials" });
 console.log(error.type, error.message);
 ```
 
-Unmatched values become `type: "unknown"` and use
-`"An unexpected error occurred."` unless `fallbackMessage` is provided.
+Unmatched values become `type: "unknown"` and use `"An unexpected error occurred."` unless `fallbackMessage` is provided.
 
 ## Documentation
 
@@ -42,9 +39,7 @@ Unmatched values become `type: "unknown"` and use
 - ESM-aware package resolution.
 - No runtime dependencies.
 
-Runtime code does not access browser or Node.js globals, making it suitable for
-browser, Node.js, SSR, worker, and edge environments that meet these
-requirements.
+Runtime code does not access browser or Node.js globals, making it suitable for browser, Node.js, SSR, worker, and edge environments that meet these requirements.
 
 ## Notes
 

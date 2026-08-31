@@ -5,9 +5,7 @@ description: Complete entrypoint and symbol reference for the current UI Kit exp
 
 # Public reference
 
-Both `@codenhub/ui-kit` and `@codenhub/ui-kit/scripts` export every JavaScript
-value and TypeScript type below. They are equivalent entrypoints. The only other
-public path is the CSS file `@codenhub/ui-kit/styles`.
+Both `@codenhub/ui-kit` and `@codenhub/ui-kit/scripts` export every JavaScript value and TypeScript type below. They are equivalent entrypoints. The only other public path is the CSS file `@codenhub/ui-kit/styles`.
 
 ## Feedback
 
@@ -15,17 +13,11 @@ public path is the CSS file `@codenhub/ui-kit/styles`.
 
 Module singleton with:
 
-- `register<T>(result, options?): Result<T>` returns the same
-  `@codenhub/error` result and performs feedback side effects.
+- `register<T>(result, options?): Result<T>` returns the same `@codenhub/error` result and performs feedback side effects.
 - `subscribe("success", listener): () => void` receives `{ entry, value }`.
 - `subscribe("error", listener): () => void` receives `{ entry, error }`.
 
-`RegisterFeedbackOptions` contains `success?: FeedbackMessage`,
-`fallback?: string`, `toast?: boolean`, `log?: boolean`, and
-`toastPosition?: ToastOptions["position"]`. `FeedbackMessage` contains `key` and
-optional `fallback`. `FeedbackEntry` contains `type: "success" | "error"` and
-`message: string | null`. `FeedbackEventMap` describes the two listener payloads.
-See [feedback](./feedback.md) for resolution rules and defaults.
+`RegisterFeedbackOptions` contains `success?: FeedbackMessage`, `fallback?: string`, `toast?: boolean`, `log?: boolean`, and `toastPosition?: ToastOptions["position"]`. `FeedbackMessage` contains `key` and optional `fallback`. `FeedbackEntry` contains `type: "success" | "error"` and `message: string | null`. `FeedbackEventMap` describes the two listener payloads. See [feedback](./feedback.md) for resolution rules and defaults.
 
 ## Internationalization
 
@@ -40,24 +32,16 @@ An `EventTarget` with:
 - `setLocale(locale: string): Promise<boolean>` attempts a locale change.
 - `translate(key: string): string | undefined` performs a flat-key lookup.
 
-`I18nConfig<TLocale>` requires `defaultLocale`, readonly `locales`,
-`getLocaleFile(locale)`, `getLocaleDirection(locale)`, and an `isLocale(value)`
-type guard. `I18nInitOptions` has optional `storageKey` and `root: ParentNode`.
-`LocaleDictionary` maps string keys to string values. `LocaleDirection` is
-`"ltr" | "rtl"`.
+`I18nConfig<TLocale>` requires `defaultLocale`, readonly `locales`, `getLocaleFile(locale)`, `getLocaleDirection(locale)`, and an `isLocale(value)` type guard. `I18nInitOptions` has optional `storageKey` and `root: ParentNode`. `LocaleDictionary` maps string keys to string values. `LocaleDirection` is `"ltr" | "rtl"`.
 
-`I18nReadyEventDetail` contains `locale` and `translationsAvailable`.
-`I18nLocaleChangeEventDetail` contains `locale` and `previousLocale`.
+`I18nReadyEventDetail` contains `locale` and `translationsAvailable`. `I18nLocaleChangeEventDetail` contains `locale` and `previousLocale`.
 
 ### Active i18n instance
 
-- `setI18nInstance(i18n: I18n | null): void` changes the module-level active
-  instance used by feedback.
-- `getI18nInstance(): I18n` returns it or throws
-  `[I18n] No i18n instance has been configured.`
+- `setI18nInstance(i18n: I18n | null): void` changes the module-level active instance used by feedback.
+- `getI18nInstance(): I18n` returns it or throws `[I18n] No i18n instance has been configured.`
 
-See [internationalization](./internationalization.md) for loading, DOM, event,
-and failure behavior.
+See [internationalization](./internationalization.md) for loading, DOM, event, and failure behavior.
 
 ## Themes
 
@@ -78,14 +62,9 @@ See [themes](./themes.md) for DOM effects, persistence, events, and lifetime.
 
 ### `Toast`
 
-`new Toast(options)` validates and snapshots `ToastOptions`. Methods are
-`show()`, `hide()`, `onShow(subscriber)`, `onShown(subscriber)`,
-`onHide(subscriber)`, and `onHidden(subscriber)`. Each subscription method
-returns an unsubscribe function.
+`new Toast(options)` validates and snapshots `ToastOptions`. Methods are `show()`, `hide()`, `onShow(subscriber)`, `onShown(subscriber)`, `onHide(subscriber)`, and `onHidden(subscriber)`. Each subscription method returns an unsubscribe function.
 
-`ToastOptions` requires a non-blank message, non-blank string content, or any DOM
-node content. Empty elements and empty `DocumentFragment` values are accepted.
-Options are:
+`ToastOptions` requires a non-blank message, non-blank string content, or any DOM node content. Empty elements and empty `DocumentFragment` values are accepted. Options are:
 
 | Option          | Values and default                                            |
 | --------------- | ------------------------------------------------------------- |
@@ -103,26 +82,14 @@ Options are:
 
 ### `SemanticToast`
 
-Extends `Toast`. Its options add optional
-`type: "success" | "error" | "warning" | "info"`, defaulting to success, and
-omit caller-controlled `icon` and `role`. It presets semantic icon, role, and
-classes.
+Extends `Toast`. Its options add optional `type: "success" | "error" | "warning" | "info"`, defaulting to success, and omit caller-controlled `icon` and `role`. It presets semantic icon, role, and classes.
 
 ### `LoadingToast`
 
-Extends `Toast`. Its options omit caller-controlled `icon` and `role`. It
-presets a loader icon, role `status`, and `autoDismiss: false` while retaining
-other toast options.
+Extends `Toast`. Its options omit caller-controlled `icon` and `role`. It presets a loader icon, role `status`, and `autoDismiss: false` while retaining other toast options.
 
-Constructors throw when both content sources are absent, when the supplied
-message or string content is blank, when resolved content is neither a string nor
-a DOM node, or when duration is negative or non-finite. Empty node content does
-not throw. See [toasts](./toasts.md) for trusted content, stacking, lifecycle,
-browser support, and accessibility. See
-[styles and icons](./styles-and-icons.md) for rendering requirements.
+Constructors throw when both content sources are absent, when the supplied message or string content is blank, when resolved content is neither a string nor a DOM node, or when duration is negative or non-finite. Empty node content does not throw. See [toasts](./toasts.md) for trusted content, stacking, lifecycle, browser support, and accessibility. See [styles and icons](./styles-and-icons.md) for rendering requirements.
 
 ## CSS entrypoint
 
-`@codenhub/ui-kit/styles` resolves to a compiled CSS file. It has no named CSS
-exports and is a complete global style/reset system. Its rules and icon boundary
-are documented in [styles and icons](./styles-and-icons.md).
+`@codenhub/ui-kit/styles` resolves to a compiled CSS file. It has no named CSS exports and is a complete global style/reset system. Its rules and icon boundary are documented in [styles and icons](./styles-and-icons.md).

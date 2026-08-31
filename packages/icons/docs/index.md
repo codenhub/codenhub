@@ -39,8 +39,7 @@ Variants are separate families rather than options on one, so resolution stays a
 An icon is identified by `prefix:name`. A class writes that with a dash, because a class name cannot contain a colon:
 
 ```html
-<i class="ic-lucide-heart"></i>
-<i class="ic-material-symbols-rounded-home"></i>
+<i class="ic-lucide-heart"></i> <i class="ic-material-symbols-rounded-home"></i>
 ```
 
 An unprefixed name is resolved in order: the curated semantic map first, then the configured `defaultPrefix`. A semantic name whose family is not registered falls through to the default prefix rather than failing.

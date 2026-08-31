@@ -2,8 +2,7 @@
 
 Vite plugin that converts stylesheet links in HTML entries to preloads and restores `rel="stylesheet"` after loading. It also emits a `noscript` fallback when `</head>` is available.
 
-> [!WARNING]
-> Experimental: the matching rules, generated HTML/JavaScript, and loading behavior may change before a stable release.
+> [!WARNING] Experimental: the matching rules, generated HTML/JavaScript, and loading behavior may change before a stable release.
 
 ## Installation
 

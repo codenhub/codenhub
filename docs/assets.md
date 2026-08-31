@@ -6,12 +6,9 @@ scope: Repository-wide static assets under root `assets/`.
 
 # Assets
 
-This document catalogs files under `assets/` and explains how to select and
-use them. Paths are relative to repository root.
+This document catalogs files under `assets/` and explains how to select and use them. Paths are relative to repository root.
 
-`assets/` contains Coden brand artwork and bundled fonts. Coden is the agency
-behind CodenHub and owns the logo, mark, and favicon artwork. Bundled fonts
-remain owned by their authors and subject to their respective licenses.
+`assets/` contains Coden brand artwork and bundled fonts. Coden is the agency behind CodenHub and owns the logo, mark, and favicon artwork. Bundled fonts remain owned by their authors and subject to their respective licenses.
 
 ## Image naming
 
@@ -20,8 +17,7 @@ remain owned by their authors and subject to their respective licenses.
 - `*-light.svg` is bright artwork. Place it on a dark background.
 - `*-dark.svg` is dark artwork. Place it on a bright background.
 
-Select image from actual background behind it. Do not select solely from a
-theme name or user color-scheme preference.
+Select image from actual background behind it. Do not select solely from a theme name or user color-scheme preference.
 
 ## Logos
 
@@ -54,23 +50,17 @@ Dark artwork shown on bright background:
   </tr>
 </table>
 
-Use full logo when space permits and name must remain visible. Use compact mark
-when available space cannot accommodate full logo. Example:
+Use full logo when space permits and name must remain visible. Use compact mark when available space cannot accommodate full logo. Example:
 
 ```html
 <img src="/assets/logo/logo-light.svg" alt="Coden" width="246" height="64" />
 ```
 
-This URL assumes a consumer placed the file at `/assets/logo/logo-light.svg`
-in its own deployment, which is a placement choice that consumer makes, not
-something this document assumes. `docs/specs/packages-demo.md`'s "Assets
-boundary" section and `docs/tooling.md`'s `hub assets` describe how a
-package declares which files it needs and exactly where they go.
+This URL assumes a consumer placed the file at `/assets/logo/logo-light.svg` in its own deployment, which is a placement choice that consumer makes, not something this document assumes. `docs/specs/packages-demo.md`'s "Assets boundary" section and `docs/tooling.md`'s `hub assets` describe how a package declares which files it needs and exactly where they go.
 
 ## Favicons
 
-`favicon.ico` is default favicon. Size-specific files are alternatives for
-consumers requiring explicit dimensions.
+`favicon.ico` is default favicon. Size-specific files are alternatives for consumers requiring explicit dimensions.
 
 | File                             | Size    | Use                                  |
 | -------------------------------- | ------- | ------------------------------------ |
@@ -80,27 +70,19 @@ consumers requiring explicit dimensions.
 | `assets/favicon/favicon-128.ico` | 128 px  | Explicit 128 x 128 icon requirement. |
 | `assets/favicon/favicon-256.ico` | 256 px  | Explicit 256 x 256 icon requirement. |
 
-`favicon.ico` needs no `<link>` tag when a consumer places it at its own
-serving root — browsers probe `/favicon.ico` at the origin root by default,
-which is what every deployed surface in this repository does
-(`docs/specs/packages-demo.md`, "Assets boundary"). Reach for an explicit
-`<link>` only for a specific non-default size:
+`favicon.ico` needs no `<link>` tag when a consumer places it at its own serving root — browsers probe `/favicon.ico` at the origin root by default, which is what every deployed surface in this repository does (`docs/specs/packages-demo.md`, "Assets boundary"). Reach for an explicit `<link>` only for a specific non-default size:
 
 ```html
 <link rel="icon" href="/assets/favicon/favicon-32.ico" sizes="32x32" type="image/x-icon" />
 ```
 
-The URL depends on where the consuming package places the file, the same as
-for logos above.
+The URL depends on where the consuming package places the file, the same as for logos above.
 
 ## Fonts
 
-Inter is body typeface. Monomaniac One is display typeface for brand and other
-special text.
+Inter is body typeface. Monomaniac One is display typeface for brand and other special text.
 
-For web delivery, prefer WOFF2 and retain WOFF as fallback where required. TTF
-files support environments or tools that require TrueType input; avoid serving
-them when web formats are accepted.
+For web delivery, prefer WOFF2 and retain WOFF as fallback where required. TTF files support environments or tools that require TrueType input; avoid serving them when web formats are accepted.
 
 ### Inter
 
@@ -170,12 +152,8 @@ Load regular face and apply it only to display, brand, or special text:
 }
 ```
 
-URLs in font examples assume the same consumer-chosen placement described for
-logos.
+URLs in font examples assume the same consumer-chosen placement described for logos.
 
 ### Font licenses
 
-Both font families use SIL Open Font License 1.1. Keep corresponding
-`LICENSE.txt` with each family when bundling, embedding, or redistributing font
-files. License files contain complete terms and take precedence over this
-summary.
+Both font families use SIL Open Font License 1.1. Keep corresponding `LICENSE.txt` with each family when bundling, embedding, or redistributing font files. License files contain complete terms and take precedence over this summary.

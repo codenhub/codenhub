@@ -1,10 +1,8 @@
 # @codenhub/store
 
-Typed object stores with synchronous and asynchronous drivers for browsers,
-Node.js, and Cloudflare Workers.
+Typed object stores with synchronous and asynchronous drivers for browsers, Node.js, and Cloudflare Workers.
 
-> **Experimental:** Store APIs, driver contracts, and persistence behavior may
-> change before a stable release.
+> **Experimental:** Store APIs, driver contracts, and persistence behavior may change before a stable release.
 
 ## Installation
 
@@ -14,8 +12,7 @@ pnpm add @codenhub/store
 
 ## Usage
 
-`createStore()` uses browser `localStorage` by default and falls back to the
-initial state when storage is empty or unavailable.
+`createStore()` uses browser `localStorage` by default and falls back to the initial state when storage is empty or unavailable.
 
 ```ts
 import { createStore } from "@codenhub/store";
@@ -29,8 +26,7 @@ const preferences = createStore({
 preferences.patch({ theme: "dark" });
 ```
 
-Recoverable driver, parsing, and validation failures use the initial state or
-return `false` and are reported through `onError` when provided.
+Recoverable driver, parsing, and validation failures use the initial state or return `false` and are reported through `onError` when provided.
 
 ## Documentation
 
@@ -41,8 +37,7 @@ return `false` and are reported through `onError` when provided.
 ## Requirements
 
 - `structuredClone` is required.
-- The default driver requires browser `localStorage`; other runtimes must choose
-  an appropriate driver.
+- The default driver requires browser `localStorage`; other runtimes must choose an appropriate driver.
 - Stored values must be structured-cloneable and driver-compatible.
 
 ## Notes

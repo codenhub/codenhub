@@ -1,11 +1,8 @@
 # @codenhub/router
 
-Small browser router for app-owned rendering, history navigation, matching, and
-subscriptions.
+Small browser router for app-owned rendering, history navigation, matching, and subscriptions.
 
-> [!WARNING]
-> This package is experimental. Its API, routing behavior, and support level may
-> change before a stable release.
+> [!WARNING] This package is experimental. Its API, routing behavior, and support level may change before a stable release.
 
 ## Installation
 
@@ -42,8 +39,7 @@ router.destroy();
 
 ## Notes
 
-Consumers own route-change focus, titles, announcements, authentication, and
-sanitization of URL-derived values. Invalid paths throw synchronously.
+Consumers own route-change focus, titles, announcements, authentication, and sanitization of URL-derived values. Invalid paths throw synchronously.
 
 ## License
 

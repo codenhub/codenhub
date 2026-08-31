@@ -5,14 +5,9 @@ description: Button classes, intents, sizes, and states.
 
 # Buttons
 
-Use `.btn` with one optional intent class, one optional fill class, one
-optional edge class, optional size class, and optional state. See
-[Composing](./composing.md) for how the intent, presentation, and aesthetic
-axes combine on any component.
+Use `.btn` with one optional intent class, one optional fill class, one optional edge class, optional size class, and optional state. See [Composing](./composing.md) for how the intent, presentation, and aesthetic axes combine on any component.
 
-Intent classes map color tokens into button tone slots.
-[Presentation](./composing.md#presentation) decides how much of that intent
-reaches background, text, border, and hover.
+Intent classes map color tokens into button tone slots. [Presentation](./composing.md#presentation) decides how much of that intent reaches background, text, border, and hover.
 
 Intent classes:
 
@@ -26,16 +21,9 @@ Intent classes:
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
 
-Every component that supports intent accepts the same list and reads the
-same [intent tokens](./theming.md#intent-tokens), so a custom intent class
-works everywhere without touching a component.
+Every component that supports intent accepts the same list and reads the same [intent tokens](./theming.md#intent-tokens), so a custom intent class works everywhere without touching a component.
 
-`.neutral` is the only intent that does not fill all the way. Its color is
-the page's own text color, so a full fill of it would be a black or white
-slab — the loudest element on the page, for the intent that means nothing in
-particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral
-is a quiet plate a step past `.soft` rather than a block of ink. Set the slot
-on your own intent classes; see [Theming → Intent tokens](./theming.md#intent-tokens).
+`.neutral` is the only intent that does not fill all the way. Its color is the page's own text color, so a full fill of it would be a black or white slab — the loudest element on the page, for the intent that means nothing in particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral is a quiet plate a step past `.soft` rather than a block of ink. Set the slot on your own intent classes; see [Theming → Intent tokens](./theming.md#intent-tokens).
 
 Size and shape classes:
 
@@ -62,14 +50,8 @@ Examples:
 <button class="btn primary loading" disabled>Saving</button>
 ```
 
-`.loading` is a state, not a color or presentation class. Prefer combining
-it with disabled behavior so users cannot trigger duplicate work. Loading
-buttons keep only opacity and transform transitions active so spinner and
-surface colors stay synchronized when theme tokens change.
+`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work. Loading buttons keep only opacity and transform transitions active so spinner and surface colors stay synchronized when theme tokens change.
 
-On the base look a press scales the button down a little
-(`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap
-in their own press gesture, and `prefers-reduced-motion` turns it off.
+On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 
-Use `<button>` for actions or an accessible link for navigation; see
-[Accessibility](../accessibility.md).
+Use `<button>` for actions or an accessible link for navigation; see [Accessibility](../accessibility.md).

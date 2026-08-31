@@ -2,9 +2,7 @@
 
 Page-wide and target-scoped keyboard shortcut registration for browser apps.
 
-> [!WARNING]
-> This package is experimental. Its API, matching behavior, and support level
-> may change before a stable release.
+> [!WARNING] This package is experimental. Its API, matching behavior, and support level may change before a stable release.
 
 ## Installation
 
@@ -37,16 +35,13 @@ registration.unregister();
 
 ## Requirements
 
-- Registration uses DOM `EventTarget`, `KeyboardEvent`, and `document` by
-  default. Pass a target to scope a binding.
+- Registration uses DOM `EventTarget`, `KeyboardEvent`, and `document` by default. Pass a target to scope a binding.
 - During SSR, registration without a target returns an inactive no-op handle.
 - Call `unregister()` for individual bindings or `clear()` for an instance.
 
 ## Notes
 
-Shortcut accessibility remains the consumer's responsibility: preserve native
-keyboard behavior, provide discoverable alternatives, and avoid capturing text
-input unless intentional.
+Shortcut accessibility remains the consumer's responsibility: preserve native keyboard behavior, provide discoverable alternatives, and avoid capturing text input unless intentional.
 
 ## License
 

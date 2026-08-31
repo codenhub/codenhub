@@ -80,9 +80,7 @@ To maintain clean and explicit testing setups, follow these configuration rules:
 
 ## Execution Commands
 
-Always run tests from the repository root. Test scripts MUST NOT chain their own
-build step; `docs/tooling.md` defines how build ordering is owned by the root
-tooling instead.
+Always run tests from the repository root. Test scripts MUST NOT chain their own build step; `docs/tooling.md` defines how build ordering is owned by the root tooling instead.
 
 ### Workspace-wide Checks
 
@@ -92,15 +90,11 @@ pnpm test:browser
 pnpm test:coverage
 ```
 
-`pnpm test` covers unit and integration tests, and `pnpm test:browser` covers the
-browser suites of the packages that have one, installing their browsers first.
-`pnpm verify` runs both. Keeping them apart is what lets the loop everyone runs
-constantly stay a few seconds long.
+`pnpm test` covers unit and integration tests, and `pnpm test:browser` covers the browser suites of the packages that have one, installing their browsers first. `pnpm verify` runs both. Keeping them apart is what lets the loop everyone runs constantly stay a few seconds long.
 
 ### Narrowed Checks
 
-Prefer a narrowed run when working on a single package, a single file, or a set
-of changed packages:
+Prefer a narrowed run when working on a single package, a single file, or a set of changed packages:
 
 ```sh
 pnpm test error
@@ -112,6 +106,4 @@ pnpm test:browser:watch styles
 pnpm test --changed
 ```
 
-A target may be a package name, a workspace directory, a path, or a glob. File
-paths are forwarded to Vitest, so a single test file runs on its own. See
-`docs/tooling.md` for the full selector and option surface.
+A target may be a package name, a workspace directory, a path, or a glob. File paths are forwarded to Vitest, so a single test file runs on its own. See `docs/tooling.md` for the full selector and option surface.

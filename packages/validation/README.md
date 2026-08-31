@@ -1,10 +1,8 @@
 # @codenhub/validation
 
-Zero-dependency validation and primitive coercion helpers for TypeScript
-application boundaries.
+Zero-dependency validation and primitive coercion helpers for TypeScript application boundaries.
 
-> **Experimental:** Validator coverage, normalization rules, error details, and
-> the public API may change before a stable release.
+> **Experimental:** Validator coverage, normalization rules, error details, and the public API may change before a stable release.
 
 ## Installation
 
@@ -14,8 +12,7 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-Validators and coercers return discriminated results instead of throwing for
-invalid input.
+Validators and coercers return discriminated results instead of throwing for invalid input.
 
 ```ts
 import { coerce, val } from "@codenhub/validation";
@@ -42,8 +39,7 @@ if (!port.ok) {
 
 ## Notes
 
-- `includeInput` defaults to `false`; enable it only when retaining input is
-  safe.
+- `includeInput` defaults to `false`; enable it only when retaining input is safe.
 - URL and email validators intentionally accept public host shapes only.
 
 ## License
