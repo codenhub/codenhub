@@ -95,32 +95,22 @@
             Icons are not shipped.
             <code class="code">.input-group</code>
             is the wrapper that owns the field box, so any icon element sits flush beside the control — a leading child
-            for a leading icon, a trailing child for a trailing one. The glyphs below are inline
-            <code class="code">&lt;svg&gt;</code>
-            ; a real project would more likely reach for
+            for a leading icon, a trailing child for a trailing one. The glyphs below are
             <code class="code">@codenhub/icons</code>
-            or another set.
+            classes —
+            <code class="code">ic-mail</code>
+            and
+            <code class="code">ic-search</code>
+            — but an inline
+            <code class="code">&lt;svg&gt;</code>
+            or another set sits the same way.
           </p>
         </div>
         <div class="stack loose">
           <label class="field" data-testid="input-group-leading">
             <span class="label">Email</span>
             <div class="input-group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect width="20" height="16" x="2" y="4" rx="2" />
-                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-              </svg>
+              <i class="ic-mail" aria-hidden="true"></i>
               <input class="ipt" type="email" value="you@example.com" />
             </div>
           </label>
@@ -128,41 +118,13 @@
             <span class="label">Search</span>
             <div class="input-group">
               <input class="ipt" type="search" value="styles" />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
+              <i class="ic-search" aria-hidden="true"></i>
             </div>
           </label>
           <label class="field" data-testid="input-group-invalid">
             <span class="label">Email</span>
             <div class="input-group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect width="20" height="16" x="2" y="4" rx="2" />
-                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-              </svg>
+              <i class="ic-mail" aria-hidden="true"></i>
               <input
                 class="ipt"
                 type="email"
@@ -176,21 +138,7 @@
           <label class="field" data-testid="input-group-disabled">
             <span class="label">Email</span>
             <div class="input-group">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <rect width="20" height="16" x="2" y="4" rx="2" />
-                <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-              </svg>
+              <i class="ic-mail" aria-hidden="true"></i>
               <input class="ipt" type="email" value="you@example.com" disabled />
             </div>
           </label>
@@ -203,42 +151,14 @@
               <label class="field">
                 <span class="label">Soft, sunk</span>
                 <div class="input-group soft edgeless">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-                  </svg>
+                  <i class="ic-mail" aria-hidden="true"></i>
                   <input class="ipt" type="email" value="you@example.com" />
                 </div>
               </label>
               <label class="field">
                 <span class="label">Primary</span>
                 <div class="input-group primary">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect width="20" height="16" x="2" y="4" rx="2" />
-                    <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
-                  </svg>
+                  <i class="ic-mail" aria-hidden="true"></i>
                   <input class="ipt" type="email" value="you@example.com" />
                 </div>
               </label>

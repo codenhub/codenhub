@@ -561,6 +561,9 @@ importers:
 
   packages/styles/debug:
     devDependencies:
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../icons
       '@codenhub/styles':
         specifier: workspace:*
         version: link:..
@@ -576,6 +579,9 @@ importers:
 
   packages/styles/dev:
     devDependencies:
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../icons
       '@codenhub/styles':
         specifier: workspace:*
         version: link:..
