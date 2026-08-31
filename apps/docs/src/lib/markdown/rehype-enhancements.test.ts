@@ -156,3 +156,24 @@ describe("code blocks", () => {
     expect(tree.children[0]).toBe(pre);
   });
 });
+
+describe("tables", () => {
+  it("wraps a table in a horizontal-overflow container", () => {
+    const table = element("table", {}, [
+      element("tbody", {}, [element("tr", {}, [element("td", {}, [text("cell")])])]),
+    ]);
+    const tree = transform([table]);
+    const wrapper = tree.children[0];
+
+    expect(wrapper).toMatchObject({ properties: { className: ["table-wrap"] }, tagName: "div" });
+    expect(wrapper.children[0]).toBe(table);
+  });
+
+  it("enhances links inside table cells before wrapping", () => {
+    const link = element("a", { href: "https://other.example/x" }, [text("Ref")]);
+    const table = element("table", {}, [element("tbody", {}, [element("tr", {}, [element("td", {}, [link])])])]);
+    transform([table]);
+
+    expect(link.properties).toMatchObject({ className: ["external-link"], rel: ["external"] });
+  });
+});
