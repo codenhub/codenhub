@@ -246,7 +246,7 @@ body {
 .markdown-content ul,
 .markdown-content ol,
 .markdown-content pre,
-.markdown-content table,
+.markdown-content .table-wrap,
 .markdown-content blockquote {
   @apply my-5;
 }
@@ -282,8 +282,11 @@ body {
   @apply quote border-border bg-foreground/60 rounded-r-(--radius-control) py-3 pr-4;
 }
 
+/* `data-table` is the Codenhub table component (renamed from `table`); it styles
+   the head, cells, rules, and row hover of a plain `<table>`. `.table-wrap` is
+   added around the table by `rehypeMarkdownEnhancements` for horizontal overflow. */
 .markdown-content table {
-  @apply block table overflow-x-auto;
+  @apply data-table;
 }
 
 .markdown-content hr {

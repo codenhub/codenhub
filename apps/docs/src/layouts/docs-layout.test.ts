@@ -62,6 +62,14 @@ describe("documentation chrome", () => {
     expect(listStart).toMatch(/nav-group[\s\S]*?href="\/styles\/usage\/"[^>]*>\s*Usage\s*<\/a>/);
   });
 
+  it("renders a Markdown table with the Codenhub table styling and an overflow wrapper", async () => {
+    const html = await readOutput("styles/usage/buttons/index.html");
+    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
+
+    expect(html).toMatch(/<div class="table-wrap">\s*<table>\s*<thead>/);
+    expect(css).toMatch(/\.markdown-content table\s*\{\s*@apply data-table;\s*\}/s);
+  });
+
   it("gives every header target a 44px minimum hit area", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
