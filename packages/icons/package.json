@@ -27,6 +27,7 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "style": "./dist/style.css",
       "import": "./dist/index.js"
     },
     "./postcss": {
@@ -46,7 +47,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs",
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-style.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",

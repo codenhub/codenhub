@@ -129,7 +129,9 @@ viteIcons({
 | `attribution`   | `auto`, `file`, or `off`. See [Licensing](#licensing).                                      |
 | `registry`      | A prepared `IconRegistry`, replacing `families`.                                            |
 
-The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet is replaced with it.
+The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet the plugin transforms is replaced with it.
+
+When the CSS pipeline resolves that import itself rather than leaving it to the plugin — `@tailwindcss/vite`, or a plain `<link rel="stylesheet" href="@codenhub/icons">` — it reaches the package's `style` export condition, a static `dist/style.css` carrying only the base `.ic` rules. Add the Vite or PostCSS plugin to turn the icon classes in your markup into mask rules on top of it.
 
 ### One module per icon
 

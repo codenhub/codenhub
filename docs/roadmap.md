@@ -36,11 +36,12 @@ deferred work; this entry tracks only where the package sits.
 - [x] Registry improvement and stabilization
 - [x] Registry population
 - [x] Dynamic icon bundle optimization
-- [ ] Add a `style` (or `default`) export condition to `exports["."]` so
-      `@import "@codenhub/icons"` resolves inside `@tailwindcss/vite`. Today the
-      Vite plugin's virtual `@import` only works on the JS-module path; a
-      `<link>`ed or Tailwind-processed stylesheet fails resolution and errors
-      out. Blocked `@codenhub/styles` from using `ic-*` in its playground.
+- [x] Add a `style` (or `default`) export condition to `exports["."]` so
+      `@import "@codenhub/icons"` resolves inside `@tailwindcss/vite`. Ships a
+      static `dist/style.css` with the base `.ic` rules for pipelines that
+      resolve the import themselves (`@tailwindcss/vite`, a plain `<link>`); the
+      Vite and PostCSS plugins still replace the import with the full scanned
+      set when they are present.
 - [ ] Playground and demo polish
 - [ ] Searchable icon catalog in the documentation site
 - [ ] First-party family owning the semantic names
