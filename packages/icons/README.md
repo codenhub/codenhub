@@ -4,8 +4,7 @@ Zero-runtime icon system for the web. Write `ic-heart` in your markup and the bu
 
 `@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself.
 
-> [!WARNING]
-> This package is experimental. Its data schema, exports, and plugin options may change before 1.0. The registry API described here replaced the provider-based one and is not backward compatible.
+> [!WARNING] This package is experimental. Its data schema, exports, and plugin options may change before 1.0. The registry API described here replaced the provider-based one and is not backward compatible.
 
 ## Installation
 

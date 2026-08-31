@@ -12,8 +12,7 @@ pnpm add @codenhub/styles
 
 ## Usage
 
-Import the compiled stylesheet for the complete token, reset, utility, and
-component-class surface:
+Import the compiled stylesheet for the complete token, reset, utility, and component-class surface:
 
 ```css
 @import "@codenhub/styles";
@@ -36,8 +35,7 @@ Apps using Tailwind CSS v4 can instead process the source entrypoint:
 @source "./src";
 ```
 
-The root follows the system color-scheme preference. Apply `.light` or `.dark`
-to force a theme for the root or a subtree.
+The root follows the system color-scheme preference. Apply `.light` or `.dark` to force a theme for the root or a subtree.
 
 ```html
 <html class="dark">
@@ -47,16 +45,9 @@ to force a theme for the root or a subtree.
 </html>
 ```
 
-The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-also supported. See [Concepts](./docs/concepts.md#theme-selection) for
-precedence details.
+The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are also supported. See [Concepts](./docs/concepts.md#theme-selection) for precedence details.
 
-`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
-and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
-container sets the look below it and any element can still override it.
-`.solid` also takes the boundary away, because a filled box ringed in another
-color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the
-way back to a line.
+`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged` and `.edgeless` set whether it draws a boundary. Both axes cascade, so a container sets the look below it and any element can still override it. `.solid` also takes the boundary away, because a filled box ringed in another color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the way back to a line.
 
 ```html
 <div class="soft">
@@ -66,10 +57,7 @@ way back to a line.
 </div>
 ```
 
-Aesthetics decide what a component is made of. They are opt-in, so import the
-stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and
-`.chunky-tile` available. They cascade to any subtree the same way, and each is
-also importable on its own from `@codenhub/styles/aesthetics/<name>`.
+Aesthetics decide what a component is made of. They are opt-in, so import the stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` available. They cascade to any subtree the same way, and each is also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ```css
 @import "@codenhub/styles";
@@ -84,14 +72,11 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Documentation
 
-- [Documentation overview](./docs/index.md): What the package is, what it
-  does and does not do, and where to go next.
+- [Documentation overview](./docs/index.md): What the package is, what it does and does not do, and where to go next.
 - [Setup](./docs/setup.md): Installation, entrypoints, and configuration.
 - [Concepts](./docs/concepts.md): The three-axis model and the token system.
-- [Usage](./docs/usage/index.md): Composing, theming, customizing,
-  aesthetics, and each component family.
-- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into
-  Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Usage](./docs/usage/index.md): Composing, theming, customizing, aesthetics, and each component family.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements
@@ -105,76 +90,44 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Notes
 
-This package has no JavaScript behavior. `--layout-gap` replaces the removed
-`--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases
-are provided.
+This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
 
 ## License
 
-Licensed under Apache-2.0. Embedded SVG icons derived from
-[Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from
-[svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed.
-See [NOTICE](NOTICE) for the required notices.
+Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from [svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed. See [NOTICE](NOTICE) for the required notices.
 
 <!-- Source: docs/index.md -->
 
 # @codenhub/styles
 
-`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and
-layout utilities, and composable classes for buttons, forms, feedback,
-surfaces, and tooltips. Every component separates three independent choices —
-which color, how much of it, and what it's made of — so changing one never
-requires a component-specific variant. Four optional aesthetics
-(`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`) restyle that same
-component set without touching markup.
+`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Four optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`) restyle that same component set without touching markup.
 
-The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4
-source entrypoints for a project that already runs Tailwind. Both cover the
-same classes; the difference is which build processes them.
+The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source entrypoints for a project that already runs Tailwind. Both cover the same classes; the difference is which build processes them.
 
 ## What it does
 
-- Publishes color, foundation, intent, presentation, and material design
-  tokens as CSS custom properties, themed with `light-dark()`.
-- Provides a reset, focus-visible handling, and responsive layout/content
-  utilities.
-- Provides composable classes for buttons, form controls and toggles, alerts,
-  badges, loaders, progress, cards/panels, tables, quotes, code, and
-  tooltips.
-- Provides four opt-in aesthetics that restyle the same components by setting
-  material tokens, not by adding component variants.
-- Provides classless mappings so plain HTML elements pick up base styling
-  without added classes, from a dedicated entrypoint.
+- Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
+- Provides a reset, focus-visible handling, and responsive layout/content utilities.
+- Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
+- Provides four opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants.
+- Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
 
 ## What it does not do
 
-- No JavaScript. There is no runtime, no framework bindings, and no build-time
-  code generation beyond the CSS itself.
-- No semantic HTML, ARIA, keyboard behavior, focus management, validation, or
-  announcement timing. See [Accessibility](docs/accessibility.md) for the exact
-  line between what the CSS provides and what an application must still add.
-- No theme-toggling logic. Theme selection is a class or attribute a consumer
-  applies; wiring a toggle to system preference, storage, or a user setting is
-  outside this package. The `@codenhub/theme` package covers that need for
-  consumers who want it.
-- No shipped font binaries. `.pixel` and `.chunky-tile` accept a
-  consumer-supplied font and fall back to a system stack when none is given.
-- No compatibility layer for removed tokens or classes. Breaking changes are
-  documented, not silently aliased.
+- No JavaScript. There is no runtime, no framework bindings, and no build-time code generation beyond the CSS itself.
+- No semantic HTML, ARIA, keyboard behavior, focus management, validation, or announcement timing. See [Accessibility](docs/accessibility.md) for the exact line between what the CSS provides and what an application must still add.
+- No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
+- No shipped font binaries. `.pixel` and `.chunky-tile` accept a consumer-supplied font and fall back to a system stack when none is given.
+- No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
 ## Next steps
 
-- [Setup](docs/setup.md): Install the package, choose an entrypoint, and render a
-  first component.
-- [Concepts](docs/concepts.md): The three-axis model, the token system, and how
-  theme selection works — read this before the usage guides.
-- [Usage](docs/usage/index.md): Guides for composing axes, theming, customizing,
-  aesthetics, and each component family.
-- [Integrating](docs/integrating/index.md): Wiring the stylesheet into Next.js,
-  Vue, Svelte, Astro, or a Tailwind CSS v4 build.
-- [Accessibility](docs/accessibility.md): CSS accessibility hooks and what
-  remains an application responsibility.
+- [Setup](docs/setup.md): Install the package, choose an entrypoint, and render a first component.
+- [Concepts](docs/concepts.md): The three-axis model, the token system, and how theme selection works — read this before the usage guides.
+- [Usage](docs/usage/index.md): Guides for composing axes, theming, customizing, aesthetics, and each component family.
+- [Integrating](docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Accessibility](docs/accessibility.md): CSS accessibility hooks and what remains an application responsibility.
 
 <!-- Source: docs/accessibility.md -->
 
@@ -208,21 +161,11 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Forced colors           | `forced-colors: active` preserves visible borders and checked states using system colors.                                  |
 | Text direction          | Quote bar, alert icon, progress fill, vertical divider, and switch knob mirror under `dir="rtl"`. No class needed.         |
 
-The loader fallback is embedded in loader CSS, so focused imports that include
-loaders honor reduced motion without the reset. This includes
-`@codenhub/styles/components`, `@codenhub/styles/tw/components`,
-`@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and
-native entrypoints include both that fallback and the reset's broader animation
-and transition shortening.
+The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, `@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
 
-In forced colors, class-based form controls including `.text-control` receive a
-2px `Highlight` system-color focus outline. The native entrypoint provides the
-same visible system outline for unclassed text inputs, selects, textareas,
-checkboxes, and radios.
+In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 
-Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
-and `HighlightText` colors in forced-colors mode so checked and unchecked states
-remain distinct. Shape, size, and spacing remain unchanged.
+Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct. Shape, size, and spacing remain unchanged.
 
 ## Required Outside CSS
 
@@ -244,15 +187,13 @@ Use semantic HTML and behavior appropriate for the component.
 Prefer native attributes first:
 
 ```html
-<button class="btn primary" disabled>Saving</button>
-<input class="ipt" aria-invalid="true" aria-describedby="email-error" />
+<button class="btn primary" disabled>Saving</button> <input class="ipt" aria-invalid="true" aria-describedby="email-error" />
 ```
 
 Use ARIA or data attributes when native attributes are not available for the element or library:
 
 ```html
-<a class="btn secondary" aria-disabled="true">Unavailable</a>
-<button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+<a class="btn secondary" aria-disabled="true">Unavailable</a> <button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
@@ -261,13 +202,11 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 # Concepts
 
-Read this before the usage guides. It explains the mental model every
-component, token, and class in this package shares.
+Read this before the usage guides. It explains the mental model every component, token, and class in this package shares.
 
 ## The three axes
 
-Every component separates three independent choices, so each can change
-without a component-specific variant:
+Every component separates three independent choices, so each can change without a component-specific variant:
 
 | Axis         | Question        | Classes                                                                                   | Inheritance  |
 | ------------ | --------------- | ----------------------------------------------------------------------------------------- | ------------ |
@@ -282,25 +221,16 @@ without a component-specific variant:
 </section>
 ```
 
-Intent stays on the component so a semantic container cannot accidentally
-recolor nested controls. Presentation and aesthetic cascade from a container;
-putting either class directly on a component overrides the inherited choice.
-Components apply documented clamps when an axis would remove an essential edge
-or overwhelm compact geometry.
+Intent stays on the component so a semantic container cannot accidentally recolor nested controls. Presentation and aesthetic cascade from a container; putting either class directly on a component overrides the inherited choice. Components apply documented clamps when an axis would remove an essential edge or overwhelm compact geometry.
 
-The maintained contract is the intersection of the combinations documented in
-[Usage](docs/usage/index.md) and demonstrated by the playground. Undocumented and
-undemonstrated combinations may produce CSS but are not supported behavior.
+The maintained contract is the intersection of the combinations documented in [Usage](docs/usage/index.md) and demonstrated by the playground. Undocumented and undemonstrated combinations may produce CSS but are not supported behavior.
 
-- [Usage → Composing](docs/usage/composing.md) shows how the three axes combine
-  on each component, with the full axis-support matrix.
-- [Usage → Aesthetics](docs/usage/aesthetics.md) covers each aesthetic and its
-  documented exceptions in depth.
+- [Usage → Composing](docs/usage/composing.md) shows how the three axes combine on each component, with the full axis-support matrix.
+- [Usage → Aesthetics](docs/usage/aesthetics.md) covers each aesthetic and its documented exceptions in depth.
 
 ## The token system
 
-Tokens are CSS custom properties, grouped by what they control rather than
-where they're used:
+Tokens are CSS custom properties, grouped by what they control rather than where they're used:
 
 | Category     | Controls                                                                                    | Reference                                                         |
 | ------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -311,50 +241,33 @@ where they're used:
 | Material     | What a component is made of — radius, border width, shadow geometry, translucency.          | [Usage → Customizing](docs/usage/customizing.md#material-tokens)     |
 | Aesthetic    | Per-aesthetic knobs such as `--pixel-unit` or `--tile-lift`.                                | [Usage → Customizing](docs/usage/customizing.md#aesthetic-tokens)    |
 
-Color and foundation tokens are the ones most apps touch first, to match a
-brand palette or spacing scale. Intent, presentation, and material tokens are
-lower-level: components read them, and only presentation classes, aesthetic
-classes, or a consumer override should set them.
+Color and foundation tokens are the ones most apps touch first, to match a brand palette or spacing scale. Intent, presentation, and material tokens are lower-level: components read them, and only presentation classes, aesthetic classes, or a consumer override should set them.
 
 ## Theme selection
 
-The root follows the operating-system `color-scheme` preference until an
-explicit selector overrides it.
+The root follows the operating-system `color-scheme` preference until an explicit selector overrides it.
 
 | Theme | Equivalent selectors                             |
 | ----- | ------------------------------------------------ |
 | Light | `.light`, `.theme-light`, `[data-theme="light"]` |
 | Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
 
-- Theme selectors set `color-scheme` and nothing else. Because `color-scheme`
-  inherits, a selector themes its entire subtree.
-- With no explicit selector, `:root` uses `color-scheme: light dark`, so the
-  system preference decides.
-- A theme selector on `:root` overrides the system preference in either
-  direction.
-- A nested explicit selector overrides an inherited theme, so the nearest
-  themed ancestor controls that subtree at any depth.
-- If conflicting light and dark selectors are placed on the same element, the
-  dark declaration wins because it appears later with equal specificity. Do
-  not rely on this conflict behavior; apply one theme per element.
-- Component colors resolve from tokens or `currentColor`, so they follow the
-  theme without separate dark-variant rules, with no exception: every glyph
-  the package draws is a `currentColor` mask. Icon artwork a consumer brings
-  is theirs to theme.
+- Theme selectors set `color-scheme` and nothing else. Because `color-scheme` inherits, a selector themes its entire subtree.
+- With no explicit selector, `:root` uses `color-scheme: light dark`, so the system preference decides.
+- A theme selector on `:root` overrides the system preference in either direction.
+- A nested explicit selector overrides an inherited theme, so the nearest themed ancestor controls that subtree at any depth.
+- If conflicting light and dark selectors are placed on the same element, the dark declaration wins because it appears later with equal specificity. Do not rely on this conflict behavior; apply one theme per element.
+- Component colors resolve from tokens or `currentColor`, so they follow the theme without separate dark-variant rules, with no exception: every glyph the package draws is a `currentColor` mask. Icon artwork a consumer brings is theirs to theme.
 
-Setting `color-scheme` yourself on an element also re-themes the tokens below
-it, because that is the only signal the palette reads. This also themes native
-UI such as scrollbars and form-control internals to match.
+Setting `color-scheme` yourself on an element also re-themes the tokens below it, because that is the only signal the palette reads. This also themes native UI such as scrollbars and form-control internals to match.
 
-This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package
-overall requires Firefox 121 for `:has()` (see [Setup](docs/setup.md#requirements)).
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 121 for `:has()` (see [Setup](docs/setup.md#requirements)).
 
 <!-- Source: docs/integrating/astro.md -->
 
 # Astro
 
-Import the package from a shared layout's frontmatter so every page that
-uses that layout loads it once:
+Import the package from a shared layout's frontmatter so every page that uses that layout loads it once:
 
 ```astro
 ---
@@ -369,30 +282,20 @@ import "@codenhub/styles";
 </html>
 ```
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following
-the system preference; see [Setup → Configuration](docs/setup.md#configuration).
+Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Setup → Configuration](docs/setup.md#configuration).
 
-A project running Tailwind CSS v4 imports `@codenhub/styles/tw` through
-Astro's Tailwind integration instead; see [Tailwind CSS v4](docs/integrating/tailwind.md)
-for the `@source` directive Astro needs to scan `src/`.
+A project running Tailwind CSS v4 imports `@codenhub/styles/tw` through Astro's Tailwind integration instead; see [Tailwind CSS v4](docs/integrating/tailwind.md) for the `@source` directive Astro needs to scan `src/`.
 
 <!-- Source: docs/integrating/index.md -->
 
 # Integrating
 
-This package has no JavaScript and no framework bindings; see
-[Introduction](docs/index.md#what-it-does-not-do). Integrating it into a
-framework is entirely about where that framework loads a global stylesheet,
-and whether the project runs Tailwind CSS v4.
+This package has no JavaScript and no framework bindings; see [Introduction](docs/index.md#what-it-does-not-do). Integrating it into a framework is entirely about where that framework loads a global stylesheet, and whether the project runs Tailwind CSS v4.
 
 Every stack does the same two things:
 
-1. Import one [entrypoint](docs/setup.md#import-paths) — the compiled
-   `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the
-   project already runs Tailwind CSS v4 — from wherever that framework loads
-   global CSS.
-2. Import `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only
-   if the project uses an [aesthetic](docs/usage/aesthetics.md).
+1. Import one [entrypoint](docs/setup.md#import-paths) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4 — from wherever that framework loads global CSS.
+2. Import `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only if the project uses an [aesthetic](docs/usage/aesthetics.md).
 
 | Stack                                    | Guide                            |
 | ---------------------------------------- | -------------------------------- |
@@ -402,17 +305,13 @@ Every stack does the same two things:
 | Svelte / SvelteKit                       | [Svelte](docs/integrating/svelte.md)            |
 | Astro                                    | [Astro](docs/integrating/astro.md)              |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — needs
-nothing beyond [Setup](docs/setup.md#quick-start): import the compiled
-stylesheet from the project's existing global CSS entry.
+A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup](docs/setup.md#quick-start): import the compiled stylesheet from the project's existing global CSS entry.
 
 <!-- Source: docs/integrating/nextjs.md -->
 
 # Next.js
 
-Next.js only allows global CSS to be imported from one place. Import the
-package from the root layout in the App Router, or from the custom App in
-the Pages Router — not from a page or component further down the tree.
+Next.js only allows global CSS to be imported from one place. Import the package from the root layout in the App Router, or from the custom App in the Pages Router — not from a page or component further down the tree.
 
 ```tsx
 // app/layout.tsx
@@ -437,23 +336,19 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following
-the system preference; see [Setup → Configuration](docs/setup.md#configuration).
+Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Setup → Configuration](docs/setup.md#configuration).
 
 ```tsx
 <html lang="en" className="dark">
 ```
 
-A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from the
-same file instead; see [Tailwind CSS v4](docs/integrating/tailwind.md) for the `@source`
-directive Next.js needs to scan its own `app`/`src` directories.
+A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from the same file instead; see [Tailwind CSS v4](docs/integrating/tailwind.md) for the `@source` directive Next.js needs to scan its own `app`/`src` directories.
 
 <!-- Source: docs/integrating/svelte.md -->
 
 # Svelte
 
-In SvelteKit, import the package from the root layout so it loads once for
-every route:
+In SvelteKit, import the package from the root layout so it loads once for every route:
 
 ```svelte
 <!-- src/routes/+layout.svelte -->
@@ -476,22 +371,15 @@ import App from "./App.svelte";
 mount(App, { target: document.getElementById("app")! });
 ```
 
-Apply `.dark` or `.light` on `<html>` (edit `src/app.html` in SvelteKit) to
-force a theme instead of following the system preference; see
-[Setup → Configuration](docs/setup.md#configuration).
+Apply `.dark` or `.light` on `<html>` (edit `src/app.html` in SvelteKit) to force a theme instead of following the system preference; see [Setup → Configuration](docs/setup.md#configuration).
 
-A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from the
-app's CSS entry instead; see [Tailwind CSS v4](docs/integrating/tailwind.md).
+A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from the app's CSS entry instead; see [Tailwind CSS v4](docs/integrating/tailwind.md).
 
 <!-- Source: docs/integrating/tailwind.md -->
 
 # Tailwind CSS v4
 
-A project that already runs Tailwind CSS v4 can process this package's
-source instead of its compiled output. `/tw` entrypoints publish copied,
-uncompiled source from `dist/tw`; your own Tailwind build compiles it
-alongside your app, so its `@theme`, `@utility`, and `@apply` directives
-resolve together with yours.
+A project that already runs Tailwind CSS v4 can process this package's source instead of its compiled output. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; your own Tailwind build compiles it alongside your app, so its `@theme`, `@utility`, and `@apply` directives resolve together with yours.
 
 ```css
 @import "tailwindcss";
@@ -500,13 +388,9 @@ resolve together with yours.
 @source "./src";
 ```
 
-`@source` tells Tailwind's build where to scan for the utility and component
-class names actually used in your markup, so it can generate only what is
-referenced. Point it at your app's source, not at this package — `/tw`
-already ships every class definition it publishes.
+`@source` tells Tailwind's build where to scan for the utility and component class names actually used in your markup, so it can generate only what is referenced. Point it at your app's source, not at this package — `/tw` already ships every class definition it publishes.
 
-Add aesthetics from the source entrypoint the same way as the compiled one,
-after the base import:
+Add aesthetics from the source entrypoint the same way as the compiled one, after the base import:
 
 ```css
 @import "tailwindcss";
@@ -516,10 +400,7 @@ after the base import:
 @source "./src";
 ```
 
-Import a focused `/tw/*` entrypoint instead of the combined one — such as
-`/tw/button` or `/tw/form` — when a build only needs one component family;
-see the full [import path table](docs/setup.md#import-paths) for what each one
-composes. Tailwind CSS 4 or newer is required for every `/tw` entrypoint.
+Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [import path table](docs/setup.md#import-paths) for what each one composes. Tailwind CSS 4 or newer is required for every `/tw` entrypoint.
 
 <!-- Source: docs/integrating/vue.md -->
 
@@ -536,13 +417,9 @@ import App from "./App.vue";
 createApp(App).mount("#app");
 ```
 
-Apply `.dark` or `.light` on the root element to force a theme instead of
-following the system preference; see
-[Setup → Configuration](docs/setup.md#configuration).
+Apply `.dark` or `.light` on the root element to force a theme instead of following the system preference; see [Setup → Configuration](docs/setup.md#configuration).
 
-A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from a CSS
-entry file instead of `main.ts`, using the `@tailwindcss/vite` plugin; see
-[Tailwind CSS v4](docs/integrating/tailwind.md).
+A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from a CSS entry file instead of `main.ts`, using the `@tailwindcss/vite` plugin; see [Tailwind CSS v4](docs/integrating/tailwind.md).
 
 <!-- Source: docs/setup.md -->
 
@@ -556,8 +433,7 @@ pnpm add @codenhub/styles
 
 ## Quick start
 
-Import the compiled stylesheet for the complete token, reset, utility, and
-component-class surface, then compose helper classes in markup:
+Import the compiled stylesheet for the complete token, reset, utility, and component-class surface, then compose helper classes in markup:
 
 ```css
 @import "@codenhub/styles";
@@ -571,13 +447,9 @@ component-class surface, then compose helper classes in markup:
 </main>
 ```
 
-The full stylesheet applies global reset and focus-visible rules, but does not
-apply the optional classless native-element mappings, and does not include
-aesthetics. Import focused entrypoints when global rules are not appropriate;
-see [Import paths](#import-paths) below.
+The full stylesheet applies global reset and focus-visible rules, but does not apply the optional classless native-element mappings, and does not include aesthetics. Import focused entrypoints when global rules are not appropriate; see [Import paths](#import-paths) below.
 
-Aesthetics are opt-in. Import the combined aesthetics stylesheet, or one
-aesthetic on its own, after the base stylesheet so its rules win:
+Aesthetics are opt-in. Import the combined aesthetics stylesheet, or one aesthetic on its own, after the base stylesheet so its rules win:
 
 ```css
 @import "@codenhub/styles";
@@ -590,14 +462,11 @@ aesthetic on its own, after the base stylesheet so its rules win:
 </section>
 ```
 
-A project already running Tailwind CSS v4 imports the source entrypoint
-instead; see [Integrating → Tailwind CSS v4](docs/integrating/tailwind.md).
+A project already running Tailwind CSS v4 imports the source entrypoint instead; see [Integrating → Tailwind CSS v4](docs/integrating/tailwind.md).
 
 ## Configuration
 
-The root follows the operating-system color-scheme preference. Apply `.light`
-or `.dark` to the root or any ancestor to force token values for that subtree.
-`.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases.
+The root follows the operating-system color-scheme preference. Apply `.light` or `.dark` to the root or any ancestor to force token values for that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases.
 
 ```html
 <html class="dark">
@@ -607,17 +476,11 @@ or `.dark` to the root or any ancestor to force token values for that subtree.
 </html>
 ```
 
-See [Concepts → Theme selection](docs/concepts.md#theme-selection) for how
-selectors resolve and [Usage → Theming](docs/usage/theming.md) for the full color
-token reference.
+See [Concepts → Theme selection](docs/concepts.md#theme-selection) for how selectors resolve and [Usage → Theming](docs/usage/theming.md) for the full color token reference.
 
 ## Import paths
 
-Compiled entrypoints are ready-to-import CSS and require only tooling that can
-resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled
-source from `dist/tw`; a Tailwind v4 build must still process their `@theme`,
-`@utility`, `@apply`, and related directives. Focused source component
-entrypoints include theme tokens so their classes can work independently.
+Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
 
 | Import path                      | Composition and effects                                                                                                                                                                                           |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -642,38 +505,27 @@ entrypoints include theme tokens so their classes can work independently.
 | `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                   |
 | `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                             |
 
-Avoid importing overlapping entrypoints in the same build unless duplicate
-generated CSS is acceptable; pick the narrowest entrypoint that covers what a
-page needs.
+Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
 
 ## Requirements
 
 - Consumer tooling must resolve package CSS imports.
-- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared
-  with `light-dark()` and selected by `color-scheme` (Firefox 120), and
-  `.input-group` propagates a nested control's invalid and disabled state with
-  `:has()` (Firefox 121).
+- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), and `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121).
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
-- The package has no JavaScript runtime. Apps must provide semantic HTML,
-  ARIA, keyboard behavior, focus management, validation, and announcements;
-  see [Accessibility](docs/accessibility.md).
+- The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/aesthetics.md -->
 
 # Aesthetics
 
-An aesthetic decides what a component is _made of_: its radius, border
-thickness, shadow, and shape. Aesthetics ship from opt-in entrypoints, so
-importing the stylesheet is what makes the classes available:
+An aesthetic decides what a component is _made of_: its radius, border thickness, shadow, and shape. Aesthetics ship from opt-in entrypoints, so importing the stylesheet is what makes the classes available:
 
 ```css
 @import "@codenhub/styles";
 @import "@codenhub/styles/aesthetics";
 ```
 
-Import them after the base stylesheet. `.neobrutalism` and `.pixel` replace
-the neutral border color, and they do so at zero specificity, so source order
-is what lets them win.
+Import them after the base stylesheet. `.neobrutalism` and `.pixel` replace the neutral border color, and they do so at zero specificity, so source order is what lets them win.
 
 Like presentation, an aesthetic class cascades to any subtree:
 
@@ -691,33 +543,19 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 
-Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless`
-intentionally removes the visible material traits from components whose
-aesthetic is expressed only through their fill, edge, or elevation.
+Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
-An explicit presentation on the element still wins over the aesthetic's
-defaults. The aesthetic supplies edge thickness; presentation only decides
-whether that edge is drawn.
+An explicit presentation on the element still wins over the aesthetic's defaults. The aesthetic supplies edge thickness; presentation only decides whether that edge is drawn.
 
-An aesthetic directly on a component likewise wins over an inherited
-aesthetic. This includes tooltip pseudo-elements: `.tooltip.glass` gets the
-complete glass bubble under a pixel ancestor, and `.tooltip.pixel` gets the
-complete stepped bubble under a glass ancestor.
+An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip pseudo-elements: `.tooltip.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip.pixel` gets the complete stepped bubble under a glass ancestor.
 
-Each aesthetic that scales from one number publishes it as a knob — see
-[Customizing → Aesthetic tokens](docs/usage/customizing.md#aesthetic-tokens) for how
-knobs resolve and where they can be set. This page covers what each
-aesthetic looks like and where it makes documented exceptions.
+Each aesthetic that scales from one number publishes it as a knob — see [Customizing → Aesthetic tokens](docs/usage/customizing.md#aesthetic-tokens) for how knobs resolve and where they can be set. This page covers what each aesthetic looks like and where it makes documented exceptions.
 
 ## Neobrutalism
 
-The shadow is cast in the component's own intent, so a success button throws
-a green shadow and a destructive card a red one. With no intent, both the
-outline and the shadow use the ink, which follows the theme rather than the
-palette.
+The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette.
 
-`--neo-offset` is the knob: the shadow offset and the distance the press
-travels are the same number, so scaling the look scales both at once.
+`--neo-offset` is the knob: the shadow offset and the distance the press travels are the same number, so scaling the look scales both at once.
 
 ```html
 <section class="neobrutalism" style="--neo-offset: 6px">
@@ -727,27 +565,15 @@ travels are the same number, so scaling the look scales both at once.
 
 **Exceptions:**
 
-- Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content
-  rather than structure, and an ink edge on one reads as a defect: a key cap
-  keeps the quiet border color and a code chip keeps no border at all.
-- Only `.btn` and an opted-in `.card` respond to hover and press. A card
-  opts in with `.interactive`, or with one of its halves — `.hoverable` for
-  the hover response alone, `.pressable` for the press alone; a plain card,
-  an alert, or a panel is a container and stays put.
-- An alert rests on the slab under this aesthetic and nowhere else. Here the
-  slab is a second ink line rather than depth, and an alert is the only
-  container the package rests flat, so without it a neobrutalist alert is
-  the one box on the page that reads as unfinished. It is a resting default,
-  so `.flat` still takes it off and `.floating` still doubles it.
+- Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content rather than structure, and an ink edge on one reads as a defect: a key cap keeps the quiet border color and a code chip keeps no border at all.
+- Only `.btn` and an opted-in `.card` respond to hover and press. A card opts in with `.interactive`, or with one of its halves — `.hoverable` for the hover response alone, `.pressable` for the press alone; a plain card, an alert, or a panel is a container and stays put.
+- An alert rests on the slab under this aesthetic and nowhere else. Here the slab is a second ink line rather than depth, and an alert is the only container the package rests flat, so without it a neobrutalist alert is the one box on the page that reads as unfinished. It is a resting default, so `.flat` still takes it off and `.floating` still doubles it.
 
 ## Glass
 
-`.glass` needs something behind it to blur. On a flat page background it
-renders as a plain translucent panel.
+`.glass` needs something behind it to blur. On a flat page background it renders as a plain translucent panel.
 
-`--glass-radius` and `--glass-radius-surface` are the corners, at `0.75rem`
-and `1rem`. Glass is rounder than the base geometry because a translucent
-panel with a tight corner reads as a cut-out rather than as a pane.
+`--glass-radius` and `--glass-radius-surface` are the corners, at `0.75rem` and `1rem`. Glass is rounder than the base geometry because a translucent panel with a tight corner reads as a cut-out rather than as a pane.
 
 ```html
 <section class="glass" style="--glass-radius-surface: 1.5rem">
@@ -757,18 +583,12 @@ panel with a tight corner reads as a cut-out rather than as a pane.
 
 **Exceptions:**
 
-- The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble
-  only. Controls stay solid and sit on the glass: a blur under every control
-  of a dense cluster costs a composited layer apiece and reads as noise.
-  Controls still take the aesthetic's radius, border, and shadow.
-- Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur
-  and become opaque.
+- The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
+- Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
 
 ## Pixel
 
-`--pixel-unit` is one pixel of the imaginary low-resolution grid, `4px` by
-default. One square unit is cut from each corner and the outline is one unit
-thick, so the cut and what covers it are the same size.
+`--pixel-unit` is one pixel of the imaginary low-resolution grid, `4px` by default. One square unit is cut from each corner and the outline is one unit thick, so the cut and what covers it are the same size.
 
 ```html
 <section class="pixel" style="--pixel-unit: 6px">
@@ -778,44 +598,16 @@ thick, so the cut and what covers it are the same size.
 
 **Exceptions:**
 
-- Corners are one unit or nothing. Chips square instead of stepping —
-  badges, key caps, code, checkboxes, and switches all read
-  `--ui-clip-tight`, which this aesthetic sets to none, because one unit off
-  each corner of a 24px badge is a bite rather than a corner. Tables,
-  progress bars, and skeletons square too, each for its own reason: a
-  table's `overflow: hidden` fights the clip and the corners square off
-  where the two meet, and progress and skeleton never read a clip at all —
-  a squaring aesthetic reaches them through `border-radius` alone. `.pre` is
-  the one exception that steps: it carries no clip override, so it inherits
-  the same polygon a button or a card gets, and with no border by default
-  the cut shows with no ring around it.
-- The outline is an inset ring, because a clip removes a real border — and
-  the focus ring, for the same reason, is a second inset layer rather than
-  an outline. Both are the element's own edge rather than a shadow, so the
-  border answers `.edged` and `.edgeless` the way a border does: a
-  `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws
-  one, and a field keeps one whatever a container asks for.
-- The tooltip trigger and `.radio` are hardcoded past the clip rather than
-  reached by it. `.tooltip-icon` forces `clip-path: none`, since a stepped
-  badge would clip its own bubble away with it. `.radio` forces the same,
-  because the circle is the only thing telling it from a checkbox at a
-  glance, and a stepped polygon would square it.
-- `--font-pixel` is yours to supply. The package ships no font binary, so the
-  aesthetic has no network side effect and falls back to the monospace
-  stack.
+- Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table's `overflow: hidden` fights the clip and the corners square off where the two meet, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
+- The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none`, since a stepped badge would clip its own bubble away with it. `.radio` forces the same, because the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square it.
+- `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 
 ## Chunky tile
 
-Rounded slabs sitting on a darker shade of themselves, pressed flat on
-click. The look mobile learning and game apps use; it is named for what it
-is made of rather than for any one product.
+Rounded slabs sitting on a darker shade of themselves, pressed flat on click. The look mobile learning and game apps use; it is named for what it is made of rather than for any one product.
 
-`--tile-lift` is how deep the bar is and how far a press travels, `4px` by
-default. One number drives both, so the top edge drops by exactly the bar's
-depth and the bottom edge does not move. `--tile-radius` is the corner,
-`0.75rem`, and it is one value rather than a control/surface pair on
-purpose — the shared corner is what makes a button and the card it sits in
-read as the same object.
+`--tile-lift` is how deep the bar is and how far a press travels, `4px` by default. One number drives both, so the top edge drops by exactly the bar's depth and the bottom edge does not move. `--tile-radius` is the corner, `0.75rem`, and it is one value rather than a control/surface pair on purpose — the shared corner is what makes a button and the card it sits in read as the same object.
 
 ```html
 <section class="chunky-tile" style="--tile-lift: 6px; --tile-radius: 0.5rem">
@@ -823,50 +615,29 @@ read as the same object.
 </section>
 ```
 
-The bar is a darker shade of the element's own colour rather than a shadow
-under it, so it follows every intent: a success button sits on a dark green
-edge, a destructive one on a dark red edge, and a plain card on a grey edge
-that matches the line it already draws. Measured on the light palette,
-`.btn.success` is `#007a55` on `#004c34`. On a dark page a near-black
-surface cannot go darker, so its bar lands lighter and reads as a rim.
+The bar is a darker shade of the element's own colour rather than a shadow under it, so it follows every intent: a success button sits on a dark green edge, a destructive one on a dark red edge, and a plain card on a grey edge that matches the line it already draws. Measured on the light palette, `.btn.success` is `#007a55` on `#004c34`. On a dark page a near-black surface cannot go darker, so its bar lands lighter and reads as a rim.
 
 **Exceptions:**
 
-- Only what the registry rests above zero sits on a bar — buttons and cards.
-  A badge, chip, field, or tooltip is flat until it asks for depth with
-  `.raised`, and `.flat` takes the bar off anything:
+- Only what the registry rests above zero sits on a bar — buttons and cards. A badge, chip, field, or tooltip is flat until it asks for depth with `.raised`, and `.flat` takes the bar off anything:
 
   ```html
   <div class="card soft edgeless info flat">Promo panel, deliberately flat</div>
   ```
 
-- `--font-rounded` is yours to supply. A heavy rounded grotesque is most of
-  this look and the package ships no font binary, so with nothing supplied
-  the page's own stack is used.
-- Action labels are drawn heavier and slightly tracked. Casing is left
-  alone: how a label is worded is the application's decision, so if you want
-  uppercase buttons, write that rule in your own stylesheet.
-- `.card.interactive` presses like a `.btn`, so a chunky answer tile drops
-  onto its bar on click; `.card.pressable` gets the same press on its own. A
-  plain `.card` stays put.
-- The shipped `.primary` is a near-black monochrome, which leaves a primary
-  button's bar almost invisible against its own plate; give `.primary` a hue
-  if it is the call to action.
-- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything
-  the registry rests flat sits flush on the page.
+- `--font-rounded` is yours to supply. A heavy rounded grotesque is most of this look and the package ships no font binary, so with nothing supplied the page's own stack is used.
+- Action labels are drawn heavier and slightly tracked. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
+- `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
+- The shipped `.primary` is a near-black monochrome, which leaves a primary button's bar almost invisible against its own plate; give `.primary` a hue if it is the call to action.
+- Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
 
 <!-- Source: docs/usage/buttons.md -->
 
 # Buttons
 
-Use `.btn` with one optional intent class, one optional fill class, one
-optional edge class, optional size class, and optional state. See
-[Composing](docs/usage/composing.md) for how the intent, presentation, and aesthetic
-axes combine on any component.
+Use `.btn` with one optional intent class, one optional fill class, one optional edge class, optional size class, and optional state. See [Composing](docs/usage/composing.md) for how the intent, presentation, and aesthetic axes combine on any component.
 
-Intent classes map color tokens into button tone slots.
-[Presentation](docs/usage/composing.md#presentation) decides how much of that intent
-reaches background, text, border, and hover.
+Intent classes map color tokens into button tone slots. [Presentation](docs/usage/composing.md#presentation) decides how much of that intent reaches background, text, border, and hover.
 
 Intent classes:
 
@@ -880,16 +651,9 @@ Intent classes:
 | `.destructive`, `.danger`, `.error` | Destructive or error action.   |
 | `.info`                             | Informational action.          |
 
-Every component that supports intent accepts the same list and reads the
-same [intent tokens](docs/usage/theming.md#intent-tokens), so a custom intent class
-works everywhere without touching a component.
+Every component that supports intent accepts the same list and reads the same [intent tokens](docs/usage/theming.md#intent-tokens), so a custom intent class works everywhere without touching a component.
 
-`.neutral` is the only intent that does not fill all the way. Its color is
-the page's own text color, so a full fill of it would be a black or white
-slab — the loudest element on the page, for the intent that means nothing in
-particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral
-is a quiet plate a step past `.soft` rather than a block of ink. Set the slot
-on your own intent classes; see [Theming → Intent tokens](docs/usage/theming.md#intent-tokens).
+`.neutral` is the only intent that does not fill all the way. Its color is the page's own text color, so a full fill of it would be a black or white slab — the loudest element on the page, for the intent that means nothing in particular. It stops at `--intent-fill-max`, which is why a `.solid` neutral is a quiet plate a step past `.soft` rather than a block of ink. Set the slot on your own intent classes; see [Theming → Intent tokens](docs/usage/theming.md#intent-tokens).
 
 Size and shape classes:
 
@@ -916,25 +680,17 @@ Examples:
 <button class="btn primary loading" disabled>Saving</button>
 ```
 
-`.loading` is a state, not a color or presentation class. Prefer combining
-it with disabled behavior so users cannot trigger duplicate work. Loading
-buttons keep only opacity and transform transitions active so spinner and
-surface colors stay synchronized when theme tokens change.
+`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work. Loading buttons keep only opacity and transform transitions active so spinner and surface colors stay synchronized when theme tokens change.
 
-On the base look a press scales the button down a little
-(`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap
-in their own press gesture, and `prefers-reduced-motion` turns it off.
+On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 
-Use `<button>` for actions or an accessible link for navigation; see
-[Accessibility](docs/accessibility.md).
+Use `<button>` for actions or an accessible link for navigation; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/composing.md -->
 
 # Composing the three axes
 
-See [Concepts](docs/concepts.md#the-three-axes) for what each axis means. This
-page covers how they combine in markup, what the presentation classes mean in
-depth, which components support which axis, and elevation.
+See [Concepts](docs/concepts.md#the-three-axes) for what each axis means. This page covers how they combine in markup, what the presentation classes mean in depth, which components support which axis, and elevation.
 
 ## Combining axes
 
@@ -946,25 +702,13 @@ depth, which components support which axis, and elevation.
 </div>
 ```
 
-A declaration on the element always beats one inherited from a container, so
-a container sets the default look for its subtree and any element opts out.
+A declaration on the element always beats one inherited from a container, so a container sets the default look for its subtree and any element opts out.
 
-Intent classes do not cascade. `.primary` and its siblings stay on the
-element that shows the intent, because a container silently recoloring every
-descendant is a trap rather than a feature — see
-[Theming → Intent tokens](docs/usage/theming.md#intent-tokens). Use `.neutral` to opt
-an element back out of an inherited intent context. Presentation and
-[material tokens](docs/usage/customizing.md#material-tokens) do cascade, so a
-container can set the look of its whole subtree while any element overrides
-it.
+Intent classes do not cascade. `.primary` and its siblings stay on the element that shows the intent, because a container silently recoloring every descendant is a trap rather than a feature — see [Theming → Intent tokens](docs/usage/theming.md#intent-tokens). Use `.neutral` to opt an element back out of an inherited intent context. Presentation and [material tokens](docs/usage/customizing.md#material-tokens) do cascade, so a container can set the look of its whole subtree while any element overrides it.
 
 ## Presentation
 
-Presentation has two independent axes. `.solid`, `.soft`, and `.ghost`
-decide how much intent fills a component; `.edged` and `.edgeless` decide
-whether it draws a boundary. They set
-[presentation tokens](docs/usage/customizing.md#presentation-tokens) and nothing
-else, so they work on the component itself or on any ancestor.
+Presentation has two independent axes. `.solid`, `.soft`, and `.ghost` decide how much intent fills a component; `.edged` and `.edgeless` decide whether it draws a boundary. They set [presentation tokens](docs/usage/customizing.md#presentation-tokens) and nothing else, so they work on the component itself or on any ancestor.
 
 | Class       | Look                                                       |
 | ----------- | ---------------------------------------------------------- |
@@ -995,21 +739,11 @@ The combinations mean exactly what they spell:
 <!-- A field sunk into the page -->
 ```
 
-A fill class never decides an edge and an edge class never decides a fill.
-Use `.solid.edgeless` for a filled box with no line — and prefer it on a
-neutral one, because a capped fill leaves the box translucent and the edge
-blend then paints a second coat of the same tint rather than disappearing
-into it (measured 1.53:1 against its own plate in light, 1.82:1 in dark).
+A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line — and prefer it on a neutral one, because a capped fill leaves the box translucent and the edge blend then paints a second coat of the same tint rather than disappearing into it (measured 1.53:1 against its own plate in light, 1.82:1 in dark).
 
-The edge is the silhouette and nothing else. Rules _inside_ a component that
-has an inside are a separate switch — see
-[Content and layout → Table rules](docs/usage/content-and-layout.md#table-rules) —
-because tying them to this axis made them arrive by implication rather than
-by request.
+The edge is the silhouette and nothing else. Rules _inside_ a component that has an inside are a separate switch — see [Content and layout → Table rules](docs/usage/content-and-layout.md#table-rules) — because tying them to this axis made them arrive by implication rather than by request.
 
-With no presentation class in scope, each component keeps its own default:
-buttons are filled, alerts and badges are tinted, surfaces and controls are
-neutral and bordered.
+With no presentation class in scope, each component keeps its own default: buttons are filled, alerts and badges are tinted, surfaces and controls are neutral and bordered.
 
 | Component                                       | Reads                                       |
 | ----------------------------------------------- | ------------------------------------------- |
@@ -1024,12 +758,7 @@ neutral and bordered.
 | `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
-Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed
-text legible when a `.solid` container reaches a field nobody classed. A
-fill class written on the control itself names its own cap instead, because
-that is a consumer describing what they want: `.soft` takes `12%` and
-`.solid` takes `20%`. A switch caps at `40%`, where its three fills separate
-far enough to read on a track.
+Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`. A switch caps at `40%`, where its three fills separate far enough to read on a track.
 
 | On a text control | fill |
 | ----------------- | ---- |
@@ -1038,45 +767,19 @@ far enough to read on a track.
 | `.soft`           | 12%  |
 | `.solid`          | 20%  |
 
-The same split governs the edge: a cascaded `.edgeless` is floored and the
-element's own is honoured — except on `.checkbox` and `.radio`, which never
-drop their line at all. See [Forms](docs/usage/forms.md) for the full toggle and text
-control reference.
+The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](docs/usage/forms.md) for the full toggle and text control reference.
 
-A tooltip bubble is filled, over a tinted ground. An intent fills it with
-that intent's own color: `.tooltip.primary` is the primary color, black on a
-light page and white on a dark one, and `.tooltip.destructive` is a red
-bubble.
+A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip.destructive` is a red bubble.
 
-With no intent the bubble is `--color-tooltip`, the one plate in the package
-chosen per theme rather than derived from an intent. Composed like
-everything else it was `20%` of the page's ink over the surface tone, which
-steps _lighter_ than the surface on a dark page and _darker_ on a light
-one — so the dark bubble read as lifted and the light one as a mid-grey
-slab two steps darker than every card on the screen. The token states each
-direction instead: near-white over a light page, a mid grey over a dark
-one. `--color-tooltip-contrast` is its ink.
+With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent. Composed like everything else it was `20%` of the page's ink over the surface tone, which steps _lighter_ than the surface on a dark page and _darker_ on a light one — so the dark bubble read as lifted and the light one as a mid-grey slab two steps darker than every card on the screen. The token states each direction instead: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
 
-Near-white is only 1.04:1 against a light page, so the bubble draws a
-hairline as well, and floors it: a container's `.solid` or `.edgeless`
-cannot take the boundary away from a bubble nobody classed, while
-`.tooltip.edgeless` still can. The ground keeps the bubble opaque at every
-fill, so a cascaded presentation leaves it readable over whatever it floats
-above. It reads the material tokens too, so an [aesthetic](docs/usage/aesthetics.md)
-in scope shapes the bubble like any other component. See
-[Tooltips](docs/usage/tooltips.md) for the full tooltip reference.
+Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](docs/usage/aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](docs/usage/tooltips.md) for the full tooltip reference.
 
 ## Component axis reference
 
-This table is the authoritative axis map for demonstrated components. "Shape"
-means the component reads applicable radius, border-width, shadow, hover, or
-clip/edge material tokens; an aesthetic may intentionally affect only the
-materials that component draws.
+This table is the authoritative axis map for demonstrated components. "Shape" means the component reads applicable radius, border-width, shadow, hover, or clip/edge material tokens; an aesthetic may intentionally affect only the materials that component draws.
 
-Presentation is two independent axes, so they get a column each. A `Yes` means
-the class changes what the component computes, which
-`tests/browser/axes.spec.ts` asserts against `registry.json` in both
-directions: an axis marked `Yes` must move, and an axis marked `No` must not.
+Presentation is two independent axes, so they get a column each. A `Yes` means the class changes what the component computes, which `tests/browser/axes.spec.ts` asserts against `registry.json` in both directions: an axis marked `Yes` must move, and an axis marked `No` must not.
 
 | Components                                                | Intent | Fill | Edge | Aesthetic material |
 | --------------------------------------------------------- | ------ | ---- | ---- | ------------------ |
@@ -1095,25 +798,15 @@ directions: an axis marked `Yes` must move, and an axis marked `No` must not.
 | `.tooltip`                                                | Yes    | Yes  | Yes  | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
-`.checkbox` and `.radio` are the only components that read one axis and not
-the other. Their line is the only thing marking an unchecked box, so it is
-drawn whatever the edge class says, from a container or from the element
-itself. `.edgeless` on either is unsupported rather than merely discouraged.
+`.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
 
-Every other text control floors a _cascaded_ `.edgeless` and honours its own:
-a `.edgeless` toolbar will not erase the line of a field nobody classed, while
-`.ipt.edgeless` is a consumer describing what they want and gets it.
+Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
-Intent aliases such as `.danger` and `.error` occupy the same intent axis as
-`.destructive`; they do not add component behavior. State and modifier
-classes such as `.interactive`, `.hoverable`, `.pressable`, `.loading`,
-`.invalid`, `.compact`, and `.vertical` sit above this map and are documented
-with their component.
+Intent aliases such as `.danger` and `.error` occupy the same intent axis as `.destructive`; they do not add component behavior. State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.loading`, `.invalid`, `.compact`, and `.vertical` sit above this map and are documented with their component.
 
 ## Elevation
 
-Depth is a modifier, not an axis. Nothing is raised until an
-[aesthetic](docs/usage/aesthetics.md) draws depth or one of these classes asks for it.
+Depth is a modifier, not an axis. Nothing is raised until an [aesthetic](docs/usage/aesthetics.md) draws depth or one of these classes asks for it.
 
 | Class             | Alias       | Depth                                                                    |
 | ----------------- | ----------- | ------------------------------------------------------------------------ |
@@ -1121,17 +814,9 @@ Depth is a modifier, not an axis. Nothing is raised until an
 | `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
 | `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
 
-Both names in a row are equivalent, interchangeable classes — `.elevation-sm`
-and `.raised` are aliases, not a canonical form and a deprecated one, the way
-`.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md`
-naming matches the raw `--elevation-*` tokens in
-[Theming](docs/usage/theming.md#foundation-tokens) for the same weight of depth, even
-though the two are read from different places.
+Both names in a row are equivalent, interchangeable classes — `.elevation-sm` and `.raised` are aliases, not a canonical form and a deprecated one, the way `.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw `--elevation-*` tokens in [Theming](docs/usage/theming.md#foundation-tokens) for the same weight of depth, even though the two are read from different places.
 
-Each is one unitless multiplier over whatever shadow geometry is in scope, so
-the same class reads as a soft blur on a plain page and as a hard offset slab
-under `.neobrutalism` — the aesthetic decides what depth looks like, the
-class decides how much of it this element takes.
+Each is one unitless multiplier over whatever shadow geometry is in scope, so the same class reads as a soft blur on a plain page and as a hard offset slab under `.neobrutalism` — the aesthetic decides what depth looks like, the class decides how much of it this element takes.
 
 ```html
 <article class="card elevation-sm">Lifted</article>
@@ -1139,11 +824,7 @@ class decides how much of it this element takes.
 <article class="card elevation-none">Flat, whatever the page or container says</article>
 ```
 
-The multiplier is a plain number, so it inherits: a container lifts or
-flattens a whole region and any element inside it still opts out on itself.
-Spread is deliberately left out of the multiplication, because an aesthetic
-that draws its edge as an inset ring spends spread on it and scaling that
-would erase the edge.
+The multiplier is a plain number, so it inherits: a container lifts or flattens a whole region and any element inside it still opts out on itself. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.
 
 <!-- Source: docs/usage/content-and-layout.md -->
 
@@ -1151,26 +832,18 @@ would erase the edge.
 
 ## Layout
 
-Layout helpers use the shared `--layout-gap` token. `.tight` sets it to
-`0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or
-auto-grid.
+Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.
 
-- `.view` is a flex container; `.vertical` and `.horizontal` set its
-  direction, and horizontal views wrap with centered cross-axis alignment.
+- `.view` is a flex container; `.vertical` and `.horizontal` set its direction, and horizontal views wrap with centered cross-axis alignment.
 - `.stack` is a vertical flex stack.
-- `.cluster` is a wrapping horizontal flex row; `.between` adds
-  `space-between` alignment.
+- `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
 - `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
-- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views,
-  stacks, clusters, and auto-grids.
+- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
 - `.section` adds responsive block padding and an inline gutter.
-- `.section-content` centers content at `--container-max`; `.narrow` and
-  `.wide` select the corresponding container tokens.
-- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It
-  takes intent, but presentation classes do not affect it.
+- `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
+- `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
 
-The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no
-compatibility aliases.
+The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
 ## Content
 
@@ -1188,8 +861,7 @@ compatibility aliases.
 
 ### Table rules
 
-A table draws three kinds of line, and `.ruled` and `.ruleless` move all of
-them together:
+A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them together:
 
 | Class       | Head and foot boundaries | Rules between body rows |
 | ----------- | ------------------------ | ----------------------- |
@@ -1198,36 +870,32 @@ them together:
 | `.ruled`    | Yes                      | Yes                     |
 
 ```html
-<table class="data-table">Head and foot boundaries only</table>
-<table class="data-table ruled">Every row separated</table>
-<table class="data-table ruleless">No lines inside the table at all</table>
+<table class="data-table">
+  Head and foot boundaries only
+</table>
+<table class="data-table ruled">
+  Every row separated
+</table>
+<table class="data-table ruleless">
+  No lines inside the table at all
+</table>
 ```
 
-The boundaries under a head and above a foot separate the parts of a table
-from each other, so they are drawn by default where the row rules are not.
-Rules between body rows used to arrive on their own, because the
-component's published edge default is `edged` and the edge axis wrote the
-rules along with the boundary — so whether you got them depended on a
-registry default rather than on anything in your markup.
+The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows used to arrive on their own, because the component's published edge default is `edged` and the edge axis wrote the rules along with the boundary — so whether you got them depended on a registry default rather than on anything in your markup.
 
-`--ui-rule` is the token behind both classes, so a container can set the
-answer for a whole region without classing each table:
+`--ui-rule` is the token behind both classes, so a container can set the answer for a whole region without classing each table:
 
 ```html
 <section style="--ui-rule: 100%">
-  <table class="data-table">Ruled by the region</table>
+  <table class="data-table">
+    Ruled by the region
+  </table>
 </section>
 ```
 
-The frame around the table is the edge axis and is asked for the same way:
-`.data-table` publishes `edgeless`, so `.edged` draws one. None of the
-three switches reaches the others — `.data-table.ruleless.edged` is a
-framed table with no lines inside it, and `.data-table.ruled` is a
-frameless one with every row separated.
+The frame around the table is the edge axis and is asked for the same way: `.data-table` publishes `edgeless`, so `.edged` draws one. None of the three switches reaches the others — `.data-table.ruleless.edged` is a framed table with no lines inside it, and `.data-table.ruled` is a frameless one with every row separated.
 
-A table's rows deliberately inherit its intent instead of resetting it, so
-`.data-table.success` tints throughout. A row carrying its own intent still
-wins:
+A table's rows deliberately inherit its intent instead of resetting it, so `.data-table.success` tints throughout. A row carrying its own intent still wins:
 
 ```html
 <table class="data-table success">
@@ -1242,37 +910,28 @@ wins:
 </table>
 ```
 
-This is the one place intent cascades, because a table's rows are parts of
-the table rather than independent components.
+This is the one place intent cascades, because a table's rows are parts of the table rather than independent components.
 
-`.data-table`, `.kbd`, `.code`, and `.pre` also read
-[presentation](docs/usage/composing.md#presentation). A table applies it to its
-header, its rules and its border; a chip to its whole plate:
+`.data-table`, `.kbd`, `.code`, and `.pre` also read [presentation](docs/usage/composing.md#presentation). A table applies it to its header, its rules and its border; a chip to its whole plate:
 
 ```html
-<table class="data-table success soft edged">...</table>
-<table class="data-table">A ghost table: rules and type, no header plate</table>
+<table class="data-table success soft edged">
+  ...
+</table>
+<table class="data-table">
+  A ghost table: rules and type, no header plate
+</table>
 <kbd class="kbd primary solid">Ctrl</kbd>
 <kbd class="kbd primary soft edged">Shift</kbd>
 ```
 
-`.ghost` means two different things on these components, and both are worth
-knowing before you reach for it.
+`.ghost` means two different things on these components, and both are worth knowing before you reach for it.
 
-On `.data-table` it removes the header plate along with the body tint, so
-`.data-table.ghost` is boundaries and type alone. The component rests at
-`soft`, so that is something to ask for rather than the default.
+On `.data-table` it removes the header plate along with the body tint, so `.data-table.ghost` is boundaries and type alone. The component rests at `soft`, so that is something to ask for rather than the default.
 
-On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on
-`--intent-subtle`, and that ground draws the plate whatever the fill says —
-so `.ghost` took the fill away and changed nothing visible. Worse, the
-ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5`
-for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against
-it for secondary. All three rest at `.soft` instead, which puts a real `12%`
-of the intent over the ground and separates them.
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All three rest at `.soft` instead, which puts a real `12%` of the intent over the ground and separates them.
 
-Use `.table-wrap` around `.data-table` when table width may exceed its
-container:
+Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
 ```html
 <div class="table-wrap">
@@ -1307,23 +966,11 @@ container:
 | `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
 | `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
-Both read intent, [presentation](docs/usage/composing.md#presentation), and
-[material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a
-neutral bordered container; only an explicit presentation tints it. Resting
-at elevation `1` is not a visible shadow by itself — nothing draws depth
-until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or
-`.elevation-sm`/`.elevation-md` asks for it; see
-[Composing → Elevation](docs/usage/composing.md#elevation).
+Both read intent, [presentation](docs/usage/composing.md#presentation), and [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](docs/usage/composing.md#elevation).
 
-On the base look, `.card.interactive` scales down slightly on press
-(`--ui-active-transform`, `scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md)
-substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
+On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
-`.interactive` is the pair `.hoverable` (hover response only, no pointer
-cursor) and `.pressable` (press response and pointer cursor) applied
-together. Take one half for a card that answers a single gesture: a card
-that warms on hover but holds its own action in a nested button takes
-`.hoverable`, so pressing that button does not dip the whole card.
+`.interactive` is the pair `.hoverable` (hover response only, no pointer cursor) and `.pressable` (press response and pointer cursor) applied together. Take one half for a card that answers a single gesture: a card that warms on hover but holds its own action in a nested button takes `.hoverable`, so pressing that button does not dip the whole card.
 
 ```html
 <article class="card">Neutral card</article>
@@ -1334,9 +981,7 @@ that warms on hover but holds its own action in a nested button takes
 <aside class="panel">Flush panel</aside>
 ```
 
-`.interactive` and `.pressable` are styling only. Use a real interactive
-element and give it an accessible name; a `<div class="card interactive">`
-is not focusable or operable by keyboard.
+`.interactive` and `.pressable` are styling only. Use a real interactive element and give it an accessible name; a `<div class="card interactive">` is not focusable or operable by keyboard.
 
 ## Typography utilities
 
@@ -1357,16 +1002,11 @@ All typography classes and `.selection-contrast` are `@utility` classes.
 
 # Customizing
 
-Presentation tokens decide how much of an intent shows. Material tokens
-decide what a component is made of. Aesthetic tokens are the small set of
-named knobs a shipped aesthetic exposes to scale its own look.
+Presentation tokens decide how much of an intent shows. Material tokens decide what a component is made of. Aesthetic tokens are the small set of named knobs a shipped aesthetic exposes to scale its own look.
 
 ## Presentation tokens
 
-Presentation tokens describe _how much_ of an intent a component shows,
-never _which_ intent it shows. They are unitless numbers and percentages, so
-they carry no color and inherit safely: a container sets them once and every
-component below resolves them against its own intent.
+Presentation tokens describe _how much_ of an intent a component shows, never _which_ intent it shows. They are unitless numbers and percentages, so they carry no color and inherit safely: a container sets them once and every component below resolves them against its own intent.
 
 | Token             | Purpose                                                                    |
 | ----------------- | -------------------------------------------------------------------------- |
@@ -1374,45 +1014,25 @@ component below resolves them against its own intent.
 | `--ui-fg-on-fill` | Percentage blended from the intent readable tone toward its contrast tone. |
 | `--ui-border`     | Percentage of the intent color mixed into the border color.                |
 
-A component resolves them with `color-mix` from its published default. Hover
-is derived by adding `--hover-step` to the resting fill and using
-`--intent-hover`; there are no per-presentation hover tokens.
+A component resolves them with `color-mix` from its published default. Hover is derived by adding `--hover-step` to the resting fill and using `--intent-hover`; there are no per-presentation hover tokens.
 
-No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A
-filled box with no line is `.solid.edgeless`, which is worth reaching for on
-a neutral component: neutral caps its fill, so the box stays translucent and
-a border over it paints a second coat of the same tint instead of blending
-into it.
+No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled box with no line is `.solid.edgeless`, which is worth reaching for on a neutral component: neutral caps its fill, so the box stays translucent and a border over it paints a second coat of the same tint instead of blending into it.
 
 ```css
 background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
 ```
 
-Two choices there are deliberate. Mixing toward `transparent` rather than a
-background token lets a tinted surface adapt to whatever it is placed on.
-Mixing in `oklab` keeps the wide-gamut token palette intact and blends
-perceptually, where `srgb` would clip it.
+Two choices there are deliberate. Mixing toward `transparent` rather than a background token lets a tinted surface adapt to whatever it is placed on. Mixing in `oklab` keeps the wide-gamut token palette intact and blends perceptually, where `srgb` would clip it.
 
-A computed color therefore reaches the page as a resolved `color-mix` result
-rather than the token's own `oklch` syntax. It is the same color; code that
-compares computed color strings should compare colors instead.
+A computed color therefore reaches the page as a resolved `color-mix` result rather than the token's own `oklch` syntax. It is the same color; code that compares computed color strings should compare colors instead.
 
-> **Presentation token contract**: only presentation classes and consumer
-> overrides set these tokens; components only read them. Setting a value
-> that no presentation class produces is supported but unvalidated. See
-> [Composing](docs/usage/composing.md) for the classes that ship these values.
+> **Presentation token contract**: only presentation classes and consumer overrides set these tokens; components only read them. Setting a value that no presentation class produces is supported but unvalidated. See [Composing](docs/usage/composing.md) for the classes that ship these values.
 
 ## Material tokens
 
-Material tokens describe what a component is _made of_ rather than which
-intent it shows or how strongly. They control shape, borders, shadows,
-translucency, filters, and transforms.
+Material tokens describe what a component is _made of_ rather than which intent it shows or how strongly. They control shape, borders, shadows, translucency, filters, and transforms.
 
-Components read each with a fallback, so leaving them unset produces the
-default look. Setting them on a container restyles the whole subtree. Only
-shadow geometry is split into colorless parts that inherit safely;
-color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may
-include their own colors.
+Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree. Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
 | Token                   | Purpose                                                                                                       | Fallback             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
@@ -1451,29 +1071,15 @@ include their own colors.
 </section>
 ```
 
-> **Material token contract**: components read these; aesthetic classes and
-> consumer overrides set them.
+> **Material token contract**: components read these; aesthetic classes and consumer overrides set them.
 
 ### Shape and ring composition
 
-Clipping removes borders, outlines, and outer shadows. An aesthetic that uses
-a clip can replace the border with an inset shadow by setting
-`--ui-shadow-inset` and the four shadow geometry parts. Set
-`--ui-border-max: 0px` when that ring replaces the component border.
-Focusable components restore the clipped focus outline through
-`--ui-focus-inset`.
+Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`.
 
-Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then
-takes the element's edge color, which carries the edge axis as its alpha, so
-`.edged` draws it and `.edgeless` does not — the same answer a real border
-gives. Without it the ring paints on every component the aesthetic reaches
-and the edge classes have no effect. Use `--ui-shadow-ink` instead when the
-shadow is depth cast in the intent's own ink, such as a hard offset slab,
-which an `.edgeless` element still gets.
+Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
-The token is read for its presence, not its value: declare it empty to
-switch the ring on, and `initial` to switch it back off in an aesthetic
-nested inside one that declares it.
+The token is read for its presence, not its value: declare it empty to switch the ring on, and `initial` to switch it back off in an aesthetic nested inside one that declares it.
 
 ```css
 .stepped {
@@ -1490,16 +1096,11 @@ nested inside one that declares it.
 }
 ```
 
-Variables named `--shape-*` are internal composition outputs. Do not set or
-read them; only the `--ui-*` inputs above are public.
+Variables named `--shape-*` are internal composition outputs. Do not set or read them; only the `--ui-*` inputs above are public.
 
 ## Aesthetic tokens
 
-The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you.
-Only aesthetics with a token listed below expose an aesthetic-specific
-token. Tune all other behavior through the shared material tokens above.
-Listed tokens are available only where that aesthetic's stylesheet is
-imported.
+The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
 | Token                    | Aesthetic       | Purpose                                                     | Default                           |
 | ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
@@ -1512,11 +1113,7 @@ imported.
 | `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                             |
 | `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack      |
 
-All four aesthetics reach the same way: each knob is _read_ with its default
-as a `var()` fallback rather than declared, so it resolves once into a
-private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`,
-`--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element
-carrying the aesthetic class, or on any ancestor including `:root`:
+All four aesthetics reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
 ```html
 <section class="pixel" style="--pixel-unit: 6px">
@@ -1532,37 +1129,19 @@ carrying the aesthetic class, or on any ancestor including `:root`:
 </html>
 ```
 
-Knobs and material tokens reach in opposite directions, and telling them
-apart matters. A knob resolves once at the aesthetic's own class and
-inherits down already-resolved, so it reaches the aesthetic **from above**:
-setting it on the element or any ancestor works, but setting it on a
-_descendant_ of the aesthetic class changes nothing — the value has already
-been read. `--ui-radius` and the other material tokens above are read fresh
-by each component as it draws, so they reach **at or below** the element
-carrying them, which is how you round one card differently from its
-neighbours without touching the knob at all.
+Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. `.neobrutalism` and
-`.pixel` set `--ui-ink` for their neutral outline; intent classes still
-override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. `.neobrutalism` and `.pixel` set `--ui-ink` for their neutral outline; intent classes still override the intent slots on each component.
 
 ## Component internals
 
-Component classes may define scoped implementation variables such as
-`--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`.
-These variables are internal wiring for class composition and are not the
-public token contract.
+Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
 
-Consumers should customize broad behavior through color, foundation, motion,
-elevation, radius, layout, and focus tokens first. The only supported
-component-scoped input is `--progress-value` on the `.progress` element,
-because consumers must provide a value such as `64%`.
+Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
 
-`--layout-gap` replaces the removed `--layout-stack-gap` and
-`--layout-cluster-gap` tokens. No compatibility aliases are provided.
+`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.
 
-Next: [Aesthetics](docs/usage/aesthetics.md) covers each shipped aesthetic's complete
-look and its documented exceptions.
+Next: [Aesthetics](docs/usage/aesthetics.md) covers each shipped aesthetic's complete look and its documented exceptions.
 
 <!-- Source: docs/usage/feedback.md -->
 
@@ -1595,11 +1174,7 @@ Activity indicator modifier classes compose with `.loader`:
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-These variants retain their embedded SVG animations normally. Under
-`prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding
-static mask. This fallback is part of focused loader, button, and components
-imports; it does not depend on the global reset. See
-[Accessibility](docs/accessibility.md).
+These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback is part of focused loader, button, and components imports; it does not depend on the global reset. See [Accessibility](docs/accessibility.md).
 
 Loader size modifiers:
 
@@ -1609,27 +1184,17 @@ Loader size modifiers:
 | `.sm`    | Small (`1.5rem`). |
 | `.lg`    | Large (`2.5rem`). |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`,
-`.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`,
-and `.info`. Without an intent, they use the text palette, except `.loader`,
-which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
-Skeletons, loaders, progress bars, and dividers are indicators. They read
-intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation).
+Skeletons, loaders, progress bars, and dividers are indicators. They read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation).
 
 ```html
-<span class="loader success" aria-hidden="true"></span>
-<span class="skeleton info"></span>
+<span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
 ```
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it
-increases the left padding and adds an embedded SVG. Success, warning, and
-destructive intents use corresponding symbols; other intents use the
-information symbol.
+`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
 
-Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation)
-classes. Without one they use a tinted surface, intent-colored text, and a
-mixed intent border.
+Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border.
 
 ## Example
 
@@ -1647,37 +1212,12 @@ mixed intent border.
 <span class="loader bars-wave" aria-hidden="true"></span>
 <span class="loader pulse-ring sm" aria-hidden="true"></span>
 <span class="loader dots-grow lg" aria-hidden="true"></span>
-<div
-  class="progress"
-  role="progressbar"
-  aria-label="Upload progress"
-  aria-valuemin="0"
-  aria-valuemax="100"
-  aria-valuenow="64"
-  style="--progress-value: 64%"
-></div>
-<div
-  class="progress secondary active"
-  role="progressbar"
-  aria-label="Upload progress"
-  aria-valuemin="0"
-  aria-valuemax="100"
-  aria-valuenow="64"
-  style="--progress-value: 64%"
-></div>
-<div
-  class="progress info indeterminate"
-  role="progressbar"
-  aria-label="Loading"
-  aria-valuemin="0"
-  aria-valuemax="100"
-></div>
+<div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress info indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"></div>
 ```
 
-Add `role="status"` or `role="alert"` to alerts based on announcement
-urgency, mark decorative loading visuals with `aria-hidden="true"`, and use
-semantic progress elements or ARIA values when numeric progress must be
-announced; see [Accessibility](docs/accessibility.md).
+Add `role="status"` or `role="alert"` to alerts based on announcement urgency, mark decorative loading visuals with `aria-hidden="true"`, and use semantic progress elements or ARIA values when numeric progress must be announced; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/forms.md -->
 
@@ -1703,19 +1243,9 @@ announced; see [Accessibility](docs/accessibility.md).
 
 ## Icons
 
-The package ships no icons. It used to paint one per input type as a
-`background-image` — a `data:` URI, which cannot read `currentColor` or a
-custom property, so every glyph shipped a light and a dark copy and a theme
-selector chose between them. That put icon artwork, and the package's only
-theme-by-selector branch, inside a CSS-only design system whose glyphs did
-not fit every aesthetic. Icons are the consumer's to choose now.
+The package ships no icons. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons are the consumer's to choose now.
 
-`.input-group` is the wrapper for a control that carries one. It owns the
-field box — border, radius, fill, focus ring, invalid and disabled state —
-and the control inside it goes flush, so the boundary is drawn once. Any
-icon element works, placed before the control for a leading icon or after it
-for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon
-set such as `@codenhub/icons`.
+`.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 
 ```html
 <label class="field">
@@ -1737,22 +1267,13 @@ set such as `@codenhub/icons`.
 </label>
 ```
 
-The group reads intent and both [presentation](docs/usage/composing.md#presentation)
-axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the
-sunk variant, `.input-group.primary` colors the boundary — and follows
-whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or
-`disabled` on the control inside propagates to the group; so does either on
-the group itself. Focus is shown with `:focus-within`, so unlike a lone
-field the ring also appears on a mouse click.
+The group reads intent and both [presentation](docs/usage/composing.md#presentation) axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the sunk variant, `.input-group.primary` colors the boundary — and follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or `disabled` on the control inside propagates to the group; so does either on the group itself. Focus is shown with `:focus-within`, so unlike a lone field the ring also appears on a mouse click.
 
-Non-icon input types keep the browser's native `date` and `datetime-local`
-pickers. WebKit's native `search` decorations are still suppressed on
-`.text-control` to keep them from overlapping the value.
+Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
 
 ## Toggles
 
-`.checkbox`, `.radio`, and `.switch` accept the same intent classes as
-buttons to set the checked color:
+`.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons to set the checked color:
 
 | Class                               | Meaning                 |
 | ----------------------------------- | ----------------------- |
@@ -1764,39 +1285,22 @@ buttons to set the checked color:
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
-All three toggles rest at `.solid`, and **`.ghost` is not supported on any of
-them.** An unchecked ghost toggle is the silhouette every toggle already
-has, and a checked one is a mark on nothing — a tick floating on the page, a
-dot with no ring around it. A container that cascades `.ghost` onto a
-toggle is floored rather than obeyed.
+All three toggles rest at `.solid`, and **`.ghost` is not supported on any of them.** An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing — a tick floating on the page, a dot with no ring around it. A container that cascades `.ghost` onto a toggle is floored rather than obeyed.
 
-Presentation decides the fill in both states. Being checked lifts the cap
-rather than pinning a fill, so the class still chooses:
+Presentation decides the fill in both states. Being checked lifts the cap rather than pinning a fill, so the class still chooses:
 
 | Toggle            | unchecked       | checked                         |
 | ----------------- | --------------- | ------------------------------- |
 | `.solid`, default | 20%, switch 40% | 100%, mark in the contrast tone |
 | `.soft`           | 12%             | 12%, mark in the strong tone    |
 
-A checked checkbox and a checked switch cut their mark out of that plate. A
-checked radio thickens its ring to twice the resting line and takes the
-intent whole on it, so `.radio.soft` is the classic ring-and-dot radio and
-`.radio.solid` is a filled circle whose dot stays readable — the mark
-follows the plate rather than being pinned to the intent color.
+A checked checkbox and a checked switch cut their mark out of that plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, so `.radio.soft` is the classic ring-and-dot radio and `.radio.solid` is a filled circle whose dot stays readable — the mark follows the plate rather than being pinned to the intent color.
 
 ## Text controls
 
-Text controls also take intent, which colors the resting border and the
-focus-visible border, and both [presentation](docs/usage/composing.md#presentation)
-axes. `.ghost` fills nothing, `.soft` takes `12%`, and `.solid` takes `20%`
-— quiet enough that typed text still reads on it, and ordered so the louder
-name draws the stronger tint. None of them touches the line.
+Text controls also take intent, which colors the resting border and the focus-visible border, and both [presentation](docs/usage/composing.md#presentation) axes. `.ghost` fills nothing, `.soft` takes `12%`, and `.solid` takes `20%` — quiet enough that typed text still reads on it, and ordered so the louder name draws the stronger tint. None of them touches the line.
 
-The boundary is the edge axis's, and it splits the same way. A container's
-`.edgeless` is floored, so a toolbar cannot leave a field with no mark of
-where typing goes. `.edgeless` on the control itself is honoured, which is
-how the borderless field is spelled — it does not meet WCAG 1.4.11 at rest,
-so it is opt-in and never a default, and the focus ring still shows.
+The boundary is the edge axis's, and it splits the same way. A container's `.edgeless` is floored, so a toolbar cannot leave a field with no mark of where typing goes. `.edgeless` on the control itself is honoured, which is how the borderless field is spelled — it does not meet WCAG 1.4.11 at rest, so it is opt-in and never a default, and the focus ring still shows.
 
 ```html
 <input class="ipt success" placeholder="Valid" />
@@ -1811,11 +1315,7 @@ so it is opt-in and never a default, and the focus ring still shows.
 </div>
 ```
 
-`.surface` is a public low-level utility. It is the box every container in
-the package composes: ghost, edged, surface radius, and the two slots only
-a surface resolves — the backdrop filter and the complete surface shadow.
-Use it to paint a container the package does not ship, under whichever
-aesthetic is in scope. Prefer `.card` or `.panel` when they fit.
+`.surface` is a public low-level utility. It is the box every container in the package composes: ghost, edged, surface radius, and the two slots only a surface resolves — the backdrop filter and the complete surface shadow. Use it to paint a container the package does not ship, under whichever aesthetic is in scope. Prefer `.card` or `.panel` when they fit.
 
 ```html
 <div class="surface glass">Blurred, translucent, glass corners</div>
@@ -1823,11 +1323,7 @@ aesthetic is in scope. Prefer `.card` or `.panel` when they fit.
 <div class="surface primary solid">Any intent, any presentation</div>
 ```
 
-`.text-control` is a public low-level utility from the form entrypoint. It
-provides the shared control dimensions, border, placeholder, focus-visible,
-invalid, and disabled styles composed by `ipt`, `textarea`, and `select`.
-Use it for custom text-like controls; prefer those higher-level utilities
-when they fit.
+`.text-control` is a public low-level utility from the form entrypoint. It provides the shared control dimensions, border, placeholder, focus-visible, invalid, and disabled styles composed by `ipt`, `textarea`, and `select`. Use it for custom text-like controls; prefer those higher-level utilities when they fit.
 
 ## Example
 
@@ -1851,53 +1347,37 @@ when they fit.
 </label>
 ```
 
-Use labels, `type`, validation logic, `aria-describedby`, and error message
-relationships; see [Accessibility](docs/accessibility.md).
+Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/index.md -->
 
 # Usage
 
-These guides assume the [Concepts](docs/concepts.md) mental model: intent,
-presentation, and aesthetic as three independent axes, resolved through
-tokens a component reads.
+These guides assume the [Concepts](docs/concepts.md) mental model: intent, presentation, and aesthetic as three independent axes, resolved through tokens a component reads.
 
-- [Composing](docs/usage/composing.md): Combining the three axes on a component, the
-  axis-support matrix, and elevation modifiers.
+- [Composing](docs/usage/composing.md): Combining the three axes on a component, the axis-support matrix, and elevation modifiers.
 - [Theming](docs/usage/theming.md): The color, intent, and foundation token reference.
-- [Customizing](docs/usage/customizing.md): The presentation and material token
-  reference, aesthetic knobs, and defining a custom intent.
-- [Aesthetics](docs/usage/aesthetics.md): Each shipped aesthetic in depth, including
-  its documented exceptions.
+- [Customizing](docs/usage/customizing.md): The presentation and material token reference, aesthetic knobs, and defining a custom intent.
+- [Aesthetics](docs/usage/aesthetics.md): Each shipped aesthetic in depth, including its documented exceptions.
 - [Buttons](docs/usage/buttons.md)
 - [Forms](docs/usage/forms.md)
 - [Feedback](docs/usage/feedback.md)
 - [Tooltips](docs/usage/tooltips.md)
-- [Content and layout](docs/usage/content-and-layout.md): Layout helpers, tables,
-  quotes, code, surfaces, and typography utilities.
+- [Content and layout](docs/usage/content-and-layout.md): Layout helpers, tables, quotes, code, surfaces, and typography utilities.
 
 ## Supported surface
 
-A class, component, and axis combination is supported when this documentation
-describes it and the package playground demonstrates it. Undocumented and
-undemonstrated combinations may still produce CSS, but are not maintained
-behavior. Playground variant matrices are the exhaustive demonstrations; small
-examples elsewhere illustrate usage without widening that contract.
+A class, component, and axis combination is supported when this documentation describes it and the package playground demonstrates it. Undocumented and undemonstrated combinations may still produce CSS, but are not maintained behavior. Playground variant matrices are the exhaustive demonstrations; small examples elsewhere illustrate usage without widening that contract.
 
 <!-- Source: docs/usage/theming.md -->
 
 # Theming
 
-Color tokens are how you restyle the palette; see
-[Concepts → Theme selection](docs/concepts.md#theme-selection) for how a theme
-is chosen. Intent tokens are how a component reads that palette once an
-intent class is applied. Foundation tokens are the shared layout, shape, and
-motion defaults underneath everything.
+Color tokens are how you restyle the palette; see [Concepts → Theme selection](docs/concepts.md#theme-selection) for how a theme is chosen. Intent tokens are how a component reads that palette once an intent class is applied. Foundation tokens are the shared layout, shape, and motion defaults underneath everything.
 
 ## Color tokens
 
-Each color token holds both of its theme values at once through
-`light-dark()`, and the element's `color-scheme` picks one.
+Each color token holds both of its theme values at once through `light-dark()`, and the element's `color-scheme` picks one.
 
 ```html
 <section data-theme="dark">
@@ -1952,20 +1432,11 @@ Each color token holds both of its theme values at once through
 | `--color-info-subtle`          | Low-emphasis companion tone for info.                                                                             |
 | `--color-info-strong`          | High-emphasis companion tone for info.                                                                            |
 
-> **Intent token contract**: color intent tokens own meaning and tone
-> variants. Intent classes map one family onto the shared intent slots below,
-> and presentation classes decide how much of it a component shows. Theme
-> changes belong in token values, not broad component-level theme checks.
-> Component-level theme handling should exist only when a component has an
-> internal structure that cannot be expressed through the token palette
-> alone.
+> **Intent token contract**: color intent tokens own meaning and tone variants. Intent classes map one family onto the shared intent slots below, and presentation classes decide how much of it a component shows. Theme changes belong in token values, not broad component-level theme checks. Component-level theme handling should exist only when a component has an internal structure that cannot be expressed through the token palette alone.
 
 ## Intent tokens
 
-Intent classes set these seven slots; components read them. Because every
-supporting component reads the same seven names, an intent works on every
-component that supports intent, and a custom intent needs no component
-changes.
+Intent classes set these seven slots; components read them. Because every supporting component reads the same seven names, an intent works on every component that supports intent, and a custom intent needs no component changes.
 
 | Token               | Purpose                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------- |
@@ -1977,49 +1448,19 @@ changes.
 | `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
 | `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.  |
 
-`--intent-color` and `--intent-strong` are two ends of the same family and not
-interchangeable. The base is a ground, chosen to be filled with; the strong
-tone is chosen to be read against a page. A `.soft` or `.ghost` component
-prints the strong one, which is why an unfilled warning reads in amber-800
-rather than the amber-600 its solid sibling is filled with.
+`--intent-color` and `--intent-strong` are two ends of the same family and not interchangeable. The base is a ground, chosen to be filled with; the strong tone is chosen to be read against a page. A `.soft` or `.ghost` component prints the strong one, which is why an unfilled warning reads in amber-800 rather than the amber-600 its solid sibling is filled with.
 
-The strong tone has to stay recognisably its own hue, not just readable. On a
-dark page the `-100` shade of every family is a pale tint that carries almost
-no chroma at small sizes: a soft success badge and a soft destructive one
-printed labels that both read white, and a soft radio's dot stopped matching
-the ring around it. The dark tones are `-300` for that reason, and the tinted
-grounds under them are `-900` so there is room — measured at 5.0:1 or better
-everywhere a partial fill prints text, and past 9:1 on the page.
+The strong tone has to stay recognisably its own hue, not just readable. On a dark page the `-100` shade of every family is a pale tint that carries almost no chroma at small sizes: a soft success badge and a soft destructive one printed labels that both read white, and a soft radio's dot stopped matching the ring around it. The dark tones are `-300` for that reason, and the tinted grounds under them are `-900` so there is room — measured at 5.0:1 or better everywhere a partial fill prints text, and past 9:1 on the page.
 
-`--intent-border` exists because a neutral border must stay the quiet border
-gray rather than the text color. Everything that draws a line reads it:
-control borders, table rules, dividers, key caps, and quote bars.
+`--intent-border` exists because a neutral border must stay the quiet border gray rather than the text color. Everything that draws a line reads it: control borders, table rules, dividers, key caps, and quote bars.
 
-`--intent-fill-max` exists for the neutral intent, whose color is the page's
-own ink. Every other intent is a hue, legible pale at 12% and saturated at
-100%; a grey filled to 100% is a black or white slab, which is the loudest
-thing on the page and the wrong look for the intent that means _nothing in
-particular_. Neutral stops at `20%`, so `.solid` gives it a quiet plate that
-still reads as a step past `.soft`. Hover adds its step on top of the cap, so
-a capped fill still deepens under the pointer.
+`--intent-fill-max` exists for the neutral intent, whose color is the page's own ink. Every other intent is a hue, legible pale at 12% and saturated at 100%; a grey filled to 100% is a black or white slab, which is the loudest thing on the page and the wrong look for the intent that means _nothing in particular_. Neutral stops at `20%`, so `.solid` gives it a quiet plate that still reads as a step past `.soft`. Hover adds its step on top of the cap, so a capped fill still deepens under the pointer.
 
-The foreground is gated by the plate rather than tied to the fill.
-`--intent-contrast` is the ink for a _full_ fill, so printing it at full
-strength on a fifth of one puts white on light grey. Contrast ink therefore
-appears only once the fill is past halfway and reaches full at a full fill;
-below that a component prints `--intent-strong`, the tone chosen to be read.
+The foreground is gated by the plate rather than tied to the fill. `--intent-contrast` is the ink for a _full_ fill, so printing it at full strength on a fifth of one puts white on light grey. Contrast ink therefore appears only once the fill is past halfway and reaches full at a full fill; below that a component prints `--intent-strong`, the tone chosen to be read.
 
-That means a capped neutral takes the strong tone whole rather than a
-fraction of the way toward the page. Tying it to the fill instead cost a
-neutral `.solid` button four points of contrast and a neutral tooltip nearly
-ten. A state that lifts the cap on purpose — a checked checkbox is filled
-with its own intent by definition — reaches a full fill and gets the contrast
-whole.
+That means a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. Tying it to the fill instead cost a neutral `.solid` button four points of contrast and a neutral tooltip nearly ten. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
 
-Set them directly to define an intent this package does not ship. **State
-every slot**, including `--intent-fill-max`: components reset all seven to
-the neutral values, so a slot your intent leaves out keeps neutral's — and an
-intent that omits the cap fills to 20% of its color instead of 100%.
+Set them directly to define an intent this package does not ship. **State every slot**, including `--intent-fill-max`: components reset all seven to the neutral values, so a slot your intent leaves out keeps neutral's — and an intent that omits the cap fills to 20% of its color instead of 100%.
 
 ```css
 .brand {
@@ -2034,29 +1475,16 @@ intent that omits the cap fills to 20% of its color instead of 100%.
 ```
 
 ```html
-<button class="btn brand">Custom intent</button>
-<span class="badge brand soft">Works everywhere</span>
+<button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
 ```
 
-> **Intent does not cascade.** Components reset these slots to the text
-> palette at their own root, so a `.success` container never recolors a
-> nested destructive button. Put the intent class on the element that shows
-> the intent.
+> **Intent does not cascade.** Components reset these slots to the text palette at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation tokens
 
-Foundation tokens are not aliases for one color. They define layout, shape,
-motion, focus, depth, and layering behavior used by helper classes.
+Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-The four `--elevation-*` values below are raw shadows for elements you style
-yourself. They are a separate thing from `.elevation-none`/`.elevation-sm`/
-`.elevation-md` (aliased as `.flat`/`.raised`/`.floating`), which scale a
-_component's own_ shadow geometry and default to no shadow at all until an
-aesthetic or one of those classes asks for depth — see
-[Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two
-share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a
-fixed value and the other multiplies shadow parts, so they will not always
-paint identically.
+The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.elevation-none`/`.elevation-sm`/ `.elevation-md` (aliased as `.flat`/`.raised`/`.floating`), which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
 
 | Token                      | Purpose                                                                 |
 | -------------------------- | ----------------------------------------------------------------------- |
@@ -2089,8 +1517,7 @@ paint identically.
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                             |
 | `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                          |
 
-Next: [Customizing](docs/usage/customizing.md) covers presentation and material
-tokens — how much of an intent shows, and what a component is made of.
+Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
 <!-- Source: docs/usage/tooltips.md -->
 
@@ -2108,29 +1535,12 @@ tokens — how much of an intent shows, and what a component is made of.
 | `[data-state="open"]`                   | Shows tooltip without hover.                                   |
 | `.tooltip.raised` / `.tooltip.floating` | Adds one or two units of depth. The bubble is flat by default. |
 
-A tooltip bubble's fill, ground color, and floor behavior are covered in
-[Composing → Presentation](docs/usage/composing.md#presentation), and its material
-follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope, including the
-pseudo-element itself.
+A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](docs/usage/composing.md#presentation), and its material follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope, including the pseudo-element itself.
 
-The bubble rests flat. It draws no shadow of its own on a plain page, and
-zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the
-same way `.flat` does elsewhere. Add [`.raised` or
-`.floating`](docs/usage/composing.md#elevation) to lift it — `.tooltip.floating` is the
-pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`,
-still reaches the bubble as it reaches any surface.
+The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](docs/usage/composing.md#elevation) to lift it — `.tooltip.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
 
 ```html
-<button
-  class="tooltip tooltip-icon"
-  data-tooltip="More details"
-  data-tooltip-position="right"
-  aria-label="More details"
->
-  ?
-</button>
+<button class="tooltip tooltip-icon" data-tooltip="More details" data-tooltip-position="right" aria-label="More details">?</button>
 ```
 
-CSS pseudo-element tooltips are presentational. They are not a complete
-accessible tooltip implementation by themselves — provide accessible
-names/descriptions outside the CSS; see [Accessibility](docs/accessibility.md).
+CSS pseudo-element tooltips are presentational. They are not a complete accessible tooltip implementation by themselves — provide accessible names/descriptions outside the CSS; see [Accessibility](docs/accessibility.md).

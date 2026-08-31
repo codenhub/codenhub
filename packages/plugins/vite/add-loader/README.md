@@ -2,8 +2,7 @@
 
 Vite plugin that injects a full-screen loading overlay into each transformed HTML entry. It removes the overlay after `window.load` or a timeout.
 
-> [!WARNING]
-> Experimental: the plugin API, injected HTML/CSS/JavaScript, and browser support may change before a stable release.
+> [!WARNING] Experimental: the plugin API, injected HTML/CSS/JavaScript, and browser support may change before a stable release.
 
 ## Installation
 

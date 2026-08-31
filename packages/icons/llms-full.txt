@@ -6,8 +6,7 @@ Zero-runtime icon system for the web. Write `ic-heart` in your markup and the bu
 
 `@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself.
 
-> [!WARNING]
-> This package is experimental. Its data schema, exports, and plugin options may change before 1.0. The registry API described here replaced the provider-based one and is not backward compatible.
+> [!WARNING] This package is experimental. Its data schema, exports, and plugin options may change before 1.0. The registry API described here replaced the provider-based one and is not backward compatible.
 
 ## Installation
 
@@ -122,8 +121,7 @@ Variants are separate families rather than options on one, so resolution stays a
 An icon is identified by `prefix:name`. A class writes that with a dash, because a class name cannot contain a colon:
 
 ```html
-<i class="ic-lucide-heart"></i>
-<i class="ic-material-symbols-rounded-home"></i>
+<i class="ic-lucide-heart"></i> <i class="ic-material-symbols-rounded-home"></i>
 ```
 
 An unprefixed name is resolved in order: the curated semantic map first, then the configured `defaultPrefix`. A semantic name whose family is not registered falls through to the default prefix rather than failing.

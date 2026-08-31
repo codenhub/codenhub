@@ -5,9 +5,7 @@ description: Runtime-neutral translations with optional browser and locale-path 
 
 # Translate applications across runtimes
 
-`@codenhub/i18n` provides isolated translation managers with consumer-owned
-locale loading. Use the core API in browsers, servers, workers, and static
-builds, then add browser effects or locale-prefixed paths when needed.
+`@codenhub/i18n` provides isolated translation managers with consumer-owned locale loading. Use the core API in browsers, servers, workers, and static builds, then add browser effects or locale-prefixed paths when needed.
 
 ## Setup
 
@@ -40,32 +38,23 @@ i18n.translate("page.title"); // "Bem-vindo"
 i18n.translate("page.description"); // "Learn more" from the default locale
 ```
 
-Core performs no locale detection. Omitting `init({ locale })` selects the
-configured default. Selecting another locale loads both its dictionary and the
-default dictionary before applying state, so fallback is deterministic.
+Core performs no locale detection. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
 
 ### Configuration
 
-Configure supported locales, a default locale, a dictionary loader, and text
-direction resolution. The loader may use imports, HTTP, files, or another
-runtime-specific source.
+Configure supported locales, a default locale, a dictionary loader, and text direction resolution. The loader may use imports, HTTP, files, or another runtime-specific source.
 
-Use `@codenhub/i18n/browser` for browser locale selection, persistence, document
-attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure
-locale-prefixed pathname parsing and generation.
+Use `@codenhub/i18n/browser` for browser locale selection, persistence, document attributes, and optional DOM translation. Use `@codenhub/i18n/routing` for pure locale-prefixed pathname parsing and generation.
 
 ## Requirements
 
 - ESM-aware package resolution.
 - Core requires standard `Event` and `EventTarget` globals.
 - Browser features require only the browser APIs they enable.
-- Browser initialization must not overlap direct core initialization on the same
-  manager; a superseded browser call rejects and releases ownership.
+- Browser initialization must not overlap direct core initialization on the same manager; a superseded browser call rejects and releases ownership.
 - Concurrent SSR requests and SSG renders require separate manager instances.
 
 ## Next steps
 
-- [Usage across runtimes](examples.md) covers browser setup, routed hydration,
-  SSR, SSG, and loader patterns.
-- [API reference](reference.md) documents configuration, dictionaries, browser
-  behavior, routing, events, and failures.
+- [Usage across runtimes](examples.md) covers browser setup, routed hydration, SSR, SSG, and loader patterns.
+- [API reference](reference.md) documents configuration, dictionaries, browser behavior, routing, events, and failures.

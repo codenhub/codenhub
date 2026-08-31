@@ -8,8 +8,7 @@ scope: Publishing preparation for the `@codenhub/skills` package.
 
 ## Purpose
 
-Define preparation work for publishing the `@codenhub/skills` package to the npm
-registry.
+Define preparation work for publishing the `@codenhub/skills` package to the npm registry.
 
 ## Current Focus
 
@@ -19,5 +18,4 @@ registry.
 ## Planned
 
 - Publish `@codenhub/skills` to npm.
-- Validate `npx @codenhub/skills@latest` and
-  `pnpm dlx @codenhub/skills@latest` on a clean machine.
+- Validate `npx @codenhub/skills@latest` and `pnpm dlx @codenhub/skills@latest` on a clean machine.

@@ -4,24 +4,17 @@ title: Results
 
 # Result Helpers
 
-`Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`;
-`Err` contains `{ ok: false, error: AppError }`.
+`Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`; `Err` contains `{ ok: false, error: AppError }`.
 
 ```ts
 import { err, ok, type Result } from "@codenhub/error";
 
-const loadName = (value: string | null): Result<string> =>
-  value === null ? err("missing_name", { fallbackMessage: "Name is missing." }) : ok(value);
+const loadName = (value: string | null): Result<string> => (value === null ? err("missing_name", { fallbackMessage: "Name is missing." }) : ok(value));
 ```
 
-`ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error,
-options?)` normalizes failures through the same pipeline as `createAppError`.
-Both return frozen result objects.
+`ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error, options?)` normalizes failures through the same pipeline as `createAppError`. Both return frozen result objects.
 
-String values are matched against the registry like any other value, at every
-wrapper depth. An unmatched string never becomes the message, so raw diagnostic
-text is not surfaced to users; supply `fallbackMessage` when user-facing text is
-needed.
+String values are matched against the registry like any other value, at every wrapper depth. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
 
 Use `attempt` and `attemptAsync` at boundaries where existing code throws:
 
@@ -32,10 +25,7 @@ const parsed = attempt(() => JSON.parse(payload) as Config);
 const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
 ```
 
-Both run the supplied callback and convert anything it throws or rejects with
-into a normalized `Err`, so the returned promise from `attemptAsync` does not
-reject for callback failures. Invalid options throw `TypeError` before the
-callback runs.
+Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options throw `TypeError` before the callback runs.
 
 The remaining helpers operate only on the success branch unless stated:
 
@@ -60,6 +50,4 @@ const output = match(doubled, {
 });
 ```
 
-`map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback
-errors. Use `attempt` or `attemptAsync` when thrown values should become
-normalized failures.
+`map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback errors. Use `attempt` or `attemptAsync` when thrown values should become normalized failures.

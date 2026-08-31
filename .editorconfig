@@ -8,3 +8,5 @@ trim_trailing_whitespace = true
 
 [*.md]
 trim_trailing_whitespace = false
+# Prose is not hard-wrapped; `pnpm format` runs Prettier with proseWrap "never".
+max_line_length = off

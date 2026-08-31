@@ -2,8 +2,7 @@
 
 Vite plugin that replaces `<i class="ic-<name>">` marker elements with inline SVG during Vite HTML and JS/TS/JSX/TSX transforms.
 
-> [!WARNING]
-> Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
+> [!WARNING] Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
 
 ## Installation
 

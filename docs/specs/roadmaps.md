@@ -20,10 +20,7 @@ Repo-level roadmap files MAY live at `docs/roadmap.md`.
 
 Package-level roadmap files MAY live at `<package-root>/docs/internal/roadmap.md`.
 
-Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific
-roadmap details belong in that package's `docs/internal/` directory. Public docs
-MAY mention planned work only under the consumer-relevance rules in
-`docs/specs/packages-documentation.md`.
+Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific roadmap details belong in that package's `docs/internal/` directory. Public docs MAY mention planned work only under the consumer-relevance rules in `docs/specs/packages-documentation.md`.
 
 ## Purpose
 

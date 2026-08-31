@@ -1,11 +1,8 @@
 # @codenhub/example-package
 
-Replace this paragraph with a short description of the package's public
-purpose, intended consumers, and essential default behavior.
+Replace this paragraph with a short description of the package's public purpose, intended consumers, and essential default behavior.
 
-Use this file as a concise README scaffold. Keep the main use case here and move
-complete reference, advanced workflows, extended examples, troubleshooting, and
-migrations into published `docs/`.
+Use this file as a concise README scaffold. Keep the main use case here and move complete reference, advanced workflows, extended examples, troubleshooting, and migrations into published `docs/`.
 
 ## Installation
 
@@ -16,13 +13,11 @@ yarn add @codenhub/example-package
 bun add @codenhub/example-package
 ```
 
-Keep the package managers useful to consumers. Omit this section when consumers
-never install the package directly.
+Keep the package managers useful to consumers. Omit this section when consumers never install the package directly.
 
 ## Usage
 
-Explain expected default behavior, then show the smallest useful example for the
-main use case.
+Explain expected default behavior, then show the smallest useful example for the main use case.
 
 ```ts
 import { createExampleThing } from "@codenhub/example-package";
@@ -32,24 +27,17 @@ const thing = createExampleThing({ id: "example-id" });
 thing.run();
 ```
 
-Add required first-use setup, such as CSS imports, provider setup, plugin
-registration, or environment configuration. State critical observable failure
-behavior here when it changes safe first use.
+Add required first-use setup, such as CSS imports, provider setup, plugin registration, or environment configuration. State critical observable failure behavior here when it changes safe first use.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Complete package documentation and
-  navigation.
+- [Documentation overview](docs/index.md): Complete package documentation and navigation.
 - [Getting started](docs/getting-started.md): Package setup and core workflow.
 - [Reference](docs/reference.md): Public entrypoints and complete API coverage.
 - [Examples](docs/examples.md): Additional consumer workflows.
 - [Troubleshooting](docs/troubleshooting.md): Common failures and recovery.
 
-Keep only links that exist, but always retain the required documentation
-overview. Link directly to especially useful documents when that improves
-navigation. A small API or entrypoint overview MAY appear here when it helps
-readers choose a starting path, but do not copy full reference content into the
-README.
+Keep only links that exist, but always retain the required documentation overview. Link directly to especially useful documents when that improves navigation. A small API or entrypoint overview MAY appear here when it helps readers choose a starting path, but do not copy full reference content into the README.
 
 ## Requirements
 
@@ -62,8 +50,7 @@ Remove this section when normal installation has no additional requirements.
 ## Notes
 
 - State critical limitations, non-goals, compatibility, or stability concerns.
-- Keep planned features out unless they affect a current adoption or migration
-  decision.
+- Keep planned features out unless they affect a current adoption or migration decision.
 
 Remove this section when no critical caveat applies.
 
@@ -71,5 +58,4 @@ Remove this section when no critical caveat applies.
 
 This project is licensed under the [Apache-2.0](LICENSE) license.
 
-Document bundled or derived third-party code and assets here when required, and
-link to the package-level [NOTICE](NOTICE) file.
+Document bundled or derived third-party code and assets here when required, and link to the package-level [NOTICE](NOTICE) file.

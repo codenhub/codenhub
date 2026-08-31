@@ -1,10 +1,8 @@
 # @codenhub/skills
 
-A curated collection of AI agent skill assets, an installer for supported agent
-harnesses, and utilities for discovering and copying skill directories.
+A curated collection of AI agent skill assets, an installer for supported agent harnesses, and utilities for discovering and copying skill directories.
 
-> **Experimental:** The CLI workflow, harness support, install destinations, and
-> bundled skill content may change as agent skill conventions evolve.
+> **Experimental:** The CLI workflow, harness support, install destinations, and bundled skill content may change as agent skill conventions evolve.
 
 ## Installation
 
@@ -18,8 +16,7 @@ The equivalent npm command is `npx @codenhub/skills@latest`.
 
 ## Usage
 
-Use the library entrypoint to discover skill directories and copy one into a
-destination:
+Use the library entrypoint to discover skill directories and copy one into a destination:
 
 ```ts
 import { copyRecursiveSync, getSkills } from "@codenhub/skills";
@@ -31,17 +28,14 @@ if (skill) {
 }
 ```
 
-The CLI is interactive only when invoked without arguments in a TTY. Before
-using `--cleanup`, review its destructive behavior in the
-[CLI guide](docs/cli.md#destructive-cleanup).
+The CLI is interactive only when invoked without arguments in a TTY. Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
 
 ## Documentation
 
 - [Documentation overview](docs/index.md): Complete package documentation.
 - [Programmatic API](docs/api.md): Public exports, path rules, and failures.
 - [CLI installer](docs/cli.md): Options, destinations, and harness behavior.
-- [Skill format and catalog](docs/skills.md): Supported assets and bundled
-  inventory.
+- [Skill format and catalog](docs/skills.md): Supported assets and bundled inventory.
 
 ## Requirements
 
@@ -51,12 +45,9 @@ using `--cleanup`, review its destructive behavior in the
 
 ## Notes
 
-- Existing files are merged and overwritten by default; stale files are not
-  removed unless `--cleanup` is used.
-- `--cleanup` recursively removes each selected harness's entire skills
-  directory before installation.
+- Existing files are merged and overwritten by default; stale files are not removed unless `--cleanup` is used.
+- `--cleanup` recursively removes each selected harness's entire skills directory before installation.
 
 ## License
 
-Licensed under Apache-2.0. Bundled skills include adapted third-party
-material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).
+Licensed under Apache-2.0. Bundled skills include adapted third-party material; see [NOTICE](NOTICE) and [skill provenance](docs/provenance.md).

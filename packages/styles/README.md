@@ -10,8 +10,7 @@ pnpm add @codenhub/styles
 
 ## Usage
 
-Import the compiled stylesheet for the complete token, reset, utility, and
-component-class surface:
+Import the compiled stylesheet for the complete token, reset, utility, and component-class surface:
 
 ```css
 @import "@codenhub/styles";
@@ -34,8 +33,7 @@ Apps using Tailwind CSS v4 can instead process the source entrypoint:
 @source "./src";
 ```
 
-The root follows the system color-scheme preference. Apply `.light` or `.dark`
-to force a theme for the root or a subtree.
+The root follows the system color-scheme preference. Apply `.light` or `.dark` to force a theme for the root or a subtree.
 
 ```html
 <html class="dark">
@@ -45,16 +43,9 @@ to force a theme for the root or a subtree.
 </html>
 ```
 
-The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are
-also supported. See [Concepts](./docs/concepts.md#theme-selection) for
-precedence details.
+The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are also supported. See [Concepts](./docs/concepts.md#theme-selection) for precedence details.
 
-`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged`
-and `.edgeless` set whether it draws a boundary. Both axes cascade, so a
-container sets the look below it and any element can still override it.
-`.solid` also takes the boundary away, because a filled box ringed in another
-color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the
-way back to a line.
+`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged` and `.edgeless` set whether it draws a boundary. Both axes cascade, so a container sets the look below it and any element can still override it. `.solid` also takes the boundary away, because a filled box ringed in another color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the way back to a line.
 
 ```html
 <div class="soft">
@@ -64,10 +55,7 @@ way back to a line.
 </div>
 ```
 
-Aesthetics decide what a component is made of. They are opt-in, so import the
-stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and
-`.chunky-tile` available. They cascade to any subtree the same way, and each is
-also importable on its own from `@codenhub/styles/aesthetics/<name>`.
+Aesthetics decide what a component is made of. They are opt-in, so import the stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` available. They cascade to any subtree the same way, and each is also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ```css
 @import "@codenhub/styles";
@@ -82,14 +70,11 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Documentation
 
-- [Documentation overview](./docs/index.md): What the package is, what it
-  does and does not do, and where to go next.
+- [Documentation overview](./docs/index.md): What the package is, what it does and does not do, and where to go next.
 - [Setup](./docs/setup.md): Installation, entrypoints, and configuration.
 - [Concepts](./docs/concepts.md): The three-axis model and the token system.
-- [Usage](./docs/usage/index.md): Composing, theming, customizing,
-  aesthetics, and each component family.
-- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into
-  Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Usage](./docs/usage/index.md): Composing, theming, customizing, aesthetics, and each component family.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
 
 ## Requirements
@@ -103,13 +88,8 @@ also importable on its own from `@codenhub/styles/aesthetics/<name>`.
 
 ## Notes
 
-This package has no JavaScript behavior. `--layout-gap` replaces the removed
-`--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases
-are provided.
+This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
 
 ## License
 
-Licensed under Apache-2.0. Embedded SVG icons derived from
-[Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from
-[svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed.
-See [NOTICE](NOTICE) for the required notices.
+Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://lucide.dev) are ISC-licensed, and loaders derived from [svg-spinners](https://github.com/n3r4zzurr0/svg-spinners) are MIT-licensed. See [NOTICE](NOTICE) for the required notices.

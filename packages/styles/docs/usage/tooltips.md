@@ -17,29 +17,12 @@ description: Tooltip host classes and positioning attributes.
 | `[data-state="open"]`                   | Shows tooltip without hover.                                   |
 | `.tooltip.raised` / `.tooltip.floating` | Adds one or two units of depth. The bubble is flat by default. |
 
-A tooltip bubble's fill, ground color, and floor behavior are covered in
-[Composing → Presentation](./composing.md#presentation), and its material
-follows whichever [aesthetic](./aesthetics.md) is in scope, including the
-pseudo-element itself.
+A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](./composing.md#presentation), and its material follows whichever [aesthetic](./aesthetics.md) is in scope, including the pseudo-element itself.
 
-The bubble rests flat. It draws no shadow of its own on a plain page, and
-zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the
-same way `.flat` does elsewhere. Add [`.raised` or
-`.floating`](./composing.md#elevation) to lift it — `.tooltip.floating` is the
-pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`,
-still reaches the bubble as it reaches any surface.
+The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](./composing.md#elevation) to lift it — `.tooltip.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
 
 ```html
-<button
-  class="tooltip tooltip-icon"
-  data-tooltip="More details"
-  data-tooltip-position="right"
-  aria-label="More details"
->
-  ?
-</button>
+<button class="tooltip tooltip-icon" data-tooltip="More details" data-tooltip-position="right" aria-label="More details">?</button>
 ```
 
-CSS pseudo-element tooltips are presentational. They are not a complete
-accessible tooltip implementation by themselves — provide accessible
-names/descriptions outside the CSS; see [Accessibility](../accessibility.md).
+CSS pseudo-element tooltips are presentational. They are not a complete accessible tooltip implementation by themselves — provide accessible names/descriptions outside the CSS; see [Accessibility](../accessibility.md).

@@ -32,21 +32,11 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Forced colors           | `forced-colors: active` preserves visible borders and checked states using system colors.                                  |
 | Text direction          | Quote bar, alert icon, progress fill, vertical divider, and switch knob mirror under `dir="rtl"`. No class needed.         |
 
-The loader fallback is embedded in loader CSS, so focused imports that include
-loaders honor reduced motion without the reset. This includes
-`@codenhub/styles/components`, `@codenhub/styles/tw/components`,
-`@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and
-native entrypoints include both that fallback and the reset's broader animation
-and transition shortening.
+The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, `@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
 
-In forced colors, class-based form controls including `.text-control` receive a
-2px `Highlight` system-color focus outline. The native entrypoint provides the
-same visible system outline for unclassed text inputs, selects, textareas,
-checkboxes, and radios.
+In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 
-Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
-and `HighlightText` colors in forced-colors mode so checked and unchecked states
-remain distinct. Shape, size, and spacing remain unchanged.
+Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct. Shape, size, and spacing remain unchanged.
 
 ## Required Outside CSS
 
@@ -68,15 +58,13 @@ Use semantic HTML and behavior appropriate for the component.
 Prefer native attributes first:
 
 ```html
-<button class="btn primary" disabled>Saving</button>
-<input class="ipt" aria-invalid="true" aria-describedby="email-error" />
+<button class="btn primary" disabled>Saving</button> <input class="ipt" aria-invalid="true" aria-describedby="email-error" />
 ```
 
 Use ARIA or data attributes when native attributes are not available for the element or library:
 
 ```html
-<a class="btn secondary" aria-disabled="true">Unavailable</a>
-<button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+<a class="btn secondary" aria-disabled="true">Unavailable</a> <button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
