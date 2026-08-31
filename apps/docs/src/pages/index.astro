@@ -1,64 +1,182 @@
 ---
+import StatusBadge from "../components/status-badge.astro";
+import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import BaseLayout from "../layouts/base-layout.astro";
-import { publicPackages } from "../lib/catalog";
-import { siteConfig } from "../site-config";
 
-const layers = [
-  {
-    description:
-      "State, validation, routing, keyboard input, errors, localization, themes, and notifications for browser apps.",
-    title: "Application primitives",
-  },
-  {
-    description: "Design tokens, composable styles, native web components, and the shared UI foundations built on them.",
-    title: "Interface systems",
-  },
-  {
-    description: "Vite build plugins, Tauri integrations, repository tooling, and reusable agent skills.",
-    title: "Tooling and platform",
-  },
-];
+function toSearchHaystack(entry: CatalogPackage): string {
+  return `${entry.label} ${entry.description ?? ""}`.toLowerCase();
+}
 
-const documentedCount = publicPackages.filter(
-  (packageEntry) => packageEntry.documentationRoute !== undefined,
-).length;
+const documentedCount = catalogPackages.filter((entry) => entry.documentationRoute !== undefined).length;
 ---
 
-<BaseLayout>
-  <main class="section-content wide px-(--layout-gutter)" id="main-content">
-    <section class="landing-hero">
-      <h1>Shared packages, apps, and project standards.</h1>
-      <p class="landing-lede">
-        Built for and by <a href="https://coden.agency">coden.agency</a>. A common
-        foundation for TypeScript, browser, UI, Vite, and Tauri projects.
-      </p>
-      <div class="landing-actions">
-        <a class="btn primary" href="/packages/">Browse packages</a>
-        <a class="btn out" href={siteConfig.githubUrl}>View on GitHub</a>
+<BaseLayout description="All public packages in the CodenHub monorepo." title="Packages">
+  <main aria-labelledby="package-catalog-title" class="section-content wide px-(--layout-gutter) py-10" id="main-content">
+    <div class="packages-toolbar">
+      <div>
+        <h1 class="text-title-lg" id="package-catalog-title">Packages</h1>
+        <p class="catalog-lede">
+          {documentedCount} documented {documentedCount === 1 ? "package" : "packages"}. Every one publishes its own
+          tokens, guides, and API reference.
+        </p>
       </div>
-      <p class="landing-meta">
-        {documentedCount} documented {documentedCount === 1 ? "package" : "packages"}
-      </p>
-    </section>
-
-    <section aria-labelledby="toolkit-title" class="landing-toolkit">
-      <h2 id="toolkit-title">What lives here</h2>
-      <div class="layer-grid">
-        {
-          layers.map((layer) => (
-            <article>
-              <h3>{layer.title}</h3>
-              <p>{layer.description}</p>
-            </article>
-          ))
-        }
+      <div class="packages-toolbar-controls">
+        <input
+          aria-label="Search packages"
+          class="package-search"
+          id="package-search"
+          placeholder="Search packages…"
+          type="search"
+        />
+        <button
+          aria-label="Sort by name, ascending"
+          aria-pressed="false"
+          class="package-sort"
+          data-sort-direction="asc"
+          id="package-sort"
+          type="button"
+        >
+          <svg aria-hidden="true" class="package-sort-icon" viewBox="0 0 24 24">
+            <path d="M11 5h10M11 9h6M11 13h3M4 17l3 3 3-3M7 4v16" />
+          </svg>
+          <span data-sort-label>A–Z</span>
+        </button>
       </div>
-    </section>
-  </main>
-  <footer class="site-footer">
-    <div class="site-footer-content section-content wide">
-      <p>&copy; 2026 CodenHub</p>
-      <p>Built by <a href="https://coden.agency/">coden</a>.</p>
     </div>
-  </footer>
+
+    <div class="auto-grid package-grid" id="package-grid" role="list">
+      {
+        catalogPackages.map((entry) =>
+          entry.documentationRoute === undefined ? (
+            <article
+              class="package-card package-card-pending"
+              data-label={entry.label}
+              data-search={toSearchHaystack(entry)}
+              role="listitem"
+            >
+              <div class="package-card-heading">
+                <h2>{entry.label}</h2>
+                <span class="badge secondary soft">Docs pending</span>
+              </div>
+              <p>{entry.description ?? "Public package documentation is not available yet."}</p>
+            </article>
+          ) : (
+            <div
+              class="package-card"
+              data-label={entry.label}
+              data-search={toSearchHaystack(entry)}
+              role="listitem"
+            >
+              <a class="package-card-open" href={entry.documentationRoute}>
+                <div class="package-card-heading">
+                  <h2>{entry.label}</h2>
+                  {entry.status !== undefined && <StatusBadge status={entry.status} />}
+                </div>
+                <p>{entry.description ?? "Package documentation and reference."}</p>
+              </a>
+              <div class="package-card-links">
+                {entry.githubUrl !== undefined && (
+                    <a
+                      aria-label={`${entry.label} on GitHub`}
+                      class="package-card-link"
+                      href={entry.githubUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 16 16">
+                        <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z" />
+                      </svg>
+                    </a>
+                  )}
+                  {entry.npmUrl !== undefined && (
+                    <a
+                      aria-label={`${entry.label} on npm`}
+                      class="package-card-link"
+                      href={entry.npmUrl}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <svg aria-hidden="true" viewBox="0 0 24 24">
+                        <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
+                      </svg>
+                    </a>
+                  )}
+                <svg aria-hidden="true" class="package-card-arrow" viewBox="0 0 24 24">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          ),
+        )
+      }
+    </div>
+    <p class="packages-empty" data-empty-filtered hidden>No packages match your search.</p>
+  </main>
 </BaseLayout>
+
+<script>
+  const searchInput = document.getElementById("package-search");
+  const sortButton = document.getElementById("package-sort");
+  const sortLabel = sortButton?.querySelector("[data-sort-label]");
+  const grid = document.getElementById("package-grid");
+  const emptyMessage = document.querySelector("[data-empty-filtered]");
+  const cards = grid
+    ? Array.from(grid.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
+    : [];
+
+  function applyFilter() {
+    if (!(searchInput instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const query = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+    for (const card of cards) {
+      const matches = query === "" || (card.dataset.search ?? "").includes(query);
+      card.hidden = !matches;
+      if (matches) {
+        visibleCount += 1;
+      }
+    }
+
+    if (emptyMessage instanceof HTMLElement) {
+      emptyMessage.hidden = visibleCount !== 0;
+    }
+  }
+
+  function applySort() {
+    if (!(sortButton instanceof HTMLElement) || grid === null) {
+      return;
+    }
+
+    const direction = sortButton.dataset.sortDirection === "desc" ? -1 : 1;
+    const sorted = [...cards].sort(
+      (left, right) => direction * (left.dataset.label ?? "").localeCompare(right.dataset.label ?? ""),
+    );
+    for (const card of sorted) {
+      grid.appendChild(card);
+    }
+  }
+
+  function toggleSortDirection() {
+    if (!(sortButton instanceof HTMLElement)) {
+      return;
+    }
+
+    const nextDirection = sortButton.dataset.sortDirection === "desc" ? "asc" : "desc";
+    sortButton.dataset.sortDirection = nextDirection;
+    sortButton.setAttribute("aria-pressed", String(nextDirection === "desc"));
+    sortButton.setAttribute(
+      "aria-label",
+      nextDirection === "desc" ? "Sort by name, descending" : "Sort by name, ascending",
+    );
+    if (sortLabel instanceof HTMLElement) {
+      sortLabel.textContent = nextDirection === "desc" ? "Z–A" : "A–Z";
+    }
+
+    applySort();
+  }
+
+  searchInput?.addEventListener("input", applyFilter);
+  sortButton?.addEventListener("click", toggleSortDirection);
+</script>

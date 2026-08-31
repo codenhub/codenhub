@@ -1,6 +1,5 @@
 @import "@codenhub/styles/tw";
 @import "./catalog.css";
-@import "./landing.css";
 @import "./markdown.css";
 @import "./search.css";
 @source "../**/*.{astro,ts}";
@@ -13,6 +12,10 @@
 
 html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
+}
+
+body {
+  @apply flex min-h-dvh flex-col;
 }
 
 .skip-link {
@@ -38,7 +41,6 @@ html {
 }
 
 .brand,
-.primary-navigation a,
 .header-icon-link,
 .theme-toggle {
   min-height: 44px;
@@ -62,23 +64,13 @@ html {
 }
 
 .header-actions,
-.header-end,
-.primary-navigation {
+.header-end {
   @apply flex items-center gap-0;
 }
 
-.primary-navigation a,
 .header-icon-link,
 .theme-toggle {
   @apply px-3;
-}
-
-.primary-navigation a {
-  @apply text-text-secondary hover:text-text flex items-center justify-center text-sm no-underline transition-colors;
-}
-
-.primary-navigation a[aria-current="page"] {
-  @apply font-semibold;
 }
 
 .header-icon-link,
@@ -331,12 +323,27 @@ html {
   }
 
   .header-end,
-  .header-actions,
-  .primary-navigation {
+  .header-actions {
     @apply gap-0;
   }
 
   .brand-logo {
     @apply h-5;
   }
+}
+
+.site-footer {
+  @apply border-border mt-auto w-full border-t;
+}
+
+.site-footer-content {
+  @apply flex flex-col gap-3 px-(--layout-gutter) py-8 sm:flex-row sm:items-center sm:justify-between;
+}
+
+.site-footer p {
+  @apply text-text-secondary text-sm;
+}
+
+.site-footer a {
+  @apply text-text hover:text-primary-strong text-sm font-medium underline underline-offset-4 transition-colors;
 }

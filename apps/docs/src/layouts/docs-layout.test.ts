@@ -29,15 +29,12 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("<h1>Overview</h1>");
   });
 
-  it.each(["index.html", "packages/index.html", "error/index.html"])(
-    "provides a skip link and main-content target in %s",
-    async (path) => {
-      const html = await readOutput(path);
+  it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
+    const html = await readOutput(path);
 
-      expect(html).toContain('class="skip-link" href="#main-content"');
-      expect(html).toMatch(/<main[^>]*id="main-content"/);
-    },
-  );
+    expect(html).toContain('class="skip-link" href="#main-content"');
+    expect(html).toMatch(/<main[^>]*id="main-content"/);
+  });
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
     const html = await readOutput("i18n/index.html");
@@ -53,17 +50,15 @@ describe("documentation chrome", () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
     expect(css).toMatch(
-      /\.brand,\s*\.primary-navigation a,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*min-height:\s*44px;[^}]*min-width:\s*44px;/s,
+      /\.brand,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*min-height:\s*44px;[^}]*min-width:\s*44px;/s,
     );
   });
 
   it("uses equal horizontal spacing around every header item", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
-    expect(css).toMatch(
-      /\.header-actions,\s*\.header-end,\s*\.primary-navigation\s*\{\s*@apply flex items-center gap-0;\s*\}/s,
-    );
-    expect(css).toMatch(/\.primary-navigation a,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
+    expect(css).toMatch(/\.header-actions,\s*\.header-end\s*\{\s*@apply flex items-center gap-0;\s*\}/s);
+    expect(css).toMatch(/\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
   });
 
   it("uses color and weight only for the active package document", async () => {
