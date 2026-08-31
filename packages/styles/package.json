@@ -91,6 +91,7 @@
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/styles-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
+    "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
     "build": "pnpm clean && pnpm build:styles && pnpm build:aesthetics && pnpm build:tw",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
     "build:aesthetics": "tailwindcss -i ./src/aesthetics/index.css -o ./dist/aesthetics/index.css --minify && tailwindcss -i ./src/aesthetics/neobrutalism.css -o ./dist/aesthetics/neobrutalism.css --minify && tailwindcss -i ./src/aesthetics/glass.css -o ./dist/aesthetics/glass.css --minify && tailwindcss -i ./src/aesthetics/pixel.css -o ./dist/aesthetics/pixel.css --minify && tailwindcss -i ./src/aesthetics/chunky-tile.css -o ./dist/aesthetics/chunky-tile.css --minify",

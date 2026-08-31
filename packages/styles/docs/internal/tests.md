@@ -176,7 +176,8 @@ Default package checks:
   "test:coverage": "pnpm test",
   "test:watch": "vitest --watch",
   "dev": "pnpm --filter=@codenhub/styles-dev dev",
-  "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev"
+  "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
+  "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev"
 }
 ```
 
