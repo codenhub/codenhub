@@ -156,6 +156,7 @@ container:
 | `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.          |
 | `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.             |
 | `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring. |
+| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.             |
 | `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                     |
 | `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                   |
 | `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.           |

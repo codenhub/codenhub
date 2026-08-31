@@ -33,12 +33,22 @@
     min-width: var(--control-height);
   }
 
-  /* `.p-sm`/`.p-lg` are the canonical names, matching the `sm`/`md`/`lg`
-     vocabulary the elevation modifier uses; `.compact`/`.spacious` are
+  /* `.p-xs`/`.p-sm`/`.p-lg` are the canonical names, matching the `sm`/`md`/`lg`
+     vocabulary the elevation modifier uses; `.dense`/`.compact`/`.spacious` are
      first-class aliases, not a deprecation shim -- the same pattern
      `.destructive`/`.danger`/`.error` uses on the intent axis. Bare `sm`/`lg`
      are already the size modifier's class names, so `p-` prefixes here to
-     avoid colliding with a button's own size. */
+     avoid colliding with a button's own size. `.p-xs` is the tightest step,
+     below `.compact`: a chip-sized button in a toolbar or a table cell. */
+  &.p-xs,
+  &.dense {
+    @apply px-2 py-0.5;
+
+    &.icon {
+      @apply p-0.5;
+    }
+  }
+
   &.p-sm,
   &.compact {
     @apply px-2.5 py-1;

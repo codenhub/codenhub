@@ -44,6 +44,7 @@ Size and shape classes:
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).     |
 | `.sm`                                                                  | Smaller button.                                             |
 | `.lg`                                                                  | Larger button.                                              |
+| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`).                  |
 | `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`).                   |
 | `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`).                    |
 | `.icon`                                                                | Square icon button. Use an accessible name in HTML.         |

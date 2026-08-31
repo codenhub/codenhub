@@ -558,16 +558,18 @@ test.describe("buttons", () => {
     }
   });
 
-  test("configures button padding with the compact and spacious modifiers", async ({ page }) => {
+  test("configures button padding with the dense, compact and spacious modifiers", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const readPadding = (testId: string, property: "padding" | "paddingLeft") =>
       page.getByTestId(testId).evaluate((element, name) => getComputedStyle(element)[name], property);
 
+    expect(await readPadding("btn-dense", "paddingLeft")).toBe("8px");
     expect(await readPadding("btn-compact", "paddingLeft")).toBe("10px");
     expect(await readPadding("btn-default-padding", "paddingLeft")).toBe("16px");
     expect(await readPadding("btn-spacious", "paddingLeft")).toBe("24px");
 
+    expect(await readPadding("btn-icon-dense", "padding")).toBe("2px");
     expect(await readPadding("btn-icon-compact", "padding")).toBe("4px");
     expect(await readPadding("btn-icon-default", "padding")).toBe("8px");
     expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");

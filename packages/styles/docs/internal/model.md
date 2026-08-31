@@ -995,6 +995,16 @@ meaningless on them; see [Unsupported values](#unsupported-values). The tooltip
 bubble names one too, and reads `--ui-surface-ground` ahead of it so a glass
 tooltip stays glass. The registry records the ground beside the pair.
 
+Everything else rests on nothing, and `box` says so on itself: it declares
+`--_d-ground: transparent` rather than leaving the value to the
+`var(--_d-ground, transparent)` fallback in its fill blend. The token inherits
+like any custom property, so a `surface` setting it to an opaque plate would
+reach every box nested inside -- a `.ghost` button in a card then blended its
+zero fill over the page colour and painted an opaque slab where it asked for no
+fill, and the slab stayed while the card tinted on hover. An own declaration on
+`box` beats the inherited one, so a nested control keeps its own ground; the four
+components above restate theirs after `@apply box` for the same reason.
+
 These authored defaults are implemented decisions, not derivations -- there is no
 rule that produces them, and there should not be. Each is stated in one place
 rather than hidden as a `var()` fallback in the middle of a component.

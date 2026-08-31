@@ -26,6 +26,17 @@
      stays the ceiling, not the result, or the slot is declared and unread. */
   --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_capped) * 2 - 100%)));
 
+  /* The ground a partial fill is painted over. Every box rests on nothing unless
+     it says so, and it says so here rather than through the `var(--_d-ground,
+     transparent)` fallback on the line below: `--_d-ground` inherits like any
+     custom property, so a `surface` setting it to its own opaque plate would
+     reach every box nested inside -- a `ghost` button in a card would blend its
+     zero fill over the page colour and paint an opaque slab where it asked for
+     no fill, and the slab would stay while the card tints on hover. An own
+     declaration beats the inherited one at any specificity; `surface`, `kbd`,
+     `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
+  --_d-ground: transparent;
+
   --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
   /* The two ends answer different questions: `--intent-contrast` prints *on* the
      fill, `--intent-strong` prints on the page (the slot for readable ink on a

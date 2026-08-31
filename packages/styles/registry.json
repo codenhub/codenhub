@@ -73,7 +73,7 @@
       }
     },
     "size": ["sm", "lg"],
-    "padding": ["p-sm", "p-lg", "compact", "spacious", "flush"],
+    "padding": ["p-xs", "p-sm", "p-lg", "dense", "compact", "spacious", "flush"],
     "shape": ["pill"],
     "state": ["loading", "disabled", "interactive", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
