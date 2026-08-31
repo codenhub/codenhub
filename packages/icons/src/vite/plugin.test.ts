@@ -176,6 +176,18 @@ describe("viteIcons", () => {
 
     expect(warnings).toEqual([]);
   });
+
+  it("emits nothing in the default css mode with auto attribution", () => {
+    const { generateBundle, load, transform } = createPlugin();
+    transform('<i class="ic-user"></i>', "index.html");
+    load("\0virtual:icons.css");
+
+    const { context, files, warnings } = createBundleContext();
+    generateBundle.call(context);
+
+    expect(files).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
 });
 
 describe("viteIcons virtual icon modules", () => {
@@ -268,12 +280,80 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
   });
 
+  it("keeps a double-quoted SVG intact inside a single-quoted string", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(`const markup = '<i class="ic-user"></i>';`, "app.ts");
+
+    expect(result?.code).toContain(`'<svg xmlns="http://www.w3.org/2000/svg"`);
+  });
+
+  it("replaces an icon tag written inside a template literal", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform('const markup = `<i class="ic-user"></i>`;', "app.tsx");
+
+    expect(result?.code).toContain("<svg");
+    expect(result?.code).not.toContain("ic-user");
+  });
+
+  it("still replaces an icon tag that sits after a line comment", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform('// a note\nconst markup = "<i class=\\"ic-user\\"></i>";', "app.ts");
+
+    expect(result?.code).toContain("<svg");
+    expect(result?.code).toContain("// a note");
+  });
+
+  it("leaves markup with no icon class untouched in a JS module", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    expect(transform('const markup = "<i class=\\"brand\\"></i>";', "app.ts")).toBeNull();
+  });
+
   it("drops the stylesheet import that has nothing to serve", () => {
     const { transform } = createPlugin({ mode: "svg" });
 
     const result = transform('@import "@codenhub/icons";\n.button { color: red; }', "styles.css");
 
     expect(result?.code).toBe("\n.button { color: red; }");
+  });
+
+  it("serves an empty virtual stylesheet, since the SVG is inlined into markup", () => {
+    const { load } = createPlugin({ mode: "svg" });
+
+    expect(load("\0virtual:icons.css")).toBe("");
+  });
+
+  it("leaves non-markup and dependency modules untouched", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    expect(transform('<i class="ic-user"></i>', "\0virtual:something")).toBeNull();
+    expect(transform('<i class="ic-user"></i>', "node_modules/pkg/index.js")).toBeNull();
+    expect(transform("const a = 1;", "app.ts")).toBeNull();
+  });
+
+  it("emits the license notice as an asset, since inline SVG carries no banner", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    transformIndexHtml('<i class="ic-user"></i>', {});
+
+    const { context, files } = createBundleContext();
+    generateBundle.call(context);
+
+    expect(files[0]?.fileName).toBe("icons-attribution.txt");
+    expect(files[0]?.source).toContain("Test Family");
+  });
+
+  it("warns instead of emitting when attribution is off in svg mode", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg", attribution: "off" });
+    transformIndexHtml('<i class="ic-user"></i>', {});
+
+    const { context, files, warnings } = createBundleContext();
+    generateBundle.call(context);
+
+    expect(files).toEqual([]);
+    expect(warnings[0]).toContain("Test Family");
   });
 });
 
