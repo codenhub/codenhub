@@ -66,7 +66,7 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
     if (element.childElementCount > 0) {
       if (!options.isSilent) {
         console.warn(
-          `[I18n] Skipping key "${key}" on <${element.tagName.toLowerCase()}> because translated elements must be leaves.`,
+          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because translated elements must be leaves.`,
         );
       }
       return;

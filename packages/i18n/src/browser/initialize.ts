@@ -214,7 +214,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     if (observe && root !== undefined) {
       const observedRoot = root;
       observer = new (getMutationObserver(observedRoot))((mutations) => {
-        const changedRoots = new Set<ParentNode>();
+        const changedRoots = new Set<Element>();
 
         for (const mutation of mutations) {
           if (mutation.type === "attributes") {
@@ -234,6 +234,22 @@ export async function initializeBrowserI18n<TLocale extends string>(
         }
 
         for (const changedRoot of changedRoots) {
+          let ancestor = changedRoot.parentElement;
+          let hasChangedAncestor = false;
+
+          while (ancestor !== null) {
+            if (changedRoots.has(ancestor)) {
+              hasChangedAncestor = true;
+              break;
+            }
+
+            ancestor = ancestor.parentElement;
+          }
+
+          if (hasChangedAncestor) {
+            continue;
+          }
+
           domTranslator.translateRoot({
             root: changedRoot,
             boundary: observedRoot,

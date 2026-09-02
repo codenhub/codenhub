@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>i18n browser tests</title>
+  </head>
+  <body>
+    <h1 data-i18n="greeting">Greeting fallback</h1>
+    <p id="hostile" data-i18n="hostile">Safe fallback</p>
+    <script type="module">
+      import { createI18n } from "/dist/index.js";
+      import { initializeBrowserI18n } from "/dist/browser.js";
+
+      const dictionaries = {
+        en: { greeting: "Hello", hostile: "Safe text" },
+        fr: { greeting: "Bonjour", hostile: '<img src=x onerror="document.body.dataset.xss = 1">' },
+      };
+      const i18n = createI18n({
+        defaultLocale: "en",
+        locales: ["en", "fr"],
+        loadLocale: (locale) => dictionaries[locale],
+        getLocaleDirection: () => "ltr",
+      });
+      const binding = await initializeBrowserI18n({ i18n, root: document.body, observe: true });
+
+      window.i18nTest = {
+        disconnect: () => binding.disconnect(),
+        setLocale: (locale) => i18n.setLocale(locale),
+      };
+      document.documentElement.dataset.ready = "true";
+    </script>
+  </body>
+</html>

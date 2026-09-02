@@ -56,6 +56,17 @@ describe("initializeBrowserI18n document integration", () => {
     rootBinding.disconnect();
   });
 
+  it("does not include rejected DOM translation keys in diagnostics", async () => {
+    document.body.innerHTML = '<p data-i18n="key&#10;forged">Keep <strong>markup</strong></p>';
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, root: document.body });
+    binding.disconnect();
+
+    expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation on <p> because translated elements must be leaves.");
+  });
+
   it("restores the original fallback when a later locale lacks the key", async () => {
     document.body.innerHTML = '<p data-i18n="frOnly">Original fallback</p>';
     const i18n = createManager();
@@ -108,6 +119,28 @@ describe("initializeBrowserI18n document integration", () => {
     expect(section.querySelector("p")?.textContent).toBe("Bonjour");
     expect(queryRoot).not.toHaveBeenCalled();
     binding.disconnect();
+  });
+
+  it("scans nested changed subtrees only once per mutation batch", async () => {
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    const section = document.createElement("section");
+    const nested = document.createElement("div");
+    nested.innerHTML = '<p data-i18n="greeting">Added fallback</p>';
+    const nestedQuery = vi.spyOn(nested, "querySelectorAll");
+
+    document.body.append(section);
+    section.append(nested);
+    await flushMutations();
+
+    binding.disconnect();
+    expect(nested.querySelector("p")?.textContent).toBe("Bonjour");
+    expect(nestedQuery).not.toHaveBeenCalled();
   });
 
   it("does not translate content added inside a custom element", async () => {

@@ -79,12 +79,12 @@ const payload = {
 // becomes { "page.title": "Welcome" }
 ```
 
-The normalized `LocaleDictionary` has a null prototype, is frozen, and contains only string values. Dictionaries allow at most 100 levels of nesting, 10,000 translations, and 1,000 characters per flattened key. A payload throws `TypeError` when it:
+The normalized `LocaleDictionary` has a null prototype, is frozen, and contains only string values. Dictionaries allow at most 100 levels of nesting, 10,000 translations, 20,000 traversed properties, 1,000 characters per flattened key, 100,000 characters per translation value, and 5,000,000 aggregate translation characters. A payload throws `TypeError` when it:
 
 - Is null, an array, a primitive, or empty.
-- Contains a non-string leaf, array, function, symbol key, accessor, or cycle.
-- Contains an empty dot-separated segment, a `__proto__`, `prototype`, or `constructor` segment, or a flat/nested key collision.
-- Exceeds a dictionary depth, translation count, or flattened-key limit.
+- Contains a non-string leaf, array, function, symbol key, accessor, cycle, or shared object reference.
+- Contains an empty dot-separated segment, an ASCII control character, a `__proto__`, `prototype`, or `constructor` segment, or a flat/nested key collision.
+- Exceeds a dictionary depth, translation count, property count, flattened-key length, translation-value length, or aggregate translation-character limit.
 
 Validation failures are not wrapped and are retryable on the next load.
 
@@ -112,7 +112,7 @@ Trims an untrusted string and returns the canonical case-insensitive exact confi
 translate(key: string): string | undefined;
 ```
 
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank or runtime non-string keys throw `TypeError`.
+Trims a non-empty key, checks the active dictionary, then the default dictionary. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000-character, or ASCII-control-containing keys throw `TypeError`.
 
 The API does not provide interpolation, plural selection, rich messages, number/date formatting, or HTML rendering.
 
@@ -141,12 +141,12 @@ Events are `CustomEvent` compatible even where the runtime lacks a global `Custo
 
 Native errors identify programmer or payload failures:
 
-| Failure                                                              | Error        |
-| -------------------------------------------------------------------- | ------------ |
-| Invalid configuration or dictionary                                  | `TypeError`  |
-| Unsupported locale or runtime non-string locale in locale operations | `RangeError` |
-| `translate()` or `setLocale()` before successful initialization      | `Error`      |
-| Blank or runtime non-string translation key                          | `TypeError`  |
+| Failure                                                                     | Error        |
+| --------------------------------------------------------------------------- | ------------ |
+| Invalid configuration or dictionary                                         | `TypeError`  |
+| Unsupported locale or runtime non-string locale in locale operations        | `RangeError` |
+| `translate()` or `setLocale()` before successful initialization             | `Error`      |
+| Blank, oversized, control-containing, or runtime non-string translation key | `TypeError`  |
 
 A rejected injected loader is wrapped:
 
@@ -294,6 +294,6 @@ routing.localizeAll("/about");
 
 `localize()` replaces a recognized locale prefix. It leaves an unsupported leading segment as application path content, emits canonical locale spelling, and omits the default prefix when configured. An unsupported or runtime non-string locale throws `RangeError`. `localizeAll()` returns one result per configured locale in configuration order.
 
-All three methods accept only an absolute application pathname beginning with `/`. They reject `TypeError` for an empty or relative path, full or protocol relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Non-root trailing slashes are preserved.
+All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Non-root trailing slashes are preserved.
 
 Routing never reads globals, negotiates headers, registers routes, handles base paths, redirects, navigates, renders HTML, or emits static pages.

@@ -44,23 +44,30 @@
     "status:npm": "npm view @codenhub/i18n version dist-tags time --json && npm dist-tag ls @codenhub/i18n && npm access get status @codenhub/i18n",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc -b"
   },
   "devDependencies": {
     "@codenhub/error": "workspace:*",
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "jsdom": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24.14.1"
   },
   "codenhub": {
     "docs": {
       "label": "i18n",
-      "status": "experimental"
+      "status": "active"
     }
   }
 }

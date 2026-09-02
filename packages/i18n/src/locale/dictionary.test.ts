@@ -48,6 +48,13 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary({ [key]: "value" })).toThrow(TypeError);
   });
 
+  it.each(["key\nforged", "key\u001bhidden", "key\u007fhidden"])(
+    "rejects ASCII control characters in key %s",
+    (key) => {
+      expect(() => normalizeDictionary({ [key]: "value" })).toThrow("[I18n] Invalid locale dictionary key.");
+    },
+  );
+
   it("rejects surrounding whitespace in nested key segments", () => {
     expect(() => normalizeDictionary({ safe: { " child ": "value" } })).toThrow(TypeError);
   });
@@ -75,6 +82,12 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary(input)).toThrow(TypeError);
   });
 
+  it("rejects shared object references before traversing them repeatedly", () => {
+    const shared = { value: "translation" };
+
+    expect(() => normalizeDictionary({ first: shared, second: shared })).toThrow("must not contain repeated objects");
+  });
+
   it("rejects dictionaries deeper than 100 levels", () => {
     let input: Record<string, unknown> = { value: "translation" };
 
@@ -91,9 +104,27 @@ describe("normalizeDictionary", () => {
     expect(() => normalizeDictionary(input)).toThrow("must not exceed 10000 translations");
   });
 
+  it("rejects dictionaries with more than 20,000 traversed properties", () => {
+    const input = Object.fromEntries(Array.from({ length: 20_001 }, (_, index) => [`key-${index}`, {}]));
+
+    expect(() => normalizeDictionary(input)).toThrow("must not exceed 20000 properties");
+  });
+
   it("rejects flattened keys longer than 1,000 characters", () => {
     expect(() => normalizeDictionary({ ["k".repeat(1_001)]: "value" })).toThrow(
       "flattened keys must not exceed 1000 characters",
     );
+  });
+
+  it("rejects translation values longer than 100,000 characters", () => {
+    expect(() => normalizeDictionary({ key: "v".repeat(100_001) })).toThrow(
+      "translation values must not exceed 100000 characters",
+    );
+  });
+
+  it("rejects dictionaries with more than 5,000,000 aggregate translation characters", () => {
+    const input = Object.fromEntries(Array.from({ length: 51 }, (_, index) => [`key-${index}`, "v".repeat(100_000)]));
+
+    expect(() => normalizeDictionary(input)).toThrow("must not exceed 5000000 aggregate translation characters");
   });
 });
