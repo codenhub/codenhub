@@ -408,7 +408,7 @@ Trims an untrusted string and returns the canonical case-insensitive exact confi
 translate(key: string): string | undefined;
 ```
 
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000-character, or ASCII-control-containing keys throw `TypeError`.
+Trims a non-empty key, checks the active dictionary, then the default dictionary. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 
 The API does not provide interpolation, plural selection, rich messages, number/date formatting, or HTML rendering.
 
@@ -590,6 +590,6 @@ routing.localizeAll("/about");
 
 `localize()` replaces a recognized locale prefix. It leaves an unsupported leading segment as application path content, emits canonical locale spelling, and omits the default prefix when configured. An unsupported or runtime non-string locale throws `RangeError`. `localizeAll()` returns one result per configured locale in configuration order.
 
-All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Non-root trailing slashes are preserved.
+All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol-relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Non-root trailing slashes are preserved.
 
 Routing never reads globals, negotiates headers, registers routes, handles base paths, redirects, navigates, renders HTML, or emits static pages.

@@ -65,6 +65,10 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
 
     expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation on <p> because translated elements must be leaves.");
+    for (const [message] of warn.mock.calls) {
+      expect(String(message)).not.toContain("key\nforged");
+      expect(String(message)).not.toContain("\n");
+    }
   });
 
   it("restores the original fallback when a later locale lacks the key", async () => {
