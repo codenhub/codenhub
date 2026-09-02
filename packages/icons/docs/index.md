@@ -146,6 +146,10 @@ element.innerHTML = svg;
 
 The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
 
+### Inline SVG mode
+
+`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms above do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
+
 ---
 
 ## PostCSS plugin

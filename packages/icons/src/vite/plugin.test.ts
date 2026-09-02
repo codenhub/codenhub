@@ -320,6 +320,37 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).toBe("\n.button { color: red; }");
   });
 
+  it("warns about an icon class on an element it does not rewrite", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<button class="btn ic-user">Save</button>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).toContain("ic-user");
+    expect(warnings.join("\n")).toContain('mode "svg" does not rewrite');
+  });
+
+  it("does not warn about a class that is not an icon", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<button class="btn ic-absent">Save</button>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).not.toContain("ic-absent");
+  });
+
+  it("does not warn when every icon class was rewritten", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<i class="ic-user"></i>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).not.toContain("does not rewrite");
+  });
+
   it("serves an empty virtual stylesheet, since the SVG is inlined into markup", () => {
     const { load } = createPlugin({ mode: "svg" });
 

@@ -413,9 +413,42 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const inMemoryClasses = new Set<string>();
   const resolvedVirtualIds = new Set<string>();
   const usedFamilies = new Map<string, IconFamilyData>();
+  const unreplacedClasses = new Map<string, string>();
 
   function rememberFamily(family: IconFamilyData): void {
     usedFamilies.set(family.prefix, family);
+  }
+
+  /**
+   * Records icon classes that survived inline SVG replacement.
+   *
+   * `svg` mode rewrites `<i class="ic-...">` tags and nothing else, so a class
+   * left on a button or a form control renders nothing at all: there is no
+   * stylesheet in this mode to carry its mask. Silence is the worst outcome, so
+   * every such class is reported once.
+   */
+  function collectUnreplacedClasses(source: string, file: string): void {
+    for (const className of scanIconClasses(source, { prefix })) {
+      if (unreplacedClasses.has(className)) {
+        continue;
+      }
+      const parsed = parseIconClass(className.slice(prefix.length + 1));
+      if (resolveIconClassName(registry, parsed.name)) {
+        unreplacedClasses.set(className, file);
+      }
+    }
+  }
+
+  function renderUnreplacedWarning(): string | undefined {
+    if (unreplacedClasses.size === 0) {
+      return undefined;
+    }
+    const listed = [...unreplacedClasses].map(([className, file]) => `- ${className} in ${file}`);
+    return [
+      `Icon classes were found on elements that mode "svg" does not rewrite, so they render nothing:`,
+      ...listed,
+      `Inline SVG replacement covers <i class="${prefix}-..."> tags only. Use that form, or switch to mode "css", which serves mask rules that work on any element.`,
+    ].join("\n");
   }
 
   function generateCssFromContent(): string {
@@ -492,12 +525,14 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     transformIndexHtml(html, ctx) {
       if (mode === "svg") {
-        return replaceIconTagsWithSvg(html, registry, {
+        const replaced = replaceIconTagsWithSvg(html, registry, {
           isJsContext: false,
           onFamilyUsed: rememberFamily,
           prefix,
           strokeWidth: options.strokeWidth,
         });
+        collectUnreplacedClasses(replaced, ctx.filename ?? "index.html");
+        return replaced;
       }
 
       const scanned = scanIconClasses(html, { prefix });
@@ -536,6 +571,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
             prefix,
             strokeWidth: options.strokeWidth,
           });
+          collectUnreplacedClasses(replaced, id);
           if (replaced !== code) {
             return { code: replaced, map: null };
           }
@@ -564,6 +600,11 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     },
 
     generateBundle() {
+      const unreplaced = renderUnreplacedWarning();
+      if (unreplaced) {
+        this.warn(unreplaced);
+      }
+
       const families = [...usedFamilies.values()];
       if (attributionMode === "off") {
         const warning = renderSuppressedAttributionWarning(families);
