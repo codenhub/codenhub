@@ -407,7 +407,16 @@ function createDevServer() {
     ws: { send: (payload: { type?: string }) => sent.push(payload) },
     watcher: { on: (event: string, handler: (filePath: string) => void) => watchers.set(event, handler) },
   };
-  return { invalidated, sent, server, watchers };
+  // Fails loudly rather than no-opping when the plugin never registered the
+  // watcher, so a test cannot pass by skipping the path it means to cover.
+  const fire = (event: "change" | "add", filePath: string) => {
+    const handler = watchers.get(event);
+    if (!handler) {
+      throw new Error(`plugin registered no "${event}" watcher`);
+    }
+    handler(filePath);
+  };
+  return { fire, invalidated, sent, server };
 }
 
 describe("viteIcons dev invalidation", () => {
@@ -437,21 +446,31 @@ describe("viteIcons dev invalidation", () => {
 
   it("refreshes when the file watcher reports a change to a source file", () => {
     const { plugin } = createPlugin();
-    const { invalidated, watchers, server } = createDevServer();
+    const { fire, invalidated, server } = createDevServer();
     (plugin.configureServer as (server: unknown) => void)(server);
 
-    watchers.get("change")?.("src/page.tsx");
+    fire("change", "src/page.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+  });
+
+  it("refreshes when the file watcher reports a newly added source file", () => {
+    const { plugin } = createPlugin();
+    const { fire, invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    fire("add", "src/new-page.tsx");
 
     expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
   });
 
   it("ignores a watcher event for a file it would never scan", () => {
     const { plugin } = createPlugin();
-    const { invalidated, watchers, server } = createDevServer();
+    const { fire, invalidated, server } = createDevServer();
     (plugin.configureServer as (server: unknown) => void)(server);
 
-    watchers.get("change")?.("node_modules/pkg/index.js");
-    watchers.get("add")?.("notes.md");
+    fire("change", "node_modules/pkg/index.js");
+    fire("add", "notes.md");
 
     expect(invalidated).toEqual([]);
   });
