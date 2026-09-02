@@ -114,7 +114,7 @@ The alternative — a variant axis inside a family — would add a dimension to 
 
 `after` and `bg` are words the utility classes own: `ic-after` and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
 
-`stroke` was reserved for the same reason until `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
+`stroke` was reserved for the same reason until 0.2.0, when `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
 
 ## Family data layout
 
@@ -205,9 +205,9 @@ Lookup order for `resolve(name)`, limited to families already loaded:
 
 The registry names no default family and carries no curated map of semantic names. An unqualified name resolves against `defaultPrefix` or against nothing.
 
-A 35-entry semantic map used to sit here, mapping `close` to `lucide:x` and so on. It read as a package-wide feature, but every entry pointed at Lucide, so for the other twelve families it silently fell through to the default prefix: the package advertised semantic resolution and honoured it for one family in thirteen. Curating it for every family is thirteen times the editorial work and a standing obligation on every upstream bump; leaving it in place meant one family's vocabulary was quietly the package's.
+Version 0.2.0 removed a 35-entry semantic map — `close` to `lucide:x`, and so on. It read as a package-wide feature but every entry pointed at Lucide, so for the other twelve families it silently fell through to the default prefix: the package advertised semantic resolution and honoured it for one family in thirteen. Curating it for every family is thirteen times the editorial work and a standing obligation on every upstream bump; leaving it in place meant one family's vocabulary was quietly the package's.
 
-It also could not survive the plugin-free path. A static family stylesheet has no alias layer, so a semantic name would have resolved under the plugins and silently failed without them -- the inconsistency the entry points exist to remove.
+It also could not survive the plugin-free path. A static family stylesheet has no alias layer, so a semantic name would have resolved under the plugins and silently failed without them — the inconsistency the entry-point work exists to remove.
 
 A curated `core` family, with its own prefix and its own artwork, is the honest shape for this if it comes back. That is a family a project opts into, not a default it cannot see.
 
