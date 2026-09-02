@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin, ViteDevServer } from "vite";
 
 import {
   renderAttributionBanner,
@@ -416,6 +416,32 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const resolvedVirtualIds = new Set<string>();
   const usedFamilies = new Map<string, IconFamilyData>();
   const unreplacedClasses = new Map<string, string>();
+  let devServer: ViteDevServer | undefined;
+
+  /**
+   * Marks the generated stylesheet stale and asks the browser for it again.
+   *
+   * Dev discovers icon classes as it transforms modules, which happens after
+   * the HTML has been served. Without this, a class first seen during a
+   * transform would sit in memory with nothing to put it on the page until
+   * someone reloaded by hand.
+   */
+  function invalidateStylesheet(): void {
+    if (!devServer) {
+      return;
+    }
+    for (const targetId of new Set<string>([RESOLVED_VIRTUAL_ID, ...resolvedVirtualIds])) {
+      const mod = devServer.moduleGraph.getModuleById(targetId);
+      if (!mod) {
+        continue;
+      }
+      devServer.moduleGraph.invalidateModule(mod);
+      devServer.ws.send({
+        type: "update",
+        updates: [{ acceptedPath: mod.url, path: mod.url, timestamp: Date.now(), type: "js-update" }],
+      });
+    }
+  }
 
   function rememberFamily(family: IconFamilyData): void {
     usedFamilies.set(family.prefix, family);
@@ -518,8 +544,7 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         id === RESOLVED_VIRTUAL_ID ||
         id === "\0virtual:codenhub-icons.css" ||
         id === "\0virtual:@codenhub/icons.css" ||
-        id.endsWith("virtual:icons.css") ||
-        id.endsWith("@codenhub/icons/style.css")
+        id.endsWith("virtual:icons.css")
       ) {
         return mode === "svg" ? "" : generateCssFromContent();
       }
@@ -544,6 +569,22 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       }
       if (ctx.filename) {
         scannedFiles.add(ctx.filename);
+      }
+
+      // In dev the stylesheet is referenced rather than inlined, so it is a
+      // module the server can invalidate. An inlined <style> is a snapshot
+      // taken before Vite has transformed a single module, and nothing can
+      // refresh it: a class written in a file this plugin has not seen yet
+      // would stay missing until the page was reloaded by hand. A build inlines
+      // it, because there the modules are transformed before the HTML is.
+      if (ctx.server) {
+        return [
+          {
+            tag: "script",
+            attrs: { type: "module", src: `/@id/${VIRTUAL_ID}` },
+            injectTo: "head",
+          },
+        ];
       }
 
       return [
@@ -573,13 +614,19 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         return null;
       }
 
-      const scanned = scanIconClasses(code, { prefix });
-      for (const cls of scanned) {
+      const knownClasses = inMemoryClasses.size;
+      const knownFiles = scannedFiles.size;
+
+      for (const cls of scanIconClasses(code, { prefix })) {
         inMemoryClasses.add(cls);
       }
 
       if (id && !id.includes("node_modules") && !id.startsWith("\0") && SOURCE_FILE.test(id)) {
         scannedFiles.add(id);
+      }
+
+      if (inMemoryClasses.size !== knownClasses || scannedFiles.size !== knownFiles) {
+        invalidateStylesheet();
       }
 
       return null;
@@ -611,31 +658,15 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     },
 
     configureServer(server) {
+      devServer = server;
+
       const handleFileChange = (filePath: string) => {
         if (filePath.includes("node_modules") || !SOURCE_FILE.test(filePath)) {
           return;
         }
 
         scannedFiles.add(filePath);
-
-        const targets = new Set<string>([RESOLVED_VIRTUAL_ID, ...resolvedVirtualIds]);
-        for (const targetId of targets) {
-          const mod = server.moduleGraph.getModuleById(targetId);
-          if (mod) {
-            server.moduleGraph.invalidateModule(mod);
-            server.ws.send({
-              type: "update",
-              updates: [
-                {
-                  type: "js-update",
-                  path: mod.url,
-                  acceptedPath: mod.url,
-                  timestamp: Date.now(),
-                },
-              ],
-            });
-          }
-        }
+        invalidateStylesheet();
       };
 
       server.watcher.on("change", handleFileChange);

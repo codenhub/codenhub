@@ -209,6 +209,8 @@ The generated stylesheet is served as `virtual:icons.css` and injected into ever
 
 `content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
 
+That last part is worth knowing. In dev, Vite serves the HTML before it transforms a single module, so a class the plugin has only ever seen inside a module is not yet known when the page is first served. The stylesheet is therefore served as a module rather than inlined, and the plugin invalidates it whenever a transform turns up something new, so the icon arrives without a reload. Listing your sources in `content` avoids the round trip entirely, because those files are read from disk up front.
+
 ### Inline SVG mode
 
 `mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms above do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
