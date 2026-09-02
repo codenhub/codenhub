@@ -47,11 +47,43 @@ export function scanIconClasses(content: string, options?: ScanIconClassesOption
   return new Set<string>(matches);
 }
 
+const GLOB_CHARACTERS = /[*?[\]{}]/;
+
 /**
- * Scans multiple file paths on disk for icon class usages matching the given prefix.
- * Safely ignores non-existent or unreadable files.
+ * Resolves one entry into the files it names.
  *
- * @param filePaths - Iterable collection of file system paths to scan.
+ * An entry is tried as a literal path first, so a real file whose name contains
+ * a bracket is read rather than treated as a pattern. Only when no such file
+ * exists is the entry expanded as a glob.
+ *
+ * @param entry - Literal file path or glob pattern.
+ * @returns The files the entry names, which may be none.
+ */
+function resolveEntry(entry: string): string[] {
+  try {
+    if (fs.existsSync(entry)) {
+      return fs.statSync(entry).isFile() ? [entry] : [];
+    }
+    if (!GLOB_CHARACTERS.test(entry)) {
+      return [];
+    }
+    return fs.globSync(entry);
+  } catch {
+    // An unreadable path or a pattern the platform rejects contributes nothing,
+    // the same as a path that names no file.
+    return [];
+  }
+}
+
+/**
+ * Scans file paths and glob patterns on disk for icon class usages matching the
+ * given prefix.
+ *
+ * Patterns are expanded here rather than by the caller, because every
+ * integration takes the same `content` option and none of them should have to
+ * carry a matcher of its own. Non-existent and unreadable files are ignored.
+ *
+ * @param filePaths - File paths or glob patterns, such as `src/**\/*.{html,tsx}`.
  * @param options - Options specifying the icon class prefix.
  * @param targetSet - Optional existing `Set` to populate with extracted class names.
  * @returns `Set` containing unique extracted icon class names.
@@ -61,17 +93,16 @@ export function scanFiles(
   options?: ScanIconClassesOptions,
   targetSet: Set<string> = new Set<string>(),
 ): Set<string> {
-  for (const filePath of filePaths) {
-    try {
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+  for (const entry of filePaths) {
+    for (const filePath of resolveEntry(entry)) {
+      try {
         const content = fs.readFileSync(filePath, "utf-8");
-        const matches = scanIconClasses(content, options);
-        for (const cls of matches) {
+        for (const cls of scanIconClasses(content, options)) {
           targetSet.add(cls);
         }
+      } catch {
+        // Ignore unreadable files gracefully
       }
-    } catch {
-      // Ignore unreadable files gracefully
     }
   }
 

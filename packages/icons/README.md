@@ -85,7 +85,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on any
 
 | Requirement  | Details                                                                               |
 | ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 18.0.0 or newer, for the build-time plugins and helpers.                              |
+| Node.js      | 22.0.0 or newer, for the build-time plugins and helpers.                              |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
 | Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |

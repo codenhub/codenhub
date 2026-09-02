@@ -194,7 +194,7 @@ viteIcons({
 | --------------- | ------------------------------------------------------------------------------------------- |
 | `families`      | Families to resolve against. Nothing is bundled by default.                                 |
 | `defaultPrefix` | Family an unqualified name resolves against. There is no default.                           |
-| `content`       | Extra files to scan, beyond what the build transforms.                                      |
+| `content`       | Files and globs to scan, beyond what the build transforms.                                  |
 | `prefix`        | Class prefix. Defaults to `ic`.                                                             |
 | `strokeWidth`   | Default for stroke-based families whose classes carry no modifier.                          |
 | `mode`          | `css` serves mask rules; `svg` replaces `<i class="ic-...">` with inline SVG at build time. |
@@ -204,6 +204,10 @@ viteIcons({
 The generated stylesheet is served as `virtual:icons.css` and injected into every HTML entry point.
 
 `@import "@codenhub/icons";` is left alone. It resolves through the package's `style` export condition to `dist/style.css`, the base `.ic` rules, and means the same thing whether or not a plugin is in the pipeline. Keep it in your stylesheet; the plugin adds the per-icon rules around it rather than in place of it.
+
+### Scanning
+
+`content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
 
 ### Inline SVG mode
 
