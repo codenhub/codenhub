@@ -94,7 +94,7 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on any
 ## Notes
 
 - An icon is named `prefix:name`, written `ic-prefix-name` in a class, as in `ic-material-symbols-rounded-home`.
-- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through whichever family stylesheet you imported last.
+- The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it.
 - Stroke width is a modifier on the icon class, `ic-lucide-heart/1.5`, and applies only to families drawn with strokes. It needs one of the plugins: a plugin-free stylesheet has no way to know which widths you want, so families there render at their authored width.
 - `after` and `bg` are reserved: `ic-after` and `ic-bg` are modifiers, so no family may use them as a prefix.
 - The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 22 MB across all 13. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
