@@ -147,17 +147,17 @@ To configure the plugin, declare it yourself instead of importing `/tw`, which a
 @plugin "@codenhub/icons/tailwind" {
   families: lucide, phosphor-fill;
   default: lucide;
-  strokewidth: 1.5;
+  stroke-width: 1.5;
 }
 ```
 
-| Option        | Purpose                                                               |
-| ------------- | --------------------------------------------------------------------- |
-| `families`    | Family prefixes to resolve against. Defaults to all of them.          |
-| `default`     | Family that unqualified names resolve against. There is no default.   |
-| `prefix`      | Class prefix. Defaults to `ic`.                                       |
-| `strokeWidth` | Applied to stroke-based families that carry no modifier of their own. |
-| `attribution` | `auto` or `off`. See [Licensing](#licensing).                         |
+| Option         | Purpose                                                               |
+| -------------- | --------------------------------------------------------------------- |
+| `families`     | Family prefixes to resolve against. Defaults to all of them.          |
+| `default`      | Family that unqualified names resolve against. There is no default.   |
+| `prefix`       | Class prefix. Defaults to `ic`.                                       |
+| `stroke-width` | Applied to stroke-based families that carry no modifier of their own. |
+| `attribution`  | `auto` or `off`. See [Licensing](#licensing).                         |
 
 `families` does not make the build cheaper. A Tailwind plugin handler has to be synchronous — utilities registered after an `await` are dropped — so every family is already loaded by the time the options are read. It decides which names resolve, and which notices the output can carry.
 

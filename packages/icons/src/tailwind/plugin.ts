@@ -57,6 +57,21 @@ export interface TailwindIconsOptions {
   /**
    * Stroke width for icons of stroke-based families that carry no stroke
    * modifier of their own.
+   *
+   * Write it as `stroke-width` in a `@plugin` block. Tailwind passes an option
+   * name through exactly as written, but a CSS formatter lowercases a property
+   * name, so a camelCase key survives being authored and not being reformatted:
+   * `strokeWidth` becomes `strokewidth` and is silently ignored. The hyphenated
+   * spelling is also the one a CSS file reads as CSS.
+   */
+  "stroke-width"?: number | string;
+
+  /**
+   * Stroke width, named the way JavaScript names it.
+   *
+   * {@link TailwindIconsOptions."stroke-width"} is the spelling to use from
+   * CSS. This one is for a caller building the plugin in JavaScript, and wins
+   * when both are given.
    */
   strokeWidth?: number | string;
 
@@ -145,7 +160,20 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
     return ({ addBase, matchUtilities }) => {
       const prefix = options.prefix ?? "ic";
       const attribution = options.attribution ?? "auto";
+      const strokeWidth = options.strokeWidth ?? options["stroke-width"];
       const families = selectFamilies(availableFamilies, options.families);
+
+      // A default naming a family that is not selected resolves nothing, so
+      // `ic-heart` would emit no CSS and no error. Refusing the configuration
+      // says which of the two options is wrong, rather than leaving an icon to
+      // go missing at a glance.
+      if (options.default !== undefined && !families.some((family) => family.prefix === options.default)) {
+        throw new Error(
+          `@codenhub/icons: default icon family "${options.default}" is not among the families this plugin resolves: ${families
+            .map((family) => family.prefix)
+            .join(", ")}.`,
+        );
+      }
 
       const registry = new IconRegistry({ defaultPrefix: options.default });
       for (const family of families) {
@@ -192,8 +220,8 @@ export function createIconsTailwindPlugin(availableFamilies: readonly IconFamily
             return null;
           }
 
-          const strokeWidth = extra?.modifier ?? parsed.strokeWidth ?? options.strokeWidth;
-          const url = getIconMaskUrl(icon.name, registry, { strokeWidth });
+          const width = extra?.modifier ?? parsed.strokeWidth ?? strokeWidth;
+          const url = getIconMaskUrl(icon.name, registry, { strokeWidth: width });
           if (!url) {
             return null;
           }

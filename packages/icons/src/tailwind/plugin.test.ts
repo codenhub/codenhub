@@ -117,6 +117,41 @@ describe("createIconsTailwindPlugin", () => {
     expect(resolve("alpha:heart")?.["--ic-uri"]).toContain("stroke-width=%223%22");
   });
 
+  it("reads the stroke width written the way CSS writes it", () => {
+    // A CSS formatter lowercases a property name, so a `strokeWidth` key in a
+    // `@plugin` block arrives as `strokewidth` and is silently dropped. The
+    // hyphenated spelling is the one that survives being formatted.
+    const { resolve } = runPlugin([createFamily("alpha")], { "stroke-width": 3 });
+
+    expect(resolve("alpha:heart")?.["--ic-uri"]).toContain("stroke-width=%223%22");
+  });
+
+  it("prefers the JavaScript spelling when both are given", () => {
+    const { resolve } = runPlugin([createFamily("alpha")], { "stroke-width": 3, strokeWidth: 1 });
+
+    expect(resolve("alpha:heart")?.["--ic-uri"]).toContain("stroke-width=%221%22");
+  });
+
+  it("lets a modifier override the configured stroke width", () => {
+    const { resolve } = runPlugin([createFamily("alpha")], { "stroke-width": 3 });
+
+    expect(resolve("alpha:heart", "1.5")?.["--ic-uri"]).toContain("stroke-width=%221.5%22");
+  });
+
+  it("reports a default naming a family it does not resolve", () => {
+    expect(() => runPlugin([createFamily("alpha")], { default: "absent" })).toThrow(
+      'default icon family "absent" is not among the families',
+    );
+  });
+
+  it("reports a default excluded by the family list", () => {
+    // Both options are individually valid, so the mistake is only visible in
+    // the pair: without this, `ic-heart` would emit nothing and say nothing.
+    expect(() =>
+      runPlugin([createFamily("alpha"), createFamily("beta")], { default: "beta", families: ["alpha"] }),
+    ).toThrow('default icon family "beta" is not among the families');
+  });
+
   it("honours a custom class prefix", () => {
     const created = createIconsTailwindPlugin([createFamily("alpha")]) as unknown as {
       (options?: TailwindIconsOptions): { handler: (api: unknown) => void };
