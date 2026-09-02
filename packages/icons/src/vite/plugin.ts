@@ -660,6 +660,11 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     configureServer(server) {
       devServer = server;
 
+      // The `transform` hook already invalidates when it scans a new class out
+      // of a module the bundler loaded. This watcher covers the rest: a file
+      // that is listed in `content` or scanned once but never enters the module
+      // graph -- a standalone HTML fragment, a template -- whose edit Vite would
+      // otherwise not connect to the stylesheet.
       const handleFileChange = (filePath: string) => {
         if (filePath.includes("node_modules") || !SOURCE_FILE.test(filePath)) {
           return;

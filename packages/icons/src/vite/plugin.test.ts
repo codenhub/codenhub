@@ -390,6 +390,73 @@ describe("viteIcons in svg mode", () => {
   });
 });
 
+interface FakeModule {
+  url: string;
+}
+
+function createDevServer() {
+  const invalidated: string[] = [];
+  const sent: { type?: string }[] = [];
+  const watchers = new Map<string, (filePath: string) => void>();
+  const mod: FakeModule = { url: "/@id/virtual:icons.css" };
+  const server = {
+    moduleGraph: {
+      getModuleById: (id: string) => (id === "\0virtual:icons.css" ? mod : undefined),
+      invalidateModule: (target: FakeModule) => invalidated.push(target.url),
+    },
+    ws: { send: (payload: { type?: string }) => sent.push(payload) },
+    watcher: { on: (event: string, handler: (filePath: string) => void) => watchers.set(event, handler) },
+  };
+  return { invalidated, sent, server, watchers };
+}
+
+describe("viteIcons dev invalidation", () => {
+  it("refreshes the stylesheet when a transform turns up a new class", () => {
+    const { plugin, transform } = createPlugin();
+    const { invalidated, sent, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    transform('export const App = () => <i className="ic-user" />;', "app.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ type: "update" });
+  });
+
+  it("does not refresh again for a class it has already seen", () => {
+    const { plugin, transform } = createPlugin();
+    const { invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    transform('<i class="ic-user"></i>', "page.tsx");
+    invalidated.length = 0;
+    transform('<i class="ic-user"></i>', "page.tsx");
+
+    expect(invalidated).toEqual([]);
+  });
+
+  it("refreshes when the file watcher reports a change to a source file", () => {
+    const { plugin } = createPlugin();
+    const { invalidated, watchers, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    watchers.get("change")?.("src/page.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+  });
+
+  it("ignores a watcher event for a file it would never scan", () => {
+    const { plugin } = createPlugin();
+    const { invalidated, watchers, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    watchers.get("change")?.("node_modules/pkg/index.js");
+    watchers.get("add")?.("notes.md");
+
+    expect(invalidated).toEqual([]);
+  });
+});
+
 describe("viteIconsPlugin", () => {
   it("is the same plugin factory under its named alias", () => {
     expect(viteIconsPlugin).toBe(viteIcons);
