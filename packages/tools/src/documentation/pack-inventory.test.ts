@@ -47,6 +47,9 @@ describe("npm package publication inventory", () => {
     );
   });
 
+  // This case deliberately shells out to the real npm CLI, so it needs a longer
+  // budget than the default 5s: under a full-workspace parallel run the spawn can
+  // sit behind other workers before npm even starts.
   it("executes npm pack for a local package without a network request", async () => {
     const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-pack-"));
     await writeFile(
@@ -56,5 +59,5 @@ describe("npm package publication inventory", () => {
     await writeFile(path.join(rootPath, "README.md"), "# Fixture");
 
     await expect(readNpmPackInventory({ packageRoot: rootPath })).resolves.toContain("README.md");
-  });
+  }, 30_000);
 });
