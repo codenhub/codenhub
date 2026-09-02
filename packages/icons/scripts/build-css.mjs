@@ -17,7 +17,7 @@ import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { generateBaseCss, generateFamilyCss } from "../dist/index.js";
+import { generateBaseCss, generateFamilyCss, renderAttributionBanner } from "../dist/index.js";
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const dataDirectory = resolve(packageDirectory, "data");
@@ -26,7 +26,7 @@ const twDirectory = resolve(packageDirectory, "dist", "tw");
 
 const PREFIX = "ic";
 
-const TW_ENTRY = `/*!
+const TW_DESCRIPTION = `/*!
  * @codenhub/icons Tailwind CSS v4 entry point.
  *
  * Base rules plus the plugin that generates icons on demand. Every family the
@@ -40,10 +40,23 @@ const TW_ENTRY = `/*!
  *   @plugin "@codenhub/icons/tailwind" {
  *     default: lucide;
  *   }
- */
-@plugin "@codenhub/icons/tailwind";
+ */`;
 
-`;
+/**
+ * Builds the header of `dist/tw/index.css`.
+ *
+ * `@import "@codenhub/icons/tw"` inlines this file, so the license banner rides
+ * along with it. `/tw` makes every bundled family resolvable, so the banner
+ * names them all: a superset notice is always safe, and a `/*!` comment is the
+ * only notice this path can carry through a plain import. A configured `@plugin`
+ * import narrows resolution and emits a `--ic-attribution-<family>` property per
+ * used family instead, because Tailwind's plugin API builds declarations, not
+ * comments.
+ */
+function twEntry(licenseBanner) {
+  const banner = licenseBanner ? `${licenseBanner}\n` : "";
+  return `${TW_DESCRIPTION}\n${banner}@plugin "@codenhub/icons/tailwind";\n\n`;
+}
 
 const families = (
   await readdir(dataDirectory, { withFileTypes: true }).catch((error) => {
@@ -59,17 +72,24 @@ const families = (
 await mkdir(outputDirectory, { recursive: true });
 await mkdir(twDirectory, { recursive: true });
 
+const familyData = await Promise.all(
+  families.map((prefix) => import(`../dist/data/${prefix}.js`).then((module) => module.default)),
+);
+
 let total = 0;
 await Promise.all(
-  families.map(async (prefix) => {
-    const family = (await import(`../dist/data/${prefix}.js`)).default;
+  familyData.map(async (family) => {
     const css = generateFamilyCss(family, { prefix: PREFIX });
     total += css.length;
-    await writeFile(resolve(outputDirectory, `${prefix}.css`), css, "utf8");
+    await writeFile(resolve(outputDirectory, `${family.prefix}.css`), css, "utf8");
   }),
 );
 
-await writeFile(resolve(twDirectory, "index.css"), `${TW_ENTRY}${generateBaseCss({ prefix: PREFIX })}\n`, "utf8");
+await writeFile(
+  resolve(twDirectory, "index.css"),
+  `${twEntry(renderAttributionBanner(familyData))}${generateBaseCss({ prefix: PREFIX })}\n`,
+  "utf8",
+);
 
 console.log(
   `Built ${families.length} family stylesheet(s), ${(total / 1024 / 1024).toFixed(1)} MB, and dist/tw/index.css.`,

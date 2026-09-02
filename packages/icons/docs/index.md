@@ -307,14 +307,15 @@ What reaches your own output is the `attribution` option:
 
 The vehicle differs by path, because not every path can carry a comment:
 
-| Path      | How the notice travels                                                             |
-| --------- | ---------------------------------------------------------------------------------- |
-| Vite      | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file`. |
-| PostCSS   | A `/*! … */` banner on the generated CSS.                                          |
-| Tailwind  | A `--ic-attribution-<family>` custom property on `:root`, one per family used.     |
-| Plain CSS | A `/*! … */` banner opening each family stylesheet you imported.                   |
+| Path               | How the notice travels                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| Vite               | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file`.       |
+| PostCSS            | A `/*! … */` banner on the generated CSS.                                                |
+| Tailwind `/tw`     | A `/*! … */` banner opening `dist/tw/index.css`, naming every bundled family.            |
+| Tailwind `@plugin` | A `--ic-attribution-<family>` custom property on `:root`, one per family the build used. |
+| Plain CSS          | A `/*! … */` banner opening each family stylesheet you imported.                         |
 
-Tailwind's plugin API builds declarations, not comments, so its notice is a custom property rather than a banner. It is emitted the first time a family produces a utility, so a build carries notices for the artwork it actually shipped and no other.
+`@import "@codenhub/icons/tw"` inlines a static file, so it carries an ordinary `/*! … */` banner. That file makes every bundled family resolvable, so the banner names them all — a superset notice, which is always safe. Declaring the plugin yourself with `@plugin "@codenhub/icons/tailwind"` narrows resolution, and there the notice is a `--ic-attribution-<family>` custom property instead: Tailwind's plugin API builds declarations, not comments, and the property is emitted the first time a family produces a utility, so the output carries notices for the artwork it actually shipped and no other.
 
 Obligations come in three levels, because permissive is not the same as free of obligation:
 
