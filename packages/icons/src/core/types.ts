@@ -246,21 +246,12 @@ export type IconFamilyLoader = () => Promise<IconFamilyData | { default: IconFam
  */
 export interface IconRegistryOptions {
   /**
-   * Prefix an unprefixed icon name resolves against.
+   * Prefix an unqualified icon name resolves against.
    *
-   * There is no built-in default: without this option an unprefixed name
-   * resolves only through the semantic alias map.
+   * There is no built-in default: the package names no default family, so
+   * without this option an unqualified name resolves to nothing.
    */
   defaultPrefix?: string;
-
-  /**
-   * Semantic names mapped to fully qualified icon names, such as
-   * `{ close: "lucide:x" }`.
-   *
-   * Defaults to the curated map exported by this package. Pass an object to
-   * replace it, or `false` to disable semantic resolution entirely.
-   */
-  semanticAliases?: Record<string, string> | false;
 }
 
 /**

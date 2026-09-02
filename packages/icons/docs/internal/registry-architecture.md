@@ -39,7 +39,6 @@ data/<prefix>/icons.json      generated family data, committed, reviewable
 src/core/                     schema, registry, resolution, aliases, loaders
         |
         +-- src/catalog/      family metadata, tiers, attribution notices
-        +-- src/semantic/     curated semantic name map (close -> lucide:x)
         +-- src/adapters/     third-party set adapters (Iconify-shaped JSON)
         |
         v
@@ -47,6 +46,7 @@ src/generator/ src/scanner/   CSS mask output, class extraction
         |
         v
 src/vite/ src/postcss/        build integrations, attribution emission
+src/tailwind/                 Tailwind v4 plugin, icons generated on demand
 ```
 
 Direction is one-way. The core never imports a family, an integration, or the catalog. Family data never imports code.
@@ -112,7 +112,9 @@ The alternative — a variant axis inside a family — would add a dimension to 
 
 ### Reserved prefixes
 
-`stroke`, `after`, and `bg` are words the utility classes own: `ic-stroke-1.5`, `ic-after`, and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
+`after` and `bg` are words the utility classes own: `ic-after` and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
+
+`stroke` was reserved for the same reason until 0.2.0, when `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
 
 ## Family data layout
 
@@ -193,22 +195,21 @@ The core has **no default prefix**. A name without a prefix resolves against the
 
 Lookup order for `resolve(name)`, limited to families already loaded:
 
-1. Semantic alias map, when the name has no prefix.
-2. Configured default prefix, when the name has no prefix.
-3. Family aliases within the prefix.
-4. Family icons within the prefix.
+1. Configured default prefix, when the name has no prefix.
+2. Family aliases within the prefix.
+3. Family icons within the prefix.
 
 `resolveAsync(name)` follows the same order, but for each candidate prefix that is not yet loaded, it loads the family first — from a registered loader, or the already-registered data — before trying to resolve against it.
 
-### Semantic aliases
+### No default family
 
-A curated, hand-maintained map in `src/semantic/`, independent of any family:
+The registry names no default family and carries no curated map of semantic names. An unqualified name resolves against `defaultPrefix` or against nothing.
 
-```ts
-{ close: "lucide:x", edit: "lucide:pencil", home: "lucide:house" }
-```
+Version 0.2.0 removed a 35-entry semantic map — `close` to `lucide:x`, and so on. It read as a package-wide feature but every entry pointed at Lucide, so for the other twelve families it silently fell through to the default prefix: the package advertised semantic resolution and honoured it for one family in thirteen. Curating it for every family is thirteen times the editorial work and a standing obligation on every upstream bump; leaving it in place meant one family's vocabulary was quietly the package's.
 
-It is code, not generated data, because it encodes editorial judgment. Projects override or replace it through registry options. It is what lets a project switch its backing family without rewriting markup, and it is what the four hand-written SVG entries in the legacy dataset were reaching for — those entries are deleted, not migrated, because their intent was aliasing and their provenance is unverifiable.
+It also could not survive the plugin-free path. A static family stylesheet has no alias layer, so a semantic name would have resolved under the plugins and silently failed without them — the inconsistency the entry-point work exists to remove.
+
+A curated `core` family, with its own prefix and its own artwork, is the honest shape for this if it comes back. That is a family a project opts into, not a default it cannot see.
 
 ### Loaders
 
@@ -249,3 +250,4 @@ Not scheduled, recorded so the design leaves room:
 - A first-party Codenhub family owning the semantic names.
 - Per-icon virtual modules for bundlers other than Vite; only the Vite plugin serves them today.
 - A searchable catalog surface in `apps/docs` built from `info` and `tags`.
+- Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports all thirteen families statically and every build pays to load them: measured at ~130 ms and ~101 MB RSS, against ~11 ms and ~62 MB for one family. A per-family entry would load only what a project names, at the cost of thirteen generated modules, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all-families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.

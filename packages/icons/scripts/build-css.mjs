@@ -1,0 +1,96 @@
+/**
+ * Emits one complete stylesheet per icon family, and the Tailwind entry point.
+ *
+ * These are the plugin-free path: `@import "@codenhub/icons/lucide"` has to
+ * deliver working icons through nothing but CSS resolution, so every icon of
+ * the family is written out ahead of time. It is large by construction -- the
+ * whole family is there because no build step is present to narrow it -- which
+ * is why the family is chosen one import at a time rather than all at once.
+ *
+ * Each rule carries two selectors: the qualified `ic-lucide-heart` and the bare
+ * `ic-heart`. They share one copy of the artwork, so the bare name costs a
+ * selector rather than a second data URI, and the last family a project imports
+ * wins the bare names by plain cascade. That is what replaces the default
+ * prefix a stylesheet has no way to configure.
+ */
+import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { generateBaseCss, generateFamilyCss, renderAttributionBanner } from "../dist/index.js";
+
+const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const dataDirectory = resolve(packageDirectory, "data");
+const outputDirectory = resolve(packageDirectory, "dist", "css");
+const twDirectory = resolve(packageDirectory, "dist", "tw");
+
+const PREFIX = "ic";
+
+const TW_DESCRIPTION = `/*!
+ * @codenhub/icons Tailwind CSS v4 entry point.
+ *
+ * Base rules plus the plugin that generates icons on demand. Every family the
+ * package ships is resolvable; only the icons your markup uses are emitted.
+ *
+ * To configure the plugin -- a default family for unqualified names, a narrower
+ * family list, a stroke width -- import "@codenhub/icons" for the base rules
+ * and declare the plugin yourself instead of importing this file:
+ *
+ *   @import "@codenhub/icons";
+ *   @plugin "@codenhub/icons/tailwind" {
+ *     default: lucide;
+ *   }
+ */`;
+
+/**
+ * Builds the header of `dist/tw/index.css`.
+ *
+ * `@import "@codenhub/icons/tw"` inlines this file, so the license banner rides
+ * along with it. `/tw` makes every bundled family resolvable, so the banner
+ * names them all: a superset notice is always safe, and a `/*!` comment is the
+ * only notice this path can carry through a plain import. A configured `@plugin`
+ * import narrows resolution and emits a `--ic-attribution-<family>` property per
+ * used family instead, because Tailwind's plugin API builds declarations, not
+ * comments.
+ */
+function twEntry(licenseBanner) {
+  const banner = licenseBanner ? `${licenseBanner}\n` : "";
+  return `${TW_DESCRIPTION}\n${banner}@plugin "@codenhub/icons/tailwind";\n\n`;
+}
+
+const families = (
+  await readdir(dataDirectory, { withFileTypes: true }).catch((error) => {
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  })
+)
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+await mkdir(outputDirectory, { recursive: true });
+await mkdir(twDirectory, { recursive: true });
+
+const familyData = await Promise.all(
+  families.map((prefix) => import(`../dist/data/${prefix}.js`).then((module) => module.default)),
+);
+
+let total = 0;
+await Promise.all(
+  familyData.map(async (family) => {
+    const css = generateFamilyCss(family, { prefix: PREFIX });
+    total += css.length;
+    await writeFile(resolve(outputDirectory, `${family.prefix}.css`), css, "utf8");
+  }),
+);
+
+await writeFile(
+  resolve(twDirectory, "index.css"),
+  `${twEntry(renderAttributionBanner(familyData))}${generateBaseCss({ prefix: PREFIX })}\n`,
+  "utf8",
+);
+
+console.log(
+  `Built ${families.length} family stylesheet(s), ${(total / 1024 / 1024).toFixed(1)} MB, and dist/tw/index.css.`,
+);

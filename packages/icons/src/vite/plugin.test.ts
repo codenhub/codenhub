@@ -114,13 +114,15 @@ describe("viteIcons", () => {
     expect(load("\0virtual:icons.css")).toContain(".ic-user {");
   });
 
-  it("replaces the package import in a stylesheet", () => {
+  it("leaves the package import in a stylesheet alone", () => {
     const { transform } = createPlugin();
 
     const result = transform('@import "@codenhub/icons";\n.button { color: red; }', "styles.css");
 
-    expect(result?.code).not.toContain('@import "@codenhub/icons"');
-    expect(result?.code).toContain(".ic {");
+    // The import resolves to the package's own base stylesheet through its
+    // exports, so it means the same thing with or without this plugin. The
+    // generated masks arrive through the virtual module instead.
+    expect(result).toBeNull();
   });
 
   it("prepends a preserved license banner by default", () => {
@@ -256,10 +258,10 @@ describe("viteIcons in svg mode", () => {
     expect(html).toContain('class="brand-mark"');
   });
 
-  it("applies the stroke width written as a class", () => {
+  it("applies the stroke width written as a modifier", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
 
-    const html = transformIndexHtml('<i class="ic-user ic-stroke-1.5"></i>', {}) as string;
+    const html = transformIndexHtml('<i class="ic-user/1.5"></i>', {}) as string;
 
     expect(html).toContain('stroke-width="1.5"');
   });
@@ -312,12 +314,43 @@ describe("viteIcons in svg mode", () => {
     expect(transform('const markup = "<i class=\\"brand\\"></i>";', "app.ts")).toBeNull();
   });
 
-  it("drops the stylesheet import that has nothing to serve", () => {
+  it("leaves the stylesheet import alone, since it carries the base rules", () => {
     const { transform } = createPlugin({ mode: "svg" });
 
     const result = transform('@import "@codenhub/icons";\n.button { color: red; }', "styles.css");
 
-    expect(result?.code).toBe("\n.button { color: red; }");
+    expect(result).toBeNull();
+  });
+
+  it("warns about an icon class on an element it does not rewrite", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<button class="btn ic-user">Save</button>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).toContain("ic-user");
+    expect(warnings.join("\n")).toContain('mode "svg" does not rewrite');
+  });
+
+  it("does not warn about a class that is not an icon", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<button class="btn ic-absent">Save</button>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).not.toContain("ic-absent");
+  });
+
+  it("does not warn when every icon class was rewritten", () => {
+    const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transformIndexHtml('<i class="ic-user"></i>', { filename: "index.html" });
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).not.toContain("does not rewrite");
   });
 
   it("serves an empty virtual stylesheet, since the SVG is inlined into markup", () => {
@@ -354,6 +387,92 @@ describe("viteIcons in svg mode", () => {
 
     expect(files).toEqual([]);
     expect(warnings[0]).toContain("Test Family");
+  });
+});
+
+interface FakeModule {
+  url: string;
+}
+
+function createDevServer() {
+  const invalidated: string[] = [];
+  const sent: { type?: string }[] = [];
+  const watchers = new Map<string, (filePath: string) => void>();
+  const mod: FakeModule = { url: "/@id/virtual:icons.css" };
+  const server = {
+    moduleGraph: {
+      getModuleById: (id: string) => (id === "\0virtual:icons.css" ? mod : undefined),
+      invalidateModule: (target: FakeModule) => invalidated.push(target.url),
+    },
+    ws: { send: (payload: { type?: string }) => sent.push(payload) },
+    watcher: { on: (event: string, handler: (filePath: string) => void) => watchers.set(event, handler) },
+  };
+  // Fails loudly rather than no-opping when the plugin never registered the
+  // watcher, so a test cannot pass by skipping the path it means to cover.
+  const fire = (event: "change" | "add", filePath: string) => {
+    const handler = watchers.get(event);
+    if (!handler) {
+      throw new Error(`plugin registered no "${event}" watcher`);
+    }
+    handler(filePath);
+  };
+  return { fire, invalidated, sent, server };
+}
+
+describe("viteIcons dev invalidation", () => {
+  it("refreshes the stylesheet when a transform turns up a new class", () => {
+    const { plugin, transform } = createPlugin();
+    const { invalidated, sent, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    transform('export const App = () => <i className="ic-user" />;', "app.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ type: "update" });
+  });
+
+  it("does not refresh again for a class it has already seen", () => {
+    const { plugin, transform } = createPlugin();
+    const { invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    transform('<i class="ic-user"></i>', "page.tsx");
+    invalidated.length = 0;
+    transform('<i class="ic-user"></i>', "page.tsx");
+
+    expect(invalidated).toEqual([]);
+  });
+
+  it("refreshes when the file watcher reports a change to a source file", () => {
+    const { plugin } = createPlugin();
+    const { fire, invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    fire("change", "src/page.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+  });
+
+  it("refreshes when the file watcher reports a newly added source file", () => {
+    const { plugin } = createPlugin();
+    const { fire, invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    fire("add", "src/new-page.tsx");
+
+    expect(invalidated).toEqual(["/@id/virtual:icons.css"]);
+  });
+
+  it("ignores a watcher event for a file it would never scan", () => {
+    const { plugin } = createPlugin();
+    const { fire, invalidated, server } = createDevServer();
+    (plugin.configureServer as (server: unknown) => void)(server);
+
+    fire("change", "node_modules/pkg/index.js");
+    fire("add", "notes.md");
+
+    expect(invalidated).toEqual([]);
   });
 });
 

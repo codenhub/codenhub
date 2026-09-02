@@ -54,11 +54,13 @@ export const LICENSE_OBLIGATIONS: Record<string, IconAttribution> = {
 /**
  * Prefixes a family may not use.
  *
- * The utility classes reserve these words: `ic-stroke-1.5`, `ic-after`, and
- * `ic-bg` are modifiers, so a family named after one would produce classes the
- * scanner reads as a modifier rather than an icon.
+ * The utility classes reserve these words: `ic-after` and `ic-bg` are
+ * modifiers, so a family named after one would produce classes the scanner
+ * reads as a modifier rather than an icon. Stroke width is no longer among them
+ * because it is written as a modifier on the icon class itself, as in
+ * `ic-heart/1.5`, and so claims no prefix of its own.
  */
-export const RESERVED_PREFIXES: readonly string[] = ["after", "bg", "stroke"];
+export const RESERVED_PREFIXES: readonly string[] = ["after", "bg"];
 
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];

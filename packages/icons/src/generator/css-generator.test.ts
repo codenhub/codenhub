@@ -5,6 +5,7 @@ import type { IconFamilyData } from "../core/types.js";
 import {
   escapeSelectorClass,
   generateBaseCss,
+  generateFamilyCss,
   generateIconCss,
   generateIconSetCss,
   getIconCssProps,
@@ -84,8 +85,8 @@ describe("generateIconCss", () => {
 });
 
 describe("escapeSelectorClass", () => {
-  it("escapes the dot in a fractional stroke class", () => {
-    expect(escapeSelectorClass("ic-stroke-1.5")).toBe("ic-stroke-1\\.5");
+  it("escapes the slash and the dot of a stroke modifier", () => {
+    expect(escapeSelectorClass("ic-heart/1.5")).toBe("ic-heart\\/1\\.5");
   });
 });
 
@@ -117,16 +118,26 @@ describe("generateIconSetCss", () => {
     expect(css).toContain(".ic-quill-x,\n.ic-quill-cancel {");
   });
 
-  it("emits a combined rule for each scanned stroke width", () => {
-    const { css } = generateIconSetCss(["ic-heart", "ic-stroke-1.5"], createRegistry());
+  it("emits one rule for a class carrying a stroke modifier", () => {
+    const { css } = generateIconSetCss(["ic-heart/1.5"], createRegistry());
 
-    expect(css).toContain(".ic-heart.ic-stroke-1\\.5 {");
+    expect(css).toContain(".ic-heart\\/1\\.5 {");
+    expect(css).toContain("stroke-width=%221.5%22");
   });
 
-  it("does not emit stroke rules for a family drawn as filled paths", () => {
-    const { css } = generateIconSetCss(["ic-filled-star", "ic-stroke-1.5"], createRegistry());
+  it("keeps a modified class separate from the same icon unmodified", () => {
+    const { css } = generateIconSetCss(["ic-heart", "ic-heart/1.5"], createRegistry());
 
-    expect(css).not.toContain(".ic-filled-star.ic-stroke-1\\.5");
+    expect(css).toContain(".ic-heart {");
+    expect(css).toContain(".ic-heart\\/1\\.5 {");
+  });
+
+  it("ignores a stroke modifier on a family drawn as filled paths", () => {
+    const { css } = generateIconSetCss(["ic-filled-star", "ic-filled-star/1.5"], createRegistry());
+
+    // Both classes resolve and render the same artwork, so they share one rule:
+    // stroke width is meaningless for a family drawn as filled paths.
+    expect(css).toContain(".ic-filled-star,\n.ic-filled-star\\/1\\.5 {");
   });
 
   it("omits the base rules when they are not wanted", () => {
@@ -179,5 +190,49 @@ describe("getIconCssProps", () => {
 
   it("returns nothing for a name that resolves to no icon", () => {
     expect(getIconCssProps("absent", createRegistry())).toBeUndefined();
+  });
+});
+
+describe("generateFamilyCss", () => {
+  const family = createQuillFamily();
+
+  it("writes every icon of the family", () => {
+    const css = generateFamilyCss(family);
+
+    expect(css).toContain(".ic-quill-heart");
+    expect(css).toContain(".ic-quill-x");
+  });
+
+  it("gives each rule a bare selector beside the qualified one", () => {
+    // One rule, two selectors: the bare name costs a selector rather than a
+    // second copy of the artwork, and import order decides which family wins it.
+    expect(generateFamilyCss(family)).toContain(".ic-quill-heart,\n.ic-heart {");
+  });
+
+  it("omits the bare selectors when they are not wanted", () => {
+    const css = generateFamilyCss(family, { bareNames: false });
+
+    expect(css).toContain(".ic-quill-heart {");
+  });
+
+  it("writes an alias as its own selector", () => {
+    expect(generateFamilyCss(family)).toContain(".ic-quill-cancel");
+  });
+
+  it("opens with the family license notice as a preserved comment", () => {
+    const css = generateFamilyCss(family);
+
+    expect(css.startsWith("/*!")).toBe(true);
+    expect(css).toContain("ISC License");
+  });
+
+  it("omits the notice when it is not wanted", () => {
+    const css = generateFamilyCss(family, { attribution: false });
+
+    expect(css.startsWith(".ic-quill")).toBe(true);
+  });
+
+  it("honours a custom class prefix", () => {
+    expect(generateFamilyCss(family, { prefix: "icon" })).toContain(".icon-quill-heart,\n.icon-heart {");
   });
 });

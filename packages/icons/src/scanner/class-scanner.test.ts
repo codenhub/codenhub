@@ -55,12 +55,56 @@ describe("class-scanner", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("should extract stroke utility classes, including floats", () => {
-    const html = '<button class="ic-close ic-stroke-1.5 ic-stroke-2 ic-stroke-3.75"></button>';
+  it("expands a glob into the files it names", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "icon-scan-glob-"));
+    fs.writeFileSync(path.join(tmpDir, "page.html"), '<div class="ic-close"></div>');
+    fs.writeFileSync(path.join(tmpDir, "widget.tsx"), '<i className="ic-user" />');
+    fs.writeFileSync(path.join(tmpDir, "notes.md"), "ic-ignored-extension");
+
+    const result = scanFiles([path.join(tmpDir, "*.{html,tsx}")]);
+
+    expect(Array.from(result).toSorted()).toEqual(["ic-close", "ic-user"]);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("expands a recursive glob into nested files", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "icon-scan-deep-"));
+    fs.mkdirSync(path.join(tmpDir, "components", "nested"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, "components", "nested", "card.html"), '<i class="ic-star"></i>');
+
+    const result = scanFiles([path.join(tmpDir, "**", "*.html")]);
+
+    expect(Array.from(result)).toEqual(["ic-star"]);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("reads a literal path before treating it as a pattern", () => {
+    // A real file whose name carries a bracket is a path, not a glob.
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "icon-scan-literal-"));
+    const bracketed = path.join(tmpDir, "page[1].html");
+    fs.writeFileSync(bracketed, '<div class="ic-close"></div>');
+
+    expect(Array.from(scanFiles([bracketed]))).toEqual(["ic-close"]);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("ignores a glob that matches nothing", () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "icon-scan-empty-"));
+
+    expect(scanFiles([path.join(tmpDir, "**", "*.html")]).size).toBe(0);
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("should extract stroke modifiers, including floats", () => {
+    const html = '<button class="ic-close ic-close/1.5 ic-user/2 ic-user/3.75"></button>';
     const found = scanIconClasses(html);
-    expect(Array.from(found)).toContain("ic-stroke-1.5");
-    expect(Array.from(found)).toContain("ic-stroke-2");
-    expect(Array.from(found)).toContain("ic-stroke-3.75");
+    expect(Array.from(found)).toContain("ic-close/1.5");
+    expect(Array.from(found)).toContain("ic-user/2");
+    expect(Array.from(found)).toContain("ic-user/3.75");
     expect(Array.from(found)).toContain("ic-close");
   });
 });

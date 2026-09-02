@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 import { IconRegistry } from "../../src/core/registry.js";
 import { renderSvg } from "../../src/core/render.js";
 import type { IconFamilyData } from "../../src/core/types.js";
-import { SEMANTIC_ALIASES } from "../../src/semantic/semantic-aliases.js";
 
 const dataDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../../data");
 
@@ -93,18 +92,5 @@ describe("generated family data", () => {
         `viewBox="${resolved!.left} ${resolved!.top} ${resolved!.width} ${resolved!.height}"`,
       );
     }
-  });
-});
-
-describe("semantic aliases", () => {
-  it("points every curated name at an icon that exists", () => {
-    const registry = new IconRegistry();
-    for (const { family } of families) {
-      registry.registerFamily(family);
-    }
-
-    const unresolved = Object.entries(SEMANTIC_ALIASES).filter(([, target]) => !registry.has(target));
-
-    expect(unresolved).toEqual([]);
   });
 });
