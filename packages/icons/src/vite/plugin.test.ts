@@ -256,10 +256,10 @@ describe("viteIcons in svg mode", () => {
     expect(html).toContain('class="brand-mark"');
   });
 
-  it("applies the stroke width written as a class", () => {
+  it("applies the stroke width written as a modifier", () => {
     const { transformIndexHtml } = createPlugin({ mode: "svg" });
 
-    const html = transformIndexHtml('<i class="ic-user ic-stroke-1.5"></i>', {}) as string;
+    const html = transformIndexHtml('<i class="ic-user/1.5"></i>', {}) as string;
 
     expect(html).toContain('stroke-width="1.5"');
   });

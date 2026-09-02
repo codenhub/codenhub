@@ -19,7 +19,10 @@ function escapeRegExp(str: string): string {
 function getPatternForPrefix(prefix: string): RegExp {
   let pattern = regexCache.get(prefix);
   if (!pattern) {
-    pattern = new RegExp(`\\b${escapeRegExp(prefix)}-(?:stroke-[0-9]+(?:\\.[0-9]+)?|[a-zA-Z0-9_-]+)\\b`, "g");
+    // The stroke modifier is part of the class, not a class beside it, so it is
+    // matched here rather than left for a second pass: `ic-heart/1.5` is one
+    // token addressing one icon at one width.
+    pattern = new RegExp(`\\b${escapeRegExp(prefix)}-[a-zA-Z0-9_-]+(?:/[0-9]+(?:\\.[0-9]+)?)?`, "g");
     regexCache.set(prefix, pattern);
   }
   return pattern;

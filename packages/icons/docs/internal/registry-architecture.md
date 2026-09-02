@@ -111,7 +111,9 @@ The alternative — a variant axis inside a family — would add a dimension to 
 
 ### Reserved prefixes
 
-`stroke`, `after`, and `bg` are words the utility classes own: `ic-stroke-1.5`, `ic-after`, and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
+`after` and `bg` are words the utility classes own: `ic-after` and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
+
+`stroke` was reserved for the same reason until `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
 
 ## Family data layout
 

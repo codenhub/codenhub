@@ -141,7 +141,7 @@ registry.resolve("close"); // undefined -- lucide calls it "x"
 
 ### Reserved names
 
-`ic-stroke-<width>`, `ic-after`, and `ic-bg` are modifiers rather than icons, so `stroke`, `after`, and `bg` cannot be family prefixes. Generation refuses a family that claims one.
+`ic-after` and `ic-bg` are modifiers rather than icons, so `after` and `bg` cannot be family prefixes. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
 
 ---
 
@@ -149,19 +149,19 @@ registry.resolve("close"); // undefined -- lucide calls it "x"
 
 ```html
 <!-- standalone -->
-<i class="ic-search" aria-hidden="true"></i>
+<i class="ic-lucide-search" aria-hidden="true"></i>
 
 <!-- leading icon on any container, through ::before -->
-<button class="btn ic-check">Submit</button>
+<button class="btn ic-lucide-check">Submit</button>
 
 <!-- trailing icon, through ::after -->
-<a class="nav-link ic-arrow-right ic-after">Next</a>
+<a class="nav-link ic-lucide-arrow-right ic-after">Next</a>
 
 <!-- form controls take a background-image instead of a mask -->
-<input class="ic-search" />
+<input class="ic-lucide-search" />
 
 <!-- stroke width, for stroke-based families only -->
-<i class="ic-heart ic-stroke-1.5"></i>
+<i class="ic-lucide-heart/1.5"></i>
 ```
 
 Size and color follow CSS custom properties:
@@ -172,6 +172,16 @@ Size and color follow CSS custom properties:
   --ic-color: var(--color-accent);
 }
 ```
+
+### Stroke width
+
+Stroke width is a modifier on the icon class, and only families drawn with strokes answer to it. Of the bundled families, Lucide is the only one; the rest are drawn as filled paths and ignore it.
+
+```html
+<i class="ic-lucide-heart/1.5"></i> <i class="ic-lucide-heart/3"></i>
+```
+
+The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.
 
 ---
 
@@ -195,10 +205,10 @@ viteIcons({
 | Option          | Purpose                                                                                     |
 | --------------- | ------------------------------------------------------------------------------------------- |
 | `families`      | Families to resolve against. Nothing is bundled by default.                                 |
-| `defaultPrefix` | Family an unprefixed name falls back to.                                                    |
+| `defaultPrefix` | Family an unqualified name resolves against. There is no default.                           |
 | `content`       | Extra files to scan, beyond what the build transforms.                                      |
 | `prefix`        | Class prefix. Defaults to `ic`.                                                             |
-| `strokeWidth`   | Applied to stroke-based families only.                                                      |
+| `strokeWidth`   | Default for stroke-based families whose classes carry no modifier.                          |
 | `mode`          | `css` serves mask rules; `svg` replaces `<i class="ic-...">` with inline SVG at build time. |
 | `attribution`   | `auto`, `file`, or `off`. See [Licensing](#licensing).                                      |
 | `registry`      | A prepared `IconRegistry`, replacing `families`.                                            |
@@ -251,7 +261,7 @@ registry.registerFamily(lucide);
 const heart = registry.resolve("lucide:heart");
 renderSvg(heart!, { strokeWidth: 1.5 });
 
-const { css, families } = generateIconSetCss(["ic-heart", "ic-stroke-1.5"], registry);
+const { css, families } = generateIconSetCss(["ic-lucide-heart", "ic-lucide-heart/1.5"], registry);
 
 getIconCssProps("lucide:x", registry);
 // { "--ic-uri": 'url("data:image/svg+xml;…")', "--ic-mask": "var(--ic-uri)" }

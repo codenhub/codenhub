@@ -6,7 +6,7 @@ import {
   renderSuppressedAttributionWarning,
 } from "../catalog/attribution.js";
 import type { AttributionMode } from "../catalog/attribution.js";
-import { resolveIconClassName } from "../core/class-names.js";
+import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
 import { IconRegistry } from "../core/registry.js";
 import { renderSvg } from "../core/render.js";
 import type { IconFamilyData, ResolvedIcon } from "../core/types.js";
@@ -37,7 +37,7 @@ export interface ViteIconsOptions {
   families?: IconFamilyData[];
 
   /**
-   * Family prefix that unprefixed icon names resolve against.
+   * Family prefix that unqualified icon names resolve against.
    */
   defaultPrefix?: string;
 
@@ -48,7 +48,8 @@ export interface ViteIconsOptions {
   registry?: IconRegistry;
 
   /**
-   * Stroke width applied to icons of stroke-based families.
+   * Stroke width applied to icons of stroke-based families that carry no stroke
+   * modifier of their own, as in `ic-heart/1.5`.
    */
   strokeWidth?: number | string;
 
@@ -83,7 +84,7 @@ const STYLE_FILE = /\.(css|scss|sass|less)$/i;
 
 function resolveIconModule(registry: IconRegistry, request: string): ResolvedIcon {
   // `lucide/heart` names a family and an icon; a single segment goes through
-  // semantic aliases and the default prefix like any other unqualified name.
+  // the default prefix like any other unqualified name.
   const separatorIndex = request.indexOf("/");
   const name =
     separatorIndex === -1 ? request : `${request.slice(0, separatorIndex)}:${request.slice(separatorIndex + 1)}`;
@@ -312,7 +313,6 @@ interface ReplaceIconTagsOptions {
 function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
   const { isJsContext = false, onFamilyUsed, prefix, strokeWidth } = options;
   const prefixDash = `${prefix}-`;
-  const strokePrefix = `${prefixDash}stroke-`;
 
   const tagRegex = /<i\b([^>]*?)(class|className)=(\\?)(["'])([^"']*?)\3\4([^>]*?)(?:>\s*<\/i>|\s*\/?>)/gi;
   const cleanSource = isJsContext ? stripComments(source) : source;
@@ -331,24 +331,19 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
     ) => {
       const classes = classValue.split(/\s+/).filter(Boolean);
       let icon: ReturnType<typeof resolveIconClassName>;
-      let strokeValFromClass: string | null = null;
+      let strokeValFromClass: string | undefined;
       const leftoverClasses: string[] = [];
 
       for (const cls of classes) {
         if (cls === prefix) {
           continue;
         }
-        if (cls.startsWith(strokePrefix)) {
-          const valStr = cls.slice(strokePrefix.length);
-          if (/^[0-9]+(?:\.[0-9]+)?$/.test(valStr)) {
-            strokeValFromClass = valStr;
-            continue;
-          }
-        }
         if (!icon && cls.startsWith(prefixDash)) {
-          const resolved = resolveIconClassName(registry, cls.slice(prefixDash.length));
+          const parsed = parseIconClass(cls.slice(prefixDash.length));
+          const resolved = resolveIconClassName(registry, parsed.name);
           if (resolved) {
             icon = resolved;
+            strokeValFromClass = parsed.strokeWidth;
             continue;
           }
         }

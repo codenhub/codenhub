@@ -84,8 +84,8 @@ describe("generateIconCss", () => {
 });
 
 describe("escapeSelectorClass", () => {
-  it("escapes the dot in a fractional stroke class", () => {
-    expect(escapeSelectorClass("ic-stroke-1.5")).toBe("ic-stroke-1\\.5");
+  it("escapes the slash and the dot of a stroke modifier", () => {
+    expect(escapeSelectorClass("ic-heart/1.5")).toBe("ic-heart\\/1\\.5");
   });
 });
 
@@ -117,16 +117,26 @@ describe("generateIconSetCss", () => {
     expect(css).toContain(".ic-quill-x,\n.ic-quill-cancel {");
   });
 
-  it("emits a combined rule for each scanned stroke width", () => {
-    const { css } = generateIconSetCss(["ic-heart", "ic-stroke-1.5"], createRegistry());
+  it("emits one rule for a class carrying a stroke modifier", () => {
+    const { css } = generateIconSetCss(["ic-heart/1.5"], createRegistry());
 
-    expect(css).toContain(".ic-heart.ic-stroke-1\\.5 {");
+    expect(css).toContain(".ic-heart\\/1\\.5 {");
+    expect(css).toContain("stroke-width=%221.5%22");
   });
 
-  it("does not emit stroke rules for a family drawn as filled paths", () => {
-    const { css } = generateIconSetCss(["ic-filled-star", "ic-stroke-1.5"], createRegistry());
+  it("keeps a modified class separate from the same icon unmodified", () => {
+    const { css } = generateIconSetCss(["ic-heart", "ic-heart/1.5"], createRegistry());
 
-    expect(css).not.toContain(".ic-filled-star.ic-stroke-1\\.5");
+    expect(css).toContain(".ic-heart {");
+    expect(css).toContain(".ic-heart\\/1\\.5 {");
+  });
+
+  it("ignores a stroke modifier on a family drawn as filled paths", () => {
+    const { css } = generateIconSetCss(["ic-filled-star", "ic-filled-star/1.5"], createRegistry());
+
+    // Both classes resolve and render the same artwork, so they share one rule:
+    // stroke width is meaningless for a family drawn as filled paths.
+    expect(css).toContain(".ic-filled-star,\n.ic-filled-star\\/1\\.5 {");
   });
 
   it("omits the base rules when they are not wanted", () => {
