@@ -11,7 +11,17 @@ function hasObligation(family: IconFamilyData): boolean {
   return family.info.attribution !== "none";
 }
 
-function describeFamily(family: IconFamilyData): string {
+/**
+ * Renders the one-line license notice for a single family.
+ *
+ * Exposed because not every pipeline can carry a comment: Tailwind's plugin API
+ * builds declarations only, so it emits these lines one family at a time, as it
+ * discovers which artwork a build actually used.
+ *
+ * @param family - Family to describe.
+ * @returns The notice line for that family.
+ */
+export function describeFamilyNotice(family: IconFamilyData): string {
   const { author, license, name, upstream } = family.info;
   const line = `${name} (${family.prefix}) ${upstream.version} — ${license.title} (${license.spdx}) — ${author.name} ${author.url}`;
   // Metadata for an adopted set is consumer-supplied; a "*/" in it must not close the /*! ... */ comment early.
@@ -50,7 +60,7 @@ export function renderAttributionNotice(families: Iterable<IconFamilyData>): str
     return undefined;
   }
 
-  return ["Icon artwork in this build:", ...attributed.map((family) => `- ${describeFamily(family)}`)].join("\n");
+  return ["Icon artwork in this build:", ...attributed.map((family) => `- ${describeFamilyNotice(family)}`)].join("\n");
 }
 
 /**

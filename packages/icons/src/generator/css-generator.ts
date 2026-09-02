@@ -1,4 +1,6 @@
+import { describeFamilyNotice } from "../catalog/attribution.js";
 import { parseIconClass, resolveIconClassName } from "../core/class-names.js";
+import { IconRegistry as IconRegistryConstructor } from "../core/registry.js";
 import type { IconRegistry } from "../core/registry.js";
 import { renderSvg } from "../core/render.js";
 import type { IconFamilyData } from "../core/types.js";
@@ -288,4 +290,70 @@ export function getIconCssProps(
 
   const prefix = options?.prefix ?? DEFAULT_PREFIX;
   return { [`--${prefix}-mask`]: `var(--${prefix}-uri)`, [`--${prefix}-uri`]: maskUrl };
+}
+
+/**
+ * Options for generating the complete stylesheet of one icon family.
+ */
+export interface GenerateFamilyCssOptions extends BaseCssOptions {
+  /**
+   * Whether each rule also answers to the unqualified name, so that
+   * `ic-lucide-heart` and `ic-heart` share one rule. Defaults to `true`.
+   *
+   * This is what gives a plugin-free stylesheet a default family: the bare name
+   * costs a selector rather than a second copy of the artwork, and the last
+   * family a project imports wins it by plain cascade.
+   */
+  bareNames?: boolean;
+
+  /**
+   * Whether to open the stylesheet with the family's license notice as a
+   * preserved comment. Defaults to `true`.
+   */
+  attribution?: boolean;
+}
+
+/**
+ * Generates the complete stylesheet for one icon family.
+ *
+ * Every icon is written out, because this is the plugin-free path: nothing is
+ * scanning the consumer's markup, so nothing can narrow the family down. A
+ * project chooses its cost one family at a time, by choosing which families it
+ * imports.
+ *
+ * Stroke width cannot be varied here. It is baked into the artwork each rule
+ * carries, and a stylesheet with no build step behind it has no way to know
+ * which widths a project wants, so `ic-heart/1.5` needs one of the plugins.
+ *
+ * @param family - Family to write out.
+ * @param options - Class prefix, bare name selectors, and the license notice.
+ * @returns The family stylesheet.
+ */
+export function generateFamilyCss(family: IconFamilyData, options?: GenerateFamilyCssOptions): string {
+  const prefix = options?.prefix ?? DEFAULT_PREFIX;
+  const bareNames = options?.bareNames ?? true;
+  const withAttribution = options?.attribution ?? true;
+
+  const registry = new IconRegistryConstructor();
+  registry.registerFamily(family);
+
+  const rules: string[] = [];
+  for (const name of [...Object.keys(family.icons), ...Object.keys(family.aliases ?? {})]) {
+    const icon = registry.resolve(`${family.prefix}:${name}`);
+    if (!icon) {
+      continue;
+    }
+    const selectors = [`.${escapeSelectorClass(`${prefix}-${family.prefix}-${name}`)}`];
+    if (bareNames) {
+      selectors.push(`.${escapeSelectorClass(`${prefix}-${name}`)}`);
+    }
+    rules.push(generateIconCss(selectors, renderSvg(icon), { prefix }));
+  }
+
+  const banner =
+    withAttribution && family.info.attribution !== "none"
+      ? `/*!\n * Icon artwork in this stylesheet:\n * ${describeFamilyNotice(family)}\n */\n`
+      : "";
+
+  return `${banner}${rules.join("\n\n")}\n`;
 }

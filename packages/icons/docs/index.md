@@ -5,7 +5,67 @@ description: Icon families, name resolution, bundler plugins, JavaScript helpers
 
 # Icons documentation
 
-`@codenhub/icons` turns icon classes in your markup into CSS mask rules at build time. There is no runtime, no component layer, and nothing in the output but the icons the markup actually used.
+`@codenhub/icons` turns icon classes in your markup into CSS mask rules. There is no runtime and no component layer. Icons arrive through CSS, by one of three entry points, and every one of them understands the same classes.
+
+---
+
+## Entry points
+
+| Entry                      | For                         | What it delivers                                                              |
+| -------------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `@codenhub/icons`          | Every path                  | The base `.ic` rules, about 2 KB. Never rewritten by a plugin.                |
+| `@codenhub/icons/tw`       | Tailwind CSS v4             | Base rules plus the plugin. Every family resolvable, only used icons emitted. |
+| `@codenhub/icons/tailwind` | Tailwind CSS v4, configured | The plugin on its own, so `@plugin` can carry options.                        |
+| `@codenhub/icons/<family>` | Plain CSS, no build step    | One complete family, every icon written out.                                  |
+| `@codenhub/icons/vite`     | Vite                        | Scans your markup and generates only the rules it needs.                      |
+| `@codenhub/icons/postcss`  | PostCSS                     | The same, for a PostCSS pipeline.                                             |
+
+`@import "@codenhub/icons"` means exactly one thing everywhere: the base rules the icon classes build on. No plugin rewrites it, no plugin deletes it. What differs between the paths is only where the per-icon mask rules come from.
+
+### Tailwind CSS v4
+
+```css
+@import "tailwindcss";
+@import "@codenhub/icons/tw";
+```
+
+Every family the package ships is resolvable, and Tailwind emits only the icons your markup used. Loading all 13 families costs about 130 ms and 100 MB once per build; a project using three icons ends up with about 10 KB of CSS.
+
+To configure the plugin, declare it yourself instead of importing `/tw`, which already declares it with no options:
+
+```css
+@import "tailwindcss";
+@import "@codenhub/icons";
+@plugin "@codenhub/icons/tailwind" {
+  families: lucide, phosphor-fill;
+  default: lucide;
+  strokewidth: 1.5;
+}
+```
+
+| Option        | Purpose                                                               |
+| ------------- | --------------------------------------------------------------------- |
+| `families`    | Family prefixes to resolve against. Defaults to all of them.          |
+| `default`     | Family that unqualified names resolve against. There is no default.   |
+| `prefix`      | Class prefix. Defaults to `ic`.                                       |
+| `strokeWidth` | Applied to stroke-based families that carry no modifier of their own. |
+| `attribution` | `auto` or `off`. See [Licensing](#licensing).                         |
+
+`families` does not make the build cheaper. A Tailwind plugin handler has to be synchronous — utilities registered after an `await` are dropped — so every family is already loaded by the time the options are read. It decides which names resolve, and which notices the output can carry.
+
+### Plain CSS, no build step
+
+```css
+@import "@codenhub/icons";
+@import "@codenhub/icons/phosphor-fill";
+@import "@codenhub/icons/lucide";
+```
+
+Each family stylesheet is complete: every icon, because nothing is scanning your markup to narrow it. They are large by construction — Lucide is about 1 MB, Material Symbols Rounded about 3.4 MB, all 13 about 22 MB — so a project chooses its cost by choosing which families it imports.
+
+Every rule carries two selectors, the qualified `ic-lucide-heart` and the bare `ic-heart`, sharing one copy of the artwork. That is how this path gets a default family without any configuration to hold one: the last family you import wins every bare name it defines. Above, `ic-heart` is Lucide's.
+
+Stroke width does not work here. It is baked into the artwork each rule carries, and a stylesheet with no build step behind it cannot know which widths you want.
 
 ---
 
@@ -44,7 +104,15 @@ An icon is identified by `prefix:name`. A class writes that with a dash, because
 
 The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
 
-An unqualified name resolves against the configured `defaultPrefix`, and against nothing at all when none is set. The package names no default family and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and renders nothing if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
+An unqualified name resolves against a default family, and against nothing at all when none is configured. The package names no default of its own and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and renders nothing if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
+
+Where the default comes from depends on the path:
+
+| Path          | Default family                       |
+| ------------- | ------------------------------------ |
+| Vite, PostCSS | The `defaultPrefix` option.          |
+| Tailwind      | The `default:` plugin option.        |
+| Plain CSS     | The last family stylesheet imported. |
 
 ```ts
 import { IconRegistry } from "@codenhub/icons";
@@ -101,6 +169,8 @@ Stroke width is a modifier on the icon class, and only families drawn with strok
 
 The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.
 
+That is also why the modifier needs a build step. It works under Vite, PostCSS, and Tailwind, all of which see your markup; the plugin-free family stylesheets render at the family's authored width, because nothing there can know which widths to prepare.
+
 ---
 
 ## Vite plugin
@@ -131,9 +201,13 @@ viteIcons({
 | `attribution`   | `auto`, `file`, or `off`. See [Licensing](#licensing).                                      |
 | `registry`      | A prepared `IconRegistry`, replacing `families`.                                            |
 
-The stylesheet is served as `virtual:icons.css`, and `@import "@codenhub/icons";` in any stylesheet the plugin transforms is replaced with it.
+The generated stylesheet is served as `virtual:icons.css` and injected into every HTML entry point.
 
-When the CSS pipeline resolves that import itself rather than leaving it to the plugin — `@tailwindcss/vite`, or a plain `<link rel="stylesheet" href="@codenhub/icons">` — it reaches the package's `style` export condition, a static `dist/style.css` carrying only the base `.ic` rules. Add the Vite or PostCSS plugin to turn the icon classes in your markup into mask rules on top of it.
+`@import "@codenhub/icons";` is left alone. It resolves through the package's `style` export condition to `dist/style.css`, the base `.ic` rules, and means the same thing whether or not a plugin is in the pipeline. Keep it in your stylesheet; the plugin adds the per-icon rules around it rather than in place of it.
+
+### Inline SVG mode
+
+`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms above do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
 ### One module per icon
 
@@ -145,10 +219,6 @@ element.innerHTML = svg;
 ```
 
 The module exports the rendered markup as `svg` and its default export, and the resolved icon as `icon`. Each import is its own module, so the bundler splits and tree-shakes at icon granularity. A name with no prefix — `virtual:@codenhub/icons/close` — resolves like any other unqualified name. An unknown icon fails the build rather than resolving to nothing.
-
-### Inline SVG mode
-
-`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms above do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
 ---
 
@@ -228,6 +298,17 @@ What reaches your own output is the `attribution` option:
 | `auto` (default) | Prepends a `/*! … */` banner to the generated CSS, naming only the families the build used. |
 | `file`           | Emits `icons-attribution.txt` as a build asset instead. Vite only.                          |
 | `off`            | Emits nothing, and warns when a family used still requires a notice.                        |
+
+The vehicle differs by path, because not every path can carry a comment:
+
+| Path      | How the notice travels                                                             |
+| --------- | ---------------------------------------------------------------------------------- |
+| Vite      | A `/*! … */` banner on the generated CSS, or `icons-attribution.txt` under `file`. |
+| PostCSS   | A `/*! … */` banner on the generated CSS.                                          |
+| Tailwind  | A `--ic-attribution-<family>` custom property on `:root`, one per family used.     |
+| Plain CSS | A `/*! … */` banner opening each family stylesheet you imported.                   |
+
+Tailwind's plugin API builds declarations, not comments, so its notice is a custom property rather than a banner. It is emitted the first time a family produces a utility, so a build carries notices for the artwork it actually shipped and no other.
 
 Obligations come in three levels, because permissive is not the same as free of obligation:
 

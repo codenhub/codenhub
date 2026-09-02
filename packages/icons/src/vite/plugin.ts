@@ -80,7 +80,6 @@ const ICON_MODULE_PREFIX = "virtual:@codenhub/icons/";
 const RESOLVED_ICON_MODULE_PREFIX = "\0" + ICON_MODULE_PREFIX;
 const SOURCE_FILE = /\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i;
 const MARKUP_FILE = /\.(html|jsx?|tsx?|vue|svelte)$/i;
-const STYLE_FILE = /\.(css|scss|sass|less)$/i;
 
 function resolveIconModule(registry: IconRegistry, request: string): ResolvedIcon {
   // `lucide/heart` names a family and an icon; a single segment goes through
@@ -396,8 +395,11 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
  * inline SVG when `mode` is `"svg"`.
  *
  * In CSS mode it serves the generated stylesheet through `virtual:icons.css`
- * and replaces `@import "@codenhub/icons";` in stylesheets. In both modes it
- * emits the license notices required by the families the build actually used.
+ * and injects it into every HTML entry point. It leaves
+ * `@import "@codenhub/icons";` alone in both modes: that import is the base
+ * stylesheet and means the same thing whether or not this plugin is in the
+ * pipeline. In both modes it emits the license notices required by the families
+ * the build actually used.
  *
  * @param options - Families, scanning, class prefix, delivery mode, and attribution.
  * @returns The Vite plugin.
@@ -481,13 +483,14 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       if (rawId.startsWith(ICON_MODULE_PREFIX)) {
         return "\0" + rawId;
       }
+      // `@codenhub/icons/style.css` is deliberately absent: the package's own
+      // base stylesheet resolves through its exports so the bare import means
+      // the same thing with or without this plugin.
       if (
         rawId === "virtual:icons.css" ||
         rawId === "virtual:codenhub-icons.css" ||
         rawId === "virtual:@codenhub/icons.css" ||
-        rawId === "@codenhub/icons/style.css" ||
-        id.endsWith("virtual:icons.css") ||
-        id.endsWith("@codenhub/icons/style.css")
+        id.endsWith("virtual:icons.css")
       ) {
         const resolvedId = "\0" + rawId;
         resolvedVirtualIds.add(resolvedId);
@@ -555,15 +558,6 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
     transform(code, id) {
       if (mode === "svg") {
-        if (id && STYLE_FILE.test(id)) {
-          const importPattern =
-            /@import\s+["'](?:@codenhub\/icons|@codenhub\/icons\/style\.css|virtual:icons\.css)["'];?/g;
-          if (code.includes("@codenhub/icons") || code.includes("virtual:icons.css")) {
-            return { code: code.replace(importPattern, ""), map: null };
-          }
-          return null;
-        }
-
         if (id && !id.includes("node_modules") && !id.startsWith("\0") && MARKUP_FILE.test(id)) {
           const replaced = replaceIconTagsWithSvg(code, registry, {
             isJsContext: true,
@@ -586,14 +580,6 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
 
       if (id && !id.includes("node_modules") && !id.startsWith("\0") && SOURCE_FILE.test(id)) {
         scannedFiles.add(id);
-      }
-
-      if (id && STYLE_FILE.test(id)) {
-        const importPattern =
-          /@import\s+["'](?:@codenhub\/icons|@codenhub\/icons\/style\.css|virtual:icons\.css)["'];?/g;
-        if (code.includes("@codenhub/icons") || code.includes("virtual:icons.css")) {
-          return { code: code.replace(importPattern, generateCssFromContent()), map: null };
-        }
       }
 
       return null;

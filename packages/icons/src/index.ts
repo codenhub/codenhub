@@ -19,6 +19,7 @@ export type {
 
 export {
   collectAttributedFamilies,
+  describeFamilyNotice,
   renderAttributionBanner,
   renderAttributionNotice,
   renderSuppressedAttributionWarning,
@@ -31,6 +32,7 @@ export type { IconifyAdapterOptions, IconifyJson } from "./adapters/iconify.js";
 export {
   escapeSelectorClass,
   generateBaseCss,
+  generateFamilyCss,
   generateIconCss,
   generateIconSetCss,
   getIconCssProps,
@@ -38,6 +40,7 @@ export {
 } from "./generator/css-generator.js";
 export type {
   BaseCssOptions,
+  GenerateFamilyCssOptions,
   GenerateIconCssOptions,
   GenerateIconSetCssOptions,
   IconSetCssResult,

@@ -46,6 +46,7 @@ src/generator/ src/scanner/   CSS mask output, class extraction
         |
         v
 src/vite/ src/postcss/        build integrations, attribution emission
+src/tailwind/                 Tailwind v4 plugin, icons generated on demand
 ```
 
 Direction is one-way. The core never imports a family, an integration, or the catalog. Family data never imports code.
@@ -205,6 +206,8 @@ Lookup order for `resolve(name)`, limited to families already loaded:
 The registry names no default family and carries no curated map of semantic names. An unqualified name resolves against `defaultPrefix` or against nothing.
 
 A 35-entry semantic map used to sit here, mapping `close` to `lucide:x` and so on. It read as a package-wide feature, but every entry pointed at Lucide, so for the other twelve families it silently fell through to the default prefix: the package advertised semantic resolution and honoured it for one family in thirteen. Curating it for every family is thirteen times the editorial work and a standing obligation on every upstream bump; leaving it in place meant one family's vocabulary was quietly the package's.
+
+It also could not survive the plugin-free path. A static family stylesheet has no alias layer, so a semantic name would have resolved under the plugins and silently failed without them -- the inconsistency the entry points exist to remove.
 
 A curated `core` family, with its own prefix and its own artwork, is the honest shape for this if it comes back. That is a family a project opts into, not a default it cannot see.
 

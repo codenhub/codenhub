@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/icons",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "Icon registry, CSS mask generator, and scanner module for Codenhub icon system.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
@@ -31,6 +31,12 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./tw": "./dist/tw/index.css",
+    "./tailwind": {
+      "types": "./dist/tw/plugin.d.ts",
+      "import": "./dist/tw/plugin.js",
+      "default": "./dist/tw/plugin.js"
+    },
     "./postcss": {
       "types": "./dist/postcss.d.ts",
       "import": "./dist/postcss.js",
@@ -45,13 +51,78 @@
       "types": "./dist/data/*.d.ts",
       "import": "./dist/data/*.js",
       "default": "./dist/data/*.js"
+    },
+    "./lucide": {
+      "style": "./dist/css/lucide.css",
+      "import": "./dist/css/lucide.css",
+      "default": "./dist/css/lucide.css"
+    },
+    "./material-symbols-outlined": {
+      "style": "./dist/css/material-symbols-outlined.css",
+      "import": "./dist/css/material-symbols-outlined.css",
+      "default": "./dist/css/material-symbols-outlined.css"
+    },
+    "./material-symbols-outlined-fill": {
+      "style": "./dist/css/material-symbols-outlined-fill.css",
+      "import": "./dist/css/material-symbols-outlined-fill.css",
+      "default": "./dist/css/material-symbols-outlined-fill.css"
+    },
+    "./material-symbols-rounded": {
+      "style": "./dist/css/material-symbols-rounded.css",
+      "import": "./dist/css/material-symbols-rounded.css",
+      "default": "./dist/css/material-symbols-rounded.css"
+    },
+    "./material-symbols-rounded-fill": {
+      "style": "./dist/css/material-symbols-rounded-fill.css",
+      "import": "./dist/css/material-symbols-rounded-fill.css",
+      "default": "./dist/css/material-symbols-rounded-fill.css"
+    },
+    "./material-symbols-sharp": {
+      "style": "./dist/css/material-symbols-sharp.css",
+      "import": "./dist/css/material-symbols-sharp.css",
+      "default": "./dist/css/material-symbols-sharp.css"
+    },
+    "./material-symbols-sharp-fill": {
+      "style": "./dist/css/material-symbols-sharp-fill.css",
+      "import": "./dist/css/material-symbols-sharp-fill.css",
+      "default": "./dist/css/material-symbols-sharp-fill.css"
+    },
+    "./phosphor": {
+      "style": "./dist/css/phosphor.css",
+      "import": "./dist/css/phosphor.css",
+      "default": "./dist/css/phosphor.css"
+    },
+    "./phosphor-bold": {
+      "style": "./dist/css/phosphor-bold.css",
+      "import": "./dist/css/phosphor-bold.css",
+      "default": "./dist/css/phosphor-bold.css"
+    },
+    "./phosphor-duotone": {
+      "style": "./dist/css/phosphor-duotone.css",
+      "import": "./dist/css/phosphor-duotone.css",
+      "default": "./dist/css/phosphor-duotone.css"
+    },
+    "./phosphor-fill": {
+      "style": "./dist/css/phosphor-fill.css",
+      "import": "./dist/css/phosphor-fill.css",
+      "default": "./dist/css/phosphor-fill.css"
+    },
+    "./phosphor-light": {
+      "style": "./dist/css/phosphor-light.css",
+      "import": "./dist/css/phosphor-light.css",
+      "default": "./dist/css/phosphor-light.css"
+    },
+    "./phosphor-thin": {
+      "style": "./dist/css/phosphor-thin.css",
+      "import": "./dist/css/phosphor-thin.css",
+      "default": "./dist/css/phosphor-thin.css"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-style.mjs",
+    "build": "tsdown src/index.ts src/postcss.ts src/vite.ts src/tailwind.ts --format esm --dts --clean --no-fixed-extension --unbundle && node scripts/build-data.mjs && node scripts/build-tailwind.mjs && node scripts/build-style.mjs && node scripts/build-css.mjs",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
@@ -71,6 +142,7 @@
     "@vitest/coverage-v8": "catalog:",
     "lucide-static": "1.33.0",
     "postcss": "^8.4.0",
+    "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
@@ -78,10 +150,14 @@
   },
   "peerDependencies": {
     "postcss": ">=8.0.0",
+    "tailwindcss": ">=4.0.0",
     "vite": ">=5.0.0"
   },
   "peerDependenciesMeta": {
     "postcss": {
+      "optional": true
+    },
+    "tailwindcss": {
       "optional": true
     },
     "vite": {

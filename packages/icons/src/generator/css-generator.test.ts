@@ -5,6 +5,7 @@ import type { IconFamilyData } from "../core/types.js";
 import {
   escapeSelectorClass,
   generateBaseCss,
+  generateFamilyCss,
   generateIconCss,
   generateIconSetCss,
   getIconCssProps,
@@ -189,5 +190,49 @@ describe("getIconCssProps", () => {
 
   it("returns nothing for a name that resolves to no icon", () => {
     expect(getIconCssProps("absent", createRegistry())).toBeUndefined();
+  });
+});
+
+describe("generateFamilyCss", () => {
+  const family = createQuillFamily();
+
+  it("writes every icon of the family", () => {
+    const css = generateFamilyCss(family);
+
+    expect(css).toContain(".ic-quill-heart");
+    expect(css).toContain(".ic-quill-x");
+  });
+
+  it("gives each rule a bare selector beside the qualified one", () => {
+    // One rule, two selectors: the bare name costs a selector rather than a
+    // second copy of the artwork, and import order decides which family wins it.
+    expect(generateFamilyCss(family)).toContain(".ic-quill-heart,\n.ic-heart {");
+  });
+
+  it("omits the bare selectors when they are not wanted", () => {
+    const css = generateFamilyCss(family, { bareNames: false });
+
+    expect(css).toContain(".ic-quill-heart {");
+  });
+
+  it("writes an alias as its own selector", () => {
+    expect(generateFamilyCss(family)).toContain(".ic-quill-cancel");
+  });
+
+  it("opens with the family license notice as a preserved comment", () => {
+    const css = generateFamilyCss(family);
+
+    expect(css.startsWith("/*!")).toBe(true);
+    expect(css).toContain("ISC License");
+  });
+
+  it("omits the notice when it is not wanted", () => {
+    const css = generateFamilyCss(family, { attribution: false });
+
+    expect(css.startsWith(".ic-quill")).toBe(true);
+  });
+
+  it("honours a custom class prefix", () => {
+    expect(generateFamilyCss(family, { prefix: "icon" })).toContain(".icon-quill-heart,\n.icon-heart {");
   });
 });

@@ -114,13 +114,15 @@ describe("viteIcons", () => {
     expect(load("\0virtual:icons.css")).toContain(".ic-user {");
   });
 
-  it("replaces the package import in a stylesheet", () => {
+  it("leaves the package import in a stylesheet alone", () => {
     const { transform } = createPlugin();
 
     const result = transform('@import "@codenhub/icons";\n.button { color: red; }', "styles.css");
 
-    expect(result?.code).not.toContain('@import "@codenhub/icons"');
-    expect(result?.code).toContain(".ic {");
+    // The import resolves to the package's own base stylesheet through its
+    // exports, so it means the same thing with or without this plugin. The
+    // generated masks arrive through the virtual module instead.
+    expect(result).toBeNull();
   });
 
   it("prepends a preserved license banner by default", () => {
@@ -312,12 +314,12 @@ describe("viteIcons in svg mode", () => {
     expect(transform('const markup = "<i class=\\"brand\\"></i>";', "app.ts")).toBeNull();
   });
 
-  it("drops the stylesheet import that has nothing to serve", () => {
+  it("leaves the stylesheet import alone, since it carries the base rules", () => {
     const { transform } = createPlugin({ mode: "svg" });
 
     const result = transform('@import "@codenhub/icons";\n.button { color: red; }', "styles.css");
 
-    expect(result?.code).toBe("\n.button { color: red; }");
+    expect(result).toBeNull();
   });
 
   it("warns about an icon class on an element it does not rewrite", () => {
