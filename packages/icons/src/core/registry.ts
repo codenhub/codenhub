@@ -1,4 +1,3 @@
-import { SEMANTIC_ALIASES } from "../semantic/semantic-aliases.js";
 import type { IconFamilyData, IconFamilyLoader, IconRegistryOptions, ResolvedIcon } from "./types.js";
 
 const DEFAULT_VIEWBOX_SIZE = 24;
@@ -33,7 +32,6 @@ function unwrapLoaded(loaded: IconFamilyData | { default: IconFamilyData }): Ico
  */
 export class IconRegistry {
   private readonly defaultPrefix?: string;
-  private readonly semanticAliases: Record<string, string>;
   private readonly families = new Map<string, IconFamilyData>();
   private readonly loaders = new Map<string, IconFamilyLoader>();
   private readonly pendingLoads = new Map<string, Promise<IconFamilyData>>();
@@ -41,11 +39,10 @@ export class IconRegistry {
   /**
    * Creates a registry holding no families.
    *
-   * @param options - Default prefix and semantic alias configuration.
+   * @param options - Default prefix for unqualified names.
    */
   constructor(options?: IconRegistryOptions) {
     this.defaultPrefix = options?.defaultPrefix;
-    this.semanticAliases = options?.semanticAliases === false ? {} : (options?.semanticAliases ?? SEMANTIC_ALIASES);
   }
 
   /**
@@ -109,11 +106,11 @@ export class IconRegistry {
   /**
    * Resolves an icon name against the families already loaded.
    *
-   * Unprefixed names resolve through the semantic alias map first, then against
-   * the configured default prefix. A name whose family is registered only as a
-   * loader does not resolve here.
+   * An unqualified name resolves against the configured default prefix, and
+   * against nothing at all when none is set. A name whose family is registered
+   * only as a loader does not resolve here.
    *
-   * @param name - Icon name, qualified (`"lucide:x"`) or not (`"close"`).
+   * @param name - Icon name, qualified (`"lucide:x"`) or not (`"x"`).
    * @returns The resolved icon, or `undefined` when it is not available.
    */
   public resolve(name: string): ResolvedIcon | undefined {
@@ -131,7 +128,7 @@ export class IconRegistry {
    * Resolves an icon name, loading its family first when it is not yet
    * available.
    *
-   * @param name - Icon name, qualified (`"lucide:x"`) or not (`"close"`).
+   * @param name - Icon name, qualified (`"lucide:x"`) or not (`"x"`).
    * @returns The resolved icon, or `undefined` when the name is unknown or its
    * family has neither data nor a loader.
    */
@@ -196,28 +193,20 @@ export class IconRegistry {
   /**
    * Every reading of a name, in the order they are tried.
    *
-   * A semantic name is tried before the default prefix, but does not shadow it:
-   * a curated alias pointing at a family the project never registered has to
-   * fall through rather than fail the lookup.
+   * A qualified name has exactly one reading. An unqualified one is read
+   * against the default prefix, and has no reading at all without one: the
+   * package names no default family, so an unqualified name means whatever the
+   * consumer said it means and nothing otherwise.
    */
   private readCandidates(name: string): { prefix: string; iconName: string }[] {
     const parsed = parseName(name);
     if (parsed.prefix) {
       return [{ iconName: parsed.iconName, prefix: parsed.prefix }];
     }
-
-    const candidates: { prefix: string; iconName: string }[] = [];
-    const semantic = this.semanticAliases[parsed.iconName];
-    if (semantic) {
-      const target = parseName(semantic);
-      if (target.prefix) {
-        candidates.push({ iconName: target.iconName, prefix: target.prefix });
-      }
-    }
     if (this.defaultPrefix) {
-      candidates.push({ iconName: parsed.iconName, prefix: this.defaultPrefix });
+      return [{ iconName: parsed.iconName, prefix: this.defaultPrefix }];
     }
-    return candidates;
+    return [];
   }
 
   private async resolveCandidate(

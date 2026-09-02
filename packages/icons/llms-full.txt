@@ -124,27 +124,20 @@ An icon is identified by `prefix:name`. A class writes that with a dash, because
 <i class="ic-lucide-heart"></i> <i class="ic-material-symbols-rounded-home"></i>
 ```
 
-An unprefixed name is resolved in order: the curated semantic map first, then the configured `defaultPrefix`. A semantic name whose family is not registered falls through to the default prefix rather than failing.
+The longest matching family prefix wins, so `material-symbols-outlined` is preferred over `material` when both are loaded.
 
-```html
-<!-- close, edit, home, loading, search... are semantic names -->
-<i class="ic-close"></i>
-```
-
-`SEMANTIC_ALIASES` is exported so a project can read, extend, or replace it:
+An unqualified name resolves against the configured `defaultPrefix`, and against nothing at all when none is set. The package names no default family and ships no curated map of semantic names: `ic-close` means whatever the family you chose calls `close`, and renders nothing if that family has no such icon. Lucide's is named `x`, so under Lucide you write `ic-x`.
 
 ```ts
-import { IconRegistry, SEMANTIC_ALIASES } from "@codenhub/icons";
+import { IconRegistry } from "@codenhub/icons";
 import lucide from "@codenhub/icons/data/lucide";
 
-const registry = new IconRegistry({
-  defaultPrefix: "lucide",
-  semanticAliases: { ...SEMANTIC_ALIASES, brand: "phosphor:sparkle" },
-});
+const registry = new IconRegistry({ defaultPrefix: "lucide" });
 registry.registerFamily(lucide);
-```
 
-Pass `semanticAliases: false` to disable semantic resolution entirely.
+registry.resolve("heart"); // lucide:heart
+registry.resolve("close"); // undefined -- lucide calls it "x"
+```
 
 ### Reserved names
 
@@ -260,7 +253,7 @@ renderSvg(heart!, { strokeWidth: 1.5 });
 
 const { css, families } = generateIconSetCss(["ic-heart", "ic-stroke-1.5"], registry);
 
-getIconCssProps("close", registry);
+getIconCssProps("lucide:x", registry);
 // { "--ic-uri": 'url("data:image/svg+xml;…")', "--ic-mask": "var(--ic-uri)" }
 ```
 

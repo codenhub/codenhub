@@ -17,8 +17,6 @@ export type {
   ResolvedIcon,
 } from "./core/types.js";
 
-export { SEMANTIC_ALIASES } from "./semantic/semantic-aliases.js";
-
 export {
   collectAttributedFamilies,
   renderAttributionBanner,

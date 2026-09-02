@@ -39,7 +39,6 @@ data/<prefix>/icons.json      generated family data, committed, reviewable
 src/core/                     schema, registry, resolution, aliases, loaders
         |
         +-- src/catalog/      family metadata, tiers, attribution notices
-        +-- src/semantic/     curated semantic name map (close -> lucide:x)
         +-- src/adapters/     third-party set adapters (Iconify-shaped JSON)
         |
         v
@@ -193,22 +192,19 @@ The core has **no default prefix**. A name without a prefix resolves against the
 
 Lookup order for `resolve(name)`, limited to families already loaded:
 
-1. Semantic alias map, when the name has no prefix.
-2. Configured default prefix, when the name has no prefix.
-3. Family aliases within the prefix.
-4. Family icons within the prefix.
+1. Configured default prefix, when the name has no prefix.
+2. Family aliases within the prefix.
+3. Family icons within the prefix.
 
 `resolveAsync(name)` follows the same order, but for each candidate prefix that is not yet loaded, it loads the family first — from a registered loader, or the already-registered data — before trying to resolve against it.
 
-### Semantic aliases
+### No default family
 
-A curated, hand-maintained map in `src/semantic/`, independent of any family:
+The registry names no default family and carries no curated map of semantic names. An unqualified name resolves against `defaultPrefix` or against nothing.
 
-```ts
-{ close: "lucide:x", edit: "lucide:pencil", home: "lucide:house" }
-```
+A 35-entry semantic map used to sit here, mapping `close` to `lucide:x` and so on. It read as a package-wide feature, but every entry pointed at Lucide, so for the other twelve families it silently fell through to the default prefix: the package advertised semantic resolution and honoured it for one family in thirteen. Curating it for every family is thirteen times the editorial work and a standing obligation on every upstream bump; leaving it in place meant one family's vocabulary was quietly the package's.
 
-It is code, not generated data, because it encodes editorial judgment. Projects override or replace it through registry options. It is what lets a project switch its backing family without rewriting markup, and it is what the four hand-written SVG entries in the legacy dataset were reaching for — those entries are deleted, not migrated, because their intent was aliasing and their provenance is unverifiable.
+A curated `core` family, with its own prefix and its own artwork, is the honest shape for this if it comes back. That is a family a project opts into, not a default it cannot see.
 
 ### Loaders
 
