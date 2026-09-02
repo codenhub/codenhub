@@ -164,6 +164,9 @@
       "optional": true
     }
   },
+  "engines": {
+    "node": ">=22"
+  },
   "codenhub": {
     "docs": {
       "label": "IconKit",
