@@ -79,7 +79,12 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on any
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): entry points, families, resolution, plugins, JavaScript helpers, and licensing.
+- [Documentation overview](docs/index.md): what the package is, installation, and the shortest working setup.
+- [Concepts](docs/concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Delivery methods](docs/delivery/index.md): plain CSS, Tailwind CSS v4, the Vite plugin, and the PostCSS plugin.
+- [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
+- [JavaScript API](docs/javascript-api.md): the registry, renderers, and third-party set adapter.
+- [Licensing](docs/licensing.md): attribution modes and what each build owes.
 
 ## Requirements
 
