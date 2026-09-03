@@ -76,7 +76,7 @@ export interface I18n<TLocale extends string = string> {
    *
    * @param options - Optional explicit locale selection.
    * @returns Whether this request applied state. Applied initialization returns `true` and emits `ready`; a stale
-   * successful request returns `false` without changing state or emitting an event.
+   * successful request returns `false` without changing state or emitting an event. Failure leaves active state unchanged.
    * @throws {RangeError} When the locale is unsupported.
    * @throws {TypeError} When a loaded dictionary is invalid.
    * @throws {TypeError} When direction resolution returns a value other than `ltr` or `rtl`.

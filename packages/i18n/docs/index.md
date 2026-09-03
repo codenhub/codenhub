@@ -5,7 +5,7 @@ description: Runtime-neutral translations with optional browser and locale-path 
 
 # Translate applications across runtimes
 
-`@codenhub/i18n` provides isolated translation managers with consumer-owned locale loading. Use the core API in browsers, servers, workers, and static builds, then add browser effects or locale-prefixed paths when needed.
+`@codenhub/i18n` provides isolated translation managers with consumer-owned locale loading. Use the core API in browser main threads, browser Web Workers, servers, and static builds, then add browser effects or locale-prefixed paths when needed.
 
 ## Setup
 
