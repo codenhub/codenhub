@@ -263,6 +263,120 @@ Setting `color-scheme` yourself on an element also re-themes the tokens below it
 
 This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 121 for `:has()` (see [Setup](docs/setup.md#requirements)).
 
+<!-- Source: docs/setup.md -->
+
+# Setup
+
+## Installation
+
+```sh
+pnpm add @codenhub/styles
+```
+
+## Quick start
+
+Import the compiled stylesheet for the complete token, reset, utility, and component-class surface, then compose helper classes in markup:
+
+```css
+@import "@codenhub/styles";
+```
+
+```html
+<main class="stack">
+  <p class="text-label">Status</p>
+  <h1 class="text-title">Ready to publish</h1>
+  <button class="btn primary">Continue</button>
+</main>
+```
+
+The full stylesheet applies global reset and focus-visible rules, but does not apply the optional classless native-element mappings, and does not include aesthetics. Import focused entrypoints when global rules are not appropriate; see [Import paths](#import-paths) below.
+
+Aesthetics are opt-in. Import the combined aesthetics stylesheet, or one aesthetic on its own, after the base stylesheet so its rules win:
+
+```css
+@import "@codenhub/styles";
+@import "@codenhub/styles/aesthetics";
+```
+
+```html
+<section class="neobrutalism">
+  <button class="btn primary">Thick ink and a hard shadow</button>
+</section>
+```
+
+A project already running Tailwind CSS v4 imports the source entrypoint instead; see [Integrating → Tailwind CSS v4](docs/integrating/tailwind.md).
+
+## Configuration
+
+The root follows the operating-system color-scheme preference. Apply `.light` or `.dark` to the root or any ancestor to force token values for that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases.
+
+```html
+<html class="dark">
+  <body>
+    <button class="btn primary">Dark themed button</button>
+  </body>
+</html>
+```
+
+See [Concepts → Theme selection](docs/concepts.md#theme-selection) for how selectors resolve and [Usage → Theming](docs/usage/theming.md) for the full color token reference.
+
+## Import paths
+
+Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
+
+| Import path                      | Composition and effects                                                                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                   |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                  |
+| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                      |
+| `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                |
+| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` classes. Adds no tokens or components of its own; import after the base stylesheet.                                                              |
+| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic: `/neobrutalism`, `/glass`, `/pixel`, or `/chunky-tile`. Same rules and ordering as the combined file.                                                                                     |
+| `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                        |
+| `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                      |
+| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
+| `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                              |
+| `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.loader-mask` for loading state.                                              |
+| `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
+| `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                             |
+| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                              |
+| `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                              |
+| `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                               |
+| `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                |
+| `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                  |
+| `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                   |
+| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                             |
+
+Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
+
+## Requirements
+
+- Consumer tooling must resolve package CSS imports.
+- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), and `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121).
+- Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
+- The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
+
+<!-- Source: docs/integrating/index.md -->
+
+# Integrating
+
+This package has no JavaScript and no framework bindings; see [Introduction](docs/index.md#what-it-does-not-do). Integrating it into a framework is entirely about where that framework loads a global stylesheet, and whether the project runs Tailwind CSS v4.
+
+Every stack does the same two things:
+
+1. Import one [entrypoint](docs/setup.md#import-paths) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4 — from wherever that framework loads global CSS.
+2. Import `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only if the project uses an [aesthetic](docs/usage/aesthetics.md).
+
+| Stack                                    | Guide                            |
+| ---------------------------------------- | -------------------------------- |
+| A Tailwind CSS v4 project on any bundler | [Tailwind CSS v4](docs/integrating/tailwind.md) |
+| Next.js / React                          | [Next.js](docs/integrating/nextjs.md)           |
+| Vue                                      | [Vue](docs/integrating/vue.md)                  |
+| Svelte / SvelteKit                       | [Svelte](docs/integrating/svelte.md)            |
+| Astro                                    | [Astro](docs/integrating/astro.md)              |
+
+A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup](docs/setup.md#quick-start): import the compiled stylesheet from the project's existing global CSS entry.
+
 <!-- Source: docs/integrating/astro.md -->
 
 # Astro
@@ -285,27 +399,6 @@ import "@codenhub/styles";
 Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Setup → Configuration](docs/setup.md#configuration).
 
 A project running Tailwind CSS v4 imports `@codenhub/styles/tw` through Astro's Tailwind integration instead; see [Tailwind CSS v4](docs/integrating/tailwind.md) for the `@source` directive Astro needs to scan `src/`.
-
-<!-- Source: docs/integrating/index.md -->
-
-# Integrating
-
-This package has no JavaScript and no framework bindings; see [Introduction](docs/index.md#what-it-does-not-do). Integrating it into a framework is entirely about where that framework loads a global stylesheet, and whether the project runs Tailwind CSS v4.
-
-Every stack does the same two things:
-
-1. Import one [entrypoint](docs/setup.md#import-paths) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4 — from wherever that framework loads global CSS.
-2. Import `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only if the project uses an [aesthetic](docs/usage/aesthetics.md).
-
-| Stack                                    | Guide                            |
-| ---------------------------------------- | -------------------------------- |
-| A Tailwind CSS v4 project on any bundler | [Tailwind CSS v4](docs/integrating/tailwind.md) |
-| Next.js / React                          | [Next.js](docs/integrating/nextjs.md)           |
-| Vue                                      | [Vue](docs/integrating/vue.md)                  |
-| Svelte / SvelteKit                       | [Svelte](docs/integrating/svelte.md)            |
-| Astro                                    | [Astro](docs/integrating/astro.md)              |
-
-A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup](docs/setup.md#quick-start): import the compiled stylesheet from the project's existing global CSS entry.
 
 <!-- Source: docs/integrating/nextjs.md -->
 
@@ -421,98 +514,25 @@ Apply `.dark` or `.light` on the root element to force a theme instead of follow
 
 A project running Tailwind CSS v4 imports `@codenhub/styles/tw` from a CSS entry file instead of `main.ts`, using the `@tailwindcss/vite` plugin; see [Tailwind CSS v4](docs/integrating/tailwind.md).
 
-<!-- Source: docs/setup.md -->
+<!-- Source: docs/usage/index.md -->
 
-# Setup
+# Usage
 
-## Installation
+These guides assume the [Concepts](docs/concepts.md) mental model: intent, presentation, and aesthetic as three independent axes, resolved through tokens a component reads.
 
-```sh
-pnpm add @codenhub/styles
-```
+- [Composing](docs/usage/composing.md): Combining the three axes on a component, the axis-support matrix, and elevation modifiers.
+- [Theming](docs/usage/theming.md): The color, intent, and foundation token reference.
+- [Customizing](docs/usage/customizing.md): The presentation and material token reference, aesthetic knobs, and defining a custom intent.
+- [Aesthetics](docs/usage/aesthetics.md): Each shipped aesthetic in depth, including its documented exceptions.
+- [Buttons](docs/usage/buttons.md)
+- [Forms](docs/usage/forms.md)
+- [Feedback](docs/usage/feedback.md)
+- [Tooltips](docs/usage/tooltips.md)
+- [Content and layout](docs/usage/content-and-layout.md): Layout helpers, tables, quotes, code, surfaces, and typography utilities.
 
-## Quick start
+## Supported surface
 
-Import the compiled stylesheet for the complete token, reset, utility, and component-class surface, then compose helper classes in markup:
-
-```css
-@import "@codenhub/styles";
-```
-
-```html
-<main class="stack">
-  <p class="text-label">Status</p>
-  <h1 class="text-title">Ready to publish</h1>
-  <button class="btn primary">Continue</button>
-</main>
-```
-
-The full stylesheet applies global reset and focus-visible rules, but does not apply the optional classless native-element mappings, and does not include aesthetics. Import focused entrypoints when global rules are not appropriate; see [Import paths](#import-paths) below.
-
-Aesthetics are opt-in. Import the combined aesthetics stylesheet, or one aesthetic on its own, after the base stylesheet so its rules win:
-
-```css
-@import "@codenhub/styles";
-@import "@codenhub/styles/aesthetics";
-```
-
-```html
-<section class="neobrutalism">
-  <button class="btn primary">Thick ink and a hard shadow</button>
-</section>
-```
-
-A project already running Tailwind CSS v4 imports the source entrypoint instead; see [Integrating → Tailwind CSS v4](docs/integrating/tailwind.md).
-
-## Configuration
-
-The root follows the operating-system color-scheme preference. Apply `.light` or `.dark` to the root or any ancestor to force token values for that subtree. `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are aliases.
-
-```html
-<html class="dark">
-  <body>
-    <button class="btn primary">Dark themed button</button>
-  </body>
-</html>
-```
-
-See [Concepts → Theme selection](docs/concepts.md#theme-selection) for how selectors resolve and [Usage → Theming](docs/usage/theming.md) for the full color token reference.
-
-## Import paths
-
-Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
-
-| Import path                      | Composition and effects                                                                                                                                                                                           |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                   |
-| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                  |
-| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                      |
-| `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                |
-| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` classes. Adds no tokens or components of its own; import after the base stylesheet.                                                              |
-| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic: `/neobrutalism`, `/glass`, `/pixel`, or `/chunky-tile`. Same rules and ordering as the combined file.                                                                                     |
-| `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                        |
-| `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                      |
-| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
-| `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                              |
-| `@codenhub/styles/tw/button`     | Published Tailwind source for theme, activity indicators, and `.btn`; includes static reduced-motion masks because buttons compose `.loader-mask` for loading state.                                              |
-| `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
-| `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                             |
-| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                              |
-| `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                              |
-| `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                               |
-| `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                |
-| `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                  |
-| `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                   |
-| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                             |
-
-Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
-
-## Requirements
-
-- Consumer tooling must resolve package CSS imports.
-- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), and `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121).
-- Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
-- The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
+A class, component, and axis combination is supported when this documentation describes it and the package playground demonstrates it. Undocumented and undemonstrated combinations may still produce CSS, but are not maintained behavior. Playground variant matrices are the exhaustive demonstrations; small examples elsewhere illustrate usage without widening that contract.
 
 <!-- Source: docs/usage/aesthetics.md -->
 
@@ -1348,26 +1368,6 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
 ```
 
 Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
-
-<!-- Source: docs/usage/index.md -->
-
-# Usage
-
-These guides assume the [Concepts](docs/concepts.md) mental model: intent, presentation, and aesthetic as three independent axes, resolved through tokens a component reads.
-
-- [Composing](docs/usage/composing.md): Combining the three axes on a component, the axis-support matrix, and elevation modifiers.
-- [Theming](docs/usage/theming.md): The color, intent, and foundation token reference.
-- [Customizing](docs/usage/customizing.md): The presentation and material token reference, aesthetic knobs, and defining a custom intent.
-- [Aesthetics](docs/usage/aesthetics.md): Each shipped aesthetic in depth, including its documented exceptions.
-- [Buttons](docs/usage/buttons.md)
-- [Forms](docs/usage/forms.md)
-- [Feedback](docs/usage/feedback.md)
-- [Tooltips](docs/usage/tooltips.md)
-- [Content and layout](docs/usage/content-and-layout.md): Layout helpers, tables, quotes, code, surfaces, and typography utilities.
-
-## Supported surface
-
-A class, component, and axis combination is supported when this documentation describes it and the package playground demonstrates it. Undocumented and undemonstrated combinations may still produce CSS, but are not maintained behavior. Playground variant matrices are the exhaustive demonstrations; small examples elsewhere illustrate usage without widening that contract.
 
 <!-- Source: docs/usage/theming.md -->
 
