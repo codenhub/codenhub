@@ -108,6 +108,17 @@ describe("createLocaleRouting", () => {
     }
   });
 
+  it("should reject pathnames longer than 8,192 characters", () => {
+    const routing = createLocaleRouting({
+      defaultLocale: "en-US",
+      locales: LOCALES,
+      prefixDefaultLocale: true,
+    });
+
+    expect(() => routing.parse(`/${"a".repeat(8_191)}`)).not.toThrow();
+    expect(() => routing.parse(`/${"a".repeat(8_192)}`)).toThrow(TypeError);
+  });
+
   it("should generate canonical prefixed pathnames and preserve non-root trailing slashes", () => {
     const routing = createLocaleRouting({
       defaultLocale: "en-US",

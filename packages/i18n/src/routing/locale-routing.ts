@@ -1,4 +1,7 @@
+import { hasAsciiControlCharacter } from "../core/string-validation";
 import { isValidLocaleIdentifier } from "../locale/identifier";
+
+const MAX_PATHNAME_LENGTH = 8_192;
 
 /** Configuration snapshotted for locale-prefixed pathname parsing and generation. */
 export interface LocaleRoutingConfig<TLocale extends string> {
@@ -31,7 +34,7 @@ export interface LocaleRouting<TLocale extends string> {
   /**
    * Parses a pathname using configured, case-insensitive locale prefixes.
    *
-   * @param pathname - An absolute application pathname without a URL, query, or fragment.
+   * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
    * @returns The canonical locale and unprefixed pathname, or `undefined` when a required prefix is absent.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    */
@@ -40,7 +43,7 @@ export interface LocaleRouting<TLocale extends string> {
   /**
    * Generates the canonical pathname for one supported locale.
    *
-   * @param pathname - An absolute application pathname without a URL, query, or fragment.
+   * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
    * @param locale - A supported locale, trimmed and matched case-insensitively.
    * @returns The pathname with the configured locale-prefix policy applied.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
@@ -51,7 +54,7 @@ export interface LocaleRouting<TLocale extends string> {
   /**
    * Generates localized pathnames for every locale in configuration order.
    *
-   * @param pathname - An absolute application pathname without a URL, query, or fragment.
+   * @param pathname - An absolute application pathname of at most 8,192 characters without a URL, query, or fragment.
    * @returns Localized pathnames paired with their canonical locales.
    * @throws {TypeError} When `pathname` is not a valid application pathname.
    */
@@ -128,15 +131,13 @@ export const createLocaleRouting = <TLocale extends string>(
     if (
       typeof pathname !== "string" ||
       pathname.length === 0 ||
+      pathname.length > MAX_PATHNAME_LENGTH ||
       !pathname.startsWith("/") ||
       pathname.includes("//") ||
       pathname.includes("?") ||
       pathname.includes("#") ||
       pathname.includes("\\") ||
-      [...pathname].some((character) => {
-        const characterCode = character.charCodeAt(0);
-        return characterCode <= 0x1f || characterCode === 0x7f;
-      }) ||
+      hasAsciiControlCharacter(pathname) ||
       /%(?![0-9a-f]{2})|%(?:0[0-9a-f]|1[0-9a-f]|2f|5c|7f)/i.test(pathname)
     ) {
       throw new TypeError("pathname must be a valid absolute application pathname");

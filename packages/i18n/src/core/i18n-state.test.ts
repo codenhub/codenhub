@@ -224,6 +224,16 @@ describe("I18n state", () => {
     expect(() => i18n.translate(" ")).toThrow(TypeError);
   });
 
+  it.each(["key\nforged", "key\u001bhidden", "key\u007fhidden", "k".repeat(1_001)])(
+    "rejects an unsafe translation key",
+    async (key) => {
+      const i18n = createI18n(createConfig());
+      await i18n.init();
+
+      expect(() => i18n.translate(key)).toThrow(TypeError);
+    },
+  );
+
   it.each([null, 1, Symbol("key")])("rejects a non-string translation key %s at runtime", async (key) => {
     const i18n = createI18n(createConfig());
     await i18n.init();

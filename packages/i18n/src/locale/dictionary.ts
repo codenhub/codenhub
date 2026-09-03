@@ -1,24 +1,32 @@
+import { hasAsciiControlCharacter } from "../core/string-validation";
 import type { LocaleDictionary } from "../core/types";
 
 const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 const MAX_DICTIONARY_DEPTH = 100;
 const MAX_TRANSLATIONS = 10_000;
+const MAX_DICTIONARY_PROPERTIES = 20_000;
 const MAX_FLATTENED_KEY_LENGTH = 1_000;
+const MAX_TRANSLATION_VALUE_LENGTH = 100_000;
+const MAX_TOTAL_TRANSLATION_LENGTH = 5_000_000;
 
 const isObject = (value: unknown): value is object =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const isValidKey = (key: string): boolean =>
-  key.split(".").every((segment) => {
+const isValidKey = (key: string): boolean => {
+  if (hasAsciiControlCharacter(key)) {
+    return false;
+  }
+
+  return key.split(".").every((segment) => {
     const normalizedSegment = segment.trim();
     return segment === normalizedSegment && normalizedSegment.length > 0 && !DANGEROUS_KEYS.has(normalizedSegment);
   });
+};
 
 /**
  * Validates and flattens an unknown locale payload into an immutable dictionary.
  *
- * @param input - Flat or nested object with at most 100 levels of nesting, 10,000 translations,
- * and 1,000 characters per flattened key.
+ * @param input - Flat or nested object within the documented depth, property, translation, key, and value limits.
  * @returns A frozen, null-prototype dictionary with dot-separated keys.
  * @throws {TypeError} When the payload cannot safely represent translations or exceeds a resource limit.
  * @internal
@@ -29,27 +37,41 @@ export function normalizeDictionary(input: unknown): LocaleDictionary {
   }
 
   const dictionary = Object.create(null) as Record<string, string>;
-  const ancestors = new WeakSet<object>();
+  const visitedObjects = new WeakSet<object>();
+  let propertyCount = 0;
   let translationCount = 0;
+  let totalTranslationLength = 0;
 
   const visit = (value: object, prefix = "", depth = 0): void => {
     if (depth > MAX_DICTIONARY_DEPTH) {
       throw new TypeError(`[I18n] A locale dictionary must not exceed ${MAX_DICTIONARY_DEPTH} levels of nesting.`);
     }
 
-    if (ancestors.has(value)) {
-      throw new TypeError("[I18n] A locale dictionary must not contain cycles.");
+    if (visitedObjects.has(value)) {
+      throw new TypeError("[I18n] A locale dictionary must not contain repeated objects.");
     }
 
-    ancestors.add(value);
+    visitedObjects.add(value);
 
     for (const key of Reflect.ownKeys(value)) {
+      propertyCount += 1;
+
+      if (propertyCount > MAX_DICTIONARY_PROPERTIES) {
+        throw new TypeError(`[I18n] A locale dictionary must not exceed ${MAX_DICTIONARY_PROPERTIES} properties.`);
+      }
+
       if (typeof key === "symbol") {
         throw new TypeError("[I18n] A locale dictionary must not contain symbol keys.");
       }
 
+      if (key.length > MAX_FLATTENED_KEY_LENGTH) {
+        throw new TypeError(
+          `[I18n] Locale dictionary flattened keys must not exceed ${MAX_FLATTENED_KEY_LENGTH} characters.`,
+        );
+      }
+
       if (!isValidKey(key)) {
-        throw new TypeError(`[I18n] Invalid locale dictionary key "${key}".`);
+        throw new TypeError("[I18n] Invalid locale dictionary key.");
       }
 
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
@@ -68,6 +90,20 @@ export function normalizeDictionary(input: unknown): LocaleDictionary {
       }
 
       if (typeof nestedValue === "string") {
+        if (nestedValue.length > MAX_TRANSLATION_VALUE_LENGTH) {
+          throw new TypeError(
+            `[I18n] Locale dictionary translation values must not exceed ${MAX_TRANSLATION_VALUE_LENGTH} characters.`,
+          );
+        }
+
+        totalTranslationLength += nestedValue.length;
+
+        if (totalTranslationLength > MAX_TOTAL_TRANSLATION_LENGTH) {
+          throw new TypeError(
+            `[I18n] A locale dictionary must not exceed ${MAX_TOTAL_TRANSLATION_LENGTH} aggregate translation characters.`,
+          );
+        }
+
         if (Object.hasOwn(dictionary, flattenedKey)) {
           throw new TypeError(`[I18n] Locale dictionary key collision at "${flattenedKey}".`);
         }
@@ -85,8 +121,6 @@ export function normalizeDictionary(input: unknown): LocaleDictionary {
         throw new TypeError(`[I18n] Locale dictionary value at "${flattenedKey}" must be a string.`);
       }
     }
-
-    ancestors.delete(value);
   };
 
   visit(input);

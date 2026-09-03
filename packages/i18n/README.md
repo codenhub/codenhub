@@ -2,8 +2,6 @@
 
 Runtime-neutral translations with consumer-provided locale loading, immutable dictionaries, deterministic fallback, and optional browser and locale-path integrations.
 
-> [!WARNING] This package is experimental. Its API, browser integration, routing behavior, and support level may change before a stable release.
-
 ## Installation
 
 ```sh
@@ -42,6 +40,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 ## Requirements
 
 - ESM-aware package resolution.
+- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, worker, or edge runtime with the required standard globals.
 - Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
 - Browser features require `navigator`, `document`, `localStorage`, or `MutationObserver` only when their related behavior is enabled.
 - Do not overlap `initializeBrowserI18n()` with direct `init()` calls on the same manager; a superseded browser initialization rejects and releases its binding.
@@ -49,9 +48,10 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 
 ## Notes
 
-- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, and cached per manager.
+- Dictionaries may be flat or nested, but every leaf must be a string. Valid dictionaries are flattened, frozen, and cached per manager. Repeated object references and payloads exceeding the documented resource limits are rejected.
 - Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing from both returns `undefined`; diagnostics deduplicate the 1,000 most recent locale/key pairs unless silent.
+- Translation lookup and locale routing intentionally omit interpolation, plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.
 - The package does not own fetch policy, request negotiation, route registration, redirects, navigation, rendering, or static page generation.
 
 ## License

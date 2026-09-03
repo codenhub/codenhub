@@ -1,5 +1,6 @@
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
+import { hasAsciiControlCharacter } from "./string-validation";
 import type {
   I18n,
   I18nConfig,
@@ -17,6 +18,7 @@ interface RequiredDictionaries {
 }
 
 const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
+const MAX_TRANSLATION_KEY_LENGTH = 1_000;
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
   private eventDetail: TDetail;
@@ -154,11 +156,22 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
       throw new Error("[I18n] translate() requires successful initialization.");
     }
 
-    if (typeof key !== "string" || key.trim().length === 0) {
+    if (typeof key !== "string" || key.length === 0) {
       throw new TypeError("[I18n] A translation key must be a non-empty string.");
     }
 
+    if (key.length > MAX_TRANSLATION_KEY_LENGTH || hasAsciiControlCharacter(key)) {
+      throw new TypeError(
+        `[I18n] A translation key must not contain ASCII control characters or exceed ${MAX_TRANSLATION_KEY_LENGTH} characters.`,
+      );
+    }
+
     const normalizedKey = key.trim();
+
+    if (normalizedKey.length === 0) {
+      throw new TypeError("[I18n] A translation key must be a non-empty string.");
+    }
+
     const translation = this.currentDictionary[normalizedKey] ?? this.defaultDictionary[normalizedKey];
 
     if (translation !== undefined) {

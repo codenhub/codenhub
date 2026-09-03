@@ -125,7 +125,7 @@ export interface I18n<TLocale extends string = string> {
    * @param key - Translation key.
    * @returns The translated string or undefined when absent. Missing-key diagnostics retain the 1,000 most recent pairs.
    * @throws {Error} When called before successful initialization.
-   * @throws {TypeError} When the key is empty or not a string.
+   * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
    */
   translate(key: string): string | undefined;
 
