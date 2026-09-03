@@ -1,6 +1,7 @@
 ---
 title: PostCSS plugin
 description: Scans the stylesheet and the files you list, then appends the base rules and the mask rules those classes need.
+order: 4
 ---
 
 # PostCSS plugin

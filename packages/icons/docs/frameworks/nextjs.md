@@ -1,6 +1,7 @@
 ---
 title: Next.js
 description: Next.js has no Vite pipeline, so use Tailwind v4, the PostCSS plugin, or plain-CSS family imports.
+order: 2
 ---
 
 # Next.js

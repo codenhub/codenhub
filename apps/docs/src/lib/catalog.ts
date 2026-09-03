@@ -2,7 +2,7 @@ import {
   assertSingleH1,
   buildPackageDefinitions,
   buildPublicPackageSummaries,
-  comparePublicDocumentPaths,
+  comparePublicDocuments,
   parsePublicDocumentFrontmatter,
   type PackageStatus,
   type PublicPackageSummary,
@@ -15,8 +15,12 @@ type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
 
 export interface PublicDocument {
   description?: string;
+  /** Section label from a folder `index.md`, when it sets one. */
+  group?: string;
   headings: MarkdownHeading[];
   html: string;
+  /** Explicit sidebar position from frontmatter, when the page sets one. */
+  order?: number;
   relativePath: string;
   route: string;
   routePath: string;
@@ -67,11 +71,13 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
           return {
             description: frontmatter.description,
+            group: frontmatter.group,
             headings,
             html: rewritePackageMarkdownLinks(await documentModule.compiledContent(), {
               packageSlug: packageDefinition.slug,
               sourceRelativePath: definition.relativePath,
             }),
+            order: frontmatter.order,
             relativePath: definition.relativePath,
             route: `/${packageDefinition.slug}/${definition.routePath}`.replace(/\/$/, "") + "/",
             routePath: definition.routePath,
@@ -80,7 +86,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         }),
       );
 
-      documents.sort((left, right) => comparePublicDocumentPaths(left.relativePath, right.relativePath));
+      documents.sort(comparePublicDocuments);
 
       return {
         description: packageDefinition.description,

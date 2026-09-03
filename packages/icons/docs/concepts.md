@@ -1,6 +1,7 @@
 ---
 title: Concepts
 description: Families, name resolution, reserved names, stroke width, and the markup forms — the model every delivery method shares.
+order: 1
 ---
 
 # How the icon system fits together

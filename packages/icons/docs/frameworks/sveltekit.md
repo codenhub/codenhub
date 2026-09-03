@@ -1,6 +1,7 @@
 ---
 title: SvelteKit
 description: SvelteKit builds on Vite and .svelte files are auto-scanned, so the Vite plugin needs almost no configuration.
+order: 3
 ---
 
 # SvelteKit

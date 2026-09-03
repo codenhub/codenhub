@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-06
+last_updated: 2026-09-03
 scope: Documentation for public workspace packages.
 ---
 
@@ -125,7 +125,8 @@ Public documentation paths MUST be deterministic and portable:
 
 - Markdown file and directory names MUST use kebab-case.
 - An `index.md` represents its containing documentation area.
-- Publishing tools MUST place the package-root `docs/index.md` before every other package page.
+- Publishing tools MUST place the package-root `docs/index.md` before every other package page, and a folder's `index.md` before the other pages in that folder.
+- Sibling pages otherwise order by their frontmatter `order`, ascending, with pages that set none keeping their path order after those that do.
 - Other Markdown files represent a document named after their relative path.
 - Package-relative Markdown links MUST be used for package-owned documents and assets.
 - Public documentation assets SHOULD live under `docs/assets/` unless colocating an asset makes ownership materially clearer.
@@ -145,6 +146,8 @@ Every public package `docs/**/*.md` file outside `docs/internal/` MUST start wit
 
 - `title`: REQUIRED non-empty page label used for navigation and sidebar labels and as the page-specific segment of the browser title.
 - `description`: OPTIONAL non-empty page summary for metadata, previews, or search.
+- `order`: OPTIONAL non-negative integer placing the page among its siblings, lowest first. It is invalid on the package `index.md`, which is always first. A folder's `index.md` `order` places that folder's whole section among its siblings.
+- `group`: OPTIONAL non-empty section label for a folder, valid only on that folder's `index.md`. Publishing tools that render folders as a labelled section MUST use it as the section label, independent of the index page's own `title`; absent it, the section label derives from the folder name.
 
 Unknown fields, including repository governance fields, are invalid. Every public document MUST contain exactly one H1, but its text is unrestricted and independent from the frontmatter title. Frontmatter controls presentation metadata; Markdown controls article markup. Publishing tools MUST render the Markdown body as authored and MUST NOT inject titles, descriptions, package identifiers, status notices, or other metadata into the article body. Site chrome outside the article body MAY present package metadata, navigation, breadcrumbs, or status. Browser titles MUST add the package label between the page title and site title so pages with common titles remain distinguishable.
 

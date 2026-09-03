@@ -1,6 +1,7 @@
 ---
 title: Plain CSS
 description: Import the base rules and one stylesheet per family — no build step, no markup scanning.
+order: 1
 ---
 
 # Plain CSS, no build step

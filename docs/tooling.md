@@ -308,7 +308,7 @@ A finding is waived only by a `Checks bypassed` bullet in `docs/specs/packages-e
 
 `hub generate` rewrites derived files from their canonical sources and writes only the ones that actually changed:
 
-- `<package>/llms-full.txt`, compiled from the package README, `docs/index.md`, and the remaining public documents in that order. Presentation frontmatter is stripped, `docs/internal/` is excluded, each section is introduced by a `<!-- Source: ... -->` marker, and relative link targets are rebased so they resolve from the package root.
+- `<package>/llms-full.txt`, compiled from the package README, then `docs/index.md`, then the remaining public documents in the same order the sidebar shows them — by frontmatter `order`, then path. Presentation frontmatter is stripped, `docs/internal/` is excluded, each section is introduced by a `<!-- Source: ... -->` marker, and relative link targets are rebased so they resolve from the package root.
 - The root `README.md` package list, between its `<!-- generated: packages start -->` and `<!-- generated: packages end -->` markers. Descriptions come from package manifests, so the list cannot drift from what each package says about itself.
 
 `llms.txt` stays hand-authored. It is a router whose value is the editorial summary a generator cannot write; `hub check` validates it like any other documentation surface.

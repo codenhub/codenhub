@@ -1,6 +1,7 @@
 ---
 title: Licensing
 description: What each build owes for the artwork it ships, the attribution modes, and how the notice travels per delivery method.
+order: 5
 ---
 
 # Licensing and attribution

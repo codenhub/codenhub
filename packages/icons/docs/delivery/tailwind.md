@@ -1,6 +1,7 @@
 ---
 title: Tailwind CSS
 description: One import makes every family resolvable; Tailwind emits only the icons your markup used.
+order: 2
 ---
 
 # Tailwind CSS v4
