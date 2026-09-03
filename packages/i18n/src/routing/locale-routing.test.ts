@@ -101,6 +101,10 @@ describe("createLocaleRouting", () => {
       "/about%0Ateam",
       "/about%00team",
       "/about%7fteam",
+      "/%252e%252e/admin",
+      "/about%252fadmin",
+      "/about%250ateam",
+      "/sale%25off",
     ];
 
     for (const pathname of invalidPathnames) {

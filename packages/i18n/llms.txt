@@ -1,6 +1,6 @@
 # @codenhub/i18n
 
-> Experimental runtime-neutral translations with consumer-provided loading,
+> Runtime-neutral translations with consumer-provided loading,
 > deterministic fallback, and optional browser and locale-path integrations.
 
 Use only the root, `/browser`, and `/routing` entrypoints. Await successful core

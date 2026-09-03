@@ -8,13 +8,18 @@
   <body>
     <h1 data-i18n="greeting">Greeting fallback</h1>
     <p id="hostile" data-i18n="hostile">Safe fallback</p>
+    <style id="hostile-css" data-i18n="hostileCss"></style>
     <script type="module">
       import { createI18n } from "/dist/index.js";
       import { initializeBrowserI18n } from "/dist/browser.js";
 
       const dictionaries = {
-        en: { greeting: "Hello", hostile: "Safe text" },
-        fr: { greeting: "Bonjour", hostile: '<img src=x onerror="document.body.dataset.xss = 1">' },
+        en: { greeting: "Hello", hostile: "Safe text", hostileCss: "body { --i18n-attack: active; }" },
+        fr: {
+          greeting: "Bonjour",
+          hostile: '<img src=x onerror="document.body.dataset.xss = 1">',
+          hostileCss: "body { --i18n-attack: active; }",
+        },
       };
       const i18n = createI18n({
         defaultLocale: "en",

@@ -29,7 +29,7 @@ await i18n.init({ locale: "pt" });
 console.log(i18n.translate("home.title")); // "Bem-vindo"
 ```
 
-`init()` rejects when a required loader rejects or returns an invalid dictionary. Await successful initialization before calling `translate()` or `setLocale()`.
+`init()` resolves `true` when its state is applied and `false` when a newer operation supersedes it. It rejects when a required loader rejects or returns an invalid dictionary. Await applied initialization before calling `translate()` or `setLocale()`.
 
 ## Documentation
 
@@ -40,7 +40,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 ## Requirements
 
 - ESM-aware package resolution.
-- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, worker, or edge runtime with the required standard globals.
+- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
 - Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
 - Browser features require `navigator`, `document`, `localStorage`, or `MutationObserver` only when their related behavior is enabled.
 - Do not overlap `initializeBrowserI18n()` with direct `init()` calls on the same manager; a superseded browser initialization rejects and releases its binding.
@@ -52,6 +52,8 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 - Locale identifiers use conservative ASCII syntax: alphanumeric subtags joined by single hyphens.
 - Missing active-locale keys fall back to the default dictionary. A key missing from both returns `undefined`; diagnostics deduplicate the 1,000 most recent locale/key pairs unless silent.
 - Translation lookup and locale routing intentionally omit interpolation, plural selection, ICU messages, rich messages, HTML rendering, number/date formatting, navigation, and redirects.
+- Browser DOM translation skips `style`, `script`, `noscript`, and `template` elements. Invalid `data-i18n` keys are skipped without interrupting other translations.
+- Locale routing rejects encoded percent signs so later decoding cannot expose separators, controls, or dot segments.
 - The package does not own fetch policy, request negotiation, route registration, redirects, navigation, rendering, or static page generation.
 
 ## License

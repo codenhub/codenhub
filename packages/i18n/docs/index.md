@@ -49,7 +49,7 @@ Use `@codenhub/i18n/browser` for browser locale selection, persistence, document
 ## Requirements
 
 - ESM-aware package resolution.
-- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, worker, or edge runtime with the required standard globals.
+- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
 - Core requires standard `Event` and `EventTarget` globals.
 - Browser features require only the browser APIs they enable.
 - Browser initialization must not overlap direct core initialization on the same manager; a superseded browser call rejects and releases ownership.

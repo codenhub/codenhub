@@ -205,9 +205,9 @@ export async function initializeBrowserI18n<TLocale extends string>(
         i18n.defaultLocale;
     }
 
-    await i18n.init({ locale: initialLocale });
+    const wasInitializationApplied = await i18n.init({ locale: initialLocale });
 
-    if (!i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {
+    if (!wasInitializationApplied || !i18n.isReady || i18n.locale !== i18n.resolveLocale(initialLocale)) {
       throw new Error("[I18n] Browser initialization was superseded before its locale became active.");
     }
 

@@ -1,5 +1,9 @@
+import { hasAsciiControlCharacter } from "../core/string-validation";
+
 const TRANSLATION_ATTRIBUTE = "data-i18n";
 const ELEMENT_NODE = 1;
+const MAX_TRANSLATION_KEY_LENGTH = 1_000;
+const BLOCKED_ELEMENT_NAMES = new Set(["noscript", "script", "style", "template"]);
 
 interface DomTranslatorOptions {
   readonly isSilent: boolean;
@@ -57,9 +61,18 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
   };
 
   const translateElement = (element: Element, translate: (key: string) => string | undefined): void => {
-    const key = element.getAttribute(TRANSLATION_ATTRIBUTE)?.trim();
+    const rawKey = element.getAttribute(TRANSLATION_ATTRIBUTE);
 
-    if (!key) {
+    if (rawKey === null) {
+      return;
+    }
+
+    if (BLOCKED_ELEMENT_NAMES.has(element.localName)) {
+      if (!options.isSilent) {
+        console.warn(
+          `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because the element can activate or hide translated content.`,
+        );
+      }
       return;
     }
 
@@ -68,6 +81,15 @@ export function createDomTranslator(options: DomTranslatorOptions): DomTranslato
         console.warn(
           `[I18n] Skipping translation on <${element.tagName.toLowerCase()}> because translated elements must be leaves.`,
         );
+      }
+      return;
+    }
+
+    const key = rawKey.trim();
+
+    if (key.length === 0 || rawKey.length > MAX_TRANSLATION_KEY_LENGTH || hasAsciiControlCharacter(rawKey)) {
+      if (!options.isSilent) {
+        console.warn("[I18n] Skipping translation because data-i18n contains an invalid key.");
       }
       return;
     }
