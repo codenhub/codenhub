@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-21
+last_updated: 2026-09-03
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -354,6 +354,8 @@ Giving the bubble a ground answers the same objection without pinning anything. 
 
 Unchanged from the replaced model: seven slots, seven classes, no cascade, and the zero-specificity reset that lets an element's own intent class win over an inherited value. This is the part inherited from that model after it held up under everything asked of it.
 
+One addition since: the neutral values are also declared at `:root`. See [The root floor](#the-root-floor).
+
 | Token               | Meaning                                                   |
 | ------------------- | --------------------------------------------------------- |
 | `--intent-color`    | The intent's base color. What a fill is made of.          |
@@ -376,10 +378,23 @@ An aesthetic sets `--ui-ink` to substitute its own neutral line color, and an in
 
 - **I1.** Intent declares color and nothing else. No intent class may set a length, a ratio, a shadow, or a shape.
 - **I2.** Exactly one intent applies, and semantic outranks emphasis.
-- **I3.** Intent does not cascade. Every component redeclares the neutral defaults at its own root, at zero specificity, so an element's own intent class wins and an inherited one loses.
+- **I3.** Intent does not cascade **into a component**. Every component redeclares the neutral defaults at its own root, at zero specificity, so an element's own intent class wins and an inherited one loses. The neutral values also sit at `:root` as the floor for everything else; the per-component redeclaration is what keeps that floor -- and any ancestor intent -- out of a component. See [The root floor](#the-root-floor).
 - **I4.** An intent class is never also a component. `.error` says destructive; it must not additionally mean "helper text". Where a component needs both, the component carries its own class and takes the intent alongside it.
 
 One deliberate exception to I3: table rows inherit their table's intent rather than resetting it, because a row is part of a table rather than an independent component. A row carrying its own intent class still wins.
+
+### The root floor
+
+`box` reads `var(--intent-color)` and the other six slots with no fallback, so an element that resolves none of them composes from an undefined value -- and an undefined `var()` inside `color-mix()` invalidates the whole declaration, so the element paints nothing. Every registered component is in one of the two resets, so this only bites a component reached another way: `@apply code` on a consumer's own `.prose code`, a bare `<code>` with no native stylesheet loaded, anything the package's selector lists do not name. The symptom is a transparent plate with no error anywhere.
+
+The neutral values are declared at `:root` to close that. It is a floor, not a barrier, and the distinction is the whole of why it does not reopen I3:
+
+- **A floor** is an inherited value. It applies only where nothing sets the slot on the element itself.
+- **A barrier** is a rule matching the element. `.neutral`, the two `:where()` resets, and every intent class are barriers -- each sets the slots _on the component_, which beats any inherited value whatever its specificity, floor and ancestor intent alike.
+
+So a registered component is unaffected: its own reset still fires, and `.success` on a container still cannot reach it. What changes is only the case that was broken before -- an unnamed `@apply` target now composes neutral instead of nothing, or picks up an ancestor's _explicit_ intent if one is in scope, which is a defensible reading of markup the package never modelled either way.
+
+The cost is a fourth copy of the neutral mapping, after `.neutral` and the two resets. CSS has no "use the root value, ignore what's inherited" primitive, so the barriers cannot reference the floor -- they have to restate it. `registry.test.ts` holds all four copies to the same slots and fails the build on drift.
 
 ## Aesthetic
 

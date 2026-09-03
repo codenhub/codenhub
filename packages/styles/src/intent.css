@@ -8,6 +8,26 @@
    tooltips, key caps, code and table heads sit on) and `--intent-border` to
    `--ui-ink` (how an aesthetic restates the neutral line without naming one). */
 
+/* The same neutral values, at the root. This is the floor: an element that
+   carries no intent class and matches none of the resets below -- a component
+   `@apply`-ed onto a selector the package does not name, a bare `<code>` with
+   no native stylesheet loaded -- still composes against a real colour instead
+   of an undefined one that collapses its `color-mix()` to nothing. It is not
+   the barrier. `.neutral` and both resets below still write these slots on the
+   element itself, which is a matching rule and so beats this inherited value --
+   that is what stops a `.success` container's intent reaching a component
+   nested under it. An intent class on the element beats both. Values track
+   `.neutral` slot for slot; `registry.test.ts` fails the build on drift. */
+:root {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-surface);
+  --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 20%;
+}
+
 /* Neutral stops its fill short: its colour is the page's ink, so a full fill is
    a slab and `.neutral.solid` was pixel-for-pixel `.primary.solid`. 20% is
    chosen against `.soft`'s 12% -- a step past the tint, not a repeat.
