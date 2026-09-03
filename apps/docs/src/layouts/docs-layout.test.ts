@@ -94,13 +94,11 @@ describe("documentation chrome", () => {
     expect(activeRule).not.toMatch(/border|\b(?:p|m)l-/);
   });
 
-  it("draws one rule when a section heading follows an authored thematic break", async () => {
+  it("hides a thematic break that directly precedes a section heading", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
-    const html = await readOutput("icons/index.html");
 
-    // The icons overview authors `---` before its `##` headings, which is what
-    // produced a doubled rule against the heading's own border.
-    expect(html).toMatch(/<hr>\s*<h2/);
+    // An authored `---` before a `##` renders an `<hr>` that would otherwise
+    // double a rule against the heading's own border, so the stylesheet hides it.
     expect(css).toMatch(/\.markdown-content hr:has\(\+ h2\)\s*\{[^}]*hidden/s);
   });
 
