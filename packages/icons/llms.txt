@@ -2,17 +2,25 @@
 
 > Zero-runtime icon system: icon classes in markup become CSS mask rules at build time, drawn from generated icon families that carry their own license notices.
 
-- An icon is `prefix:name`, written `ic-prefix-name` as a class. Unprefixed names resolve through a curated semantic map, then through the configured default prefix.
+- An icon is `prefix:name`, written `ic-prefix-name` as a class. An unqualified `ic-name` resolves only against a configured default family; the package ships no curated map of semantic names.
 - Families are data, imported from `@codenhub/icons/data/<prefix>` and passed to a plugin. Nothing is bundled by default.
 - Variants such as filled or duotone are separate families with their own prefixes, never options on one family.
-- Stroke width applies only to families drawn with strokes; filled families ignore it.
-- `stroke`, `after`, and `bg` are reserved words in the class syntax and cannot be family prefixes.
+- Stroke width is a modifier on the class, `ic-lucide-heart/1.5`. It applies only to families drawn with strokes, and needs one of the plugin delivery methods.
+- `after` and `bg` are reserved words in the class syntax and cannot be family prefixes.
 - The build emits the license notices required by the families it used, controlled by the `attribution` option.
 
 ## Documentation
 
-- [Overview](docs/index.md): families, name resolution, the Vite and PostCSS plugins, the JavaScript API, and licensing.
-- [README](README.md): purpose, installation, and the shortest working setup.
+- [Overview](docs/index.md): what the package is, installation, the shortest working setup, and requirements.
+- [Concepts](docs/concepts.md): families, name resolution, reserved names, stroke width, and the markup forms.
+- [Delivery methods](docs/delivery/index.md): the four ways icons reach your CSS and how to choose.
+- [Plain CSS](docs/delivery/plain-css.md): base import plus one stylesheet per family, no build step.
+- [Tailwind CSS](docs/delivery/tailwind.md): the `/tw` import and the configurable `@plugin`.
+- [Vite plugin](docs/delivery/vite.md): options, the scanning model, dev behavior, inline SVG mode, and per-icon modules.
+- [PostCSS plugin](docs/delivery/postcss.md): options and the stylesheet-plus-`content` scanning model.
+- [Frameworks](docs/frameworks/index.md): setup for Astro, Next.js, and SvelteKit.
+- [JavaScript API](docs/javascript-api.md): the registry, renderers, on-demand loading, and the third-party set adapter.
+- [Licensing](docs/licensing.md): attribution modes, per-method notice vehicles, and obligation levels.
 
 ## Optional
 
