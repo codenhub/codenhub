@@ -773,14 +773,17 @@ test("documents the neutral intent fill cap in every generated reference", async
   }
 });
 
-/* Both resets stand in for a missing intent class, so they owe every slot an
-   intent class writes. A slot missing from one of them is an undefined `var()`
-   inside whichever `color-mix()` reads it, and that declaration collapses to its
-   initial value without reporting anything. */
-test("both intent resets declare every slot the neutral intent declares", async () => {
-  const sources = { "intent.css": await read("src/intent.css"), "native.css": await read("src/native.css") };
+/* The two `:where()` resets and the `:root` floor each stand in for a missing
+   intent class, so all three owe every slot an intent class writes. A slot
+   missing from one of them is an undefined `var()` inside whichever
+   `color-mix()` reads it, and that declaration collapses to its initial value
+   without reporting anything. The floor is in `intent.css` beside `.neutral`;
+   the resets are the two hand-maintained selector lists, one per file. */
+test("both intent resets and the root floor declare every slot the neutral intent declares", async () => {
+  const intent = await read("src/intent.css");
+  const native = await read("src/native.css");
   const problems: string[] = [];
-  const neutralMatch = sources["intent.css"].match(/(?:^|\n)\.neutral(?![A-Za-z0-9_-])[^{}]*\{([^{}]*)}/);
+  const neutralMatch = intent.match(/(?:^|\n)\.neutral(?![A-Za-z0-9_-])[^{}]*\{([^{}]*)}/);
 
   if (neutralMatch === null) {
     problems.push("intent.css: could not extract .neutral intent block");
@@ -790,18 +793,23 @@ test("both intent resets declare every slot the neutral intent declares", async 
 
   expect(slots.length).toBeGreaterThan(0);
 
-  for (const [file, source] of Object.entries(sources)) {
-    const resetMatch = source.match(/:where\((?:[^()]|\([^()]*\))*\)\s*\{([^{}]*--intent-color[^{}]*)}/);
+  const rootMatch = intent.match(/(?:^|\n):root\s*\{([^{}]*--intent-color[^{}]*)}/);
+  const declarations: Record<string, string | null> = {
+    "the :root floor in intent.css": rootMatch?.[1] ?? null,
+    "the intent reset in intent.css":
+      intent.match(/:where\((?:[^()]|\([^()]*\))*\)\s*\{([^{}]*--intent-color[^{}]*)}/)?.[1] ?? null,
+    "the intent reset in native.css":
+      native.match(/:where\((?:[^()]|\([^()]*\))*\)\s*\{([^{}]*--intent-color[^{}]*)}/)?.[1] ?? null,
+  };
 
-    if (resetMatch === null) {
-      problems.push(`${file}: could not extract intent reset`);
+  for (const [label, block] of Object.entries(declarations)) {
+    if (block === null) {
+      problems.push(`could not extract ${label}`);
       continue;
     }
-    const reset = resetMatch[1];
-
     for (const slot of slots) {
-      if (!reset.includes(`${slot}:`)) {
-        problems.push(`the intent reset in ${file} is missing ${slot}`);
+      if (!block.includes(`${slot}:`)) {
+        problems.push(`${label} is missing ${slot}`);
       }
     }
   }

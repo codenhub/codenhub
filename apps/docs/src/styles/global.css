@@ -271,23 +271,6 @@ body {
   @apply text-text decoration-border-hover hover:decoration-primary font-medium underline underline-offset-4;
 }
 
-/* `@apply code` / `@apply data-table` below pull in the `box` composition from
-   `@codenhub/styles` but not the neutral `--intent-*` defaults the package sets
-   through `:where(.code, .data-table, …)` on the literal class names — which a
-   bare markdown `<code>` or `<table>` never matches, leaving every plate mixing
-   an undefined colour and rendering transparent. Restate them here, scoped to
-   prose, slot for slot with `packages/styles/src/native.css`. */
-.markdown-content :not(pre) > code,
-.markdown-content table {
-  --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
-  --intent-hover: var(--color-text-hover);
-  --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-surface);
-  --intent-border: var(--ui-ink, var(--color-border));
-  --intent-fill-max: 20%;
-}
-
 .markdown-content :not(pre) > code {
   @apply code text-text text-[0.88em];
 }
