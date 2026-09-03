@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-30
+last_updated: 2026-09-03
 scope: repo-wide package progress tracking
 ---
 
@@ -26,6 +26,7 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [ ] Polish UI/UX and code in general
 - [x] Add fuzzy search
+- [x] Frontmatter-driven sidebar order (`order`) and folder section labels (`group`), one ordering shared by the sidebar and `llms-full.txt` — `docs/specs/packages-documentation.md`
 
 ### @codenhub/icons
 
@@ -82,6 +83,8 @@ Track high-level progress and milestone status for foundation and utility packag
 
 ### @codenhub/docs
 
+- [ ] Generated API reference per package from source TSDoc — see Notes
+- [ ] Documentation versioning: keep docs for past package versions, not just `main` — see Notes
 - [ ] Localize the site and package documentation with `@codenhub/i18n`
 
 ### @codenhub/kbd
@@ -118,3 +121,5 @@ Track high-level progress and milestone status for foundation and utility packag
 - `@codenhub/styles` will be the first package to publish under the delivery work listed above, and none of it is in place yet: `0.1.0` goes out as a manual `npm publish` from a maintainer's machine, which `docs/specs/packages-lifecycle.md` allows and which the trusted-publishing item is meant to replace.
 - Continuous delivery is deferred until package adoption justifies it. `hub release` already covers the publish preflight, and trusted publishing only pays off once publishing runs from CI rather than from a maintainer's machine.
 - `docs/specs/packages-lifecycle.md` keeps `npm publish` a human action. Delivery work must stay compatible with that: a maintainer-triggered workflow, never publish-on-merge.
+- Generated API reference: land it opt-in first, via a `codenhub.docs` flag, proven on one or two packages with strong TSDoc (`icons` or `error`), then flip to default-on with an opt-out once the generator and the repo-wide TSDoc baseline hold up. A terse exports manifest (name, kind, signature line, from the emitted `.d.ts`) is low-risk enough to go default-on ahead of the full prose reference. It needs a `docs/specs/packages-documentation.md` revision: the spec today discourages mechanical API-dump files and makes hand-authored domain docs plus source TSDoc jointly the contract. Not default-on from the start because per-package TSDoc quality is unknown until generated, a 15-package migration and a spec-philosophy change are both avoidable while the generator is unproven, and opt-in to default is a cheap later flip where the reverse is not.
+- Documentation versioning and localization are the same shape: a content dimension (version, then locale) threaded through routing (`apps/docs/src/pages/[...path].astro`), the catalog loader (`apps/docs/src/lib/catalog.ts`), and the single search index. Neither is near-term — versioning waits on real breaking changes once there are external consumers, localization waits on versioning — but the version-by-locale shape should be designed once, before either is built, so current `apps/docs` decisions do not foreclose it. Open questions for that design: snapshot-on-publish vs. build-from-git-tags, and the URL scheme (`/icons/0.2/…` vs. `/icons/latest/…`).
