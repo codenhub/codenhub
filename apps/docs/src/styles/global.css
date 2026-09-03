@@ -167,8 +167,11 @@ body {
   @apply text-text font-semibold;
 }
 
+/* A group toggle is a sibling of the plain links around it, not a heading over
+   them, so it takes the same resting tone and weight as `.document-list a`. Only
+   the row layout for the caret is its own. */
 .nav-group summary {
-  @apply text-text hover:text-text flex cursor-pointer list-none items-center justify-between gap-1.5 py-1.5 font-semibold transition-colors;
+  @apply text-text-secondary hover:text-text flex cursor-pointer list-none items-center justify-between gap-1.5 py-1.5 transition-colors;
 }
 
 .nav-group summary::-webkit-details-marker {
@@ -185,11 +188,11 @@ body {
   @apply rotate-90;
 }
 
-/* The rule aligns with the caret, so the folder's pages read as one indented
-   column hanging off the group they belong to. */
+/* The folder's pages read as one indented column hanging off the group they
+   belong to. The rule sits flush to the rail's left edge, in line with the
+   top-level entries, and `mt-2` sets the group's summary apart from its body. */
 .document-sublist {
-  @apply border-border m-0 list-none border-l py-0.5 pl-4;
-  margin-left: 0.4375rem;
+  @apply border-border m-0 mt-2 list-none border-l py-0.5 pl-4;
 }
 
 /* Transparent by default so the rail's rule shows through underneath. The
@@ -266,6 +269,23 @@ body {
 
 .markdown-content a {
   @apply text-text decoration-border-hover hover:decoration-primary font-medium underline underline-offset-4;
+}
+
+/* `@apply code` / `@apply data-table` below pull in the `box` composition from
+   `@codenhub/styles` but not the neutral `--intent-*` defaults the package sets
+   through `:where(.code, .data-table, …)` on the literal class names — which a
+   bare markdown `<code>` or `<table>` never matches, leaving every plate mixing
+   an undefined colour and rendering transparent. Restate them here, scoped to
+   prose, slot for slot with `packages/styles/src/native.css`. */
+.markdown-content :not(pre) > code,
+.markdown-content table {
+  --intent-color: var(--color-text);
+  --intent-contrast: var(--color-text-contrast);
+  --intent-hover: var(--color-text-hover);
+  --intent-strong: var(--color-text-strong);
+  --intent-subtle: var(--color-surface);
+  --intent-border: var(--ui-ink, var(--color-border));
+  --intent-fill-max: 20%;
 }
 
 .markdown-content :not(pre) > code {
