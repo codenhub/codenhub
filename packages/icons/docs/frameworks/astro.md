@@ -1,6 +1,7 @@
 ---
 title: Astro
 description: Plain CSS and Tailwind v4 work with no configuration; the Vite plugin works but must be told about .astro files.
+order: 1
 ---
 
 # Astro

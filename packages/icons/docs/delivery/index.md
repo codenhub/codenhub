@@ -1,6 +1,8 @@
 ---
-title: Delivery methods
+title: Comparison
 description: The four ways icon classes become CSS mask rules, the package entry points behind them, and how to choose.
+group: Delivery methods
+order: 2
 ---
 
 # How icons reach your CSS

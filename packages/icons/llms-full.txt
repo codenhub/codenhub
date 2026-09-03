@@ -328,54 +328,6 @@ Stroke width does not work here. It is baked into the artwork each rule carries,
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
 - [Concepts](docs/concepts.md) — name resolution and the markup forms.
 
-<!-- Source: docs/delivery/postcss.md -->
-
-# PostCSS plugin
-
-```ts
-import lucide from "@codenhub/icons/data/lucide";
-import postcssIcons from "@codenhub/icons/postcss";
-
-postcssIcons({
-  content: ["./src/**/*.html"],
-  families: [lucide],
-  defaultPrefix: "lucide",
-  injectBase: true,
-  attribution: "auto",
-});
-```
-
-It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](docs/delivery/vite.md). PostCSS has no asset pipeline, so `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
-
-| Option          | Purpose                                                            |
-| --------------- | ------------------------------------------------------------------ |
-| `content`       | Files and globs to scan for icon classes.                          |
-| `families`      | Families to resolve against. Nothing is bundled by default.        |
-| `defaultPrefix` | Family an unqualified name resolves against.                       |
-| `injectBase`    | Whether to append the base `.ic` rules. Defaults to `true`.        |
-| `prefix`        | Class prefix. Defaults to `ic`.                                    |
-| `strokeWidth`   | Default for stroke-based families whose classes carry no modifier. |
-| `attribution`   | `auto` or `off`. See [Licensing](docs/licensing.md).                 |
-
-## Scanning
-
-Unlike the Vite plugin, this plugin has no view of the bundler's module graph. When it processes a stylesheet it scans that stylesheet's own text and every path in `content`, and nothing else. List globs that cover wherever your icon classes are written — components, templates, HTML — or only classes that literally appear in the CSS will resolve:
-
-```ts
-postcssIcons({
-  content: ["./app/**/*.{tsx,jsx,mdx}", "./components/**/*.{tsx,jsx}"],
-  families: [lucide],
-  defaultPrefix: "lucide",
-});
-```
-
-The plugin runs once per stylesheet it processes, so apply it to a single global stylesheet rather than to every CSS module.
-
-## See also
-
-- [Delivery methods](docs/delivery/index.md) — how the methods compare.
-- [Frameworks: Next.js](docs/frameworks/nextjs.md) — the main reason to reach for PostCSS over Vite.
-
 <!-- Source: docs/delivery/tailwind.md -->
 
 # Tailwind CSS v4
@@ -481,6 +433,70 @@ The module exports the rendered markup as `svg` and its default export, and the 
 - [Frameworks](docs/frameworks/index.md) — Astro and SvelteKit build on this plugin.
 - [JavaScript API](docs/javascript-api.md) — preparing a `registry` by hand.
 
+<!-- Source: docs/delivery/postcss.md -->
+
+# PostCSS plugin
+
+```ts
+import lucide from "@codenhub/icons/data/lucide";
+import postcssIcons from "@codenhub/icons/postcss";
+
+postcssIcons({
+  content: ["./src/**/*.html"],
+  families: [lucide],
+  defaultPrefix: "lucide",
+  injectBase: true,
+  attribution: "auto",
+});
+```
+
+It takes the same `families`, `defaultPrefix`, `prefix`, and `strokeWidth` options as the [Vite plugin](docs/delivery/vite.md). PostCSS has no asset pipeline, so `attribution` accepts `auto` and `off` only, and there is no `mode: "svg"`.
+
+| Option          | Purpose                                                            |
+| --------------- | ------------------------------------------------------------------ |
+| `content`       | Files and globs to scan for icon classes.                          |
+| `families`      | Families to resolve against. Nothing is bundled by default.        |
+| `defaultPrefix` | Family an unqualified name resolves against.                       |
+| `injectBase`    | Whether to append the base `.ic` rules. Defaults to `true`.        |
+| `prefix`        | Class prefix. Defaults to `ic`.                                    |
+| `strokeWidth`   | Default for stroke-based families whose classes carry no modifier. |
+| `attribution`   | `auto` or `off`. See [Licensing](docs/licensing.md).                 |
+
+## Scanning
+
+Unlike the Vite plugin, this plugin has no view of the bundler's module graph. When it processes a stylesheet it scans that stylesheet's own text and every path in `content`, and nothing else. List globs that cover wherever your icon classes are written — components, templates, HTML — or only classes that literally appear in the CSS will resolve:
+
+```ts
+postcssIcons({
+  content: ["./app/**/*.{tsx,jsx,mdx}", "./components/**/*.{tsx,jsx}"],
+  families: [lucide],
+  defaultPrefix: "lucide",
+});
+```
+
+The plugin runs once per stylesheet it processes, so apply it to a single global stylesheet rather than to every CSS module.
+
+## See also
+
+- [Delivery methods](docs/delivery/index.md) — how the methods compare.
+- [Frameworks: Next.js](docs/frameworks/nextjs.md) — the main reason to reach for PostCSS over Vite.
+
+<!-- Source: docs/frameworks/index.md -->
+
+# Framework setup
+
+Every framework consumes `@codenhub/icons` through one of the [delivery methods](docs/delivery/index.md). This section covers the frameworks whose setup has a wrinkle worth spelling out; the rest follow their bundler.
+
+| Framework                           | Recommended method                              | Notes                                                                                           |
+| ----------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [Astro](docs/frameworks/astro.md)                   | Plain CSS or Tailwind v4; Vite plugin with care | `.astro` is not auto-scanned by the Vite plugin — pass `content`.                               |
+| [Next.js](docs/frameworks/nextjs.md)                | Tailwind v4 or PostCSS plugin                   | No Vite pipeline, so the Vite plugin does not apply.                                            |
+| [SvelteKit](docs/frameworks/sveltekit.md)           | Vite plugin                                     | `.svelte` is auto-scanned; the cleanest plugin story.                                           |
+| Vue, SolidStart, Nuxt, Remix (Vite) | Vite plugin                                     | Follow [SvelteKit](docs/frameworks/sveltekit.md); `.vue` is auto-scanned like `.svelte`.                        |
+| Any framework                       | Plain CSS                                       | [Plain-CSS](docs/delivery/plain-css.md) family imports work everywhere that resolves package CSS. |
+
+If your framework is not listed and it builds with Vite, follow the [SvelteKit](docs/frameworks/sveltekit.md) guide. If it builds with webpack or another PostCSS host, follow [Next.js](docs/frameworks/nextjs.md). If in doubt, [plain CSS](docs/delivery/plain-css.md) works anywhere at the cost of larger stylesheets.
+
 <!-- Source: docs/frameworks/astro.md -->
 
 # Astro
@@ -547,22 +563,6 @@ The `content` entry is required, not optional. The plugin auto-scans the files V
 
 - [Vite plugin](docs/delivery/vite.md) — full option reference and the scanning model.
 - [Delivery methods](docs/delivery/index.md) — how the methods compare.
-
-<!-- Source: docs/frameworks/index.md -->
-
-# Framework setup
-
-Every framework consumes `@codenhub/icons` through one of the [delivery methods](docs/delivery/index.md). This section covers the frameworks whose setup has a wrinkle worth spelling out; the rest follow their bundler.
-
-| Framework                           | Recommended method                              | Notes                                                                                           |
-| ----------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [Astro](docs/frameworks/astro.md)                   | Plain CSS or Tailwind v4; Vite plugin with care | `.astro` is not auto-scanned by the Vite plugin — pass `content`.                               |
-| [Next.js](docs/frameworks/nextjs.md)                | Tailwind v4 or PostCSS plugin                   | No Vite pipeline, so the Vite plugin does not apply.                                            |
-| [SvelteKit](docs/frameworks/sveltekit.md)           | Vite plugin                                     | `.svelte` is auto-scanned; the cleanest plugin story.                                           |
-| Vue, SolidStart, Nuxt, Remix (Vite) | Vite plugin                                     | Follow [SvelteKit](docs/frameworks/sveltekit.md); `.vue` is auto-scanned like `.svelte`.                        |
-| Any framework                       | Plain CSS                                       | [Plain-CSS](docs/delivery/plain-css.md) family imports work everywhere that resolves package CSS. |
-
-If your framework is not listed and it builds with Vite, follow the [SvelteKit](docs/frameworks/sveltekit.md) guide. If it builds with webpack or another PostCSS host, follow [Next.js](docs/frameworks/nextjs.md). If in doubt, [plain CSS](docs/delivery/plain-css.md) works anywhere at the cost of larger stylesheets.
 
 <!-- Source: docs/frameworks/nextjs.md -->
 

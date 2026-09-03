@@ -4,7 +4,8 @@ import { join, posix } from "node:path";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 
-import { comparePublicDocumentPaths, parseMarkdown } from "./document-policy.ts";
+import { orderDocumentSections } from "./document-order.ts";
+import { coercePublicDocumentOrder, comparePublicDocumentPaths, parseMarkdown } from "./document-policy.ts";
 
 const SOURCE_MARKER = "<!-- Source: %s -->";
 const CODE_TYPES = new Set(["code", "inlineCode"]);
@@ -19,6 +20,28 @@ export interface LlmsFullSection {
   sourcePath: string;
   /** Authored Markdown body without its presentation frontmatter. */
   body: string;
+}
+
+/** A `docs/` document awaiting its place in a compilation. */
+export interface LlmsFullDocument extends LlmsFullSection {
+  /** Frontmatter `order`, when the document sets one. */
+  order?: number;
+}
+
+/**
+ * Orders the `docs/` documents of a compilation the way the sidebar orders them:
+ * the package `index.md` first, then root pages and folder sections by
+ * frontmatter `order`, then path, with each folder's pages inlined after its
+ * `index.md`.
+ * @param documents Documents whose `sourcePath` starts with `docs/`.
+ * @returns The same documents in reading order.
+ */
+export function orderLlmsFullDocuments(documents: readonly LlmsFullDocument[]): LlmsFullDocument[] {
+  const placeable = documents.map((document) => ({
+    ...document,
+    relativePath: document.sourcePath.slice("docs/".length),
+  }));
+  return orderDocumentSections(placeable).flatMap((section) => section.documents);
 }
 
 function isRebasable(target: string): boolean {
@@ -172,11 +195,17 @@ export function renderLlmsFull(sections: readonly LlmsFullSection[]): string {
  */
 export async function buildLlmsFull(rootPath: string, packageFiles: readonly string[]): Promise<string> {
   const sourcePaths = orderLlmsFullSources(packageFiles);
-  const sections = await Promise.all(
-    sourcePaths.map(async (sourcePath): Promise<LlmsFullSection> => {
+  const parsed = await Promise.all(
+    sourcePaths.map(async (sourcePath): Promise<LlmsFullSection | LlmsFullDocument> => {
       const source = await readFile(join(rootPath, sourcePath), "utf8");
-      return { body: sourcePath === "README.md" ? source : parseMarkdown(source).body, sourcePath };
+      if (sourcePath === "README.md") {
+        return { body: source, sourcePath };
+      }
+      const { body, frontmatter } = parseMarkdown(source);
+      return { body, order: coercePublicDocumentOrder(frontmatter.order), sourcePath };
     }),
   );
-  return renderLlmsFull(sections);
+  const readme = parsed.filter((section): section is LlmsFullSection => section.sourcePath === "README.md");
+  const documents = parsed.filter((section): section is LlmsFullDocument => section.sourcePath !== "README.md");
+  return renderLlmsFull([...readme, ...orderLlmsFullDocuments(documents)]);
 }

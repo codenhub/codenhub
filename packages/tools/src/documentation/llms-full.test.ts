@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseMarkdown } from "./document-policy.ts";
-import { orderLlmsFullSources, rebaseMarkdownTargets, renderLlmsFull } from "./llms-full.ts";
+import { orderLlmsFullDocuments, orderLlmsFullSources, rebaseMarkdownTargets, renderLlmsFull } from "./llms-full.ts";
 
 describe("parseMarkdown", () => {
   it("shouldSplitFrontmatterFromTheAuthoredBody", () => {
@@ -38,6 +38,28 @@ describe("orderLlmsFullSources", () => {
 
   it("shouldOmitAMissingReadmeRatherThanFailing", () => {
     expect(orderLlmsFullSources(["docs/index.md"])).toEqual(["docs/index.md"]);
+  });
+});
+
+describe("orderLlmsFullDocuments", () => {
+  it("shouldOrderTheWaySidebarDoesWithFolderPagesInlinedAfterTheirIndex", () => {
+    const documents = [
+      { body: "", order: 5, sourcePath: "docs/reference.md" },
+      { body: "", sourcePath: "docs/concepts.md" },
+      { body: "", order: 2, sourcePath: "docs/guides/index.md" },
+      { body: "", sourcePath: "docs/guides/alpha.md" },
+      { body: "", order: 1, sourcePath: "docs/guides/zeta.md" },
+      { body: "", sourcePath: "docs/index.md" },
+    ];
+
+    expect(orderLlmsFullDocuments(documents).map((document) => document.sourcePath)).toEqual([
+      "docs/index.md",
+      "docs/guides/index.md",
+      "docs/guides/zeta.md",
+      "docs/guides/alpha.md",
+      "docs/reference.md",
+      "docs/concepts.md",
+    ]);
   });
 });
 

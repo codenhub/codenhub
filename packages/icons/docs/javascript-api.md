@@ -1,6 +1,7 @@
 ---
 title: JavaScript API
 description: The registry, the renderers, on-demand family loading, and the adapter for third-party icon sets.
+order: 4
 ---
 
 # JavaScript API

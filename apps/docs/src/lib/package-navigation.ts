@@ -1,3 +1,5 @@
+import { orderDocumentSections } from "@codenhub/tools/documentation";
+
 import type { PublicDocument } from "./catalog";
 
 /** A single documentation page in the package sidebar. */
@@ -16,70 +18,29 @@ export interface NavGroup {
 
 export type NavNode = NavGroup | NavLink;
 
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function titleCase(segment: string): string {
-  return segment
-    .split(/[-_]/)
-    .filter((word) => word.length > 0)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+function toLink(document: PublicDocument): NavLink {
+  return { kind: "link", route: document.route, title: document.title };
 }
 
 /**
- * Splits a package's flat document list into a two-level sidebar: root pages
- * first in their existing order, then one collapsible group per top-level
- * folder, ordered by folder name.
+ * Builds a package's two-level sidebar.
  *
- * Only the first path segment groups the sidebar. No package nests its docs
- * deeper than one folder today; a deeper file would still list flat inside its
- * top-level group rather than nesting further.
- * @param documents Package documents, already sorted by the catalog.
+ * Root pages and folder groups share one ordering: the package `index.md` is
+ * always first, then entries with a frontmatter `order` in that order, then the
+ * rest — page links before groups — by path. A folder group takes its position
+ * from its `index.md` `order` and its label from that page's `group` field,
+ * falling back to the title-cased folder name. Inside a group the folder
+ * `index.md` leads, then its siblings by the same `order`-then-path rule.
+ * @param documents Package documents; order is recomputed here.
  * @returns Ordered sidebar nodes.
  */
 export function buildNavigationTree(documents: readonly PublicDocument[]): NavNode[] {
-  const rootLinks: NavLink[] = [];
-  const groupOrder: string[] = [];
-  const groupDocuments = new Map<string, PublicDocument[]>();
-
-  for (const document of documents) {
-    const separator = document.relativePath.indexOf("/");
-    if (separator === -1) {
-      rootLinks.push({ kind: "link", route: document.route, title: document.title });
-      continue;
-    }
-
-    const segment = document.relativePath.slice(0, separator);
-    let bucket = groupDocuments.get(segment);
-    if (bucket === undefined) {
-      bucket = [];
-      groupDocuments.set(segment, bucket);
-      groupOrder.push(segment);
-    }
-    bucket.push(document);
-  }
-
-  const groups: NavGroup[] = [...groupOrder].sort(compareText).map((segment) => {
-    const bucket = groupDocuments.get(segment) ?? [];
-    const indexPath = `${segment}/index.md`;
-    const indexDocument = bucket.find((document) => document.relativePath === indexPath);
-    const rest = bucket.filter((document) => document.relativePath !== indexPath);
-    const ordered = indexDocument === undefined ? rest : [indexDocument, ...rest];
-
-    return {
-      items: ordered.map((document) => ({
-        kind: "link" as const,
-        route: document.route,
-        title: document.title,
-      })),
-      kind: "group",
-      title: indexDocument?.title ?? titleCase(segment),
-    };
-  });
-
-  return [...rootLinks, ...groups];
+  return orderDocumentSections(documents).map(
+    (section): NavNode =>
+      section.segment === ""
+        ? toLink(section.documents[0])
+        : { items: section.documents.map(toLink), kind: "group", title: section.label },
+  );
 }
 
 /** Whether `route` names one of the pages inside `group`. */

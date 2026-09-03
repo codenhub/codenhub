@@ -9,19 +9,30 @@ export {
   type ValidationIssue,
 } from "./document-graph.ts";
 export {
+  orderDocumentSections,
+  titleCaseSegment,
+  type DocumentSection,
+  type PlaceablePublicDocument,
+} from "./document-order.ts";
+export {
   assertSingleH1,
+  coercePublicDocumentOrder,
   comparePublicDocumentPaths,
+  comparePublicDocuments,
   parseMarkdown,
   parsePublicDocumentFrontmatter,
+  type OrderablePublicDocument,
   type ParsedMarkdown,
   type PublicDocumentFrontmatter,
 } from "./document-policy.ts";
 export {
   buildLlmsFull,
   listLlmsFullSources,
+  orderLlmsFullDocuments,
   orderLlmsFullSources,
   rebaseMarkdownTargets,
   renderLlmsFull,
+  type LlmsFullDocument,
   type LlmsFullSection,
 } from "./llms-full.ts";
 export {

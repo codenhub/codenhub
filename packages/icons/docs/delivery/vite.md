@@ -1,6 +1,7 @@
 ---
 title: Vite plugin
 description: Scans the markup Vite transforms, plus any globs you list, and serves only the mask rules it needs.
+order: 3
 ---
 
 # Vite plugin

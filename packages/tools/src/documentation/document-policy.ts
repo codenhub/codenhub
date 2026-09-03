@@ -7,11 +7,50 @@ interface HeadingDefinition {
 export interface PublicDocumentFrontmatter {
   /** Optional page summary. */
   description?: string;
+  /**
+   * Optional section label for a folder's `index.md`, decoupled from its
+   * `title`. Absent on every other page.
+   */
+  group?: string;
+  /**
+   * Optional sidebar position among siblings. Absent on the package `index.md`,
+   * which is always first.
+   */
+  order?: number;
   /** Page label used for navigation and browser titles. */
   title: string;
 }
 
-const ALLOWED_FRONTMATTER_FIELDS = new Set(["description", "title"]);
+const ALLOWED_FRONTMATTER_FIELDS = new Set(["description", "group", "order", "title"]);
+
+const FOLDER_INDEX = /^[^/]+\/index\.md$/;
+
+/**
+ * Reduces a document source path to its path relative to the package `docs/`
+ * directory, so the same rules apply whether the caller passes `docs/x.md` or an
+ * absolute or bundler-relative path.
+ * @param sourcePath Any path ending in the document's `docs/`-relative location.
+ * @returns The `docs/`-relative path, or the input when it has no `docs/` segment.
+ */
+function docsRelativePath(sourcePath: string): string {
+  const marker = sourcePath.lastIndexOf("docs/");
+  return marker === -1 ? sourcePath : sourcePath.slice(marker + "docs/".length);
+}
+
+/**
+ * Coerces a frontmatter `order` value to a non-negative integer.
+ *
+ * The Markdown frontmatter parser yields strings, while a bundler's own parser
+ * yields numbers, so both are accepted. Anything else, including a fractional or
+ * negative number, resolves to `undefined`.
+ * @param value Raw `order` frontmatter value.
+ * @returns The position, or `undefined` when the value cannot be one.
+ */
+export function coercePublicDocumentOrder(value: unknown): number | undefined {
+  const numeric =
+    typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : undefined;
+}
 
 function readRequiredTitle(frontmatter: Record<string, unknown>, sourcePath: string): string {
   const value = frontmatter.title;
@@ -32,12 +71,35 @@ function readOptionalDescription(frontmatter: Record<string, unknown>, sourcePat
   return value;
 }
 
+function readOptionalOrder(frontmatter: Record<string, unknown>, sourcePath: string): number | undefined {
+  const value = frontmatter.order;
+  if (value === undefined) {
+    return undefined;
+  }
+  const order = coercePublicDocumentOrder(value);
+  if (order === undefined) {
+    throw new Error(`Invalid order frontmatter in ${sourcePath}: expected a non-negative integer.`);
+  }
+  return order;
+}
+
+function readOptionalGroup(frontmatter: Record<string, unknown>, sourcePath: string): string | undefined {
+  const value = frontmatter.group;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`Invalid group frontmatter in ${sourcePath}: expected a non-empty string.`);
+  }
+  return value;
+}
+
 /**
  * Validates public document frontmatter against its closed schema.
  * @param frontmatter Parsed frontmatter fields.
- * @param sourcePath Document path used in error messages.
- * @returns The validated title and optional description.
- * @throws When a field is unknown, missing, or empty.
+ * @param sourcePath Document path used in error messages and to place the document.
+ * @returns The validated title, optional description, section label, and order.
+ * @throws When a field is unknown, missing, empty, or not allowed on this path.
  */
 export function parsePublicDocumentFrontmatter(
   frontmatter: Record<string, unknown>,
@@ -49,8 +111,20 @@ export function parsePublicDocumentFrontmatter(
     }
   }
 
+  const relativePath = docsRelativePath(sourcePath);
+  const order = readOptionalOrder(frontmatter, sourcePath);
+  if (order !== undefined && relativePath === "index.md") {
+    throw new Error(`Invalid order frontmatter in ${sourcePath}: the package index is always first.`);
+  }
+  const group = readOptionalGroup(frontmatter, sourcePath);
+  if (group !== undefined && !FOLDER_INDEX.test(relativePath)) {
+    throw new Error(`Invalid group frontmatter in ${sourcePath}: only a folder index page can set a section label.`);
+  }
+
   return {
     description: readOptionalDescription(frontmatter, sourcePath),
+    group,
+    order,
     title: readRequiredTitle(frontmatter, sourcePath),
   };
 }
@@ -68,20 +142,48 @@ export function assertSingleH1(headings: readonly HeadingDefinition[], sourcePat
   }
 }
 
+/** A public document reduced to what places it among its siblings. */
+export interface OrderablePublicDocument {
+  /** Path relative to the package `docs/` directory. */
+  relativePath: string;
+  /** Explicit sidebar position from frontmatter, when the document sets one. */
+  order?: number;
+}
+
+// Documents without an explicit `order` sort after every document that has one,
+// keeping their path order among themselves.
+const UNORDERED_POSITION = Number.MAX_SAFE_INTEGER;
+
 /**
- * Orders public document paths so `index.md` always comes first.
+ * Orders public documents: `index.md` first, then by frontmatter `order`, then
+ * by path. A document with no `order` sorts after every ordered sibling.
+ * @param left First document.
+ * @param right Second document.
+ * @returns Negative, zero, or positive following `Array.prototype.sort` semantics.
+ */
+export function comparePublicDocuments(left: OrderablePublicDocument, right: OrderablePublicDocument): number {
+  if (left.relativePath === "index.md") {
+    return right.relativePath === "index.md" ? 0 : -1;
+  }
+  if (right.relativePath === "index.md") {
+    return 1;
+  }
+  const byOrder = (left.order ?? UNORDERED_POSITION) - (right.order ?? UNORDERED_POSITION);
+  if (byOrder !== 0) {
+    return byOrder;
+  }
+  return left.relativePath < right.relativePath ? -1 : left.relativePath > right.relativePath ? 1 : 0;
+}
+
+/**
+ * Orders public document paths so `index.md` always comes first, ignoring any
+ * frontmatter `order`. Use {@link comparePublicDocuments} where order matters.
  * @param left First path relative to the package `docs/` directory.
  * @param right Second path relative to the package `docs/` directory.
  * @returns Negative, zero, or positive following `Array.prototype.sort` semantics.
  */
 export function comparePublicDocumentPaths(left: string, right: string): number {
-  if (left === "index.md") {
-    return right === "index.md" ? 0 : -1;
-  }
-  if (right === "index.md") {
-    return 1;
-  }
-  return left < right ? -1 : left > right ? 1 : 0;
+  return comparePublicDocuments({ relativePath: left }, { relativePath: right });
 }
 
 const FRONTMATTER_PATTERN = /^---\r?\n(?<body>[\s\S]*?)\r?\n---[^\S\r\n]*(?:\r?\n|$)/;
