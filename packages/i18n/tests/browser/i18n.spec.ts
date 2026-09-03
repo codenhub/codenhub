@@ -28,6 +28,26 @@ test("keeps markup-like translations inert during locale changes", async ({ page
   await expect(page.locator("body")).not.toHaveAttribute("data-xss");
 });
 
+test("does not activate translated CSS", async ({ page }) => {
+  await expect(page.locator("#hostile-css")).toHaveText("");
+
+  const customProperty = await page.evaluate(() => getComputedStyle(document.body).getPropertyValue("--i18n-attack"));
+  expect(customProperty).toBe("");
+});
+
+test("initializes the built core package in a Web Worker", async ({ page }) => {
+  const result = await page.evaluate(
+    () =>
+      new Promise<unknown>((resolve, reject) => {
+        const worker = new Worker("/tests/browser/worker.ts", { type: "module" });
+        worker.addEventListener("message", (event) => resolve(event.data), { once: true });
+        worker.addEventListener("error", (event) => reject(new Error(event.message)), { once: true });
+      }),
+  );
+
+  expect(result).toEqual({ direction: "ltr", isReady: true, locale: "fr", translation: "Bonjour" });
+});
+
 test("translates observed additions with the active locale", async ({ page }) => {
   await page.evaluate(async () => {
     await window.i18nTest.setLocale("fr");

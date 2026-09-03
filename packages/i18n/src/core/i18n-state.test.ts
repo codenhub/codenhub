@@ -183,9 +183,9 @@ describe("I18n state", () => {
 
     const staleInit = i18n.init({ locale: "pt" });
     const latestInit = i18n.init({ locale: "en" });
-    await latestInit;
+    await expect(latestInit).resolves.toBe(true);
     ptLoad.resolve(dictionaries.pt);
-    await staleInit;
+    await expect(staleInit).resolves.toBe(false);
     expect(i18n.locale).toBe("en");
     expect(listener).toHaveBeenCalledTimes(1);
   });

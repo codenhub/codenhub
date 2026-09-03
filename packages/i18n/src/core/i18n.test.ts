@@ -111,7 +111,7 @@ describe("createI18n", () => {
   it("treats only undefined init locale as omitted", async () => {
     const i18n = createI18n(createConfig());
 
-    await expect(i18n.init({ locale: undefined })).resolves.toBeUndefined();
+    await expect(i18n.init({ locale: undefined })).resolves.toBe(true);
     expect(i18n.locale).toBe("en");
   });
 

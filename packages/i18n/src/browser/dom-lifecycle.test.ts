@@ -71,6 +71,69 @@ describe("initializeBrowserI18n document integration", () => {
     }
   });
 
+  it.each(["style", "script", "noscript", "template"])("does not translate active <%s> containers", async (tagName) => {
+    const element = document.createElement(tagName);
+    if (element instanceof HTMLScriptElement) {
+      element.type = "application/json";
+    }
+    element.setAttribute("data-i18n", "greeting");
+    const fallbackText = tagName === "style" ? "" : "Safe fallback";
+    element.textContent = fallbackText;
+    document.body.append(element);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+    try {
+      expect(element.textContent).toBe(fallbackText);
+      expect(warn).toHaveBeenCalledWith(
+        `[I18n] Skipping translation on <${tagName}> because the element can activate or hide translated content.`,
+      );
+    } finally {
+      binding.disconnect();
+    }
+  });
+
+  it("does not translate SVG style elements", async () => {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", "style");
+    element.setAttribute("data-i18n", "greeting");
+    document.body.append(element);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+    try {
+      expect(element.textContent).toBe("");
+      expect(warn).toHaveBeenCalledWith(
+        "[I18n] Skipping translation on <style> because the element can activate or hide translated content.",
+      );
+    } finally {
+      binding.disconnect();
+    }
+  });
+
+  it.each([" ", "key\nforged", "k".repeat(1_001)])(
+    "skips malformed keys during initial translation and continues with other elements",
+    async (invalidKey) => {
+      const invalid = document.createElement("p");
+      invalid.dataset.i18n = invalidKey;
+      invalid.textContent = "Invalid fallback";
+      const valid = document.createElement("p");
+      valid.dataset.i18n = "greeting";
+      valid.textContent = "Valid fallback";
+      document.body.append(invalid, valid);
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const i18n = createManager();
+
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body });
+
+      expect(invalid.textContent).toBe("Invalid fallback");
+      expect(valid.textContent).toBe("Bonjour");
+      expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation because data-i18n contains an invalid key.");
+      binding.disconnect();
+    },
+  );
+
   it("restores the original fallback when a later locale lacks the key", async () => {
     document.body.innerHTML = '<p data-i18n="frOnly">Original fallback</p>';
     const i18n = createManager();
@@ -103,6 +166,32 @@ describe("initializeBrowserI18n document integration", () => {
 
     expect(added.textContent).toBe("Added fallback");
     binding.disconnect();
+  });
+
+  it("skips malformed observed keys and continues with other added elements", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    const section = document.createElement("section");
+    section.innerHTML = [
+      '<p data-i18n="key&#10;forged">Invalid fallback</p>',
+      '<p data-i18n="greeting">Valid fallback</p>',
+    ].join("");
+
+    document.body.append(section);
+    await flushMutations();
+    try {
+      expect(section.children[0]?.textContent).toBe("Invalid fallback");
+      expect(section.children[1]?.textContent).toBe("Bonjour");
+      expect(warn).toHaveBeenCalledWith("[I18n] Skipping translation because data-i18n contains an invalid key.");
+    } finally {
+      binding.disconnect();
+    }
   });
 
   it("translates added subtrees without rescanning the observed root", async () => {
@@ -241,6 +330,18 @@ describe("initializeBrowserI18n binding lifecycle", () => {
     localeLoads.fr.resolve(dictionaries.fr);
     await coreInitialization;
     const binding = await initializeBrowserI18n({ i18n, locale: "fr" });
+    binding.disconnect();
+  });
+
+  it("rejects when superseded while the manager is already ready with the selected locale", async () => {
+    const i18n = createManager();
+    await i18n.init({ locale: "en" });
+
+    const browserInitialization = initializeBrowserI18n({ i18n, locale: "en" });
+    await i18n.setLocale("en");
+
+    await expect(browserInitialization).rejects.toThrow("Browser initialization was superseded");
+    const binding = await initializeBrowserI18n({ i18n, locale: "en" });
     binding.disconnect();
   });
 

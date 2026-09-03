@@ -100,7 +100,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     return this.loader.loadLocale(this.requireLocale(locale));
   }
 
-  async init(options: I18nInitOptions<TLocale> = {}): Promise<void> {
+  async init(options: I18nInitOptions<TLocale> = {}): Promise<boolean> {
     const requestedLocale = options.locale === undefined ? this.defaultLocale : options.locale;
     const locale = this.requireLocale(requestedLocale);
     const requestId = this.createRequest();
@@ -108,7 +108,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     const direction = this.resolveLocaleDirection(locale);
 
     if (!this.isLatestRequest(requestId)) {
-      return;
+      return false;
     }
 
     this.currentLocale = locale;
@@ -117,6 +117,7 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
     this.defaultDictionary = dictionaries.fallback;
     this.isReadyState = true;
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
+    return true;
   }
 
   async setLocale(locale: TLocale): Promise<void> {

@@ -49,14 +49,14 @@ interface I18nInitOptions<TLocale extends string = string> {
   locale?: TLocale;
 }
 
-init(options?: I18nInitOptions<TLocale>): Promise<void>;
+init(options?: I18nInitOptions<TLocale>): Promise<boolean>;
 ```
 
 The explicit locale is trimmed and matched case-insensitively. Only `undefined` means omitted; omission selects `defaultLocale`. Core never inspects browser, route, request, or process state.
 
-Initialization of a non-default locale loads it and the default locale in parallel. State is applied only after both required dictionaries and the locale direction resolve successfully. A successful call sets `isReady` and emits `ready`; repeated successful calls emit another `ready` event.
+Initialization of a non-default locale loads it and the default locale in parallel. State is applied only after both required dictionaries and the locale direction resolve successfully. An applied call returns `true`, sets `isReady`, and emits `ready`; repeated applied calls emit another `ready` event.
 
-Overlapping initialization and locale-change operations use latest-request-wins application. A stale successful completion resolves without applying state or emitting a success event. A failed initial call leaves the manager not ready; a failed reinitialization preserves prior ready state. A stale operation that fails before the application check still rejects with its normal error.
+Overlapping initialization and locale-change operations use latest-request-wins application. A stale successful initialization returns `false` without applying state or emitting a success event. A failed initial call leaves the manager not ready; a failed reinitialization preserves prior ready state. A stale operation that fails before the application check still rejects with its normal error.
 
 ### `loadLocale(locale)`
 
@@ -238,7 +238,7 @@ Storage read, parse, and write failures are recoverable: they warn unless the ma
 
 ### DOM translation boundary
 
-Only elements carrying a non-empty `data-i18n` key and no child elements are translated. Original text is retained as fallback and restored when a later locale lacks the key. Elements containing markup are skipped and warn unless silent. Traversal does not enter a custom element from an outer root; pass that custom element or its shadow root explicitly when it owns translation.
+Only elements carrying a valid, non-empty `data-i18n` key and no child elements are translated. `style`, `script`, `noscript`, and `template` elements are always skipped because their text can activate or hide content. Blank, longer than 1,000 characters, or ASCII-control-containing DOM keys are skipped. Skips warn without including key content unless the manager is silent, and one invalid element does not interrupt other initial or observed translations. Original text is retained as fallback and restored when a later locale lacks the key. Elements containing markup are skipped and warn unless silent. Traversal does not enter a custom element from an outer root; pass that custom element or its shadow root explicitly when it owns translation.
 
 ## `@codenhub/i18n/routing`
 
@@ -294,6 +294,6 @@ routing.localizeAll("/about");
 
 `localize()` replaces a recognized locale prefix. It leaves an unsupported leading segment as application path content, emits canonical locale spelling, and omits the default prefix when configured. An unsupported or runtime non-string locale throws `RangeError`. `localizeAll()` returns one result per configured locale in configuration order.
 
-All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol-relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Non-root trailing slashes are preserved.
+All three methods accept only an absolute application pathname beginning with `/` and no longer than 8,192 characters. They reject `TypeError` for an empty, oversized, or relative path, full or protocol-relative URL, repeated slash, query, fragment, backslash, encoded slash or backslash, encoded percent sign, ASCII control character, encoded ASCII control character, malformed percent escape, and literal or encoded dot segment. Rejecting encoded percent signs prevents later decoding from exposing recursively encoded separators, controls, or dot segments. Non-root trailing slashes are preserved.
 
 Routing never reads globals, negotiates headers, registers routes, handles base paths, redirects, navigates, renders HTML, or emits static pages.
