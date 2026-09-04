@@ -224,6 +224,46 @@ for (const [target, roots] of Object.entries(compiledCompleteness)) {
   });
 }
 
+/* The check above only asks whether a utility's name appears anywhere in the
+   output, which a class inside an `:is()`/`:where()` argument list already
+   satisfies -- `.input-group).soft{` passes it without `input-group`'s own
+   `@utility` body ever compiling. That gap is exactly how `.input-group`,
+   `.text-control`, and `.surface` went dark when the docs prose that was
+   accidentally naming them was excluded from the content scan: every existing
+   assertion here still passed, and only the browser suite caught it. The seven
+   composition utilities are the ones at risk -- unlike a component class, they
+   never appear as the selector of a rule of their own except through the
+   `@source inline` safelist in `components/index.css` -- so this holds each to
+   emitting a real rule: the name at the start of a selector or right after a
+   previous rule closes, followed by `{` directly or by a pseudo-class/combinator
+   -- `box-hover` and `box-active` only ever compile as `.box-hover:not(...):hover{`,
+   never as a bare `.box-hover{`. */
+const COMPOSITION_UTILITIES = [
+  "box",
+  "box-hover",
+  "box-active",
+  "loader-mask",
+  "text-control",
+  "surface",
+  "input-group",
+];
+
+test("composition utilities emit their own rule body, not just a mention inside a selector list", async () => {
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/components.css", "dist/native.css"].map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+  const problems = outputs.flatMap(({ output, target }) =>
+    COMPOSITION_UTILITIES.filter(
+      (name) => !new RegExp(String.raw`(?:^|[,}])\.${name}(?=[{,.:[ >+~])`).test(output),
+    ).map((name) => `${target} has no standalone rule for .${name}`),
+  );
+
+  expect(problems).toEqual([]);
+});
+
 test("aggregate exports emit each public rule expansion once", async () => {
   const aggregateOutputs = await Promise.all(
     aggregateExportTargets.map(async (target) => ({
