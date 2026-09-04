@@ -22,7 +22,7 @@ A tooltip bubble's fill, ground color, and floor behavior are covered in [Compos
 
 The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](./composing.md#elevation) to lift it — `.tooltip.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
 
-Intent works on a tooltip the same way it works on a filled component: `.tooltip.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent — near-white in light, mid grey in dark; see [Composing → Presentation](./composing.md#presentation) for why.
+Intent works on a tooltip the same way it works on a filled component: `.tooltip.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent — near-white in light, mid-grey in dark; see [Composing → Presentation](./composing.md#presentation) for why.
 
 ## Example
 

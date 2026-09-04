@@ -16,7 +16,7 @@ Every stack does the same two imports, from the same kind of place — a root la
 1. One [entrypoint](../setup.md#import-paths) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (or `/tw/aesthetics`) after it, only if the project uses an [aesthetic](../usage/aesthetics.md).
 
-Importing from one place matters for two reasons. Several frameworks only _allow_ global CSS from a designated root file and fail the build otherwise — Next.js is explicit about this, see [Next.js → Troubleshooting](./nextjs.md#troubleshooting). And even where a framework allows it anywhere, importing per-component would load the same reset and token rules once per component instead of once per app.
+Importing from one place matters for two reasons. Some frameworks only _allow_ global CSS from a designated root file and fail the build otherwise — Next.js's Pages Router is one, see [Next.js → Troubleshooting](./nextjs.md#troubleshooting). Where a framework allows it more broadly, as Next.js's App Router does, importing from the root remains the recommended choice for predictable CSS ordering — and importing per-component instead would load the same reset and token rules once per component rather than once per app.
 
 ## Which guide to follow
 

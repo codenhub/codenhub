@@ -37,7 +37,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.  |
 | Reduced transparency    | `.glass` drops its blur and becomes an opaque surface when `prefers-reduced-transparency: reduce` matches.          |
 
-The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, `@codenhub/styles/tw/button`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
+The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
 
 ### Color and contrast
 

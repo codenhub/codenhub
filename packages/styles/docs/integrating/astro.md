@@ -23,7 +23,7 @@ import "@codenhub/styles";
 </html>
 ```
 
-Every page that uses this layout loads the stylesheet once. Running Tailwind CSS v4? Import `@codenhub/styles/tw` through Astro's Tailwind integration instead — see [Tailwind CSS v4](./tailwind.md) for the `@source` directive Astro needs to scan `src/`.
+Every page that uses this layout loads the stylesheet once. Running Tailwind CSS v4? Import `@codenhub/styles/tw` through Astro's Tailwind integration instead — see [Tailwind CSS v4](./tailwind.md), including when an explicit `@source` is actually needed.
 
 ## Force a theme
 

@@ -21,7 +21,7 @@ A project that already runs Tailwind CSS v4 can process this package's source in
 @source "./src";
 ```
 
-`@source` tells Tailwind's build where to scan for the utility and component class names actually used in your markup, so it generates only what's referenced. Point it at your app's source, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
+Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the two imports above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
 
 ## Add aesthetics
 
@@ -44,8 +44,8 @@ Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw
 **Classes resolve to no styling**
 
 - **What happened:** components use documented classes like `.btn.primary`, but no styling appears even though `@import "@codenhub/styles/tw"` is in the stylesheet.
-- **Why:** Tailwind CSS v4 statically scans the files listed by `@source` and only generates the utility and component rules it finds referenced there. If `@source` is missing or points at the wrong directory, Tailwind never sees `class="btn primary"` in your markup and skips generating rules for it.
-- **Fix:** point `@source` at every directory containing markup that uses these classes — typically your app's `src/` — matching the [example above](#import-the-source-entrypoint).
+- **Why:** this is rarely `@source` itself — Tailwind already scans your project automatically. The more common cause is markup living somewhere that automatic scan excludes by default: a `.gitignore`d path, or a component pulled from `node_modules`. Tailwind may not see a class used only there and skips generating a rule for it.
+- **Fix:** add an explicit `@source` pointing at that directory, resolved relative to this stylesheet — matching the [example above](#import-the-source-entrypoint).
 
 **Duplicate token and reset rules**
 
