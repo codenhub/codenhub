@@ -1,11 +1,18 @@
 @reference "tailwindcss";
 @import "tailwindcss/utilities.css";
+/* Everything that is not `src/` -- see the note in `index.css`. Keeps a class
+   name in a docs code fence from shipping as a real rule in `dist/components.css`. */
 @source not "../../dist";
 @source not "../../tests";
 @source not "../../dev";
 @source not "../../debug";
 @source not "../../demo";
 @source not "../../playground";
+@source not "../../docs";
+@source not "../../scripts";
+@source not "../../*.md";
+@source not "../../*.txt";
+@source not "../../*.json";
 @import "../theme.css";
 @import "../typography.css";
 @import "../box.css";
@@ -16,4 +23,17 @@
 @import "./surface.css";
 @import "./tooltip.css";
 
-@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");
+/* The composition utilities -- `box`, `box-hover`, `box-active`, `loader-mask`,
+   `text-control`, `surface`, `input-group` -- are `@utility` rules whose bodies
+   the content scan will not emit on its own. `box` and friends appear only as
+   `@utility` blocks and `@apply` targets; `text-control`, `surface` and
+   `input-group` appear only inside `:is()`/`:where()` argument lists in
+   `intent.css` and `form.css`, never as a selector of their own. Their standalone
+   rules shipped only because docs prose happened to name them, and excluding
+   `docs/` from the scan removed that -- `.input-group` (and, with it, its focus
+   ring, its flush inner control, and `:has()`-propagated invalid state) went
+   silently dark, caught only by the browser suite. Safelisting all seven here
+   makes the emission deliberate; the composition-body check in
+   `exports.test.ts` fails the build if one is dropped. `text-control` and
+   `surface` are also documented as consumer-usable on their own. */
+@source inline("box box-hover box-active loader-mask text-control surface input-group text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");

@@ -224,6 +224,69 @@ for (const [target, roots] of Object.entries(compiledCompleteness)) {
   });
 }
 
+/* The check above only asks whether a utility's name appears anywhere in the
+   output, which a class inside an `:is()`/`:where()` argument list already
+   satisfies -- `.input-group).soft{` passes it without `input-group`'s own
+   `@utility` body ever compiling. That gap is exactly how `.input-group`,
+   `.text-control`, and `.surface` went dark when the docs prose that was
+   accidentally naming them was excluded from the content scan: every existing
+   assertion here still passed, and only the browser suite caught it. The seven
+   composition utilities are the ones at risk -- unlike a component class, they
+   never appear as the selector of a rule of their own except through the
+   `@source inline` safelist in `components/index.css` -- so this holds each to
+   emitting a real rule. */
+const COMPOSITION_UTILITIES = [
+  "box",
+  "box-hover",
+  "box-active",
+  "loader-mask",
+  "text-control",
+  "surface",
+  "input-group",
+];
+
+/* True when `name` starts a rule of its own in `output`: immediately followed
+   by `{` (its base declarations) or `:` (a pseudo-class state, the only form
+   `box-hover` and `box-active` ever compile as -- `.box-hover:not(...):hover{`,
+   never a bare `.box-hover{`). A comma, a compound-class `.`, a bracket, a
+   space, or a combinator after the name does not qualify: `.input-group.soft{`
+   is a modifier rule that only fires alongside `input-group`'s own body, and
+   `.input-group .child{` styles a descendant, neither of which proves
+   `input-group`'s own `@utility` block compiled. The name may be preceded by
+   the start of the string, a previous rule closing (`}`), a sibling in a
+   comma-separated selector list (`,`), or the opening of an enclosing block
+   such as `@media (forced-colors: active) {` (`{`). */
+function emitsOwnRule(output: string, name: string): boolean {
+  return new RegExp(String.raw`(?:^|[,{}])\.${name}(?=[{:])`).test(output);
+}
+
+test("emitsOwnRule rejects a compound class or descendant selector as proof of a utility's own rule", () => {
+  expect(emitsOwnRule(".input-group.soft{--_fill-cap:12%}", "input-group"), "compound class").toBe(false);
+  expect(emitsOwnRule(".input-group .child{color:red}", "input-group"), "descendant selector").toBe(false);
+  expect(emitsOwnRule(".a,.input-group{color:red}", "input-group"), "comma-separated own rule").toBe(true);
+  expect(emitsOwnRule(".input-group:focus-within{outline:none}", "input-group"), "pseudo-class").toBe(true);
+  expect(
+    emitsOwnRule("@media(forced-colors:active){.input-group{color:red}}", "input-group"),
+    "first rule inside an enclosing block",
+  ).toBe(true);
+});
+
+test("composition utilities emit their own rule body, not just a mention inside a selector list", async () => {
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/components.css", "dist/native.css"].map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+  const problems = outputs.flatMap(({ output, target }) =>
+    COMPOSITION_UTILITIES.filter((name) => !emitsOwnRule(output, name)).map(
+      (name) => `${target} has no standalone rule for .${name}`,
+    ),
+  );
+
+  expect(problems).toEqual([]);
+});
+
 test("aggregate exports emit each public rule expansion once", async () => {
   const aggregateOutputs = await Promise.all(
     aggregateExportTargets.map(async (target) => ({
@@ -241,8 +304,9 @@ test("aggregate exports emit each public rule expansion once", async () => {
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {
-    const target = manifest.exports[exportName];
-    expect(typeof target, `${exportName} must have one CSS target`).toBe("string");
+    const entry = manifest.exports[exportName];
+    const target = typeof entry === "string" ? entry : (entry.style ?? entry.import ?? entry.default);
+    expect(typeof target, `${exportName} must resolve to one CSS target`).toBe("string");
 
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
     const inputPath = path.join(temporaryRoot, "input.css");
@@ -265,3 +329,35 @@ for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
     }
   });
 }
+
+/* Tailwind's content detection scans the whole package directory, and the
+   compiled entrypoints narrow it back to `src/` with `@source not`. A miss in
+   that list leaks: a `--color-<family>-<shade>` that appears only in a docs
+   example -- the violet ramp in `docs/usage/theming.md`'s custom-intent block --
+   compiles into a real `@theme` entry in the shipped CSS. This holds every
+   palette color the build declares to one the stylesheet source actually
+   references (comments included, because Tailwind scans those too). */
+test("compiled entrypoints ship only palette colors the source references", async () => {
+  const sourceDirectory = path.resolve(packageRoot, "src");
+  const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
+    (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
+  );
+  const sourceText = (
+    await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))
+  ).join("\n");
+  const referenced = new Set(sourceText.match(/--color-[a-z]+-\d+/g) ?? []);
+
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/native.css", "dist/components.css", "dist/theme.css"].map(async (target) => ({
+      target,
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+    })),
+  );
+  const leaks = outputs.flatMap(({ target, output }) =>
+    [...new Set(output.match(/--color-[a-z]+-\d+(?=\s*:)/g) ?? [])]
+      .filter((declared) => !referenced.has(declared))
+      .map((declared) => `${target} declares ${declared}, which src/ never references`),
+  );
+
+  expect(leaks).toEqual([]);
+});

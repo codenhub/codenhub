@@ -19,6 +19,9 @@
     "llms-full.txt"
   ],
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     ".": {
       "style": "./dist/index.css",
@@ -60,29 +63,102 @@
       "import": "./dist/aesthetics/chunky-tile.css",
       "default": "./dist/aesthetics/chunky-tile.css"
     },
-    "./tw": "./dist/tw/index.css",
-    "./tw/theme": "./dist/tw/theme.css",
-    "./tw/components": "./dist/tw/components/index.css",
-    "./tw/surface": "./dist/tw/components/surface.css",
-    "./tw/button": "./dist/tw/components/button.css",
-    "./tw/form": "./dist/tw/components/form.css",
-    "./tw/feedback": "./dist/tw/components/feedback.css",
-    "./tw/loader": "./dist/tw/components/loader.css",
-    "./tw/tooltip": "./dist/tw/components/tooltip.css",
-    "./tw/reset": "./dist/tw/reset.css",
-    "./tw/native": "./dist/tw/native.css",
-    "./tw/typography": "./dist/tw/typography.css",
-    "./tw/utilities": "./dist/tw/utilities/index.css",
-    "./tw/aesthetics": "./dist/tw/aesthetics/index.css",
-    "./tw/aesthetics/neobrutalism": "./dist/tw/aesthetics/neobrutalism.css",
-    "./tw/aesthetics/glass": "./dist/tw/aesthetics/glass.css",
-    "./tw/aesthetics/pixel": "./dist/tw/aesthetics/pixel.css",
-    "./tw/aesthetics/chunky-tile": "./dist/tw/aesthetics/chunky-tile.css",
+    "./tw": {
+      "style": "./dist/tw/index.css",
+      "import": "./dist/tw/index.css",
+      "default": "./dist/tw/index.css"
+    },
+    "./tw/theme": {
+      "style": "./dist/tw/theme.css",
+      "import": "./dist/tw/theme.css",
+      "default": "./dist/tw/theme.css"
+    },
+    "./tw/components": {
+      "style": "./dist/tw/components/index.css",
+      "import": "./dist/tw/components/index.css",
+      "default": "./dist/tw/components/index.css"
+    },
+    "./tw/surface": {
+      "style": "./dist/tw/components/surface.css",
+      "import": "./dist/tw/components/surface.css",
+      "default": "./dist/tw/components/surface.css"
+    },
+    "./tw/button": {
+      "style": "./dist/tw/components/button.css",
+      "import": "./dist/tw/components/button.css",
+      "default": "./dist/tw/components/button.css"
+    },
+    "./tw/form": {
+      "style": "./dist/tw/components/form.css",
+      "import": "./dist/tw/components/form.css",
+      "default": "./dist/tw/components/form.css"
+    },
+    "./tw/feedback": {
+      "style": "./dist/tw/components/feedback.css",
+      "import": "./dist/tw/components/feedback.css",
+      "default": "./dist/tw/components/feedback.css"
+    },
+    "./tw/loader": {
+      "style": "./dist/tw/components/loader.css",
+      "import": "./dist/tw/components/loader.css",
+      "default": "./dist/tw/components/loader.css"
+    },
+    "./tw/tooltip": {
+      "style": "./dist/tw/components/tooltip.css",
+      "import": "./dist/tw/components/tooltip.css",
+      "default": "./dist/tw/components/tooltip.css"
+    },
+    "./tw/reset": {
+      "style": "./dist/tw/reset.css",
+      "import": "./dist/tw/reset.css",
+      "default": "./dist/tw/reset.css"
+    },
+    "./tw/native": {
+      "style": "./dist/tw/native.css",
+      "import": "./dist/tw/native.css",
+      "default": "./dist/tw/native.css"
+    },
+    "./tw/typography": {
+      "style": "./dist/tw/typography.css",
+      "import": "./dist/tw/typography.css",
+      "default": "./dist/tw/typography.css"
+    },
+    "./tw/utilities": {
+      "style": "./dist/tw/utilities/index.css",
+      "import": "./dist/tw/utilities/index.css",
+      "default": "./dist/tw/utilities/index.css"
+    },
+    "./tw/aesthetics": {
+      "style": "./dist/tw/aesthetics/index.css",
+      "import": "./dist/tw/aesthetics/index.css",
+      "default": "./dist/tw/aesthetics/index.css"
+    },
+    "./tw/aesthetics/neobrutalism": {
+      "style": "./dist/tw/aesthetics/neobrutalism.css",
+      "import": "./dist/tw/aesthetics/neobrutalism.css",
+      "default": "./dist/tw/aesthetics/neobrutalism.css"
+    },
+    "./tw/aesthetics/glass": {
+      "style": "./dist/tw/aesthetics/glass.css",
+      "import": "./dist/tw/aesthetics/glass.css",
+      "default": "./dist/tw/aesthetics/glass.css"
+    },
+    "./tw/aesthetics/pixel": {
+      "style": "./dist/tw/aesthetics/pixel.css",
+      "import": "./dist/tw/aesthetics/pixel.css",
+      "default": "./dist/tw/aesthetics/pixel.css"
+    },
+    "./tw/aesthetics/chunky-tile": {
+      "style": "./dist/tw/aesthetics/chunky-tile.css",
+      "import": "./dist/tw/aesthetics/chunky-tile.css",
+      "default": "./dist/tw/aesthetics/chunky-tile.css"
+    },
     "./native": {
       "style": "./dist/native.css",
       "import": "./dist/native.css",
       "default": "./dist/native.css"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
@@ -96,7 +172,7 @@
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
     "build:aesthetics": "tailwindcss -i ./src/aesthetics/index.css -o ./dist/aesthetics/index.css --minify && tailwindcss -i ./src/aesthetics/neobrutalism.css -o ./dist/aesthetics/neobrutalism.css --minify && tailwindcss -i ./src/aesthetics/glass.css -o ./dist/aesthetics/glass.css --minify && tailwindcss -i ./src/aesthetics/pixel.css -o ./dist/aesthetics/pixel.css --minify && tailwindcss -i ./src/aesthetics/chunky-tile.css -o ./dist/aesthetics/chunky-tile.css --minify",
     "build:tw": "node scripts/build-tw.mjs",
-    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "prepublishOnly": "pnpm build && pnpm typecheck && pnpm test",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",

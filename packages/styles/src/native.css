@@ -1,11 +1,19 @@
 @import "./theme.css";
 @reference "tailwindcss";
+/* Everything that is not `src/` -- see the note in `index.css`. Without the
+   docs and root-file excludes a utility used only in a documentation example
+   compiles into `dist/native.css`. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
 @source not "../demo";
 @source not "../playground";
+@source not "../docs";
+@source not "../scripts";
+@source not "../*.md";
+@source not "../*.txt";
+@source not "../*.json";
 @import "./typography.css";
 @import "./utilities/index.css";
 @import "./components/index.css";
