@@ -20,20 +20,27 @@
   --ui-elevation: 0;
 }
 
-/* The aesthetic's depth as authored, said explicitly. The geometry is the
-   fallback for a page with no aesthetic in scope; an aesthetic that declares its
-   own overrides it, and the elevation multiplies whichever one lands. */
+/* The plain-step geometry both rungs multiply, declared once so the two cannot
+   drift. It is the fallback for a page with no aesthetic in scope; an aesthetic
+   that declares its own shadow parts overrides it, and the elevation multiplier
+   scales whichever one lands. `.floating` takes its extra depth from the
+   multiplier below, not a second copy of these parts. */
+.elevation-sm,
+.raised,
+.elevation-md,
+.floating {
+  --elevation-y: 1px;
+  --elevation-blur: 3px;
+}
+
+/* The aesthetic's depth as authored, said explicitly. */
 .elevation-sm,
 .raised {
   --ui-elevation: 1;
-  --elevation-y: 1px;
-  --elevation-blur: 3px;
 }
 
 /* Twice it, for menus and popovers. */
 .elevation-md,
 .floating {
   --ui-elevation: 2;
-  --elevation-y: 1px;
-  --elevation-blur: 3px;
 }
