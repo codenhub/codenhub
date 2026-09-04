@@ -59,7 +59,9 @@ describe("documentation chrome", () => {
     expect(listStart.search(/>\s*Introduction\s*</)).toBeLessThan(listStart.indexOf("nav-group"));
 
     // The folder index sits inside its group under its own title, not at the root.
-    expect(listStart).toMatch(/nav-group[\s\S]*?href="\/styles\/usage\/"[^>]*>\s*Usage\s*<\/a>/);
+    // Its title is "Overview" (not "Usage") so the sidebar link doesn't repeat the
+    // group label right above it; see packages/styles/docs/usage/index.md.
+    expect(listStart).toMatch(/nav-group[\s\S]*?href="\/styles\/usage\/"[^>]*>\s*Overview\s*<\/a>/);
   });
 
   it("renders a Markdown table with the Codenhub table styling and an overflow wrapper", async () => {
