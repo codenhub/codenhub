@@ -1,6 +1,6 @@
 ---
-status: DRAFT
-last_updated: 2026-08-25
+status: IMPLEMENTED
+last_updated: 2026-09-04
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
