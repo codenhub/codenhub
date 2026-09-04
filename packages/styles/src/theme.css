@@ -6,6 +6,7 @@
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
+@source not "../demo";
 @source not "../playground";
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the

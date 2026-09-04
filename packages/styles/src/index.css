@@ -1,8 +1,19 @@
 @import "tailwindcss";
+
+/* The build has no markup to scan, so Tailwind's automatic content detection
+   sees only this package's own files. That is load-bearing -- it is how the
+   composition utilities (`box`, `surface`, `text-control`, `input-group`,
+   `loader-mask`) get emitted as standalone rules, since nothing `@source
+   inline`s them -- so `source(none)` is not an option. The cost is that a
+   handful of Tailwind utilities whose names collide with a CSS property or a
+   word in a comment (`.backdrop-filter`, `.filter`, `.transition`, `.container`,
+   ...) are emitted unused. They are inert and small; left as-is deliberately.
+   These excludes keep the sibling app and fixture directories out of that scan. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
+@source not "../demo";
 @source not "../playground";
 
 @import "./theme.css";
