@@ -24,49 +24,7 @@ Import the compiled stylesheet for the complete token, reset, utility, and compo
 </main>
 ```
 
-Apps using Tailwind CSS v4 can instead process the source entrypoint:
-
-```css
-@import "tailwindcss";
-@import "@codenhub/styles/tw";
-
-@source "./src";
-```
-
-The root follows the system color-scheme preference. Apply `.light` or `.dark` to force a theme for the root or a subtree.
-
-```html
-<html class="dark">
-  <body>
-    <button class="btn primary">Dark themed button</button>
-  </body>
-</html>
-```
-
-The aliases `.theme-light`, `.theme-dark`, and `data-theme="light|dark"` are also supported. See [Concepts](./docs/concepts.md#theme-selection) for precedence details.
-
-`.solid`, `.soft`, and `.ghost` set how much intent fills a component; `.edged` and `.edgeless` set whether it draws a boundary. Both axes cascade, so a container sets the look below it and any element can still override it. `.solid` also takes the boundary away, because a filled box ringed in another color is what the blend behind `.edged` exists to prevent; `.solid.edged` is the way back to a line.
-
-```html
-<div class="soft">
-  <button class="btn primary">Soft</button>
-  <span class="badge success">Soft</span>
-  <button class="btn primary ghost edged">Outlined</button>
-</div>
-```
-
-Aesthetics decide what a component is made of. They are opt-in, so import the stylesheet after the base one to make `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` available. They cascade to any subtree the same way, and each is also importable on its own from `@codenhub/styles/aesthetics/<name>`.
-
-```css
-@import "@codenhub/styles";
-@import "@codenhub/styles/aesthetics";
-```
-
-```html
-<section class="neobrutalism">
-  <button class="btn primary">Thick ink and a hard shadow</button>
-</section>
-```
+For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axes, and opt-in aesthetics, see [Setup](./docs/setup.md), [Concepts](./docs/concepts.md), and [Usage](./docs/usage/index.md).
 
 ## Documentation
 
