@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -162,6 +162,65 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
     for (const pattern of contract.patterns) {
       expect(output, `${exportName} should contain ${pattern}`).toMatch(pattern);
     }
+  });
+}
+
+/* The contracts above spot-check a handful of classes per entrypoint. A
+   compiled bundle has no markup to scan, so a `@utility` emits only because the
+   self-scan or an `@source inline` in that entrypoint's index names it -- and a
+   new component added to `src/components/` that is missed in the inline list
+   ships absent from `dist/components.css` with nothing failing, the mirror of
+   the `.table` collision. This holds every `@utility` a compiled entrypoint's
+   own source tree defines against its output.
+
+   `roots` is the entrypoint's import closure, not just its directory: the
+   `dist/components.css` index pulls `../box.css` and `../typography.css`
+   alongside `./`, and a utility added to either belongs in that bundle. A
+   functional `@utility name-*` keeps its trailing `*` so the match below can
+   look for `.name-<value>` rather than a bare `.name`. */
+async function definedUtilities(roots: string[]): Promise<string[]> {
+  const perRoot = await Promise.all(
+    roots.map(async (root) => {
+      const absolute = path.resolve(packageRoot, root);
+
+      if (root.endsWith(".css")) {
+        return [await readFile(absolute, "utf8")];
+      }
+      const files = (await readdir(absolute, { recursive: true })).filter(
+        (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
+      );
+
+      return Promise.all(files.map((file) => readFile(path.join(absolute, file), "utf8")));
+    }),
+  );
+
+  return [
+    ...new Set(
+      perRoot
+        .flat()
+        .flatMap((source) => [...source.matchAll(/@utility\s+([a-z][a-z0-9-]*\*?)\s*\{/g)].map((match) => match[1])),
+    ),
+  ];
+}
+
+const compiledCompleteness: Record<string, string[]> = {
+  "dist/index.css": ["src"],
+  "dist/components.css": ["src/components", "src/box.css", "src/typography.css", "src/theme.css"],
+  "dist/native.css": ["src"],
+};
+
+for (const [target, roots] of Object.entries(compiledCompleteness)) {
+  test(`${target} emits every @utility its source tree defines`, async () => {
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+    const missing = (await definedUtilities(roots)).filter((name) => {
+      /* A functional `@utility foo-*` emits as `.foo-<value>`; a static one as a
+         bare `.foo`. The `*` is carried through so the two are told apart here. */
+      const pattern = name.endsWith("*") ? String.raw`\.${name.slice(0, -1)}[a-z0-9]` : String.raw`\.${name}(?![\w-])`;
+
+      return !new RegExp(pattern).test(output);
+    });
+
+    expect(missing, `${target} is missing rules for: ${missing.join(", ")}`).toEqual([]);
   });
 }
 

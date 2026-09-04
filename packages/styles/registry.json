@@ -267,6 +267,13 @@
           "value": "100%",
           "escape": null,
           "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        },
+        {
+          "token": "--ui-shadow-spread",
+          "kind": "cap",
+          "value": "--ui-border-width",
+          "escape": null,
+          "reason": "Under .pixel the aesthetic draws its edge as an inset ring spending shadow spread, and a 16px box cannot spend four pixels a side: the ring leaves an eight-pixel hole and an unchecked box reads as filled. Capped at the line width the aesthetic draws elsewhere."
         }
       ],
       "unsupported": [
@@ -307,6 +314,20 @@
           "value": "100%",
           "escape": null,
           "reason": "An unchecked box has nothing outside its line, so removing it removes the control."
+        },
+        {
+          "token": "--ui-shadow-spread",
+          "kind": "cap",
+          "value": "--ui-border-width",
+          "escape": null,
+          "reason": "The inset ring, for the reason given on .checkbox: a 16px box cannot spend four pixels a side, so the spread is capped at the line width the aesthetic draws elsewhere."
+        },
+        {
+          "token": "--ui-border-width",
+          "kind": "cap",
+          "value": "3px",
+          "escape": null,
+          "reason": "A checked radio doubles its line, and a thick aesthetic doubled would close the circle over its own dot. 3px leaves 10px of interior for an 8px mark."
         }
       ],
       "unsupported": [
@@ -347,6 +368,13 @@
           "value": "100%",
           "escape": "the element's own .edgeless",
           "reason": "A container's .edgeless would leave a toggle with no silhouette (WCAG 1.4.11). A switch may opt out on the element because its knob still carries the state."
+        },
+        {
+          "token": "--ui-shadow-spread",
+          "kind": "cap",
+          "value": "--ui-border-width",
+          "escape": null,
+          "reason": "The inset ring, for the reason given on .checkbox: a 20px track has no more room for a thick inset edge than a 16px box, so the spread is capped at the line width the aesthetic draws elsewhere."
         }
       ],
       "unsupported": [

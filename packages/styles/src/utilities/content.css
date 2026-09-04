@@ -306,7 +306,11 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
   --_d-elevation: 0;
-  --quote-fill: calc(min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%)) * var(--ui-bg-alpha, 1));
+  /* Presentation capped by the intent, the same `--_capped` `box` composes, kept
+     separate from `--quote-fill` because the ink ramp below reads it before
+     `--ui-bg-alpha` thins it. */
+  --quote-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+  --quote-fill: calc(var(--quote-capped) * var(--ui-bg-alpha, 1));
   --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
   /* The same edge blend `box` draws, in the same order and for the same reason:
      the blend is the line's colour, and how much line there is comes after it.
@@ -327,9 +331,17 @@
   background-color: var(--quote-bg);
   border-inline-start-color: var(--quote-edge);
   border-inline-start-width: var(--quote-width);
+  /* The ink is gated by the plate, not tied to the fill: `--ui-fg-on-fill` is the
+     ceiling, and the contrast tone only ramps in past a half fill, reaching full
+     at a full fill. Below that the ink stays `--intent-strong`, the tone chosen
+     to read on the page. This is `box`'s `--_on-fill` exactly -- `min(asked,
+     --intent-fill-max)` read plausibly and was wrong at the bottom of the range,
+     printing a capped-neutral `.solid` quote at ~6.6:1 where the ramp gives
+     ~11:1, and this renderer has to agree with `box`. */
   color: color-mix(
     in oklab,
-    var(--intent-contrast) min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), var(--intent-fill-max, 100%)),
+    var(--intent-contrast)
+      min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--quote-capped) * 2 - 100%))),
     var(--intent-strong)
   );
 

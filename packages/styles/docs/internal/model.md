@@ -330,17 +330,18 @@ Nobody combined anything here. Presentation cascades **by design** -- that is ho
 
 That is the test. **A bound is justified when our own composition produces the broken result, and unjustified when a consumer's own combination does.** The first is a bug we shipped; the second is a decision they made.
 
-Four pass it today, and they are the same argument in different materials. Every one is recorded in `registry.json` under the component's `bounds`, with the composition of ours that earns it and what lifts it:
+Eight pass it today, and they are the same argument in different materials. Every one is recorded in `registry.json` under the component's `bounds`, with the composition of ours that earns it and what lifts it:
 
-| Component            | Bound                               | What our own composition does to it                                                                                                                                                                                                           |
-| -------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `text-control`       | Cascaded fill capped at 6%          | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap.                                                                                              |
-| Toggles              | Fill capped at 20%, switch 40%      | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.                                                                                                            |
-| Toggles              | Checked fill floored at 12%         | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                                                                                                                            |
-| Text controls        | Edge floored at 100%                | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                                                                                                                          |
-| `.checkbox` `.radio` | Edge floored at 100%, absolutely    | The same, with nothing left when the line goes. Lifted by nothing, which is why it is the only bound with no escape.                                                                                                                          |
-| `.tooltip`           | Edge floored at 100%                | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`. |
-| Toggles              | Inset edge capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one.                                                                                              |
+| Component            | Bound                                      | What our own composition does to it                                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text-control`       | Cascaded fill capped at 6%                 | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap.                                                                                              |
+| Toggles              | Fill capped at 20%, switch 40%             | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.                                                                                                            |
+| Toggles              | Checked fill floored at 12%                | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                                                                                                                            |
+| Text controls        | Edge floored at 100%                       | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                                                                                                                          |
+| `.checkbox` `.radio` | Edge floored at 100%, absolutely           | The same, with nothing left when the line goes. Lifted by nothing.                                                                                                                                                                            |
+| `.tooltip`           | Edge floored at 100%                       | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`. |
+| Toggles              | Inset ring spread capped at the line width | Under `.pixel` the aesthetic's four-pixel ring on a sixteen-pixel box leaves an eight-pixel hole, so an unchecked toggle reads as a checked one. Capped at `--ui-border-width`.                                                               |
+| `.radio`             | Checked line width capped at 3px           | A checked radio doubles its line, and a thick aesthetic doubled closes the circle over its own dot; 3px leaves 10px of interior for an 8px mark.                                                                                              |
 
 The count went from two to eight, and that is the test working rather than failing. Three of the additions are bounds that already existed as rewritten results — the edge floor was `--_edge: color-mix(...)` and the switch cap was two `--_edge: transparent` rules — and were invisible because a rewrite has nowhere to declare itself. Written as bounds on inputs they are countable, publishable, and testable, which is the whole argument for P6.
 
@@ -573,7 +574,7 @@ Per component: class name, default fill/edge/elevation, the axes it reads, the g
 }
 ```
 
-`axes` is what makes a dead axis findable. It is the registry's claim about the component, and the browser suite is what holds it to it. A bound narrows an axis without removing it, so a component that bounds one still lists it:
+`axes` is what makes a dead axis findable. It is the registry's claim about the component, and the browser suite is what holds it to it. A bound narrows an axis input without removing it, so a component that bounds one still lists the axis -- and a bound may also clamp a piece of material geometry a chip cannot spend in full, `--ui-shadow-spread` or `--ui-border-width`, which `registry.test.ts` holds against the `min()` seam in the component's own block:
 
 ```json
 {
@@ -591,7 +592,7 @@ Per component: class name, default fill/edge/elevation, the axes it reads, the g
 }
 ```
 
-An `escape` of `null` is the register of what the package does not support. `.checkbox` and `.radio` are the only two entries carrying one.
+An `escape` of `null` is the register of what nothing lifts: the checked-fill floor on every toggle, the edge floor that is absolute on `.checkbox` and `.radio`, and the chip geometry caps -- the inset-ring spread on all three toggles and the checked line width on `.radio` -- which are clamped by their nature rather than against a cascade.
 
 **It describes the stylesheet; it does not produce it.** An earlier draft generated selector lists from it, which made the CSS a build artifact and put a CSS generator inside `packages/tools`. Both are gone. The registry is read by things that need the list and checked against the CSS that is written by hand:
 
@@ -602,7 +603,7 @@ An `escape` of `null` is the register of what the package does not support. `.ch
 
 ### What validation enforces
 
-Seven checks, all of which fail the build:
+Eight checks, all of which fail the build:
 
 1. No duplicate class name anywhere in the package.
 2. No collision with a Tailwind static utility.
@@ -611,10 +612,11 @@ Seven checks, all of which fail the build:
 5. Every component appears in one of the two hand-maintained intent resets. A component missing from one reads an undefined `--intent-*`, which makes every `color-mix()` referencing it invalid and drops the declaration -- so it renders as nothing rather than as an error.
 6. Every implemented component declares the resting values the registry publishes for it.
 7. Every component declares the axes it reads, and every bound it places on one carries the composition of ours that earns it and what lifts it.
+8. Every `--ui-shadow-spread` or `--ui-border-width` bound in the registry has a matching `min()` seam in the component's own block, and every such seam in the stylesheet has a bound -- so a chip geometry cap cannot be added to the CSS without being published, and cannot be published without existing.
 
-Checks 5 and 6 are what a generator would have made unnecessary, and they cost sixty lines instead of four hundred.
+Checks 5, 6 and 8 are what a generator would have made unnecessary, and they cost eighty lines instead of four hundred.
 
-Check 7 is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. The package went a whole release with `.edged` and `.edgeless` inert on six components and every other check passing, which is what this one exists for.
+Check 7's axis half is enforced in the browser rather than against the stylesheet text, in `tests/browser/axes.spec.ts`, because it is the only one whose answer is a computed value. It asserts both directions: an axis the registry calls live must change what the component computes, and an axis it leaves off must not. The package went a whole release with `.edged` and `.edgeless` inert on six components and every other check passing, which is what this one exists for. Check 8 is a text check in `registry.test.ts`, because a `min()` seam is a stylesheet fact rather than a computed one.
 
 ### The one rename
 
@@ -706,7 +708,7 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 | `shaped`, `shaped-tight`       | `box`. It reads `--ui-clip` and draws the ring itself, so neither utility held anything of its own.                |
 | `--ui-hover-fill`              | Derived hover.                                                                                                     |
 | `--ui-hover-fg-on-fill`        | Derived hover.                                                                                                     |
-| Per-component clamps           | Deleting the edge scale. Five bounds survive, each in `registry.json`.                                             |
+| Per-component clamps           | Deleting the edge scale. Eight bounds survive, each in `registry.json`.                                            |
 | Aesthetic selector lists       | `--ui-ink`, shadow parts, `--ui-backdrop`.                                                                         |
 | "Plain"                        | A published default pair per component.                                                                            |
 | `.soft` dropping its line      | `.soft.edgeless`. No fill class decides an edge (P5).                                                              |

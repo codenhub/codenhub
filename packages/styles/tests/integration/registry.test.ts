@@ -20,6 +20,14 @@ interface FillPresentation {
   "ui-fg-on-fill": string;
 }
 
+interface Bound {
+  token: string;
+  kind: "cap" | "floor";
+  value: string;
+  escape: string | null;
+  reason: string;
+}
+
 interface ComponentEntry {
   class: string;
   default: { fill?: string; edge?: string; ground?: string; elevation: number };
@@ -29,6 +37,7 @@ interface ComponentEntry {
   renameReason?: string;
   composition?: "frame" | "none";
   compositionReason?: string;
+  bounds?: Bound[];
 }
 
 interface AestheticEntry {
@@ -584,6 +593,79 @@ test("the root walk keeps a component's own declarations and drops its nested on
   expect(root).toContain("--_d-fill:");
   expect(root, "declared only on hover").not.toContain("--_d-fg-on-fill:");
   expect(root, "after the nesting closes").toContain("--_d-border:");
+});
+
+/* Check 8. Most bounds clamp a presentation axis input, and `axes.spec.ts`
+   holds those against the computed value. Two clamp a piece of material geometry
+   instead: `--ui-shadow-spread`, because a 16px chip cannot spend a thick
+   aesthetic's full inset ring, and `--ui-border-width` on a checked `.radio`,
+   because a doubled thick line closes the circle over its own dot. Those are
+   bounds like any other -- recorded, reasoned, and here held against the
+   `min()` seam in the component's own block in both directions: a seam with no
+   bound is an unpublished clamp, a bound with no seam is a promise nothing
+   keeps, and a bound whose `kind` or `value` disagrees with the seam is a
+   record that has drifted from the code. See
+   model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+test("every geometry-cap bound matches its min() seam, and every seam a bound", async () => {
+  const utilities = await shippedUtilities();
+  /* The declaration each geometry token is clamped through. */
+  const property: Record<string, string> = {
+    "--ui-shadow-spread": "--_ss",
+    "--ui-border-width": "border-width",
+  };
+  /* The `min(...)` value assigned to `<name>` in `block`, parens balanced, or
+     null when the block does not clamp that property with a `min()`. */
+  const minSeam = (block: string, name: string): string | null => {
+    const opener = `${name}: min(`;
+    const at = block.indexOf(opener);
+
+    if (at === -1) {
+      return null;
+    }
+
+    const start = at + `${name}: `.length;
+    let depth = 0;
+    let index = start + "min".length;
+
+    do {
+      depth += block[index] === "(" ? 1 : block[index] === ")" ? -1 : 0;
+      index += 1;
+    } while (depth > 0 && index < block.length);
+
+    return block.slice(start, index);
+  };
+  const problems: string[] = [];
+
+  for (const component of registry.components) {
+    const block = utilities.get(component.class);
+    const geometryBounds = (component.bounds ?? []).filter((bound) => bound.token in property);
+    const bounded = new Set(geometryBounds.map((bound) => bound.token));
+
+    for (const bound of geometryBounds) {
+      const seam = block === undefined ? null : minSeam(block, property[bound.token]);
+
+      if (seam === null) {
+        problems.push(`${component.class} bounds ${bound.token} but its @utility has no min() seam for it`);
+        continue;
+      }
+      if (bound.kind !== "cap") {
+        problems.push(`${component.class}'s ${bound.token} bound is a ${bound.kind}, but a min() seam is a cap`);
+      }
+      if (!seam.includes(bound.value)) {
+        problems.push(
+          `${component.class}'s ${bound.token} bound value "${bound.value}" is absent from its seam ${seam}`,
+        );
+      }
+    }
+
+    for (const [token, name] of Object.entries(property)) {
+      if (block !== undefined && minSeam(block, name) !== null && !bounded.has(token)) {
+        problems.push(`${component.class} caps ${name} with min() but the registry records no ${token} bound`);
+      }
+    }
+  }
+
+  expect(problems).toEqual([]);
 });
 
 /* R7. Elevation multiplies every shadow length, and `calc(0 * 1)` is a number

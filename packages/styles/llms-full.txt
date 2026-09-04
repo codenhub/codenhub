@@ -1115,7 +1115,7 @@ The token is read for its presence, not its value: declare it empty to switch th
 }
 ```
 
-Variables named `--shape-*` are internal composition outputs. Do not set or read them; only the `--ui-*` inputs above are public.
+Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, `--_edge`, `--_fill`, `--_shadow`, and the `--_d-*` resting slots a component states for `box` to read. Do not set or read them; only the `--ui-*` inputs above are public.
 
 ## Aesthetic tokens
 
@@ -1154,7 +1154,7 @@ Shipped aesthetics set the shared material tokens above. `.neobrutalism` and `.p
 
 ## Component internals
 
-Component classes may define scoped implementation variables such as `--button-*`, `--surface-*`, `--control-*`, `--feedback-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
+Component classes may define scoped implementation variables such as `--surface-padding`, `--field-gap`, `--input-group-pad`, `--switch-*`, `--table-*`, `--quote-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
 
 Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
 
