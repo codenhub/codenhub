@@ -52,21 +52,7 @@
 }
 
 @layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p,
-  figure,
-  blockquote,
-  dl,
-  dd,
-  ul,
-  ol {
-    margin: 0;
-  }
+  /* The `h1`-`ol` margin reset lives in `reset.css`, imported above. */
 
   /* Headings */
   h1 {
