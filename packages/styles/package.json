@@ -19,6 +19,9 @@
     "llms-full.txt"
   ],
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "exports": {
     ".": {
       "style": "./dist/index.css",
