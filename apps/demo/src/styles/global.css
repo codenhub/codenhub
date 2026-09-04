@@ -5,8 +5,14 @@
   --demo-header-height: 4rem;
 }
 
+/* The base stylesheet resets `<body>` margins and sets its color and font, but
+   no longer lays it out. The demo shell is a sticky header, a growing main, and
+   a footer, so the column lives here. */
 body {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
 }
 
 .skip-link {
