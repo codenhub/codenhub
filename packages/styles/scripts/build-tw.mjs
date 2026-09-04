@@ -11,7 +11,7 @@
  * `@source inline(...)` is left in place -- it safelists the utility class names
  * a `/tw` consumer needs and is load-bearing.
  */
-import { cpSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,6 +19,11 @@ const packageRoot = resolve(fileURLToPath(import.meta.url), "../..");
 const source = join(packageRoot, "src");
 const target = join(packageRoot, "dist", "tw");
 
+/* `cpSync` overwrites but never deletes, so a source file that was renamed or
+   removed would linger in `dist/tw/` and ship -- `files` publishes all of
+   `dist`. The full `build` clears `dist/` first; clearing here too makes a bare
+   `build:tw` just as safe. */
+rmSync(target, { recursive: true, force: true });
 cpSync(source, target, { recursive: true });
 
 /* One directive per line, each terminated with `;`. The horizontal-whitespace
