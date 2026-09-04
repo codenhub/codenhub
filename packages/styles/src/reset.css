@@ -113,15 +113,17 @@
   }
 }
 
-@layer components {
-  @media (forced-colors: active) {
-    .btn,
-    .ipt,
-    .textarea,
-    .select,
-    .alert,
-    .badge {
-      border-color: CanvasText;
-    }
+/* Unlayered on purpose, matching the `forced-colors` blocks in `native.css` and
+   `form.css`. An accessibility override has to win over any layered rule
+   whatever the specificity, and a `@layer components` wrapper here would let the
+   component utilities that draw a border overrule it. */
+@media (forced-colors: active) {
+  .btn,
+  .ipt,
+  .textarea,
+  .select,
+  .alert,
+  .badge {
+    border-color: CanvasText;
   }
 }
