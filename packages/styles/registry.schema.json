@@ -190,7 +190,7 @@
           },
           "bounds": {
             "type": "array",
-            "description": "Bounds this component places on an axis input. A bound is justified only when our own composition produces the broken result, never when a consumer's own combination does.",
+            "description": "Bounds this component places on an axis input or on a piece of material geometry. A bound is justified only when our own composition produces the broken result, never when a consumer's own combination does.",
             "items": {
               "type": "object",
               "required": ["token", "kind", "value", "reason", "escape"],
@@ -198,7 +198,8 @@
               "properties": {
                 "token": {
                   "type": "string",
-                  "enum": ["--ui-fill", "--ui-border"]
+                  "enum": ["--ui-fill", "--ui-border", "--ui-shadow-spread", "--ui-border-width"],
+                  "description": "The input the bound clamps: a presentation axis (--ui-fill, --ui-border) or a material length a chip cannot spend in full (--ui-shadow-spread for an inset ring, --ui-border-width for a checked toggle line)."
                 },
                 "kind": {
                   "type": "string",

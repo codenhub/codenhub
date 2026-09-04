@@ -20,6 +20,14 @@ interface FillPresentation {
   "ui-fg-on-fill": string;
 }
 
+interface Bound {
+  token: string;
+  kind: "cap" | "floor";
+  value: string;
+  escape: string | null;
+  reason: string;
+}
+
 interface ComponentEntry {
   class: string;
   default: { fill?: string; edge?: string; ground?: string; elevation: number };
@@ -29,6 +37,7 @@ interface ComponentEntry {
   renameReason?: string;
   composition?: "frame" | "none";
   compositionReason?: string;
+  bounds?: Bound[];
 }
 
 interface AestheticEntry {
@@ -584,6 +593,43 @@ test("the root walk keeps a component's own declarations and drops its nested on
   expect(root).toContain("--_d-fill:");
   expect(root, "declared only on hover").not.toContain("--_d-fg-on-fill:");
   expect(root, "after the nesting closes").toContain("--_d-border:");
+});
+
+/* Check 8. Most bounds clamp a presentation axis input, and `axes.spec.ts`
+   holds those against the computed value. Two clamp a piece of material geometry
+   instead: `--ui-shadow-spread`, because a 16px chip cannot spend a thick
+   aesthetic's full inset ring, and `--ui-border-width` on a checked `.radio`,
+   because a doubled thick line closes the circle over its own dot. Those are
+   bounds like any other -- recorded, reasoned, and here held against the
+   `min()` seam in the component's own block in both directions: a seam with no
+   bound is an unpublished clamp, and a bound with no seam is a promise nothing
+   keeps. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+test("every geometry-cap bound matches a min() seam, and every seam a bound", async () => {
+  const utilities = await shippedUtilities();
+  const seam: Record<string, (block: string) => boolean> = {
+    "--ui-shadow-spread": (block) => /--_ss:\s*min\(/.test(block) && block.includes("var(--ui-shadow-spread"),
+    "--ui-border-width": (block) => /border-width:\s*min\(/.test(block),
+  };
+  const problems: string[] = [];
+
+  for (const component of registry.components) {
+    const block = utilities.get(component.class);
+    const bounds = new Set((component.bounds ?? []).map((bound) => bound.token));
+
+    for (const [token, present] of Object.entries(seam)) {
+      const hasBound = bounds.has(token);
+      const hasSeam = block !== undefined && present(block);
+
+      if (hasBound && !hasSeam) {
+        problems.push(`${component.class} bounds ${token} but its @utility has no matching min() seam`);
+      }
+      if (hasSeam && !hasBound) {
+        problems.push(`${component.class} caps ${token} with min() but the registry records no bound`);
+      }
+    }
+  }
+
+  expect(problems).toEqual([]);
 });
 
 /* R7. Elevation multiplies every shadow length, and `calc(0 * 1)` is a number
