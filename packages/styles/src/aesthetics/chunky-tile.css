@@ -80,8 +80,10 @@
 
   /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships no
      font binary, so the aesthetic has no rounded face to fall back to and takes the
-     page's own stack until one is supplied. */
-  font-family: var(--font-rounded, var(--font-sans, ui-sans-serif, system-ui, sans-serif));
+     page's own stack until one is supplied -- `--font-default`, the token the
+     reset applies to `html`/`body`, so a consumer that themed the page font gets
+     it here too. `--font-sans` is Tailwind's own and the package never sets it. */
+  font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
 }
 
 /* The one R3 exception this aesthetic takes, recorded in the registry as
