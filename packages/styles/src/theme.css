@@ -6,6 +6,7 @@
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
+@source not "../demo";
 @source not "../playground";
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
@@ -215,4 +216,10 @@
   color-scheme: dark;
 }
 
-@custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
+/* The selector list mirrors the `color-scheme: dark` block above, all three
+   spellings included -- a consumer writing `.theme-dark` for the token theme
+   was otherwise left without the matching `dark:` variant. System preference is
+   deliberately out: the variant follows an explicit theme selector, the same
+   rule the rest of the theme model states, so `dark:` utilities track the theme
+   a subtree was actually put in rather than the OS default. */
+@custom-variant dark (&:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *));

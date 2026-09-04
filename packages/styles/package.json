@@ -95,7 +95,7 @@
     "build": "pnpm clean && pnpm build:styles && pnpm build:aesthetics && pnpm build:tw",
     "build:styles": "tailwindcss -i ./src/index.css -o ./dist/index.css --minify && tailwindcss -i ./src/theme.css -o ./dist/theme.css --minify && tailwindcss -i ./src/components/index.css -o ./dist/components.css --minify && tailwindcss -i ./src/native.css -o ./dist/native.css --minify",
     "build:aesthetics": "tailwindcss -i ./src/aesthetics/index.css -o ./dist/aesthetics/index.css --minify && tailwindcss -i ./src/aesthetics/neobrutalism.css -o ./dist/aesthetics/neobrutalism.css --minify && tailwindcss -i ./src/aesthetics/glass.css -o ./dist/aesthetics/glass.css --minify && tailwindcss -i ./src/aesthetics/pixel.css -o ./dist/aesthetics/pixel.css --minify && tailwindcss -i ./src/aesthetics/chunky-tile.css -o ./dist/aesthetics/chunky-tile.css --minify",
-    "build:tw": "node -e \"import('node:fs').then(fs => fs.cpSync('src', 'dist/tw', { recursive: true }))\"",
+    "build:tw": "node scripts/build-tw.mjs",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run --ignore-scripts",

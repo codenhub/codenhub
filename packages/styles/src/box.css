@@ -117,6 +117,16 @@
   --_shadow: var(--_shadow-parts);
   --_focus-stack: var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
 
+  /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
+     plus its own padding and the border shorthand above, so its geometry is only
+     right under `box-sizing: border-box`. `reset.css` sets that on `*`, but only
+     the `.`, `/native` and `/tw/reset` entrypoints carry the reset -- and the
+     first two pull Tailwind's Preflight, which sets it anyway. `/components` and
+     the granular `/tw/*` component entrypoints ship neither, so a box there
+     inherited the `content-box` default and every sized control came out
+     inflated by its own padding and border. A component's own geometry is not an
+     external reset's job; `box` owns it. */
+  box-sizing: border-box;
   background-color: var(--_bg);
   color: var(--_fg);
   border: var(--_width) solid var(--_edge);

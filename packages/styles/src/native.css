@@ -4,6 +4,7 @@
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
+@source not "../demo";
 @source not "../playground";
 @import "./typography.css";
 @import "./utilities/index.css";
@@ -52,21 +53,7 @@
 }
 
 @layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p,
-  figure,
-  blockquote,
-  dl,
-  dd,
-  ul,
-  ol {
-    margin: 0;
-  }
+  /* The `h1`-`ol` margin reset lives in `reset.css`, imported above. */
 
   /* Headings */
   h1 {
