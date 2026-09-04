@@ -1,6 +1,7 @@
 ---
 title: Feedback
 description: Alert, badge, loader, skeleton, and progress class reference.
+order: 7
 ---
 
 # Feedback

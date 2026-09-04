@@ -1,6 +1,8 @@
 ---
-title: Usage
+title: Overview
 description: Guides for composing axes, theming, customizing, aesthetics, and each component family.
+group: Usage
+order: 3
 ---
 
 # Usage

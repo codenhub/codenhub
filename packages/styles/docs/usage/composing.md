@@ -1,6 +1,7 @@
 ---
 title: Composing
 description: Combining intent, presentation, and aesthetic on a component, and the axis-support matrix.
+order: 1
 ---
 
 # Composing the three axes

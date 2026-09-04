@@ -1,6 +1,7 @@
 ---
 title: Buttons
 description: Button classes, intents, sizes, and states.
+order: 5
 ---
 
 # Buttons

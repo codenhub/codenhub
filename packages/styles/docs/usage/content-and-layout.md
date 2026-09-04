@@ -1,6 +1,7 @@
 ---
 title: Content and layout
 description: Layout helpers, content chips and tables, surfaces, and typography utilities.
+order: 9
 ---
 
 # Content and layout

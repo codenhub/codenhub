@@ -1,6 +1,7 @@
 ---
 title: Setup
 description: Install the package, pick an entrypoint, and render a first component.
+order: 1
 ---
 
 # Setup
