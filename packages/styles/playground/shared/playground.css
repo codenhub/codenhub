@@ -20,6 +20,14 @@
   --font-pixel: "Pixelify Sans", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* The base stylesheet no longer lays out `<body>`. Every fixture page is a
+   sticky nav over a full-height main, so the scaffolding owns the column. */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
 .playground-nav {
   position: sticky;
   z-index: var(--z-popover);

@@ -36,7 +36,7 @@
 
   html,
   body {
-    @apply bg-background text-text font-default min-h-dvh;
+    @apply bg-background text-text font-default;
   }
 
   h1,
@@ -55,10 +55,6 @@
     margin: 0;
   }
 
-  body {
-    @apply flex flex-col;
-  }
-
   button,
   input,
   optgroup,
@@ -72,10 +68,6 @@
   input[type="submit"],
   input[type="reset"] {
     @apply enabled:cursor-pointer;
-  }
-
-  img {
-    @apply select-none;
   }
 
   ::selection {
@@ -125,10 +117,6 @@
 }
 
 @layer components {
-  [aria-current="page"] {
-    @apply text-primary font-bold;
-  }
-
   @media (forced-colors: active) {
     .btn,
     .ipt,
