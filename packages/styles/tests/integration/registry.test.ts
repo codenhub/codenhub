@@ -602,29 +602,65 @@ test("the root walk keeps a component's own declarations and drops its nested on
    because a doubled thick line closes the circle over its own dot. Those are
    bounds like any other -- recorded, reasoned, and here held against the
    `min()` seam in the component's own block in both directions: a seam with no
-   bound is an unpublished clamp, and a bound with no seam is a promise nothing
-   keeps. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
-test("every geometry-cap bound matches a min() seam, and every seam a bound", async () => {
+   bound is an unpublished clamp, a bound with no seam is a promise nothing
+   keeps, and a bound whose `kind` or `value` disagrees with the seam is a
+   record that has drifted from the code. See
+   model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+test("every geometry-cap bound matches its min() seam, and every seam a bound", async () => {
   const utilities = await shippedUtilities();
-  const seam: Record<string, (block: string) => boolean> = {
-    "--ui-shadow-spread": (block) => /--_ss:\s*min\(/.test(block) && block.includes("var(--ui-shadow-spread"),
-    "--ui-border-width": (block) => /border-width:\s*min\(/.test(block),
+  /* The declaration each geometry token is clamped through. */
+  const property: Record<string, string> = {
+    "--ui-shadow-spread": "--_ss",
+    "--ui-border-width": "border-width",
+  };
+  /* The `min(...)` value assigned to `<name>` in `block`, parens balanced, or
+     null when the block does not clamp that property with a `min()`. */
+  const minSeam = (block: string, name: string): string | null => {
+    const opener = `${name}: min(`;
+    const at = block.indexOf(opener);
+
+    if (at === -1) {
+      return null;
+    }
+
+    const start = at + `${name}: `.length;
+    let depth = 0;
+    let index = start + "min".length;
+
+    do {
+      depth += block[index] === "(" ? 1 : block[index] === ")" ? -1 : 0;
+      index += 1;
+    } while (depth > 0 && index < block.length);
+
+    return block.slice(start, index);
   };
   const problems: string[] = [];
 
   for (const component of registry.components) {
     const block = utilities.get(component.class);
-    const bounds = new Set((component.bounds ?? []).map((bound) => bound.token));
+    const geometryBounds = (component.bounds ?? []).filter((bound) => bound.token in property);
+    const bounded = new Set(geometryBounds.map((bound) => bound.token));
 
-    for (const [token, present] of Object.entries(seam)) {
-      const hasBound = bounds.has(token);
-      const hasSeam = block !== undefined && present(block);
+    for (const bound of geometryBounds) {
+      const seam = block === undefined ? null : minSeam(block, property[bound.token]);
 
-      if (hasBound && !hasSeam) {
-        problems.push(`${component.class} bounds ${token} but its @utility has no matching min() seam`);
+      if (seam === null) {
+        problems.push(`${component.class} bounds ${bound.token} but its @utility has no min() seam for it`);
+        continue;
       }
-      if (hasSeam && !hasBound) {
-        problems.push(`${component.class} caps ${token} with min() but the registry records no bound`);
+      if (bound.kind !== "cap") {
+        problems.push(`${component.class}'s ${bound.token} bound is a ${bound.kind}, but a min() seam is a cap`);
+      }
+      if (!seam.includes(bound.value)) {
+        problems.push(
+          `${component.class}'s ${bound.token} bound value "${bound.value}" is absent from its seam ${seam}`,
+        );
+      }
+    }
+
+    for (const [token, name] of Object.entries(property)) {
+      if (block !== undefined && minSeam(block, name) !== null && !bounded.has(token)) {
+        problems.push(`${component.class} caps ${name} with min() but the registry records no ${token} bound`);
       }
     }
   }
