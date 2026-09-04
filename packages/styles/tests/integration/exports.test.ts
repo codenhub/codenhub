@@ -234,10 +234,7 @@ for (const [target, roots] of Object.entries(compiledCompleteness)) {
    composition utilities are the ones at risk -- unlike a component class, they
    never appear as the selector of a rule of their own except through the
    `@source inline` safelist in `components/index.css` -- so this holds each to
-   emitting a real rule: the name at the start of a selector or right after a
-   previous rule closes, followed by `{` directly or by a pseudo-class/combinator
-   -- `box-hover` and `box-active` only ever compile as `.box-hover:not(...):hover{`,
-   never as a bare `.box-hover{`. */
+   emitting a real rule. */
 const COMPOSITION_UTILITIES = [
   "box",
   "box-hover",
@@ -248,6 +245,32 @@ const COMPOSITION_UTILITIES = [
   "input-group",
 ];
 
+/* True when `name` starts a rule of its own in `output`: immediately followed
+   by `{` (its base declarations) or `:` (a pseudo-class state, the only form
+   `box-hover` and `box-active` ever compile as -- `.box-hover:not(...):hover{`,
+   never a bare `.box-hover{`). A comma, a compound-class `.`, a bracket, a
+   space, or a combinator after the name does not qualify: `.input-group.soft{`
+   is a modifier rule that only fires alongside `input-group`'s own body, and
+   `.input-group .child{` styles a descendant, neither of which proves
+   `input-group`'s own `@utility` block compiled. The name may be preceded by
+   the start of the string, a previous rule closing (`}`), a sibling in a
+   comma-separated selector list (`,`), or the opening of an enclosing block
+   such as `@media (forced-colors: active) {` (`{`). */
+function emitsOwnRule(output: string, name: string): boolean {
+  return new RegExp(String.raw`(?:^|[,{}])\.${name}(?=[{:])`).test(output);
+}
+
+test("emitsOwnRule rejects a compound class or descendant selector as proof of a utility's own rule", () => {
+  expect(emitsOwnRule(".input-group.soft{--_fill-cap:12%}", "input-group"), "compound class").toBe(false);
+  expect(emitsOwnRule(".input-group .child{color:red}", "input-group"), "descendant selector").toBe(false);
+  expect(emitsOwnRule(".a,.input-group{color:red}", "input-group"), "comma-separated own rule").toBe(true);
+  expect(emitsOwnRule(".input-group:focus-within{outline:none}", "input-group"), "pseudo-class").toBe(true);
+  expect(
+    emitsOwnRule("@media(forced-colors:active){.input-group{color:red}}", "input-group"),
+    "first rule inside an enclosing block",
+  ).toBe(true);
+});
+
 test("composition utilities emit their own rule body, not just a mention inside a selector list", async () => {
   const outputs = await Promise.all(
     ["dist/index.css", "dist/components.css", "dist/native.css"].map(async (target) => ({
@@ -256,9 +279,9 @@ test("composition utilities emit their own rule body, not just a mention inside 
     })),
   );
   const problems = outputs.flatMap(({ output, target }) =>
-    COMPOSITION_UTILITIES.filter(
-      (name) => !new RegExp(String.raw`(?:^|[,}])\.${name}(?=[{,.:[ >+~])`).test(output),
-    ).map((name) => `${target} has no standalone rule for .${name}`),
+    COMPOSITION_UTILITIES.filter((name) => !emitsOwnRule(output, name)).map(
+      (name) => `${target} has no standalone rule for .${name}`,
+    ),
   );
 
   expect(problems).toEqual([]);
