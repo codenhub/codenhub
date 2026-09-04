@@ -40,12 +40,17 @@ const tailwindCssUrl = new URL("./index.css", import.meta.resolve("tailwindcss/p
 const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw": {
     candidates: "btn",
-    patterns: [/\.btn\{--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
+    patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
   },
   "./tw/theme": { patterns: [/--color-primary:/] },
   "./tw/components": {
     candidates: "alert btn loading",
-    patterns: [/\.alert\{--_capped:/, /\.btn\{--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
+    patterns: [
+      /\.alert\{--_capped:/,
+      /\.btn\{[^}]*--_capped:/,
+      /\.btn\.loading:after\{/,
+      /mask-image:var\(--loader-art\)/,
+    ],
   },
   "./tw/surface": {
     candidates: "panel",
@@ -53,7 +58,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/button": {
     candidates: "btn loading",
-    patterns: [/\.btn\{--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
+    patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
   },
   "./tw/form": {
     candidates: "ipt radio",

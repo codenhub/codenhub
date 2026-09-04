@@ -104,8 +104,6 @@
 
   @apply w-full appearance-none;
 
-  box-sizing: border-box;
-
   &::placeholder {
     color: var(--color-text-secondary);
   }

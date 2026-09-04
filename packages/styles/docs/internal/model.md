@@ -630,7 +630,7 @@ Check 7 is enforced in the browser rather than against the stylesheet text, in `
 
 | Utility        | What applying it gives an element                                                                                                                |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `box`          | The whole painted box: fill, foreground, edge, radius, shadow, clip, focus, disabled.                                                            |
+| `box`          | The whole painted box: `border-box` sizing, fill, foreground, edge, radius, shadow, clip, focus, disabled.                                       |
 | `box-hover`    | The derived hover tone, for something you press rather than type into. `btn`, and `.card.interactive` / `.card.hoverable`.                       |
 | `box-active`   | The `:active` press: the base `scale(0.97)`, or the aesthetic's active shadow and transform. `btn`, and `.card.interactive` / `.card.pressable`. |
 | `surface`      | `box` plus the surface-only slots: ground, backdrop, surface shadow.                                                                             |
@@ -638,6 +638,8 @@ Check 7 is enforced in the browser rather than against the stylesheet text, in `
 | `loader-mask`  | The spinner artwork, as a mask so it takes the element's own color.                                                                              |
 
 They are the seam the components are built from, and a consumer composing a component we do not ship is better served by them than by copying a component's declarations. What they are not is a taxonomy: applying `box` says how an element is painted, not what kind of thing it is.
+
+`box` declares `box-sizing: border-box` on itself. A box sizes itself as `min-height`/`min-width: var(--control-height)` plus its own padding and the composed `border` shorthand, so its geometry only resolves correctly under `border-box`. `reset.css` sets that on `*`, but the reset ships only with `.`, `/native`, and `/tw/reset` -- and the first two pull Tailwind's Preflight, which sets it regardless. `/components` and the granular `/tw/*` component entrypoints carry neither, so before `box` owned it, every sized control there inherited `content-box` and came out inflated by its own padding and border. A component's own geometry is not an external reset's responsibility; the universal rule in `reset.css` now covers only the consumer's own markup.
 
 ## Variant specs
 

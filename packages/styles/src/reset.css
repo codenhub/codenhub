@@ -3,16 +3,13 @@
 @import "./typography.css";
 
 @layer base {
-  /* Every sizing utility this package ships — `min-height`/`min-width:
-     var(--control-height)` on `.btn`, `.ipt`, `.select`, `.textarea` chief
-     among them — means that as the control's total footprint, padding and
-     border included. Without this, `apps/docs` reads correctly only because
-     its own Tailwind pipeline supplies Preflight's border-box reset
-     separately; this package only pulls in Tailwind's utility engine via
-     `@reference`, never its Preflight, so a consumer with no Tailwind
-     pipeline of its own — `apps/demo` imports this compiled stylesheet
-     directly — got the content-box default instead, inflating every sized
-     control by its own padding and border. */
+  /* The package's own components no longer lean on this: `@utility box` sets
+     `box-sizing: border-box` on itself, so a sized control is right in every
+     entrypoint including the reset-less `/components` and granular `/tw/*`
+     ones. What is left for the universal rule is the consumer's own markup --
+     a plain `<div>` laid out beside our components under the full reset -- so
+     it stays part of the opinionated baseline the reset already is, rather
+     than a correctness prop the components need. */
   *,
   *::before,
   *::after {
