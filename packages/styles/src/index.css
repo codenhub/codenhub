@@ -8,7 +8,11 @@
    handful of Tailwind utilities whose names collide with a CSS property or a
    word in a comment (`.backdrop-filter`, `.filter`, `.transition`, `.container`,
    ...) are emitted unused. They are inert and small; left as-is deliberately.
-   These excludes keep the sibling app and fixture directories out of that scan. */
+
+   The `@source not` lines below keep the sibling app and fixture directories
+   out of that scan. `scripts/build-tw.mjs` strips them from the `dist/tw/`
+   copy, where they resolve to nothing and the `/tw` consumer scans their own
+   tree anyway. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
