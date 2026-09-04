@@ -88,7 +88,7 @@ Aesthetics decide what a component is made of. They are opt-in, so import the st
 
 ## Notes
 
-This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
+This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens, and `--color-text-subtle` is removed because nothing read it; no compatibility aliases are provided.
 
 ## License
 

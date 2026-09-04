@@ -58,7 +58,9 @@
   --color-text-secondary: light-dark(var(--color-neutral-700), var(--color-neutral-400));
   --color-text-contrast: light-dark(var(--color-neutral-50), var(--color-neutral-950));
   --color-text-hover: light-dark(var(--color-neutral-700), var(--color-neutral-200));
-  --color-text-subtle: light-dark(var(--color-neutral-200), var(--color-neutral-900));
+  /* No `--color-text-subtle`: the neutral intent points `--intent-subtle` at
+     `--color-surface`, not at a text-family tint, so the slot the other families
+     fill had no reader here. */
   --color-text-strong: light-dark(var(--color-neutral-900), var(--color-neutral-100));
 
   /* The tooltip bubble is the one component whose plate is chosen rather than

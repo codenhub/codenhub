@@ -90,7 +90,7 @@ Aesthetics decide what a component is made of. They are opt-in, so import the st
 
 ## Notes
 
-This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens; no compatibility aliases are provided.
+This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens, and `--color-text-subtle` is removed because nothing read it; no compatibility aliases are provided.
 
 ## License
 
@@ -1378,6 +1378,8 @@ Color tokens are how you restyle the palette; see [Concepts → Theme selection]
 
 Each color token holds both of its theme values at once through `light-dark()`, and the element's `color-scheme` picks one.
 
+Every row is an override point: set it on `:root` to retheme globally, or on any element to retheme that subtree. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companion tones wired into the intent slots, so overriding a base color such as `--color-primary` on its own does not shift its companions — retheme the whole family. The `text` family has no `-subtle` row: the neutral intent draws its subtle tone from `--color-surface`.
+
 ```html
 <section data-theme="dark">
   <article>Dark token subtree</article>
@@ -1406,7 +1408,6 @@ Each color token holds both of its theme values at once through `light-dark()`, 
 | `--color-text-secondary`       | Secondary text color.                                                                                             |
 | `--color-text-contrast`        | Readable color on top of a full fill of `--color-text`. A checked toggle prints it.                               |
 | `--color-text-hover`           | Text hover state.                                                                                                 |
-| `--color-text-subtle`          | Low-emphasis companion tone for text. Use as soft surface or subtle background.                                   |
 | `--color-text-strong`          | High-emphasis companion tone for text. Use as readable text, icon, or border on subtle surfaces.                  |
 | `--color-tooltip`              | Tooltip bubble plate with no intent. Chosen per theme rather than derived: near-white in light, mid grey in dark. |
 | `--color-tooltip-contrast`     | Ink on `--color-tooltip`.                                                                                         |
