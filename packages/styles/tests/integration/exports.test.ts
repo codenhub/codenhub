@@ -241,8 +241,9 @@ test("aggregate exports emit each public rule expansion once", async () => {
 
 for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
   test(`${exportName} emits its representative public surface`, async () => {
-    const target = manifest.exports[exportName];
-    expect(typeof target, `${exportName} must have one CSS target`).toBe("string");
+    const entry = manifest.exports[exportName];
+    const target = typeof entry === "string" ? entry : (entry.style ?? entry.import ?? entry.default);
+    expect(typeof target, `${exportName} must resolve to one CSS target`).toBe("string");
 
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
     const inputPath = path.join(temporaryRoot, "input.css");
