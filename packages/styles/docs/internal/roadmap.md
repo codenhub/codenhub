@@ -40,6 +40,8 @@ Publishing is a separate gate and a repository-level one. Neither trusted publis
 
 - **Fixture-only playground**: `demo/` now reuses the playground pages as a branded, deployable reference, aggregated by `apps/demo`. The playground still doubles as the test-fixture surface for `tests/browser/`; trimming it to a minimal fixture set behind the demo is still open, and only worth doing once the supported surface and consumer documentation are stable, because the two would otherwise drift.
 
+- **`dark:` variant under system preference**: the `@custom-variant dark` in `theme.css` now covers all three explicit spellings (`.dark`, `.theme-dark`, `[data-theme="dark"]`) but deliberately not `prefers-color-scheme: dark`, so a consumer's `dark:` utilities do not respond to the OS default the way the token palette does through `light-dark()`. Adding a system arm is possible but cannot cleanly exclude a forced-light subtree in a single `@custom-variant`, so it would be an imperfect match to the "explicit selector decides" rule the theme model states. Open as a question, not a commitment: only worth doing if the asymmetry between token colors (system-aware) and `dark:` utilities (selector-only) turns out to bite a real consumer.
+
 ## Aesthetics assessed and deferred
 
 Both were costed against the current model and neither fits it. Recorded so the question is not reopened from scratch.
