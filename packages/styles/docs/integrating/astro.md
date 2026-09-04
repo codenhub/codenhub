@@ -1,11 +1,14 @@
 ---
 title: Astro
 description: Loading the stylesheet in an Astro app.
+order: 5
 ---
 
 # Astro
 
-Import the package from a shared layout's frontmatter so every page that uses that layout loads it once:
+Astro renders components statically by default, but a global stylesheet import still only needs to happen once — from a shared layout, not from individual pages or islands.
+
+## Import the stylesheet
 
 ```astro
 ---
@@ -20,6 +23,13 @@ import "@codenhub/styles";
 </html>
 ```
 
+Every page that uses this layout loads the stylesheet once. Running Tailwind CSS v4? Import `@codenhub/styles/tw` through Astro's Tailwind integration instead — see [Tailwind CSS v4](./tailwind.md) for the `@source` directive Astro needs to scan `src/`.
+
+## Force a theme
+
 Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Setup → Configuration](../setup.md#configuration).
 
-A project running Tailwind CSS v4 imports `@codenhub/styles/tw` through Astro's Tailwind integration instead; see [Tailwind CSS v4](./tailwind.md) for the `@source` directive Astro needs to scan `src/`.
+## See also
+
+- [Setup → Import paths](../setup.md#import-paths): every entrypoint this package publishes.
+- [Usage](../usage/index.md): component classes to compose once the stylesheet is loaded.
