@@ -265,3 +265,35 @@ for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
     }
   });
 }
+
+/* Tailwind's content detection scans the whole package directory, and the
+   compiled entrypoints narrow it back to `src/` with `@source not`. A miss in
+   that list leaks: a `--color-<family>-<shade>` that appears only in a docs
+   example -- the violet ramp in `docs/usage/theming.md`'s custom-intent block --
+   compiles into a real `@theme` entry in the shipped CSS. This holds every
+   palette color the build declares to one the stylesheet source actually
+   references (comments included, because Tailwind scans those too). */
+test("compiled entrypoints ship only palette colors the source references", async () => {
+  const sourceDirectory = path.resolve(packageRoot, "src");
+  const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
+    (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
+  );
+  const sourceText = (
+    await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))
+  ).join("\n");
+  const referenced = new Set(sourceText.match(/--color-[a-z]+-\d+/g) ?? []);
+
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/native.css", "dist/components.css", "dist/theme.css"].map(async (target) => ({
+      target,
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+    })),
+  );
+  const leaks = outputs.flatMap(({ target, output }) =>
+    [...new Set(output.match(/--color-[a-z]+-\d+(?=\s*:)/g) ?? [])]
+      .filter((declared) => !referenced.has(declared))
+      .map((declared) => `${target} declares ${declared}, which src/ never references`),
+  );
+
+  expect(leaks).toEqual([]);
+});

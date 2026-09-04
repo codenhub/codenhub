@@ -1,11 +1,18 @@
 @reference "tailwindcss";
 @import "tailwindcss/utilities.css";
+/* Everything that is not `src/` -- see the note in `index.css`. Keeps a class
+   name in a docs code fence from shipping as a real rule in `dist/components.css`. */
 @source not "../../dist";
 @source not "../../tests";
 @source not "../../dev";
 @source not "../../debug";
 @source not "../../demo";
 @source not "../../playground";
+@source not "../../docs";
+@source not "../../scripts";
+@source not "../../*.md";
+@source not "../../*.txt";
+@source not "../../*.json";
 @import "../theme.css";
 @import "../typography.css";
 @import "../box.css";
@@ -16,4 +23,13 @@
 @import "./surface.css";
 @import "./tooltip.css";
 
-@source inline("text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");
+/* `box`, `box-hover`, `box-active` and `loader-mask` are `@utility` rules that
+   never appear as a bare `.box` selector in `src/` -- only as `@utility` blocks
+   and `@apply` targets, neither of which is a class candidate the content scan
+   emits a standalone rule for. They shipped as standalone rules only because
+   docs prose happened to name them, and excluding `docs/` from the scan removed
+   that. Safelisting them here makes the emission deliberate; `exports.test.ts`'s
+   "emits every @utility its source tree defines" check fails the build if one is
+   dropped. The `.text-control`, `.surface` and `.input-group` utilities do not
+   need this -- they appear as real selectors in `intent.css` and `form.css`. */
+@source inline("box box-hover box-active loader-mask text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert badge skeleton progress tooltip card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");

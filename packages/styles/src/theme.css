@@ -2,12 +2,19 @@
 @import "./intent.css";
 @import "./presentation.css";
 @import "./elevation.css";
+/* Everything that is not `src/` -- see the note in `index.css`. Keeps a
+   `--color-*` reference in a docs example from shipping as a real theme entry. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";
 @source not "../debug";
 @source not "../demo";
 @source not "../playground";
+@source not "../docs";
+@source not "../scripts";
+@source not "../*.md";
+@source not "../*.txt";
+@source not "../*.json";
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
    point of use against the consuming element's computed `color-scheme`. Theme
