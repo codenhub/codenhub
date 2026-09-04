@@ -4,6 +4,8 @@ title: Overview
 
 # Replace icon markers at build time
 
+> [!WARNING] Deprecated: superseded by [`@codenhub/icons`](https://github.com/codenhub/codenhub/tree/main/packages/icons)'s own `@codenhub/icons/vite` entry point, which covers the same marker-driven usage across a much larger icon set. Retained for existing consumers; do not adopt for new projects.
+
 `@codenhub/vite-plugin-icons` replaces static icon markers with inline SVG while Vite transforms HTML, JavaScript, TypeScript, JSX, and TSX. It includes a Lucide-derived registry and accepts trusted custom SVG definitions.
 
 ## Setup

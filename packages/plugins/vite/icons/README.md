@@ -2,7 +2,7 @@
 
 Vite plugin that replaces `<i class="ic-<name>">` marker elements with inline SVG during Vite HTML and JS/TS/JSX/TSX transforms.
 
-> [!WARNING] Experimental: marker matching, the built-in icon set, generated SVG, and plugin API may change before a stable release.
+> [!WARNING] Deprecated: superseded by [`@codenhub/icons`](https://github.com/codenhub/codenhub/tree/main/packages/icons)'s own `@codenhub/icons/vite` entry point, which covers the same marker-driven usage across a much larger icon set. Retained for existing consumers; do not adopt for new projects.
 
 ## Installation
 
