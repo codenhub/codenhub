@@ -1,6 +1,7 @@
 ---
 title: Concepts
 description: The three-axis model, the token system, and how theme selection works.
+order: 2
 ---
 
 # Concepts

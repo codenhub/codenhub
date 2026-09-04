@@ -1,6 +1,7 @@
 ---
 title: Aesthetics
 description: The four shipped aesthetics in depth, including their documented exceptions.
+order: 4
 ---
 
 # Aesthetics

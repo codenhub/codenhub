@@ -1,6 +1,7 @@
 ---
 title: Theming
 description: The color, intent, and foundation token reference.
+order: 2
 ---
 
 # Theming

@@ -1,6 +1,7 @@
 ---
 title: Forms
 description: Field, text control, and toggle class reference.
+order: 6
 ---
 
 # Forms
@@ -25,7 +26,9 @@ description: Field, text control, and toggle class reference.
 
 ## Icons
 
-The package ships no icons. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons are the consumer's to choose now.
+No icon is shipped for text inputs — that's what this section covers. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons for `.input-group` are the consumer's to choose now.
+
+This is separate from the toggle marks below and the alert icons in [Feedback](./feedback.md#example): those are small, fixed, built-in glyphs — not a per-input icon system — and aren't affected by this change.
 
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 

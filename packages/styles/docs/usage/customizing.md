@@ -1,6 +1,7 @@
 ---
 title: Customizing
 description: Presentation and material token reference, and aesthetic knobs.
+order: 3
 ---
 
 # Customizing
