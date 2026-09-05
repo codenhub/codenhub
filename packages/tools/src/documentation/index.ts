@@ -61,3 +61,13 @@ export {
   type PublicPackageSummary,
 } from "./package-metadata.ts";
 export { discoverPublicResources, type DiscoveredResource, type PublicResource } from "./public-resources.ts";
+export {
+  buildReferenceModel,
+  type ReferenceEntrypoint,
+  type ReferenceMember,
+  type ReferenceMemberKind,
+  type ReferenceModel,
+  type ReferenceNamedDoc,
+  type ReferenceSymbol,
+  type ReferenceSymbolKind,
+} from "./reference-model.ts";
