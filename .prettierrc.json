@@ -1,4 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/prettierrc",
-  "proseWrap": "never"
+  "proseWrap": "never",
+  "overrides": [
+    {
+      "files": "**/docs/reference/**/*.md",
+      "options": { "embeddedLanguageFormatting": "off" }
+    }
+  ]
 }

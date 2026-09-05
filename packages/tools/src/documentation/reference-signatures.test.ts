@@ -18,6 +18,7 @@ export declare class Registry<T> extends Base implements Frozen {
 }
 export type Result<T> = Ok<T> | Err;
 export declare const DEFAULT_APP_ERROR_MESSAGE: "Something went wrong";
+export declare const browserErrorRegistry: import("../types.js").ReadonlyErrorRegistry;
 export declare enum Level {
     Low = 0,
     High = 1
@@ -56,10 +57,16 @@ describe("extractSignatures", () => {
     expect([...(registry?.members ?? [])]).toEqual([["add", "add(name: string, value: T): void;"]]);
   });
 
-  it("keeps a type alias and a variable declaration whole", () => {
+  it("keeps a type alias and a variable declaration whole, with a terminating semicolon", () => {
     expect(index.get("Result")?.text).toBe("export type Result<T> = Ok<T> | Err;");
     expect(index.get("DEFAULT_APP_ERROR_MESSAGE")?.text).toBe(
-      'export declare const DEFAULT_APP_ERROR_MESSAGE: "Something went wrong"',
+      'export declare const DEFAULT_APP_ERROR_MESSAGE: "Something went wrong";',
+    );
+  });
+
+  it('strips `import("...").` prefixes from a signature', () => {
+    expect(index.get("browserErrorRegistry")?.text).toBe(
+      "export declare const browserErrorRegistry: ReadonlyErrorRegistry;",
     );
   });
 

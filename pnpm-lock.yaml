@@ -784,6 +784,9 @@ importers:
       esbuild:
         specifier: 'catalog:'
         version: 0.28.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.9.6
       typedoc:
         specifier: 'catalog:'
         version: 0.28.20(typescript@6.0.3)

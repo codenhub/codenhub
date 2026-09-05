@@ -94,6 +94,16 @@ function addSignature(index: SignatureIndex, name: string, signature: SymbolSign
   existing.overloads = [...(existing.overloads ?? []), signature.text];
 }
 
+/** `import("../types").ReadonlyErrorRegistry` → `ReadonlyErrorRegistry`; adds a terminating `;`. */
+function tidy(text: string, terminate: boolean): string {
+  const stripped = text.replace(/import\((["'])[^"']*\1\)\./g, "").trim();
+  return terminate && !stripped.endsWith(";") ? `${stripped};` : stripped;
+}
+
+function modifiersText(node: ts.HasModifiers, source: ts.SourceFile): string {
+  return (ts.getModifiers(node) ?? []).map((modifier) => modifier.getText(source)).join(" ");
+}
+
 function collectDeclarations(source: ts.SourceFile): SignatureIndex {
   const index: SignatureIndex = new Map();
 
@@ -101,7 +111,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
     if (ts.isFunctionDeclaration(statement) && isExported(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
-        addSignature(index, name, { text: headerText(statement, source) });
+        addSignature(index, name, { text: tidy(headerText(statement, source), true) });
       }
       continue;
     }
@@ -109,20 +119,23 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
     if ((ts.isClassDeclaration(statement) || ts.isInterfaceDeclaration(statement)) && isExported(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
-        index.set(name, { members: memberEntries(statement.members, source), text: headerText(statement, source) });
+        index.set(name, {
+          members: memberEntries(statement.members, source),
+          text: tidy(headerText(statement, source), false),
+        });
       }
       continue;
     }
 
     if (ts.isTypeAliasDeclaration(statement) && isExported(statement)) {
-      index.set(statement.name.text, { text: statement.getText(source) });
+      index.set(statement.name.text, { text: tidy(statement.getText(source), true) });
       continue;
     }
 
     if (ts.isEnumDeclaration(statement) && isExported(statement)) {
       index.set(statement.name.text, {
         members: memberEntries(statement.members, source),
-        text: `${(ts.getModifiers(statement) ?? []).map((modifier) => modifier.getText(source)).join(" ")} enum ${statement.name.text}`.trim(),
+        text: `${modifiersText(statement, source)} enum ${statement.name.text}`.trim(),
       });
       continue;
     }
@@ -131,10 +144,10 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
       for (const declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name)) {
           const keyword = statement.declarationList.flags & ts.NodeFlags.Const ? "const" : "let";
-          const modifiers = (ts.getModifiers(statement) ?? []).map((modifier) => modifier.getText(source));
-          index.set(declaration.name.text, {
-            text: [...modifiers, keyword, declaration.getText(source)].filter((part) => part !== "").join(" "),
-          });
+          const parts = [modifiersText(statement, source), keyword, declaration.getText(source)].filter(
+            (part) => part !== "",
+          );
+          index.set(declaration.name.text, { text: tidy(parts.join(" "), true) });
         }
       }
       continue;

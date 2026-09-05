@@ -4,6 +4,7 @@
     "composite": true,
     "lib": ["ESNext"],
     "noEmit": true,
+    "skipLibCheck": true,
     "types": ["node"]
   },
   "extends": "../../tsconfig.json",
