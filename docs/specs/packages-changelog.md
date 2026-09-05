@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -52,7 +52,7 @@ Releasing a new version means adding its file and one link here. Dropping an old
 
 Each released version gets its own file, named after the exact released version string: `1.2.0.md`, `2.0.0-beta.1.md`. This is a deliberate exception to the general kebab-case filename rule in `docs/specs/packages-documentation.md` — a version number isn't word-based, so kebab-casing it would only obscure the version it names. The exception is defined here, as a rule of this document, not as a package-specific bypass, so it does not need an entry in `docs/specs/packages-exceptions.md`.
 
-A version page's frontmatter needs only `title` (and, optionally, `description`) — the same as any ordinary public document. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
+A version page's frontmatter needs only `title`, the same as any ordinary public document. It SHOULD also set `date` to the release date in ISO `YYYY-MM-DD` form, and MAY set `description`. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 
 A version page exists only for a version that has actually been released. Do not keep a running "Unreleased" page; write the page when the version ships.
 

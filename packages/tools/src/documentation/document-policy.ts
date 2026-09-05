@@ -11,6 +11,12 @@ export interface PublicDocumentFrontmatter {
    * order, are published. Absent on every other page.
    */
   curated?: boolean;
+  /**
+   * Optional release date, as an ISO `YYYY-MM-DD` string. Valid only on a
+   * changelog version page: a non-index Markdown file directly under a package
+   * `changelog/` folder. Absent on every other page.
+   */
+  date?: string;
   /** Optional page summary. */
   description?: string;
   /**
@@ -27,9 +33,15 @@ export interface PublicDocumentFrontmatter {
   title: string;
 }
 
-const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "description", "group", "order", "title"]);
+const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "date", "description", "group", "order", "title"]);
 
 const FOLDER_INDEX = /^[^/]+\/index\.md$/;
+
+// A non-index Markdown file directly under a package `changelog/` folder, such
+// as `changelog/1.2.0.md`. Single-level, matching `FOLDER_INDEX`.
+const CHANGELOG_VERSION_PAGE = /^changelog\/(?!index\.md$)[^/]+\.md$/;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Reduces a document source path to its path relative to the package `docs/`
@@ -134,10 +146,51 @@ function readOptionalCurated(frontmatter: Record<string, unknown>, sourcePath: s
 }
 
 /**
+ * Coerces a frontmatter `date` value to an ISO `YYYY-MM-DD` string.
+ *
+ * The repository's own frontmatter parser yields strings, while a bundler's YAML
+ * parser may yield a `Date`, so both are accepted. A string must already be in
+ * `YYYY-MM-DD` form. Anything that is not a real calendar date, such as
+ * `2026-02-30`, resolves to `undefined`.
+ * @param value Raw `date` frontmatter value.
+ * @returns The ISO date string, or `undefined` when the value cannot be one.
+ */
+export function coercePublicDocumentDate(value: unknown): string | undefined {
+  const text =
+    value instanceof Date
+      ? Number.isNaN(value.getTime())
+        ? ""
+        : value.toISOString().slice(0, 10)
+      : typeof value === "string"
+        ? value.trim()
+        : "";
+  if (!ISO_DATE.test(text)) {
+    return undefined;
+  }
+  const [year, month, day] = text.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  const isRealDate =
+    parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+  return isRealDate ? text : undefined;
+}
+
+function readOptionalDate(frontmatter: Record<string, unknown>, sourcePath: string): string | undefined {
+  const value = frontmatter.date;
+  if (value === undefined) {
+    return undefined;
+  }
+  const date = coercePublicDocumentDate(value);
+  if (date === undefined) {
+    throw new Error(`Invalid date frontmatter in ${sourcePath}: expected an ISO YYYY-MM-DD calendar date.`);
+  }
+  return date;
+}
+
+/**
  * Validates public document frontmatter against its closed schema.
  * @param frontmatter Parsed frontmatter fields.
  * @param sourcePath Document path used in error messages and to place the document.
- * @returns The validated title, optional description, section label, order, and curated flag.
+ * @returns The validated title, optional description, section label, order, curated flag, and release date.
  * @throws When a field is unknown, missing, empty, or not allowed on this path.
  */
 export function parsePublicDocumentFrontmatter(
@@ -163,9 +216,14 @@ export function parsePublicDocumentFrontmatter(
   if (curated !== undefined && !FOLDER_INDEX.test(relativePath)) {
     throw new Error(`Invalid curated frontmatter in ${sourcePath}: only a folder index page can be curated.`);
   }
+  const date = readOptionalDate(frontmatter, sourcePath);
+  if (date !== undefined && !CHANGELOG_VERSION_PAGE.test(relativePath)) {
+    throw new Error(`Invalid date frontmatter in ${sourcePath}: only a changelog version page can set a release date.`);
+  }
 
   return {
     curated,
+    date,
     description: readOptionalDescription(frontmatter, sourcePath),
     group,
     order,
