@@ -98,4 +98,41 @@ describe("applyFolderCuration", () => {
 
     expect(paths(applyFolderCuration(documents))).toEqual(["changelog/index.md"]);
   });
+
+  it("matches a sibling link that carries a fragment or query string", () => {
+    const documents = [
+      document("changelog/index.md", {
+        curated: true,
+        rawHtml: `<a href="1.0.0.md#fixed">1.0.0</a> <a href="0.9.0.md?utm=x">0.9.0</a>`,
+      }),
+      document("changelog/1.0.0.md"),
+      document("changelog/0.9.0.md"),
+    ];
+
+    const result = applyFolderCuration(documents);
+
+    expect(paths(result)).toEqual(["changelog/index.md", "changelog/1.0.0.md", "changelog/0.9.0.md"]);
+  });
+
+  it("curates a nested folder by its own immediate index, not an ancestor's", () => {
+    const documents = [
+      document("guides/index.md"),
+      document("guides/setup.md"),
+      document("guides/advanced/index.md", {
+        curated: true,
+        rawHtml: `<a href="deep-dive.md">Deep dive</a>`,
+      }),
+      document("guides/advanced/deep-dive.md"),
+      document("guides/advanced/unlisted.md"),
+    ];
+
+    const result = applyFolderCuration(documents);
+
+    expect(paths(result)).toEqual([
+      "guides/index.md",
+      "guides/setup.md",
+      "guides/advanced/index.md",
+      "guides/advanced/deep-dive.md",
+    ]);
+  });
 });

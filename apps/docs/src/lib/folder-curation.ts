@@ -13,7 +13,7 @@ export interface CuratableDocument {
 }
 
 function folderSegment(relativePath: string): string | undefined {
-  const separator = relativePath.indexOf("/");
+  const separator = relativePath.lastIndexOf("/");
   return separator === -1 ? undefined : relativePath.slice(0, separator);
 }
 
@@ -29,6 +29,16 @@ function basename(relativePath: string): string {
  */
 function extractLinkTargets(html: string): string[] {
   return [...html.matchAll(LOCAL_HREF)].map((match) => match[2]!);
+}
+
+/**
+ * Reduces a link target to the filename a sibling document can be matched
+ * against, stripping a leading `./`, and any query string or fragment.
+ * @param target Raw `href`/`src` attribute value.
+ * @returns The bare filename the target points at.
+ */
+function normalizeLinkTarget(target: string): string {
+  return target.replace(/^\.\//, "").replace(/[?#].*$/, "");
 }
 
 /**
@@ -77,7 +87,7 @@ export function applyFolderCuration<T extends CuratableDocument>(documents: read
     );
     const linkedNames = new Set<string>();
     for (const target of extractLinkTargets(indexDocument.rawHtml)) {
-      linkedNames.add(target.replace(/^\.\//, ""));
+      linkedNames.add(normalizeLinkTarget(target));
     }
 
     result.push(indexDocument);

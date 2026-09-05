@@ -31,7 +31,7 @@ docs/
 
 Set `curated: true` in its frontmatter, per `docs/specs/packages-documentation.md`. That flag tells the documentation site that this page's job is to list what to publish, not to be read as an article: only the version pages it links to, in the order it links them, get a route, a nav entry, and a search hit. It MAY also set `group` (for example `group: Changelog`) to label its sidebar section.
 
-Its body is exactly an ordered list of links, newest first, and nothing else:
+After the required H1, its body is an ordered list of links, newest first, and nothing else:
 
 ```markdown
 ---
