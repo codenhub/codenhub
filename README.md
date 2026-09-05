@@ -98,6 +98,7 @@ Read these before changing package behavior, public APIs, or project conventions
 - `docs/tooling.md`: root scripts, the `hub` CLI, and package script rules.
 - `docs/ci.md`: the pinned toolchain and the pull-request workflow.
 - `docs/code-guidelines.md`: coding conventions and enforceable quality rules.
+- `docs/specs/packages-changelog.md`: recommended per-package changelog format and location.
 - `docs/specs/packages-demo.md`: general contract for package demos and the app that aggregates them into one deployed surface.
 - `docs/specs/packages-development.md`: optional package-local playground, dev, debug, and demo workflow for real usage scenarios and deployable demos.
 - `docs/specs/packages-documentation.md`: public and internal package documentation requirements.

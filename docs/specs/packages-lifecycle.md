@@ -161,6 +161,8 @@ Breaking changes MUST update the package README and any relevant `docs/` files i
 
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
+Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above.
+
 ## Documentation relationship
 
 Package README files MUST follow `docs/specs/packages-readme.md`.
