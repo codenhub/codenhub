@@ -75,7 +75,7 @@ Package-specific requirements that affect first use MUST appear in the README; f
 README files MAY add concise sections when they materially help first use:
 
 - API overview.
-- Changelog link.
+- Changelog link, recommended per `docs/specs/packages-changelog.md`.
 - Related packages.
 
 ### Features or support status

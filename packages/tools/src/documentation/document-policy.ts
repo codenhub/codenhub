@@ -5,6 +5,12 @@ interface HeadingDefinition {
 
 /** Closed presentation frontmatter schema for public package documents. */
 export interface PublicDocumentFrontmatter {
+  /**
+   * Whether a folder's `index.md` is a functional entrypoint rather than an
+   * ordinary page: only the sibling documents it links to, in that link
+   * order, are published. Absent on every other page.
+   */
+  curated?: boolean;
   /** Optional page summary. */
   description?: string;
   /**
@@ -21,7 +27,7 @@ export interface PublicDocumentFrontmatter {
   title: string;
 }
 
-const ALLOWED_FRONTMATTER_FIELDS = new Set(["description", "group", "order", "title"]);
+const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "description", "group", "order", "title"]);
 
 const FOLDER_INDEX = /^[^/]+\/index\.md$/;
 
@@ -95,10 +101,43 @@ function readOptionalGroup(frontmatter: Record<string, unknown>, sourcePath: str
 }
 
 /**
+ * Coerces a frontmatter `curated` value to a boolean.
+ *
+ * The Markdown frontmatter parser yields strings, while a bundler's own parser
+ * yields booleans, so both are accepted. Anything else resolves to `undefined`.
+ * @param value Raw `curated` frontmatter value.
+ * @returns The flag, or `undefined` when the value cannot be one.
+ */
+export function coercePublicDocumentCurated(value: unknown): boolean | undefined {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "false") {
+      return normalized === "true";
+    }
+  }
+  return undefined;
+}
+
+function readOptionalCurated(frontmatter: Record<string, unknown>, sourcePath: string): boolean | undefined {
+  const value = frontmatter.curated;
+  if (value === undefined) {
+    return undefined;
+  }
+  const curated = coercePublicDocumentCurated(value);
+  if (curated === undefined) {
+    throw new Error(`Invalid curated frontmatter in ${sourcePath}: expected a boolean.`);
+  }
+  return curated;
+}
+
+/**
  * Validates public document frontmatter against its closed schema.
  * @param frontmatter Parsed frontmatter fields.
  * @param sourcePath Document path used in error messages and to place the document.
- * @returns The validated title, optional description, section label, and order.
+ * @returns The validated title, optional description, section label, order, and curated flag.
  * @throws When a field is unknown, missing, empty, or not allowed on this path.
  */
 export function parsePublicDocumentFrontmatter(
@@ -120,8 +159,13 @@ export function parsePublicDocumentFrontmatter(
   if (group !== undefined && !FOLDER_INDEX.test(relativePath)) {
     throw new Error(`Invalid group frontmatter in ${sourcePath}: only a folder index page can set a section label.`);
   }
+  const curated = readOptionalCurated(frontmatter, sourcePath);
+  if (curated !== undefined && !FOLDER_INDEX.test(relativePath)) {
+    throw new Error(`Invalid curated frontmatter in ${sourcePath}: only a folder index page can be curated.`);
+  }
 
   return {
+    curated,
     description: readOptionalDescription(frontmatter, sourcePath),
     group,
     order,
