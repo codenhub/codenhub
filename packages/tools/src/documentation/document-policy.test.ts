@@ -84,6 +84,30 @@ describe("public document policy", () => {
     expect(parsed.group).toBe("Guides");
   });
 
+  it("accepts a curated flag as a boolean or a string on a folder index page", () => {
+    expect(
+      parsePublicDocumentFrontmatter({ curated: true, title: "Changelog" }, "docs/changelog/index.md").curated,
+    ).toBe(true);
+    expect(
+      parsePublicDocumentFrontmatter({ curated: "false", title: "Changelog" }, "docs/changelog/index.md").curated,
+    ).toBe(false);
+  });
+
+  it("rejects a curated value that is not a boolean", () => {
+    expect(() =>
+      parsePublicDocumentFrontmatter({ curated: "yes", title: "Changelog" }, "docs/changelog/index.md"),
+    ).toThrow("Invalid curated frontmatter");
+  });
+
+  it("rejects a curated flag anywhere but a folder index page", () => {
+    expect(() => parsePublicDocumentFrontmatter({ curated: true, title: "Overview" }, "docs/index.md")).toThrow(
+      "only a folder index page",
+    );
+    expect(() => parsePublicDocumentFrontmatter({ curated: true, title: "1.2.0" }, "docs/changelog/1.2.0.md")).toThrow(
+      "only a folder index page",
+    );
+  });
+
   it("rejects documents without an H1", () => {
     expect(() => assertSingleH1([{ depth: 2 }], "docs/api.md")).toThrow("exactly one H1");
   });

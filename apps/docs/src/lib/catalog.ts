@@ -9,6 +9,7 @@ import {
 } from "@codenhub/tools/documentation";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
+import { applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
 type PublicDocumentModule = MarkdownInstance<Record<string, unknown>>;
@@ -54,11 +55,18 @@ const documentModules = import.meta.glob<PublicDocumentModule>([
   "!../../../../packages/**/docs/internal/**",
 ]);
 
+interface LoadedDocument extends PublicDocument {
+  /** Whether this document is a folder's curated entrypoint. Stripped before publication. */
+  curated?: boolean;
+  /** Compiled HTML before local links are rewritten, used only to resolve curated-folder links. */
+  rawHtml: string;
+}
+
 async function loadCatalog(): Promise<PublicPackage[]> {
   return Promise.all(
     packageDefinitions.map(async (packageDefinition) => {
-      const documents = await Promise.all(
-        packageDefinition.documents.map(async (definition): Promise<PublicDocument> => {
+      const loadedDocuments = await Promise.all(
+        packageDefinition.documents.map(async (definition): Promise<LoadedDocument> => {
           const loadDocument = documentModules[definition.sourcePath];
           if (loadDocument === undefined) {
             throw new Error(`Unable to load documentation source ${definition.sourcePath}.`);
@@ -68,16 +76,19 @@ async function loadCatalog(): Promise<PublicPackage[]> {
           const headings = documentModule.getHeadings();
           const frontmatter = parsePublicDocumentFrontmatter(documentModule.frontmatter, definition.sourcePath);
           assertSingleH1(headings, definition.sourcePath);
+          const rawHtml = await documentModule.compiledContent();
 
           return {
+            curated: frontmatter.curated,
             description: frontmatter.description,
             group: frontmatter.group,
             headings,
-            html: rewritePackageMarkdownLinks(await documentModule.compiledContent(), {
+            html: rewritePackageMarkdownLinks(rawHtml, {
               packageSlug: packageDefinition.slug,
               sourceRelativePath: definition.relativePath,
             }),
             order: frontmatter.order,
+            rawHtml,
             relativePath: definition.relativePath,
             route: `/${packageDefinition.slug}/${definition.routePath}`.replace(/\/$/, "") + "/",
             routePath: definition.routePath,
@@ -86,6 +97,9 @@ async function loadCatalog(): Promise<PublicPackage[]> {
         }),
       );
 
+      const documents: PublicDocument[] = applyFolderCuration(loadedDocuments).map(
+        ({ curated: _curated, rawHtml: _rawHtml, ...document }) => document,
+      );
       documents.sort(comparePublicDocuments);
 
       return {
