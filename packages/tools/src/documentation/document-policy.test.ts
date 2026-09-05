@@ -133,6 +133,21 @@ describe("public document policy", () => {
     ).toThrow("Invalid date frontmatter");
   });
 
+  it("accepts a date-only Date but rejects one carrying a time", () => {
+    expect(
+      parsePublicDocumentFrontmatter(
+        { date: new Date("2026-09-05T00:00:00.000Z"), title: "1.2.0" },
+        "docs/changelog/1.2.0.md",
+      ).date,
+    ).toBe("2026-09-05");
+    expect(() =>
+      parsePublicDocumentFrontmatter(
+        { date: new Date("2026-09-05T12:00:00.000Z"), title: "1.2.0" },
+        "docs/changelog/1.2.0.md",
+      ),
+    ).toThrow("Invalid date frontmatter");
+  });
+
   it("rejects a release date anywhere but a changelog version page", () => {
     expect(() =>
       parsePublicDocumentFrontmatter({ date: "2026-09-05", title: "Changelog" }, "docs/changelog/index.md"),

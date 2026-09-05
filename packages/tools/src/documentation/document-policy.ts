@@ -149,21 +149,26 @@ function readOptionalCurated(frontmatter: Record<string, unknown>, sourcePath: s
  * Coerces a frontmatter `date` value to an ISO `YYYY-MM-DD` string.
  *
  * The repository's own frontmatter parser yields strings, while a bundler's YAML
- * parser may yield a `Date`, so both are accepted. A string must already be in
- * `YYYY-MM-DD` form. Anything that is not a real calendar date, such as
- * `2026-02-30`, resolves to `undefined`.
+ * parser may yield a `Date` for an unquoted scalar. A string is taken as
+ * authored; a `Date` is accepted only when it carries no time-of-day component,
+ * so a full timestamp is rejected rather than truncated to a date (and possibly
+ * shifted a day by the UTC conversion). Anything that is not a real calendar
+ * date in `YYYY-MM-DD` form, such as `2026-02-30`, resolves to `undefined`.
  * @param value Raw `date` frontmatter value.
  * @returns The ISO date string, or `undefined` when the value cannot be one.
  */
 export function coercePublicDocumentDate(value: unknown): string | undefined {
-  const text =
-    value instanceof Date
-      ? Number.isNaN(value.getTime())
-        ? ""
-        : value.toISOString().slice(0, 10)
-      : typeof value === "string"
-        ? value.trim()
-        : "";
+  let text = "";
+  if (typeof value === "string") {
+    text = value.trim();
+  } else if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const isDateOnly =
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0;
+    text = isDateOnly ? value.toISOString().slice(0, 10) : "";
+  }
   if (!ISO_DATE.test(text)) {
     return undefined;
   }
