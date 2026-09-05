@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-05
 scope: Generated API reference documentation for public workspace packages.
 ---
@@ -8,7 +8,7 @@ scope: Generated API reference documentation for public workspace packages.
 
 This document defines a generated API reference for public workspace packages: a per-package, per-entrypoint set of Markdown pages compiled from the package's TypeScript declarations and source TSDoc by `pnpm generate`, published by the documentation site alongside the hand-authored public docs.
 
-It is a DRAFT. The mechanism, metadata shape, and page layout below are the agreed target; the generator, the `hub check` rule, and the documentation-site rendering are not implemented yet. Nothing in the repository is required to comply until this document is `APPROVED`. The rollout in "Adoption" below is the order that approval is expected to unblock.
+The generator, the `hub check` rule, and the documentation-site rendering this document describes are not built yet; this is the contract they will be built against. "Adoption" below is the order that work is expected to follow. Until a package opts in per "Opting in", nothing about it changes.
 
 ## Why it is generated
 
@@ -18,7 +18,7 @@ This is an addition to `docs/specs/packages-documentation.md`, not a replacement
 
 ## Scope
 
-This spec covers TypeScript packages only. The reference is compiled from emitted `.d.ts` declarations and the TSDoc attached to them. Packages that expose no TypeScript or JavaScript API, such as `@codenhub/styles`, are out of scope; a CSS reference, if it is ever built, is a separate document. JavaScript packages that ship JSDoc-typed source are covered by the same mechanism without a spec change, because the extractor reads JSDoc the same way it reads TSDoc; none exist today.
+This spec covers packages that ship TypeScript. The reference is compiled from emitted `.d.ts` declarations and the TSDoc attached to them. Packages that expose no API a declaration file can describe, such as the CSS-only `@codenhub/styles`, are out of scope; a CSS reference, if it is ever built, is a separate document. Plain JavaScript packages typed with JSDoc are also out of scope for now: the extractor could read JSDoc the same way it reads TSDoc, but no such package exists, and committing to that surface is a later revision of this spec rather than an implicit guarantee here.
 
 ## Opting in
 
@@ -66,9 +66,9 @@ docs/
 ```
 
 - Each documented entrypoint maps to exactly one page. A leaf entrypoint becomes `<name>.md`; an entrypoint that also has child entrypoints becomes a folder with an `index.md`. The `.` entrypoint is always `docs/reference/index.md`.
-- Page and folder names are the kebab-case `exports` subpath segments. `"./registries/browser"` is `reference/registries/browser.md`. A segment that is already kebab-case is used verbatim; the generator does not invent friendlier names.
+- Page and folder names are the `exports` subpath segments verbatim. `"./registries/browser"` is `reference/registries/browser.md`. Every documented entrypoint's subpath segments MUST already be kebab-case, matching the filename rule in `docs/specs/packages-documentation.md`. The generator does not normalize a segment: rewriting `./fooBar` to `foo-bar` could silently collide with a real `./foo-bar` entrypoint. A documented entrypoint whose segment is not kebab-case, or whose page path would collide with another's, is a `reference/entrypoint` finding and stops generation for that package.
 - `docs/reference/index.md` is an ordinary public document, not a `curated: true` router. It documents the `.` entrypoint and, by being the area's `index.md`, is placed first by publishing tools per `docs/specs/packages-documentation.md`. Sibling order is controlled by a generated `order` value on each page.
-- The generated area is `docs/reference/` and only `docs/reference/`. A hand-authored `docs/reference.md` or a hand-authored page inside `docs/reference/` is invalid; the generator owns the whole directory.
+- The generated area is `docs/reference/` and only `docs/reference/`. A hand-authored `docs/reference.md`, or any file under `docs/reference/` the generator did not produce, is invalid; the generator owns the whole directory. Because `hub generate` writes but never deletes, a page left behind by a removed or renamed entrypoint MUST be deleted in the same change — `reference/unexpected-file` (see "Validation") fails the run until it is.
 
 ### Frontmatter
 
@@ -93,13 +93,13 @@ Editing a generated page is pointless: the next `pnpm generate` overwrites it, a
 
 A page's H1 is its `title`. Below it, each public symbol reachable from that entrypoint is a section:
 
-- Symbols are grouped by kind under H2 headings in this order: **Functions**, **Classes**, **Interfaces**, **Type aliases**, **Variables**, **Namespaces**. A group with no members is omitted.
-- Within a group, each symbol is an H3 named exactly as it is exported. Members are alphabetical within their group.
+- Symbols are grouped by kind under H2 headings in this order: **Functions**, **Classes**, **Interfaces**, **Type aliases**, **Enumerations**, **Variables**, **Namespaces**. A group with no members is omitted. An export whose kind is none of these is a `reference/unsupported-export` finding, not a silent omission.
+- Within a group, each symbol is an H3 named exactly as it is exported. A default export is named after its declaration; an anonymous default export is named `default`. `docs/code-guidelines.md` already steers library code to named exports, so this is expected to be rare. Members are alphabetical within their group.
 - Each symbol section contains, in order:
   1. A fenced `ts` block with the symbol's declaration signature, taken from the emitted `.d.ts`. Overloads are listed as separate lines in source order. Long signatures are emitted as written; the site is responsible for horizontal scroll.
   2. When `prose` is `true`: the symbol's TSDoc summary and remarks, rendered as Markdown, followed by its `@param`, `@returns`, `@throws`, `@defaultValue`, `@example`, and `@see` content under short bold labels. `@deprecated` is surfaced first, as a blockquote, so it is impossible to miss.
   3. For a class or interface: its public members, each with its own signature block and, when `prose` is `true`, its TSDoc.
-- `{@link Symbol}` references resolve to an anchor on the same page, or to `../other-entrypoint.md#symbol` when the target is documented under another entrypoint of the same package. A target that is not part of this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
+- `{@link Symbol}` references resolve to a fragment on whichever page documents the target. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
 - Re-exported symbols are documented on the entrypoint that exports them. A symbol exported from several entrypoints is documented on each, with the signature repeated; prose is repeated too, since these pages are read one at a time.
 
 When `prose` is `true` and a public symbol has no TSDoc, the page still lists it with its signature. The gap is a `warning`-level finding (see "Validation"), consistent with `docs/code-guidelines.md` requiring public-API TSDoc without yet enforcing it in lint.
@@ -129,11 +129,13 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 
 ## Validation
 
-`pnpm check` (`hub check`) gains a `reference` rule, implementing `CheckRule` and registered in `packages/tools/src/checks/registry.ts`. It `appliesTo` a package with a non-`false` `codenhub.docs.reference` and reports:
+`pnpm check` (`hub check`) gains a `reference` rule, implementing `CheckRule` and registered in `packages/tools/src/checks/registry.ts`. It `appliesTo` a package whose `codenhub.docs.reference` is an object — one that has opted in. An absent value and the literal `false` are both outside the rule. When the reference flips to default-on (see "Adoption"), that predicate widens to "not `false`" in the same change. The rule reports:
 
 - `reference/missing` — `error` — opted in, but `docs/reference/` is absent.
 - `reference/drift` — `error` — a generated page differs from what the generator produces now. This is the compliance-report view of the `hub generate --dry-run` gate.
-- `reference/entrypoint` — `error` — a configured `entrypoints` key or `exclude` glob does not resolve.
+- `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
+- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key or `exclude` glob does not resolve.
+- `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
 - `reference/undocumented-symbol` — `warning` — `prose` is `true` and a public symbol reachable from a documented entrypoint has no TSDoc.
 
 `error` findings fail the run; `warning` findings do not, per `docs/tooling.md`. Link, frontmatter, single-H1, and tarball-inclusion validation for the generated pages is the existing `documentation` rule's job; the generator MUST emit pages that pass it.
