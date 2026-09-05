@@ -46,7 +46,9 @@ curated: true
 - [1.0.0](1.0.0.md)
 ```
 
-Releasing a new version means adding its file and one link here. Dropping an old release from view means removing its link — the file itself is untouched, stays a normal valid public document, and keeps shipping wherever public `docs/` ships; it simply stops getting a page on the live site. Nothing needs deleting and nothing moves to `docs/internal/`.
+Releasing a new version means adding its file and one link here.
+
+Keep every released version linked. The list is meant to grow — a link is one line and nothing is ever renumbered — and removing a link has a cost: an unlinked version page gets no route, no navigation entry, and no search result on the documentation site, so a consumer still on that version can no longer look up what changed in their release. The file itself is untouched and keeps shipping wherever public `docs/` ships, so it stays in the package tarball regardless. Drop a link only when keeping the version visible would mislead more than help, such as a pre-1.0 entry that no longer describes any supported behavior. Nothing is ever deleted and nothing moves to `docs/internal/`.
 
 ### Version pages own only their own content
 
