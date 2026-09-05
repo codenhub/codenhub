@@ -1,4 +1,4 @@
-const LOCAL_HREF = /(?:href|src)=(['"])([^'"]+)\1/g;
+const ANCHOR_HREF = /<a\b[^>]*\bhref=(['"])([^'"]+)\1[^>]*>/gi;
 
 /** A document's fields relevant to curated-folder membership and ordering. */
 export interface CuratableDocument {
@@ -23,18 +23,21 @@ function basename(relativePath: string): string {
 }
 
 /**
- * Extracts local link targets from compiled HTML, in document order.
+ * Extracts navigational anchor link targets from compiled HTML, in document
+ * order. Resource attributes such as an image `src` are deliberately not a
+ * membership signal — only an `<a href>` counts as the index page linking to
+ * a sibling.
  * @param html Compiled HTML of one document.
- * @returns Every `href`/`src` attribute value found, including duplicates.
+ * @returns Every `<a href>` attribute value found, including duplicates.
  */
 function extractLinkTargets(html: string): string[] {
-  return [...html.matchAll(LOCAL_HREF)].map((match) => match[2]!);
+  return [...html.matchAll(ANCHOR_HREF)].map((match) => match[2]!);
 }
 
 /**
  * Reduces a link target to the filename a sibling document can be matched
  * against, stripping a leading `./`, and any query string or fragment.
- * @param target Raw `href`/`src` attribute value.
+ * @param target Raw `href` attribute value.
  * @returns The bare filename the target points at.
  */
 function normalizeLinkTarget(target: string): string {

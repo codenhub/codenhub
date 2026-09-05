@@ -114,6 +114,21 @@ describe("applyFolderCuration", () => {
     expect(paths(result)).toEqual(["changelog/index.md", "changelog/1.0.0.md", "changelog/0.9.0.md"]);
   });
 
+  it("ignores an image src that happens to match a sibling filename", () => {
+    const documents = [
+      document("changelog/index.md", {
+        curated: true,
+        rawHtml: `<img src="1.0.0.md?cache=1"> <a href="0.9.0.md">0.9.0</a>`,
+      }),
+      document("changelog/1.0.0.md"),
+      document("changelog/0.9.0.md"),
+    ];
+
+    const result = applyFolderCuration(documents);
+
+    expect(paths(result)).toEqual(["changelog/index.md", "changelog/0.9.0.md"]);
+  });
+
   it("curates a nested folder by its own immediate index, not an ancestor's", () => {
     const documents = [
       document("guides/index.md"),
