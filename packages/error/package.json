@@ -64,7 +64,8 @@
   "codenhub": {
     "docs": {
       "label": "ErrorKit",
-      "status": "active"
+      "status": "active",
+      "reference": {}
     }
   }
 }

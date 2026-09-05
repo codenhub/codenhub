@@ -29,6 +29,7 @@ Unmatched values become `type: "unknown"` and use `"An unexpected error occurred
 ## Documentation
 
 - [Documentation overview](docs/index.md)
+- [API reference](docs/reference/index.md)
 - [Error normalization and registries](docs/error-normalization.md)
 - [Result helpers](docs/results.md)
 

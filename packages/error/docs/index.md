@@ -48,3 +48,4 @@ Runtime code does not access browser or Node.js globals. Browser preset imports 
 
 - [Error normalization and registries](error-normalization.md) explains classification, registry configuration, presets, matching priority, defaults, and failure behavior.
 - [Result helpers](results.md) covers `Result` construction, transformation, matching, and unwrapping for code that prefers explicit success and failure values.
+- [API reference](reference/index.md) lists every export of each entrypoint with its signature and documentation, generated from the source.

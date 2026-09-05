@@ -28,14 +28,17 @@ export interface Err {
 export type Result<T> = Ok<T> | Err;
 
 /**
- * Creates a successful Result instance wrapping the provided value.
- * If no value is provided, returns an Ok<void> result.
- *
- * @typeParam T - The type of the value.
- * @param value - The optional success value to wrap.
- * @returns An Ok result object.
+ * Creates a successful `Ok<void>` Result with no value.
+ * @returns An Ok result object carrying no value.
  */
 export function ok(): Ok<void>;
+/**
+ * Creates a successful Result instance wrapping the provided value.
+ *
+ * @typeParam T - The type of the success value.
+ * @param value - The success value to wrap.
+ * @returns An Ok result object.
+ */
 export function ok<T>(value: T): Ok<T>;
 export function ok<T>(value?: T): Ok<T> {
   return Object.freeze({ ok: true, value: value as T });
