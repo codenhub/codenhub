@@ -71,6 +71,25 @@ Structure each version page's content with [Keep a Changelog](https://keepachang
 
 Each heading's content is a short bullet list. Describe the change from the consumer's point of view, the same way `docs/specs/packages-lifecycle.md` expects breaking changes to be documented — what changed and why it matters to someone upgrading, not which files moved.
 
+Putting the frontmatter and headings together, a complete `docs/changelog/1.2.0.md`:
+
+```markdown
+---
+title: 1.2.0
+date: 2026-09-05
+---
+
+# 1.2.0
+
+## Added
+
+- `parseConfig` accepts a `strict` option that rejects unknown keys instead of dropping them silently.
+
+## Fixed
+
+- `resolvePath` no longer throws on a trailing separator; it returns the normalized directory path.
+```
+
 ## Linking from the README
 
 `docs/specs/packages-readme.md` lists a changelog link as an optional README section. When a package has one, that link MUST point to `docs/changelog/index.md`.
