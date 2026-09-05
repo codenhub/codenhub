@@ -173,7 +173,12 @@ function stripLeadingDotSlash(fileName: string): string {
   return normalized.startsWith("./") ? normalized.slice(2) : normalized;
 }
 
-/** Flattens TypeDoc comment parts into a Markdown string. */
+/**
+ * Flattens TypeDoc comment parts into a Markdown string.
+ *
+ * `{@link Target}` inline tags are kept verbatim; the Markdown renderer resolves
+ * them to page links against the symbols it knows, falling back to inline code.
+ */
 function renderParts(parts: CommentPart[] | undefined): string {
   if (parts === undefined) {
     return "";
@@ -182,10 +187,8 @@ function renderParts(parts: CommentPart[] | undefined): string {
   return parts
     .map((part) => {
       if (part.kind === "inline-tag") {
-        // `{@link Target}` — the reference renderer turns a bare name into a
-        // page link later; here it stays inline code so the model is renderer-agnostic.
         const label = (part.text ?? "").trim();
-        return label === "" ? "" : `\`${label}\``;
+        return label === "" ? "" : `{@link ${label}}`;
       }
       return part.text ?? "";
     })
@@ -408,7 +411,7 @@ function sourceFileOf(target: Reflection): string | undefined {
  *
  * Signature text is not produced here: {@link ReferenceSymbol.signature} and
  * {@link ReferenceMember.signature} are filled from the emitted `.d.ts` after this
- * model is built. `{@link}` inline tags are left as inline code for the renderer to
+ * model is built. `{@link Name}` inline tags are kept verbatim for the renderer to
  * resolve. Members inherited from outside the package (`flags.isExternal`) are dropped.
  * @param project Parsed `typedoc --json` output.
  * @param subpathByModule Maps each TypeDoc module name to its `exports` subpath key.

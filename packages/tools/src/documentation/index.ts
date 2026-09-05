@@ -71,3 +71,11 @@ export {
   type ReferenceSymbol,
   type ReferenceSymbolKind,
 } from "./reference-model.ts";
+export {
+  attachSignatures,
+  buildSignatureResolver,
+  extractSignatures,
+  type SignatureIndex,
+  type SignatureResolver,
+  type SymbolSignature,
+} from "./reference-signatures.ts";
