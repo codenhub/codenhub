@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 scope: Documentation for public workspace packages.
 ---
 
@@ -123,7 +123,7 @@ Packages SHOULD adapt their structure when another organization better matches t
 
 Public documentation paths MUST be deterministic and portable:
 
-- Markdown file and directory names MUST use kebab-case.
+- Markdown file and directory names MUST use kebab-case, except version-named files in a package `changelog/` folder, which follow `docs/specs/packages-changelog.md`.
 - An `index.md` represents its containing documentation area.
 - Publishing tools MUST place the package-root `docs/index.md` before every other package page, and a folder's `index.md` before the other pages in that folder.
 - Sibling pages otherwise order by their frontmatter `order`, ascending, with pages that set none keeping their path order after those that do.
