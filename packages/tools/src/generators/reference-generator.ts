@@ -139,6 +139,9 @@ async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]):
       entryPointStrategy: "resolve",
       excludeInternal: true,
       logLevel: "Error",
+      // The package's own `pnpm typecheck` is the type gate; here a test file that
+      // self-imports the not-yet-built package must not abort the whole run.
+      skipErrorChecking: true,
       tsconfig: `${pkgDir}/tsconfig.json`,
     },
     [new TSConfigReader()],
