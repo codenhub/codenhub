@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-09-05
 scope: Generated API reference documentation for public workspace packages.
 ---
@@ -8,7 +8,7 @@ scope: Generated API reference documentation for public workspace packages.
 
 This document defines a generated API reference for public workspace packages: a per-package, per-entrypoint set of Markdown pages compiled from the package's TypeScript declarations and source TSDoc by `pnpm generate`, published by the documentation site alongside the hand-authored public docs.
 
-The generator, the `hub check` rule, and the documentation-site rendering this document describes are not built yet; this is the contract they will be built against. "Adoption" below is the order that work is expected to follow. Until a package opts in per "Opting in", nothing about it changes.
+The `reference` generator (`packages/tools/src/generators/reference-generator.ts`) and the `reference` compliance check implement this document; `@codenhub/error` is the first package to opt in. "Adoption" below is the order the rollout follows. Until a package opts in per "Opting in", nothing about it changes.
 
 ## Why it is generated
 
