@@ -108,6 +108,55 @@ describe("public document policy", () => {
     );
   });
 
+  it("accepts an ISO release date on a changelog version page", () => {
+    expect(parsePublicDocumentFrontmatter({ date: "2026-09-05", title: "1.2.0" }, "docs/changelog/1.2.0.md").date).toBe(
+      "2026-09-05",
+    );
+    expect(
+      parsePublicDocumentFrontmatter({ date: "2026-01-09", title: "2.0.0-beta.1" }, "docs/changelog/2.0.0-beta.1.md")
+        .date,
+    ).toBe("2026-01-09");
+  });
+
+  it("rejects a release date that is not an ISO YYYY-MM-DD string", () => {
+    expect(() =>
+      parsePublicDocumentFrontmatter({ date: "Sept 5, 2026", title: "1.2.0" }, "docs/changelog/1.2.0.md"),
+    ).toThrow("Invalid date frontmatter");
+    expect(() =>
+      parsePublicDocumentFrontmatter({ date: "2026-9-5", title: "1.2.0" }, "docs/changelog/1.2.0.md"),
+    ).toThrow("Invalid date frontmatter");
+  });
+
+  it("rejects a release date that is not a real calendar date", () => {
+    expect(() =>
+      parsePublicDocumentFrontmatter({ date: "2026-02-30", title: "1.2.0" }, "docs/changelog/1.2.0.md"),
+    ).toThrow("Invalid date frontmatter");
+  });
+
+  it("accepts a date-only Date but rejects one carrying a time", () => {
+    expect(
+      parsePublicDocumentFrontmatter(
+        { date: new Date("2026-09-05T00:00:00.000Z"), title: "1.2.0" },
+        "docs/changelog/1.2.0.md",
+      ).date,
+    ).toBe("2026-09-05");
+    expect(() =>
+      parsePublicDocumentFrontmatter(
+        { date: new Date("2026-09-05T12:00:00.000Z"), title: "1.2.0" },
+        "docs/changelog/1.2.0.md",
+      ),
+    ).toThrow("Invalid date frontmatter");
+  });
+
+  it("rejects a release date anywhere but a changelog version page", () => {
+    expect(() =>
+      parsePublicDocumentFrontmatter({ date: "2026-09-05", title: "Changelog" }, "docs/changelog/index.md"),
+    ).toThrow("only a changelog version page");
+    expect(() => parsePublicDocumentFrontmatter({ date: "2026-09-05", title: "API" }, "docs/api.md")).toThrow(
+      "only a changelog version page",
+    );
+  });
+
   it("rejects documents without an H1", () => {
     expect(() => assertSingleH1([{ depth: 2 }], "docs/api.md")).toThrow("exactly one H1");
   });

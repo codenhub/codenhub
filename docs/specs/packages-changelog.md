@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -46,13 +46,15 @@ curated: true
 - [1.0.0](1.0.0.md)
 ```
 
-Releasing a new version means adding its file and one link here. Dropping an old release from view means removing its link — the file itself is untouched, stays a normal valid public document, and keeps shipping wherever public `docs/` ships; it simply stops getting a page on the live site. Nothing needs deleting and nothing moves to `docs/internal/`.
+Releasing a new version means adding its file and one link here.
+
+Keep every released version linked. The list is meant to grow — a link is one line and nothing is ever renumbered — and removing a link has a cost: an unlinked version page gets no route, no navigation entry, and no search result on the documentation site, so a consumer still on that version can no longer look up what changed in their release. The file itself is untouched and keeps shipping wherever public `docs/` ships, so it stays in the package tarball regardless. Drop a link only when keeping the version visible would mislead more than help, such as a pre-1.0 entry that no longer describes any supported behavior. Nothing is ever deleted and nothing moves to `docs/internal/`.
 
 ### Version pages own only their own content
 
 Each released version gets its own file, named after the exact released version string: `1.2.0.md`, `2.0.0-beta.1.md`. This is a deliberate exception to the general kebab-case filename rule in `docs/specs/packages-documentation.md` — a version number isn't word-based, so kebab-casing it would only obscure the version it names. The exception is defined here, as a rule of this document, not as a package-specific bypass, so it does not need an entry in `docs/specs/packages-exceptions.md`.
 
-A version page's frontmatter needs only `title` (and, optionally, `description`) — the same as any ordinary public document. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
+A version page's frontmatter needs only `title`, the same as any ordinary public document. It SHOULD also set `date` to the release date in ISO `YYYY-MM-DD` form, and MAY set `description`. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 
 A version page exists only for a version that has actually been released. Do not keep a running "Unreleased" page; write the page when the version ships.
 
@@ -68,6 +70,25 @@ Structure each version page's content with [Keep a Changelog](https://keepachang
 - `## Security` — fixes for a vulnerability.
 
 Each heading's content is a short bullet list. Describe the change from the consumer's point of view, the same way `docs/specs/packages-lifecycle.md` expects breaking changes to be documented — what changed and why it matters to someone upgrading, not which files moved.
+
+Putting the frontmatter and headings together, a complete `docs/changelog/1.2.0.md`:
+
+```markdown
+---
+title: 1.2.0
+date: 2026-09-05
+---
+
+# 1.2.0
+
+## Added
+
+- `parseConfig` accepts a `strict` option that rejects unknown keys instead of dropping them silently.
+
+## Fixed
+
+- `resolvePath` no longer throws on a trailing separator; it returns the normalized directory path.
+```
 
 ## Linking from the README
 

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-04
+last_updated: 2026-09-05
 scope: Documentation for public workspace packages.
 ---
 
@@ -123,7 +123,7 @@ Packages SHOULD adapt their structure when another organization better matches t
 
 Public documentation paths MUST be deterministic and portable:
 
-- Markdown file and directory names MUST use kebab-case.
+- Markdown file and directory names MUST use kebab-case, except version-named files in a package `changelog/` folder, which follow `docs/specs/packages-changelog.md`.
 - An `index.md` represents its containing documentation area.
 - Publishing tools MUST place the package-root `docs/index.md` before every other package page, and a folder's `index.md` before the other pages in that folder.
 - Sibling pages otherwise order by their frontmatter `order`, ascending, with pages that set none keeping their path order after those that do.
@@ -164,6 +164,7 @@ Every public package `docs/**/*.md` file outside `docs/internal/` MUST start wit
 - `order`: OPTIONAL non-negative integer placing the page among its siblings, lowest first. It is invalid on the package `index.md`, which is always first. A folder's `index.md` `order` places that folder's whole section among its siblings.
 - `group`: OPTIONAL non-empty section label for a folder, valid only on that folder's `index.md`. Publishing tools that render folders as a labelled section MUST use it as the section label, independent of the index page's own `title`; absent it, the section label derives from the folder name.
 - `curated`: OPTIONAL boolean, valid only on a folder's `index.md`. When `true`, that page is a functional entrypoint rather than an ordinary page: publishing tools MUST treat only the sibling documents it links to, in that link order, as published for that folder, and MUST NOT publish, navigate to, or index a sibling it does not link. Unlinked siblings remain ordinary public documents for every other purpose, including this spec's other requirements and link validation.
+- `date`: OPTIONAL ISO `YYYY-MM-DD` string, valid only on a changelog version page: a non-index Markdown file directly under a package `changelog/` folder, per `docs/specs/packages-changelog.md`. It records the release date of the version the page documents. It does not affect ordering; a curated changelog `index.md` still controls order through its link list.
 
 Unknown fields, including repository governance fields, are invalid. Every public document MUST contain exactly one H1, but its text is unrestricted and independent from the frontmatter title. Frontmatter controls presentation metadata; Markdown controls article markup. Publishing tools MUST render the Markdown body as authored and MUST NOT inject titles, descriptions, package identifiers, status notices, or other metadata into the article body. Site chrome outside the article body MAY present package metadata, navigation, breadcrumbs, or status. Browser titles MUST add the package label between the page title and site title so pages with common titles remain distinguishable.
 
