@@ -170,3 +170,42 @@ describe("buildSignatureResolver", () => {
     expect(resolver.lookup("dist/index.d.ts", "missing")).toBeUndefined();
   });
 });
+
+describe("buildSignatureResolver local and imported aliases", () => {
+  it("resolves a local `export { local as public }` clause with no `from`", () => {
+    const resolver = buildSignatureResolver(
+      new Map([["m.d.ts", `declare function Internal(): void;\nexport { Internal as Public };`]]),
+    );
+    expect(resolver.lookup("m.d.ts", "Public")?.text).toBe("declare function Internal(): void;");
+  });
+
+  it("resolves an imported binding that is then re-exported by name", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `import { Thing as Renamed } from "./thing.js";\nexport { Renamed };`],
+        ["thing.d.ts", `export declare const Thing: number;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "Renamed")?.text).toBe("export declare const Thing: number;");
+  });
+
+  it("reaches one file through both a star edge and a renamed edge", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export * from "./m.js";\nexport { Internal as Public } from "./m.js";`],
+        ["m.d.ts", `export declare function Internal(): void;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "Public")?.text).toBe("export declare function Internal(): void;");
+  });
+
+  it("follows a `.d.mts` re-export target", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.mts", `export { helper } from "./helper.mjs";`],
+        ["helper.d.mts", `export declare function helper(): void;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.mts", "helper")?.text).toBe("export declare function helper(): void;");
+  });
+});

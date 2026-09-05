@@ -77,7 +77,15 @@ export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig)
     }
     const stem = entryStem(target);
     const module = stem === "index" ? "index" : stem.replace(/\/index$/, "");
-    return [{ entryDts: `${stem}.d.ts`, module, sourceRel: `${stem}.ts`, subpath }];
+    const esm = /\.(?:d\.mts|mts|mjs)$/.test(target);
+    return [
+      {
+        entryDts: `${stem}${esm ? ".d.mts" : ".d.ts"}`,
+        module,
+        sourceRel: `${stem}${esm ? ".mts" : ".ts"}`,
+        subpath,
+      },
+    ];
   });
 }
 

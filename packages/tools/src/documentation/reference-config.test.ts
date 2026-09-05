@@ -41,6 +41,12 @@ describe("parseReferenceConfig", () => {
     );
   });
 
+  it("rejects an explicitly empty entrypoints array", () => {
+    expect(() => parseReferenceConfig({ codenhub: { docs: { reference: { entrypoints: [] } } } }, path)).toThrow(
+      /at least one key/,
+    );
+  });
+
   it("rejects a non-boolean prose", () => {
     expect(() => parseReferenceConfig({ codenhub: { docs: { reference: { prose: "no" } } } }, path)).toThrow(/prose/);
   });

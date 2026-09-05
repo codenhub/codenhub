@@ -48,6 +48,11 @@ export function parseReferenceConfig(manifest: unknown, manifestPath: string): R
   }
 
   const entrypoints = stringArray(value.entrypoints, "entrypoints", manifestPath);
+  if (entrypoints?.length === 0) {
+    throw new Error(
+      `Invalid codenhub.docs.reference.entrypoints in ${manifestPath}: give at least one key, or omit the field to document every entrypoint.`,
+    );
+  }
   if (entrypoints?.some((entry) => entry !== "." && !entry.startsWith("./"))) {
     throw new Error(
       `Invalid codenhub.docs.reference.entrypoints in ${manifestPath}: expected "." or "./"-prefixed keys.`,

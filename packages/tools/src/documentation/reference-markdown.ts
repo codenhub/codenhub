@@ -94,6 +94,9 @@ function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: stri
   if (prose && member.doc !== undefined) {
     blocks.push(link(member.doc));
   }
+  if (prose) {
+    blocks.push(...namedDocList("Parameters", member.parameters, link));
+  }
   return blocks;
 }
 

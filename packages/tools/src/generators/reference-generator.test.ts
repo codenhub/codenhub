@@ -38,6 +38,11 @@ describe("resolveEntrypoints", () => {
       /not in package exports/,
     );
   });
+
+  it("preserves ESM extensions for a .d.mts target", () => {
+    const plans = resolveEntrypoints({ ".": { types: "./dist/index.d.mts" } }, { prose: true });
+    expect(plans).toEqual([{ subpath: ".", sourceRel: "index.mts", module: "index", entryDts: "index.d.mts" }]);
+  });
 });
 
 describe("referencePageRel", () => {

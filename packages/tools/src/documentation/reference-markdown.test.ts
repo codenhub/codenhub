@@ -45,6 +45,16 @@ const entrypoint: ReferenceEntrypoint = {
           signature: "readonly messageKey?: string;",
           parameters: [],
         },
+        {
+          name: "toJSON",
+          kind: "method",
+          isOptional: false,
+          isReadonly: false,
+          isStatic: false,
+          doc: "Serializes the error.",
+          signature: "toJSON(space?: number): AppErrorJson;",
+          parameters: [{ name: "space", doc: "Indentation passed through." }],
+        },
       ],
     }),
     symbol({
@@ -93,6 +103,11 @@ describe("renderReferencePage", () => {
 
   it("renders interface members with their own heading and signature block", () => {
     expect(page).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.");
+  });
+
+  it("renders a method member's documented parameters", () => {
+    expect(page).toContain("#### toJSON");
+    expect(page).toContain("Serializes the error.\n\n**Parameters**\n\n- `space` — Indentation passed through.");
   });
 
   it("omits prose when prose is false", () => {

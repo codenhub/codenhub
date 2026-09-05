@@ -28,10 +28,6 @@ function hasModifier(node: ts.HasModifiers, kind: ts.SyntaxKind): boolean {
   return ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false;
 }
 
-function isExported(node: ts.HasModifiers): boolean {
-  return hasModifier(node, ts.SyntaxKind.ExportKeyword);
-}
-
 function declaredName(name: ts.Identifier | undefined, node: ts.HasModifiers): string | undefined {
   if (name !== undefined) {
     return name.text;
@@ -108,7 +104,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
   const index: SignatureIndex = new Map();
 
   for (const statement of source.statements) {
-    if (ts.isFunctionDeclaration(statement) && isExported(statement)) {
+    if (ts.isFunctionDeclaration(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
         addSignature(index, name, { text: tidy(headerText(statement, source), true) });
@@ -116,7 +112,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
       continue;
     }
 
-    if ((ts.isClassDeclaration(statement) || ts.isInterfaceDeclaration(statement)) && isExported(statement)) {
+    if (ts.isClassDeclaration(statement) || ts.isInterfaceDeclaration(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
         index.set(name, {
@@ -127,12 +123,12 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
       continue;
     }
 
-    if (ts.isTypeAliasDeclaration(statement) && isExported(statement)) {
+    if (ts.isTypeAliasDeclaration(statement)) {
       index.set(statement.name.text, { text: tidy(statement.getText(source), true) });
       continue;
     }
 
-    if (ts.isEnumDeclaration(statement) && isExported(statement)) {
+    if (ts.isEnumDeclaration(statement)) {
       index.set(statement.name.text, {
         members: memberEntries(statement.members, source),
         text: `${modifiersText(statement, source)} enum ${statement.name.text}`.trim(),
@@ -140,7 +136,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
       continue;
     }
 
-    if (ts.isVariableStatement(statement) && isExported(statement)) {
+    if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name)) {
           const keyword = statement.declarationList.flags & ts.NodeFlags.Const ? "const" : "let";
@@ -153,7 +149,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
       continue;
     }
 
-    if (ts.isModuleDeclaration(statement) && isExported(statement) && ts.isIdentifier(statement.name)) {
+    if (ts.isModuleDeclaration(statement) && ts.isIdentifier(statement.name)) {
       index.set(statement.name.text, { text: `namespace ${statement.name.text}` });
     }
   }
@@ -186,10 +182,52 @@ interface ReexportEdge {
   names: Map<string, string>;
 }
 
-function collectReexports(source: ts.SourceFile): ReexportEdge[] {
-  const edges: ReexportEdge[] = [];
+/** An imported binding: `import { orig as local } from "./m"`. */
+interface ImportBinding {
+  module: string;
+  original: string;
+}
+
+/** How one `.d.ts` connects an exported name to a declaration elsewhere. */
+interface ModuleGraph {
+  /** `export ... from` edges. */
+  reexports: ReexportEdge[];
+  /** `export { local as public }` with no `from`: public name to the local binding it points at. */
+  localAliases: Map<string, string>;
+  /** `import { orig as local } from "./m"`: local binding to where it came from. */
+  imports: Map<string, ImportBinding>;
+}
+
+function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
+  const reexports: ReexportEdge[] = [];
+  const localAliases = new Map<string, string>();
+  const imports = new Map<string, ImportBinding>();
+
   for (const statement of source.statements) {
-    if (!ts.isExportDeclaration(statement) || statement.moduleSpecifier === undefined) {
+    if (
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.importClause?.namedBindings !== undefined &&
+      ts.isNamedImports(statement.importClause.namedBindings)
+    ) {
+      for (const element of statement.importClause.namedBindings.elements) {
+        imports.set(element.name.text, {
+          module: statement.moduleSpecifier.text,
+          original: (element.propertyName ?? element.name).text,
+        });
+      }
+      continue;
+    }
+
+    if (!ts.isExportDeclaration(statement)) {
+      continue;
+    }
+    if (statement.moduleSpecifier === undefined) {
+      if (statement.exportClause !== undefined && ts.isNamedExports(statement.exportClause)) {
+        for (const element of statement.exportClause.elements) {
+          localAliases.set(element.name.text, (element.propertyName ?? element.name).text);
+        }
+      }
       continue;
     }
     if (!ts.isStringLiteral(statement.moduleSpecifier)) {
@@ -197,7 +235,7 @@ function collectReexports(source: ts.SourceFile): ReexportEdge[] {
     }
     const module = statement.moduleSpecifier.text;
     if (statement.exportClause === undefined) {
-      edges.push({ all: true, module, names: new Map() });
+      reexports.push({ all: true, module, names: new Map() });
       continue;
     }
     if (!ts.isNamedExports(statement.exportClause)) {
@@ -207,17 +245,18 @@ function collectReexports(source: ts.SourceFile): ReexportEdge[] {
     for (const element of statement.exportClause.elements) {
       names.set(element.name.text, (element.propertyName ?? element.name).text);
     }
-    edges.push({ all: false, module, names });
+    reexports.push({ all: false, module, names });
   }
-  return edges;
+
+  return { imports, localAliases, reexports };
 }
 
-/** Candidate `.d.ts` paths a module specifier could resolve to, relative to `fromPath`. */
+/** Candidate declaration paths a module specifier could resolve to, relative to `fromPath`. */
 function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(
-    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.ts$/, "").replace(/\.js$/, "")),
+    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.m?ts$/, "").replace(/\.m?js$/, "")),
   );
-  return [`${base}.d.ts`, `${base}/index.d.ts`];
+  return [`${base}.d.ts`, `${base}.d.mts`, `${base}/index.d.ts`, `${base}/index.d.mts`];
 }
 
 /** Resolves a symbol's signature to whichever `.d.ts` actually declares it, following re-exports. */
@@ -241,28 +280,50 @@ export interface SignatureResolver {
  */
 export function buildSignatureResolver(files: ReadonlyMap<string, string>): SignatureResolver {
   const declarations = new Map<string, SignatureIndex>();
-  const reexports = new Map<string, ReexportEdge[]>();
+  const graphs = new Map<string, ModuleGraph>();
   for (const [path, text] of files) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
     declarations.set(path, collectDeclarations(source));
-    reexports.set(path, collectReexports(source));
+    graphs.set(path, collectModuleGraph(source));
   }
 
   const resolveEdgeTarget = (fromPath: string, specifier: string): string | undefined =>
     resolveDtsCandidates(fromPath, specifier).find((candidate) => files.has(candidate));
 
   const lookup = (entryPath: string, name: string, seen: Set<string>): SymbolSignature | undefined => {
-    if (seen.has(entryPath)) {
+    // Key the guard on the pair: a renamed edge reaches the same file under a
+    // different name, and that second visit must not be blocked by the first.
+    const visitKey = JSON.stringify([entryPath, name]);
+    if (seen.has(visitKey)) {
       return undefined;
     }
-    seen.add(entryPath);
+    seen.add(visitKey);
 
     const direct = declarations.get(entryPath)?.get(name);
     if (direct !== undefined) {
       return direct;
     }
 
-    for (const edge of reexports.get(entryPath) ?? []) {
+    const graph = graphs.get(entryPath);
+
+    const localBinding = graph?.localAliases.get(name);
+    if (localBinding !== undefined && localBinding !== name) {
+      const found = lookup(entryPath, localBinding, seen);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+
+    const imported = graph?.imports.get(name);
+    if (imported !== undefined) {
+      const targetPath = resolveEdgeTarget(entryPath, imported.module);
+      const found = targetPath === undefined ? undefined : lookup(targetPath, imported.original, seen);
+      if (found !== undefined) {
+        return found;
+      }
+    }
+
+    for (const edge of graph?.reexports ?? []) {
       const targetPath = resolveEdgeTarget(entryPath, edge.module);
       if (targetPath === undefined) {
         continue;
