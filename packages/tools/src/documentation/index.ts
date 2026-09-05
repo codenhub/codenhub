@@ -73,7 +73,7 @@ export {
   type UnsupportedExport,
 } from "./reference-model.ts";
 export { parseReferenceConfig, type ReferenceConfig } from "./reference-config.ts";
-export { renderReferencePage, type RenderReferencePageOptions } from "./reference-markdown.ts";
+export { renderReferencePage, symbolSlug, type RenderReferencePageOptions } from "./reference-markdown.ts";
 export {
   attachSignatures,
   buildSignatureResolver,

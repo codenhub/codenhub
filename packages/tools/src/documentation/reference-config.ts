@@ -2,7 +2,10 @@
 export interface ReferenceConfig {
   /** `exports` subpath keys to document; when absent, every subpath with a type target is used. */
   entrypoints?: string[];
-  /** Repo-relative globs; a symbol declared in a matched source file is omitted. */
+  /**
+   * RESERVED. The shape is validated but the generator does not yet honour it. Intended to omit a
+   * public symbol whose declaration originates in a matched repo-relative glob.
+   */
   exclude?: string[];
   /** Whether to compile TSDoc prose. `false` renders the signature manifest only. Defaults to `true`. */
   prose: boolean;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { renderReferencePage } from "./reference-markdown.ts";
+import { renderReferencePage, symbolSlug } from "./reference-markdown.ts";
 import type { ReferenceEntrypoint, ReferenceSymbol } from "./reference-model.ts";
 
 function symbol(partial: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name" | "kind">): ReferenceSymbol {
@@ -121,5 +121,12 @@ describe("renderReferencePage", () => {
     expect(bare).not.toContain("**Parameters**");
     expect(bare).not.toContain("> **Deprecated.**");
     expect(bare).toContain("order: 0");
+  });
+});
+
+describe("symbolSlug", () => {
+  it("lower-cases a plain identifier and strips a leading sigil", () => {
+    expect(symbolSlug("createAppError")).toBe("createapperror");
+    expect(symbolSlug("$state")).toBe("state");
   });
 });

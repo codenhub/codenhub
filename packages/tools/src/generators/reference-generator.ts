@@ -5,7 +5,7 @@ import { Application, normalizePath, TSConfigReader } from "typedoc";
 import ts from "typescript";
 
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
-import { renderReferencePage } from "../documentation/reference-markdown.ts";
+import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
 import { buildReferenceModel, type ReferenceModel } from "../documentation/reference-model.ts";
 import {
   attachSignatures,
@@ -124,7 +124,7 @@ function linkResolverFor(model: ReferenceModel, allSubpaths: readonly string[]) 
       const fromRel = referencePageRel(fromSubpath, allSubpaths);
       const toRel = referencePageRel(targetSubpath, allSubpaths);
       const relative = posix.relative(posix.dirname(fromRel), toRel);
-      return `${relative}#${name.toLowerCase()}`;
+      return `${relative}#${symbolSlug(name)}`;
     };
 }
 

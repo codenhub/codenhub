@@ -15,6 +15,19 @@ const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string 
 
 const LINK_PATTERN = /\{@link\s+([^}|]+?)(?:\s*\|\s*([^}]+?))?\s*\}/g;
 
+/**
+ * The heading-anchor slug for a symbol or member name.
+ *
+ * The generator uses the same function for cross-page `{@link}` targets so a
+ * link and the heading it points at always agree, matching how the docs site
+ * derives its own heading ids.
+ * @param name Symbol or member name.
+ * @returns Its GitHub-style slug.
+ */
+export function symbolSlug(name: string): string {
+  return slug(name);
+}
+
 /** Inputs the caller supplies alongside the entrypoint to render its page. */
 export interface RenderReferencePageOptions {
   /** Frontmatter `title` and the page H1 text. */
@@ -58,7 +71,7 @@ function resolveLinks(
   return markdown.replace(LINK_PATTERN, (_match, rawTarget: string, rawLabel: string | undefined) => {
     const target = rawTarget.trim();
     const label = (rawLabel ?? target).trim();
-    const href = resolve?.(target) ?? (ownNames.has(target) ? `#${slug(target)}` : undefined);
+    const href = resolve?.(target) ?? (ownNames.has(target) ? `#${symbolSlug(target)}` : undefined);
     return href === undefined ? `\`${label}\`` : `[${label}](${href})`;
   });
 }
