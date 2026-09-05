@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
+last_updated: 2026-09-04
 scope: README files for workspace packages.
 ---
 
@@ -18,7 +18,7 @@ Private packages and apps MAY follow this spec when it improves maintainability,
 
 A package README is the small human entrypoint for evaluating and starting with the package. It owns package purpose, installation, the main happy path, links to full documentation, and critical constraints consumers must see before adopting the package.
 
-The README MUST stay concise. Complete API reference, advanced workflows, extended examples, troubleshooting, and migrations belong in published package-level `docs/`. Maintainer rationale and workflows belong in `docs/internal/`.
+The README MUST stay concise. Complete API reference, advanced workflows, extended examples, troubleshooting, and migrations belong in published package-level `docs/`. Maintainer rationale and workflows belong in `docs/internal/`. This conciseness expectation is unaffected by the completeness expectations `docs/specs/packages-documentation.md` sets for `docs/index.md` and deeper documentation, which govern a different surface with a different job.
 
 ## Required structure
 

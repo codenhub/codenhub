@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-03
+last_updated: 2026-09-04
 scope: Documentation for public workspace packages.
 ---
 
@@ -23,7 +23,7 @@ docs/
   internal/
 ```
 
-All four documentation surfaces are required even for small packages. Their content MAY remain concise when the package has a small API or one clear use case. `docs/internal/` MAY be empty or absent until maintainer-only knowledge exists, but it is the required location for such knowledge.
+All four documentation surfaces are required even for small packages. A small API or one clear use case MAY mean fewer pages, not thinner explanations on the pages that exist — see "Completeness over compactness" below. `docs/internal/` MAY be empty or absent until maintainer-only knowledge exists, but it is the required location for such knowledge.
 
 ## Public documentation metadata
 
@@ -139,8 +139,23 @@ Public docs MUST:
 - Describe current supported consumer behavior rather than private implementation.
 - Match public exports, defaults, constraints, and observable failure behavior.
 - Use small, realistic, copyable examples.
+- Explain rather than assume: do not require prior familiarity with the package's domain or general ecosystem conventions it touches, per "Completeness over compactness" below.
 - Avoid stale TODOs, speculative promises, secrets, private URLs, and local machine paths.
 - Avoid linking to `docs/internal/`.
+
+### Completeness over compactness
+
+Write for a consumer using the package, or a package like it, for the first time. Do not assume familiarity with the package's domain or with general ecosystem conventions it touches — module resolution, semantic versioning, build tooling, and similar background — unless linking to an explanation. Prefer spelling out a step that looks obvious over omitting it: an experienced reader skips a sentence in a second, but an inexperienced one is blocked by its absence and comes away thinking the package, not the doc, is unfinished.
+
+Stop trusting that a reader will fill the gap correctly. Treat every consumer as if this is their first package of this kind, they do not know the surrounding conventions, and an unexplained assumption is a support request waiting to happen.
+
+This does not license padding. The "avoid repeating the same explanation across these surfaces" rule above still applies, and the README stays a concise entrypoint under `docs/specs/packages-readme.md`. Completeness is about not leaving a gap a first-time reader would hit, not about length.
+
+### Tone
+
+Public docs MAY be playful, funny, or show personality where it fits the material and does not delay the reader from finding the fact they came for. A package with a distinctive voice is memorable; one that reads like a form is not.
+
+Humor MUST NOT replace precision. A joke never substitutes for the exact behavior, constraint, or failure mode a consumer needs, and it MUST NOT obscure a warning. Marketing copy that does not help usage is still out of place here, the same as in the README under `docs/specs/packages-readme.md`: personality that helps a reader is not marketing copy, and marketing copy dressed up as personality is still marketing copy.
 
 Every public package `docs/**/*.md` file outside `docs/internal/` MUST start with portable presentation frontmatter. Its schema is closed and contains only:
 
