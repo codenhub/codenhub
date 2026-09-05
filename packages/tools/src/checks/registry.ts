@@ -4,6 +4,7 @@ import { createDocumentationRules } from "./documentation-rules.ts";
 import { createExportsRules } from "./exports-rules.ts";
 import { createManifestRules } from "./manifest-rules.ts";
 import { createReadmeRules } from "./readme-rules.ts";
+import { createReferenceRules } from "./reference-rules.ts";
 import type { CheckRule } from "./rule.ts";
 
 /**
@@ -22,5 +23,6 @@ export function createCheckRules(workspace: Workspace): CheckRule[] {
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
     ...createReadmeRules(),
+    ...createReferenceRules(),
   ];
 }

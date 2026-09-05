@@ -203,7 +203,25 @@ function withSignatures(model: ReferenceModel, plans: readonly EntrypointPlan[],
   return attachSignatures(model, byModule);
 }
 
-async function generatePackage(workspacePackage: WorkspacePackage, config: ReferenceConfig) {
+/** An opted-in package's reference model and the Markdown pages it renders to. */
+export interface ReferenceAnalysis {
+  /** The model, with signatures attached. */
+  model: ReferenceModel;
+  /** The generated pages, formatted, ready to write. */
+  files: { path: string; contents: string }[];
+}
+
+/**
+ * Builds the reference model and pages for one opted-in package.
+ * @param workspacePackage The package.
+ * @param config Its parsed `codenhub.docs.reference`.
+ * @returns The model and the rendered, formatted pages.
+ * @throws When an entrypoint is unresolved, non-kebab-case, or collides with another.
+ */
+export async function analyzeReference(
+  workspacePackage: WorkspacePackage,
+  config: ReferenceConfig,
+): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
   const label = (workspacePackage.manifest as { codenhub?: { docs?: { label?: string } } }).codenhub?.docs?.label;
   const plans = resolveEntrypoints(workspacePackage.manifest.exports, config);
@@ -217,12 +235,18 @@ async function generatePackage(workspacePackage: WorkspacePackage, config: Refer
   );
 
   const allSubpaths = plans.map((plan) => plan.subpath);
+  const pageRels = new Map(allSubpaths.map((subpath) => [subpath, referencePageRel(subpath, allSubpaths)]));
+  const collisions = [...pageRels.values()].filter((rel, index, all) => all.indexOf(rel) !== index);
+  if (collisions.length > 0) {
+    throw new Error(`Reference entrypoints collide on page path: ${[...new Set(collisions)].join(", ")}.`);
+  }
+
   const resolveLinkFor = linkResolverFor(model, allSubpaths);
   const sourceRoot = `${workspacePackage.location}/src`;
 
-  return Promise.all(
+  const files = await Promise.all(
     model.entrypoints.map(async (entrypoint, index) => {
-      const pageRel = referencePageRel(entrypoint.subpath, allSubpaths);
+      const pageRel = pageRels.get(entrypoint.subpath) ?? referencePageRel(entrypoint.subpath, allSubpaths);
       const isIndex = entrypoint.subpath === ".";
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
@@ -240,6 +264,8 @@ async function generatePackage(workspacePackage: WorkspacePackage, config: Refer
       return { contents, path: `${workspacePackage.location}/${REFERENCE_DIR}/${pageRel}` };
     }),
   );
+
+  return { files, model };
 }
 
 /**
@@ -257,7 +283,7 @@ export function createReferenceGenerator(): Generator {
       const results = await Promise.all(
         packages.map(async (workspacePackage) => {
           const config = parseReferenceConfig(workspacePackage.manifest, `${workspacePackage.location}/package.json`);
-          return config === null ? [] : generatePackage(workspacePackage, config);
+          return config === null ? [] : (await analyzeReference(workspacePackage, config)).files;
         }),
       );
       return results.flat();

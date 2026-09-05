@@ -115,12 +115,22 @@ export interface ReferenceEntrypoint {
   symbols: ReferenceSymbol[];
 }
 
+/** An export the page model has no group for, so it was left undocumented. */
+export interface UnsupportedExport {
+  /** Entrypoint subpath it was exported from. */
+  subpath: string;
+  /** Export name. */
+  name: string;
+}
+
 /** A package's complete generated-reference data, before Markdown rendering. */
 export interface ReferenceModel {
   /** Published package name. */
   packageName: string;
   /** Documented entrypoints, in the order their subpaths were supplied. */
   entrypoints: ReferenceEntrypoint[];
+  /** Exports skipped because their declaration kind has no page group. */
+  unsupported: UnsupportedExport[];
 }
 
 interface CommentPart {
@@ -429,12 +439,27 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
 
   const modules = (root.children ?? []).filter(isModule);
   const entrypoints: ReferenceEntrypoint[] = [];
+  const unsupported: UnsupportedExport[] = [];
 
   for (const [module, subpath] of Object.entries(subpathByModule)) {
     const reflection = modules.find((candidate) => candidate.name === module);
-    const symbols = sortSymbols((reflection?.children ?? []).flatMap((child) => buildSymbol(child, resolve) ?? []));
-    entrypoints.push({ module, subpath, symbols });
+    const children = reflection?.children ?? [];
+    for (const child of children) {
+      if (
+        typeof child.name === "string" &&
+        typeof child.kind === "number" &&
+        child.kind !== KIND_REFERENCE &&
+        !SYMBOL_KIND_BY_REFLECTION.has(child.kind)
+      ) {
+        unsupported.push({ name: child.name, subpath });
+      }
+    }
+    entrypoints.push({
+      module,
+      subpath,
+      symbols: sortSymbols(children.flatMap((child) => buildSymbol(child, resolve) ?? [])),
+    });
   }
 
-  return { entrypoints, packageName };
+  return { entrypoints, packageName, unsupported };
 }

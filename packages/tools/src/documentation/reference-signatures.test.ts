@@ -88,6 +88,7 @@ describe("attachSignatures", () => {
   it("fills symbol and member signature text from the matching module index", () => {
     const model: ReferenceModel = {
       packageName: "@codenhub/error",
+      unsupported: [],
       entrypoints: [
         {
           subpath: ".",
