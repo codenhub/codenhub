@@ -280,7 +280,8 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
       const text = found.members?.get(member.name);
       return text === undefined ? member : { ...member, signature: text };
     }),
-    signature: found.text,
+    // Overloads join the signature block as separate lines, in source order.
+    signature: [found.text, ...(found.overloads ?? [])].join("\n"),
   };
 }
 

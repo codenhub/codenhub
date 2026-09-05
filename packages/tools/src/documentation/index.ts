@@ -71,6 +71,7 @@ export {
   type ReferenceSymbol,
   type ReferenceSymbolKind,
 } from "./reference-model.ts";
+export { renderReferencePage, type RenderReferencePageOptions } from "./reference-markdown.ts";
 export {
   attachSignatures,
   buildSignatureResolver,
