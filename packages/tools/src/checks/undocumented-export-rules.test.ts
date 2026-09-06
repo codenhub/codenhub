@@ -280,6 +280,38 @@ export type Identifier = string;
     expect((await readdir(pkg.directory)).sort()).toEqual(["src", "tsconfig.json"]);
   });
 
+  it("accepts documented namespace exports without checking their members", async () => {
+    const pkg = await createPackage({
+      "dist/index.d.ts": '/** Utility functions. */\nexport * as utilities from "./utilities.js";',
+      "dist/utilities.d.ts": "export declare function helper(): void;",
+    });
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([]);
+  });
+
+  it("reports missing documentation on a namespace export, not its documented members", async () => {
+    const pkg = await createPackage({
+      "dist/index.d.ts": 'export * as utilities from "./utilities.js";',
+      "dist/utilities.d.ts": "/** Helps. */\nexport declare function helper(): void;",
+    });
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+      expect.objectContaining({
+        code: "undocumented-export/missing-jsdoc",
+        severity: "error",
+        location: "dist/index.d.ts",
+        message: expect.stringContaining('"utilities"'),
+      }),
+    ]);
+  });
+
+  it("follows barrel aliases to the original namespace export documentation", async () => {
+    const pkg = await createPackage({
+      "dist/index.d.ts": 'export { utilities as helpers } from "./barrel.js";',
+      "dist/barrel.d.ts": '/** Utility functions. */\nexport * as utilities from "./utilities.js";',
+      "dist/utilities.d.ts": "export declare function helper(): void;",
+    });
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([]);
+  });
+
   it("reports an unresolvable typed export instead of silently passing it", async () => {
     const pkg = await createPackage({ "tsconfig.json": "{}" });
     expect(await rule.run({ package: pkg, includePack: false })).toEqual([

@@ -340,6 +340,13 @@ function collectDeclarationNodes(statements: readonly ts.Statement[]): Map<strin
       }
     } else if (ts.isExportAssignment(statement) && !ts.isIdentifier(statement.expression)) {
       add(DEFAULT_EXPORT_NAME, statement);
+    } else if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause !== undefined &&
+      ts.isNamespaceExport(statement.exportClause)
+    ) {
+      // The namespace binding originates here; its members are not top-level exports.
+      add(statement.exportClause.name.text, statement);
     }
   }
   return nodes;
