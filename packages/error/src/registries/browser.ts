@@ -1,3 +1,9 @@
+/**
+ * Browser and Web API error preset: common DOMException names mapped to safe feedback.
+ *
+ * @packageDocumentation
+ */
+
 import { freezeFeedbackMap } from "../bucket";
 import { createErrorRegistry, freezeRegistry } from "../registry";
 import type { ErrorFeedback } from "../types";

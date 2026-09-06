@@ -1,3 +1,9 @@
+/**
+ * Typed error normalization, result helpers, and the error registry.
+ *
+ * @packageDocumentation
+ */
+
 export { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
 export { createErrorRegistry, getErrorRegistry, setErrorRegistry, freezeRegistry } from "./registry";
 export {

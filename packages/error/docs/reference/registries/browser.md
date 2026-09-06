@@ -1,5 +1,6 @@
 ---
 title: registries/browser
+description: "Browser and Web API error preset: common DOMException names mapped to safe feedback."
 order: 2
 ---
 

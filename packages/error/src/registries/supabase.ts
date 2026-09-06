@@ -1,3 +1,9 @@
+/**
+ * Supabase error preset: common Postgres and Auth codes mapped to safe feedback.
+ *
+ * @packageDocumentation
+ */
+
 import { freezeFeedbackMap } from "../bucket";
 import { createErrorRegistry, freezeRegistry } from "../registry";
 

@@ -1,5 +1,6 @@
 ---
 title: registries
+description: Opt-in error registry presets and their raw feedback maps for common runtimes.
 order: 1
 ---
 

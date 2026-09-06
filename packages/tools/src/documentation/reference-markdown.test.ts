@@ -28,6 +28,7 @@ const entrypoint: ReferenceEntrypoint = {
       parameters: [{ name: "error", doc: "The raw value." }],
       returns: "A frozen error.",
       throws: ["When options is not an object.", "When maxDepth is negative."],
+      since: "1.2.0",
     }),
     symbol({
       name: "AppError",
@@ -93,7 +94,34 @@ describe("renderReferencePage", () => {
     expect(section).toContain("**Parameters**\n\n- `error` — The raw value.");
     expect(section).toContain("**Returns** — A frozen error.");
     expect(section).toContain("**Throws**\n\n- When options is not an object.\n- When maxDepth is negative.");
+    expect(section).toContain("**Since** — 1.2.0");
     expect(section.indexOf("> **Deprecated.**")).toBeLessThan(section.indexOf("**Parameters**"));
+  });
+
+  it("emits description and since frontmatter when the entry module supplies them", () => {
+    const enriched = renderReferencePage(entrypoint, {
+      title: "ErrorKit",
+      sourceRoot: "packages/error/src",
+      description: "Typed error normalization and result helpers.",
+      since: "1.0.0",
+      group: "Reference",
+      prose: true,
+    });
+    expect(enriched).toContain(
+      "---\ntitle: ErrorKit\ndescription: Typed error normalization and result helpers.\nsince: 1.0.0\ngroup: Reference\n---\n",
+    );
+  });
+
+  it("keeps the frontmatter version but drops the per-symbol Since line when prose is false", () => {
+    const bare = renderReferencePage(entrypoint, {
+      title: "ErrorKit",
+      sourceRoot: "packages/error/src",
+      since: "1.0.0",
+      order: 0,
+      prose: false,
+    });
+    expect(bare).toContain("since: 1.0.0");
+    expect(bare).not.toContain("**Since**");
   });
 
   it("renders a single-entry Throws or See also section as one inline line", () => {

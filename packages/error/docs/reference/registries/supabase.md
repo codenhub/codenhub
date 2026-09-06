@@ -1,5 +1,6 @@
 ---
 title: registries/supabase
+description: "Supabase error preset: common Postgres and Auth codes mapped to safe feedback."
 order: 3
 ---
 

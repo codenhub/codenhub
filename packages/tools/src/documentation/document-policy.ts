@@ -29,17 +29,27 @@ export interface PublicDocumentFrontmatter {
    * which is always first.
    */
   order?: number;
+  /**
+   * Optional version an entrypoint first became available, as an opaque string.
+   * Valid only on a generated `docs/reference/` page, per
+   * `docs/specs/packages-reference.md`. Absent on every other page.
+   */
+  since?: string;
   /** Page label used for navigation and browser titles. */
   title: string;
 }
 
-const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "date", "description", "group", "order", "title"]);
+const ALLOWED_FRONTMATTER_FIELDS = new Set(["curated", "date", "description", "group", "order", "since", "title"]);
 
 const FOLDER_INDEX = /^[^/]+\/index\.md$/;
 
 // A non-index Markdown file directly under a package `changelog/` folder, such
 // as `changelog/1.2.0.md`. Single-level, matching `FOLDER_INDEX`.
 const CHANGELOG_VERSION_PAGE = /^changelog\/(?!index\.md$)[^/]+\.md$/;
+
+// Any Markdown page in the generated `reference/` area, at any depth, such as
+// `reference/index.md` or `reference/registries/browser.md`.
+const REFERENCE_PAGE = /^reference\/(?:[^/]+\/)*[^/]+\.md$/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -108,6 +118,17 @@ function readOptionalGroup(frontmatter: Record<string, unknown>, sourcePath: str
   }
   if (typeof value !== "string" || value.trim() === "") {
     throw new Error(`Invalid group frontmatter in ${sourcePath}: expected a non-empty string.`);
+  }
+  return value;
+}
+
+function readOptionalSince(frontmatter: Record<string, unknown>, sourcePath: string): string | undefined {
+  const value = frontmatter.since;
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`Invalid since frontmatter in ${sourcePath}: expected a non-empty string.`);
   }
   return value;
 }
@@ -195,7 +216,7 @@ function readOptionalDate(frontmatter: Record<string, unknown>, sourcePath: stri
  * Validates public document frontmatter against its closed schema.
  * @param frontmatter Parsed frontmatter fields.
  * @param sourcePath Document path used in error messages and to place the document.
- * @returns The validated title, optional description, section label, order, curated flag, and release date.
+ * @returns The validated title, optional description, section label, order, curated flag, release date, and version.
  * @throws When a field is unknown, missing, empty, or not allowed on this path.
  */
 export function parsePublicDocumentFrontmatter(
@@ -225,6 +246,10 @@ export function parsePublicDocumentFrontmatter(
   if (date !== undefined && !CHANGELOG_VERSION_PAGE.test(relativePath)) {
     throw new Error(`Invalid date frontmatter in ${sourcePath}: only a changelog version page can set a release date.`);
   }
+  const since = readOptionalSince(frontmatter, sourcePath);
+  if (since !== undefined && !REFERENCE_PAGE.test(relativePath)) {
+    throw new Error(`Invalid since frontmatter in ${sourcePath}: only a generated reference page can set a version.`);
+  }
 
   return {
     curated,
@@ -232,6 +257,7 @@ export function parsePublicDocumentFrontmatter(
     description: readOptionalDescription(frontmatter, sourcePath),
     group,
     order,
+    since,
     title: readRequiredTitle(frontmatter, sourcePath),
   };
 }
