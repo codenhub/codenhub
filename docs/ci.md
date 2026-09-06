@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-30
+last_updated: 2026-09-06
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -35,6 +35,8 @@ A pull request checks what it changed, which is what makes the run fast enough t
 `--changed` compares against a branch ref, so the checkout uses `fetch-depth: 0`. A shallow clone has no base branch to compare against. Both selecting jobs assert the base ref exists before running: `--changed` degrades to working-tree changes when its ref is missing, which locally means "check what I am editing" and in CI would mean checking nothing and reporting success.
 
 Runs for the same pull request cancel each other, because only the newest push is worth a verdict. Runs on `main` never cancel: each merge is the authoritative check of that commit.
+
+The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. Pull requests check the changed packages against their base branch; pushes to `main` check the whole workspace. The scope and remaining review responsibilities are defined in `docs/code-guidelines.md`.
 
 ## Jobs
 

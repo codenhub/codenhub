@@ -173,8 +173,7 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
           code: "undocumented-export/missing-jsdoc",
           location: nodes[0]?.getSourceFile().fileName ?? plan.target,
           message: `Export "${name}" from "${plan.subpath}" has no JSDoc/TSDoc on its declaration.`,
-          // Promote after the workspace coverage pass; reference/undocumented-symbol overlaps for now.
-          severity: "warning",
+          severity: "error",
         });
       }
     }
@@ -191,7 +190,7 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
 
 /**
  * Creates the top-level public export documentation check, independent of reference opt-in.
- * @returns The warning rule for documented packages, ready for registration.
+ * @returns The documentation coverage rule for documented packages, ready for registration.
  */
 export function createUndocumentedExportRules(): CheckRule[] {
   return [

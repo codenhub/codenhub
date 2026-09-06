@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-05
+last_updated: 2026-09-06
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -101,7 +101,7 @@ A page's H1 is its `title`. Below it, each public symbol reachable from that ent
 - `{@link Symbol}` references resolve to a fragment on whichever page documents the target. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
 - Re-exported symbols are documented on the entrypoint that exports them. A symbol exported from several entrypoints is documented on each, with the signature repeated; prose is repeated too, since these pages are read one at a time.
 
-When `prose` is `true` and a public symbol has no TSDoc, the page still lists it with its signature. The gap is a `warning`-level finding (see "Validation"), consistent with `docs/code-guidelines.md` requiring public-API TSDoc without yet enforcing it in lint.
+When `prose` is `true` and a public symbol has no TSDoc, the page still lists it with its signature. Missing source documentation is an error reported by the independent `undocumented-export` check (see "Validation").
 
 ## Generation
 
@@ -135,7 +135,8 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
 - `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key does not resolve.
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
-- `reference/undocumented-symbol` — `warning` — `prose` is `true` and a public symbol reachable from a documented entrypoint has no TSDoc.
+
+Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, independently of reference opt-in and `prose`, as defined in `docs/specs/packages-documentation.md`. The `reference` rule owns generated-page correctness and does not duplicate that finding.
 
 `error` findings fail the run; `warning` findings do not, per `docs/tooling.md`. Link, frontmatter, single-H1, and tarball-inclusion validation for the generated pages is the existing `documentation` rule's job; the generator MUST emit pages that pass it.
 

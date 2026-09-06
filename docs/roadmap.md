@@ -85,7 +85,7 @@ Track high-level progress and milestone status for foundation and utility packag
 
 - [x] Generated API reference per package from source TSDoc — `hub generate` writes `docs/reference/` for a package that sets `codenhub.docs.reference`, enforced by a `reference` check; `docs/specs/packages-reference.md` is IMPLEMENTED. Opt-in and live on `@codenhub/error`. Next steps in Notes.
 - [x] Detect missing JSDoc/TSDoc on top-level typed package exports with the TypeScript-based `hub check` rule `undocumented-export/missing-jsdoc`, independently of generated reference opt-in.
-- [ ] Review and backfill workspace JSDoc/TSDoc coverage, then consider promoting `undocumented-export/missing-jsdoc` from warning to error. Keep `reference/undocumented-symbol` during rollout despite the overlap.
+- [x] Review and backfill workspace JSDoc/TSDoc coverage, promote `undocumented-export/missing-jsdoc` to an error enforced by local verification and PR CI, and retire the duplicate reference warning.
 - [ ] Rework `apps/docs` navigation, primarily the labelling: top-level sections (hand-authored docs, then Reference, then Changelog), and a clearer scheme for what sidebar entries are named — the current flat two-level tree and raw labels do not read well as generated content grows. Open, not designed — see Notes
 - [ ] Enrich the generated reference for readers and maintainers: friendlier entrypoint labels, an emitted `description`, and "added in" / "last updated" metadata the site currently lacks — see Notes
 - [ ] Documentation versioning: keep docs for past package versions, not just `main` — see Notes

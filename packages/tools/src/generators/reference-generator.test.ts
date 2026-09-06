@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { referencePageRel, resolveEntrypoints } from "./reference-generator.ts";
+import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
+import { referencePageRel } from "./reference-generator.ts";
 
 describe("resolveEntrypoints", () => {
   const exportsMap = {

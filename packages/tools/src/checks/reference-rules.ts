@@ -107,21 +107,6 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     });
   }
 
-  if (config.prose) {
-    for (const entrypoint of analysis.model.entrypoints) {
-      for (const symbol of entrypoint.symbols) {
-        if (symbol.doc === undefined) {
-          findings.push({
-            code: "reference/undocumented-symbol",
-            location: `${REFERENCE_DIR} (${entrypoint.subpath})`,
-            message: `"${symbol.name}" has no TSDoc; its reference entry will show only a signature.`,
-            severity: "warning",
-          });
-        }
-      }
-    }
-  }
-
   return findings;
 }
 
@@ -131,8 +116,8 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
  * It applies to a package whose `codenhub.docs.reference` is an object, and
  * regenerates that package's reference to compare it against what is committed:
  * a missing area, a stale or unexpected page, an unresolved or colliding
- * entrypoint, an unsupported export kind, and (for `prose`) an undocumented
- * public symbol.
+ * entrypoint, and an unsupported export kind. Source documentation coverage is
+ * owned by the `undocumented-export` rule.
  * @returns The `reference` rule, ready for registration.
  */
 export function createReferenceRules(): CheckRule[] {

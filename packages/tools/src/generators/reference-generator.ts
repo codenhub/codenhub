@@ -18,7 +18,6 @@ import type { Generator } from "./generator.ts";
 const REFERENCE_DIR = "docs/reference";
 const REFERENCE_GROUP = "Reference";
 const KEBAB_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-export { resolveEntrypoints, type EntrypointPlan } from "../documentation/reference-declarations.ts";
 
 /**
  * The `docs/reference/`-relative path for an entrypoint's page.

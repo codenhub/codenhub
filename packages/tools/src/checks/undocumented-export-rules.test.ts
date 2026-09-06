@@ -60,12 +60,12 @@ export type Identifier = string;
     expect(await rule.run({ package: pkg, includePack: false })).toEqual([]);
   });
 
-  it("reports an undocumented public declaration as a warning", async () => {
+  it("reports an undocumented public declaration as an error", async () => {
     const pkg = await createPackage({ "dist/index.d.ts": "export declare function missing(): void;" });
     expect(await rule.run({ package: pkg, includePack: false })).toEqual([
       {
         code: "undocumented-export/missing-jsdoc",
-        severity: "warning",
+        severity: "error",
         location: "dist/index.d.ts",
         message: 'Export "missing" from "." has no JSDoc/TSDoc on its declaration.',
       },

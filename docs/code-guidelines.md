@@ -102,7 +102,7 @@ Internal exports used only to compose package entrypoints SHOULD stay unexported
 
 When changing package `exports`, public symbols, public behavior, or observable failure behavior, update source JSDoc/TSDoc and affected README, public docs, and LLM documentation in the same change.
 
-Oxlint validates JSDoc structure and tag quality where supported. `hub check` reports `undocumented-export/missing-jsdoc` warnings for undocumented top-level declarations exposed through typed package exports, following re-exports to their original declarations. It covers public packages and private packages that declare `codenhub.docs`, independently of generated reference opt-in. Class and interface members remain a review responsibility, as does the quality of the documentation. The warning will be considered for promotion to an error after a workspace coverage pass.
+Oxlint validates JSDoc structure and tag quality where supported. `hub check` reports `undocumented-export/missing-jsdoc` errors for undocumented top-level declarations exposed through typed package exports, following re-exports to their original declarations. It covers public packages and private packages that declare `codenhub.docs`, independently of generated reference opt-in. Missing documentation fails local verification and pull-request CI. Class and interface members remain a review responsibility, as does the quality of the documentation.
 
 ## Formatting, linting, and type checking
 

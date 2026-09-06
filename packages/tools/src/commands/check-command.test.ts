@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
+import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createCheckCommand } from "./check-command.ts";
@@ -146,23 +147,45 @@ describe("hub check", () => {
 
   it("waives the registered undocumented-export rule through the exception register", async () => {
     const pkg = createPackage("@codenhub/example", {
+      name: "@codenhub/example",
       codenhub: { docs: { label: "Example", status: "active" } },
       exports: { ".": { types: "./dist/index.d.ts" } },
     });
     pkg.directory = await mkdtemp(join(tmpdir(), "codenhub-check-export-"));
     await mkdir(join(pkg.directory, "dist"));
     await writeFile(join(pkg.directory, "dist/index.d.ts"), "export declare const value: string;");
-    const before = await runCheck([pkg], undefined, ["--json"]);
-    expect(JSON.parse(before.output)[0].findings).toContainEqual(
-      expect.objectContaining({ code: "undocumented-export/missing-jsdoc" }),
+    await mkdir(join(pkg.directory, "docs"));
+    await Promise.all(
+      Object.entries({
+        "README.md": "# @codenhub/example\n\n[Docs](docs/index.md)\n",
+        "docs/index.md": "---\ntitle: Example\n---\n\n# Example\n",
+        "llms.txt": "# @codenhub/example\n\n> Example package.\n\n## Docs\n\n- [Index](docs/index.md): Entrypoint.\n",
+      }).map(([path, contents]) => writeFile(join(pkg.directory, path), contents)),
     );
+    await writeFile(
+      join(pkg.directory, "llms-full.txt"),
+      await buildLlmsFull(pkg.directory, await listLlmsFullSources(pkg.directory)),
+    );
+    const before = await runCheck([pkg], undefined, ["--json"]);
+    expect(before.exitCode).toBe(EXIT_FAILURE);
+    expect(JSON.parse(before.output)[0].findings).toEqual([
+      expect.objectContaining({ code: "undocumented-export/missing-jsdoc", severity: "error" }),
+    ]);
     const after = await runCheck([pkg], createWaiver(pkg.name, ["undocumented-export/missing-jsdoc"]), ["--json"]);
     const report = JSON.parse(after.output)[0];
+    expect(after.exitCode).toBe(EXIT_SUCCESS);
     expect(
       report.findings.some((finding: { code: string }) => finding.code === "undocumented-export/missing-jsdoc"),
     ).toBe(false);
     expect(report.waived).toBe(1);
     expect(report.unusedWaivers).toEqual([]);
+    await writeFile(
+      join(pkg.directory, "dist/index.d.ts"),
+      "/** Default value. */\nexport declare const value: string;",
+    );
+    const documented = await runCheck([pkg], undefined, ["--json"]);
+    expect(documented.exitCode).toBe(EXIT_SUCCESS);
+    expect(JSON.parse(documented.output)[0].findings).toEqual([]);
   });
 
   it("reports a waived code that suppresses nothing", async () => {

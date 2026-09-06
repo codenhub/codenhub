@@ -86,7 +86,7 @@ Packages MUST export only values, types, files, and subpaths intended for consum
 
 Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/code-guidelines.md`.
 
-For packages covered by this spec, `hub check` reports `undocumented-export/missing-jsdoc` warnings when top-level declarations exposed through typed `exports` lack JSDoc/TSDoc, following re-exports to their original declarations; class and interface members remain outside this check's scope.
+For packages covered by this spec, `hub check` reports `undocumented-export/missing-jsdoc` errors when top-level declarations exposed through typed `exports` lack JSDoc/TSDoc, following re-exports to their original declarations; class and interface members remain outside this check's scope.
 
 ## Public documentation
 
