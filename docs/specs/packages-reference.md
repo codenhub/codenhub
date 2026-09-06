@@ -73,7 +73,7 @@ docs/
 
 Generated pages use the closed frontmatter schema from `docs/specs/packages-documentation.md`, including `since`, which that spec permits only on a generated reference page:
 
-- `title`: the entrypoint's public label. For `.` it is the package's `codenhub.docs.label`. For a subpath it is the subpath without the leading `./`, such as `registries/browser`.
+- `title`: the entrypoint's import subpath, used as the sidebar label. For `.` it is `/`; for a subpath it is the subpath with its leading `.` removed, such as `/registries/browser`. This keeps every entry in one list on the same footing — a package's marketing label would stand out among path-style siblings — and mirrors what a consumer appends to the bare import. The H1 carries the full specifier (see "Page content").
 - `description`: OPTIONAL one-line summary of the entrypoint, compiled from the entry module's TSDoc summary — a file-level `@packageDocumentation` comment on the entry source, collapsed to a single line. Omitted when the entry module carries no such comment.
 - `since`: OPTIONAL version string recording the release the entrypoint first shipped in, emitted from a `@since` tag on the entry module's `@packageDocumentation` comment. It is an opaque label, not validated as semver. Omitted when the tag is absent.
 - `order`: generator-assigned, placing entrypoint pages in a stable order — `.` first, then remaining entrypoints by `exports` declaration order.
@@ -93,7 +93,7 @@ Editing a generated page is pointless: the next `pnpm generate` overwrites it, a
 
 ## Page content
 
-A page's H1 is its `title`. Below it, each public symbol reachable from that entrypoint is a section:
+A page's H1 is the entrypoint's full import specifier — the package name for `.`, the package name plus the subpath for the rest, such as `@codenhub/error/registries/browser` — so the page is unambiguous on its own even though the sidebar `title` is terse. Below it, each public symbol reachable from that entrypoint is a section:
 
 - Symbols are grouped by kind under H2 headings in this order: **Functions**, **Classes**, **Interfaces**, **Type aliases**, **Enumerations**, **Variables**, **Namespaces**. A group with no members is omitted. An export whose kind is none of these is a `reference/unsupported-export` finding, not a silent omission.
 - Within a group, each symbol is an H3 named exactly as it is exported. A default export is named after its declaration; an anonymous default export is named `default`. `docs/code-guidelines.md` already steers library code to named exports, so this is expected to be rare. Members are alphabetical within their group.

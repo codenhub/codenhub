@@ -128,7 +128,6 @@ export async function analyzeReference(
   config: ReferenceConfig,
 ): Promise<ReferenceAnalysis> {
   const pkgDir = workspacePackage.directory.split("\\").join("/");
-  const label = (workspacePackage.manifest as { codenhub?: { docs?: { label?: string } } }).codenhub?.docs?.label;
   const plans = resolveEntrypoints(workspacePackage.manifest.exports, config);
   assertKebabEntrypoints(plans);
 
@@ -153,16 +152,20 @@ export async function analyzeReference(
     model.entrypoints.map(async (entrypoint, index) => {
       const pageRel = pageRels.get(entrypoint.subpath) ?? referencePageRel(entrypoint.subpath, allSubpaths);
       const isIndex = entrypoint.subpath === ".";
+      // Sidebar label is the import subpath (`/`, `/registries/browser`); the H1 is
+      // the full specifier a consumer would `import` from.
+      const suffix = isIndex ? "" : entrypoint.subpath.slice(1);
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
         description: entrypoint.description,
         group: isIndex ? REFERENCE_GROUP : undefined,
+        heading: `${workspacePackage.name}${suffix}`,
         order: isIndex ? undefined : index,
         prose: config.prose,
         resolveLink: resolveLinkFor(entrypoint.subpath),
         since: entrypoint.since,
         sourceRoot,
-        title: isIndex ? (label ?? workspacePackage.name) : entrypoint.subpath.replace(/^\.\//, ""),
+        title: suffix === "" ? "/" : suffix,
       });
       // Run the same formatter `pnpm format` applies — resolveConfig folds in the
       // docs/reference/ override — so a generated page is never reported as needing
