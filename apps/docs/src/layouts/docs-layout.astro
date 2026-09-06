@@ -1,6 +1,6 @@
 ---
 import PackageNavigation from "../components/package-navigation.astro";
-import type { PublicDocument, PublicPackage } from "../lib/catalog";
+import { isReferenceDocument, type PublicDocument, type PublicPackage } from "../lib/catalog";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
@@ -10,12 +10,20 @@ interface Props {
 
 const { currentPackage, document } = Astro.props;
 const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
+
+// A generated reference page carries a terse sidebar title (`/`, `/registries`)
+// and puts the full import specifier in its H1, so the browser title reads from
+// the heading. Its `description`/`since` deck is spliced below the H1 in the
+// catalog, not rendered here.
+const headingTitle = document.headings.find(({ depth }) => depth === 1)?.text;
+const browserTitle =
+  isReferenceDocument(document) && headingTitle !== undefined ? headingTitle : document.title;
 ---
 
 <BaseLayout
   description={document.description ?? currentPackage.description}
   sectionTitle={currentPackage.label}
-  title={document.title}
+  title={browserTitle}
 >
   <details class="mobile-navigation">
     <summary>Browse documentation</summary>
