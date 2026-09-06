@@ -235,6 +235,51 @@ export type Identifier = string;
     expect((await readdir(pkg.directory)).sort()).toEqual(["src", "tsconfig.json"]);
   });
 
+  it.each(["./dist/index.d.cts", { types: "./dist/index.d.cts" }])(
+    "checks CommonJS declaration entrypoints: %j",
+    async (target) => {
+      const pkg = await createPackage({ "dist/index.d.cts": "export declare const value: string;" }, { ".": target });
+      expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+        expect.objectContaining({ code: "undocumented-export/missing-jsdoc", severity: "error" }),
+      ]);
+    },
+  );
+
+  it.each(["./value.cjs", "./value.d.cts", "./nested"])("follows CommonJS barrel target %s", async (target) => {
+    const pkg = await createPackage(
+      {
+        "dist/index.d.cts": `export { value } from "${target}";`,
+        "dist/value.d.cts": "export declare const value: string;",
+        "dist/nested/index.d.cts": "export declare const value: string;",
+      },
+      { ".": { types: "./dist/index.d.cts" } },
+    );
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+      expect.objectContaining({
+        code: "undocumented-export/missing-jsdoc",
+        location: target === "./nested" ? "dist/nested/index.d.cts" : "dist/value.d.cts",
+      }),
+    ]);
+  });
+
+  it.each([false, true])("emits missing CommonJS declarations with wildcard=%s", async (wildcard) => {
+    const pkg = await createPackage(
+      {
+        "tsconfig.json": JSON.stringify({ compilerOptions: { noLib: true } }),
+        "src/index.cts": 'export { value } from "./value.cjs";',
+        "src/value.cts": "export const value = 1;",
+      },
+      wildcard ? { "./*": { types: "./dist/*.d.cts" } } : { ".": { types: "./dist/index.d.cts" } },
+    );
+    const findings = await rule.run({ package: pkg, includePack: false });
+    expect(findings).toEqual(
+      Array.from({ length: wildcard ? 2 : 1 }, () =>
+        expect.objectContaining({ code: "undocumented-export/missing-jsdoc", location: "dist/value.d.cts" }),
+      ),
+    );
+    expect((await readdir(pkg.directory)).sort()).toEqual(["src", "tsconfig.json"]);
+  });
+
   it("reports an unresolvable typed export instead of silently passing it", async () => {
     const pkg = await createPackage({ "tsconfig.json": "{}" });
     expect(await rule.run({ package: pkg, includePack: false })).toEqual([

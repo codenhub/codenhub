@@ -269,9 +269,19 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
  */
 export function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(
-    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.m?ts$/, "").replace(/\.m?js$/, "")),
+    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?js$/, "")),
   );
-  return [`${base}.d.ts`, `${base}.d.mts`, `${base}/index.d.ts`, `${base}/index.d.mts`];
+  if (/\.(?:cjs|d\.cts)$/.test(specifier)) {
+    return [`${base}.d.cts`];
+  }
+  return [
+    `${base}.d.ts`,
+    `${base}.d.mts`,
+    `${base}.d.cts`,
+    `${base}/index.d.ts`,
+    `${base}/index.d.mts`,
+    `${base}/index.d.cts`,
+  ];
 }
 
 /** Resolves a symbol's signature to whichever `.d.ts` actually declares it, following re-exports. */

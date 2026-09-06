@@ -2,7 +2,7 @@ import ts from "typescript";
 
 import type { ReferenceConfig } from "./reference-config.ts";
 
-const ENTRY_EXTENSION = /\.(?:d\.m?ts|m?js|ts)$/;
+const ENTRY_EXTENSION = /\.(?:d\.[cm]?ts|[cm]?js|[cm]?ts)$/;
 
 /** One documented entrypoint, resolved from an `exports` subpath to its source and module. */
 export interface EntrypointPlan {
@@ -61,12 +61,16 @@ export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig)
     }
     const stem = entryStem(target);
     const module = stem === "index" ? "index" : stem.replace(/\/index$/, "");
-    const esm = /\.(?:d\.mts|mts|mjs)$/.test(target);
+    const extension = /\.(?:d\.mts|mts|mjs)$/.test(target)
+      ? "mts"
+      : /\.(?:d\.cts|cts|cjs)$/.test(target)
+        ? "cts"
+        : "ts";
     return [
       {
-        entryDts: `${stem}${esm ? ".d.mts" : ".d.ts"}`,
+        entryDts: `${stem}.d.${extension}`,
         module,
-        sourceRel: `${stem}${esm ? ".mts" : ".ts"}`,
+        sourceRel: `${stem}.${extension}`,
         subpath,
       },
     ];

@@ -23,7 +23,7 @@ function unresolved(message: string, location: string): Finding {
 
 function typeTargets(entry: unknown): string[] {
   if (typeof entry === "string") {
-    return /\.d\.m?ts$/.test(entry) ? [entry] : [];
+    return /\.d\.[cm]?ts$/.test(entry) ? [entry] : [];
   }
   if (entry === null || typeof entry !== "object") {
     return [];
@@ -67,7 +67,7 @@ async function resolveTypedEntrypoints(workspacePackage: WorkspacePackage): Prom
                 `dist/${path
                   .replaceAll("\\", "/")
                   .slice(4)
-                  .replace(/\.m?ts$/, plan.entryDts.endsWith(".d.mts") ? ".d.mts" : ".d.ts")}`,
+                  .replace(/\.([cm]?ts)$/, ".d.$1")}`,
             ),
           ]);
           const pattern = posix.normalize(target);
