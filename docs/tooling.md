@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-30
+last_updated: 2026-09-06
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -273,16 +273,21 @@ A precondition that cannot be resolved, such as a tarball npm refused to build, 
 
 Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fail the run; `warning` covers SHOULD-level rules such as the recommended `license` and `repository` metadata. `pnpm check --json` prints the codes.
 
-| Rule            | Checks                                                                                                                  |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `metadata`      | Required and recommended manifest fields, and the LICENSE file, of published packages.                                  |
-| `scripts`       | Required scripts, a self-contained `prepublishOnly`, no chained builds, and browser tests kept out of the unit scripts. |
-| `dependencies`  | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
-| `exports`       | Import paths shown in the README and public docs are declared in `exports`.                                             |
-| `documentation` | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
-| `llms-full`     | `llms-full.txt` still matches the documents it compiles.                                                                |
-| `readme`        | README status notices agree with `codenhub.docs.status`.                                                                |
-| `assets`        | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
+| Rule                  | Checks                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `metadata`            | Required and recommended manifest fields, and the LICENSE file, of published packages.                                  |
+| `scripts`             | Required scripts, a self-contained `prepublishOnly`, no chained builds, and browser tests kept out of the unit scripts. |
+| `dependencies`        | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
+| `exports`             | Import paths shown in the README and public docs are declared in `exports`.                                             |
+| `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
+| `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                 |
+| `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
+| `readme`              | README status notices agree with `codenhub.docs.status`.                                                                |
+| `assets`              | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
+
+The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` errors for top-level declarations exposed through `exports` subpaths with type targets. It applies to public packages and private packages with `codenhub.docs`, skips `./package.json`, expands typed wildcard subpaths, and follows re-export aliases to the original declaration before checking for JSDoc/TSDoc. It reads emitted declarations when available and otherwise emits declarations in memory with the TypeScript compiler API. It does not run TypeDoc. Run a build after source changes to keep on-disk declarations current; `hub verify` and PR CI already build before checking. Missing documentation fails the check. Unresolvable exports or declaration dependencies report `undocumented-export/unresolved-export` warnings, including generated targets that need a package build first. Class and interface members and documentation quality remain review responsibilities. Source documentation coverage belongs to this rule alone; the `reference` rule checks generated-page correctness.
+
+Typed export targets include `.d.ts`, `.d.mts`, and `.d.cts`; missing CommonJS declarations can be emitted from `.cts` sources. A namespace re-export such as `export * as utilities from "./utilities.js"` is documented on that export declaration. Its members are not checked as top-level exports, and subsequent barrel aliases follow back to that namespace declaration.
 
 The `exports` rule reads import statements, not prose: naming a path in a sentence is not a promise that it resolves, but showing it in an `import` is. The reverse direction — a supported path the package never documents — is not mechanically knowable and stays a review responsibility.
 

@@ -198,24 +198,34 @@ interface ModuleGraph {
   imports: Map<string, ImportBinding>;
 }
 
-function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
+/**
+ * Reads declaration-barrel edges for signature and documentation analysis.
+ * @param source Parsed declaration file.
+ * @returns Re-exports, local aliases, and imported bindings.
+ */
+export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
   const reexports: ReexportEdge[] = [];
   const localAliases = new Map<string, string>();
   const imports = new Map<string, ImportBinding>();
 
   for (const statement of source.statements) {
-    if (
-      ts.isImportDeclaration(statement) &&
-      ts.isStringLiteral(statement.moduleSpecifier) &&
-      statement.importClause?.namedBindings !== undefined &&
-      ts.isNamedImports(statement.importClause.namedBindings)
-    ) {
-      for (const element of statement.importClause.namedBindings.elements) {
+    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+      const clause = statement.importClause;
+      if (clause?.name !== undefined) {
+        imports.set(clause.name.text, { module: statement.moduleSpecifier.text, original: DEFAULT_EXPORT_NAME });
+      }
+      const bindings = clause?.namedBindings;
+      for (const element of bindings !== undefined && ts.isNamedImports(bindings) ? bindings.elements : []) {
         imports.set(element.name.text, {
           module: statement.moduleSpecifier.text,
           original: (element.propertyName ?? element.name).text,
         });
       }
+      continue;
+    }
+
+    if (ts.isExportAssignment(statement) && !statement.isExportEquals && ts.isIdentifier(statement.expression)) {
+      localAliases.set(DEFAULT_EXPORT_NAME, statement.expression.text);
       continue;
     }
 
@@ -251,12 +261,27 @@ function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
   return { imports, localAliases, reexports };
 }
 
-/** Candidate declaration paths a module specifier could resolve to, relative to `fromPath`. */
-function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
+/**
+ * Lists declaration paths a relative module specifier could resolve to.
+ * @param fromPath Importing declaration's POSIX path.
+ * @param specifier Relative module specifier.
+ * @returns Candidates in declaration resolution order.
+ */
+export function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(
-    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.m?ts$/, "").replace(/\.m?js$/, "")),
+    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?js$/, "")),
   );
-  return [`${base}.d.ts`, `${base}.d.mts`, `${base}/index.d.ts`, `${base}/index.d.mts`];
+  if (/\.(?:cjs|d\.cts)$/.test(specifier)) {
+    return [`${base}.d.cts`];
+  }
+  return [
+    `${base}.d.ts`,
+    `${base}.d.mts`,
+    `${base}.d.cts`,
+    `${base}/index.d.ts`,
+    `${base}/index.d.mts`,
+    `${base}/index.d.cts`,
+  ];
 }
 
 /** Resolves a symbol's signature to whichever `.d.ts` actually declares it, following re-exports. */
@@ -279,18 +304,108 @@ export interface SignatureResolver {
  * @returns A resolver whose `lookup` keys are those same paths.
  */
 export function buildSignatureResolver(files: ReadonlyMap<string, string>): SignatureResolver {
-  const declarations = new Map<string, SignatureIndex>();
+  return buildModuleResolver(files, collectDeclarations);
+}
+
+/** Original declaration nodes and exported names reachable through declaration barrels. */
+export interface DeclarationResolver {
+  /** Resolves an exported name to its original declarations, including overloads. */
+  lookup(entryPath: string, name: string): readonly ts.Node[] | undefined;
+  /** Lists only top-level public names, including aliases and star re-exports. */
+  exports(entryPath: string): string[];
+}
+
+function collectDeclarationNodes(statements: readonly ts.Statement[]): Map<string, readonly ts.Node[]> {
+  const nodes = new Map<string, readonly ts.Node[]>();
+  const add = (name: string, node: ts.Node) => nodes.set(name, [...(nodes.get(name) ?? []), node]);
+  for (const statement of statements) {
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          add(declaration.name.text, declaration);
+        }
+      }
+    } else if (
+      ts.isFunctionDeclaration(statement) ||
+      ts.isClassDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isTypeAliasDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isModuleDeclaration(statement)
+    ) {
+      const name = statement.name?.text ?? DEFAULT_EXPORT_NAME;
+      add(name, statement);
+      if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword) && name !== DEFAULT_EXPORT_NAME) {
+        add(DEFAULT_EXPORT_NAME, statement);
+      }
+    } else if (ts.isExportAssignment(statement) && !ts.isIdentifier(statement.expression)) {
+      add(DEFAULT_EXPORT_NAME, statement);
+    } else if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause !== undefined &&
+      ts.isNamespaceExport(statement.exportClause)
+    ) {
+      // The namespace binding originates here; its members are not top-level exports.
+      add(statement.exportClause.name.text, statement);
+    }
+  }
+  return nodes;
+}
+
+/**
+ * Resolves top-level exports to their original AST nodes without creating a type program.
+ * @param files Declaration contents keyed by consistent POSIX paths.
+ * @returns Declaration lookup and public export enumeration using the signature resolver's barrel graph.
+ */
+export function buildDeclarationResolver(files: ReadonlyMap<string, string>): DeclarationResolver {
+  return buildModuleResolver(files, (source) => collectDeclarationNodes(source.statements));
+}
+
+function collectExportNames(source: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+  for (const statement of source.statements) {
+    if (ts.canHaveModifiers(statement) && hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
+      if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword)) {
+        names.add(DEFAULT_EXPORT_NAME);
+      } else {
+        for (const name of collectDeclarationNodes([statement]).keys()) {
+          names.add(name);
+        }
+      }
+    }
+    if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
+      names.add(DEFAULT_EXPORT_NAME);
+    }
+    if (ts.isExportDeclaration(statement) && statement.exportClause !== undefined) {
+      const clause = statement.exportClause;
+      for (const name of ts.isNamedExports(clause)
+        ? clause.elements.map((element) => element.name.text)
+        : [clause.name.text]) {
+        names.add(name);
+      }
+    }
+  }
+  return names;
+}
+
+function buildModuleResolver<T>(
+  files: ReadonlyMap<string, string>,
+  collect: (source: ts.SourceFile) => Map<string, T>,
+) {
+  const declarations = new Map<string, Map<string, T>>();
   const graphs = new Map<string, ModuleGraph>();
+  const exportedNames = new Map<string, Set<string>>();
   for (const [path, text] of files) {
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-    declarations.set(path, collectDeclarations(source));
+    declarations.set(path, collect(source));
     graphs.set(path, collectModuleGraph(source));
+    exportedNames.set(path, collectExportNames(source));
   }
 
   const resolveEdgeTarget = (fromPath: string, specifier: string): string | undefined =>
     resolveDtsCandidates(fromPath, specifier).find((candidate) => files.has(candidate));
 
-  const lookup = (entryPath: string, name: string, seen: Set<string>): SymbolSignature | undefined => {
+  const lookup = (entryPath: string, name: string, seen: Set<string>): T | undefined => {
     // Key the guard on the pair: a renamed edge reaches the same file under a
     // different name, and that second visit must not be blocked by the first.
     const visitKey = JSON.stringify([entryPath, name]);
@@ -299,12 +414,12 @@ export function buildSignatureResolver(files: ReadonlyMap<string, string>): Sign
     }
     seen.add(visitKey);
 
+    const graph = graphs.get(entryPath);
+    const isRemoteExport = graph?.reexports.some((edge) => edge.names.has(name)) ?? false;
     const direct = declarations.get(entryPath)?.get(name);
-    if (direct !== undefined) {
+    if (direct !== undefined && !isRemoteExport) {
       return direct;
     }
-
-    const graph = graphs.get(entryPath);
 
     const localBinding = graph?.localAliases.get(name);
     if (localBinding !== undefined && localBinding !== name) {
@@ -323,9 +438,20 @@ export function buildSignatureResolver(files: ReadonlyMap<string, string>): Sign
       }
     }
 
-    for (const edge of graph?.reexports ?? []) {
+    // Explicit re-exports shadow star exports, irrespective of statement order.
+    const edges = graph?.reexports ?? [];
+    for (const edge of [
+      ...edges.filter((candidate) => !candidate.all),
+      ...edges.filter((candidate) => candidate.all),
+    ]) {
+      if (edge.all && name === DEFAULT_EXPORT_NAME) {
+        continue;
+      }
       const targetPath = resolveEdgeTarget(entryPath, edge.module);
       if (targetPath === undefined) {
+        continue;
+      }
+      if (edge.all && !listExports(targetPath, new Set()).has(name)) {
         continue;
       }
       const targetName = edge.all ? name : edge.names.get(name);
@@ -340,7 +466,30 @@ export function buildSignatureResolver(files: ReadonlyMap<string, string>): Sign
     return undefined;
   };
 
-  return { lookup: (entryPath, name) => lookup(entryPath, name, new Set()) };
+  const listExports = (entryPath: string, seen: Set<string>): Set<string> => {
+    if (seen.has(entryPath)) {
+      return new Set();
+    }
+    seen.add(entryPath);
+    const names = new Set(exportedNames.get(entryPath));
+    for (const edge of graphs.get(entryPath)?.reexports ?? []) {
+      const target = resolveEdgeTarget(entryPath, edge.module);
+      if (!edge.all || target === undefined) {
+        continue;
+      }
+      for (const name of listExports(target, seen)) {
+        if (name !== DEFAULT_EXPORT_NAME) {
+          names.add(name);
+        }
+      }
+    }
+    return names;
+  };
+
+  return {
+    exports: (entryPath: string) => [...listExports(entryPath, new Set())],
+    lookup: (entryPath: string, name: string) => lookup(entryPath, name, new Set()),
+  };
 }
 
 function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefined): ReferenceSymbol {

@@ -16,6 +16,10 @@ const outputDirectory = resolve(packageDirectory, "dist", "data");
 
 const DECLARATION = `import type { IconFamilyData } from "../index.js";
 
+/**
+ * Icon family data for registration and CSS or SVG rendering.
+ * Contains the family's icon geometry, aliases, and upstream attribution metadata.
+ */
 declare const family: IconFamilyData;
 export default family;
 `;
