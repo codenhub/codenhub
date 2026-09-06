@@ -19,9 +19,7 @@ Maps the success value of a Result using the provided mapper function that retur
 
 **Returns** — A new Result instance from the mapper or the original Err.
 
-**Throws**
-
-- The exception thrown by `mapper`; callback failures are not normalized.
+**Throws** — The exception thrown by `mapper`; callback failures are not normalized.
 
 ### andThenAsync
 
@@ -45,9 +43,7 @@ This is the boundary helper for wrapping code that throws: the callback result b
 
 **Returns** — An Ok result holding the callback value, or an Err holding the normalized failure.
 
-**Throws**
-
-- TypeError - If `options` or any supplied option value is invalid.
+**Throws** — TypeError - If `options` or any supplied option value is invalid.
 
 ### attemptAsync
 
@@ -59,9 +55,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 
 **Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`.
 
-**Throws**
-
-- TypeError - If `options` or any supplied option value is invalid.
+**Throws** — TypeError - If `options` or any supplied option value is invalid.
 
 ### createAppError
 
@@ -82,9 +76,7 @@ A deep known match outranks a shallow unexpected match. Ordinary unknown input n
 
 **Returns** — A frozen AppError. An existing AppError is returned as-is only when no options are supplied.
 
-**Throws**
-
-- TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
+**Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
 ### createErrorRegistry
 
@@ -98,9 +90,7 @@ Optionally merges a list of preset registries into the newly created registry.
 
 **Returns** — A new, mutable ErrorRegistry instance.
 
-**Throws**
-
-- TypeError - If `presets` is not a list, if a preset does not implement the readable registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
+**Throws** — TypeError - If `presets` is not a list, if a preset does not implement the readable registry interface, or if any preset contains an invalid identifier, pattern, or feedback field.
 
 ### err
 
@@ -114,9 +104,7 @@ A raw string is matched against the registry like any other value. An unmatched 
 
 **Returns** — An Err result object.
 
-**Throws**
-
-- TypeError - If `options` or any supplied option value is invalid.
+**Throws** — TypeError - If `options` or any supplied option value is invalid.
 
 ### freezeRegistry
 
@@ -162,9 +150,7 @@ Maps the success value of a Result using the provided mapper function.
 
 **Returns** — A new Result instance with the mapped value or the original Err.
 
-**Throws**
-
-- The exception thrown by `mapper`; callback failures are not normalized.
+**Throws** — The exception thrown by `mapper`; callback failures are not normalized.
 
 ### mapAsync
 
@@ -189,9 +175,7 @@ Pattern matches on a Result, executing the corresponding callback based on the o
 
 **Returns** — The value returned by the executed callback.
 
-**Throws**
-
-- The exception thrown by the selected callback; callback failures are not normalized.
+**Throws** — The exception thrown by the selected callback; callback failures are not normalized.
 
 ### ok
 
@@ -214,9 +198,7 @@ Sets the active global error registry.
 
 Allows consumers to replace the default registry at application initialization. Throws a TypeError if the provided value does not implement the mutable registry interface.
 
-**Throws**
-
-- TypeError - If the parameter is not a valid ErrorRegistry.
+**Throws** — TypeError - If the parameter is not a valid ErrorRegistry.
 
 ### unwrap
 
@@ -228,9 +210,7 @@ Unwraps a Result, returning the value if successful, or throwing the normalized 
 
 **Returns** — The unwrapped success value.
 
-**Throws**
-
-- AppError - If the result is an Err.
+**Throws** — AppError - If the result is an Err.
 
 ### unwrapOr
 

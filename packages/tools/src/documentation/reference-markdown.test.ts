@@ -96,6 +96,29 @@ describe("renderReferencePage", () => {
     expect(section.indexOf("> **Deprecated.**")).toBeLessThan(section.indexOf("**Parameters**"));
   });
 
+  it("renders a single-entry Throws or See also section as one inline line", () => {
+    const single = renderReferencePage(
+      {
+        subpath: ".",
+        module: "index",
+        symbols: [
+          symbol({
+            name: "unwrap",
+            kind: "function",
+            signature: "export declare function unwrap<T>(result: Result<T>): T;",
+            doc: "Returns the value or throws.",
+            throws: ["When the result is an Err."],
+            see: ["unwrapOr"],
+          }),
+        ],
+      },
+      { title: "ErrorKit", sourceRoot: "packages/error/src", prose: true },
+    );
+    expect(single).toContain("**Throws** — When the result is an Err.");
+    expect(single).not.toContain("**Throws**\n\n-");
+    expect(single).toContain("**See also** — unwrapOr");
+  });
+
   it("resolves an in-page {@link} to a heading anchor and leaves unknown targets as code", () => {
     expect(page).toContain("Normalizes an unknown value into an [AppError](#apperror).");
     expect(page).toContain("See {@link https://mdn}.".replace("{@link https://mdn}", "`https://mdn`"));

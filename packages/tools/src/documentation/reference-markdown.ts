@@ -92,8 +92,17 @@ function namedDocList(
   return [`**${heading}**`, documented.map((entry) => `- \`${entry.name}\` — ${link(entry.doc ?? "")}`).join("\n")];
 }
 
-function bulletList(heading: string, items: readonly string[], link: (text: string) => string): string[] {
-  return items.length === 0 ? [] : [`**${heading}**`, items.map((item) => `- ${link(item)}`).join("\n")];
+// A repeatable free-text tag section (@throws, @see). One entry reads as a
+// `**Label** — text` line, matching how the single-valued @returns renders; two
+// or more become a bulleted list.
+function notesSection(heading: string, items: readonly string[], link: (text: string) => string): string[] {
+  if (items.length === 0) {
+    return [];
+  }
+  if (items.length === 1) {
+    return [`**${heading}** — ${link(items[0] ?? "")}`];
+  }
+  return [`**${heading}**`, items.map((item) => `- ${link(item)}`).join("\n")];
 }
 
 function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: string) => string): string[] {
@@ -136,14 +145,14 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
     if (symbol.returns !== undefined) {
       blocks.push(`**Returns** — ${link(symbol.returns)}`);
     }
-    blocks.push(...bulletList("Throws", symbol.throws, link));
+    blocks.push(...notesSection("Throws", symbol.throws, link));
     if (symbol.defaultValue !== undefined) {
       blocks.push(`**Default** — ${link(symbol.defaultValue)}`);
     }
     for (const example of symbol.examples) {
       blocks.push("**Example**", example.trim());
     }
-    blocks.push(...bulletList("See also", symbol.see, link));
+    blocks.push(...notesSection("See also", symbol.see, link));
   }
 
   for (const member of symbol.members) {
