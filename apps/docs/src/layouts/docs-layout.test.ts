@@ -29,6 +29,28 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("<h1>Overview</h1>");
   });
 
+  it("titles a generated reference page by its import specifier, not the terse sidebar title", async () => {
+    const html = await readOutput("error/reference/index.html");
+
+    expect(html).toContain("<title>@codenhub/error | ErrorKit | CodenHub</title>");
+    expect(html).toContain('<h1 id="codenhuberror">@codenhub/error</h1>');
+  });
+
+  it("shows a generated reference page's description as a standfirst above the article", async () => {
+    const html = await readOutput("error/reference/index.html");
+
+    expect(html).toContain(
+      '<p class="reference-summary">Typed error normalization, result helpers, and the error registry.</p>',
+    );
+  });
+
+  it("leaves a hand-authored page's description as metadata only", async () => {
+    const html = await readOutput("icons/index.html");
+
+    expect(html).toContain('name="description"');
+    expect(html).not.toContain("reference-summary");
+  });
+
   it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
     const html = await readOutput(path);
 

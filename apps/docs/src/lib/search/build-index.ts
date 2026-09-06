@@ -7,6 +7,8 @@ export interface IndexableHeading {
 }
 
 export interface IndexableDocument {
+  /** Frontmatter summary, folded into the document entry so a page is findable by it. */
+  description?: string;
   /** Headings as parsed from the source, in document order. */
   headings: readonly IndexableHeading[];
   /** Compiled document HTML, as rendered into the page. */
@@ -76,10 +78,12 @@ export function buildSearchIndex(packages: readonly IndexablePackage[]): SearchE
       const headings = document.headings.filter(({ depth }) => depth === 2 || depth === 3);
       const bounds = findSectionBounds(document.html);
 
+      const leadText = toText(document.html.slice(0, bounds[0]?.openIndex ?? document.html.length));
+      const documentText = document.description === undefined ? leadText : `${document.description} ${leadText}`;
       const documentEntry: SearchEntry = {
         packageLabel: packageEntry.label,
         route: document.route,
-        text: toText(document.html.slice(0, bounds[0]?.openIndex ?? document.html.length)).slice(0, TEXT_LIMIT),
+        text: documentText.slice(0, TEXT_LIMIT),
         title: document.title,
       };
 

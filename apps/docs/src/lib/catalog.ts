@@ -25,7 +25,19 @@ export interface PublicDocument {
   relativePath: string;
   route: string;
   routePath: string;
+  /** Version an entrypoint first shipped in, from a generated reference page's `since`. */
+  since?: string;
   title: string;
+}
+
+/**
+ * Whether a document is a page in a package's generated `docs/reference/` area.
+ *
+ * Matches the `reference/` directory only. A hand-authored `docs/reference.md`
+ * (a file, in a package with no generated reference) is an ordinary page.
+ */
+export function isReferenceDocument(document: Pick<PublicDocument, "relativePath">): boolean {
+  return document.relativePath.startsWith("reference/");
 }
 
 export interface PublicPackage {
@@ -92,6 +104,7 @@ async function loadCatalog(): Promise<PublicPackage[]> {
             relativePath: definition.relativePath,
             route: `/${packageDefinition.slug}/${definition.routePath}`.replace(/\/$/, "") + "/",
             routePath: definition.routePath,
+            since: frontmatter.since,
             title: frontmatter.title,
           };
         }),
