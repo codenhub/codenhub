@@ -36,19 +36,19 @@ describe("documentation chrome", () => {
     expect(html).toContain('<h1 id="codenhuberror">@codenhub/error</h1>');
   });
 
-  it("shows a generated reference page's description as a standfirst above the article", async () => {
+  it("renders a generated reference page's description as a deck directly below the H1", async () => {
     const html = await readOutput("error/reference/index.html");
+    const deck =
+      '<div class="reference-deck"><p class="reference-summary">Typed error normalization, result helpers, and the error registry.</p></div>';
 
-    expect(html).toContain(
-      '<p class="reference-summary">Typed error normalization, result helpers, and the error registry.</p>',
-    );
+    expect(html).toContain(`</h1>${deck}`);
   });
 
   it("leaves a hand-authored page's description as metadata only", async () => {
     const html = await readOutput("icons/index.html");
 
     expect(html).toContain('name="description"');
-    expect(html).not.toContain("reference-summary");
+    expect(html).not.toContain("reference-deck");
   });
 
   it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {

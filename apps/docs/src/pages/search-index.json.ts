@@ -13,13 +13,7 @@ export const GET: APIRoute = () =>
   Response.json(
     buildSearchIndex(
       packages.map(({ documents, label }) => ({
-        documents: documents.map(({ description, headings, html, route, title }) => ({
-          description,
-          headings,
-          html,
-          route,
-          title,
-        })),
+        documents: documents.map(({ headings, html, route, title }) => ({ headings, html, route, title })),
         label,
       })),
     ),

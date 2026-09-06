@@ -214,20 +214,6 @@ body {
   @apply min-w-0 px-8 py-10 md:px-10 xl:px-14;
 }
 
-/* Standfirst for a generated reference page: the entrypoint summary and the
-   version it shipped in, shown above the article's import-specifier H1. */
-.reference-meta {
-  @apply mb-8 max-w-3xl;
-}
-
-.reference-summary {
-  @apply text-text-secondary text-[1.05rem] leading-7;
-}
-
-.reference-since {
-  @apply text-label text-text-secondary mt-2;
-}
-
 .toc-rail ol {
   @apply mt-3;
 }
@@ -238,6 +224,21 @@ body {
 
 .markdown-content h1 {
   @apply text-title-lg mb-8 break-words;
+}
+
+/* Deck under a generated reference page's H1: the entrypoint summary and the
+   version it first shipped in, spliced in by the catalog. It tucks up against
+   the H1, ahead of the first symbol group. */
+.markdown-content .reference-deck {
+  @apply -mt-4 mb-2;
+}
+
+.markdown-content .reference-summary {
+  @apply text-text-secondary my-0 text-[1.05rem] leading-7;
+}
+
+.markdown-content .reference-since {
+  @apply text-text-secondary text-label mt-2 mb-0;
 }
 
 /* No `scroll-mt-*` here: the page scrolls, so `html` already reserves the sticky

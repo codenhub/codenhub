@@ -43,19 +43,6 @@ describe("buildSearchIndex", () => {
     expect(documentEntry?.text).toBe("Design tokens Tokens are CSS custom & foundation properties.");
   });
 
-  it("folds a document's frontmatter description into its entry text", () => {
-    const [documentEntry] = buildSearchIndex([
-      {
-        documents: [{ ...packages[0]!.documents[0]!, description: "Design token reference." }],
-        label: "Styles",
-      },
-    ]);
-
-    expect(documentEntry?.text).toBe(
-      "Design token reference. Design tokens Tokens are CSS custom & foundation properties.",
-    );
-  });
-
   it("stops a section's prose at the next heading", () => {
     const [, colorTokens] = buildSearchIndex(packages);
 

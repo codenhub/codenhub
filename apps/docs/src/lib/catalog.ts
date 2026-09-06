@@ -40,6 +40,34 @@ export function isReferenceDocument(document: Pick<PublicDocument, "relativePath
   return document.relativePath.startsWith("reference/");
 }
 
+const escapeHtml = (value: string): string =>
+  value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+/**
+ * Splices a generated reference page's `description` and `since` in as a deck
+ * directly below the H1.
+ *
+ * This is the one place the site adds to a rendered document body rather than
+ * only to page chrome: both values are generator-derived and read as part of the
+ * entrypoint heading they sit under. `docs/specs/packages-documentation.md`
+ * carves this out for `docs/reference/` pages.
+ */
+export function insertReferenceDeck(html: string, meta: { description?: string; since?: string }): string {
+  const parts: string[] = [];
+  if (meta.description !== undefined) {
+    parts.push(`<p class="reference-summary">${escapeHtml(meta.description)}</p>`);
+  }
+  if (meta.since !== undefined) {
+    parts.push(`<p class="reference-since">Added in ${escapeHtml(meta.since)}</p>`);
+  }
+  const cut = parts.length === 0 ? -1 : html.indexOf("</h1>");
+  if (cut === -1) {
+    return html;
+  }
+  const at = cut + "</h1>".length;
+  return `${html.slice(0, at)}<div class="reference-deck">${parts.join("")}</div>${html.slice(at)}`;
+}
+
 export interface PublicPackage {
   description?: string;
   documents: PublicDocument[];
@@ -90,15 +118,20 @@ async function loadCatalog(): Promise<PublicPackage[]> {
           assertSingleH1(headings, definition.sourcePath);
           const rawHtml = await documentModule.compiledContent();
 
+          const linkedHtml = rewritePackageMarkdownLinks(rawHtml, {
+            packageSlug: packageDefinition.slug,
+            sourceRelativePath: definition.relativePath,
+          });
+          const isReference = isReferenceDocument({ relativePath: definition.relativePath });
+
           return {
             curated: frontmatter.curated,
             description: frontmatter.description,
             group: frontmatter.group,
             headings,
-            html: rewritePackageMarkdownLinks(rawHtml, {
-              packageSlug: packageDefinition.slug,
-              sourceRelativePath: definition.relativePath,
-            }),
+            html: isReference
+              ? insertReferenceDeck(linkedHtml, { description: frontmatter.description, since: frontmatter.since })
+              : linkedHtml,
             order: frontmatter.order,
             rawHtml,
             relativePath: definition.relativePath,

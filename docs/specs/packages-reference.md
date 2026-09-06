@@ -93,7 +93,7 @@ Editing a generated page is pointless: the next `pnpm generate` overwrites it, a
 
 ## Page content
 
-A page's H1 is the entrypoint's full import specifier — the package name for `.`, the package name plus the subpath for the rest, such as `@codenhub/error/registries/browser` — so the page is unambiguous on its own even though the sidebar `title` is terse. Below it, each public symbol reachable from that entrypoint is a section:
+A page's H1 is the entrypoint's full import specifier — the package name for `.`, the package name plus the subpath for the rest, such as `@codenhub/error/registries/browser` — so the page is unambiguous on its own even though the sidebar `title` is terse. A publishing site MAY render the page's `description` and `since` as a deck directly after this H1; `docs/specs/packages-documentation.md` carves that out from its no-metadata-in-the-body rule. Below the H1, each public symbol reachable from that entrypoint is a section:
 
 - Symbols are grouped by kind under H2 headings in this order: **Functions**, **Classes**, **Interfaces**, **Type aliases**, **Enumerations**, **Variables**, **Namespaces**. A group with no members is omitted. An export whose kind is none of these is a `reference/unsupported-export` finding, not a silent omission.
 - Within a group, each symbol is an H3 named exactly as it is exported. A default export is named after its declaration; an anonymous default export is named `default`. `docs/code-guidelines.md` already steers library code to named exports, so this is expected to be rare. Members are alphabetical within their group.

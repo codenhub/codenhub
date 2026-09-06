@@ -13,12 +13,11 @@ const tocHeadings = document.headings.filter(({ depth }) => depth === 2 || depth
 
 // A generated reference page carries a terse sidebar title (`/`, `/registries`)
 // and puts the full import specifier in its H1, so the browser title reads from
-// the heading; its `description`/`since` frontmatter render as a standfirst
-// above the article rather than only as page metadata.
-const isReference = isReferenceDocument(document);
+// the heading. Its `description`/`since` deck is spliced below the H1 in the
+// catalog, not rendered here.
 const headingTitle = document.headings.find(({ depth }) => depth === 1)?.text;
-const browserTitle = isReference && headingTitle !== undefined ? headingTitle : document.title;
-const showReferenceMeta = isReference && (document.description !== undefined || document.since !== undefined);
+const browserTitle =
+  isReferenceDocument(document) && headingTitle !== undefined ? headingTitle : document.title;
 ---
 
 <BaseLayout
@@ -39,14 +38,6 @@ const showReferenceMeta = isReference && (document.description !== undefined || 
     </aside>
 
     <main class="document-column" id="main-content">
-      {
-        showReferenceMeta && (
-          <div class="reference-meta">
-            {document.description !== undefined && <p class="reference-summary">{document.description}</p>}
-            {document.since !== undefined && <p class="reference-since">Added in {document.since}</p>}
-          </div>
-        )
-      }
       <article class="markdown-content">
         <slot />
       </article>
