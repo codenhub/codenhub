@@ -61,3 +61,24 @@ export {
   type PublicPackageSummary,
 } from "./package-metadata.ts";
 export { discoverPublicResources, type DiscoveredResource, type PublicResource } from "./public-resources.ts";
+export {
+  buildReferenceModel,
+  type ReferenceEntrypoint,
+  type ReferenceMember,
+  type ReferenceMemberKind,
+  type ReferenceModel,
+  type ReferenceNamedDoc,
+  type ReferenceSymbol,
+  type ReferenceSymbolKind,
+  type UnsupportedExport,
+} from "./reference-model.ts";
+export { parseReferenceConfig, type ReferenceConfig } from "./reference-config.ts";
+export { renderReferencePage, symbolSlug, type RenderReferencePageOptions } from "./reference-markdown.ts";
+export {
+  attachSignatures,
+  buildSignatureResolver,
+  extractSignatures,
+  type SignatureIndex,
+  type SignatureResolver,
+  type SymbolSignature,
+} from "./reference-signatures.ts";

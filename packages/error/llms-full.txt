@@ -31,6 +31,7 @@ Unmatched values become `type: "unknown"` and use `"An unexpected error occurred
 ## Documentation
 
 - [Documentation overview](docs/index.md)
+- [API reference](docs/reference/index.md)
 - [Error normalization and registries](docs/error-normalization.md)
 - [Result helpers](docs/results.md)
 
@@ -109,6 +110,7 @@ Runtime code does not access browser or Node.js globals. Browser preset imports 
 
 - [Error normalization and registries](docs/error-normalization.md) explains classification, registry configuration, presets, matching priority, defaults, and failure behavior.
 - [Result helpers](docs/results.md) covers `Result` construction, transformation, matching, and unwrapping for code that prefers explicit success and failure values.
+- [API reference](docs/reference/index.md) lists every export of each entrypoint with its signature and documentation, generated from the source.
 
 <!-- Source: docs/error-normalization.md -->
 

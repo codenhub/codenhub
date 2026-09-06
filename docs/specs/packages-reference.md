@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-09-05
 scope: Generated API reference documentation for public workspace packages.
 ---
@@ -8,7 +8,7 @@ scope: Generated API reference documentation for public workspace packages.
 
 This document defines a generated API reference for public workspace packages: a per-package, per-entrypoint set of Markdown pages compiled from the package's TypeScript declarations and source TSDoc by `pnpm generate`, published by the documentation site alongside the hand-authored public docs.
 
-The generator, the `hub check` rule, and the documentation-site rendering this document describes are not built yet; this is the contract they will be built against. "Adoption" below is the order that work is expected to follow. Until a package opts in per "Opting in", nothing about it changes.
+The `reference` generator (`packages/tools/src/generators/reference-generator.ts`) and the `reference` compliance check implement this document; `@codenhub/error` is the first package to opt in. "Adoption" below is the order the rollout follows. Until a package opts in per "Opting in", nothing about it changes.
 
 ## Why it is generated
 
@@ -32,7 +32,6 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
       "status": "active",
       "reference": {
         "entrypoints": ["."],
-        "exclude": ["packages/error/src/registries/internal/**"],
         "prose": true
       }
     }
@@ -43,8 +42,8 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
 `codenhub.docs.reference` is one of:
 
 - An **object** — the package opts in. Every field is OPTIONAL:
-  - `entrypoints`: array of `package.json` `exports` subpath keys to document, such as `"."` or `"./registries/browser"`. Defaults to every `exports` subpath that resolves to a `types` target. A key not present in `exports` is invalid.
-  - `exclude`: array of repository-relative globs. A public symbol whose declaration originates in a matched source file is omitted from the reference. This is for surfaces that are exported for tooling reasons but are not a consumer contract; prefer not exporting them at all.
+  - `entrypoints`: array of `package.json` `exports` subpath keys to document, such as `"."` or `"./registries/browser"`. Defaults to every `exports` subpath that resolves to a `types` target. A key not present in `exports` is invalid. An explicitly empty array is invalid; omit the field to document every entrypoint.
+  - `exclude`: RESERVED. An array of repository-relative globs is accepted and its shape validated, but the generator does not yet honour it. The intent is to omit a public symbol whose declaration originates in a matched source file — for surfaces exported for tooling reasons that are not a consumer contract; until it is implemented, prefer not exporting such symbols at all.
   - `prose`: boolean, default `true`. When `false`, pages carry the signature manifest only (see "Page content") and no prose is compiled from TSDoc. This is the low-risk subset intended to be safe to enable widely before per-package TSDoc quality is known.
 - The literal **`false`** — the package explicitly opts out. Meaningful once the reference is default-on (see "Adoption"); until then, absence and `false` behave the same.
 - **Absent** — the package has no generated reference.
@@ -134,7 +133,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/missing` — `error` — opted in, but `docs/reference/` is absent.
 - `reference/drift` — `error` — a generated page differs from what the generator produces now. This is the compliance-report view of the `hub generate --dry-run` gate.
 - `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
-- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key or `exclude` glob does not resolve.
+- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key does not resolve.
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
 - `reference/undocumented-symbol` — `warning` — `prose` is `true` and a public symbol reachable from a documented entrypoint has no TSDoc.
 
