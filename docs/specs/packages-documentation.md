@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-05
+last_updated: 2026-09-06
 scope: Documentation for public workspace packages.
 ---
 
@@ -85,6 +85,8 @@ Documentation work MUST start by reviewing the package's public surface. An expo
 Packages MUST export only values, types, files, and subpaths intended for consumer use. Implementation details that consumers should not access MUST stay unexported from package entrypoints and `package.json` `exports`. Do not preserve an accidental export merely to document it.
 
 Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/code-guidelines.md`.
+
+For packages covered by this spec, `hub check` reports `undocumented-export/missing-jsdoc` warnings when top-level declarations exposed through typed `exports` lack JSDoc/TSDoc, following re-exports to their original declarations; class and interface members remain outside this check's scope.
 
 ## Public documentation
 

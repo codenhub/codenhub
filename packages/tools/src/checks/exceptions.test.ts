@@ -22,6 +22,17 @@ const REGISTER = [
 ].join("\n");
 
 describe("parseCheckExceptions", () => {
+  it("accepts new undocumented-export codes without a known-prefix list", () => {
+    expect(
+      parseCheckExceptions(
+        [
+          "## `@codenhub/example`: documentation rollout",
+          "- **Checks bypassed:** `undocumented-export/missing-jsdoc`.",
+        ].join("\n"),
+      ).get("@codenhub/example"),
+    ).toEqual(new Set(["undocumented-export/missing-jsdoc"]));
+  });
+
   it("shouldWaiveOnlyTheDeclaredCheckCodes", () => {
     expect(parseCheckExceptions(REGISTER).get("@codenhub/styles")).toEqual(
       new Set(["metadata/main", "metadata/module", "metadata/types", "scripts/test:coverage"]),

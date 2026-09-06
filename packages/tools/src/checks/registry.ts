@@ -6,6 +6,7 @@ import { createManifestRules } from "./manifest-rules.ts";
 import { createReadmeRules } from "./readme-rules.ts";
 import { createReferenceRules } from "./reference-rules.ts";
 import type { CheckRule } from "./rule.ts";
+import { createUndocumentedExportRules } from "./undocumented-export-rules.ts";
 
 /**
  * Builds every compliance rule for a workspace.
@@ -22,6 +23,7 @@ export function createCheckRules(workspace: Workspace): CheckRule[] {
     ...createDependencyRules(workspace.packages),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
+    ...createUndocumentedExportRules(),
     ...createReadmeRules(),
     ...createReferenceRules(),
   ];
