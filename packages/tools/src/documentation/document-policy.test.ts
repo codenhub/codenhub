@@ -157,6 +157,27 @@ describe("public document policy", () => {
     );
   });
 
+  it("accepts a since version on any generated reference page", () => {
+    expect(parsePublicDocumentFrontmatter({ since: "1.4.0", title: "ErrorKit" }, "docs/reference/index.md").since).toBe(
+      "1.4.0",
+    );
+    expect(
+      parsePublicDocumentFrontmatter(
+        { since: "1.4.0", title: "registries/browser" },
+        "docs/reference/registries/browser.md",
+      ).since,
+    ).toBe("1.4.0");
+  });
+
+  it("rejects a since version that is empty or set outside the reference area", () => {
+    expect(() => parsePublicDocumentFrontmatter({ since: " ", title: "ErrorKit" }, "docs/reference/index.md")).toThrow(
+      "Invalid since frontmatter",
+    );
+    expect(() => parsePublicDocumentFrontmatter({ since: "1.4.0", title: "API" }, "docs/api.md")).toThrow(
+      "only a generated reference page",
+    );
+  });
+
   it("rejects documents without an H1", () => {
     expect(() => assertSingleH1([{ depth: 2 }], "docs/api.md")).toThrow("exactly one H1");
   });

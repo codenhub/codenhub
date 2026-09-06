@@ -71,12 +71,15 @@ docs/
 
 ### Frontmatter
 
-Generated pages use only the closed frontmatter schema from `docs/specs/packages-documentation.md`. No new field is introduced:
+Generated pages use the closed frontmatter schema from `docs/specs/packages-documentation.md`, including `since`, which that spec permits only on a generated reference page:
 
 - `title`: the entrypoint's public label. For `.` it is the package's `codenhub.docs.label`. For a subpath it is the subpath without the leading `./`, such as `registries/browser`.
-- `description`: OPTIONAL one-line summary of the entrypoint, when the generator has one to emit.
+- `description`: OPTIONAL one-line summary of the entrypoint, compiled from the entry module's TSDoc summary — a file-level `@packageDocumentation` comment on the entry source, collapsed to a single line. Omitted when the entry module carries no such comment.
+- `since`: OPTIONAL version string recording the release the entrypoint first shipped in, emitted from a `@since` tag on the entry module's `@packageDocumentation` comment. It is an opaque label, not validated as semver. Omitted when the tag is absent.
 - `order`: generator-assigned, placing entrypoint pages in a stable order — `.` first, then remaining entrypoints by `exports` declaration order.
 - `group`: set to `Reference` on `docs/reference/index.md` only, to label the sidebar section. Not set on any other page.
+
+`description` and `since` are page metadata and are emitted whether or not `prose` is enabled.
 
 ### Generated-file notice
 
@@ -96,7 +99,7 @@ A page's H1 is its `title`. Below it, each public symbol reachable from that ent
 - Within a group, each symbol is an H3 named exactly as it is exported. A default export is named after its declaration; an anonymous default export is named `default`. `docs/code-guidelines.md` already steers library code to named exports, so this is expected to be rare. Members are alphabetical within their group.
 - Each symbol section contains, in order:
   1. A fenced `ts` block with the symbol's declaration signature, taken from the emitted `.d.ts`. Overloads are listed as separate lines in source order. Long signatures are emitted as written; the site is responsible for horizontal scroll.
-  2. When `prose` is `true`: the symbol's TSDoc summary and remarks, rendered as Markdown, followed by its `@param`, `@returns`, `@throws`, `@defaultValue`, `@example`, and `@see` content under short bold labels. `@returns`, and a `@throws` or `@see` with a single entry, render as one `**Label** — text` line; `@param`, `@typeParam`, and a `@throws` or `@see` with several entries render as a bulleted list. `@deprecated` is surfaced first, as a blockquote, so it is impossible to miss.
+  2. When `prose` is `true`: the symbol's TSDoc summary and remarks, rendered as Markdown, followed by its `@param`, `@returns`, `@throws`, `@defaultValue`, `@since`, `@example`, and `@see` content under short bold labels. `@returns`, `@defaultValue`, `@since`, and a `@throws` or `@see` with a single entry, render as one `**Label** — text` line; `@param`, `@typeParam`, and a `@throws` or `@see` with several entries render as a bulleted list. `@deprecated` is surfaced first, as a blockquote, so it is impossible to miss.
   3. For a class or interface: its public members, each with its own signature block and, when `prose` is `true`, its TSDoc.
 - `{@link Symbol}` references resolve to a fragment on whichever page documents the target. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
 - Re-exported symbols are documented on the entrypoint that exports them. A symbol exported from several entrypoints is documented on each, with the signature repeated; prose is repeated too, since these pages are read one at a time.

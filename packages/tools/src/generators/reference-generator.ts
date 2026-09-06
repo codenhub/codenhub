@@ -155,10 +155,12 @@ export async function analyzeReference(
       const isIndex = entrypoint.subpath === ".";
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
+        description: entrypoint.description,
         group: isIndex ? REFERENCE_GROUP : undefined,
         order: isIndex ? undefined : index,
         prose: config.prose,
         resolveLink: resolveLinkFor(entrypoint.subpath),
+        since: entrypoint.since,
         sourceRoot,
         title: isIndex ? (label ?? workspacePackage.name) : entrypoint.subpath.replace(/^\.\//, ""),
       });

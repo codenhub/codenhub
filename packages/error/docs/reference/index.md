@@ -1,5 +1,6 @@
 ---
 title: ErrorKit
+description: Typed error normalization, result helpers, and the error registry.
 group: Reference
 ---
 

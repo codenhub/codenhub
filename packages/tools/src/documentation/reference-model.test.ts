@@ -30,6 +30,10 @@ const project = {
       variant: "declaration",
       kind: 2,
       flags: {},
+      comment: {
+        summary: [textPart("Typed error normalization\nand result helpers.")],
+        blockTags: [{ tag: "@since", content: [textPart("1.0.0")] }],
+      },
       children: [
         {
           id: 10,
@@ -53,6 +57,7 @@ const project = {
                   { tag: "@returns", content: [textPart("A frozen error.")] },
                   { tag: "@throws", content: [textPart("When the registry is missing.")] },
                   { tag: "@throws", content: [textPart("When maxDepth is negative.")] },
+                  { tag: "@since", content: [textPart("1.2.0")] },
                   { tag: "@deprecated", content: [textPart("Use createError instead.")] },
                 ],
               },
@@ -162,8 +167,20 @@ describe("buildReferenceModel", () => {
     expect(fn?.returns).toBe("A frozen error.");
     expect(fn?.throws).toEqual(["When the registry is missing.", "When maxDepth is negative."]);
     expect(fn?.deprecated).toBe("Use createError instead.");
+    expect(fn?.since).toBe("1.2.0");
     expect(fn?.doc).toBe("Builds a frozen `AppError`.");
     expect(fn?.source).toEqual({ fileName: "packages/error/src/create-app-error.ts", line: 42 });
+  });
+
+  it("reads the entry module's summary and @since as the entrypoint description and version", () => {
+    const model = buildReferenceModel(project, subpaths);
+    const index = model.entrypoints.find((entry) => entry.subpath === ".");
+    const registries = model.entrypoints.find((entry) => entry.subpath === "./registries");
+
+    expect(index?.description).toBe("Typed error normalization and result helpers.");
+    expect(index?.since).toBe("1.0.0");
+    expect(registries?.description).toBeUndefined();
+    expect(registries?.since).toBeUndefined();
   });
 
   it("keeps a package's own interface members and drops externally inherited ones", () => {

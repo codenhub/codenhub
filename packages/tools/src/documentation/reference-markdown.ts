@@ -34,6 +34,10 @@ export interface RenderReferencePageOptions {
   title: string;
   /** Repo-relative source root for the generated-file notice, such as `packages/error/src`. */
   sourceRoot: string;
+  /** Frontmatter `description`; omit when the entry module carries no summary. */
+  description?: string;
+  /** Frontmatter `since`; omit when the entry module carries no `@since` tag. */
+  since?: string;
   /** Frontmatter `order`; omit on the reference index page. */
   order?: number;
   /** Frontmatter `group`; set only on the reference index page. */
@@ -53,6 +57,12 @@ function yamlValue(value: string): string {
 
 function frontmatter(options: RenderReferencePageOptions): string {
   const lines = ["---", `title: ${yamlValue(options.title)}`];
+  if (options.description !== undefined) {
+    lines.push(`description: ${yamlValue(options.description)}`);
+  }
+  if (options.since !== undefined) {
+    lines.push(`since: ${yamlValue(options.since)}`);
+  }
   if (options.order !== undefined) {
     lines.push(`order: ${options.order}`);
   }
@@ -148,6 +158,9 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
     blocks.push(...notesSection("Throws", symbol.throws, link));
     if (symbol.defaultValue !== undefined) {
       blocks.push(`**Default** — ${link(symbol.defaultValue)}`);
+    }
+    if (symbol.since !== undefined) {
+      blocks.push(`**Since** — ${link(symbol.since)}`);
     }
     for (const example of symbol.examples) {
       blocks.push("**Example**", example.trim());

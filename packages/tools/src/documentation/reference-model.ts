@@ -95,6 +95,8 @@ export interface ReferenceSymbol {
   see: string[];
   /** `@defaultValue` text for a variable or property, when present. */
   defaultValue?: string;
+  /** `@since` version text, when the symbol carries the tag. */
+  since?: string;
   /** Members of a class, interface, or enum; empty otherwise. */
   members: ReferenceMember[];
   /** Source file (repo-relative POSIX) and 1-based line the declaration starts on. */
@@ -111,6 +113,16 @@ export interface ReferenceEntrypoint {
   subpath: string;
   /** TypeDoc module name the symbols came from, such as `index` or `registries/browser`. */
   module: string;
+  /**
+   * One-line summary from the entry module's `@packageDocumentation` TSDoc, for the
+   * page `description` frontmatter. Absent when the entry file carries no such comment.
+   */
+  description?: string;
+  /**
+   * Version the entrypoint first shipped in, from a `@since` tag on the entry module's
+   * `@packageDocumentation` comment. Absent when the tag is not present.
+   */
+  since?: string;
   /** Symbols ordered by kind group, then alphabetically within a group. */
   symbols: ReferenceSymbol[];
 }
@@ -211,6 +223,12 @@ function renderComment(comment: Comment | undefined): string | undefined {
   const remarks = blockTagText(comment, "@remarks");
   const body = [summary, remarks].filter((text) => text !== "").join("\n\n");
   return body === "" ? undefined : body;
+}
+
+/** The entry module's `@packageDocumentation` summary, collapsed to a single line for frontmatter. */
+function moduleSummary(comment: Comment | undefined): string | undefined {
+  const text = renderParts(comment?.summary).replace(/\s+/g, " ").trim();
+  return text === "" ? undefined : text;
 }
 
 function blockTags(comment: Comment | undefined, tag: string): string[] {
@@ -378,6 +396,7 @@ function buildSymbol(
     reexportedFrom,
     returns: optionalBlockTagText(comment, "@returns"),
     see: blockTags(comment, "@see"),
+    since: optionalBlockTagText(comment, "@since"),
     source: buildSource(declaration.sources ?? reflection.sources),
     throws: blockTags(comment, "@throws"),
     typeParameters: namedDocs(signature?.typeParameters ?? declaration.typeParameters, comment, "@typeParam"),
@@ -455,7 +474,9 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
       }
     }
     entrypoints.push({
+      description: moduleSummary(reflection?.comment),
       module,
+      since: optionalBlockTagText(reflection?.comment, "@since"),
       subpath,
       symbols: sortSymbols(children.flatMap((child) => buildSymbol(child, resolve) ?? [])),
     });
