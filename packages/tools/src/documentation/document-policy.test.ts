@@ -148,6 +148,24 @@ describe("public document policy", () => {
     ).toThrow("Invalid date frontmatter");
   });
 
+  it("accepts the serialized timestamp a bundler produces for an unquoted date", () => {
+    // Astro serializes frontmatter into the module graph, so the Date its YAML
+    // parser built from `date: 2026-09-05` arrives as this string.
+    expect(
+      parsePublicDocumentFrontmatter({ date: "2026-09-05T00:00:00.000Z", title: "1.2.0" }, "docs/changelog/1.2.0.md")
+        .date,
+    ).toBe("2026-09-05");
+    expect(
+      parsePublicDocumentFrontmatter({ date: "2026-09-05T00:00:00Z", title: "1.2.0" }, "docs/changelog/1.2.0.md").date,
+    ).toBe("2026-09-05");
+  });
+
+  it("rejects a timestamp string carrying a real time of day", () => {
+    expect(() =>
+      parsePublicDocumentFrontmatter({ date: "2026-09-05T12:00:00.000Z", title: "1.2.0" }, "docs/changelog/1.2.0.md"),
+    ).toThrow("Invalid date frontmatter");
+  });
+
   it("rejects a release date anywhere but a changelog version page", () => {
     expect(() =>
       parsePublicDocumentFrontmatter({ date: "2026-09-05", title: "Changelog" }, "docs/changelog/index.md"),
