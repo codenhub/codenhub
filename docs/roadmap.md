@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-06
+last_updated: 2026-09-07
 scope: repo-wide package progress tracking
 ---
 
@@ -78,7 +78,7 @@ Track high-level progress and milestone status for foundation and utility packag
 ### @codenhub/demo
 
 - [x] `apps/demo` shell and build pipeline aggregating every package's `demo/` output into `dist/demo/<package>/` — general contract in `docs/specs/packages-demo.md`, this app's own architecture in `apps/demo/docs/internal/architecture.md`
-- [ ] Second Cloudflare Workers Builds project, connected from the dashboard like `apps/docs`'s, with its own watch-path excludes, so the app above is actually deployed
+- [ ] Second Cloudflare Workers Builds project, `codenhub-demo`, connected from the dashboard like `apps/docs`'s. The repository half is done: `docs/ci.md` now records the project's build watch-path excludes beside `apps/docs`'s, and `apps/demo/*` was added to the documentation project's list in the same change — a demo-only change had been rebuilding the documentation Worker for nothing. What remains is dashboard state and nothing else: connect the repository, set the build command and output directory to `apps/demo`'s, turn non-production branch builds off, and paste in the exclude list
 - [x] Migrate `apps/docs` and `packages/icons/demo` off hand-duplicated `favicon.ico`/`logo-*.svg` onto the shared `assets/` build-time copy step `docs/specs/packages-demo.md` defines
 
 ### @codenhub/docs
@@ -120,7 +120,7 @@ Track high-level progress and milestone status for foundation and utility packag
 ## Notes & exclusions
 
 - `docs/ci.md` is the entrypoint for the pinned toolchain and what runs on a pull request. Delivery work below builds on it rather than adding a second workflow model.
-- The documentation site deploys from the Cloudflare dashboard, connected to this repository. `apps/docs/wrangler.jsonc` describes what to serve, and everything else about the deployment lives in the dashboard. That split is deliberate: the repository carries build configuration, not delivery plumbing, so there is no deploy workflow and no deployment credentials here.
+- Both deployed surfaces — the documentation site and the demo site — deploy from the Cloudflare dashboard, connected to this repository. `apps/docs/wrangler.jsonc` and `apps/demo/wrangler.jsonc` describe what each one serves, and everything else about both deployments lives in the dashboard. That split is deliberate: the repository carries build configuration, not delivery plumbing, so there is no deploy workflow and no deployment credentials here.
 - That config declares no `main`, because the site is static and the Worker serves its assets without running a script. `html_handling` is explicit so the directory-style routes Astro builds resolve with or without a trailing slash, and `not_found_handling` serves the built 404 page rather than rewriting an unknown path to a shell the site does not have. `pnpm hub preview docs` runs the same config locally through `wrangler dev`, which is why `compatibility_date` tracks a date the installed runtime supports rather than the current one.
 - Unlisted packages (`router`, `store`, `theme`, `plugins`, `ui-kit`) are currently internal, WIP, deprecated, or evaluated separately.
 - `@codenhub/styles` will be the first package to publish under the delivery work listed above, and none of it is in place yet: `0.1.0` goes out as a manual `npm publish` from a maintainer's machine, which `docs/specs/packages-lifecycle.md` allows and which the trusted-publishing item is meant to replace.

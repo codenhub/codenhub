@@ -1,12 +1,10 @@
 ---
 status: APPROVED
-last_updated: 2026-08-27
+last_updated: 2026-09-07
 scope: apps/demo's own architecture — this app's implementation of the contract in docs/specs/packages-demo.md.
 ---
 
 # Architecture
-
-The shell, build pipeline, and asset copy step below are implemented. Deployment is not: `docs/roadmap.md` tracks the remaining Cloudflare project under `@codenhub/demo`, and `docs/ci.md` names it in "Not covered yet" until that project exists.
 
 `apps/demo` is the current implementation of the demo aggregator described in `docs/specs/packages-demo.md`. That document owns the general contract; this one owns how this specific app satisfies it.
 
@@ -31,8 +29,8 @@ Both stay in sync automatically as demos are added or removed — neither hand-m
 
 Pull request verification needs no new configuration: `packages/*/demo` and `apps/demo` are both already `pnpm-workspace.yaml` globs, so `--changed` already covers them.
 
-Deployment is a second Cloudflare Workers Builds project, connected to the repository from the dashboard exactly like `apps/docs`'s, with its own `apps/demo/wrangler.jsonc`. `docs/ci.md` explains why that split keeps delivery plumbing out of the repository; the same reasoning applies here.
+Deployment is a second Cloudflare Workers Builds project, `codenhub-demo`, connected to the repository from the dashboard exactly like `apps/docs`'s, with its own `apps/demo/wrangler.jsonc`. `docs/ci.md` explains why that split keeps delivery plumbing out of the repository; the same reasoning applies here.
 
-Its build watch-path excludes are the inverse of `apps/docs`'s list in `docs/ci.md`: `packages/*/demo/*` moves from excluded to the thing that should trigger a build, and `apps/docs/*` is added to the exclude list, since a docs-only change should not rebuild the demo Worker. Everything else — `docs/*`, repository governance files, lint/format configs — stays excluded for the same reasons `docs/ci.md` gives for `apps/docs`.
+`docs/ci.md` owns the project's build watch-path excludes, alongside `apps/docs`'s, so the two lists can be read against each other. What this app's build actually reads is the input to that list: `src/lib/catalog.ts` globs `packages/*/demo/package.json` and `src/lib/demo-integration.ts` copies each demo's `dist/`, so a package reaches this site through its `demo/` directory and through nothing else. The hand-maintained `workspace:*` lines above are why that list does not exclude the `src/` of packages without a demo — a forgotten dependency line would otherwise turn into a site that quietly stops rebuilding.
 
 Previews reuse the existing mechanism: `apps/demo` registers `preview` and `preview:deploy` scripts the same way `apps/docs` does, so `pnpm hub preview:deploy demo` already works once a maintainer has their own `wrangler` login (`docs/tooling.md`, "Hosted previews"). No new `hub` capability was needed.
