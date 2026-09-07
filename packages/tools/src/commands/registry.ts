@@ -9,6 +9,7 @@ import { createFormatCommand } from "./format-command.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createNewCommand } from "./new-command.ts";
+import { createPublishCommand } from "./publish-command.ts";
 import { createReleaseCommand } from "./release-command.ts";
 import { createRootToolCommand } from "./root-tool-command.ts";
 import { createScriptCommand } from "./script-command.ts";
@@ -93,6 +94,7 @@ const COMMANDS: readonly CommandDefinition[] = [
   }),
   createVerifyCommand(),
   createReleaseCommand(),
+  createPublishCommand(),
   createCheckCommand(),
   createGenerateCommand(),
   createCleanCommand(),

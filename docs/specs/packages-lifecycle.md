@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-12
+last_updated: 2026-09-07
 scope: Public workspace packages.
 ---
 
@@ -141,9 +141,23 @@ Before publishing a public package, run `pnpm hub release <package>`. It runs `p
 - **worktree**: the package has no uncommitted changes, so the tarball matches a commit.
 - **tarball**: `npm pack --dry-run` includes every file `exports`, `main`, `module`, and `types` point at.
 
-The command writes nothing and publishes nothing. Publishing is irreversible in a way no other repository action is — a version can be deprecated but never replaced — so the tooling stops at the report and leaves `npm publish` to a person. Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
+The command writes nothing and publishes nothing. It is the report a maintainer reads while deciding whether to release.
 
-After publishing a public package, run package `status:npm` to confirm the registry version, dist tags, and package access status. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
+### Who publishes
+
+Publishing is irreversible in a way no other repository action is: a version can be deprecated but never replaced. A release is therefore authorized by a person and performed by CI, and the two halves MUST stay separate.
+
+A maintainer authorizes a release by pushing a tag named `<package name>@<version>`, such as `@codenhub/error@0.3.0`. That tag MUST name a version equal to the one in the package manifest at the tagged commit. `.github/workflows/publish.yml` runs on such a tag and publishes through `hub publish`, which refuses the run when the two disagree; `docs/ci.md` describes the workflow and `docs/tooling.md` the command.
+
+Publishing MUST NOT happen on merge. A merge is a decision to change `main`, not a decision to release, and the two must be separately revocable — a version bump that lands in a pull request has to be reversible by a revert, which it is not once a merge publishes it.
+
+CI MUST authenticate through npm trusted publishing, exchanging the workflow's OIDC token for a short-lived credential. No long-lived npm token may exist in this repository or in its Actions secrets. Provenance follows from that exchange rather than from a flag.
+
+A maintainer MAY run `hub publish <package>` from their own machine against their own `npm login`, and MUST do so for a package's first release: a trusted publisher cannot be configured on npm for a package name that does not exist yet. Every release after the first goes through the workflow.
+
+Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
+
+After publishing, confirm the registry version, dist tags, and package access status. `hub publish` reads the served version back and reports it; package `status:npm` reports all three. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
 
 Published packages MUST NOT include secrets, local paths, internal docs, test fixtures that are not useful to consumers, or build artifacts outside `files`.
 
