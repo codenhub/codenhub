@@ -1,8 +1,9 @@
-/* No border and no 44px floor here, unlike the other header targets: a control
-   as tall as the icon buttons reads as an input field, and an outline is the one
-   thing in this header that would draw a box around itself. */
+/* Edged with the same border token as the app's other inputs (the catalog's
+   package filter, for one). No 44px floor, unlike the header's icon targets: it
+   sits beside them and stays as tall as they are rather than growing into a full
+   form control. */
 .search-trigger {
-  @apply text-text-secondary hover:bg-surface hover:text-text bg-foreground mr-2 flex items-center gap-2 rounded-(--radius-control) py-1.5 pr-1.5 pl-2.5 text-sm transition-colors;
+  @apply border-border text-text-secondary hover:bg-surface hover:text-text hover:border-border-hover bg-foreground mr-2 flex items-center gap-2 rounded-(--radius-control) border py-1.5 pr-1.5 pl-2.5 text-sm transition-colors;
 }
 
 .search-icon {

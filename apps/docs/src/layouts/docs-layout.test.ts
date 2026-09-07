@@ -51,6 +51,35 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("reference-deck");
   });
 
+  it("shows a section strip that marks only the tab holding the current page", async () => {
+    const overview = await readOutput("error/index.html");
+    const reference = await readOutput("error/reference/index.html");
+
+    // Both pages carry the same two-tab strip, each row an icon then its label.
+    for (const html of [overview, reference]) {
+      expect(html).toMatch(
+        /<a class="package-tab"(?: aria-current="location")? href="\/error\/">\s*<svg[\s\S]*?<\/svg>\s*Guides\s*<\/a>/,
+      );
+      expect(html).toMatch(
+        /<a class="package-tab"(?: aria-current="location")? href="\/error\/reference\/">\s*<svg[\s\S]*?<\/svg>\s*Reference\s*<\/a>/,
+      );
+    }
+
+    // The tab is `location`, not `page`: the reader may be on a nested page of
+    // the section, and the exact document link carries `page`. Exactly one tab
+    // is marked on each page.
+    expect(overview).toMatch(/<a class="package-tab" aria-current="location" href="\/error\/">/);
+    expect(overview).toMatch(/<a class="package-tab" href="\/error\/reference\/">/);
+    expect(reference).toMatch(/<a class="package-tab" aria-current="location" href="\/error\/reference\/">/);
+    expect(reference).toMatch(/<a class="package-tab" href="\/error\/">/);
+  });
+
+  it("omits the section strip for a package that has only guides", async () => {
+    const html = await readOutput("validation/index.html");
+
+    expect(html).not.toContain("package-tab");
+  });
+
   it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
     const html = await readOutput(path);
 
@@ -90,7 +119,7 @@ describe("documentation chrome", () => {
     const html = await readOutput("styles/usage/buttons/index.html");
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
 
-    expect(html).toMatch(/<div class="table-wrap">\s*<table>\s*<thead>/);
+    expect(html).toMatch(/<div class="table-wrap">\s*<table class="edged ruled">\s*<thead>/);
     expect(css).toMatch(/\.markdown-content table\s*\{\s*@apply data-table;\s*\}/s);
   });
 
@@ -109,13 +138,17 @@ describe("documentation chrome", () => {
     expect(css).toMatch(/\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
   });
 
-  it("uses color and weight only for the active package document", async () => {
+  it("marks the active package document like the table of contents marks its own", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const activeRule = css.match(/\.document-list a\[aria-current="page"\]\s*\{([^}]*)\}/)?.[1];
+    const tocActiveRule = css.match(/\.toc-rail a\[aria-current="true"\]\s*\{([^}]*)\}/)?.[1];
 
     expect(activeRule).toContain("text-text");
     expect(activeRule).toContain("font-semibold");
-    expect(activeRule).not.toMatch(/border|\b(?:p|m)l-/);
+    // Same segment-on-the-rail-rule treatment as the table of contents.
+    expect(activeRule).toContain("border-primary");
+    expect(tocActiveRule).toContain("border-primary");
+    expect(css).toMatch(/\.left-rail::before\s*\{[^}]*right-0/s);
   });
 
   it("hides a thematic break that directly precedes a section heading", async () => {
@@ -136,16 +169,18 @@ describe("documentation chrome", () => {
     expect(css).not.toMatch(/overflow:\s*hidden/);
   });
 
-  it("sticks each rail panel below the header without clipping its divider", async () => {
+  it("runs each rail divider the full document while only its panel scrolls", async () => {
     const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
     const stickyRule = css.match(/\.left-rail > \*,\s*\.toc-rail > \*\s*\{([^}]*)\}/)?.[1];
 
-    // The divider belongs to the rail itself so it runs the full document, while
-    // the panel inside sticks and scrolls only once it outgrows the viewport.
+    // Each divider is a positioned line on the rail, not a border on the
+    // scrolling panel, so a current-entry segment paints over it uncut. The
+    // panel inside sticks and scrolls only once it outgrows the viewport.
     expect(stickyRule).toContain("sticky");
     expect(stickyRule).toContain("overflow-y-auto");
     expect(stickyRule).toContain("top: var(--docs-header-height)");
-    expect(css).toMatch(/\.left-rail\s*\{[^}]*border-r/s);
+    expect(css).toMatch(/\.left-rail::before\s*\{[^}]*inset-y-0/s);
+    expect(css).toMatch(/\.left-rail::before\s*\{[^}]*right-0/s);
   });
 
   it("draws the table-of-contents rule and its indicator as one line", async () => {
@@ -167,13 +202,15 @@ describe("documentation chrome", () => {
     expect(css).toMatch(/\.toc-rail a\[aria-current="true"\]\s*\{[^}]*border-primary/s);
   });
 
-  it("keeps the search trigger clear of the header's outlined controls", async () => {
+  it("edges the search trigger with the app's shared input border", async () => {
     const css = await readFile(new URL("../styles/search.css", import.meta.url), "utf8");
     const triggerRule = css.match(/\.search-trigger\s*\{([^}]*)\}/)?.[1];
 
-    // A border and a 44px floor turn the trigger into a form field sitting in a
-    // header where nothing else is boxed.
-    expect(triggerRule).not.toMatch(/\bborder\b/);
+    // It carries the shared border token and the plain `border` utility, so it
+    // reads like the catalog's package filter. Still no 44px floor: it stays as
+    // tall as the header's icon buttons rather than growing into a form control.
+    expect(triggerRule).toMatch(/\bborder-border\b/);
+    expect(triggerRule).toMatch(/\bborder\b(?!-)/);
     expect(triggerRule).not.toContain("44px");
   });
 

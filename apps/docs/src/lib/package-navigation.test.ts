@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PublicDocument } from "./catalog";
-import { buildNavigationTree, groupContainsRoute, type NavGroup } from "./package-navigation";
+import { buildNavigationTree, buildPackageSidebar, groupContainsRoute, type NavGroup } from "./package-navigation";
 
 function doc(
   relativePath: string,
@@ -134,6 +134,66 @@ describe("buildNavigationTree", () => {
       { kind: "link", title: "Reference" },
       { kind: "group", title: "Guide" },
     ]);
+  });
+});
+
+describe("buildPackageSidebar", () => {
+  const errorLike: PublicDocument[] = [
+    doc("index.md", "Overview", "/error/"),
+    doc("results.md", "Results", "/error/results/"),
+    doc("reference/index.md", "/", "/error/reference/", { group: "Reference" }),
+    doc("reference/registries/index.md", "/registries", "/error/reference/registries/", { order: 1 }),
+    doc("reference/registries/browser.md", "/registries/browser", "/error/reference/registries/browser/", { order: 2 }),
+  ];
+
+  it("offers a tab per non-empty section, pointing each at its first page", () => {
+    const { tabs } = buildPackageSidebar(errorLike, "/error/");
+
+    expect(tabs.map((tab) => [tab.id, tab.route])).toEqual([
+      ["guides", "/error/"],
+      ["reference", "/error/reference/"],
+    ]);
+    expect(tabs.find((tab) => tab.current)?.id).toBe("guides");
+  });
+
+  it("marks the tab that holds the current page", () => {
+    const { tabs } = buildPackageSidebar(errorLike, "/error/reference/registries/browser/");
+
+    expect(tabs.find((tab) => tab.current)?.id).toBe("reference");
+  });
+
+  it("shows only the active section's pages, with the section prefix stripped so folders still group", () => {
+    const guides = buildPackageSidebar(errorLike, "/error/").tree;
+    expect(guides.map((node) => ({ kind: node.kind, title: node.title }))).toEqual([
+      { kind: "link", title: "Overview" },
+      { kind: "link", title: "Results" },
+    ]);
+
+    const reference = buildPackageSidebar(errorLike, "/error/reference/").tree;
+    expect(reference[0]).toEqual({ kind: "link", route: "/error/reference/", title: "/" });
+    // The folder takes its `index.md` page's subpath as the group title, and the
+    // siblings drop that prefix: `/registries/browser` reads as `/browser`.
+    expect(reference[1]).toMatchObject({ kind: "group", title: "/registries" });
+    expect((reference[1] as NavGroup).items).toEqual([
+      { kind: "link", route: "/error/reference/registries/", title: "/" },
+      { kind: "link", route: "/error/reference/registries/browser/", title: "/browser" },
+    ]);
+  });
+
+  it("leaves a single-section package with one tab for the caller to hide", () => {
+    const { tabs } = buildPackageSidebar([doc("index.md", "Overview", "/theme/")], "/theme/");
+
+    expect(tabs.map((tab) => tab.id)).toEqual(["guides"]);
+  });
+
+  it("treats a hand-authored reference.md as the Reference section", () => {
+    const { tabs } = buildPackageSidebar(
+      [doc("index.md", "Overview", "/kbd/"), doc("reference.md", "Reference", "/kbd/reference/")],
+      "/kbd/reference/",
+    );
+
+    expect(tabs.map((tab) => tab.id)).toEqual(["guides", "reference"]);
+    expect(tabs.find((tab) => tab.current)?.id).toBe("reference");
   });
 });
 

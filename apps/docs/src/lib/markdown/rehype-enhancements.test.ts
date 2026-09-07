@@ -167,6 +167,7 @@ describe("tables", () => {
 
     expect(wrapper).toMatchObject({ properties: { className: ["table-wrap"] }, tagName: "div" });
     expect(wrapper.children[0]).toBe(table);
+    expect(table.properties?.className).toEqual(["edged", "ruled"]);
   });
 
   it("enhances links inside table cells before wrapping", () => {

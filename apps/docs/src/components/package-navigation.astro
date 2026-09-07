@@ -1,6 +1,7 @@
 ---
 import type { PublicPackage } from "../lib/catalog";
-import { buildNavigationTree, groupContainsRoute } from "../lib/package-navigation";
+import type { DocumentSection } from "../lib/document-section";
+import { buildPackageSidebar, groupContainsRoute } from "../lib/package-navigation";
 import StatusBadge from "./status-badge.astro";
 
 interface Props {
@@ -9,7 +10,19 @@ interface Props {
 }
 
 const { currentPackage, currentRoute } = Astro.props;
-const navigation = buildNavigationTree(currentPackage.documents);
+const { tabs, tree } = buildPackageSidebar(currentPackage.documents, currentRoute);
+
+// A strip of one is not a choice, so a package with a single section shows none.
+const sectionTabs = tabs.length > 1 ? tabs : [];
+
+// Stroked line icons in the app's shared style (see the sidebar caret and search
+// glyph): an open book, code brackets, a tag.
+const TAB_ICONS: Record<DocumentSection, string> = {
+  changelog:
+    '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  guides: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+  reference: '<path d="m16 18 6-6-6-6"/><path d="M8 6l-6 6 6 6"/>',
+};
 ---
 
 <nav aria-label={`${currentPackage.label} documentation`}>
@@ -17,9 +30,30 @@ const navigation = buildNavigationTree(currentPackage.documents);
     <p class="rail-title">{currentPackage.label}</p>
     <StatusBadge status={currentPackage.status} />
   </div>
+
+  {
+    sectionTabs.length > 0 && (
+      <ul class="package-tabs">
+        {sectionTabs.map((tab) => (
+          <li>
+            <a class="package-tab" aria-current={tab.current ? "location" : undefined} href={tab.route}>
+              <svg
+                aria-hidden="true"
+                class="package-tab-icon"
+                viewBox="0 0 24 24"
+                set:html={TAB_ICONS[tab.id]}
+              />
+              {tab.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   <ul class="document-list">
     {
-      navigation.map((node) =>
+      tree.map((node) =>
         node.kind === "link" ? (
           <li>
             <a aria-current={node.route === currentRoute ? "page" : undefined} href={node.route}>
