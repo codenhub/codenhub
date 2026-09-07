@@ -175,7 +175,9 @@ Breaking changes MUST update the package README and any relevant `docs/` files i
 
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
 
-Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above.
+Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above. A package that has opted in MUST keep its changelog in step with its version, which `hub check` enforces.
+
+`hub release --cut=<version|major|minor|patch>` raises the version and scaffolds that entry in one step, and prints the sequence that follows. It writes only; committing and tagging stay with a person, for the reason "Who publishes" gives above.
 
 ## Documentation relationship
 
