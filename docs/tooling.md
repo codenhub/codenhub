@@ -269,6 +269,21 @@ A precondition that cannot be resolved, such as a tarball npm refused to build, 
 
 `--skip-verify` reports readiness without the verification step, which is what you want while fixing one blocker at a time.
 
+### Cutting a release
+
+`hub release --cut=<version|major|minor|patch>` raises one package's version and scaffolds the changelog entry that documents it:
+
+```sh
+pnpm hub release error --cut=minor
+pnpm hub release error --cut=0.4.0
+```
+
+It rewrites the manifest `version` field in place, leaving the rest of the file byte-identical rather than round-tripping it through a parser that would reformat what `oxfmt` owns. Then it writes `docs/changelog/<version>.md` and adds the link to `docs/changelog/index.md`, creating both when the package keeps no changelog yet. It names exactly one package: releasing is per-package, and an implicit selection is refused.
+
+It commits nothing and tags nothing, and the page it writes is deliberately unfinished. What changed for a consumer is the one part of a release no tool can derive, so the page carries the Keep a Changelog headings with `TODO` bullets and the command prints the three steps that follow: fill the page in, run `pnpm generate` and commit, then tag the merge. A cut that committed itself would publish a changelog saying nothing, which is worse than no changelog at all.
+
+The `changelog` compliance rule below is the other half. `--cut` makes the entry easy to write; the rule makes it impossible to skip.
+
 ## Publishing
 
 `hub publish` is the only command in the repository that does something irreversible, and it is shaped around that. A version can be deprecated but never replaced, so the command refuses far more than it accepts.
@@ -309,11 +324,14 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                 |
 | `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
 | `readme`              | README status notices agree with `codenhub.docs.status`.                                                                |
+| `changelog`           | An opted-in changelog documents and links the version the manifest declares.                                            |
 | `assets`              | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
 
 The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` errors for top-level declarations exposed through `exports` subpaths with type targets. It applies to public packages and private packages with `codenhub.docs`, skips `./package.json`, expands typed wildcard subpaths, and follows re-export aliases to the original declaration before checking for JSDoc/TSDoc. It reads emitted declarations when available and otherwise emits declarations in memory with the TypeScript compiler API. It does not run TypeDoc. Run a build after source changes to keep on-disk declarations current; `hub verify` and PR CI already build before checking. Missing documentation fails the check. Unresolvable exports or declaration dependencies report `undocumented-export/unresolved-export` warnings, including generated targets that need a package build first. Class and interface members and documentation quality remain review responsibilities. Source documentation coverage belongs to this rule alone; the `reference` rule checks generated-page correctness.
 
 Typed export targets include `.d.ts`, `.d.mts`, and `.d.cts`; missing CommonJS declarations can be emitted from `.cts` sources. A namespace re-export such as `export * as utilities from "./utilities.js"` is documented on that export declaration. Its members are not checked as top-level exports, and subsequent barrel aliases follow back to that namespace declaration.
+
+The `changelog` rule applies only to a package that already has `docs/changelog/`, because `docs/specs/packages-changelog.md` makes keeping one recommended rather than required and the directory is the opt-in. What it enforces is the part that stops being optional once a package has opted in: `changelog/missing-entry` when the manifest version has no page, and `changelog/unlinked-entry` when it has one the curated `index.md` does not link, which on the documentation site means no route, no navigation entry, and no search result. Only the current version is required to be linked — the spec permits dropping an older version's link deliberately, and this rule leaves that alone. It is what makes a version bump and the document describing it land in the same change; without it, a released version a consumer cannot read about is invisible until someone goes looking.
 
 The `exports` rule reads import statements, not prose: naming a path in a sentence is not a promise that it resolves, but showing it in an `import` is. The reverse direction — a supported path the package never documents — is not mechanically knowable and stays a review responsibility.
 

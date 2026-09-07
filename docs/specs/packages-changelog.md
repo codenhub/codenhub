@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-05
+last_updated: 2026-09-07
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -13,6 +13,8 @@ This document defines how a package records its release history. Keeping one is 
 Keeping a changelog costs little once a package has any consumer, and it's usually the first thing an upgrading consumer looks for. It is still optional: nothing in `docs/specs/packages-lifecycle.md` or `docs/specs/packages-documentation.md` requires one, and a package with no changelog is fully compliant with both.
 
 A package opts in by adding a `docs/changelog/` directory as described below. There is no metadata flag to set on the package itself and no version at which a package is expected to start.
+
+Once a package has opted in, keeping the changelog current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-entry` when the version in the manifest has no page and `changelog/unlinked-entry` when it has one `index.md` does not link. `hub release --cut` writes both, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
 
 ## Structure
 

@@ -1,4 +1,5 @@
 import type { Workspace } from "../workspace/discover.ts";
+import { createChangelogRules } from "./changelog-rules.ts";
 import { createDependencyRules } from "./dependency-rules.ts";
 import { createDocumentationRules } from "./documentation-rules.ts";
 import { createExportsRules } from "./exports-rules.ts";
@@ -26,5 +27,6 @@ export function createCheckRules(workspace: Workspace): CheckRule[] {
     ...createUndocumentedExportRules(),
     ...createReadmeRules(),
     ...createReferenceRules(),
+    ...createChangelogRules(),
   ];
 }

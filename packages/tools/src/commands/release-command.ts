@@ -1,10 +1,12 @@
 import { mapConcurrent } from "../process/concurrency.ts";
+import { cutRelease } from "../release/cut.ts";
 import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 import type { CommandResolver } from "./verify-command.ts";
 
 const SKIP_VERIFY_FLAG = "--skip-verify";
+const CUT_FLAG = "--cut";
 
 function toSummaryRow(readiness: PackageReadiness): SummaryRow {
   const blocked = readiness.checks.filter(({ status }) => status === "blocked").length;
@@ -51,10 +53,68 @@ function report(context: CommandContext, results: readonly PackageReadiness[]): 
  * @param readiness Preflight overrides, injected by tests.
  * @returns Command definition ready for registration.
  */
+function readCutFlag(passthrough: readonly string[]): string | undefined | { error: string } {
+  if (passthrough.includes(CUT_FLAG)) {
+    return { error: `${CUT_FLAG} takes its value with "=", as ${CUT_FLAG}=minor or ${CUT_FLAG}=0.4.0.` };
+  }
+  const found = passthrough.find((argument) => argument.startsWith(`${CUT_FLAG}=`));
+  return found === undefined ? undefined : found.slice(CUT_FLAG.length + 1);
+}
+
+/**
+ * Raises one package's version and scaffolds the changelog entry for it.
+ *
+ * It writes and stops there. Committing and tagging are left to a person
+ * because the scaffolded page is deliberately unfinished: what changed for a
+ * consumer is the one part of a release no tool can derive, and a cut that
+ * committed itself would publish a changelog full of TODO bullets.
+ * @param context Command context for this invocation.
+ * @param requested A bump name, or an explicit version.
+ * @returns Process exit code.
+ */
+async function runCut(context: CommandContext, requested: string): Promise<number> {
+  const packages = context.selection.targets
+    .map(({ package: workspacePackage }) => workspacePackage)
+    .filter(({ isPrivate }) => !isPrivate);
+  if (context.selection.isImplicit || packages.length !== 1) {
+    context.reporter.error(`${CUT_FLAG} releases one package; name it, as "pnpm hub release error ${CUT_FLAG}=minor".`);
+    return EXIT_FAILURE;
+  }
+  const [workspacePackage] = packages as [(typeof packages)[number]];
+
+  let result;
+  try {
+    result = await cutRelease(workspacePackage, requested, new Date().toISOString().slice(0, 10));
+  } catch (error) {
+    context.reporter.error(error instanceof Error ? error.message : String(error));
+    return EXIT_FAILURE;
+  }
+
+  context.reporter.step(`${workspacePackage.name} ${result.version}`);
+  for (const path of result.written) {
+    context.reporter.info(`  wrote  ${workspacePackage.location}/${path}`);
+  }
+  context.reporter.blank();
+  context.reporter.info("Next, in this order:");
+  context.reporter.detail(`  1. Fill in ${workspacePackage.location}/docs/changelog/${result.version}.md`);
+  context.reporter.detail("  2. Run `pnpm generate` and commit both, then merge");
+  context.reporter.detail(`  3. Tag the merge: git tag "${result.tag}" && git push origin "${result.tag}"`);
+  return EXIT_SUCCESS;
+}
+
 export function createReleaseCommand(resolver?: CommandResolver, readiness: ReadinessOptions = {}): CommandDefinition {
   return {
     name: "release",
     run: async (context) => {
+      const cut = readCutFlag(context.passthrough);
+      if (typeof cut === "object" && cut !== undefined) {
+        context.reporter.error(cut.error);
+        return EXIT_FAILURE;
+      }
+      if (cut !== undefined) {
+        return runCut(context, cut);
+      }
+
       const publishable = context.selection.targets
         .map(({ package: workspacePackage }) => workspacePackage)
         .filter((workspacePackage) => !workspacePackage.isPrivate);
@@ -83,6 +143,6 @@ export function createReleaseCommand(resolver?: CommandResolver, readiness: Read
       return blocked ? EXIT_FAILURE : EXIT_SUCCESS;
     },
     summary: "Report whether the selected packages could be published.",
-    usage: "hub release [targets...] [--skip-verify]",
+    usage: "hub release [targets...] [--cut=<version|major|minor|patch>] [--skip-verify]",
   };
 }
