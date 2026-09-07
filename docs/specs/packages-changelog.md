@@ -58,7 +58,7 @@ Each released version gets its own file, named after the exact released version 
 
 A version page's frontmatter needs only `title`, the same as any ordinary public document. It SHOULD also set `date` to the release date in ISO `YYYY-MM-DD` form, and MAY set `description`. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 
-A version page exists only for a version that has actually been released. Do not keep a running "Unreleased" page; write the page when the version ships.
+A version page exists only for a version that is being released. Do not keep a running "Unreleased" page: the page is written as part of cutting the release, in the same change that raises the manifest version, and the tag that publishes it follows. `docs/specs/packages-lifecycle.md` owns that sequence and `hub release --cut` performs it.
 
 ## Entry format
 

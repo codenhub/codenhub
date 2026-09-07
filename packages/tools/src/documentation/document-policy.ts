@@ -52,6 +52,7 @@ const CHANGELOG_VERSION_PAGE = /^changelog\/(?!index\.md$)[^/]+\.md$/;
 const REFERENCE_PAGE = /^reference\/(?:[^/]+\/)*[^/]+\.md$/;
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const UTC_MIDNIGHT_TIMESTAMP = /^(?<date>\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z$/u;
 
 /**
  * Reduces a document source path to its path relative to the package `docs/`
@@ -169,11 +170,16 @@ function readOptionalCurated(frontmatter: Record<string, unknown>, sourcePath: s
 /**
  * Coerces a frontmatter `date` value to an ISO `YYYY-MM-DD` string.
  *
- * The repository's own frontmatter parser yields strings, while a bundler's YAML
- * parser may yield a `Date` for an unquoted scalar. A string is taken as
- * authored; a `Date` is accepted only when it carries no time-of-day component,
- * so a full timestamp is rejected rather than truncated to a date (and possibly
- * shifted a day by the UTC conversion). Anything that is not a real calendar
+ * Three spellings reach here for what an author wrote as `date: 2026-09-02`.
+ * The repository's own frontmatter parser yields the string. A bundler's YAML
+ * parser yields a `Date` for that unquoted scalar. Astro yields neither: it
+ * serializes frontmatter into the module graph, so the `Date` arrives as its
+ * own ISO timestamp string, `2026-09-02T00:00:00.000Z`.
+ *
+ * A `Date` and a timestamp string are both accepted only at exactly midnight
+ * UTC, which is the one case where no time-of-day information is being
+ * discarded and no day can shift. An authored timestamp carrying a real time is
+ * still rejected rather than truncated. Anything that is not a real calendar
  * date in `YYYY-MM-DD` form, such as `2026-02-30`, resolves to `undefined`.
  * @param value Raw `date` frontmatter value.
  * @returns The ISO date string, or `undefined` when the value cannot be one.
@@ -181,7 +187,9 @@ function readOptionalCurated(frontmatter: Record<string, unknown>, sourcePath: s
 export function coercePublicDocumentDate(value: unknown): string | undefined {
   let text = "";
   if (typeof value === "string") {
-    text = value.trim();
+    // Astro hands back the serialized form of a YAML date rather than the date
+    // itself, so the timestamp it produces has to resolve to the day it names.
+    text = value.trim().replace(UTC_MIDNIGHT_TIMESTAMP, "$<date>");
   } else if (value instanceof Date && !Number.isNaN(value.getTime())) {
     const isDateOnly =
       value.getUTCHours() === 0 &&
