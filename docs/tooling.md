@@ -244,7 +244,13 @@ pnpm hub preview:deploy docs -- --preview-alias staging
 
 The alias needs the `--` separator. A value after a bare flag would otherwise be read as a target, since that is what a bare word after the command name means everywhere else.
 
-It exists because the documentation deployment no longer builds branches. The Cloudflare project builds the production branch only, so a preview is something a maintainer asks for rather than something every push produces. `docs/ci.md` covers that side. The upload runs from the maintainer's machine against their own `wrangler` login, which is why it stays out of CI and needs no repository credentials.
+`demo` works the same way, against the second Cloudflare project:
+
+```sh
+pnpm hub preview:deploy demo
+```
+
+It exists because neither deployment builds branches. Both Cloudflare projects build the production branch only, so a preview is something a maintainer asks for rather than something every push produces. `docs/ci.md` covers that side. The upload runs from the maintainer's machine against their own `wrangler` login, which is why it stays out of CI and needs no repository credentials.
 
 `preview` and `preview:deploy` are different things: `preview` runs `wrangler dev` locally against the built output, while `preview:deploy` puts a version on Cloudflare that other people can open.
 
