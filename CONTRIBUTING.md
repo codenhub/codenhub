@@ -108,6 +108,24 @@ Pushing a branch and opening a pull request are outward-facing actions. An agent
 
 Keep a pull request to one subject. A branch that fixes a bug and also restructures a doc is two pull requests, for the same reason a commit that does both is two commits.
 
+## Releasing
+
+Releasing a package is a maintainer action, and it is separate from merging. Merging changes `main`; releasing puts a version on npm, where it can be deprecated but never replaced.
+
+Check the package is ready, then push the tag that authorizes the release:
+
+```sh
+pnpm hub release error
+git tag "@codenhub/error@0.3.0"
+git push origin "@codenhub/error@0.3.0"
+```
+
+The tag must name the version already in the package manifest on `main`; `.github/workflows/publish.yml` refuses the run otherwise. Bump the version and write its changelog entry in an ordinary pull request first, then tag the merge commit.
+
+A package's first release is the exception and is published from a maintainer's machine, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` owns the rules and `docs/ci.md` the workflow.
+
+Pushing a release tag is an outward-facing action. An agent asks first and never pushes one on its own initiative.
+
 ## Hooks
 
 Three hooks run locally, all from `.githooks/`:

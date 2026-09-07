@@ -46,7 +46,7 @@ Root scripts map directly onto it:
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
 
-`hub browsers`, `hub assets`, `hub new`, `hub release`, and `hub preview:deploy` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
+`hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, and `hub preview:deploy` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
@@ -263,11 +263,31 @@ pnpm hub release error
 pnpm hub release --skip-verify
 ```
 
-It writes nothing, tags nothing, and publishes nothing. Publishing is irreversible in a way no other repository action is — a version can be deprecated but never replaced — so the tooling stops at the report and leaves the irreversible step to a person.
+It writes nothing, tags nothing, and publishes nothing. `hub publish` below is what publishes; this is the command you run while deciding whether to.
 
 A precondition that cannot be resolved, such as a tarball npm refused to build, is reported as unresolved rather than as ready. A blocker fails the run; an unresolved check does not, because "npm is unavailable" is not the same claim as "this package must not ship".
 
 `--skip-verify` reports readiness without the verification step, which is what you want while fixing one blocker at a time.
+
+## Publishing
+
+`hub publish` is the only command in the repository that does something irreversible, and it is shaped around that. A version can be deprecated but never replaced, so the command refuses far more than it accepts.
+
+```sh
+pnpm hub publish error
+pnpm hub publish --from-tag=@codenhub/error@0.3.0
+pnpm hub publish error --dry-run
+```
+
+It names its target one of two ways. `--from-tag=<tag>` reads a release tag of the form `<package name>@<version>` and resolves it to that package, refusing the run when the version in the tag is not the version in the manifest — that equality is what makes a tag an authorization rather than a label. The value has to be joined with `=`, because a bare `@codenhub/error@0.3.0` would otherwise be read as a package selector. Without a tag, the packages come from the selectors, and an implicit selection is refused outright: `pnpm hub publish` on its own would mean "publish the whole workspace".
+
+It then runs `verify` for those packages, runs the same preflight `hub release` reports, and only publishes when every precondition is `ready`. That last part is where it differs from the report: an unresolved precondition blocks a publish even though it only warns in `hub release`. A report may leave a question open for a person to answer; a publish cannot, because by the time anyone reads the answer the version is on the registry for good.
+
+`--dry-run` prints what it would run after a real preflight, so the checks are genuine and only the publish is not. `--skip-verify` behaves as it does for `hub release`.
+
+Authentication is never configured here. In `.github/workflows/publish.yml` it comes from npm trusted publishing, which exchanges the job's OIDC token for a short-lived credential; on a maintainer's machine it comes from their own `npm login`. No npm token exists in this repository. No `--provenance` flag is passed either: trusted publishing attaches provenance on its own, and the flag is rejected outside a supported CI provider, so passing it would buy nothing in the workflow and break the same command locally.
+
+After a successful publish it reads the version npm serves back and reports it, which is the confirmation `docs/specs/packages-lifecycle.md` asks for. That read is a report and never a gate — registry metadata propagates eventually, so a version that has not appeared yet means "look again in a moment", not "the publish failed".
 
 ## Cleaning
 

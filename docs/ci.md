@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-06
+last_updated: 2026-09-07
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
 # Continuous integration
 
-`.github/workflows/ci.yml` is the only workflow. It runs the same commands a contributor runs locally, so a green run means `pnpm verify` passed rather than that some CI-only approximation of it did.
+Two workflows run here. `.github/workflows/ci.yml` verifies every pull request and every merge; `.github/workflows/publish.yml` releases one package when a maintainer pushes its tag. Both run the same commands a contributor runs locally, so a green run means `pnpm verify` passed rather than that some CI-only approximation of it did.
 
 ## Toolchain
 
@@ -197,6 +197,34 @@ That builds the app and uploads it as a new Worker version without deploying it,
 
 Previewing the merge rather than a working tree is the one thing it does not do. A version uploaded from a laptop is built from whatever is checked out there.
 
+## Publishing
+
+`.github/workflows/publish.yml` publishes one package to npm. It is the only workflow that changes anything outside this repository, and everything about it is shaped by that.
+
+It triggers on a tag matching `@codenhub/*@*` and on nothing else. The tag names the package and the version — `@codenhub/error@0.3.0` — and that pairing is the authorization: `docs/specs/packages-lifecycle.md` requires the version in the tag to equal the version in the manifest at the tagged commit, and `hub publish` refuses the run when they disagree. A merge never publishes. A merge is a decision to change `main`, not a decision to release, and keeping them apart is what makes a version bump revertible right up until someone tags it.
+
+The job body is one command:
+
+```sh
+pnpm hub publish --from-tag="$GITHUB_REF_NAME"
+```
+
+That command verifies the package, runs the publish preflight `hub release` reports, and publishes only when every precondition is `ready`. It is the same command a maintainer can run locally, which is the rule the section above states: a step only CI can run is a step nobody can reproduce before pushing. `docs/tooling.md` documents its flags.
+
+### Credentials
+
+There are none. The job holds `id-token: write` and authenticates through npm trusted publishing, which exchanges that OIDC token for a credential valid for the length of the publish. No npm token exists in this repository or in its Actions secrets, which is the same split the deployments above keep — the repository carries the build, never the key.
+
+Provenance comes with that exchange rather than from a flag. `--provenance` is deliberately not passed: the registry already attests a trusted-publishing release, and the flag is rejected outside a supported CI provider, so passing it would buy nothing here and break `hub publish` on a maintainer's machine.
+
+Trusted publishing needs npm 11.5.1 or newer. The pinned Node ships one well past that, so the workflow asserts the version rather than installing one — an npm that cannot do the exchange should fail by name, not as an authentication error inside `npm publish`.
+
+### The two things this workflow cannot do
+
+A package's **first** release cannot go through it. npm has no trusted publisher to configure for a name that does not exist yet, so the first version of a package is published by a maintainer running `hub publish <package>` against their own `npm login`, and the trusted publisher is configured afterwards. Every release after the first goes through the workflow.
+
+A tag can be pushed by anyone with write access, from any commit. The job therefore runs in the `npm` environment, which is where a required reviewer is configured. Until one is, the environment exists with no protection rules and the workflow runs unimpeded; the environment is what gives that decision somewhere to live.
+
 ## Not covered yet
 
-Package publishing is deliberately absent, and so is any deployment the repository would own. `docs/roadmap.md` tracks trusted publishing, and `docs/specs/packages-lifecycle.md` keeps `npm publish` a human action, so delivery work must stay a maintainer-triggered workflow rather than publish-on-merge. Neither deployment above nor their previews are an exception: the deployments run from dashboard state and the previews from a maintainer's machine, and none of them carries a credential here.
+Nothing the repository would own is missing any more. The two deployments run from Cloudflare dashboard state, their previews from a maintainer's machine, and publishing from a tag through trusted publishing. None of the three carries a credential here, which is the property to preserve when any of them changes.

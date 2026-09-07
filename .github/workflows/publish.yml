@@ -1,0 +1,68 @@
+name: Publish
+
+# A release is authorized by pushing its tag. The tag names one package and the
+# version it releases — `@codenhub/error@0.3.0` — and `hub publish` refuses to
+# run when that version disagrees with the package manifest at the tagged
+# commit. `docs/specs/packages-lifecycle.md` owns the rule; `docs/ci.md`
+# explains why this workflow exists at all.
+on:
+  push:
+    tags: ["@codenhub/*@*"]
+
+# Two runs would race for the same version, and the loser is a failed publish
+# rather than a duplicate. Nothing is cancelled: a publish half-way through is
+# worse than a publish that waits.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # npm trusted publishing exchanges this job's OIDC token for a short-lived
+  # publish credential, which is why no npm token exists in this repository.
+  # Provenance is attached by the registry as part of that exchange; the
+  # `--provenance` flag is deliberately not passed, because it is rejected
+  # outside CI and would break the same command on a maintainer's machine.
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # The tag is the authorization, and a tag can be pushed by anyone with write
+    # access from any commit. This environment is where a required reviewer is
+    # configured, so the irreversible step still passes through a person.
+    environment: npm
+    steps:
+      # Full history: the preflight compares the tagged commit against the
+      # working tree, and `hub verify` resolves package selectors from git.
+      - name: Check out the tag
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      # Trusted publishing needs npm 11.5.1 or newer. The pinned Node ships one
+      # well past that, so this asserts rather than installs: an npm that cannot
+      # do the OIDC exchange should fail here, naming the reason, rather than
+      # inside `npm publish` as an authentication error.
+      - name: Assert npm supports trusted publishing
+        run: |
+          version="$(npm --version)"
+          echo "npm $version"
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number);
+            if (a<11 || (a===11 && (b<5 || (b===5 && c<1)))) {
+              console.error("npm >= 11.5.1 is required for trusted publishing");
+              process.exit(1);
+            }' "$version"
+
+      # One command, and the same one a maintainer can run locally. It verifies
+      # the package, runs the publish preflight, asserts the tag matches the
+      # manifest, and only then publishes.
+      - name: Publish
+        run: pnpm hub publish --from-tag="$GITHUB_REF_NAME"
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
