@@ -109,34 +109,72 @@ body {
   @apply mb-3 flex items-center gap-2;
 }
 
+/* Larger than a page-list entry so the package it scopes reads as the heading
+   of the rail, not another link in it. */
 .package-navigation-title .rail-title {
-  @apply mb-0;
+  @apply text-label-lg mb-0 font-bold;
+}
+
+/* The package's Guides / Reference / Changelog switcher: a short vertical list
+   in a bordered box above the page tree, so it reads as its own control and not
+   as three more links in the rail. Each row links to its section's entry page
+   and the active one is derived from the current page, so it needs no script.
+   The component hides the box when a package has only one section. */
+.package-tabs {
+  @apply border-border mr-6 mb-3 flex list-none flex-col gap-0.5 rounded-(--radius-control) border p-1;
+}
+
+.package-tab {
+  @apply text-text-secondary hover:text-text hover:bg-foreground flex items-center gap-2.5 rounded-(--radius-small) px-2.5 py-2 text-sm no-underline transition-colors;
+}
+
+.package-tab[aria-current="page"] {
+  @apply bg-surface text-text font-semibold;
+}
+
+.package-tab-icon {
+  @apply size-4 shrink-0 fill-none stroke-current stroke-2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .docs-shell {
   @apply grid grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
 }
 
-.left-rail {
-  @apply border-border border-r pr-6;
-}
+/* Both rails carry a full-height rule at the edge where they meet the document
+   column — the left rail on its right, the table of contents on its left — and
+   the current entry paints its own segment directly over that rule, so the
+   divider and the position indicator read as one line rather than two.
 
-/* The rule runs the full height of the rail, and each entry paints its own
-   segment directly over it, so the divider against the document column and the
-   current-entry indicator are one line rather than two parallel ones.
+   Each is a positioned line rather than a border because the panel inside the
+   rail scrolls: `overflow-y` clips both axes, so a segment reaching past the
+   panel to a border on the rail would be cut off. Nothing reaches past — the
+   rail carries no inline padding on that side, and every entry insets its own
+   text instead, so the rule and every segment start at the same edge.
 
-   It is a positioned line rather than a border because the panel inside this
-   rail scrolls: `overflow-y` clips on both axes, so a segment that overhung its
-   scroll container to reach a border on the rail would be cut off. Nothing
-   overhangs instead — the rail carries no inline padding, so the rule and every
-   segment start at the same edge. */
+   Both use `::before` so the rule paints under the sticky panel: the current
+   entry's own border then draws over it at full strength. An `::after` here
+   would paint on top of the panel and mute that segment back to the rule tone. */
+.left-rail,
 .toc-rail {
   @apply relative pl-0;
+}
+
+.left-rail::before {
+  @apply bg-border/60 absolute inset-y-0 right-0 w-0.5;
+  content: "";
 }
 
 .toc-rail::before {
   @apply bg-border/60 absolute inset-y-0 left-0 w-0.5;
   content: "";
+}
+
+.left-rail .package-navigation-title,
+.left-rail .document-list a,
+.left-rail .nav-group summary {
+  @apply border-r-2 border-transparent pr-6;
 }
 
 .toc-rail .rail-title,
@@ -163,8 +201,11 @@ body {
   @apply text-text-secondary hover:text-text block py-1.5 no-underline transition-colors;
 }
 
+/* Color, weight, and a segment on the rail's rule in the text color — the same
+   current-entry treatment `.toc-rail a[aria-current="true"]` gets on the other
+   side, where `border-primary` resolves to the same monochrome ink as the text. */
 .document-list a[aria-current="page"] {
-  @apply text-text font-semibold;
+  @apply border-primary text-text font-semibold;
 }
 
 /* A group toggle is a sibling of the plain links around it, not a heading over
@@ -275,7 +316,7 @@ body {
 }
 
 .markdown-content ul {
-  list-style-type: square;
+  list-style-type: disc;
 }
 
 .markdown-content ol {
@@ -301,8 +342,10 @@ body {
 }
 
 /* `data-table` is the Codenhub table component (renamed from `table`); it styles
-   the head, cells, rules, and row hover of a plain `<table>`. `.table-wrap` is
-   added around the table by `rehypeMarkdownEnhancements` for horizontal overflow. */
+   the head, cells, and row hover of a plain `<table>`. `rehypeMarkdownEnhancements`
+   adds the `edged` and `ruled` modifier classes from `@codenhub/styles` to the
+   element for its outer border and row rules, and wraps it in `.table-wrap` for
+   horizontal overflow. */
 .markdown-content table {
   @apply data-table;
 }

@@ -126,12 +126,18 @@ function wrapCodeBlock(node: AstNode, context: TransformContext): AstNode {
 }
 
 /* A GFM table renders as a bare `<table>`. `data-table` (the Codenhub table
-   component) styles it through CSS; `table-wrap` is the package's wrapper that
-   lets a table wider than its column scroll rather than overflow the page. */
+   component) styles it through CSS, and the `edged` and `ruled` modifiers from
+   `@codenhub/styles` are set here as classes on the element, the way that
+   package means them to be used, rather than forced through a local `@apply`.
+   `table-wrap` is the package's wrapper that lets a table wider than its column
+   scroll rather than overflow the page. */
 function wrapTable(node: AstNode): AstNode {
   if (node.tagName !== "table") {
     return node;
   }
+  const properties = (node.properties ??= {});
+  const classNames = Array.isArray(properties.className) ? properties.className : [];
+  properties.className = [...classNames, "edged", "ruled"];
   return element("div", { className: ["table-wrap"] }, [node]);
 }
 
