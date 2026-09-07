@@ -128,7 +128,7 @@ body {
   @apply text-text-secondary hover:text-text hover:bg-foreground flex items-center gap-2.5 rounded-(--radius-small) px-2.5 py-2 text-sm no-underline transition-colors;
 }
 
-.package-tab[aria-current="page"] {
+.package-tab[aria-current="location"] {
   @apply bg-surface text-text font-semibold;
 }
 

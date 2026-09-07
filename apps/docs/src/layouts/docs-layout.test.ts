@@ -51,22 +51,27 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("reference-deck");
   });
 
-  it("shows a section strip that marks the tab holding the current page", async () => {
+  it("shows a section strip that marks only the tab holding the current page", async () => {
     const overview = await readOutput("error/index.html");
     const reference = await readOutput("error/reference/index.html");
 
-    // Both pages carry the same two-tab strip, each row an icon then its label;
-    // only the current tab is marked.
+    // Both pages carry the same two-tab strip, each row an icon then its label.
     for (const html of [overview, reference]) {
       expect(html).toMatch(
-        /<a class="package-tab"(?: aria-current="page")? href="\/error\/">\s*<svg[\s\S]*?<\/svg>\s*Guides\s*<\/a>/,
+        /<a class="package-tab"(?: aria-current="location")? href="\/error\/">\s*<svg[\s\S]*?<\/svg>\s*Guides\s*<\/a>/,
       );
       expect(html).toMatch(
-        /<a class="package-tab"(?: aria-current="page")? href="\/error\/reference\/">\s*<svg[\s\S]*?<\/svg>\s*Reference\s*<\/a>/,
+        /<a class="package-tab"(?: aria-current="location")? href="\/error\/reference\/">\s*<svg[\s\S]*?<\/svg>\s*Reference\s*<\/a>/,
       );
     }
-    expect(overview).toMatch(/<a class="package-tab" aria-current="page" href="\/error\/">/);
-    expect(reference).toMatch(/<a class="package-tab" aria-current="page" href="\/error\/reference\/">/);
+
+    // The tab is `location`, not `page`: the reader may be on a nested page of
+    // the section, and the exact document link carries `page`. Exactly one tab
+    // is marked on each page.
+    expect(overview).toMatch(/<a class="package-tab" aria-current="location" href="\/error\/">/);
+    expect(overview).toMatch(/<a class="package-tab" href="\/error\/reference\/">/);
+    expect(reference).toMatch(/<a class="package-tab" aria-current="location" href="\/error\/reference\/">/);
+    expect(reference).toMatch(/<a class="package-tab" href="\/error\/">/);
   });
 
   it("omits the section strip for a package that has only guides", async () => {
