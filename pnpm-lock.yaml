@@ -93,30 +93,6 @@ importers:
         specifier: 'catalog:'
         version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
 
-  apps/debug:
-    devDependencies:
-      '@codenhub/ui-kit':
-        specifier: workspace:*
-        version: link:../../packages/ui-kit
-      '@codenhub/vite-plugin-add-loader':
-        specifier: workspace:*
-        version: link:../../packages/plugins/vite/add-loader
-      '@codenhub/vite-plugin-defer-css':
-        specifier: workspace:*
-        version: link:../../packages/plugins/vite/defer-css
-      '@codenhub/vite-plugin-icons':
-        specifier: workspace:*
-        version: link:../../packages/plugins/vite/icons
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
-      tailwindcss:
-        specifier: 'catalog:'
-        version: 4.3.2
-      vite:
-        specifier: 'catalog:'
-        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
-
   apps/demo:
     devDependencies:
       '@codenhub/icons':

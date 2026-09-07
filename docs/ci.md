@@ -105,7 +105,6 @@ Because the trigger is dashboard state, a build fires for every push unless the 
 .github/*
 .githooks/*
 docs/*
-apps/debug/*
 AGENTS.md
 CLAUDE.md
 CONTRIBUTING.md

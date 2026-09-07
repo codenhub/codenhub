@@ -84,7 +84,7 @@ async function runRelease(
 
 describe("hub release", () => {
   it("reports nothing to do when no selected package is published", async () => {
-    const result = await runRelease([createPackage("@codenhub/debug", true)], ["--skip-verify"]);
+    const result = await runRelease([createPackage("@codenhub/tools", true)], ["--skip-verify"]);
 
     expect(result.errors).toContain("No selected package is published.");
     expect(result.exitCode).toBe(EXIT_SUCCESS);
@@ -113,12 +113,12 @@ describe("hub release", () => {
   });
 
   it("leaves private packages out of the report", async () => {
-    const packages = [createPackage("@codenhub/error"), createPackage("@codenhub/debug", true)];
+    const packages = [createPackage("@codenhub/error"), createPackage("@codenhub/tools", true)];
 
     const result = await runRelease(packages, ["--skip-verify"]);
 
     expect(result.output).toContain("@codenhub/error");
-    expect(result.output).not.toContain("@codenhub/debug");
+    expect(result.output).not.toContain("@codenhub/tools");
   });
 
   it("fails when a precondition blocks publication", async () => {

@@ -33,6 +33,6 @@ Pull request verification needs no new configuration: `packages/*/demo` and `app
 
 Deployment is a second Cloudflare Workers Builds project, connected to the repository from the dashboard exactly like `apps/docs`'s, with its own `apps/demo/wrangler.jsonc`. `docs/ci.md` explains why that split keeps delivery plumbing out of the repository; the same reasoning applies here.
 
-Its build watch-path excludes are the inverse of `apps/docs`'s list in `docs/ci.md`: `packages/*/demo/*` moves from excluded to the thing that should trigger a build, and `apps/docs/*` is added to the exclude list, since a docs-only change should not rebuild the demo Worker. Everything else — `docs/*`, `apps/debug/*`, repository governance files, lint/format configs — stays excluded for the same reasons `docs/ci.md` gives for `apps/docs`.
+Its build watch-path excludes are the inverse of `apps/docs`'s list in `docs/ci.md`: `packages/*/demo/*` moves from excluded to the thing that should trigger a build, and `apps/docs/*` is added to the exclude list, since a docs-only change should not rebuild the demo Worker. Everything else — `docs/*`, repository governance files, lint/format configs — stays excluded for the same reasons `docs/ci.md` gives for `apps/docs`.
 
 Previews reuse the existing mechanism: `apps/demo` registers `preview` and `preview:deploy` scripts the same way `apps/docs` does, so `pnpm hub preview:deploy demo` already works once a maintainer has their own `wrangler` login (`docs/tooling.md`, "Hosted previews"). No new `hub` capability was needed.
