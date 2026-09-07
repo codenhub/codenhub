@@ -753,3 +753,31 @@ Obligations come in three levels, because permissive is not the same as free of 
 Every bundled family is `core` tier, meaning `none` or `notice`, so a default build satisfies every obligation automatically. A minifier configured with `legalComments: "none"` strips CSS comments, which is what `file` mode exists for.
 
 A set adopted through `adoptIconifySet` is `extended` tier — you remain responsible for its license terms and attribution material. See [JavaScript API](docs/javascript-api.md).
+
+<!-- Source: docs/changelog/index.md -->
+
+# Changelog
+
+- [0.2.0](docs/changelog/0.2.0.md)
+
+<!-- Source: docs/changelog/0.2.0.md -->
+
+# 0.2.0
+
+## Added
+
+- `@codenhub/icons/tw` for Tailwind v4: the base rules plus a plugin that generates icons as Tailwind matches them, so a project carries only what its markup used and ships no stylesheet. `@codenhub/icons/tailwind` exposes the plugin on its own, so `@plugin` can carry options.
+- `@codenhub/icons/<family>` for a plain CSS pipeline: one complete family, every icon written out because nothing is there to narrow it. Each rule carries both the qualified and the bare selector, so import order picks the default family by plain cascade.
+- A license banner on `@codenhub/icons/tw`, naming every bundled family. The configured `@plugin` path keeps its per-family `--ic-attribution-<family>` property, which is the most Tailwind's declaration-only plugin API allows.
+- An `engines` field requiring Node 22. The scanner calls `fs.globSync`, stable only from Node 22, and the README already stated the requirement — without the field a consumer on Node 20 installed cleanly and then failed at build time with no warning.
+
+## Changed
+
+- **Breaking.** `@import "@codenhub/icons"` is now always the base rules and nothing else. The Vite plugin no longer substitutes the generated set at that line, nor deletes it in svg mode; the masks arrive through `virtual:icons.css` and the injected stylesheet instead. The same line previously meant two different things depending on configuration, and a pipeline without a plugin resolved it to base rules, rendered nothing, and said nothing.
+- The Tailwind plugin reads its stroke width option as `stroke-width`. The camelCase `strokeWidth` still works for a JavaScript caller and wins when both are given.
+
+## Fixed
+
+- The `content` option expands glob patterns. It is documented as taking file paths or globs and the README example passes one, but the scanner only ever called `statSync` on each entry, so a pattern matched nothing and content scanning silently did not happen.
+- The documented `@plugin` stroke width option reaches the plugin. Tailwind hands an option through exactly as written, but a CSS formatter lowercases a property name, so `strokeWidth` became `strokewidth` and was dropped — icons rendered at their authored width with no error and nothing in the output to explain it.
+- The generated stylesheet is referenced as a module in dev rather than inlined as a `<style>` tag. The inlined tag was a snapshot taken before Vite had transformed any module, so a class in a file the plugin had not seen yet was missing from it and nothing could put it back. A build still inlines the tag, where modules are transformed before the HTML is.
