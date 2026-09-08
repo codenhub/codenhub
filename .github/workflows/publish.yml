@@ -17,7 +17,9 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # `write` for the GitHub release the last step cuts from the tag; the publish
+  # itself reads the repository and needs nothing more.
+  contents: write
   # npm trusted publishing exchanges this job's OIDC token for a short-lived
   # publish credential, which is why no npm token exists in this repository.
   # Provenance is attached by the registry as part of that exchange; the
@@ -66,3 +68,30 @@ jobs:
         run: pnpm hub publish --from-tag="$GITHUB_REF_NAME"
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      # The published version gets a GitHub release too, so the Releases tab and
+      # its Atom feed carry the same history npm does. Notes are the version's
+      # changelog page when the package keeps one (`docs/specs/packages-changelog.md`),
+      # and GitHub's generated notes otherwise. This never gates the publish
+      # above: the version is already on npm, and a missing release entry is
+      # re-creatable by hand with the same `gh release create`.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${GITHUB_REF_NAME##*@}"
+          package_dir="$(pnpm --filter "${GITHUB_REF_NAME%@*}" exec pwd 2>/dev/null | tail -1 || true)"
+          notes="${package_dir}/docs/changelog/${version}.md"
+
+          args=(--verify-tag --title "$GITHUB_REF_NAME")
+          case "$version" in
+            *-*) args+=(--prerelease) ;;
+          esac
+          if [ -f "$notes" ]; then
+            args+=(--notes-file "$notes")
+          else
+            args+=(--generate-notes)
+          fi
+
+          gh release create "$GITHUB_REF_NAME" "${args[@]}"

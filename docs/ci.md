@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -247,9 +247,13 @@ pnpm hub publish --from-tag="$GITHUB_REF_NAME"
 
 That command verifies the package, runs the publish preflight `hub release` reports, and publishes only when every precondition is `ready`. It is the same command a maintainer can run locally, which is the rule the section above states: a step only CI can run is a step nobody can reproduce before pushing. `docs/tooling.md` documents its flags.
 
+### The GitHub release
+
+A final step cuts a GitHub release from the same tag, so the Releases tab and its Atom feed carry the history npm already has. Its notes are the version's `docs/changelog/<version>.md` page when the package keeps a changelog, and GitHub's generated notes otherwise; a pre-release version is marked as one. The step runs `gh release create` directly rather than through `hub`, because it touches GitHub metadata rather than the package, and it never gates the publish before it — the version is already on npm, and a missing release entry is re-creatable by hand with the same command. This is why the job holds `contents: write`.
+
 ### Credentials
 
-There are none. The job holds `id-token: write` and authenticates through npm trusted publishing, which exchanges that OIDC token for a credential valid for the length of the publish. No npm token exists in this repository or in its Actions secrets, which is the same split the deployments above keep — the repository carries the build, never the key.
+There are none. The job holds `id-token: write` and authenticates through npm trusted publishing, which exchanges that OIDC token for a credential valid for the length of the publish. No npm token exists in this repository or in its Actions secrets, which is the same split the deployments above keep — the repository carries the build, never the key. `contents: write` is for the GitHub release above and nothing else; the publish reads the repository and needs no more.
 
 Provenance comes with that exchange rather than from a flag. `--provenance` is deliberately not passed: the registry already attests a trusted-publishing release, and the flag is rejected outside a supported CI provider, so passing it would buy nothing here and break `hub publish` on a maintainer's machine.
 
