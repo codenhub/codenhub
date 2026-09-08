@@ -2,7 +2,7 @@
 import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 
 import StatusBadge from "../components/status-badge.astro";
-import { catalogPackages, documentedCount, type CatalogPackage } from "../lib/catalog";
+import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -76,10 +76,6 @@ const visibleRoutes = routes.filter((route): route is Route & { href: string } =
         <div class="packages-toolbar">
           <div>
             <h2 id="packages-title">Packages</h2>
-            <p class="packages-lede">
-              {catalogPackages.length} published {catalogPackages.length === 1 ? "package" : "packages"}, {documentedCount}
-              {" "}with documentation.
-            </p>
           </div>
           <div class="packages-toolbar-controls">
             <div class="input-group package-search">
