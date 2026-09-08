@@ -1,5 +1,6 @@
 import { mapSeries } from "../process/concurrency.ts";
 import {
+  distTagForVersion,
   readPublishedVersion,
   resolveTagTarget,
   runNpmPublish,
@@ -138,8 +139,12 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
           hasFailed = true;
           return;
         }
+        const distTag = distTagForVersion(String(workspacePackage.manifest.version));
+        const distTagArgs = distTag === undefined ? "" : ` --tag ${distTag}`;
         if (context.options.isDryRun) {
-          context.reporter.info(`  would run: npm publish --access public (in ${workspacePackage.location})`);
+          context.reporter.info(
+            `  would run: npm publish --access public${distTagArgs} (in ${workspacePackage.location})`,
+          );
           return;
         }
         const outcome = await (options.publish ?? runNpmPublish)(workspacePackage, context.options.timeoutMs);
@@ -150,7 +155,9 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
           return;
         }
         const version = String(workspacePackage.manifest.version);
-        context.reporter.info(`  published ${workspacePackage.name}@${version}`);
+        context.reporter.info(
+          `  published ${workspacePackage.name}@${version}${distTag === undefined ? "" : ` under dist-tag ${distTag}`}`,
+        );
 
         // A report, never a gate. Registry metadata propagates eventually, so a
         // version that has not appeared yet means "look again in a moment"; the

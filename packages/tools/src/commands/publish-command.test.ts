@@ -204,8 +204,28 @@ describe("hub publish", () => {
       ["--from-tag=@codenhub/error@1.0.0", "--dry-run"],
     );
 
-    expect(result.output).toContain("would run: npm publish --access public");
+    expect(result.output).toContain("would run: npm publish --access public (in");
     expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("would publish a pre-release under the next dist-tag", async () => {
+    const result = await runPublish(
+      [createPackage("@codenhub/error", "1.0.0-beta.1")],
+      ["--from-tag=@codenhub/error@1.0.0-beta.1", "--dry-run"],
+    );
+
+    expect(result.output).toContain("would run: npm publish --access public --tag next (in");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("names the dist-tag in the published line for a pre-release", async () => {
+    const result = await runPublish(
+      [createPackage("@codenhub/error", "1.0.0-beta.1")],
+      ["--from-tag=@codenhub/error@1.0.0-beta.1"],
+    );
+
+    expect(result.output).toContain("published @codenhub/error@1.0.0-beta.1 under dist-tag next");
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
 

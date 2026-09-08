@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-06
+last_updated: 2026-09-08
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -297,6 +297,8 @@ pnpm hub publish error --dry-run
 It names its target one of two ways. `--from-tag=<tag>` reads a release tag of the form `<package name>@<version>` and resolves it to that package, refusing the run when the version in the tag is not the version in the manifest — that equality is what makes a tag an authorization rather than a label. The value has to be joined with `=`, because a bare `@codenhub/error@0.3.0` would otherwise be read as a package selector. Without a tag, the packages come from the selectors, and an implicit selection is refused outright: `pnpm hub publish` on its own would mean "publish the whole workspace".
 
 It then runs `verify` for those packages, runs the same preflight `hub release` reports, and only publishes when every precondition is `ready`. That last part is where it differs from the report: an unresolved precondition blocks a publish even though it only warns in `hub release`. A report may leave a question open for a person to answer; a publish cannot, because by the time anyone reads the answer the version is on the registry for good.
+
+A normal release publishes under npm's `latest` dist-tag. A pre-release version — one with a `-beta.1`, `-rc.0`, or similar suffix — publishes under `next` instead, because `npm publish` would otherwise move `latest` to it and make it the version `npm install` resolves. The tag is derived from the version alone, so nothing extra is passed on the command line.
 
 `--dry-run` prints what it would run after a real preflight, so the checks are genuine and only the publish is not. `--skip-verify` behaves as it does for `hub release`.
 
