@@ -11,7 +11,7 @@ A pnpm workspace of publishable packages, the apps that exercise them, and the d
 | `packages/`         | Libraries and primitives, most of them published                |
 | `packages/plugins/` | Framework plugins, nested by host: `tauri/`, `vite/`            |
 | `packages/tools/`   | The `hub` CLI behind every root script                          |
-| `apps/`             | `docs` publishes the site, `debug` is a private scratch app     |
+| `apps/`             | `docs` publishes the site, `demo` aggregates every package demo |
 | `docs/`             | Durable repository documentation; `docs/specs/` holds the specs |
 | `assets/`           | Repository-wide fonts, logos, and icons                         |
 
