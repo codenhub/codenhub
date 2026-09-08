@@ -220,6 +220,22 @@ describe("documentation chrome", () => {
     expect(config).toContain('"directory": "./dist"');
   });
 
+  it("points robots at the sitemap for the canonical origin", async () => {
+    const robots = await readOutput("robots.txt");
+
+    expect(robots).toBe("User-agent: *\nAllow: /\n\nSitemap: https://docs.codenhub.dev/sitemap.xml\n");
+  });
+
+  it("lists every published page in the sitemap and nothing that is curated away", async () => {
+    const sitemap = await readOutput("sitemap.xml");
+
+    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/</loc>");
+    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/error/</loc>");
+    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/0.2.0/</loc>");
+    // The curated changelog `index.md` has no route, so it is absent here too.
+    expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+  });
+
   it("emits a search index covering package sections", async () => {
     const entries = JSON.parse(await readOutput("search-index.json")) as {
       route: string;

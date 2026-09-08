@@ -822,12 +822,6 @@ Every bundled family is `core` tier, meaning `none` or `notice`, so a default bu
 
 A set adopted through `adoptIconifySet` is `extended` tier — you remain responsible for its license terms and attribution material. See [JavaScript API](docs/javascript-api.md).
 
-<!-- Source: docs/changelog/index.md -->
-
-# Changelog
-
-- [0.2.0](docs/changelog/0.2.0.md)
-
 <!-- Source: docs/changelog/0.2.0.md -->
 
 # 0.2.0

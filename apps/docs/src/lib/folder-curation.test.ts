@@ -28,7 +28,7 @@ describe("applyFolderCuration", () => {
     expect(paths(applyFolderCuration(documents))).toEqual(paths(documents));
   });
 
-  it("keeps only the siblings a curated index links to, in link order", () => {
+  it("drops the curated index and keeps only the siblings it links, in link order", () => {
     const documents = [
       document("index.md"),
       document("changelog/index.md", {
@@ -42,7 +42,7 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual(["index.md", "changelog/index.md", "changelog/1.1.0.md", "changelog/1.0.0.md"]);
+    expect(paths(result)).toEqual(["index.md", "changelog/1.1.0.md", "changelog/1.0.0.md"]);
   });
 
   it("assigns synthetic order matching link position, ignoring any prior order", () => {
@@ -73,7 +73,7 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual(["changelog/index.md", "changelog/1.0.0.md", "changelog/0.9.0.md"]);
+    expect(paths(result)).toEqual(["changelog/1.0.0.md", "changelog/0.9.0.md"]);
   });
 
   it("ignores links that don't match a sibling filename", () => {
@@ -87,16 +87,16 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual(["changelog/index.md", "changelog/1.0.0.md"]);
+    expect(paths(result)).toEqual(["changelog/1.0.0.md"]);
   });
 
-  it("only publishes the index page when a curated index links no siblings", () => {
+  it("publishes nothing from a curated folder whose index links no siblings", () => {
     const documents = [
       document("changelog/index.md", { curated: true, rawHtml: "<p>Nothing yet.</p>" }),
       document("changelog/1.0.0.md"),
     ];
 
-    expect(paths(applyFolderCuration(documents))).toEqual(["changelog/index.md"]);
+    expect(paths(applyFolderCuration(documents))).toEqual([]);
   });
 
   it("matches a sibling link that carries a fragment or query string", () => {
@@ -111,7 +111,7 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual(["changelog/index.md", "changelog/1.0.0.md", "changelog/0.9.0.md"]);
+    expect(paths(result)).toEqual(["changelog/1.0.0.md", "changelog/0.9.0.md"]);
   });
 
   it("ignores an image src that happens to match a sibling filename", () => {
@@ -126,7 +126,7 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual(["changelog/index.md", "changelog/0.9.0.md"]);
+    expect(paths(result)).toEqual(["changelog/0.9.0.md"]);
   });
 
   it("curates a nested folder by its own immediate index, not an ancestor's", () => {
@@ -143,11 +143,6 @@ describe("applyFolderCuration", () => {
 
     const result = applyFolderCuration(documents);
 
-    expect(paths(result)).toEqual([
-      "guides/index.md",
-      "guides/setup.md",
-      "guides/advanced/index.md",
-      "guides/advanced/deep-dive.md",
-    ]);
+    expect(paths(result)).toEqual(["guides/index.md", "guides/setup.md", "guides/advanced/deep-dive.md"]);
   });
 });

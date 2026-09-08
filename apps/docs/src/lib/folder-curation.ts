@@ -49,10 +49,14 @@ function normalizeLinkTarget(target: string): string {
  * `curated: true` publishes only the sibling documents it links to, in that
  * link order, instead of every document physically present in the folder.
  *
- * A folder without a curated index page is returned unchanged, so this has no
- * effect on any other folder in the workspace.
+ * The curated `index.md` is a functional entrypoint, not a page: it names what
+ * to publish and is itself dropped, so it gets no route, no navigation entry,
+ * and no search hit (`docs/specs/packages-changelog.md`,
+ * `docs/specs/packages-documentation.md`). A folder without a curated index page
+ * is returned unchanged, so this has no effect on any other folder in the
+ * workspace.
  * @param documents One package's public documents, unfiltered.
- * @returns The same documents, minus each curated folder's unlinked siblings, with kept siblings reordered to match their curated index's link order.
+ * @returns The same documents, minus every curated folder's index page and unlinked siblings, with kept siblings reordered to match their curated index's link order.
  */
 export function applyFolderCuration<T extends CuratableDocument>(documents: readonly T[]): T[] {
   const rootDocuments: T[] = [];
@@ -93,7 +97,8 @@ export function applyFolderCuration<T extends CuratableDocument>(documents: read
       linkedNames.add(normalizeLinkTarget(target));
     }
 
-    result.push(indexDocument);
+    // The curated index is read for its link list, then left out of the result:
+    // only the version pages it links to are published.
     let position = 0;
     for (const name of linkedNames) {
       const sibling = siblingsByName.get(name);
