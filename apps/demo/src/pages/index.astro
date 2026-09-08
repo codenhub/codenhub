@@ -181,10 +181,18 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
         ? "Sort by name, descending"
         : "Sort by name, ascending",
     );
+    // The icons are SVG elements, not HTML ones: `mode: "svg"` replaces the
+    // `<i>` this markup writes with the icon itself. `hidden` is therefore an
+    // attribute to set rather than a property to assign, and the guard has to
+    // admit both namespaces or the toggle silently stops working.
     for (const icon of sortButton.querySelectorAll("[data-sort-icon]")) {
-      if (icon instanceof HTMLElement) {
-        icon.hidden = icon.dataset.sortIcon !== nextDirection;
+      if (!(icon instanceof Element)) {
+        continue;
       }
+      icon.toggleAttribute(
+        "hidden",
+        icon.getAttribute("data-sort-icon") !== nextDirection,
+      );
     }
 
     applySort();
