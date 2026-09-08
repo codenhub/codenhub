@@ -80,7 +80,7 @@ Track high-level progress and milestone status for foundation and utility packag
 ### @codenhub/demo
 
 - [x] `apps/demo` shell and build pipeline aggregating every package's `demo/` output into `dist/demo/<package>/` — general contract in `docs/specs/packages-demo.md`, this app's own architecture in `apps/demo/docs/internal/architecture.md`
-- [ ] Second Cloudflare Workers Builds project, `codenhub-demo`, connected from the dashboard like `apps/docs`'s. The repository half is done: `docs/ci.md` now records the project's build watch-path excludes beside `apps/docs`'s, and `apps/demo/*` was added to the documentation project's list in the same change — a demo-only change had been rebuilding the documentation Worker for nothing. What remains is dashboard state and nothing else: connect the repository, set the build command and output directory to `apps/demo`'s, turn non-production branch builds off, and paste in the exclude list
+- [x] Second Cloudflare Workers Builds project, `codenhub-demo`, connected from the dashboard like `apps/docs`'s and serving the aggregated demo surface. `docs/ci.md` records the project's build watch-path excludes beside `apps/docs`'s, and `apps/demo/*` was added to the documentation project's list in the same change — a demo-only change had been rebuilding the documentation Worker for nothing. Everything else about the deployment is dashboard state the repository deliberately does not carry
 - [x] Migrate `apps/docs` and `packages/icons/demo` off hand-duplicated `favicon.ico`/`logo-*.svg` onto the shared `assets/` build-time copy step `docs/specs/packages-demo.md` defines
 
 ### @codenhub/docs
