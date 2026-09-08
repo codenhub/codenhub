@@ -38,13 +38,17 @@ The generated stylesheet is served as `virtual:icons.css` and injected into ever
 
 `content` takes literal paths and glob patterns, `src/**/*.{html,tsx}` among them, expanded when the scan runs. It is additive: the plugin also scans every source file the build transforms, so `content` is for what the bundler never reaches, and for making the first paint correct in dev.
 
-The transform-time scan covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and stylesheet files. Markup in a file type outside that set — a `.astro` or `.md` template — is only seen through `content`, so list those globs explicitly. See [Frameworks](../frameworks/index.md).
+The transform-time scan covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and stylesheet files. Markup in a file type outside that set — a `.astro` or `.md` template — is only seen through `content`, so list those globs explicitly. See [Frameworks](../frameworks/index.md). This is about the stylesheet only; which files [inline SVG mode](#inline-svg-mode) rewrites is a separate set.
 
 In dev, Vite serves the HTML before it transforms a single module, so a class the plugin has only ever seen inside a module is not yet known when the page is first served. The stylesheet is therefore served as a module rather than inlined, and the plugin invalidates it whenever a transform turns up something new, so the icon arrives without a reload. Listing your sources in `content` avoids the round trip entirely, because those files are read from disk up front.
 
 ## Inline SVG mode
 
 `mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
+
+Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup. `content` plays no part here — it feeds stylesheet generation, which this mode does not do.
+
+The class has to be written out in full, as a literal string, for the plugin to find it: a name assembled at runtime, as in `` `ic-${name}` ``, cannot be seen at build time. In CSS mode such a class simply has no rule generated. In svg mode it is worse, because there is no stylesheet to fall back on and the element renders as nothing. Reach for [one module per icon](#one-module-per-icon) whenever the icon is chosen at runtime; it is the supported form for that, and it is the only one that works in either mode.
 
 ## One module per icon
 

@@ -79,7 +79,8 @@ const ATTRIBUTION_FILE = "icons-attribution.txt";
 const ICON_MODULE_PREFIX = "virtual:@codenhub/icons/";
 const RESOLVED_ICON_MODULE_PREFIX = "\0" + ICON_MODULE_PREFIX;
 const SOURCE_FILE = /\.(html|jsx?|tsx?|vue|svelte|css|scss|sass|less)$/i;
-const MARKUP_FILE = /\.(html|jsx?|tsx?|vue|svelte)$/i;
+const MARKUP_FILE = /\.(html|jsx?|tsx?|vue|svelte|astro)$/i;
+const ASTRO_FILE = /\.astro$/i;
 
 function resolveIconModule(registry: IconRegistry, request: string): ResolvedIcon {
   // `lucide/heart` names a family and an icon; a single segment goes through
@@ -391,6 +392,53 @@ function replaceIconTagsWithSvg(source: string, registry: IconRegistry, options:
 }
 
 /**
+ * Splits an `.astro` file into its frontmatter fence and the template after it.
+ *
+ * Returns `undefined` for a file that opens with no fence, which is a valid
+ * `.astro` file that is template all the way down.
+ */
+function splitAstroFrontmatter(source: string): { frontmatter: string; template: string } | undefined {
+  const openEnd = source.indexOf("\n");
+  if (openEnd === -1 || source.slice(0, openEnd).trim() !== "---") {
+    return undefined;
+  }
+  let lineStart = openEnd + 1;
+  while (lineStart <= source.length) {
+    const lineEnd = source.indexOf("\n", lineStart);
+    const end = lineEnd === -1 ? source.length : lineEnd;
+    if (source.slice(lineStart, end).trim() === "---") {
+      return { frontmatter: source.slice(0, end), template: source.slice(end) };
+    }
+    if (lineEnd === -1) {
+      break;
+    }
+    lineStart = lineEnd + 1;
+  }
+  return undefined;
+}
+
+/**
+ * Replaces icon tags in an `.astro` file, escaping each half for what it is.
+ *
+ * An `.astro` file is two languages in one: the frontmatter fence is JavaScript,
+ * where an icon tag can only appear inside a string literal and the SVG has to
+ * be escaped for the quote enclosing it, and the template below is markup, where
+ * escaping it would corrupt the output. Rewriting the whole file under either
+ * rule breaks the other half, and skipping the frontmatter is worse than it
+ * sounds: svg mode emits no stylesheet, so a tag left behind there is not an
+ * icon delivered another way, it is a blank element.
+ */
+function replaceIconTagsInAstro(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
+  const parts = splitAstroFrontmatter(source);
+  if (parts === undefined) {
+    return replaceIconTagsWithSvg(source, registry, { ...options, isJsContext: false });
+  }
+  const frontmatter = replaceIconTagsWithSvg(parts.frontmatter, registry, { ...options, isJsContext: true });
+  const template = replaceIconTagsWithSvg(parts.template, registry, { ...options, isJsContext: false });
+  return `${frontmatter}${template}`;
+}
+
+/**
  * Vite plugin that turns icon utility classes into CSS mask rules, or into
  * inline SVG when `mode` is `"svg"`.
  *
@@ -600,12 +648,20 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
     transform(code, id) {
       if (mode === "svg") {
         if (id && !id.includes("node_modules") && !id.startsWith("\0") && MARKUP_FILE.test(id)) {
-          const replaced = replaceIconTagsWithSvg(code, registry, {
-            isJsContext: true,
+          // `.astro` arrives here as its own source rather than as compiled
+          // output, because this plugin is `enforce: "pre"` and so runs ahead of
+          // Astro's compiler. It is the only markup file that is part JavaScript
+          // and part template, so it is the only one that cannot take a single
+          // escaping rule. Astro never calls `transformIndexHtml` for its pages,
+          // which is why this hook is the whole of svg mode's reach into them.
+          const replaceOptions = {
             onFamilyUsed: rememberFamily,
             prefix,
             strokeWidth: options.strokeWidth,
-          });
+          };
+          const replaced = ASTRO_FILE.test(id)
+            ? replaceIconTagsInAstro(code, registry, replaceOptions)
+            : replaceIconTagsWithSvg(code, registry, { ...replaceOptions, isJsContext: true });
           collectUnreplacedClasses(replaced, id);
           if (replaced !== code) {
             return { code: replaced, map: null };

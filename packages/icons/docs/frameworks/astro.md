@@ -75,7 +75,13 @@ The `content` entry is required, not optional. The plugin auto-scans the files V
 
 Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
-`mode: "svg"` rewrites `<i class="ic-...">` tags only in the auto-scanned file types, so it does not transform `.astro` templates. `content` does not change that — it widens which files are scanned for class names, not which are rewritten. Use CSS mode (the default) with Astro.
+## Inline SVG mode
+
+`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags in `.astro` files, frontmatter and template alike. Everything above about delivering the stylesheet stops applying: svg mode emits no stylesheet, so neither the `virtual:icons.css` import nor `content` does anything here, and the `::before`, `::after`, and form-control forms do not work, because those need mask rules and svg mode produces none.
+
+`.md` and `.mdx` are not rewritten. An icon class written in one of those reaches the page as a bare `<i>` element with no stylesheet behind it, so it renders as nothing at all — not as the empty box CSS mode would leave. The build warns and names the class and the file, so this fails loudly rather than silently.
+
+There are two ways through it. In `.mdx`, put the icon in a component and use the component from the markdown: the component is an `.astro`, `.jsx`, or `.tsx` file, all of which are rewritten. In plain `.md`, which cannot import a component, there is no such route — a site that writes icon classes directly into its markdown wants CSS mode, where `content` globs cover `.md` and `.mdx` like any other file.
 
 ## See also
 
