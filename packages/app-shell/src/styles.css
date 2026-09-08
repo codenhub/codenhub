@@ -67,8 +67,8 @@
   top: 0;
   z-index: 30;
   flex-shrink: 0;
-  /* A minimum, not a fixed height: on a narrow header the nav links drop to
-     their own row and the header grows to hold them. */
+  /* A minimum, not a fixed height: on a narrow header the actions drop to their
+     own row and the header grows to hold them. */
   min-height: var(--shell-header-height);
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-background) 92%, transparent);
@@ -300,29 +300,19 @@
   }
 }
 
-/* Below this width the brand, links, and actions can no longer share one line,
-   so the links wrap to their own row under the brand and the header grows to
-   fit. Paired with the footer's `min-width: 40rem` row switch just above. */
+/* Below this width the brand, links, and actions can no longer share one line.
+   The links stay on the brand's row (scrolling sideways if they overrun) and
+   the actions drop to a full-width row below, so the header keeps its DOM order
+   — brand, links, actions — as the visible order and keyboard focus follows it.
+   Paired with the footer's `min-width: 40rem` row switch just above. */
 @media (max-width: 40rem) {
   .shell-header-content {
     flex-wrap: wrap;
     padding-block: 0.5rem;
   }
 
-  .shell-brand {
-    order: 1;
-  }
-
-  .shell-actions {
-    order: 2;
-    margin-inline-start: auto;
-  }
-
-  /* The links move to a full-width row under the brand and actions; it scrolls
-     sideways rather than wrapping again if it still overflows. */
   .shell-nav {
-    order: 3;
-    width: 100%;
+    flex: 1;
     margin-inline-end: 0;
     overflow-x: auto;
     scrollbar-width: none;
@@ -330,6 +320,11 @@
 
   .shell-nav::-webkit-scrollbar {
     display: none;
+  }
+
+  .shell-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

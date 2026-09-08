@@ -15,6 +15,10 @@ const { siteConfig, homeHref = "/" } = Astro.props;
  * only when its `siteConfig` URL is set, so a surface opts a link in or out by
  * whether it carries the URL at all. Every one points at another origin, so it
  * opens in a new tab and carries the outbound arrow.
+ *
+ * DOM order is brand, links, actions at every width — the wide row shows them
+ * in that order, and the narrow layout keeps the links on the brand's row and
+ * drops the actions below, so keyboard focus always follows the visible order.
  */
 const navLinks = [
   { href: siteConfig.wwwUrl, label: "Hub" },

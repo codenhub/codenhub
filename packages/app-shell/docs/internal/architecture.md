@@ -30,7 +30,7 @@ The header is one standard layout every surface shares, not a set of parts each 
 
 Each link renders only when its `SiteConfig` URL is set, so a surface opts a link in or out purely by whether it carries that URL — there is no per-link prop. Every left link points at another origin, so all three open in a new tab and carry an outbound arrow. The `actions` slot is for things the standard set cannot express: `apps/docs` puts its search trigger there. `apps/www` and `apps/demo` pass nothing.
 
-Below `40rem` the three groups can no longer share a line, so the text links wrap to their own row under the brand and the header grows to hold them (`--shell-header-height` is a minimum, not a fixed height). A surface that keys layout off the header height — `apps/docs` does, for `scroll-padding-top` — raises its own value at that breakpoint.
+Below `40rem` the three groups can no longer share a line. The links stay on the brand's row (scrolling sideways if they overrun) and the actions drop to a full-width row below, so the rendered order still matches the DOM order — brand, links, actions — and keyboard focus follows it. The header grows to hold the extra row (`--shell-header-height` is a minimum, not a fixed height); a surface that keys layout off the header height — `apps/docs` does, for `scroll-padding-top` — raises its own value at that breakpoint.
 
 ## Layout width
 

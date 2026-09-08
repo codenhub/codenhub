@@ -35,11 +35,13 @@ describe("app-shell chrome stylesheet", () => {
     expect(styles).toContain(".shell-theme-switch .shell-theme-icon-sun {\n  display: none;\n}");
   });
 
-  it("wraps the nav links onto their own row on a narrow header", () => {
+  it("drops the actions to their own row on a narrow header, keeping DOM order visible", () => {
     const query = styles.match(/@media \(max-width: 40rem\) \{([\s\S]*?)\n\}/)?.[1];
 
-    expect(query).toContain(".shell-nav {");
-    expect(query).toContain("order: 3");
-    expect(query).toContain("width: 100%");
+    // The links stay on the brand's row and the actions wrap below, so the
+    // rendered order still matches the DOM order (brand, links, actions) and
+    // keyboard focus follows it.
+    expect(query).toContain("flex-wrap: wrap");
+    expect(query).toMatch(/\.shell-actions \{[^}]*width: 100%/s);
   });
 });
