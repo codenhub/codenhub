@@ -1,0 +1,27 @@
+---
+import type { PackageStatus } from "@codenhub/tools/documentation";
+
+interface Props {
+  status: PackageStatus;
+}
+
+const { status } = Astro.props;
+
+/* `active` is the norm and carries no badge: marking every healthy package
+   makes the ones that need attention harder to spot. */
+const badges = {
+  deprecated: { icon: "ic-lucide-ban", label: "Deprecated", tone: "destructive" },
+  experimental: { icon: "ic-lucide-flask-conical", label: "Experimental", tone: "warning" },
+} as const;
+
+const badge = status === "active" ? undefined : badges[status];
+---
+
+{
+  badge !== undefined && (
+    <span class:list={["badge", "soft", "status-badge", badge.tone]}>
+      <i aria-hidden="true" class:list={[badge.icon, "status-badge-icon"]} />
+      {badge.label}
+    </span>
+  )
+}

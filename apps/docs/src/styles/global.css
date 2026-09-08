@@ -14,6 +14,11 @@
   --docs-header-height: var(--shell-header-height, 4rem);
   --docs-rail-width: 17rem;
   --docs-toc-width: 13rem;
+  /* The documentation layout is deliberately wide. Widen the shared shell
+     chrome to the same measure and gutter the doc grid already uses, so the
+     header and footer line up with it. */
+  --shell-max-width: var(--container-wide);
+  --shell-gutter: var(--layout-gutter);
 }
 
 html {

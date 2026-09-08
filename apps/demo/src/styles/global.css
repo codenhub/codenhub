@@ -5,16 +5,12 @@
    stylesheet carries the base, so a separate `@import "@codenhub/icons"` here
    would only duplicate it. */
 
+/* Page width, gutter, and centering come from `.shell-content` in
+   `@codenhub/app-shell/styles.css`, so the list lines up with the header and
+   footer. */
 .site-main {
   flex: 1 1 auto;
   padding-block: 2.5rem 4rem;
-}
-
-.demo-container {
-  max-width: 72rem;
-  margin-inline: auto;
-  padding-inline: var(--shell-gutter);
-  box-sizing: border-box;
 }
 
 .packages-toolbar {
@@ -37,32 +33,27 @@
   gap: 0.75rem;
 }
 
+/* `.input-group` (from `@codenhub/styles`) draws the field boundary, the focus
+   ring, and mutes the leading icon; this sizes the wrapper and the icon only. */
 .package-search {
   width: 16rem;
   max-width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  background: var(--color-background);
-  color: var(--color-text);
-  font: inherit;
   font-size: 0.875rem;
-  transition: border-color var(--motion-duration-fast, 120ms) var(--motion-ease);
 }
 
-.package-search::placeholder {
+.package-search .ic-lucide-search {
+  --ic-size: 1rem;
+}
+
+.package-search input::placeholder {
   color: var(--color-text-secondary);
-}
-
-.package-search:focus-visible {
-  border-color: var(--color-border-hover);
-  outline: none;
 }
 
 .package-sort {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-height: var(--control-height);
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
@@ -137,14 +128,12 @@
   line-height: 1.7;
 }
 
-.package-card-status {
-  display: grid;
-  place-items: center;
-  color: var(--color-text-secondary);
+.status-badge {
+  flex-shrink: 0;
 }
 
-.package-card-status-icon {
-  --ic-size: 1rem;
+.status-badge-icon {
+  --ic-size: 0.875rem;
 }
 
 .package-card-arrow {

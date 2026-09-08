@@ -10,17 +10,30 @@ function toSearchHaystack(entry: CatalogPackage): string {
   return `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
 }
 
-const routes = [
-  { href: siteConfig.docsUrl, title: "Documentation", body: "Guides, API reference, and changelogs for every package.", external: false },
-  { href: siteConfig.demoUrl, title: "Demos", body: "Live, deployed demos for the packages that ship one.", external: false },
-  { href: siteConfig.githubUrl, title: "GitHub", body: "Source, issues, and the monorepo itself.", external: true },
-  { href: siteConfig.npmUrl, title: "npm", body: "The @codenhub organization and its published packages.", external: true },
-].filter((route): route is typeof route & { href: string } => route.href !== undefined);
+interface Route {
+  href: string | undefined;
+  title: string;
+  body: string;
+  external: boolean;
+  /** Leading lucide icon class for an internal surface. */
+  icon?: string;
+  /** Leading inline brand mark, for GitHub and npm. */
+  brand?: "github" | "npm";
+}
+
+const routes: Route[] = [
+  { href: siteConfig.docsUrl, title: "Documentation", body: "Guides, API reference, and changelogs for every package.", external: false, icon: "ic-lucide-book-open" },
+  { href: siteConfig.demoUrl, title: "Demos", body: "Live, deployed demos for the packages that ship one.", external: false, icon: "ic-lucide-play" },
+  { href: siteConfig.githubUrl, title: "GitHub", body: "Source, issues, and the monorepo itself.", external: true, brand: "github" },
+  { href: siteConfig.npmUrl, title: "npm", body: "The @codenhub organization and its published packages.", external: true, brand: "npm" },
+];
+
+const visibleRoutes = routes.filter((route): route is Route & { href: string } => route.href !== undefined);
 ---
 
 <BaseLayout siteConfig={siteConfig}>
   <main class="www-main" id="main-content">
-    <div class="www-container">
+    <div class="shell-content">
       <section class="www-hero">
         <h1>CodenHub</h1>
         <p>
@@ -31,7 +44,7 @@ const routes = [
 
       <nav aria-label="CodenHub surfaces" class="www-routes">
         {
-          routes.map((route) => (
+          visibleRoutes.map((route) => (
             <a
               class="www-route"
               href={route.href}
@@ -39,8 +52,19 @@ const routes = [
               target={route.external ? "_blank" : undefined}
             >
               <span class="www-route-title">
+                {route.brand === "github" && (
+                  <svg aria-hidden="true" class="www-route-icon www-route-brand" viewBox="0 0 16 16">
+                    <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z" />
+                  </svg>
+                )}
+                {route.brand === "npm" && (
+                  <svg aria-hidden="true" class="www-route-icon www-route-brand" viewBox="0 0 24 24">
+                    <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
+                  </svg>
+                )}
+                {route.icon !== undefined && <i aria-hidden="true" class:list={["www-route-icon", route.icon]} />}
                 {route.title}
-                <i aria-hidden="true" class="ic-lucide-arrow-up-right" />
+                <i aria-hidden="true" class="www-route-arrow ic-lucide-arrow-up-right" />
               </span>
               <p>{route.body}</p>
             </a>
@@ -58,13 +82,10 @@ const routes = [
             </p>
           </div>
           <div class="packages-toolbar-controls">
-            <input
-              aria-label="Search packages"
-              class="package-search"
-              id="package-search"
-              placeholder="Search packages…"
-              type="search"
-            />
+            <div class="input-group package-search">
+              <i aria-hidden="true" class="ic-lucide-search"></i>
+              <input aria-label="Search packages" id="package-search" placeholder="Search packages…" type="search" />
+            </div>
             <button
               aria-label="Sort by name, ascending"
               aria-pressed="false"
