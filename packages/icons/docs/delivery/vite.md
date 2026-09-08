@@ -46,6 +46,11 @@ In dev, Vite serves the HTML before it transforms a single module, so a class th
 
 `mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
+Switching an existing project from CSS mode is not only a config change, because the element that reaches the browser is no longer the one you wrote. Two things the `<i>` had do not come with it:
+
+- **Size.** The rendered `<svg>` carries a `viewBox` and nothing else, leaving size and color to CSS. The `1em` box came from the base stylesheet's `i[class^="ic-"]` and `.ic` rules, which now match nothing, so an icon with no size of its own from the surrounding CSS collapses or fills its container. Size the SVG where you styled the `<i>`.
+- **`hidden`.** `[hidden] { display: none }` is a user-agent rule for HTML elements, and an inlined icon is in the SVG namespace, so the attribute no longer hides it. Script that toggles an icon needs an explicit `[hidden] { display: none }` rule, and a guard written as `instanceof HTMLElement` stops matching — an SVG element is not one.
+
 Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup. `content` plays no part here — it feeds stylesheet generation, which this mode does not do.
 
 The class has to be written out in full, as a literal string, for the plugin to find it: a name assembled at runtime, as in `` `ic-${name}` ``, cannot be seen at build time. In CSS mode such a class simply has no rule generated. In svg mode it is worse, because there is no stylesheet to fall back on and the element renders as nothing. Reach for [one module per icon](#one-module-per-icon) whenever the icon is chosen at runtime; it is the supported form for that, and it is the only one that works in either mode.
