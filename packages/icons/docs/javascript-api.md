@@ -35,7 +35,7 @@ getIconMaskUrl("lucide:search", registry); // 'url("data:image/svg+xml;…")'
 getIconCssProps("lucide:search", registry); // { "--ic-uri": …, "--ic-mask": "var(--ic-uri)" }
 ```
 
-`getIconMaskUrl` also takes raw `<svg>` markup and skips the registry. `getIconCssProps` gives the two custom properties an inline `style` attribute or a CSS-in-JS object needs; pair them with `background-image: var(--ic-uri)` or `mask-image: var(--ic-mask)` and your own sizing.
+`getIconMaskUrl` also takes a string that begins with `<svg` and encodes it directly, skipping the registry — pass the element itself, with no leading whitespace or XML declaration. `getIconCssProps` gives the two custom properties an inline `style` attribute or a CSS-in-JS object needs; pair them with `background-image: var(--ic-uri)` or `mask-image: var(--ic-mask)` and your own sizing.
 
 ## Loading a family on demand
 

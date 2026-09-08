@@ -79,10 +79,11 @@ export function escapeSelectorClass(className: string): string {
  * Generates the base rules every icon class builds on.
  *
  * An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any
- * element you own) rendered as a mask, or an inlined `<svg>` given a `1em` box.
- * There is no `::before`, `::after`, or form-control form — an icon beside a
- * label is a real `<i>` inside the control — so the base rules are just those
- * two element forms plus the `${p}-xs`–`${p}-xl` size axis.
+ * element you own) rendered as a mask, or an inlined `<svg>` sized and coloured
+ * from the same custom properties. There is no `::before`, `::after`, or
+ * form-control form — an icon beside a label is a real `<i>` inside the control
+ * — so the base rules are just those two element forms plus the
+ * `${p}-xs`–`${p}-xl` size axis.
  *
  * The size axis is five one-line rules that each set `--${p}-size` to a rem
  * value. Both forms above already read `var(--${p}-size, 1em)`, so a size class
@@ -121,6 +122,7 @@ svg[class*=" ${p}-"] {
   width: var(--${p}-size, 1em);
   height: var(--${p}-size, 1em);
   vertical-align: -0.125em;
+  color: var(--${p}-color, currentColor);
 }
 
 .${p}-xs {

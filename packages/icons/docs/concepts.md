@@ -125,6 +125,6 @@ The default size is `1em`. Set `--ic-size` on the icon or any ancestor to change
 <i class="ic-lucide-search ic-lg"></i>
 ```
 
-Each class does one thing — set `--ic-size` to a rem value — so it composes with a stroke modifier, works on the `<i>` and `.ic` forms alike, and needs no knowledge of the element it lands on. Unlike stroke width, a size is not baked into the artwork, so the axis is part of the base rules: it works in every delivery method, including the plugin-free family stylesheets, and including [inline SVG mode](delivery/vite.md#inline-svg-mode) as long as `@import "@codenhub/icons"` is present for the base rules.
+Each class does one thing — set `--ic-size` to a rem value — so it composes with a stroke modifier and needs no knowledge of the element it lands on. Unlike stroke width, a size is not baked into the artwork, so the axis is part of the base rules and works in every delivery method: the plugin-free family stylesheets, and [inline SVG mode](delivery/vite.md#inline-svg-mode), where the base rules size the rewritten `<svg>` as long as `@import "@codenhub/icons"` is present. The `.ic` form itself is CSS-based methods only, as above.
 
 The five classes are always emitted, so `xs`, `sm`, `md`, `lg`, and `xl` are [reserved](#reserved-names): a family may not ship an icon or take a prefix by one of those names.

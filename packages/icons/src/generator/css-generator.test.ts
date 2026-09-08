@@ -74,12 +74,14 @@ describe("generateBaseCss", () => {
     expect(css).not.toContain(".ic-bg");
   });
 
-  it("sizes an inlined SVG that carries an icon class from the same custom property", () => {
+  it("sizes and colours an inlined SVG that carries an icon class from the same custom properties", () => {
     const css = generateBaseCss();
 
     expect(css).toContain('svg[class^="ic-"]');
     expect(css).toContain('svg[class*=" ic-"]');
     expect(css).toMatch(/svg\[class\^="ic-"\][\S\s]*?width: var\(--ic-size, 1em\);/);
+    expect(css).toMatch(/svg\[class\^="ic-"\][\S\s]*?height: var\(--ic-size, 1em\);/);
+    expect(css).toMatch(/svg\[class\^="ic-"\][\S\s]*?color: var\(--ic-color, currentColor\);/);
   });
 
   it("emits the ic-xs through ic-xl size axis as one declaration each", () => {

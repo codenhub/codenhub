@@ -55,11 +55,12 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
  * Renders a resolved icon as a complete, self-contained SVG element.
  *
  * The element carries a namespace, a viewBox, and a `1em` box, leaving color to
- * CSS. The `1em` box is a floor for an icon inlined with no stylesheet behind
- * it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so
- * CSS `width`/`height` still wins — including the base stylesheet's
- * `svg[class^="ic-"]` rule, which reads `--ic-size` and so carries the
- * `ic-xs`–`ic-xl` size axis onto an inlined icon the same as onto an `<i>`.
+ * CSS — the icon body paints in `currentColor`. The `1em` box is a floor for an
+ * icon inlined with no stylesheet behind it, which a bare `viewBox` renders at
+ * 0×0. It is a presentation attribute, so CSS `width`/`height` still wins —
+ * including the base stylesheet's `svg[class^="ic-"]` rule, which reads
+ * `--ic-size` and `--ic-color` and so carries the `ic-xs`–`ic-xl` size axis and
+ * the colour custom property onto an inlined icon the same as onto an `<i>`.
  * Passing `width` or `height` in {@link RenderSvgOptions.attributes} replaces
  * the default. The viewBox keeps the icon's own origin, because families such as
  * Material Symbols draw above it. A stroke width is applied only when the icon's
