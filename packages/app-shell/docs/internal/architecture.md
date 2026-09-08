@@ -24,6 +24,10 @@ There is no build step and no `dist/`. The package is private, so the lifecycle 
 
 `styles.css` is written entirely against `@codenhub/styles` design tokens (`--color-*`, `--radius-*`, `--elevation-*`, `--motion-*`), which both the Tailwind (`/tw`) and native (`/native`) builds emit with the same names. It uses its own `shell-` prefixed class names and restyles no bare element and no styles-package utility, so it composes on top of either foundation without ordering hazards. `apps/docs` keeps `/tw`; `apps/www` and `apps/demo` use `/native`.
 
+## Layout width
+
+The header and footer size their content to `--shell-max-width` (default `80rem`) with `--shell-gutter` (`1.5rem`) of inline padding. `styles.css` also exports `.shell-content` — the same `max-width` + gutter + centering — for a page to wrap its `<main>` matter in, so the three columns line up at the same edges. A surface that needs a different measure overrides `--shell-max-width` (and, if it wants a responsive gutter, `--shell-gutter`) at its own `:root`; the chrome and every `.shell-content` follow. `apps/docs` does this, widening all three to `--container-wide` on the same `--layout-gutter` its documentation grid already uses.
+
 ## Icons
 
 Chrome icons are `@codenhub/icons` classes (`ic-lucide-*`) in **CSS mode**. GitHub and npm are brand marks, not UI icons, and stay inline `<svg>` in the components.
@@ -37,7 +41,7 @@ An app consuming the shell must:
 1. Register `@codenhub/icons/vite` in `astro.config.ts` with `mode: "css"`, the `lucide` family, and a `content` entry covering this package's components, e.g. `path.join(packagesRoot, "app-shell/src/**/*.astro")`.
 2. `@import "@codenhub/app-shell/styles.css";` in its global stylesheet, after its `@codenhub/styles` import.
 3. Import `@codenhub/styles` — either `/tw` or `/native` — so the tokens `styles.css` reads are defined.
-4. Give its `<main>` `id="main-content"` for the skip link.
+4. Give its `<main>` `id="main-content"` for the skip link, and wrap its content in `.shell-content` (or match `--shell-max-width` and `--shell-gutter` itself) so the page lines up with the header and footer.
 5. Place the brand assets the header references at `/assets/logo/logo-dark.svg` and `/assets/logo/logo-light.svg` via `codenhub.assets` (`docs/specs/packages-demo.md`).
 
 `base-layout.astro` imports `virtual:icons.css` itself, so the generated stylesheet reaches the page even though Astro never runs `transformIndexHtml` for its own pages. In CSS mode that stylesheet already carries the base rules (the `1em` box, the `ic-xs`–`ic-xl` size classes) alongside the generated masks, so a host must **not** also `@import "@codenhub/icons"` — that only ships the base a second time, and the copy that loses the cascade is the one `styles.css` needs to win. A host that keeps its own `@codenhub/icons` mode (as `apps/docs` and `apps/demo` may) still adds the `content` entry so the shell's classes reach whichever stylesheet that mode generates.

@@ -25,13 +25,10 @@ function toSearchHaystack(entry: PublicPackageSummary): string {
         </p>
       </div>
       <div class="packages-toolbar-controls">
-        <input
-          aria-label="Search packages"
-          class="package-search"
-          id="package-search"
-          placeholder="Search packages…"
-          type="search"
-        />
+        <div class="input-group package-search">
+          <i aria-hidden="true" class="ic-lucide-search"></i>
+          <input aria-label="Search packages" id="package-search" placeholder="Search packages…" type="search" />
+        </div>
         <button
           aria-label="Sort by name, ascending"
           aria-pressed="false"

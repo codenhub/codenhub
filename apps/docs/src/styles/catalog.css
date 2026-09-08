@@ -34,12 +34,22 @@
   @apply flex flex-shrink-0 flex-wrap items-center gap-3;
 }
 
+/* `.input-group` (from `@codenhub/styles`) draws the field boundary, the focus
+   ring, and mutes the leading icon; this sizes the wrapper and the icon only. */
 .package-search {
-  @apply border-border bg-background text-text placeholder:text-text-secondary focus-visible:border-border-hover w-64 max-w-full rounded-(--radius-control) border px-3 py-2 text-sm transition-colors outline-none;
+  @apply w-64 max-w-full text-sm;
+}
+
+.package-search input::placeholder {
+  @apply text-text-secondary;
+}
+
+.package-search .ic-lucide-search {
+  --ic-size: 1rem;
 }
 
 .package-sort {
-  @apply border-border text-text-secondary hover:text-text hover:border-border-hover flex items-center gap-2 rounded-(--radius-control) border px-3 py-2 text-sm transition-colors;
+  @apply border-border text-text-secondary hover:text-text hover:border-border-hover flex min-h-(--control-height) items-center gap-2 rounded-(--radius-control) border px-3 py-2 text-sm transition-colors;
 }
 
 .package-sort i {
