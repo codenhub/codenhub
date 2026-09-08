@@ -1,0 +1,11 @@
+---
+/**
+ * Light/dark toggle. The button swaps which icon shows by the root
+ * `data-theme`; `base-layout.astro` owns the click handler and persistence.
+ */
+---
+
+<button aria-label="Switch theme" class="shell-action" data-theme-toggle type="button">
+  <i aria-hidden="true" class="ic-lucide-moon shell-action-icon shell-theme-icon-moon"></i>
+  <i aria-hidden="true" class="ic-lucide-sun shell-action-icon shell-theme-icon-sun"></i>
+</button>
