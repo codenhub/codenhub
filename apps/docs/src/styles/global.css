@@ -70,8 +70,12 @@ html {
   stroke-linejoin: round;
 }
 
+/* `flex-1` so the grid fills the space between the sticky header and the footer
+   even when the document is short: the shell footer pins itself to the bottom
+   with `margin-top: auto`, and without this the grid would only be as tall as
+   its content, cutting each rail's full-height rule off at the last entry. */
 .docs-shell {
-  @apply grid grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
+  @apply grid flex-1 grid-cols-[var(--docs-rail-width)_minmax(0,1fr)_var(--docs-toc-width)] px-(--layout-gutter);
 }
 
 /* Both rails carry a full-height rule at the edge where they meet the document
