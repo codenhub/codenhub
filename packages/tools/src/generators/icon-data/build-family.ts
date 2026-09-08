@@ -6,6 +6,7 @@ import {
   CORE_TIER_OBLIGATIONS,
   LICENSE_OBLIGATIONS,
   RESERVED_PREFIXES,
+  RESERVED_SIZE_TOKENS,
   type IconAttribution,
   type IconFamilyDefinition,
 } from "./family-definitions.ts";
@@ -180,6 +181,15 @@ export async function buildFamily(
 
   if (normalized.size === 0) {
     throw new Error(`Family "${definition.prefix}" produced no icons from ${definition.upstreamPackage}.`);
+  }
+
+  const reservedNames = [...normalized.keys()].filter((name) => RESERVED_SIZE_TOKENS.includes(name));
+  if (reservedNames.length > 0) {
+    throw new Error(
+      `Family "${definition.prefix}" ships ${reservedNames
+        .map((name) => `"${name}"`)
+        .join(", ")}, reserved by the ic-xs–ic-xl size axis. Rename or drop the icon(s) upstream.`,
+    );
   }
 
   const familyViewBox = pickDominantViewBox([...normalized.values()].map(readViewBoxKey));

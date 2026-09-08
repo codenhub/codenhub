@@ -34,7 +34,9 @@ function initPlayground(): void {
 
   // 2. Setup Theme Toggle (Light / Dark)
   const themeToggleBtn = document.getElementById("theme-toggle-btn");
-  if (themeToggleBtn) {
+  const themeToggleIcon = document.getElementById("theme-toggle-icon");
+  const themeToggleLabel = document.getElementById("theme-toggle-label");
+  if (themeToggleBtn && themeToggleIcon && themeToggleLabel) {
     themeToggleBtn.addEventListener("click", () => {
       const htmlEl = document.documentElement;
       const currentTheme = htmlEl.getAttribute("data-theme") ?? "dark";
@@ -44,13 +46,8 @@ function initPlayground(): void {
       htmlEl.classList.remove("dark", "light");
       htmlEl.classList.add(nextTheme);
 
-      if (nextTheme === "dark") {
-        themeToggleBtn.className = "btn out sm ic-moon";
-        themeToggleBtn.textContent = "Dark Mode";
-      } else {
-        themeToggleBtn.className = "btn out sm ic-sun";
-        themeToggleBtn.textContent = "Light Mode";
-      }
+      themeToggleIcon.className = nextTheme === "dark" ? "ic-moon" : "ic-sun";
+      themeToggleLabel.textContent = nextTheme === "dark" ? "Dark Mode" : "Light Mode";
     });
   }
 

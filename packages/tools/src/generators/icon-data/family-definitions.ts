@@ -52,15 +52,27 @@ export const LICENSE_OBLIGATIONS: Record<string, IconAttribution> = {
 };
 
 /**
+ * Size-axis tokens the utility classes own.
+ *
+ * `ic-xs` through `ic-xl` each set `--ic-size`, so a family that shipped an icon
+ * or took a prefix by one of these names would carve a hole in that scale: the
+ * same class would mean a size through the base rules and an icon through the
+ * generated set. The generator refuses such a family rather than let the
+ * meaning depend on which rules load first.
+ */
+export const RESERVED_SIZE_TOKENS: readonly string[] = ["xs", "sm", "md", "lg", "xl"];
+
+/**
  * Prefixes a family may not use.
  *
- * The utility classes reserve these words: `ic-after` and `ic-bg` are
- * modifiers, so a family named after one would produce classes the scanner
- * reads as a modifier rather than an icon. Stroke width is no longer among them
- * because it is written as a modifier on the icon class itself, as in
- * `ic-heart/1.5`, and so claims no prefix of its own.
+ * `ic-xs` through `ic-xl` are the size axis, so a family named after one would
+ * produce classes the base rules read as a size rather than an icon. Stroke
+ * width is not among them because it is written as a modifier on the icon class
+ * itself, as in `ic-heart/1.5`, and so claims no prefix of its own; `after` and
+ * `bg` are no longer reserved since the package dropped its `::after` and
+ * form-control forms.
  */
-export const RESERVED_PREFIXES: readonly string[] = ["after", "bg"];
+export const RESERVED_PREFIXES: readonly string[] = [...RESERVED_SIZE_TOKENS];
 
 /** Obligations a `core` family may place on a consumer. */
 export const CORE_TIER_OBLIGATIONS: readonly IconAttribution[] = ["none", "notice"];

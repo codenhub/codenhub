@@ -64,26 +64,29 @@ registry.resolve("close"); // undefined -- lucide calls it "x"
 
 ## Reserved names
 
-`ic-after` and `ic-bg` are modifiers rather than icons, so `after` and `bg` cannot be family prefixes. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
+`ic-xs` through `ic-xl` are the [size axis](#size), so `xs`, `sm`, `md`, `lg`, and `xl` cannot be family prefixes or icon names. Generation refuses a family that claims one. Stroke width is written on the icon class itself, so it claims no prefix.
 
 ## Markup
 
+An icon is an element that carries an icon class. Use an `<i>`:
+
 ```html
-<!-- standalone -->
 <i class="ic-lucide-search" aria-hidden="true"></i>
-
-<!-- leading icon on any container, through ::before -->
-<button class="btn ic-lucide-check">Submit</button>
-
-<!-- trailing icon, through ::after -->
-<a class="nav-link ic-lucide-arrow-right ic-after">Next</a>
-
-<!-- form controls take a background-image instead of a mask -->
-<input class="ic-lucide-search" />
 
 <!-- stroke width, for stroke-based families only -->
 <i class="ic-lucide-heart/1.5"></i>
+
+<!-- a size from the axis -->
+<i class="ic-lucide-search ic-lg"></i>
 ```
+
+`<i>` is the recommended element and the only one [inline SVG mode](delivery/vite.md#inline-svg-mode) rewrites. In the CSS-based methods the class also works on any element you add `.ic` to, for a framework component that renders its own tag:
+
+```html
+<span class="ic ic-lucide-search" aria-hidden="true"></span>
+```
+
+There is no `::before`, `::after`, or form-control form: an icon next to a label is a real `<i>` inside the button or link, which composes with a layout gap and works in every delivery method. For an icon painted as a `background-image` — a custom control, an input affix — resolve the `url()` with [`getIconMaskUrl` or `getIconCssProps`](javascript-api.md) and place it yourself.
 
 Size and color follow CSS custom properties:
 
@@ -105,3 +108,23 @@ Stroke width is a modifier on the icon class, and only families drawn with strok
 The width is baked into the artwork the rule carries, so it cannot be a second class applied on top: `ic-heart` and `ic-heart/1.5` are two icons, not one icon and a switch. One class is one rule, so a project pays for the widths it wrote and no others.
 
 That is also why the modifier needs a build step. It works under Vite, PostCSS, and Tailwind, all of which see your markup; the plugin-free family stylesheets render at the family's authored width, because nothing there can know which widths to prepare.
+
+## Size
+
+The default size is `1em`. Set `--ic-size` on the icon or any ancestor to change it, or add a class from the axis:
+
+| Class   | `--ic-size` |
+| ------- | ----------- |
+| `ic-xs` | `0.75rem`   |
+| `ic-sm` | `0.875rem`  |
+| `ic-md` | `1rem`      |
+| `ic-lg` | `1.25rem`   |
+| `ic-xl` | `1.5rem`    |
+
+```html
+<i class="ic-lucide-search ic-lg"></i>
+```
+
+Each class does one thing — set `--ic-size` to a rem value — so it composes with a stroke modifier and needs no knowledge of the element it lands on. Unlike stroke width, a size is not baked into the artwork, so the axis is part of the base rules and works in every delivery method: the plugin-free family stylesheets, and [inline SVG mode](delivery/vite.md#inline-svg-mode), where the base rules size the rewritten `<svg>` as long as `@import "@codenhub/icons"` is present. The `.ic` form itself is CSS-based methods only, as above.
+
+The five classes are always emitted, so `xs`, `sm`, `md`, `lg`, and `xl` are [reserved](#reserved-names): a family may not ship an icon or take a prefix by one of those names.

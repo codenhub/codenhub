@@ -26,6 +26,17 @@ getIconCssProps("lucide:x", registry);
 
 `generateIconSetCss` returns the families it drew from alongside the CSS, which is what lets a caller emit the right license notice.
 
+## A background-image icon
+
+The base rules render an icon as an element (`<i>` or `.ic`) or an inlined `<svg>`, and nothing else. When you need one as a `background-image` — a custom control, an input affix, a `::before` you own — resolve the `url()` yourself:
+
+```ts
+getIconMaskUrl("lucide:search", registry); // 'url("data:image/svg+xml;…")'
+getIconCssProps("lucide:search", registry); // { "--ic-uri": …, "--ic-mask": "var(--ic-uri)" }
+```
+
+`getIconMaskUrl` also takes a string that begins with `<svg` and encodes it directly, skipping the registry — pass the element itself, with no leading whitespace or XML declaration. `getIconCssProps` gives the two custom properties an inline `style` attribute or a CSS-in-JS object needs; pair them with `background-image: var(--ic-uri)` or `mask-image: var(--ic-mask)` and your own sizing.
+
 ## Loading a family on demand
 
 ```ts

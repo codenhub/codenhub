@@ -33,7 +33,7 @@ export interface GenerateIconCssOptions {
  */
 export interface GenerateIconSetCssOptions extends BaseCssOptions {
   /**
-   * Whether to include the base container rules (`.ic`). Defaults to `true`.
+   * Whether to include the base rules (`.ic`, the size axis). Defaults to `true`.
    */
   injectBase?: boolean;
 
@@ -76,9 +76,22 @@ export function escapeSelectorClass(className: string): string {
 }
 
 /**
- * Generates the base rules every icon class builds on, covering standalone
- * elements, `::before` and `::after` pseudo-elements, and form controls that
- * take a `background-image`.
+ * Generates the base rules every icon class builds on.
+ *
+ * An icon is an element that carries an icon class: an `<i>` (or `.${p}` on any
+ * element you own) rendered as a mask, or an inlined `<svg>` sized and coloured
+ * from the same custom properties. There is no `::before`, `::after`, or
+ * form-control form — an icon beside a label is a real `<i>` inside the control
+ * — so the base rules are just those two element forms plus the
+ * `${p}-xs`–`${p}-xl` size axis.
+ *
+ * The size axis is five one-line rules that each set `--${p}-size` to a rem
+ * value. Both forms above already read `var(--${p}-size, 1em)`, so a size class
+ * needs no knowledge of the element it lands on and the unclassed default stays
+ * `1em`. The classes are always emitted because they cost almost nothing and a
+ * scanner cannot know a project is about to use one. `xs`, `sm`, `md`, `lg`, and
+ * `xl` are reserved names for this reason — no family may ship an icon or take a
+ * prefix by one.
  *
  * @param options - Class prefix.
  * @returns The base stylesheet.
@@ -103,58 +116,33 @@ i[class*=" ${p}-"],
   -webkit-mask-size: 100% 100%;
 }
 
-:not(i, input, select, textarea, .${p})[class^="${p}-"]::before,
-:not(i, input, select, textarea, .${p})[class*=" ${p}-"]::before {
-  content: "";
+svg[class^="${p}-"],
+svg[class*=" ${p}-"] {
   display: inline-block;
   width: var(--${p}-size, 1em);
   height: var(--${p}-size, 1em);
   vertical-align: -0.125em;
-  background-color: var(--${p}-color, currentColor);
-  mask-image: var(--${p}-mask);
-  -webkit-mask-image: var(--${p}-mask);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 100% 100%;
+  color: var(--${p}-color, currentColor);
 }
 
-:not(i, input, select, textarea, .${p})[class*="${p}-after"]::before,
-:not(i, input, select, textarea, .${p})[class*=" ${p}-after"]::before,
-.${p}-after::before {
-  display: none !important;
+.${p}-xs {
+  --${p}-size: 0.75rem;
 }
 
-:not(i, input, select, textarea, .${p})[class*="${p}-after"]::after,
-:not(i, input, select, textarea, .${p})[class*=" ${p}-after"]::after,
-.${p}-after::after {
-  content: "";
-  display: inline-block;
-  width: var(--${p}-size, 1em);
-  height: var(--${p}-size, 1em);
-  vertical-align: -0.125em;
-  background-color: var(--${p}-color, currentColor);
-  mask-image: var(--${p}-mask);
-  -webkit-mask-image: var(--${p}-mask);
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: 100% 100%;
+.${p}-sm {
+  --${p}-size: 0.875rem;
 }
 
-input[class^="${p}-"],
-input[class*=" ${p}-"],
-select[class^="${p}-"],
-select[class*=" ${p}-"],
-textarea[class^="${p}-"],
-textarea[class*=" ${p}-"],
-.${p}-bg {
-  background-image: var(--${p}-uri);
-  background-repeat: no-repeat;
+.${p}-md {
+  --${p}-size: 1rem;
+}
+
+.${p}-lg {
+  --${p}-size: 1.25rem;
+}
+
+.${p}-xl {
+  --${p}-size: 1.5rem;
 }`;
 }
 

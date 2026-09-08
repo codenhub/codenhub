@@ -80,6 +80,15 @@ describe("generated family data", () => {
     expect(dangling).toEqual([]);
   });
 
+  it.each(families)("$prefix ships no icon whose name the size axis reserves", ({ family }) => {
+    const reserved = ["xs", "sm", "md", "lg", "xl"];
+    const collisions = [...Object.keys(family.icons), ...Object.keys(family.aliases ?? {})].filter((name) =>
+      reserved.includes(name),
+    );
+
+    expect(collisions).toEqual([]);
+  });
+
   it.each(families)("$prefix renders every icon into an element with a viewBox", ({ family }) => {
     const registry = new IconRegistry();
     registry.registerFamily(family);

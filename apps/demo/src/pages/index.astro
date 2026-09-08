@@ -35,12 +35,12 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
               >
                 <i
                   aria-hidden="true"
-                  class="ic-lucide-arrow-up-narrow-wide"
+                  class="ic-lucide-arrow-up-narrow-wide ic-md"
                   data-sort-icon="asc"
                 />
                 <i
                   aria-hidden="true"
-                  class="ic-lucide-arrow-down-wide-narrow"
+                  class="ic-lucide-arrow-down-wide-narrow ic-md"
                   data-sort-icon="desc"
                   hidden
                 />
@@ -64,7 +64,7 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
                     {demoPackage.status !== undefined &&
                       demoPackage.status !== "active" && (
                         <span aria-label={demoPackage.status} class="demo-card-status warning" title={demoPackage.status}>
-                          <i aria-hidden="true" class="ic-phosphor-warning" />
+                          <i aria-hidden="true" class="ic-phosphor-warning ic-md" />
                         </span>
                       )}
                   </div>
@@ -83,7 +83,7 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
                       rel="noopener noreferrer"
                       target="_blank"
                     >
-                      <i aria-hidden="true" class="ic-phosphor-github-logo" />
+                      <i aria-hidden="true" class="ic-phosphor-github-logo ic-md" />
                     </a>
                   )}
                   {demoPackage.npmUrl !== undefined && (
@@ -94,7 +94,7 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
                       rel="noopener noreferrer"
                       target="_blank"
                     >
-                      <i aria-hidden="true" class="ic-lucide-package" />
+                      <i aria-hidden="true" class="ic-lucide-package ic-md" />
                     </a>
                   )}
                   {demoPackage.docsUrl !== undefined && (
@@ -105,7 +105,7 @@ function toSearchHaystack(demoPackage: DemoPackage): string {
                       rel="noopener noreferrer"
                       target="_blank"
                     >
-                      <i aria-hidden="true" class="ic-lucide-book-open" />
+                      <i aria-hidden="true" class="ic-lucide-book-open ic-md" />
                     </a>
                   )}
                 </div>

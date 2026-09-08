@@ -112,9 +112,9 @@ The alternative — a variant axis inside a family — would add a dimension to 
 
 ### Reserved prefixes
 
-`after` and `bg` are words the utility classes own: `ic-after` and `ic-bg` are modifiers, so a family named after one would produce classes the scanner reads as a modifier rather than an icon. Generation refuses such a family rather than leaving the collision to be discovered as an icon that silently fails to render.
+`xs`, `sm`, `md`, `lg`, and `xl` are words the utility classes own: `ic-xs` through `ic-xl` are the size axis, each a base rule setting `--ic-size`, so a family that took one as a prefix — or shipped an icon by that name — would produce a class the base rules read as a size and the generated set reads as an icon. Generation refuses such a family (`RESERVED_PREFIXES` for the prefix, an icon-name check in `build-family.ts`) rather than leaving the collision to be discovered as an icon that silently renders at the wrong size.
 
-`stroke` was reserved for the same reason until 0.2.0, when `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
+`after` and `bg` were reserved the same way until the `::after` and form-control forms were dropped and the package narrowed to the `<i>` and `.ic` element forms; `stroke` was reserved until 0.2.0, when `ic-heart ic-stroke-1.5` became `ic-heart/1.5`. Writing the width as a modifier on the icon class rather than as a class beside it freed the word, and removed the cross-product the old form forced: the generator had to emit a rule for every scanned icon paired with every scanned width, because the two classes were independent. One token addressing one icon at one width is one rule.
 
 ## Family data layout
 
