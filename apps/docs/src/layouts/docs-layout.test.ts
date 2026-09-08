@@ -83,8 +83,18 @@ describe("documentation chrome", () => {
   it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
     const html = await readOutput(path);
 
-    expect(html).toContain('class="skip-link" href="#main-content"');
+    expect(html).toContain('class="shell-skip-link" href="#main-content"');
     expect(html).toMatch(/<main[^>]*id="main-content"/);
+  });
+
+  it.each(["index.html", "error/index.html"])("renders the shared app-shell chrome in %s", async (path) => {
+    const html = await readOutput(path);
+
+    // Header, footer, and theme toggle come from `@codenhub/app-shell`; this app
+    // supplies only the search trigger in the header's actions slot.
+    expect(html).toMatch(/<header class="shell-header">/);
+    expect(html).toMatch(/<footer class="shell-footer">/);
+    expect(html).toMatch(/<button[^>]*data-theme-toggle/);
   });
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
@@ -121,21 +131,6 @@ describe("documentation chrome", () => {
 
     expect(html).toMatch(/<div class="table-wrap">\s*<table class="edged ruled">\s*<thead>/);
     expect(css).toMatch(/\.markdown-content table\s*\{\s*@apply data-table;\s*\}/s);
-  });
-
-  it("gives every header target a 44px minimum hit area", async () => {
-    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
-
-    expect(css).toMatch(
-      /\.brand,\s*\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*min-height:\s*44px;[^}]*min-width:\s*44px;/s,
-    );
-  });
-
-  it("uses equal horizontal spacing around every header item", async () => {
-    const css = await readFile(new URL("../styles/global.css", import.meta.url), "utf8");
-
-    expect(css).toMatch(/\.header-actions,\s*\.header-end\s*\{\s*@apply flex items-center gap-0;\s*\}/s);
-    expect(css).toMatch(/\.header-icon-link,\s*\.theme-toggle\s*\{[^}]*@apply px-3;/s);
   });
 
   it("marks the active package document like the table of contents marks its own", async () => {

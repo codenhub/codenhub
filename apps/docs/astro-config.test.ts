@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import config from "./astro.config";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
+import { siteConfig } from "./src/site-config";
 
 interface ConfiguredProcessor {
   options?: {
@@ -22,6 +23,13 @@ describe("Astro Markdown configuration", () => {
 
   it("installs package documentation validation and resource publication", () => {
     expect(config.integrations).toEqual([expect.objectContaining({ name: "codenhub-package-documentation" })]);
+  });
+
+  it("sets the canonical site and delivers shell icons in CSS mode", () => {
+    expect(config.site).toBe(siteConfig.siteUrl);
+
+    const plugins = config.vite?.plugins as { name?: string }[] | undefined;
+    expect(plugins?.some((plugin) => plugin?.name === "codenhub-icons")).toBe(true);
   });
 
   it("assigns heading ids before adding anchor controls", () => {

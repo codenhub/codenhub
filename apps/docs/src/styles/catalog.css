@@ -1,3 +1,7 @@
+.catalog {
+  @apply px-(--layout-gutter) py-10;
+}
+
 .catalog-lede {
   @apply text-text-secondary mt-3 mb-10 max-w-2xl leading-7;
 }
@@ -38,14 +42,15 @@
   @apply border-border text-text-secondary hover:text-text hover:border-border-hover flex items-center gap-2 rounded-(--radius-control) border px-3 py-2 text-sm transition-colors;
 }
 
-.package-sort-icon {
-  @apply size-4 fill-none stroke-current stroke-2 transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.package-sort i {
+  --ic-size: 1rem;
 }
 
-.package-sort[data-sort-direction="desc"] .package-sort-icon {
-  @apply -scale-y-100;
+/* The icons base stylesheet gives `i[class^="ic-"]` an explicit `display`, which
+   outranks the `[hidden]` user-agent rule; the sort button's inactive direction
+   needs this to disappear. */
+[data-sort-icon][hidden] {
+  display: none;
 }
 
 .packages-empty {
@@ -57,25 +62,11 @@
 }
 
 .package-card {
-  @apply border-border bg-background relative flex flex-col rounded-(--radius-surface) border p-6 transition-[background-color,border-color,transform,box-shadow] duration-(--motion-duration-fast) ease-(--motion-ease);
+  @apply border-border bg-background flex flex-1 flex-col rounded-(--radius-surface) border p-6 no-underline transition-[background-color,border-color] duration-(--motion-duration-fast) ease-(--motion-ease);
 }
 
-.package-card:has(.package-card-open:hover) {
+.package-card:hover {
   @apply border-border-hover bg-foreground;
-  transform: var(--surface-hover-transform);
-  box-shadow: var(--elevation-md);
-}
-
-/* Stretches the primary link over the whole card so it reads as one click
-   target, while the footer's own links stay outside it — an <a> inside an <a>
-   is invalid. `.package-card-links` sits above through its own stacking. */
-.package-card-open {
-  @apply flex flex-1 flex-col no-underline;
-}
-
-.package-card-open::after {
-  @apply absolute inset-0;
-  content: "";
 }
 
 .package-card-heading {
@@ -90,33 +81,14 @@
   @apply text-text-secondary mt-3 leading-7;
 }
 
-.package-card-pending {
-  @apply border-dashed;
-}
-
 .package-card-arrow {
-  @apply text-text-secondary ms-auto size-4 shrink-0 fill-none stroke-current stroke-2 transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  @apply text-text-secondary mt-4 self-end transition-transform duration-(--motion-duration-fast) ease-(--motion-ease);
+  --ic-size: 1rem;
 }
 
-.package-card:has(.package-card-open:hover) .package-card-arrow {
+.package-card:hover .package-card-arrow {
   @apply text-text;
   transform: translateX(0.25rem);
-}
-
-/* The arrow is pushed to the far end by `ms-auto`, so the row still lays out
-   with the outbound icons at the start when a card has any. */
-.package-card-links {
-  @apply relative mt-4 flex items-center gap-3 pt-4;
-}
-
-.package-card-link {
-  @apply text-text-secondary hover:text-text grid place-items-center transition-colors;
-}
-
-.package-card-link svg {
-  @apply size-4 fill-current;
 }
 
 .status-badge {
@@ -132,16 +104,11 @@
 @media (prefers-reduced-motion: reduce) {
   .package-card,
   .package-card-arrow,
-  .package-sort-icon,
   .nav-group-caret {
     transition: none;
   }
 
-  .package-card:has(.package-card-open:hover) {
-    transform: none;
-  }
-
-  .package-card:has(.package-card-open:hover) .package-card-arrow {
+  .package-card:hover .package-card-arrow {
     transform: none;
   }
 }

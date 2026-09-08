@@ -1,104 +1,23 @@
 @import "@codenhub/styles/tw";
+@import "@codenhub/app-shell/styles.css";
 @import "./catalog.css";
 @import "./markdown.css";
 @import "./search.css";
 @source "../**/*.{astro,ts}";
 
+/* Header, footer, theme toggle, and skip link come from `@codenhub/app-shell`.
+   The icon base rules and generated masks arrive through `virtual:icons.css`,
+   imported by the shell's base layout, so this app does not `@import
+   "@codenhub/icons"` itself. */
+
 :root {
-  --docs-header-height: 4rem;
+  --docs-header-height: var(--shell-header-height, 4rem);
   --docs-rail-width: 17rem;
   --docs-toc-width: 13rem;
 }
 
 html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
-}
-
-body {
-  @apply flex min-h-dvh flex-col;
-}
-
-.skip-link {
-  @apply bg-background text-text fixed top-2 left-2 z-50 flex items-center rounded-(--radius-control) px-4 font-semibold shadow-(--elevation-lg);
-  min-height: 44px;
-  transform: translateY(calc(-100% - 0.5rem));
-}
-
-.skip-link:focus {
-  transform: translateY(0);
-}
-
-.site-header {
-  @apply border-border bg-background/92 sticky top-0 z-30 h-(--docs-header-height) border-b backdrop-blur-md;
-}
-
-.site-header-content {
-  @apply flex h-full items-center justify-between gap-4 px-(--layout-gutter);
-}
-
-.brand {
-  @apply flex min-w-0 items-center no-underline;
-}
-
-.brand,
-.header-icon-link,
-.theme-toggle {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-.brand-logo {
-  @apply h-7 w-auto;
-}
-
-.brand-logo-on-dark {
-  @apply hidden;
-}
-
-[data-theme="dark"] .brand-logo-on-light {
-  @apply hidden;
-}
-
-[data-theme="dark"] .brand-logo-on-dark {
-  @apply block;
-}
-
-.header-actions,
-.header-end {
-  @apply flex items-center gap-0;
-}
-
-.header-icon-link,
-.theme-toggle {
-  @apply px-3;
-}
-
-.header-icon-link,
-.theme-toggle {
-  @apply text-text-secondary hover:text-text grid place-items-center bg-transparent transition-colors;
-}
-
-.header-icon-link svg,
-.theme-icon {
-  @apply size-5 fill-current;
-}
-
-.theme-icon {
-  @apply fill-none stroke-current stroke-2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.theme-icon-sun {
-  @apply hidden;
-}
-
-[data-theme="dark"] .theme-icon-moon {
-  @apply hidden;
-}
-
-[data-theme="dark"] .theme-icon-sun {
-  @apply block;
 }
 
 .rail-title {
@@ -400,39 +319,4 @@ body {
   .document-column {
     @apply px-(--layout-gutter) py-8;
   }
-
-  .brand-logo {
-    @apply h-6;
-  }
-}
-
-@media (max-width: 24rem) {
-  .site-header-content {
-    @apply gap-0;
-  }
-
-  .header-end,
-  .header-actions {
-    @apply gap-0;
-  }
-
-  .brand-logo {
-    @apply h-5;
-  }
-}
-
-.site-footer {
-  @apply border-border mt-auto w-full border-t;
-}
-
-.site-footer-content {
-  @apply flex flex-col gap-3 px-(--layout-gutter) py-8 sm:flex-row sm:items-center sm:justify-between;
-}
-
-.site-footer p {
-  @apply text-text-secondary text-sm;
-}
-
-.site-footer a {
-  @apply text-text hover:text-primary-strong text-sm font-medium underline underline-offset-4 transition-colors;
 }
