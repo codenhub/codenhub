@@ -1,0 +1,92 @@
+---
+import "virtual:icons.css";
+
+import type { SiteConfig } from "../site-config";
+import SiteFooter from "../components/site-footer.astro";
+import SiteHeader from "../components/site-header.astro";
+
+interface Props {
+  siteConfig: SiteConfig;
+  title?: string;
+  description?: string;
+  /** Middle segment of the document title, between the page title and site name. */
+  sectionTitle?: string;
+  /** Home link target passed through to the header. */
+  homeHref?: string;
+}
+
+const { siteConfig, title, description = siteConfig.description, sectionTitle, homeHref } = Astro.props;
+
+const pageTitle =
+  title === undefined
+    ? siteConfig.title
+    : sectionTitle === undefined
+      ? `${title} | ${siteConfig.title}`
+      : `${title} | ${sectionTitle} | ${siteConfig.title}`;
+
+const THEME_STORAGE_KEY = "codenhub-theme";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width" name="viewport" />
+    <meta content={description} name="description" />
+    <script define:vars={{ storageKey: THEME_STORAGE_KEY }} is:inline>
+      (() => {
+        const systemTheme = () =>
+          matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+        try {
+          const stored = localStorage.getItem(storageKey);
+          document.documentElement.dataset.theme =
+            stored === "light" || stored === "dark" ? stored : systemTheme();
+        } catch {
+          document.documentElement.dataset.theme = systemTheme();
+        }
+      })();
+    </script>
+    <slot name="head" />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="shell-body">
+    <a class="shell-skip-link" href="#main-content">Skip to main content</a>
+    <SiteHeader homeHref={homeHref} siteConfig={siteConfig}>
+      <slot name="actions" slot="actions" />
+    </SiteHeader>
+    <slot />
+    <SiteFooter />
+    <script define:vars={{ storageKey: THEME_STORAGE_KEY }}>
+      const themeToggle = document.querySelector("[data-theme-toggle]");
+      const footerYear = document.querySelector("[data-footer-year]");
+
+      if (footerYear !== null) {
+        footerYear.textContent = String(new Date().getFullYear());
+      }
+
+      const syncToggleLabel = () => {
+        if (!(themeToggle instanceof HTMLButtonElement)) {
+          return;
+        }
+        const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+        const next = current === "dark" ? "light" : "dark";
+        themeToggle.setAttribute("aria-label", `Switch to ${next} theme`);
+        themeToggle.title = `Switch to ${next} theme`;
+      };
+
+      syncToggleLabel();
+
+      themeToggle?.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch {
+          // The choice still applies to this page when storage is unavailable.
+        }
+        syncToggleLabel();
+      });
+    </script>
+  </body>
+</html>

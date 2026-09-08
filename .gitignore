@@ -26,6 +26,8 @@ playwright-report
 
 # Build-time copies of root assets/ (docs/specs/packages-demo.md)
 **/.codenhub-assets.json
+/apps/www/public/assets/
+/apps/www/public/favicon.ico
 /apps/docs/public/assets/
 /apps/docs/public/favicon.ico
 /apps/demo/public/assets/

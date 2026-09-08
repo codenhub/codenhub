@@ -97,29 +97,63 @@ gh api repos/actions/checkout/commits/v5 --jq .sha
 
 ## Deployment checks
 
-Two checks report on pull requests without living in this repository. The documentation site and the demo site each deploy through their own Cloudflare Workers Builds project, connected to the repository from the Cloudflare dashboard; `apps/docs/wrangler.jsonc` and `apps/demo/wrangler.jsonc` describe what each one serves and the rest of both deployments is dashboard state. `docs/roadmap.md` records why that split exists.
+Three checks report on pull requests without living in this repository. The site index, the documentation site, and the demo site each deploy through their own Cloudflare Workers Builds project, connected to the repository from the Cloudflare dashboard; `apps/www/wrangler.jsonc`, `apps/docs/wrangler.jsonc`, and `apps/demo/wrangler.jsonc` describe what each one serves and the rest of all three deployments is dashboard state. `docs/roadmap.md` records why that split exists.
 
-Because the trigger is dashboard state, a build fires for every push unless that project's build watch paths exclude the change. Both lists are recorded below so the reasoning is reviewable even though the setting is not.
+Because the trigger is dashboard state, a build fires for every push unless that project's build watch paths exclude the change. All three lists are recorded below so the reasoning is reviewable even though the setting is not.
 
-Three things are true of both.
+Three things are true of all three.
 
 Each list excludes rather than includes, and that direction is the point. An include list that misses a path publishes a stale site and says nothing; an exclude list that misses one costs a build nobody needed. Only the second failure is visible, so both filters are built to fail that way.
 
-Package `src/` directories are deliberately absent from both. Most of them cannot affect either site, but each site has a handful that are build inputs to it, so excluding `src/` wholesale would ship stale output, and excluding it per package would leave a trap for the first change that adds an import or a dependency. The saving does not come close to paying for a silent staleness failure.
+Package `src/` directories are deliberately absent from all three. Most of them cannot affect any site, but each site has a handful that are build inputs to it, so excluding `src/` wholesale would ship stale output, and excluding it per package would leave a trap for the first change that adds an import or a dependency. The saving does not come close to paying for a silent staleness failure.
 
 Watch paths apply to the production branch only. Cloudflare documents excludes as applied first, with a build triggered only if a changed path survives them and then matches an include, and documents `*` as matching across `/` — so a push touching only `docs/ci.md` should not build. Three such pushes on a pull request branch built anyway, and the merge of the same change into `main` skipped. Read these filters as governing merges, not pull requests; nothing either one lists will spare a build on a branch.
 
-The figures below come from replaying the same window of merges into `main` through each filter, so the two are comparable with each other.
+The figures below come from replaying the same window of merges into `main` through each filter, so the documentation and demo lists are comparable with each other. The site index is new and has no replay window yet.
+
+### The site index
+
+The `codenhub` project, serving `apps/www/dist`. `apps/www` is the entry point a visitor reaches first, so it takes the shortest project name; the documentation project moved to `codenhub-docs` when this one was added. These are the paths its Build watch paths setting excludes:
+
+```
+.github/*
+.githooks/*
+docs/*
+apps/docs/*
+apps/demo/*
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+README.md
+LICENSE
+.oxlintrc.json
+.oxfmtrc.json
+.editorconfig
+.gitattributes
+.gitignore
+packages/*/README.md
+packages/*/LICENSE
+packages/*/llms.txt
+packages/*/llms-full.txt
+packages/*/docs/*
+packages/*/tests/*
+packages/*/dev/*
+packages/*/debug/*
+packages/*/demo/*
+```
+
+The index reads one input only: `apps/www/src/lib/catalog.ts` globs `packages/**/package.json` for names, descriptions, statuses, and `homepage`, and derives each documentation slug from the presence of `packages/**/docs/**/*.md` without reading any of it. So the list excludes package `docs/` wholesale like the demo list does, plus each package's `README.md`, `LICENSE`, and `llms*.txt`, and both other apps. What it keeps is `packages/*/package.json` and the `src/` rule shared by all three — `@codenhub/app-shell`, `@codenhub/styles`, `@codenhub/icons`, and `@codenhub/tools` are build inputs here.
 
 ### The documentation site
 
-The `codenhub` project, serving `apps/docs/dist`. These are the paths its Build watch paths setting excludes:
+The `codenhub-docs` project, serving `apps/docs/dist`. These are the paths its Build watch paths setting excludes:
 
 ```
 .github/*
 .githooks/*
 docs/*
 apps/demo/*
+apps/www/*
 AGENTS.md
 CLAUDE.md
 CONTRIBUTING.md
@@ -137,13 +171,13 @@ packages/*/debug/*
 packages/*/demo/*
 ```
 
-Each entry is excluded because the site provably cannot read it. The site's content comes from `packages/` alone: `apps/docs/astro.config.ts` points the documentation integration at that root, and `src/lib/catalog.ts` globs `packages/**/package.json` and public `packages/**/docs/**/*.md` from it. Root `docs/`, `README.md`, and `CONTRIBUTING.md` are repository governance, not site content. `docs/internal/**` is already outside the catalog glob. The `dev`, `debug`, and `demo` workspaces are `private: true`, and private manifests are filtered out of the public package summaries. `apps/demo/*` is the other app, which nothing here reads.
+Each entry is excluded because the site provably cannot read it. The site's content comes from `packages/` alone: `apps/docs/astro.config.ts` points the documentation integration at that root, and `src/lib/catalog.ts` globs `packages/**/package.json` and public `packages/**/docs/**/*.md` from it. Root `docs/`, `README.md`, and `CONTRIBUTING.md` are repository governance, not site content. `docs/internal/**` is already outside the catalog glob. The `dev`, `debug`, and `demo` workspaces are `private: true`, and private manifests are filtered out of the public package summaries. `apps/demo/*` and `apps/www/*` are the other apps, which nothing here reads.
 
 The `src/` rule above bites hardest here: `@codenhub/tools`, `@codenhub/styles`, and `@codenhub/kbd` are build inputs to this site — the integration imports `@codenhub/tools/documentation`. Over the replay window, excluding every package `src/` would have skipped only 2 more builds.
 
 Expect the filter to skip roughly a sixth of merges, not most of them. Over the window it skips 16 of 108, because the other 92 touch a surface the site publishes and genuinely need the rebuild they get. This repository is docs-first and `pnpm generate` rewrites `llms-full.txt` whenever a document changes, so most commits reach a published surface whatever else they touch. Path filtering cannot change that, which is why the larger saving came from not building branches at all.
 
-`apps/demo/*` is correct but not yet load-bearing: over the replay window no merge touched it without also touching something else this list excludes, so adding it skipped no build that was not already skipped. It starts paying once `apps/demo` accumulates changes of its own.
+`apps/demo/*` and `apps/www/*` are correct but not yet load-bearing: over the replay window no merge touched either without also touching something else this list excludes, so adding them skipped no build that was not already skipped. They start paying once the other apps accumulate changes of their own.
 
 ### The demo site
 
@@ -154,6 +188,7 @@ The `codenhub-demo` project, serving `apps/demo/dist`. `apps/demo/docs/internal/
 .githooks/*
 docs/*
 apps/docs/*
+apps/www/*
 AGENTS.md
 CLAUDE.md
 CONTRIBUTING.md
@@ -174,7 +209,7 @@ packages/*/dev/*
 packages/*/debug/*
 ```
 
-It is close to the inverse of the list above. `packages/*/demo/*` moves from excluded to the thing that should trigger a build — it is what this site serves — and `apps/docs/*` joins the excludes, since a change to the documentation app cannot reach this one.
+It is close to the inverse of the documentation list. `packages/*/demo/*` moves from excluded to the thing that should trigger a build — it is what this site serves — and `apps/docs/*` and `apps/www/*` join the excludes, since a change to either of the other apps cannot reach this one.
 
 The rest of the difference is that this site reads no Markdown at all. `apps/demo/src/lib/catalog.ts` globs `packages/*/demo/package.json` and `demo-integration.ts` copies each demo's `dist/`; nothing else in a package is an input. So where the documentation list has to keep public `packages/*/docs/` and exclude only `docs/internal/`, this one excludes package `docs/` wholesale, along with each package's `README.md`, `LICENSE`, `llms.txt`, and `llms-full.txt`.
 
@@ -184,11 +219,12 @@ The `src/` rule applies here through dependencies rather than imports: `@codenhu
 
 ## Previews
 
-Both Cloudflare projects build the production branch only; builds for non-production branches are off. That is where the build minutes went — a pull request pushed six times built the site six times, and watch paths would not have stopped any of them. Pull requests are now checked by the workflow above and nothing else.
+All three Cloudflare projects build the production branch only; builds for non-production branches are off. That is where the build minutes went — a pull request pushed six times built the site six times, and watch paths would not have stopped any of them. Pull requests are now checked by the workflow above and nothing else.
 
 A preview is therefore something a maintainer asks for:
 
 ```sh
+pnpm hub preview:deploy www
 pnpm hub preview:deploy docs
 pnpm hub preview:deploy demo
 ```
@@ -227,4 +263,4 @@ A tag can be pushed by anyone with write access, from any commit. The job theref
 
 ## Not covered yet
 
-Nothing the repository would own is missing any more. The two deployments run from Cloudflare dashboard state, their previews from a maintainer's machine, and publishing from a tag through trusted publishing. None of the three carries a credential here, which is the property to preserve when any of them changes.
+Nothing the repository would own is missing any more. The three deployments run from Cloudflare dashboard state, their previews from a maintainer's machine, and publishing from a tag through trusted publishing. None of them carries a credential here, which is the property to preserve when any of them changes.
