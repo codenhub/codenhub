@@ -73,9 +73,15 @@ Both lines are required, and this one is specific to Astro. Everywhere else the 
 
 The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are only discovered through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
 
-Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box, and in an Astro host it is not reported: the plugin's unresolved-class warning is raised from the same hook Astro does not call, so the build stays green.
+Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
-`mode: "svg"` rewrites `<i class="ic-...">` tags only in the auto-scanned file types, so it does not transform `.astro` templates. `content` does not change that — it widens which files are scanned for class names, not which are rewritten. Use CSS mode (the default) with Astro.
+## Inline SVG mode
+
+`mode: "svg"` works in Astro and rewrites `<i class="ic-...">` tags in `.astro` files — in the template, in the frontmatter, and in a `<script>` block, each escaped for what it is. An icon tag written inside a _string_ in a template expression is the one place it is not handled, because `{cond && <i class="ic-x" />}` holds markup rather than a string and telling those apart needs a parser; put such a tag in the frontmatter or a component instead. Everything above about delivering the stylesheet stops applying: svg mode emits no stylesheet, so neither the `virtual:icons.css` import nor `content` does anything here, and the `::before`, `::after`, and form-control forms do not work, because those need mask rules and svg mode produces none.
+
+`.md` and `.mdx` are not rewritten. An icon class written in one of those reaches the page as a bare `<i>` element with no stylesheet behind it, so it renders as nothing at all — not even the empty box CSS mode would leave. Nothing reports it, either: the unresolved-class warning only covers the files this mode rewrites, so such a page builds green and ships blank.
+
+There are two ways through it. In `.mdx`, put the icon in a component and use the component from the markdown: the component is an `.astro`, `.jsx`, or `.tsx` file, all of which are rewritten. In plain `.md`, which cannot import a component, there is no such route — a site that writes icon classes directly into its markdown wants CSS mode, where `content` globs cover `.md` and `.mdx` like any other file.
 
 ## See also
 

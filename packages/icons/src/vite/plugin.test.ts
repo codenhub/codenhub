@@ -322,6 +322,112 @@ describe("viteIcons in svg mode", () => {
     expect(result).toBeNull();
   });
 
+  it("replaces an icon tag in an .astro template without escaping it", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(
+      ["---", 'const title = "Home";', "---", '<i class="ic-user"></i>'].join("\n"),
+      "index.astro",
+    );
+
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).not.toContain("ic-user");
+  });
+
+  it("escapes an icon tag written inside an .astro frontmatter string", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(
+      ["---", 'const markup = "<i class=\\"ic-user\\"></i>";', "---", "<div></div>"].join("\n"),
+      "index.astro",
+    );
+
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("escapes each half of an .astro file for what that half is", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(
+      ["---", 'const markup = "<i class=\\"ic-user\\"></i>";', "---", '<i class="ic-x"></i>'].join("\n"),
+      "index.astro",
+    );
+
+    // The frontmatter copy is escaped for the string holding it; the template
+    // copy is not, because escaping it would corrupt the rendered markup.
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+  });
+
+  it("replaces an icon tag in an .astro file that opens with no frontmatter", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform('<i class="ic-user"></i>', "component.astro");
+
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+  });
+
+  it("treats an empty frontmatter fence as frontmatter", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const result = transform(["---", "---", '<i class="ic-user"></i>'].join("\n"), "index.astro");
+
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).not.toContain('\\"');
+  });
+
+  it("escapes an icon tag inside an .astro template script block", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = ["---", "---", "<script>", '  el.innerHTML = "<i class=\\"ic-user\\"></i>";', "</script>"].join(
+      "\n",
+    );
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("leaves template markup unescaped while escaping a script beside it", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = [
+      "---",
+      "---",
+      '<i class="ic-x"></i>',
+      "<script>",
+      '  el.innerHTML = "<i class=\\"ic-user\\"></i>";',
+      "</script>",
+    ].join("\n");
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("keeps a script tag's own attributes out of the JavaScript it escapes", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    // The opening tag carries quotes of its own. Handing them to the scan that
+    // looks for the string around a match would make it read the body wrong.
+    const source = ['<script type="module">', '  el.innerHTML = "<i class=\\"ic-user\\"></i>";', "</script>"].join(
+      "\n",
+    );
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<script type="module">');
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("warns about an icon class it does not rewrite in an .astro file", () => {
+    const { generateBundle, transform } = createPlugin({ mode: "svg" });
+    const { context, warnings } = createBundleContext();
+
+    transform(["---", "---", '<button class="btn ic-user">Save</button>'].join("\n"), "index.astro");
+    generateBundle.call(context);
+
+    expect(warnings.join("\n")).toContain("ic-user");
+  });
+
   it("warns about an icon class on an element it does not rewrite", () => {
     const { generateBundle, transformIndexHtml } = createPlugin({ mode: "svg" });
     const { context, warnings } = createBundleContext();
