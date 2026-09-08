@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { parseReleaseTag, resolveTagTarget } from "./publish.ts";
+import { distTagForVersion, parseReleaseTag, resolveTagTarget } from "./publish.ts";
 
 function createPackage(name: string, version = "1.0.0", isPrivate = false): WorkspacePackage {
   const unscopedName = name.slice(name.lastIndexOf("/") + 1);
@@ -64,5 +64,21 @@ describe("resolveTagTarget", () => {
 
   it("refuses a tag that is not shaped like a release", () => {
     expect(resolveTagTarget("v0.3.0", packages)).toMatchObject({ reason: "malformed" });
+  });
+});
+
+describe("distTagForVersion", () => {
+  it("leaves a normal release on npm's default latest", () => {
+    expect(distTagForVersion("1.0.0")).toBeUndefined();
+    expect(distTagForVersion("0.3.0")).toBeUndefined();
+    expect(distTagForVersion("1.0.0+build.5")).toBeUndefined();
+  });
+
+  it("publishes any pre-release under next so it cannot take latest", () => {
+    expect(distTagForVersion("1.0.0-beta.1")).toBe("next");
+    expect(distTagForVersion("2.0.0-rc.0")).toBe("next");
+    expect(distTagForVersion("1.0.0-alpha")).toBe("next");
+    expect(distTagForVersion("1.0.0-0")).toBe("next");
+    expect(distTagForVersion("1.0.0-beta.1+build.5")).toBe("next");
   });
 });

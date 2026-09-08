@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 scope: Public workspace packages.
 ---
 
@@ -154,6 +154,8 @@ Publishing MUST NOT happen on merge. A merge is a decision to change `main`, not
 CI MUST authenticate through npm trusted publishing, exchanging the workflow's OIDC token for a short-lived credential. No long-lived npm token may exist in this repository or in its Actions secrets. Provenance follows from that exchange rather than from a flag.
 
 A maintainer MAY run `hub publish <package>` from their own machine against their own `npm login`, and MUST do so for a package's first release: a trusted publisher cannot be configured on npm for a package name that does not exist yet. Every release after the first goes through the workflow.
+
+A pre-release version — one carrying a SemVer suffix such as `-beta.1` — MUST publish under the `next` dist-tag, not `latest`, so that `npm install` without a version keeps resolving the current stable release. `hub publish` derives this from the version and needs no extra flag.
 
 Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
 

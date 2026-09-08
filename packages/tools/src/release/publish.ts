@@ -70,6 +70,21 @@ export function resolveTagTarget(
   return { package: found };
 }
 
+/**
+ * The npm dist-tag a version publishes under.
+ *
+ * `npm publish` moves `latest` to whatever it publishes unless told otherwise,
+ * so a pre-release (`1.0.0-beta.1`) left to that default would become the
+ * version `npm install` resolves. A pre-release therefore publishes under
+ * `next`, and only a normal release takes npm's `latest`.
+ * @param version Version being published, from the package manifest.
+ * @returns `"next"` for a pre-release version, `undefined` to accept npm's `latest`.
+ */
+export function distTagForVersion(version: string): string | undefined {
+  const [, ...preRelease] = (version.split("+")[0] ?? version).split("-");
+  return preRelease.length > 0 ? "next" : undefined;
+}
+
 /** Runs `npm publish` for one package. Injected by tests. */
 export type PublishRunner = (
   workspacePackage: WorkspacePackage,
@@ -78,6 +93,9 @@ export type PublishRunner = (
 
 /**
  * Publishes one package with npm.
+ *
+ * A pre-release version is published under the `next` dist-tag so it does not
+ * take `latest` from the current stable release; see {@link distTagForVersion}.
  *
  * No `--provenance` flag is passed. Under npm trusted publishing the registry
  * generates a provenance attestation on its own, and the flag is rejected
@@ -88,8 +106,13 @@ export type PublishRunner = (
  * @returns Whether npm succeeded, with its combined output.
  */
 export const runNpmPublish: PublishRunner = async (workspacePackage, timeoutMs) => {
+  const distTag = distTagForVersion(String(workspacePackage.manifest.version));
   const outcome = await execute(
-    { args: ["publish", "--access", "public"], command: "npm", cwd: workspacePackage.directory },
+    {
+      args: ["publish", "--access", "public", ...(distTag === undefined ? [] : ["--tag", distTag])],
+      command: "npm",
+      cwd: workspacePackage.directory,
+    },
     { stdio: "pipe", timeoutMs },
   );
   return { isSuccess: outcome.isSuccess, output: outcome.output ?? "" };
