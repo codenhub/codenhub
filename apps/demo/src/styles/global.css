@@ -1,5 +1,4 @@
 @import "@codenhub/styles/native";
-@import "@codenhub/icons";
 
 :root {
   --demo-header-height: 4rem;
@@ -108,10 +107,6 @@ body {
   width: 1.1rem;
   height: 1.1rem;
   fill: currentcolor;
-}
-
-.header-icon-link i {
-  font-size: 1.1rem;
 }
 
 .theme-toggle {
@@ -225,10 +220,17 @@ body {
   gap: 0.75rem;
 }
 
-/* `@codenhub/icons`'s own base rule (`i[class^="ic-"] { display: inline-block; }`)
-   outranks the browser's default `[hidden] { display: none; }` — same cascade
-   origin, higher specificity — so the sort button's inactive direction icon needs
-   an explicit, higher-specificity override to actually disappear. */
+/* svg mode inlines each icon as an SVG element, and two things the `<i>` got for
+   free do not survive that. The element carries only a viewBox, so it has no
+   intrinsic size: the `1em` box came from `@codenhub/icons`'s `i[class^="ic-"]`
+   rule, which now matches nothing. And `hidden` is a user-agent rule for HTML
+   elements, so it does not hide anything in the SVG namespace -- the sort
+   button's inactive direction has to be hidden explicitly. */
+[data-sort-icon] {
+  width: 1em;
+  height: 1em;
+}
+
 [data-sort-icon][hidden] {
   display: none;
 }
@@ -279,8 +281,9 @@ body {
   place-items: center;
 }
 
-.demo-card-status i {
-  font-size: 1rem;
+.demo-card-status svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .demo-card-links {
@@ -300,8 +303,9 @@ body {
   color: var(--color-text);
 }
 
-.demo-card-link i {
-  font-size: 1rem;
+.demo-card-link svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .demo-empty {

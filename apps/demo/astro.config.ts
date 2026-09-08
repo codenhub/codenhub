@@ -17,9 +17,11 @@ export default defineConfig({
   integrations: [createDemoIntegration({ packagesRoot }), createDemoDevProxyIntegration({ packagesRoot })],
   vite: {
     plugins: [
-      // .astro sources aren't in the plugin's default-scanned extensions, so
-      // the icon classes this shell writes need to be named explicitly here.
-      viteIcons({ content: ["./src/**/*.astro"], defaultPrefix: "lucide", families: [lucide, phosphor] }),
+      /* svg mode inlines each icon into the built markup, so the shell ships no
+         mask stylesheet and no icon class survives the build. `content` is not
+         listed because it feeds stylesheet generation, which this mode does not
+         do; the plugin rewrites `.astro` files through its transform instead. */
+      viteIcons({ defaultPrefix: "lucide", families: [lucide, phosphor], mode: "svg" }),
     ],
   },
 });
