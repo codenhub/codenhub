@@ -57,16 +57,47 @@ function createRegistry(): IconRegistry {
 }
 
 describe("generateBaseCss", () => {
-  it("covers standalone elements, pseudo-elements, and form controls", () => {
+  it("covers the standalone element and .ic forms only", () => {
     const css = generateBaseCss();
 
     expect(css).toContain('i[class^="ic-"]');
-    expect(css).toContain(".ic-after::after");
-    expect(css).toContain('input[class^="ic-"]');
+    expect(css).toContain(".ic {");
+  });
+
+  it("emits no ::before, ::after, or form-control form", () => {
+    const css = generateBaseCss();
+
+    expect(css).not.toContain("::before");
+    expect(css).not.toContain("::after");
+    expect(css).not.toContain(".ic-after");
+    expect(css).not.toContain("input[class");
+    expect(css).not.toContain(".ic-bg");
+  });
+
+  it("sizes an inlined SVG that carries an icon class from the same custom property", () => {
+    const css = generateBaseCss();
+
+    expect(css).toContain('svg[class^="ic-"]');
+    expect(css).toContain('svg[class*=" ic-"]');
+    expect(css).toMatch(/svg\[class\^="ic-"\][\S\s]*?width: var\(--ic-size, 1em\);/);
+  });
+
+  it("emits the ic-xs through ic-xl size axis as one declaration each", () => {
+    const css = generateBaseCss();
+
+    expect(css).toContain(".ic-xs {\n  --ic-size: 0.75rem;\n}");
+    expect(css).toContain(".ic-sm {\n  --ic-size: 0.875rem;\n}");
+    expect(css).toContain(".ic-md {\n  --ic-size: 1rem;\n}");
+    expect(css).toContain(".ic-lg {\n  --ic-size: 1.25rem;\n}");
+    expect(css).toContain(".ic-xl {\n  --ic-size: 1.5rem;\n}");
   });
 
   it("honors a custom class prefix", () => {
-    expect(generateBaseCss({ prefix: "ux" })).toContain('i[class^="ux-"]');
+    const css = generateBaseCss({ prefix: "ux" });
+
+    expect(css).toContain('i[class^="ux-"]');
+    expect(css).toContain('svg[class^="ux-"]');
+    expect(css).toContain(".ux-lg {\n  --ux-size: 1.25rem;\n}");
   });
 });
 

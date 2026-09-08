@@ -56,14 +56,21 @@ const offsetIcon: ResolvedIcon = {
 };
 
 describe("renderSvg", () => {
-  it("wraps the body in an element carrying only namespace and viewBox", () => {
+  it("wraps the body in an element carrying a namespace, a viewBox, and a 1em box", () => {
     expect(renderSvg(strokeIcon)).toBe(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke-width="2"><path d="M0 0" /></g></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em"><g stroke-width="2"><path d="M0 0" /></g></svg>',
     );
   });
 
   it("uses the icon's own geometry for the viewBox", () => {
     expect(renderSvg(filledIcon)).toContain('viewBox="0 0 20 20"');
+  });
+
+  it("lets a caller replace the default 1em size", () => {
+    const svg = renderSvg(filledIcon, { attributes: { width: "24", height: "24" } });
+
+    expect(svg).toContain('width="24" height="24"');
+    expect(svg).not.toContain('width="1em"');
   });
 
   it("applies a requested stroke width to a stroke-based icon", () => {
@@ -72,7 +79,7 @@ describe("renderSvg", () => {
 
   it("ignores a requested stroke width for an icon that is not stroke-based", () => {
     expect(renderSvg(filledIcon, { strokeWidth: 1 })).toBe(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M0 0" /></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="1em" height="1em"><path fill="currentColor" d="M0 0" /></svg>',
     );
   });
 
@@ -82,7 +89,7 @@ describe("renderSvg", () => {
 
   it("places extra attributes on the element", () => {
     expect(renderSvg(strokeIcon, { attributes: { "aria-hidden": "true", class: "icon" } })).toContain(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" class="icon">',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" class="icon">',
     );
   });
 

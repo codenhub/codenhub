@@ -44,11 +44,11 @@ In dev, Vite serves the HTML before it transforms a single module, so a class th
 
 ## Inline SVG mode
 
-`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so the `::before`, `::after`, and form-control forms do not work in this mode: they need mask rules, and there are none. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
+`mode: "svg"` replaces `<i class="ic-...">` tags with inline SVG at build time and emits no stylesheet at all. It rewrites those tags and nothing else, so a class left on any other element — or `.ic` on a `<span>` — renders nothing in this mode: there is no stylesheet to carry its mask. The plugin warns at build time when it finds an icon class on an element it will not rewrite, naming the class and the file.
 
-Switching an existing project from CSS mode is not only a config change, because the element that reaches the browser is no longer the one you wrote. Two things the `<i>` had do not come with it:
+Switching an existing project from CSS mode is not only a config change, because the element that reaches the browser is no longer the one you wrote. Two things the `<i>` had need attention:
 
-- **Size.** The rendered `<svg>` carries a `viewBox` and nothing else, leaving size and color to CSS. The `1em` box came from the base stylesheet's `i[class^="ic-"]` and `.ic` rules, which now match nothing, so an icon with no size of its own from the surrounding CSS collapses or fills its container. Size the SVG where you styled the `<i>`.
+- **Size.** The rendered `<svg>` carries a `1em` box as a presentation attribute, so an icon renders at text size with no stylesheet at all. CSS still wins over that: keep `@import "@codenhub/icons"` in a stylesheet and the base rules size the inlined `<svg>` from `--ic-size` exactly as they size an `<i>`, so setting `--ic-size` on an ancestor and the `ic-xs`–`ic-xl` classes both work. Without that import an icon is fixed at `1em`.
 - **`hidden`.** `[hidden] { display: none }` is a user-agent rule for HTML elements, and an inlined icon is in the SVG namespace, so the attribute no longer hides it. Script that toggles an icon needs an explicit `[hidden] { display: none }` rule, and a guard written as `instanceof HTMLElement` stops matching — an SVG element is not one.
 
 Rewriting covers `.html`, `.js`, `.jsx`, `.ts`, `.tsx`, `.vue`, `.svelte`, and `.astro`. An `.astro` file is rewritten in both halves, its frontmatter escaped as JavaScript and its template left as markup. `content` plays no part here — it feeds stylesheet generation, which this mode does not do.

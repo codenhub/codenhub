@@ -27,10 +27,10 @@ Icons reach a project through CSS. The shortest path with no build step is the b
 ```
 
 ```html
-<i class="ic-lucide-heart" aria-hidden="true"></i> <button class="btn ic-lucide-check">Submit</button>
+<i class="ic-lucide-heart" aria-hidden="true"></i> <button class="btn"><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
 ```
 
-Size and color follow custom properties: set `--ic-size` and `--ic-color` on any ancestor.
+An icon is an `<i>` carrying an icon class (or `.ic` on any element, in the CSS-based methods). Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor, or use the `ic-xs`–`ic-xl` size classes.
 
 Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4, a Vite plugin, and a PostCSS plugin. The plugins scan your markup and emit only the rules you used; the plain-CSS family stylesheets are complete and large by construction. See [Delivery methods](delivery/index.md) to choose one, and [Frameworks](frameworks/index.md) for framework-specific setup.
 

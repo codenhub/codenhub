@@ -1,4 +1,8 @@
 @import "@codenhub/styles/native";
+/* svg mode ships no mask stylesheet, but the base rules still matter: they give
+   an inlined icon its `1em` box and carry the `ic-xs`–`ic-xl` size classes the
+   shell uses. */
+@import "@codenhub/icons";
 
 :root {
   --demo-header-height: 4rem;
@@ -101,12 +105,6 @@ body {
 
 .header-icon-link:hover {
   color: var(--color-text);
-}
-
-.header-icon-link svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  fill: currentcolor;
 }
 
 .theme-toggle {
@@ -220,17 +218,11 @@ body {
   gap: 0.75rem;
 }
 
-/* svg mode inlines each icon as an SVG element, and two things the `<i>` got for
-   free do not survive that. The element carries only a viewBox, so it has no
-   intrinsic size: the `1em` box came from `@codenhub/icons`'s `i[class^="ic-"]`
-   rule, which now matches nothing. And `hidden` is a user-agent rule for HTML
-   elements, so it does not hide anything in the SVG namespace -- the sort
-   button's inactive direction has to be hidden explicitly. */
-[data-sort-icon] {
-  width: 1em;
-  height: 1em;
-}
-
+/* `hidden` is a user-agent rule for HTML elements, so it does not hide an
+   element in the SVG namespace, and svg mode inlines each icon as one. The sort
+   button's inactive direction has to be hidden explicitly. Sizing is not here:
+   `@codenhub/icons` gives the inlined `<svg>` a `1em` box and the `ic-md` class
+   on the markup sets the rest. */
 [data-sort-icon][hidden] {
   display: none;
 }
@@ -281,11 +273,6 @@ body {
   place-items: center;
 }
 
-.demo-card-status svg {
-  width: 1rem;
-  height: 1rem;
-}
-
 .demo-card-links {
   --layout-gap: 0.75rem;
 
@@ -301,11 +288,6 @@ body {
 
 .demo-card-link:hover {
   color: var(--color-text);
-}
-
-.demo-card-link svg {
-  width: 1rem;
-  height: 1rem;
 }
 
 .demo-empty {

@@ -12,10 +12,11 @@
       <header class="playground-header">
         <div class="header-titles">
           <h1>@codenhub/icons Playground</h1>
-          <p>Native CSS custom properties, pseudo-elements, and JS helpers harness.</p>
+          <p>Native CSS custom properties, the size axis, and JS helpers harness.</p>
         </div>
-        <button type="button" id="theme-toggle-btn" class="btn out sm ic-moon" aria-label="Toggle color theme">
-          Dark Mode
+        <button type="button" id="theme-toggle-btn" class="btn out sm" aria-label="Toggle color theme">
+          <i id="theme-toggle-icon" class="ic-moon" aria-hidden="true"></i>
+          <span id="theme-toggle-label">Dark Mode</span>
         </button>
       </header>
 
@@ -42,23 +43,51 @@
         </div>
       </section>
 
-      <!-- 2. Pseudo-Element Icons on Closed Tags -->
+      <!-- 2. Icons in controls, and the size axis -->
       <section class="playground-card">
         <h2>
-          2. Automatic Pseudo-Elements (
-          <code>::before</code>
-          &amp;
-          <code>::after</code>
+          2. Icons in controls &amp; the size axis (
+          <code>&lt;i&gt;</code>
+          ,
+          <code>.ic</code>
+          ,
+          <code>ic-xs</code>
+          –
+          <code>ic-xl</code>
           )
         </h2>
         <p class="card-desc">
-          Icon mask applied directly to buttons, links, badges, or tags without extra nested child tags:
+          An icon is a real element inside the control. Size follows
+          <code>--ic-size</code>
+          , or an
+          <code>ic-*</code>
+          size class:
         </p>
         <div class="demo-row">
-          <button type="button" class="btn primary ic-check">Submit Form</button>
-          <button type="button" class="btn ic-search">Search Docs</button>
-          <button type="button" class="btn ic-arrow-right ic-after">Next Step</button>
-          <span class="btn soft ic-settings">Settings Badge</span>
+          <button type="button" class="btn primary">
+            <i class="ic-check" aria-hidden="true"></i>
+            Submit Form
+          </button>
+          <button type="button" class="btn">
+            <i class="ic-search" aria-hidden="true"></i>
+            Search Docs
+          </button>
+          <button type="button" class="btn">
+            Next Step
+            <i class="ic-arrow-right" aria-hidden="true"></i>
+          </button>
+          <span class="btn soft">
+            <i class="ic-settings" aria-hidden="true"></i>
+            Settings Badge
+          </span>
+        </div>
+        <div class="demo-row icon-grid-standalone">
+          <i class="ic-user ic-xs" title="ic-xs"></i>
+          <i class="ic-user ic-sm" title="ic-sm"></i>
+          <i class="ic-user ic-md" title="ic-md"></i>
+          <i class="ic-user ic-lg" title="ic-lg"></i>
+          <i class="ic-user ic-xl" title="ic-xl"></i>
+          <span class="ic ic-user" title=".ic on a span"></span>
         </div>
       </section>
 

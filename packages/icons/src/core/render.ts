@@ -54,10 +54,16 @@ export function setStrokeWidth(body: string, strokeWidth: number | string): stri
 /**
  * Renders a resolved icon as a complete, self-contained SVG element.
  *
- * The element carries only a namespace and a viewBox, leaving size and color to
- * CSS. The viewBox keeps the icon's own origin, because families such as
- * Material Symbols draw above it. A stroke width is applied only when the
- * icon's family is stroke-based.
+ * The element carries a namespace, a viewBox, and a `1em` box, leaving color to
+ * CSS. The `1em` box is a floor for an icon inlined with no stylesheet behind
+ * it, which a bare `viewBox` renders at 0×0. It is a presentation attribute, so
+ * CSS `width`/`height` still wins — including the base stylesheet's
+ * `svg[class^="ic-"]` rule, which reads `--ic-size` and so carries the
+ * `ic-xs`–`ic-xl` size axis onto an inlined icon the same as onto an `<i>`.
+ * Passing `width` or `height` in {@link RenderSvgOptions.attributes} replaces
+ * the default. The viewBox keeps the icon's own origin, because families such as
+ * Material Symbols draw above it. A stroke width is applied only when the icon's
+ * family is stroke-based.
  *
  * @param icon - Icon to render.
  * @param options - Stroke width and extra element attributes.
@@ -68,7 +74,7 @@ export function renderSvg(icon: ResolvedIcon, options?: RenderSvgOptions): strin
     icon.strokeWidth !== undefined && options?.strokeWidth !== undefined
       ? setStrokeWidth(icon.body, options.strokeWidth)
       : icon.body;
-  const extra = options?.attributes ? renderAttributes(options.attributes) : "";
+  const extra = renderAttributes({ width: "1em", height: "1em", ...options?.attributes });
 
   return `<svg xmlns="${SVG_NAMESPACE}" viewBox="${icon.left} ${icon.top} ${icon.width} ${icon.height}"${extra}>${body}</svg>`;
 }

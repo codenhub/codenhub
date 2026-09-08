@@ -58,24 +58,26 @@ export default defineConfig({
 
 ### The markup
 
+An icon is an element carrying an icon class — an `<i>`, or `.ic` on any element you own.
+
 ```html
-<!-- standalone element -->
+<!-- standalone -->
 <i class="ic-lucide-heart" aria-hidden="true"></i>
 
-<!-- leading icon through ::before -->
-<button class="btn ic-lucide-check">Submit</button>
+<!-- icon beside a label: a real element inside the control -->
+<button class="btn"><i class="ic-lucide-check" aria-hidden="true"></i>Submit</button>
 
-<!-- trailing icon through ::after -->
-<button class="btn ic-lucide-arrow-right ic-after">Next</button>
-
-<!-- form controls take a background-image -->
-<input class="ic-lucide-search" />
+<!-- .ic, for a component that renders its own tag (CSS-based methods) -->
+<span class="ic ic-lucide-search" aria-hidden="true"></span>
 
 <!-- stroke width, for stroke-based families -->
 <i class="ic-lucide-heart/1.5" aria-hidden="true"></i>
+
+<!-- a size from the axis -->
+<i class="ic-lucide-search ic-lg" aria-hidden="true"></i>
 ```
 
-Size and color follow custom properties: set `--ic-size` and `--ic-color` on any ancestor.
+Size and color follow custom properties: set `--ic-size` and `--ic-color` on the icon or any ancestor. The `ic-xs`–`ic-xl` classes are shorthand that set `--ic-size` to a rem value; the default is `1em`. There is no `::before`, `::after`, or form-control form — for a `background-image` icon, resolve the `url()` with `getIconMaskUrl` / `getIconCssProps`.
 
 ## Documentation
 
@@ -101,9 +103,11 @@ Size and color follow custom properties: set `--ic-size` and `--ic-color` on any
 - An icon is named `prefix:name`, written `ic-prefix-name` in a class, as in `ic-material-symbols-rounded-home`.
 - The package names no default family. An unqualified `ic-heart` resolves only where you said what it means: through `defaultPrefix` in the Vite and PostCSS plugins, through `default:` in the Tailwind plugin, or, in the plugin-free path, through the last family stylesheet you imported that defines it. A family that has no icon by that name does not claim the bare selector, so an earlier family still answers to it.
 - Stroke width is a modifier on the icon class, `ic-lucide-heart/1.5`, and applies only to families drawn with strokes. It needs one of the plugins: a plugin-free stylesheet has no way to know which widths you want, so families there render at their authored width.
-- `after` and `bg` are reserved: `ic-after` and `ic-bg` are modifiers, so no family may use them as a prefix.
+- An icon is an `<i>` (or `.ic` on any element, in the CSS-based methods). There is no `::before`, `::after`, or form-control form: an icon beside a label is a real `<i>` in the control, and a `background-image` icon comes from `getIconMaskUrl` / `getIconCssProps`.
+- `xs`, `sm`, `md`, `lg`, and `xl` are reserved (`ic-xs`–`ic-xl` are the size axis): no family may use one as a prefix or ship an icon by that name.
+- Size follows `--ic-size`, default `1em`. The `ic-xs`–`ic-xl` classes each set it to a rem value (`0.75`, `0.875`, `1`, `1.25`, `1.5`) and nothing else, so they compose with a stroke modifier. An inlined `<svg>` from the renderer or `mode: "svg"` carries a `1em` box of its own and honours `--ic-size` through the base rules.
 - The `/lucide` and other family stylesheets are large by construction — a whole family, because nothing is narrowing it. `dist/css` totals about 22 MB across all 13. Import the families you use, or use Tailwind or a plugin, which emit only what your markup asked for.
-- `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. Icons on other elements need CSS mode; the plugin warns when it finds one.
+- `mode: "svg"` in the Vite plugin rewrites `<i class="ic-...">` tags into inline SVG and nothing else. A class on another element renders nothing in this mode; the plugin warns when it finds one.
 - Icon data is generated from upstream packages and committed; `pnpm generate icons` rebuilds it and CI fails on drift.
 
 ## License
