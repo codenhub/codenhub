@@ -5,7 +5,12 @@ import remarkParse from "remark-parse";
 import { unified } from "unified";
 
 import { orderDocumentSections } from "./document-order.ts";
-import { coercePublicDocumentOrder, comparePublicDocumentPaths, parseMarkdown } from "./document-policy.ts";
+import {
+  coercePublicDocumentCurated,
+  coercePublicDocumentOrder,
+  comparePublicDocumentPaths,
+  parseMarkdown,
+} from "./document-policy.ts";
 
 const SOURCE_MARKER = "<!-- Source: %s -->";
 const CODE_TYPES = new Set(["code", "inlineCode"]);
@@ -26,6 +31,8 @@ export interface LlmsFullSection {
 export interface LlmsFullDocument extends LlmsFullSection {
   /** Frontmatter `order`, when the document sets one. */
   order?: number;
+  /** Frontmatter `curated`, set only on a folder `index.md` that routes rather than reads. */
+  curated?: boolean;
 }
 
 /**
@@ -42,6 +49,82 @@ export function orderLlmsFullDocuments(documents: readonly LlmsFullDocument[]): 
     relativePath: document.sourcePath.slice("docs/".length),
   }));
   return orderDocumentSections(placeable).flatMap((section) => section.documents);
+}
+
+/** Reduces a link target to the sibling filename it points at, dropping `./`, a query, or a fragment. */
+function linkedSiblingName(target: string): string {
+  return (
+    target
+      .replace(/^\.\//, "")
+      .replace(/[?#].*$/, "")
+      .split("/")
+      .at(-1) ?? ""
+  );
+}
+
+/**
+ * Applies curated-folder membership to a compilation, matching what the
+ * documentation site publishes: a folder whose `index.md` sets `curated: true`
+ * (per `docs/specs/packages-documentation.md`) contributes only the sibling
+ * pages that index links, in link order, and the index itself — a router, not a
+ * page — is left out. A folder with no curated index is untouched.
+ * @param documents Parsed `docs/` documents.
+ * @returns The documents a curated folder actually publishes, others unchanged.
+ */
+export function curateLlmsFullDocuments(documents: readonly LlmsFullDocument[]): LlmsFullDocument[] {
+  const rootDocuments: LlmsFullDocument[] = [];
+  const folderSegments: string[] = [];
+  const folderDocuments = new Map<string, LlmsFullDocument[]>();
+
+  for (const document of documents) {
+    const relativePath = document.sourcePath.slice("docs/".length);
+    const separator = relativePath.lastIndexOf("/");
+    if (separator === -1) {
+      rootDocuments.push(document);
+      continue;
+    }
+    const segment = relativePath.slice(0, separator);
+    let bucket = folderDocuments.get(segment);
+    if (bucket === undefined) {
+      bucket = [];
+      folderDocuments.set(segment, bucket);
+      folderSegments.push(segment);
+    }
+    bucket.push(document);
+  }
+
+  const result: LlmsFullDocument[] = [...rootDocuments];
+  for (const segment of folderSegments) {
+    const bucket = folderDocuments.get(segment) ?? [];
+    const indexDocument = bucket.find((document) => document.sourcePath === `docs/${segment}/index.md`);
+    if (indexDocument?.curated !== true) {
+      result.push(...bucket);
+      continue;
+    }
+
+    const siblingsByName = new Map(
+      bucket
+        .filter((document) => document !== indexDocument)
+        .map((document) => [linkedSiblingName(document.sourcePath), document]),
+    );
+    const linkedNames = new Set<string>();
+    for (const pattern of [INLINE_TARGET, DEFINITION_TARGET]) {
+      for (const match of indexDocument.body.matchAll(pattern)) {
+        linkedNames.add(linkedSiblingName(match.groups?.target ?? ""));
+      }
+    }
+
+    let position = 0;
+    for (const name of linkedNames) {
+      const sibling = siblingsByName.get(name);
+      if (sibling !== undefined) {
+        result.push({ ...sibling, order: position });
+        position += 1;
+      }
+    }
+  }
+
+  return result;
 }
 
 function isRebasable(target: string): boolean {
@@ -206,10 +289,15 @@ export async function buildLlmsFull(rootPath: string, packageFiles: readonly str
         return { body: source, sourcePath };
       }
       const { body, frontmatter } = parseMarkdown(source);
-      return { body, order: coercePublicDocumentOrder(frontmatter.order), sourcePath };
+      return {
+        body,
+        curated: coercePublicDocumentCurated(frontmatter.curated),
+        order: coercePublicDocumentOrder(frontmatter.order),
+        sourcePath,
+      };
     }),
   );
   const readme = parsed.filter((section): section is LlmsFullSection => section.sourcePath === "README.md");
   const documents = parsed.filter((section): section is LlmsFullDocument => section.sourcePath !== "README.md");
-  return renderLlmsFull([...readme, ...orderLlmsFullDocuments(documents)]);
+  return renderLlmsFull([...readme, ...orderLlmsFullDocuments(curateLlmsFullDocuments(documents))]);
 }

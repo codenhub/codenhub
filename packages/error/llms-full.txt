@@ -274,12 +274,6 @@ const output = match(doubled, {
 
 `map`, `mapAsync`, `andThen`, `andThenAsync`, and `match` do not catch callback errors. Use `attempt` or `attemptAsync` when thrown values should become normalized failures.
 
-<!-- Source: docs/changelog/index.md -->
-
-# Changelog
-
-- [0.3.0](docs/changelog/0.3.0.md)
-
 <!-- Source: docs/changelog/0.3.0.md -->
 
 # 0.3.0

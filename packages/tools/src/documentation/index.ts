@@ -27,6 +27,7 @@ export {
 } from "./document-policy.ts";
 export {
   buildLlmsFull,
+  curateLlmsFullDocuments,
   listLlmsFullSources,
   orderLlmsFullDocuments,
   orderLlmsFullSources,

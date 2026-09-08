@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { parseMarkdown } from "./document-policy.ts";
-import { orderLlmsFullDocuments, orderLlmsFullSources, rebaseMarkdownTargets, renderLlmsFull } from "./llms-full.ts";
+import {
+  curateLlmsFullDocuments,
+  orderLlmsFullDocuments,
+  orderLlmsFullSources,
+  rebaseMarkdownTargets,
+  renderLlmsFull,
+} from "./llms-full.ts";
 
 describe("parseMarkdown", () => {
   it("shouldSplitFrontmatterFromTheAuthoredBody", () => {
@@ -60,6 +66,52 @@ describe("orderLlmsFullDocuments", () => {
       "docs/reference.md",
       "docs/concepts.md",
     ]);
+  });
+});
+
+describe("curateLlmsFullDocuments", () => {
+  it("shouldDropACuratedIndexAndKeepOnlyItsLinkedSiblingsInLinkOrder", () => {
+    const documents = [
+      { body: "", sourcePath: "docs/index.md" },
+      {
+        body: "# Changelog\n\n- [1.1.0](1.1.0.md)\n- [1.0.0](1.0.0.md)\n",
+        curated: true,
+        sourcePath: "docs/changelog/index.md",
+      },
+      { body: "", sourcePath: "docs/changelog/1.1.0.md" },
+      { body: "", sourcePath: "docs/changelog/1.0.0.md" },
+      { body: "", sourcePath: "docs/changelog/0.9.0.md" },
+    ];
+
+    const result = curateLlmsFullDocuments(documents);
+
+    expect(result.map((document) => document.sourcePath)).toEqual([
+      "docs/index.md",
+      "docs/changelog/1.1.0.md",
+      "docs/changelog/1.0.0.md",
+    ]);
+    expect(result.map((document) => document.order)).toEqual([undefined, 0, 1]);
+  });
+
+  it("shouldLeaveAFolderWithoutACuratedIndexUntouched", () => {
+    const documents = [
+      { body: "", sourcePath: "docs/guides/index.md" },
+      { body: "", sourcePath: "docs/guides/beta.md" },
+      { body: "", sourcePath: "docs/guides/alpha.md" },
+    ];
+
+    expect(curateLlmsFullDocuments(documents).map((document) => document.sourcePath)).toEqual(
+      documents.map((document) => document.sourcePath),
+    );
+  });
+
+  it("shouldPublishNothingFromACuratedFolderWhoseIndexLinksNoSiblings", () => {
+    const documents = [
+      { body: "# Changelog\n\nNothing yet.\n", curated: true, sourcePath: "docs/changelog/index.md" },
+      { body: "", sourcePath: "docs/changelog/1.0.0.md" },
+    ];
+
+    expect(curateLlmsFullDocuments(documents)).toEqual([]);
   });
 });
 
