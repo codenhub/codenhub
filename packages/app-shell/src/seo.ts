@@ -9,19 +9,32 @@ export function buildRobotsTxt(baseUrl: string): string {
   return `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml\n`;
 }
 
+const XML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+};
+
+/** Escapes the five predefined XML entities so a value is safe as element text. */
+function escapeXml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => XML_ENTITIES[character]);
+}
+
 /**
  * Builds a `sitemap.xml` body listing each supplied route under `baseUrl`.
  *
  * The caller passes every path it wants listed, root included, so the helper
- * stays agnostic about how a surface enumerates its own pages. Paths are used
- * verbatim, so they carry their own leading slash.
+ * stays agnostic about how a surface enumerates its own pages. Paths carry their
+ * own leading slash; each `<loc>` is XML-escaped, so a route may contain `&`.
  *
  * @param baseUrl - Canonical origin of the surface, without a trailing slash.
  * @param routePaths - Absolute paths to list, such as `["/", "/about/"]`.
  * @returns The XML body, newline-terminated.
  */
 export function buildSitemapXml(baseUrl: string, routePaths: readonly string[]): string {
-  const urls = routePaths.map((routePath) => `  <url><loc>${baseUrl}${routePath}</loc></url>`);
+  const urls = routePaths.map((routePath) => `  <url><loc>${escapeXml(`${baseUrl}${routePath}`)}</loc></url>`);
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

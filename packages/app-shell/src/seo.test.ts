@@ -25,4 +25,11 @@ describe("buildSitemapXml", () => {
     expect(body.match(/<url>/g)).toHaveLength(1);
     expect(body.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
   });
+
+  it("XML-escapes a route so an ampersand does not break the document", () => {
+    const body = buildSitemapXml("https://codenhub.dev", ["/r&d/"]);
+
+    expect(body).toContain("<loc>https://codenhub.dev/r&amp;d/</loc>");
+    expect(body).not.toContain("/r&d/");
+  });
 });
