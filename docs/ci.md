@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -239,7 +239,7 @@ Previewing the merge rather than a working tree is the one thing it does not do.
 
 It triggers on a tag matching `@codenhub/*@*` and on nothing else. The tag names the package and the version — `@codenhub/error@0.3.0` — and that pairing is the authorization: `docs/specs/packages-lifecycle.md` requires the version in the tag to equal the version in the manifest at the tagged commit, and `hub publish` refuses the run when they disagree. A merge never publishes. A merge is a decision to change `main`, not a decision to release, and keeping them apart is what makes a version bump revertible right up until someone tags it.
 
-The job body is one command:
+The `publish` job's body is one command:
 
 ```sh
 pnpm hub publish --from-tag="$GITHUB_REF_NAME"
@@ -247,9 +247,15 @@ pnpm hub publish --from-tag="$GITHUB_REF_NAME"
 
 That command verifies the package, runs the publish preflight `hub release` reports, and publishes only when every precondition is `ready`. It is the same command a maintainer can run locally, which is the rule the section above states: a step only CI can run is a step nobody can reproduce before pushing. `docs/tooling.md` documents its flags.
 
+### The GitHub release
+
+A second job, `release`, cuts a GitHub release from the same tag once `publish` succeeds, so the Releases tab and its Atom feed carry the history npm already has. Its notes are the version's `docs/changelog/<version>.md` page when the package keeps a changelog, and GitHub's generated notes otherwise; a pre-release version is marked as one. It runs `gh release create` directly rather than through `hub`, because it touches GitHub metadata rather than the package.
+
+It is a separate job on purpose. `gh release create` needs `contents: write`, and the `publish` job runs the entire build and lifecycle toolchain — repository-controlled code that should never share a step with a push credential. So `publish` stays `contents: read` with `persist-credentials: false`, and only `release`, which checks out the repository and runs nothing from it, holds the write scope. Before creating the release it re-fetches the tag and refuses to continue if it no longer points at the commit that was published, since a tag can be force-moved by anyone with write access. The release never undoes the publish before it: the version is already on npm, and a missing release entry is re-creatable by hand with the same command.
+
 ### Credentials
 
-There are none. The job holds `id-token: write` and authenticates through npm trusted publishing, which exchanges that OIDC token for a credential valid for the length of the publish. No npm token exists in this repository or in its Actions secrets, which is the same split the deployments above keep — the repository carries the build, never the key.
+There are none. The `publish` job holds `id-token: write` and authenticates through npm trusted publishing, which exchanges that OIDC token for a credential valid for the length of the publish. No npm token exists in this repository or in its Actions secrets, which is the same split the deployments above keep — the repository carries the build, never the key. The workflow's default permission is `contents: read`; `contents: write` is the `release` job's alone.
 
 Provenance comes with that exchange rather than from a flag. `--provenance` is deliberately not passed: the registry already attests a trusted-publishing release, and the flag is rejected outside a supported CI provider, so passing it would buy nothing here and break `hub publish` on a maintainer's machine.
 

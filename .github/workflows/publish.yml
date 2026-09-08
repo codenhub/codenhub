@@ -16,14 +16,12 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
+# Read-only by default. Each job widens only what it needs, and the two stay
+# apart: `publish` runs the whole build and lifecycle toolchain and never needs
+# write access, while `release` writes one GitHub release and runs nothing from
+# the repository.
 permissions:
   contents: read
-  # npm trusted publishing exchanges this job's OIDC token for a short-lived
-  # publish credential, which is why no npm token exists in this repository.
-  # Provenance is attached by the registry as part of that exchange; the
-  # `--provenance` flag is deliberately not passed, because it is rejected
-  # outside CI and would break the same command on a maintainer's machine.
-  id-token: write
 
 jobs:
   publish:
@@ -34,13 +32,31 @@ jobs:
     # access from any commit. This environment is where a required reviewer is
     # configured, so the irreversible step still passes through a person.
     environment: npm
+    permissions:
+      contents: read
+      # npm trusted publishing exchanges this job's OIDC token for a short-lived
+      # publish credential, which is why no npm token exists in this repository.
+      # Provenance is attached by the registry as part of that exchange; the
+      # `--provenance` flag is deliberately not passed, because it is rejected
+      # outside CI and would break the same command on a maintainer's machine.
+      id-token: write
+    outputs:
+      # For the release job: the notes file (repo-relative, empty when the
+      # package keeps no changelog) and whether the version is a pre-release.
+      # Resolved here because only this job has the workspace installed.
+      notes-file: ${{ steps.notes.outputs.file }}
+      prerelease: ${{ steps.notes.outputs.prerelease }}
     steps:
       # Full history: the preflight compares the tagged commit against the
-      # working tree, and `hub verify` resolves package selectors from git.
+      # working tree, and `hub verify` resolves package selectors from git. The
+      # token is not persisted — publishing needs no authenticated git, and the
+      # build and lifecycle code this job runs should never hold a push
+      # credential.
       - name: Check out the tag
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up the workspace
         uses: ./.github/actions/setup
@@ -59,6 +75,28 @@ jobs:
               process.exit(1);
             }' "$version"
 
+      # Resolve what the release job needs before anything is published, so a bad
+      # resolution fails the run early rather than after npm has the version.
+      # `pnpm --filter … exec pwd` handles a nested plugin path too.
+      - name: Resolve the release notes
+        id: notes
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${GITHUB_REF_NAME##*@}"
+          package_dir="$(pnpm --filter "${GITHUB_REF_NAME%@*}" exec pwd 2>/dev/null | tail -1 || true)"
+          rel="${package_dir#"$GITHUB_WORKSPACE"/}"
+          notes="${rel}/docs/changelog/${version}.md"
+          if [ -n "$rel" ] && [ -f "$notes" ]; then
+            echo "file=$notes" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=" >> "$GITHUB_OUTPUT"
+          fi
+          case "$version" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       # One command, and the same one a maintainer can run locally. It verifies
       # the package, runs the publish preflight, asserts the tag matches the
       # manifest, and only then publishes.
@@ -66,3 +104,54 @@ jobs:
         run: pnpm hub publish --from-tag="$GITHUB_REF_NAME"
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
+
+  release:
+    name: GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The only job that writes: it creates one GitHub release and runs nothing
+    # from the repository, so the write credential never sits next to
+    # repository-controlled code.
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the published commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      # The published version gets a GitHub release too, so the Releases tab and
+      # its Atom feed carry the same history npm does. Notes are the version's
+      # changelog page when the package keeps one (`docs/specs/packages-changelog.md`),
+      # and GitHub's generated notes otherwise. This never undoes the publish:
+      # the version is already on npm, and a missing release entry is
+      # re-creatable by hand with the same `gh release create`.
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          NOTES_FILE: ${{ needs.publish.outputs.notes-file }}
+          PRERELEASE: ${{ needs.publish.outputs.prerelease }}
+        run: |
+          # A tag can be force-moved by anyone with write access. Confirm it
+          # still points at the commit that was just published before pointing a
+          # release at it.
+          git fetch --no-tags --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          tag_sha="$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{commit}")"
+          if [ "$tag_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::${GITHUB_REF_NAME} now points at ${tag_sha}, not the published commit ${GITHUB_SHA}."
+            exit 1
+          fi
+
+          args=(--verify-tag --title "$GITHUB_REF_NAME")
+          if [ "$PRERELEASE" = "true" ]; then
+            args+=(--prerelease)
+          fi
+          if [ -n "$NOTES_FILE" ] && [ -f "$NOTES_FILE" ]; then
+            args+=(--notes-file "$NOTES_FILE")
+          else
+            args+=(--generate-notes)
+          fi
+
+          gh release create "$GITHUB_REF_NAME" "${args[@]}"
