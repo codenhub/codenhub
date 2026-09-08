@@ -13,15 +13,5 @@ const { description, title } = Astro.props;
 ---
 
 <ShellLayout description={description} siteConfig={siteConfig} title={title}>
-  <a
-    aria-label="CodenHub documentation"
-    class="shell-action"
-    href={siteConfig.docsUrl}
-    rel="noopener noreferrer"
-    slot="actions"
-    target="_blank"
-  >
-    <i aria-hidden="true" class="ic-lucide-book-open shell-action-icon"></i>
-  </a>
   <slot />
 </ShellLayout>

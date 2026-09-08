@@ -9,6 +9,18 @@ interface Props {
 }
 
 const { siteConfig, homeHref = "/" } = Astro.props;
+
+/*
+ * The standard cross-surface links, left of the brand actions. Each renders
+ * only when its `siteConfig` URL is set, so a surface opts a link in or out by
+ * whether it carries the URL at all. Every one points at another origin, so it
+ * opens in a new tab and carries the outbound arrow.
+ */
+const navLinks = [
+  { href: siteConfig.wwwUrl, label: "Hub" },
+  { href: siteConfig.docsUrl, label: "Documentation" },
+  { href: siteConfig.demoUrl, label: "Demo" },
+].filter((link): link is { href: string; label: string } => link.href !== undefined);
 ---
 
 <header class="shell-header">
@@ -31,7 +43,19 @@ const { siteConfig, homeHref = "/" } = Astro.props;
         width="984"
       />
     </a>
-    <nav aria-label="Site" class="shell-actions">
+    {
+      navLinks.length > 0 && (
+        <nav aria-label="Sites" class="shell-nav">
+          {navLinks.map((link) => (
+            <a class="shell-nav-link" href={link.href} rel="noopener noreferrer" target="_blank">
+              {link.label}
+              <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow" />
+            </a>
+          ))}
+        </nav>
+      )
+    }
+    <div class="shell-actions">
       <slot name="actions" />
       <a
         aria-label="CodenHub on GitHub"
@@ -46,7 +70,22 @@ const { siteConfig, homeHref = "/" } = Astro.props;
           ></path>
         </svg>
       </a>
+      {
+        siteConfig.npmUrl !== undefined && (
+          <a
+            aria-label="CodenHub on npm"
+            class="shell-action"
+            href={siteConfig.npmUrl}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 24 24">
+              <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
+            </svg>
+          </a>
+        )
+      }
       <ThemeToggle />
-    </nav>
+    </div>
   </div>
 </header>

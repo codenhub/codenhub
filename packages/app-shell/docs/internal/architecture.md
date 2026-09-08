@@ -6,13 +6,13 @@ scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and t
 
 # Architecture
 
-`@codenhub/app-shell` is the shared chrome for `apps/www`, `apps/docs`, and `apps/demo`. It exists so the header, theme toggle, footer, skip link, and SEO files read identically across the three subdomains without each app carrying its own copy.
+`@codenhub/app-shell` is the shared chrome for `apps/www`, `apps/docs`, and `apps/demo`. It exists so the header, theme switch, footer, skip link, and SEO files read identically across the three subdomains without each app carrying its own copy.
 
 ## What it ships
 
 Through `exports`, as source:
 
-- `./layouts/base-layout.astro` — the `<html>` document: head, inline theme bootstrap, skip link, `<SiteHeader>`, page `<slot />`, `<SiteFooter>`, and the theme-toggle + footer-year script.
+- `./layouts/base-layout.astro` — the `<html>` document: head, inline theme bootstrap, skip link, `<SiteHeader>`, page `<slot />`, `<SiteFooter>`, and the theme-switch + footer-year script.
 - `./components/site-header.astro`, `./components/site-footer.astro`, `./components/theme-toggle.astro` — used by the layout; exported so an app can compose them directly if it needs to.
 - `./site-config` — the `SiteConfig` type each app fills in.
 - `./seo` — `buildRobotsTxt(baseUrl)` and `buildSitemapXml(baseUrl, routePaths)`.
@@ -23,6 +23,14 @@ There is no build step and no `dist/`. The package is private, so the lifecycle 
 ## Styling model
 
 `styles.css` is written entirely against `@codenhub/styles` design tokens (`--color-*`, `--radius-*`, `--elevation-*`, `--motion-*`), which both the Tailwind (`/tw`) and native (`/native`) builds emit with the same names. It uses its own `shell-` prefixed class names and restyles no bare element and no styles-package utility, so it composes on top of either foundation without ordering hazards. `apps/docs` keeps `/tw`; `apps/www` and `apps/demo` use `/native`.
+
+## Header
+
+The header is one standard layout every surface shares, not a set of parts each app assembles. On the left: the brand/logo (linking to `homeHref`, the surface's own root by default) followed by the cross-surface text links — **Hub** (`wwwUrl`), **Documentation** (`docsUrl`), **Demo** (`demoUrl`). On the right: the `actions` slot for genuine per-surface extras, then the **GitHub** mark, the **npm** mark (`npmUrl`), and the theme switch.
+
+Each link renders only when its `SiteConfig` URL is set, so a surface opts a link in or out purely by whether it carries that URL — there is no per-link prop. Every left link points at another origin, so all three open in a new tab and carry an outbound arrow. The `actions` slot is for things the standard set cannot express: `apps/docs` puts its search trigger there. `apps/www` and `apps/demo` pass nothing.
+
+Below `40rem` the three groups can no longer share a line, so the text links wrap to their own row under the brand and the header grows to hold them (`--shell-header-height` is a minimum, not a fixed height). A surface that keys layout off the header height — `apps/docs` does, for `scroll-padding-top` — raises its own value at that breakpoint.
 
 ## Layout width
 
@@ -48,4 +56,4 @@ An app consuming the shell must:
 
 ## Theme
 
-One `localStorage` key, `codenhub-theme`, shared by name across the surfaces (each origin has its own storage). The inline bootstrap sets `data-theme` before first paint; the deferred script wires the toggle and writes the key. A surface that wants a theme package later swaps the two scripts in `base-layout.astro` and nothing else.
+One `localStorage` key, `codenhub-theme`, shared by name across the surfaces (each origin has its own storage). The inline bootstrap sets `data-theme` before first paint; the deferred script wires the switch, mirrors the active theme onto its `role="switch"` `aria-checked`, and writes the key. The switch itself is a sliding pill (`theme-toggle.astro`) whose knob carries the icon of the theme in effect. A surface that wants a theme package later swaps the two scripts in `base-layout.astro` and nothing else.

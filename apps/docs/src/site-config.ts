@@ -7,4 +7,5 @@ export const siteConfig: SiteConfig = {
   githubUrl: "https://github.com/codenhub/codenhub",
   wwwUrl: "https://codenhub.dev",
   demoUrl: "https://demo.codenhub.dev",
+  npmUrl: "https://www.npmjs.com/org/codenhub",
 };

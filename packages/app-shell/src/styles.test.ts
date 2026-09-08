@@ -32,6 +32,14 @@ describe("app-shell chrome stylesheet", () => {
   it("hides the resting theme icon at a specificity that clears the icon base rule", () => {
     // `@codenhub/icons` emits `i[class^="ic-"] { display: … }` after this sheet
     // through `virtual:icons.css`, so the hide rule needs two classes to win.
-    expect(styles).toContain(".shell-action .shell-theme-icon-sun {\n  display: none;\n}");
+    expect(styles).toContain(".shell-theme-switch .shell-theme-icon-sun {\n  display: none;\n}");
+  });
+
+  it("wraps the nav links onto their own row on a narrow header", () => {
+    const query = styles.match(/@media \(max-width: 40rem\) \{([\s\S]*?)\n\}/)?.[1];
+
+    expect(query).toContain(".shell-nav {");
+    expect(query).toContain("order: 3");
+    expect(query).toContain("width: 100%");
   });
 });
