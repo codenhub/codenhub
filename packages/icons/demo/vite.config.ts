@@ -10,6 +10,11 @@ import lucide from "../data/lucide/icons.json" with { type: "json" };
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
+  /* `apps/demo` mounts this build at `/icons/`, the package directory name,
+     per the URL scheme in `docs/specs/packages-demo.md`. Setting it here rather
+     than passing `--base` from the aggregator is what keeps the built asset
+     URLs and `import.meta.env.BASE_URL` agreeing in dev and in a build. */
+  base: "/icons/",
   root: resolve(__dirname, "."),
   plugins: [
     viteIcons({
