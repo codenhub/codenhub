@@ -73,7 +73,7 @@ Both lines are required, and this one is specific to Astro. Everywhere else the 
 
 The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are only discovered through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
 
-Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box, and in an Astro host it is not reported: the plugin's unresolved-class warning is raised from the same hook Astro does not call, so the build stays green.
+Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box. CSS mode reports nothing when that happens — in any host, not only in Astro — so the build stays green and the gap is visible only on the page. Inline SVG mode does warn, naming the class and the file.
 
 `mode: "svg"` rewrites `<i class="ic-...">` tags only in the auto-scanned file types, so it does not transform `.astro` templates. `content` does not change that — it widens which files are scanned for class names, not which are rewritten. Use CSS mode (the default) with Astro.
 
