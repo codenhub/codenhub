@@ -427,15 +427,38 @@ function splitAstroFrontmatter(source: string): { frontmatter: string; template:
  * rule breaks the other half, and skipping the frontmatter is worse than it
  * sounds: svg mode emits no stylesheet, so a tag left behind there is not an
  * icon delivered another way, it is a blank element.
+ *
+ * A `<script>` in the template is JavaScript too and is treated as such. An icon
+ * tag written inside a string in a template expression is not: `{cond && <i
+ * class="ic-x" />}` holds markup rather than a string, so telling the two apart
+ * needs a parser rather than a split, and treating either as the other breaks it.
  */
+function replaceIconTagsInTemplate(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
+  // A `<script>` body is JavaScript sitting in the middle of markup, so it takes
+  // the frontmatter's rule rather than the template's. Only the body does: the
+  // opening tag's own attributes carry quotes that would derail the scan for the
+  // string enclosing a match.
+  const scriptRegion = /(<script\b[^>]*>)([\s\S]*?)(<\/script>)/gi;
+  const markup = (text: string): string => replaceIconTagsWithSvg(text, registry, { ...options, isJsContext: false });
+
+  let result = "";
+  let lastIndex = 0;
+  for (const match of source.matchAll(scriptRegion)) {
+    const [region, openTag, body, closeTag] = match;
+    result += markup(source.slice(lastIndex, match.index));
+    result += openTag + replaceIconTagsWithSvg(body, registry, { ...options, isJsContext: true }) + closeTag;
+    lastIndex = match.index + region.length;
+  }
+  return result + markup(source.slice(lastIndex));
+}
+
 function replaceIconTagsInAstro(source: string, registry: IconRegistry, options: ReplaceIconTagsOptions): string {
   const parts = splitAstroFrontmatter(source);
   if (parts === undefined) {
-    return replaceIconTagsWithSvg(source, registry, { ...options, isJsContext: false });
+    return replaceIconTagsInTemplate(source, registry, options);
   }
   const frontmatter = replaceIconTagsWithSvg(parts.frontmatter, registry, { ...options, isJsContext: true });
-  const template = replaceIconTagsWithSvg(parts.template, registry, { ...options, isJsContext: false });
-  return `${frontmatter}${template}`;
+  return `${frontmatter}${replaceIconTagsInTemplate(parts.template, registry, options)}`;
 }
 
 /**

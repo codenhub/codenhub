@@ -376,6 +376,48 @@ describe("viteIcons in svg mode", () => {
     expect(result?.code).not.toContain('\\"');
   });
 
+  it("escapes an icon tag inside an .astro template script block", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = ["---", "---", "<script>", '  el.innerHTML = "<i class=\\"ic-user\\"></i>";', "</script>"].join(
+      "\n",
+    );
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("leaves template markup unescaped while escaping a script beside it", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    const source = [
+      "---",
+      "---",
+      '<i class="ic-x"></i>',
+      "<script>",
+      '  el.innerHTML = "<i class=\\"ic-user\\"></i>";',
+      "</script>",
+    ].join("\n");
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
+  it("keeps a script tag's own attributes out of the JavaScript it escapes", () => {
+    const { transform } = createPlugin({ mode: "svg" });
+
+    // The opening tag carries quotes of its own. Handing them to the scan that
+    // looks for the string around a match would make it read the body wrong.
+    const source = ['<script type="module">', '  el.innerHTML = "<i class=\\"ic-user\\"></i>";', "</script>"].join(
+      "\n",
+    );
+    const result = transform(source, "index.astro");
+
+    expect(result?.code).toContain('<script type="module">');
+    expect(result?.code).toContain('<svg xmlns=\\"http://www.w3.org/2000/svg\\"');
+  });
+
   it("warns about an icon class it does not rewrite in an .astro file", () => {
     const { generateBundle, transform } = createPlugin({ mode: "svg" });
     const { context, warnings } = createBundleContext();
