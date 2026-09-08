@@ -71,6 +71,7 @@ const THEME_STORAGE_KEY = "codenhub-theme";
         }
         const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
         const next = current === "dark" ? "light" : "dark";
+        themeToggle.setAttribute("aria-checked", String(current === "dark"));
         themeToggle.setAttribute("aria-label", `Switch to ${next} theme`);
         themeToggle.title = `Switch to ${next} theme`;
       };

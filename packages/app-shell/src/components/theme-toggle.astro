@@ -1,11 +1,29 @@
 ---
 /**
- * Light/dark toggle. The button swaps which icon shows by the root
- * `data-theme`; `base-layout.astro` owns the click handler and persistence.
+ * Light/dark switch. The button is a 44px hit target matching the header's
+ * other actions; the pill inside is the visual. The knob slides by the root
+ * `data-theme`; the click handler and persistence live in `base-layout.astro`,
+ * which also mirrors the current theme onto `aria-checked` and the label.
+ *
+ * `aria-checked` ships as `false` (the light-theme resting state) so the switch
+ * is never announced without a state; the deferred script in `base-layout.astro`
+ * corrects it to the active theme, which the inline head bootstrap has already
+ * resolved before first paint.
  */
 ---
 
-<button aria-label="Switch theme" class="shell-action" data-theme-toggle type="button">
-  <i aria-hidden="true" class="ic-lucide-moon shell-action-icon shell-theme-icon-moon"></i>
-  <i aria-hidden="true" class="ic-lucide-sun shell-action-icon shell-theme-icon-sun"></i>
+<button
+  aria-checked="false"
+  aria-label="Switch theme"
+  class="shell-theme-switch"
+  data-theme-toggle
+  role="switch"
+  type="button"
+>
+  <span class="shell-theme-switch-track">
+    <span class="shell-theme-switch-knob">
+      <i aria-hidden="true" class="ic-lucide-moon shell-theme-icon shell-theme-icon-moon"></i>
+      <i aria-hidden="true" class="ic-lucide-sun shell-theme-icon shell-theme-icon-sun"></i>
+    </span>
+  </span>
 </button>

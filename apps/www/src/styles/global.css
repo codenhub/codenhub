@@ -101,7 +101,7 @@
 .packages-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem 1.5rem;
   margin-bottom: 2rem;
@@ -109,13 +109,6 @@
 
 .packages-toolbar h2 {
   margin: 0;
-}
-
-.packages-lede {
-  margin: 0.5rem 0 0;
-  max-width: 40rem;
-  color: var(--color-text-secondary);
-  line-height: 1.7;
 }
 
 .packages-toolbar-controls {

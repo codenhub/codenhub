@@ -2,10 +2,6 @@
   @apply px-(--layout-gutter) py-10;
 }
 
-.catalog-lede {
-  @apply text-text-secondary mt-3 mb-10 max-w-2xl leading-7;
-}
-
 .not-found-status {
   @apply text-text-secondary text-label font-bold;
 }
@@ -19,15 +15,11 @@
 }
 
 .packages-toolbar {
-  @apply mb-10 flex flex-wrap items-start justify-between gap-x-6 gap-y-4;
+  @apply mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-4;
 }
 
 .packages-toolbar h1 {
   @apply text-title-lg;
-}
-
-.packages-toolbar .catalog-lede {
-  @apply mt-2 mb-0;
 }
 
 .packages-toolbar-controls {

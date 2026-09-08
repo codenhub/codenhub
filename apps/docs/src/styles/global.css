@@ -25,6 +25,14 @@ html {
   scroll-padding-top: calc(var(--docs-header-height) + 1.5rem);
 }
 
+/* At this width the shared header wraps its nav links onto a second row, so it
+   stands taller; keep in-page anchor jumps clearing the sticky header. */
+@media (max-width: 40rem) {
+  :root {
+    --docs-header-height: calc(var(--shell-header-height, 4rem) + 3rem);
+  }
+}
+
 .rail-title {
   @apply text-label text-text mb-3 font-bold;
 }

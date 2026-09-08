@@ -3,8 +3,11 @@
  *
  * `siteUrl` is the canonical origin of the surface itself and is what
  * `robots.txt` and `sitemap.xml` build their absolute URLs from. The remaining
- * URLs are cross-links the shell chrome renders; a surface omits the one that
- * points back at itself.
+ * URLs are the shell header's standard links; each renders only when it is set,
+ * so a surface opts a link in or out purely by whether it carries the URL — it
+ * omits the one that points back at itself, and sets the rest. `wwwUrl`,
+ * `docsUrl`, and `demoUrl` are the left-side "Hub", "Documentation", and "Demo"
+ * links; `npmUrl` is the npm mark beside GitHub on the right.
  */
 export interface SiteConfig {
   /** Canonical origin of this surface, without a trailing slash. */
@@ -15,12 +18,12 @@ export interface SiteConfig {
   description: string;
   /** Repository URL for the header's source link. */
   githubUrl: string;
-  /** Documentation site origin, when this surface links out to it. */
+  /** Documentation site origin. Renders the header's "Documentation" link. */
   docsUrl?: string;
-  /** Demo site origin, when this surface links out to it. */
+  /** Demo site origin. Renders the header's "Demo" link. */
   demoUrl?: string;
-  /** Site index origin, when this surface links out to it. */
+  /** Site index origin. Renders the header's "Hub" link. */
   wwwUrl?: string;
-  /** npm organization page, when this surface links out to it. */
+  /** npm organization page. Renders the header's npm mark. */
   npmUrl?: string;
 }

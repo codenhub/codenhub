@@ -32,6 +32,16 @@ describe("app-shell chrome stylesheet", () => {
   it("hides the resting theme icon at a specificity that clears the icon base rule", () => {
     // `@codenhub/icons` emits `i[class^="ic-"] { display: … }` after this sheet
     // through `virtual:icons.css`, so the hide rule needs two classes to win.
-    expect(styles).toContain(".shell-action .shell-theme-icon-sun {\n  display: none;\n}");
+    expect(styles).toContain(".shell-theme-switch .shell-theme-icon-sun {\n  display: none;\n}");
+  });
+
+  it("drops the actions to their own row on a narrow header, keeping DOM order visible", () => {
+    const query = styles.match(/@media \(max-width: 40rem\) \{([\s\S]*?)\n\}/)?.[1];
+
+    // The links stay on the brand's row and the actions wrap below, so the
+    // rendered order still matches the DOM order (brand, links, actions) and
+    // keyboard focus follows it.
+    expect(query).toContain("flex-wrap: wrap");
+    expect(query).toMatch(/\.shell-actions \{[^}]*width: 100%/s);
   });
 });
