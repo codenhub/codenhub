@@ -105,6 +105,31 @@ describe("curateLlmsFullDocuments", () => {
     );
   });
 
+  it("shouldOnlyMatchSameDirectorySiblingLinksNotCrossDirectoryOrExternalOnes", () => {
+    const documents = [
+      {
+        body: [
+          "# Changelog",
+          "",
+          "- [external](https://example.com/1.0.0.md)",
+          "- [parent](../guides/1.0.0.md)",
+          "- [nested](archive/1.0.0.md)",
+          "- [root](/1.0.0.md)",
+          "- [missing](2.0.0.md)",
+          "- [real](1.0.0.md)",
+          "",
+        ].join("\n"),
+        curated: true,
+        sourcePath: "docs/changelog/index.md",
+      },
+      { body: "", sourcePath: "docs/changelog/1.0.0.md" },
+    ];
+
+    expect(curateLlmsFullDocuments(documents).map((document) => document.sourcePath)).toEqual([
+      "docs/changelog/1.0.0.md",
+    ]);
+  });
+
   it("shouldPublishNothingFromACuratedFolderWhoseIndexLinksNoSiblings", () => {
     const documents = [
       { body: "# Changelog\n\nNothing yet.\n", curated: true, sourcePath: "docs/changelog/index.md" },

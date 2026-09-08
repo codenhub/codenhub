@@ -51,15 +51,20 @@ export function orderLlmsFullDocuments(documents: readonly LlmsFullDocument[]): 
   return orderDocumentSections(placeable).flatMap((section) => section.documents);
 }
 
-/** Reduces a link target to the sibling filename it points at, dropping `./`, a query, or a fragment. */
-function linkedSiblingName(target: string): string {
-  return (
-    target
-      .replace(/^\.\//, "")
-      .replace(/[?#].*$/, "")
-      .split("/")
-      .at(-1) ?? ""
-  );
+/** The bare filename of a `docs/` path — the key a curated-index link has to match. */
+function siblingFileName(sourcePath: string): string {
+  return sourcePath.split("/").at(-1) ?? "";
+}
+
+/**
+ * Normalizes a curated-index link target for comparison against a sibling
+ * filename: only a leading `./`, a query, and a fragment are stripped. A target
+ * that still holds a slash — `../x`, `sub/x`, `/x`, `https://…/x` — keeps it and
+ * so never matches a bare sibling name, the same rule `folder-curation.ts`
+ * applies on the documentation site.
+ */
+function normalizeCuratedLinkTarget(target: string): string {
+  return target.replace(/^\.\//, "").replace(/[?#].*$/, "");
 }
 
 /**
@@ -105,12 +110,12 @@ export function curateLlmsFullDocuments(documents: readonly LlmsFullDocument[]):
     const siblingsByName = new Map(
       bucket
         .filter((document) => document !== indexDocument)
-        .map((document) => [linkedSiblingName(document.sourcePath), document]),
+        .map((document) => [siblingFileName(document.sourcePath), document]),
     );
     const linkedNames = new Set<string>();
     for (const pattern of [INLINE_TARGET, DEFINITION_TARGET]) {
       for (const match of indexDocument.body.matchAll(pattern)) {
-        linkedNames.add(linkedSiblingName(match.groups?.target ?? ""));
+        linkedNames.add(normalizeCuratedLinkTarget(match.groups?.target ?? ""));
       }
     }
 
