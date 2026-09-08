@@ -7,6 +7,10 @@ import { viteIcons } from "@codenhub/icons/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 
+/* `apps/demo` mounts this build at `/styles/`, the package directory name, per
+   the URL scheme in `docs/specs/packages-demo.md`. */
+const BASE = "/styles/";
+
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
@@ -139,6 +143,9 @@ function demoChrome(): Plugin {
 }
 
 export default defineConfig({
+  /* `chrome.ts` reads `import.meta.env.BASE_URL`, which Vite fills from this,
+     so the stylesheet URLs it builds follow without a second source of truth. */
+  base: BASE,
   root: playgroundRoot,
   publicDir: resolve(__dirname, "public"),
   plugins: [
