@@ -7,7 +7,7 @@ import { siteConfig } from "./src/site-config";
 
 describe("Astro configuration", () => {
   it("sets the canonical site used by robots.txt and sitemap.xml", () => {
-    expect(config.site).toBe(siteConfig.baseUrl);
+    expect(config.site).toBe(siteConfig.siteUrl);
   });
 
   it("installs the package demo aggregation integrations", () => {
@@ -15,6 +15,14 @@ describe("Astro configuration", () => {
       expect.objectContaining({ name: "codenhub-package-demos" }),
       expect.objectContaining({ name: "codenhub-package-demos-dev-proxy" }),
     ]);
+  });
+
+  it("delivers icons in CSS mode so the shared shell's markup resolves", () => {
+    const iconsPlugin = (config.vite?.plugins as { name?: string }[] | undefined)?.find(
+      (plugin) => plugin?.name === "codenhub-icons",
+    );
+
+    expect(iconsPlugin).toBeDefined();
   });
 
   it("matches demos only at the depth supported by the aggregator", () => {

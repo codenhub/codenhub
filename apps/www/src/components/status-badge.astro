@@ -19,9 +19,9 @@ const badge = status === "active" ? undefined : badges[status];
 
 {
   badge !== undefined && (
-    <span class:list={["badge", "soft", "status-badge", badge.tone]} title={badge.label}>
+    <span class:list={["badge", "soft", "status-badge", badge.tone]}>
       <i aria-hidden="true" class:list={[badge.icon, "status-badge-icon"]} />
-      <span class="sr-only">{badge.label}</span>
+      {badge.label}
     </span>
   )
 }

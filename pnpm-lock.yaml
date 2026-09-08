@@ -95,6 +95,9 @@ importers:
 
   apps/demo:
     devDependencies:
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../packages/app-shell
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../../packages/icons
@@ -131,6 +134,12 @@ importers:
       '@astrojs/markdown-remark':
         specifier: 7.2.1
         version: 7.2.1
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../packages/app-shell
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@codenhub/kbd':
         specifier: workspace:*
         version: link:../../packages/kbd

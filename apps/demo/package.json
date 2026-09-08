@@ -14,6 +14,7 @@
     "typecheck": "astro sync && tsc --noEmit"
   },
   "devDependencies": {
+    "@codenhub/app-shell": "workspace:*",
     "@codenhub/icons": "workspace:*",
     "@codenhub/icons-demo": "workspace:*",
     "@codenhub/styles": "workspace:*",
