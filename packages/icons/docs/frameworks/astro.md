@@ -69,11 +69,11 @@ import "virtual:icons.css";
 ---
 ```
 
-Both lines are required, and this one is specific to Astro. Everywhere else the plugin injects the generated stylesheet into the HTML itself; Astro renders its pages at `astro:build:done` rather than through Vite's HTML entry pipeline, so that injection never runs and the import is what puts the mask rules on the page. Without it the build succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as an empty box.
+Both lines are required, and this one is specific to Astro. Everywhere else the plugin injects the generated stylesheet into the HTML itself, from Vite's `transformIndexHtml` hook. A production `astro build` renders pages through Astro's own pipeline rather than as Vite HTML entries and does not put them through that hook, so the injection never reaches them and this import is what puts the mask rules on the page. Without it the build still succeeds, `@import "@codenhub/icons"` still supplies the base rules, and every icon renders as an empty box.
 
 The `content` entry is required, not optional. The plugin auto-scans the files Vite transforms for `.html`, `.js(x)`, `.ts(x)`, `.vue`, `.svelte`, and stylesheets — `.astro` is not in that set, so classes written in `.astro`, `.md`, or `.mdx` templates are only discovered through `content`. List those globs and keep `@import "@codenhub/icons";` in a stylesheet for the base rules.
 
-Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box, and in an Astro host it is not reported: the plugin's unresolved-class warning is raised from the same hooks Astro does not run, so the build stays green.
+Check that every class you write resolves in a family you registered. An icon name the registry cannot find is left without a rule and renders as an empty box, and in an Astro host it is not reported: the plugin's unresolved-class warning is raised from the same hook Astro does not call, so the build stays green.
 
 `mode: "svg"` rewrites `<i class="ic-...">` tags only in the auto-scanned file types, so it does not transform `.astro` templates. `content` does not change that — it widens which files are scanned for class names, not which are rewritten. Use CSS mode (the default) with Astro.
 
