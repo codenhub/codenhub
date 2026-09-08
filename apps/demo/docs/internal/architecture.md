@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-07
+last_updated: 2026-09-08
 scope: apps/demo's own architecture — this app's implementation of the contract in docs/specs/packages-demo.md.
 ---
 
@@ -10,7 +10,13 @@ scope: apps/demo's own architecture — this app's implementation of the contrac
 
 ## Shell
 
-`apps/demo` is an Astro app, matching `apps/docs` rather than introducing a second meta-framework. Its own surface is small — an index linking to every demo — so this is about reusing tooling already paid for in this repository, not about needing Astro's features specifically. `@codenhub/components` is not stable enough to build on yet, so the shell does not depend on it; revisit this once that package settles.
+`apps/demo` is an Astro app, matching `apps/docs` and `apps/www` rather than introducing a second meta-framework. Its own surface is small — an index linking to every demo — so this is about reusing tooling already paid for in this repository, not about needing Astro's features specifically.
+
+The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bodies come from `@codenhub/app-shell`, the private package the three deploy surfaces share so their chrome reads identically. `apps/demo/src/layouts/base-layout.astro` is a thin wrapper that supplies this surface's `SiteConfig` and adds the documentation link to the header's `actions` slot; everything else in `src/styles/global.css` is this app's own index-page styling. `@codenhub/components` is still not stable enough to build the shell on; revisit that once the package settles.
+
+## Icons
+
+`@codenhub/icons/vite` runs in **CSS mode**, not SVG mode. The shell's `<i class="ic-…">` markup resolves under `node_modules`, which the plugin's per-file scan skips in either mode; CSS mode picks those classes up through a `content` glob instead and serves mask rules that apply to any element, where SVG mode would leave them unrendered. `virtual:icons.css`, imported by the shell's base layout, carries the base rules and the generated masks, so `src/styles/global.css` must not also `@import "@codenhub/icons"`. The aggregated package demos each bring their own icon handling and are untouched by this.
 
 ## Build
 

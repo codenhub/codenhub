@@ -76,16 +76,6 @@ export interface PublicPackage {
   status: PackageStatus;
 }
 
-/** A catalog summary plus the outbound links the landing grid renders. */
-export interface CatalogPackage extends PublicPackageSummary {
-  /** GitHub URL from the package's manifest `homepage`, when it points there. */
-  githubUrl?: string;
-  /** npmjs.com URL, when the package is published. */
-  npmUrl?: string;
-  /** Documentation slug, when the package publishes docs. */
-  slug?: string;
-}
-
 const manifestModules = import.meta.glob<unknown>("../../../../packages/**/package.json", {
   eager: true,
   import: "default",
@@ -161,36 +151,12 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 
 const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
 
-function readString(manifest: unknown, key: string): string | undefined {
-  if (typeof manifest !== "object" || manifest === null) {
-    return undefined;
-  }
-  const value = (manifest as Record<string, unknown>)[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function isPublished(manifest: unknown): boolean {
-  return typeof manifest === "object" && manifest !== null && (manifest as Record<string, unknown>).private === false;
-}
-
-const manifestsByName = new Map<string, unknown>(
-  Object.values(manifestModules).flatMap((manifest) => {
-    const name = readString(manifest, "name");
-    return name === undefined ? [] : [[name, manifest] as const];
-  }),
-);
-
 export const packages = await loadCatalog();
+
+/**
+ * Catalog summaries for the landing page: every published package, listed or
+ * not, with its label, description, status, and documentation route. The rich
+ * cross-linked catalog lives on `apps/www`; this list only routes into the docs
+ * site itself.
+ */
 export const publicPackages: PublicPackageSummary[] = buildPublicPackageSummaries(manifestModules, packageDefinitions);
-
-export const catalogPackages: CatalogPackage[] = publicPackages.map((entry) => {
-  const manifest = manifestsByName.get(entry.name);
-  const homepage = readString(manifest, "homepage");
-
-  return {
-    ...entry,
-    githubUrl: homepage !== undefined && homepage.startsWith("https://github.com/") ? homepage : undefined,
-    npmUrl: isPublished(manifest) ? `https://www.npmjs.com/package/${entry.name}` : undefined,
-    slug: entry.documentationRoute?.replace(/^\/|\/$/g, ""),
-  };
-});

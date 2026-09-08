@@ -1,15 +1,10 @@
-export interface SiteConfig {
-  baseUrl: string;
-  description: string;
-  docsUrl: string;
-  githubUrl: string;
-  title: string;
-}
+import type { SiteConfig } from "@codenhub/app-shell/site-config";
 
 export const siteConfig: SiteConfig = {
-  baseUrl: "https://demo.codenhub.dev",
-  description: "Live, deployed demos for every CodenHub package that ships one.",
-  docsUrl: "https://docs.codenhub.dev",
-  githubUrl: "https://github.com/codenhub/codenhub",
+  siteUrl: "https://demo.codenhub.dev",
   title: "CodenHub Demos",
+  description: "Live, deployed demos for every CodenHub package that ships one.",
+  githubUrl: "https://github.com/codenhub/codenhub",
+  docsUrl: "https://docs.codenhub.dev",
+  wwwUrl: "https://codenhub.dev",
 };

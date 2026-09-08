@@ -1,19 +1,11 @@
 import { parsePackageMetadata, type PackageStatus } from "@codenhub/tools/documentation";
 
-import { siteConfig } from "../site-config";
-
 /** One package with a mounted demo, ready to present on the landing page. */
 export interface DemoPackage {
   /** Catalog description, falling back to the package's own `description`. */
   description?: string;
-  /** `docs.codenhub.dev` route for the package's public documentation, when it declares any. */
-  docsUrl?: string;
-  /** GitHub URL for the package's own directory, from its manifest `homepage`. */
-  githubUrl?: string;
   /** Human-readable package label. */
   label: string;
-  /** npmjs.com URL, when the package is published. */
-  npmUrl?: string;
   /** Path segment this demo is mounted under. */
   slug: string;
   /** Documentation status, when the package declares `codenhub.docs`. */
@@ -22,9 +14,7 @@ export interface DemoPackage {
 
 interface PackageManifest {
   description?: unknown;
-  homepage?: unknown;
   name?: unknown;
-  private?: unknown;
 }
 
 const DEMO_MANIFEST_PATTERN = /\/packages\/([^/]+)\/demo\/package\.json$/;
@@ -55,18 +45,6 @@ const packageManifestsBySlug = new Map<string, PackageManifest>(
   }),
 );
 
-function toGithubUrl(manifest: PackageManifest | undefined): string | undefined {
-  return typeof manifest?.homepage === "string" && manifest.homepage.startsWith("https://github.com/")
-    ? manifest.homepage
-    : undefined;
-}
-
-function toNpmUrl(manifest: PackageManifest | undefined): string | undefined {
-  return manifest?.private === false && typeof manifest.name === "string"
-    ? `https://www.npmjs.com/package/${manifest.name}`
-    : undefined;
-}
-
 function toDescription(
   manifest: PackageManifest | undefined,
   metadataDescription: string | undefined,
@@ -93,10 +71,7 @@ export const demoPackages: DemoPackage[] = demoManifestPaths
 
     return {
       description: toDescription(manifest, metadata?.description),
-      docsUrl: metadata === null ? undefined : `${siteConfig.docsUrl}/${metadata.slug}/`,
-      githubUrl: toGithubUrl(manifest),
       label: toLabel(manifest, metadata?.label, slug),
-      npmUrl: toNpmUrl(manifest),
       slug,
       status: metadata?.status,
     };

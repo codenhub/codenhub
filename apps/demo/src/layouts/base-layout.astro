@@ -1,4 +1,6 @@
 ---
+import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -7,135 +9,19 @@ interface Props {
   title?: string;
 }
 
-const { description = siteConfig.description, title } = Astro.props;
-const pageTitle = title === undefined ? siteConfig.title : `${title} | ${siteConfig.title}`;
+const { description, title } = Astro.props;
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta content="width=device-width" name="viewport" />
-    <meta content={description} name="description" />
-    <script is:inline>
-      (() => {
-        const storageKey = "codenhub-demo-theme";
-
-        try {
-          const storedTheme = localStorage.getItem(storageKey);
-          const theme =
-            storedTheme === "light" || storedTheme === "dark"
-              ? storedTheme
-              : matchMedia("(prefers-color-scheme: dark)").matches
-                ? "dark"
-                : "light";
-
-          document.documentElement.dataset.theme = theme;
-        } catch {
-          document.documentElement.dataset.theme = matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
-        }
-      })();
-    </script>
-    <title>{pageTitle}</title>
-  </head>
-  <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
-    <header class="site-header">
-      <div class="site-header-content section-content wide">
-        <a aria-label={`${siteConfig.title} home`} class="brand" href="/">
-          <img
-            alt=""
-            aria-hidden="true"
-            class="brand-logo brand-logo-on-light"
-            height="255"
-            src="/assets/logo/logo-dark.svg"
-            width="984"
-          />
-          <img
-            alt=""
-            aria-hidden="true"
-            class="brand-logo brand-logo-on-dark"
-            height="255"
-            src="/assets/logo/logo-light.svg"
-            width="984"
-          />
-        </a>
-        <nav aria-label="Site actions" class="header-actions">
-          <a
-            aria-label="CodenHub on GitHub"
-            class="header-icon-link"
-            href={siteConfig.githubUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <i aria-hidden="true" class="ic-phosphor-github-logo ic-lg"></i>
-          </a>
-          <a
-            aria-label="CodenHub documentation"
-            class="header-icon-link"
-            href={siteConfig.docsUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <i aria-hidden="true" class="ic-lucide-book-open ic-lg"></i>
-          </a>
-          <button aria-label="Switch theme" class="theme-toggle" data-theme-toggle type="button">
-            <span class="theme-toggle-knob">
-              <svg aria-hidden="true" class="theme-icon theme-icon-moon" viewBox="0 0 24 24">
-                <path d="M20.4 15.2A9 9 0 0 1 8.8 3.6 9 9 0 1 0 20.4 15.2Z" />
-              </svg>
-              <svg aria-hidden="true" class="theme-icon theme-icon-sun" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-              </svg>
-            </span>
-          </button>
-        </nav>
-      </div>
-    </header>
-    <slot />
-    <footer class="site-footer">
-      <div class="site-footer-content section-content wide cluster between">
-        <p>&copy; <span id="footer-year"></span> Coden</p>
-        <p>Built by <a href="https://coden.agency/" target="_blank" rel="noopener noreferrer">coden</a>.</p>
-      </div>
-    </footer>
-    <script>
-      const storageKey = "codenhub-demo-theme";
-      const themeToggle = document.querySelector("[data-theme-toggle]");
-      const footerYear = document.getElementById("footer-year");
-
-      if (footerYear !== null) {
-        footerYear.textContent = String(new Date().getFullYear());
-      }
-
-      const updateThemeToggle = () => {
-        if (!(themeToggle instanceof HTMLButtonElement)) {
-          return;
-        }
-
-        const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-        const nextTheme = currentTheme === "dark" ? "light" : "dark";
-        themeToggle.setAttribute("aria-label", `Switch to ${nextTheme} theme`);
-        themeToggle.title = `Switch to ${nextTheme} theme`;
-      };
-
-      updateThemeToggle();
-
-      themeToggle?.addEventListener("click", () => {
-        const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-        document.documentElement.dataset.theme = nextTheme;
-
-        try {
-          localStorage.setItem(storageKey, nextTheme);
-        } catch {
-          // Theme still applies for this page when storage is unavailable.
-        }
-
-        updateThemeToggle();
-      });
-    </script>
-  </body>
-</html>
+<ShellLayout description={description} siteConfig={siteConfig} title={title}>
+  <a
+    aria-label="CodenHub documentation"
+    class="shell-action"
+    href={siteConfig.docsUrl}
+    rel="noopener noreferrer"
+    slot="actions"
+    target="_blank"
+  >
+    <i aria-hidden="true" class="ic-lucide-book-open shell-action-icon"></i>
+  </a>
+  <slot />
+</ShellLayout>

@@ -1,23 +1,27 @@
 ---
+import type { PublicPackageSummary } from "@codenhub/tools/documentation";
+
 import StatusBadge from "../components/status-badge.astro";
-import { catalogPackages, type CatalogPackage } from "../lib/catalog";
+import { publicPackages } from "../lib/catalog";
 import BaseLayout from "../layouts/base-layout.astro";
 
-function toSearchHaystack(entry: CatalogPackage): string {
-  return `${entry.label} ${entry.description ?? ""}`.toLowerCase();
-}
+const documentedPackages = publicPackages.filter(
+  (entry): entry is PublicPackageSummary & { documentationRoute: string } => entry.documentationRoute !== undefined,
+);
 
-const documentedCount = catalogPackages.filter((entry) => entry.documentationRoute !== undefined).length;
+function toSearchHaystack(entry: PublicPackageSummary): string {
+  return `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
+}
 ---
 
-<BaseLayout description="All public packages in the CodenHub monorepo." title="Packages">
-  <main aria-labelledby="package-catalog-title" class="section-content wide px-(--layout-gutter) py-10" id="main-content">
+<BaseLayout description="Every documented package in the CodenHub monorepo." title="Packages">
+  <main aria-labelledby="package-catalog-title" class="section-content wide catalog" id="main-content">
     <div class="packages-toolbar">
       <div>
-        <h1 class="text-title-lg" id="package-catalog-title">Packages</h1>
+        <h1 id="package-catalog-title">Packages</h1>
         <p class="catalog-lede">
-          {documentedCount} documented {documentedCount === 1 ? "package" : "packages"}. Every one publishes its own
-          tokens, guides, and API reference.
+          {documentedPackages.length} documented {documentedPackages.length === 1 ? "package" : "packages"}. The full
+          index, with source and release links, is at <a href="https://codenhub.dev">codenhub.dev</a>.
         </p>
       </div>
       <div class="packages-toolbar-controls">
@@ -36,9 +40,8 @@ const documentedCount = catalogPackages.filter((entry) => entry.documentationRou
           id="package-sort"
           type="button"
         >
-          <svg aria-hidden="true" class="package-sort-icon" viewBox="0 0 24 24">
-            <path d="M11 5h10M11 9h6M11 13h3M4 17l3 3 3-3M7 4v16" />
-          </svg>
+          <i aria-hidden="true" class="ic-lucide-arrow-up-narrow-wide" data-sort-icon="asc"></i>
+          <i aria-hidden="true" class="ic-lucide-arrow-down-wide-narrow" data-sort-icon="desc" hidden></i>
           <span data-sort-label>A–Z</span>
         </button>
       </div>
@@ -46,68 +49,22 @@ const documentedCount = catalogPackages.filter((entry) => entry.documentationRou
 
     <div class="auto-grid package-grid" id="package-grid" role="list">
       {
-        catalogPackages.map((entry) =>
-          entry.documentationRoute === undefined ? (
-            <article
-              class="package-card package-card-pending"
-              data-label={entry.label}
-              data-search={toSearchHaystack(entry)}
-              role="listitem"
-            >
-              <div class="package-card-heading">
-                <h2>{entry.label}</h2>
-                <span class="badge secondary soft">Docs pending</span>
-              </div>
-              <p>{entry.description ?? "Public package documentation is not available yet."}</p>
-            </article>
-          ) : (
-            <div
-              class="package-card"
-              data-label={entry.label}
-              data-search={toSearchHaystack(entry)}
-              role="listitem"
-            >
-              <a class="package-card-open" href={entry.documentationRoute}>
-                <div class="package-card-heading">
-                  <h2>{entry.label}</h2>
-                  {entry.status !== undefined && <StatusBadge status={entry.status} />}
-                </div>
-                <p>{entry.description ?? "Package documentation and reference."}</p>
-              </a>
-              <div class="package-card-links">
-                {entry.githubUrl !== undefined && (
-                    <a
-                      aria-label={`${entry.label} on GitHub`}
-                      class="package-card-link"
-                      href={entry.githubUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 16 16">
-                        <path d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z" />
-                      </svg>
-                    </a>
-                  )}
-                  {entry.npmUrl !== undefined && (
-                    <a
-                      aria-label={`${entry.label} on npm`}
-                      class="package-card-link"
-                      href={entry.npmUrl}
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <svg aria-hidden="true" viewBox="0 0 24 24">
-                        <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
-                      </svg>
-                    </a>
-                  )}
-                <svg aria-hidden="true" class="package-card-arrow" viewBox="0 0 24 24">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </div>
+        documentedPackages.map((entry) => (
+          <a
+            class="package-card"
+            data-label={entry.label}
+            data-search={toSearchHaystack(entry)}
+            href={entry.documentationRoute}
+            role="listitem"
+          >
+            <div class="package-card-heading">
+              <h2>{entry.label}</h2>
+              {entry.status !== undefined && <StatusBadge status={entry.status} />}
             </div>
-          ),
-        )
+            <p>{entry.description ?? "Package documentation and reference."}</p>
+            <i aria-hidden="true" class="ic-lucide-arrow-right package-card-arrow" />
+          </a>
+        ))
       }
     </div>
     <p class="packages-empty" data-empty-filtered hidden>No packages match your search.</p>
@@ -172,6 +129,10 @@ const documentedCount = catalogPackages.filter((entry) => entry.documentationRou
     );
     if (sortLabel instanceof HTMLElement) {
       sortLabel.textContent = nextDirection === "desc" ? "Z–A" : "A–Z";
+    }
+
+    for (const icon of sortButton.querySelectorAll<HTMLElement>("[data-sort-icon]")) {
+      icon.hidden = icon.dataset.sortIcon !== nextDirection;
     }
 
     applySort();
