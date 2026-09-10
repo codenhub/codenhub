@@ -1,0 +1,10 @@
+/* Playground-only. `@codenhub/styles` ships no `svg` rule -- glyph dimensions
+   are the consumer's job everywhere. It gets away with an unsized `<svg>` in a
+   normal `.btn.icon` only because the `min-width` floor holds the box open; at
+   `.p-xs`/`.dense` that floor is gone, so the glyph needs a size here or it
+   collapses to nothing. A real consumer sizes it in their own stylesheet. */
+.btn.icon.p-xs > svg,
+.btn.icon.dense > svg {
+  width: 1rem;
+  height: 1rem;
+}
