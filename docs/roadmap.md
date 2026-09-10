@@ -13,7 +13,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 ## Current Focus
 
 - **Public surface stabilization.** `apps/www` is the site index at `codenhub.dev` — the canonical package list and the entry point to docs, demos, and source. `@codenhub/app-shell` is the private package the three deploy surfaces share so their chrome is identical, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list that routes into their own surface.
-- **`@codenhub/styles` `0.1.0` release.** Model, machine-checked contract, and the shipped aesthetics are in place. Release conditions are in `packages/styles/docs/internal/roadmap.md`.
+- **`@codenhub/styles` post-`0.1` evaluation.** `0.1.0` and `0.1.1` are published, `0.1.1` through the tag workflow. The model, machine-checked contract, and shipped aesthetics are in place; the focus is now a stress-test pass to find what to fix, add, or drop before the surface grows. Direction is in `packages/styles/docs/internal/roadmap.md`.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
 - **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error`. Next: opt in packages with different shapes (`icons`, `kbd`, `router`, `validation`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
 

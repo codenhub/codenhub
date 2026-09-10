@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-21
+last_updated: 2026-09-10
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,27 +18,21 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.1.0` stabilization.** The public docs have had their consumer-focused, task-oriented reformulation. What remains is closing the current review and turning any outstanding problem findings into a clear, finite release path.
+**Exercising the shipped model.** `0.1.0` and `0.1.1` are on npm, `0.1.1` published from its tag through the repository's trusted-publishing workflow. The model, the machine-checked contract, and the shipped aesthetics are all in place; what is not yet known is how they hold up in anger. The near-term work is a deliberate stress-test -- build real screens with the package and record where it is strong, where it fights back, what a consumer reaches for and cannot find, and what ships but goes unused.
 
 ## Planned
 
-`0.1.0` is complete when all of these outcomes hold:
-
-- **Internal sources are stable**: [Model](./model.md), `registry.json`, the test strategy, roadmap, and applicable package exceptions agree on the current contract and release direction.
-- **The current review is closed**: every review thread and finding on the release PR is resolved, or explicitly dismissed after the relevant behavior or document has been verified. This roadmap does not duplicate that finding list.
-- **Public docs are final**: README and public docs satisfy `docs/specs/packages-readme.md` and `docs/specs/packages-documentation.md`, cover every `package.json` export, and match current behavior. Running `pnpm generate styles` leaves all derived documentation current.
-- **Validation is clean**: `pnpm verify --changed` passes for the release candidate.
-- **The PR is merge-ready**: all required PR checks are green and the PR is mergeable with no unresolved blocking review thread or finding.
-
-Publishing is a separate gate and a repository-level one. Neither trusted publishing from CI nor a versioning and changelog workflow exists yet -- both are open items under `@codenhub` in [the repository roadmap](../../../../docs/roadmap.md) -- so `0.1.0` goes out as a manual `npm publish`, which `docs/specs/packages-lifecycle.md` allows. The jump from the published `0.0.4` carries the whole model rewrite, so the release notes are the only place a consumer can find out what moved.
+- **Stress-test pass.** Compose non-trivial, real-world screens against the published package -- forms, tables, toolbars, dialogs, a dense app shell -- under each shipped aesthetic and both themes. The output is a written findings list: friction points, missing primitives, combinations that read wrong, and classes or tokens nothing exercises.
+- **Feed findings back into the contract.** Anything the stress-test turns up that changes behavior, the token surface, or the supported class list goes through a normal versioned change: [Model](./model.md) and `registry.json` first, then the public docs, then a `docs/changelog/` entry. `hub release --cut` raises the version and scaffolds the entry; the `changelog` check makes skipping it impossible.
+- **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed.
 
 ## Later / Possible
 
-- **A primary that reads under a shade**: the shipped `.primary` is a monochrome near-black, so a chunky tile's bar under a primary button lands about 10 units of sRGB distance from the plate above it -- present, and almost invisible. The six hue intents separate cleanly. This is a palette question rather than an aesthetic one, and it is the same root as the filled-contrast item above: neither is free to move without changing what the intent looks like.
+- **A primary that reads under a shade**: the shipped `.primary` is a monochrome near-black, so a chunky tile's bar under a primary button lands about 10 units of sRGB distance from the plate above it -- present, and almost invisible. The six hue intents separate cleanly. This is a palette question rather than an aesthetic one: `.primary` cannot move without changing what it looks like everywhere it is used.
 
 - **Elevation coupled to size**: `.sm`/`.lg` already exist as the size modifier's class names; a bare `.elevation` that infers its level from a sibling `.sm`/`.lg` on the same element (`.btn.sm.elevation` for a small elevated button), with `.elevation-md` etc. as an explicit override (`.btn.sm.elevation-md`), would read naturally. Shelved rather than built: `.sm.elevation` (two classes) has higher CSS specificity than `.elevation-md` (one class), so the explicit override would lose to the implicit pairing without extra plumbing, and no other modifier in the package currently reads a sibling modifier's class to set its own default -- this would be the first. A maybe, not a target: only worth doing if a clean fix for the specificity problem turns up that does not make elevation a special case among the modifiers.
 
-- **Fixture-only playground**: `demo/` now reuses the playground pages as a branded, deployable reference, aggregated by `apps/demo`. The playground still doubles as the test-fixture surface for `tests/browser/`; trimming it to a minimal fixture set behind the demo is still open, and only worth doing once the supported surface and consumer documentation are stable, because the two would otherwise drift.
+- **Fixture-only playground**: `demo/` reuses the playground pages as a branded, deployable reference, aggregated by `apps/demo`. The playground still doubles as the test-fixture surface for `tests/browser/`. With `0.1` shipped, trimming it to a minimal fixture set behind the demo is now on the table -- but the stress-test pass above should land first, since it will move fixtures around anyway.
 
   Until then, a change to a `playground/*/index.html` page touches three consumers at once: `dev` and `debug` both `root` at `playground/`, `demo`'s Vite build rewrites those same pages (inlining `shared/playground.js` and `shared/matrix.js`, which cannot be modules because `playground.js` `document.write`s its stylesheet link; stripping the `@source` at-rules the prod CSS minifier rejects; forcing `?env=vanilla`), and `tests/browser/*.spec.ts` asserts against the `data-testid`s in the markup. So a fixture edit needs `pnpm test:browser styles` and a `pnpm --filter=@codenhub/styles-demo build` to be trusted. The cheapest first step, if this is picked up, is making `playground.js` and `matrix.js` real ES modules so `demo`'s rewrite plugin shrinks to just the chrome injection.
 
@@ -52,7 +46,7 @@ Both were costed against the current model and neither fits it. Recorded so the 
 
 - **Liquid glass**: the refraction that defines it needs an SVG filter element in the DOM, which a CSS-only package cannot ship; the specular highlight is a surface-only treatment; `clip-path: path()` rejects percentages, so the silhouette cannot scale with the box; and `corner-shape: squircle` is Chrome-only. What is reachable without those is `.glass` with a heavier blur.
 
-- **Synthwave / retro**: its signatures are palette, which [R1](./model.md#rules-for-aesthetics) bars an aesthetic from setting. The glow is `--ui-shadow-blur` scaled by elevation, and 18 of the 21 components rest at zero elevation, so it would reach three of them. `text-shadow` does not inherit into `<button>` or `<input>`, and the grid and scanline backgrounds need a painted layer `box` does not have. Shipping it would mean either breaking R1 or adding a background-image slot, and neither is worth doing before `0.1.0`.
+- **Synthwave / retro**: its signatures are palette, which [R1](./model.md#rules-for-aesthetics) bars an aesthetic from setting. The glow is `--ui-shadow-blur` scaled by elevation, and 18 of the 21 components rest at zero elevation, so it would reach three of them. `text-shadow` does not inherit into `<button>` or `<input>`, and the grid and scanline backgrounds need a painted layer `box` does not have. Shipping it would mean either breaking R1 or adding a background-image slot, and neither is worth doing until the stress-test pass shows the model needs a painted layer for something else.
 
 ## Notes
 
@@ -60,7 +54,9 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.1.0` is the next release. The package stays on `0.x` while the public contract remains young, so necessary breaking corrections stay explicit and cheap. Documentation status remains `active`: the package is supported for normal consumer use, not frozen against future semver-major changes.
+`0.1.1` is the current release. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+
+The package stays on `0.x` while the public contract is still young, so a necessary breaking correction stays explicit and cheap. Documentation status remains `active`: supported for normal consumer use, not frozen against future semver-major changes.
 
 ## Not Planned
 
