@@ -100,8 +100,15 @@ jobs:
       # One command, and the same one a maintainer can run locally. It verifies
       # the package, runs the publish preflight, asserts the tag matches the
       # manifest, and only then publishes.
+      #
+      # `--skip=test:browser` for the same reason `ci.yml`'s verify job skips it:
+      # the browser matrix owns those suites, and `browser-result` is a required
+      # check on `main`, so a tag on a merged commit has already passed all three
+      # engines. This job installs no browsers, so without the skip `hub verify`
+      # fails to launch WebKit ("Host system is missing dependencies") and blocks
+      # a release the merge gate already cleared.
       - name: Publish
-        run: pnpm hub publish --from-tag="$GITHUB_REF_NAME"
+        run: pnpm hub publish --from-tag="$GITHUB_REF_NAME" --skip=test:browser
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
