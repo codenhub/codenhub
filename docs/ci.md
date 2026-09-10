@@ -242,10 +242,12 @@ It triggers on a tag matching `@codenhub/*@*` and on nothing else. The tag names
 The `publish` job's body is one command:
 
 ```sh
-pnpm hub publish --from-tag="$GITHUB_REF_NAME"
+pnpm hub publish --from-tag="$GITHUB_REF_NAME" --skip=test:browser
 ```
 
 That command verifies the package, runs the publish preflight `hub release` reports, and publishes only when every precondition is `ready`. It is the same command a maintainer can run locally, which is the rule the section above states: a step only CI can run is a step nobody can reproduce before pushing. `docs/tooling.md` documents its flags.
+
+`--skip=test:browser` is there for the reason the `verify` job skips it too: the `browser` matrix owns those suites, `browser-result` is a required check on `main`, and this job installs no browser engines. Without the skip, `hub verify` here fails to launch WebKit — the runner is missing its system libraries — and blocks a release the merge gate already cleared. The tagged commit still runs the rest of `verify` plus the preflight, and a tag is expected to point at a merged commit that passed the matrix.
 
 ### The GitHub release
 
