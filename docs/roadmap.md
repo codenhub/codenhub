@@ -63,5 +63,5 @@ Durable direction for the workspace: what is being worked on now, what is intend
 - `docs/specs/packages-reference.md` — generated API reference contract.
 - `docs/specs/packages-demo.md` — package demo and aggregator contract.
 - `docs/specs/roadmaps.md` — how this file is structured.
-- `packages/styles/docs/internal/roadmap.md` — `@codenhub/styles` release conditions.
+- `packages/styles/docs/internal/roadmap.md` — `@codenhub/styles` direction and open questions.
 - `packages/app-shell/docs/internal/architecture.md`, `apps/demo/docs/internal/architecture.md` — deploy-surface architecture.
