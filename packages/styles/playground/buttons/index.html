@@ -7,6 +7,7 @@
     <script src="/shared/playground.js"></script>
     <script src="/shared/matrix.js"></script>
     <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
     <main class="sect" data-testid="preview-root">
@@ -114,6 +115,38 @@
               <button class="btn primary compact" data-testid="btn-compact">Compact</button>
               <button class="btn primary" data-testid="btn-default-padding">Default</button>
               <button class="btn primary spacious" data-testid="btn-spacious">Spacious</button>
+            </div>
+          </div>
+
+          <div class="stack tight">
+            <h3 class="text-title-sm">Chip-sized</h3>
+            <p class="text-body text-text-secondary">
+              <code class="code">p-xs</code>
+              and its alias
+              <code class="code">dense</code>
+              are the one padding step that also drops the
+              <code class="code">--control-height</code>
+              floor, so a button can sit inside a table cell or a dense toolbar. Every other size and padding class
+              keeps the floor. The icon variant sizes its own glyph — the package leaves glyph dimensions to the
+              consumer.
+            </p>
+            <div class="cluster items-center">
+              <span class="text-body text-text-secondary">Row label</span>
+              <button class="btn primary sm p-xs" data-testid="btn-chip">Edit</button>
+              <button class="btn sm dense ghost edged" data-testid="btn-chip-dense">Dismiss</button>
+              <button class="btn icon destructive sm dense" aria-label="Remove row" data-testid="btn-chip-icon">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
             </div>
           </div>
 

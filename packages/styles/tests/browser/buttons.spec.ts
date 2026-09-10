@@ -575,6 +575,47 @@ test.describe("buttons", () => {
     expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");
   });
 
+  /* `.p-xs`/`.dense` is the one padding tier that also drops the size floor, so a
+     button fits a table cell or a dense toolbar. Every other size and padding
+     class keeps `min-height: var(--control-height)`; `.sm` is the control here
+     and stays floored. The icon variant gives up its `min-width` floor with it. */
+  test("drops the button size floor at the tightest padding tier", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const measured = await page.evaluate(() => {
+      const read = (testId: string) => {
+        const element = document.querySelector(`[data-testid="${testId}"]`);
+
+        if (!element) {
+          throw new Error(`Expected fixture ${testId} to exist.`);
+        }
+
+        const styles = getComputedStyle(element);
+
+        return {
+          height: element.getBoundingClientRect().height,
+          minHeight: styles.minHeight,
+          minWidth: styles.minWidth,
+          width: element.getBoundingClientRect().width,
+        };
+      };
+
+      return { chip: read("btn-chip"), chipIcon: read("btn-chip-icon"), small: read("btn-sm") };
+    });
+
+    expect(measured.chip.minHeight).toBe("0px");
+    expect(measured.chipIcon.minWidth).toBe("0px");
+    /* `.sm` floors at 2rem, so it clears 32px on its own. The floorless chip
+       carries the same `.sm` classes and lands under it -- a wide margin rather
+       than an exact height, which the line-height would make brittle. */
+    expect(measured.small.height).toBeGreaterThanOrEqual(32);
+    expect(measured.chip.height).toBeLessThan(measured.small.height);
+    /* The glyph is sized by the playground's own stylesheet, not the package,
+       so the icon chip is a touch of padding around it rather than collapsed. */
+    expect(measured.chipIcon.width).toBeLessThan(measured.small.height);
+    expect(measured.chipIcon.width).toBeGreaterThan(0);
+  });
+
   /* No aesthetic is in scope, so `box-active` falls back to the `:root`
      `--ui-active-transform` the base look declares. A held pointer is what drives
      `:active`; no keyboard move can. Reduced motion drops the transform entirely. */

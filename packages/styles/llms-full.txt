@@ -844,17 +844,17 @@ Every component that supports intent accepts the same list and reads the same [i
 
 Size and shape classes:
 
-| Class                                                                  | Purpose                                                     |
-| ---------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).     |
-| `.sm`                                                                  | Smaller button.                                             |
-| `.lg`                                                                  | Larger button.                                              |
-| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`).    |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).       |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).        |
-| `.icon`                                                                | Square icon button. Use an accessible name in HTML.         |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator. |
-| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                           |
+| Class                                                                  | Purpose                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                                                                                                                                                                                                                                                         |
+| `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                                                                                                 |
+| `.lg`                                                                  | Larger button.                                                                                                                                                                                                                                                                                                  |
+| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor. An icon-only button at this tier gives up its `min-width` too, so size the glyph yourself. |
+| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                                                                                           |
+| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                                                                                            |
+| `.icon`                                                                | Square icon button. Use an accessible name in HTML.                                                                                                                                                                                                                                                             |
+| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                                                                                                                                                                                                                                                     |
+| `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                                                                                               |
 
 Examples:
 
@@ -1632,3 +1632,45 @@ Use ARIA or data attributes when native attributes are not available for the ele
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
+
+<!-- Source: docs/changelog/0.1.1.md -->
+
+# 0.1.1
+
+## Fixed
+
+- `.p-xs` and its alias `.dense` now clear a button's `--control-height` minimum, so a chip-sized button fits inside a table cell or a dense toolbar. Before this, every button kept the full control-height floor even at the tightest padding, so a button that small could not be built. Every other size and padding class still keeps the floor, so a plain button is unchanged. An icon-only `.p-xs`/`.dense` button also gives up its `min-width`; size the glyph yourself, as the package sizes no icons.
+
+<!-- Source: docs/changelog/0.1.0.md -->
+
+# 0.1.0
+
+`0.1.0` replaces the model published in `0.0.4` wholesale. The old model had three orthogonal axes with per-component clamps and no chosen default: a plain element got whatever `var()` fallback each component happened to declare. This release makes each decision explicitly and is the baseline the `0.x` line builds on. Nearly everything below is breaking against `0.0.4`; there are no compatibility aliases.
+
+## Changed
+
+- **Every element now composes from three named axes.** _Intent_ (`.primary`, `.success`, `.destructive`, …) sets hue only. _Presentation_ sets how much of that hue fills the element and whether it draws an edge. _Aesthetic_ sets the material — radius, edge width, shadow, silhouette, type. Intent is redeclared per component; presentation and aesthetic cascade, so a container can set the look of a subtree while any element opts out. [Concepts](docs/concepts.md) and [Composing](docs/usage/composing.md) describe the full model.
+- **Presentation is two independent questions.** Fill is `.solid` / `.soft` / `.ghost`; edge is `.edged` / `.edgeless`. Exactly one of each applies, and they never decide each other. The common web button — a subtle fill with a border — is `.soft.edged`, which had no spelling before.
+- **`.bare` is renamed `.ghost`.** `.bare` and `.edgeless` both read as "less of something", so the name is now a fill and only a fill: no fill at rest, a tint on hover.
+- **Hover is derived, not declared.** A hovered element takes its resting fill plus one published step and its `--intent-hover` colour. There are no hover tokens to set. An outline button therefore tints on hover rather than filling completely.
+- **A sunk text field is `.soft.edgeless`.** Two classes saying two things, where `.soft` alone used to silently suppress the field's border.
+- **Table row rules are opt-in via `.ruled`.** Rules no longer arrive by implication from a component's edge default. The head and foot separators stay at every presentation.
+- **Depth is a modifier, not part of a component.** `surface` no longer carries a structural shadow, so cards, buttons, and chips on a plain page rest flat. Use `.raised` / `.floating` (or `.elevation-sm` / `.elevation-md`) to add depth, and `.flat` to remove an aesthetic's.
+- **The Tailwind v4 entrypoint moved from `/overrides` to `/native`.**
+
+## Added
+
+- **Opt-in aesthetics.** `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile`, each shipped as its own entrypoint (`@codenhub/styles/aesthetics/pixel`, …) and as an aggregate (`@codenhub/styles/aesthetics`). An aesthetic sets material tokens only; it never repaints hue. See [Aesthetics](docs/usage/aesthetics.md).
+- **An elevation modifier.** `.flat` / `.raised` / `.floating` (and the `.elevation-none` / `-sm` / `-md` names) multiply an aesthetic's shadow geometry. Unitless, so a container can flatten a whole toolbar and any element can opt back in.
+- **Granular Tailwind v4 source entrypoints.** `@codenhub/styles/tw` and per-family subpaths (`/tw/button`, `/tw/form`, `/tw/feedback`, `/tw/tooltip`, `/tw/utilities`, `/tw/aesthetics/*`, …) for consumers compiling their own build. `package.json` is also exported.
+- **`.input-group`.** A wrapper that draws one box and lets the control inside give up its own paint, so an icon can sit alongside a field. The package ships no icons — any element works in the slot.
+- **`registry.json`.** A machine-readable record of every supported class, each component's default fill/edge/elevation, the axes it reads, and every bound and exception with its reason.
+- **`--intent-strong`**, the intent tone chosen to be read on a page, used wherever a fill is partial.
+
+## Removed
+
+- **`.out` and `.fill`.** Outline is now `.ghost.edged`; there is no class that makes an outline button fill completely on hover.
+- **`--ui-border-scale` / `.out`'s doubled border.** The edge width comes from the aesthetic and nothing else, which removed the per-component border ceilings small components needed.
+- **`--color-text-subtle`**, which nothing read.
+- **`--layout-stack-gap` and `--layout-cluster-gap`**, replaced by a single `--layout-gap`.
+- **The bundled input-field icons.** Icons were a `background-image` data URI with a light and a dark copy per glyph; they are gone, and `.input-group` carries a consumer-supplied icon instead.
