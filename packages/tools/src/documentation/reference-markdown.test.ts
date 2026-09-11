@@ -47,6 +47,15 @@ const entrypoint: ReferenceEntrypoint = {
           parameters: [],
         },
         {
+          name: "origin",
+          kind: "property",
+          isOptional: false,
+          isReadonly: false,
+          isStatic: false,
+          inheritedFrom: "ErrorFeedback",
+          parameters: [],
+        },
+        {
           name: "toJSON",
           kind: "method",
           isOptional: false,
@@ -157,6 +166,20 @@ describe("renderReferencePage", () => {
 
   it("renders interface members with their own heading and signature block", () => {
     expect(page).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```\n\nTranslation key.");
+  });
+
+  it("renders an inherited member as a link to its declaring type, with no signature block", () => {
+    const section = page.slice(page.indexOf("#### origin"), page.indexOf("#### toJSON"));
+    expect(section).toBe("#### origin\n\nInherited from `ErrorFeedback`.\n\n");
+
+    const linked = renderReferencePage(entrypoint, {
+      title: "/",
+      heading: "@codenhub/error",
+      sourceRoot: "packages/error/src",
+      prose: true,
+      resolveLink: (name) => (name === "ErrorFeedback" ? "feedback.md#errorfeedback" : undefined),
+    });
+    expect(linked).toContain("#### origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
   });
 
   it("renders a method member's documented parameters", () => {

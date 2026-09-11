@@ -61,6 +61,14 @@ export interface ReferenceMember {
   isReadonly: boolean;
   /** Whether the member is `static`. */
   isStatic: boolean;
+  /**
+   * Bare name of the type this member is inherited from, when it is not declared
+   * in place. Set for a member reached through `extends`; the empty string when
+   * the member is inherited but the source type could not be named. An inherited
+   * member carries no `doc`, `signature`, or parameter docs — it is rendered as a
+   * link to the type that declares it, per `docs/specs/packages-reference.md`.
+   */
+  inheritedFrom?: string;
   /** Rendered Markdown summary, when the member carries TSDoc. */
   doc?: string;
   /** `@deprecated` text, or `true` when the tag was present without one. */
@@ -165,6 +173,10 @@ interface ReflectionFlags {
   isInherited?: boolean;
 }
 
+interface InheritedFrom {
+  name?: unknown;
+}
+
 interface SourceReference {
   fileName?: unknown;
   line?: unknown;
@@ -176,6 +188,7 @@ interface Reflection {
   kind?: unknown;
   variant?: unknown;
   flags?: ReflectionFlags;
+  inheritedFrom?: InheritedFrom;
   comment?: Comment;
   children?: Reflection[];
   signatures?: Reflection[];
@@ -296,6 +309,19 @@ function memberComment(reflection: Reflection): Comment | undefined {
   return reflection.comment ?? reflection.signatures?.[0]?.comment;
 }
 
+/**
+ * The bare name of the type a member is inherited from, or `undefined` when the
+ * member is declared in place. Returns the empty string when the member is
+ * inherited but `inheritedFrom` carried no usable name.
+ */
+function inheritedTypeName(reflection: Reflection): string | undefined {
+  if (reflection.flags?.isInherited !== true) {
+    return undefined;
+  }
+  const qualified = reflection.inheritedFrom?.name;
+  return typeof qualified === "string" && qualified !== "" ? (qualified.split(".")[0] ?? "") : "";
+}
+
 function buildMember(reflection: Reflection): ReferenceMember | undefined {
   if (typeof reflection.kind !== "number" || typeof reflection.name !== "string") {
     return undefined;
@@ -306,6 +332,21 @@ function buildMember(reflection: Reflection): ReferenceMember | undefined {
   const kind = memberKind(reflection.kind);
   if (kind === undefined) {
     return undefined;
+  }
+
+  const inheritedFrom = inheritedTypeName(reflection);
+  if (inheritedFrom !== undefined) {
+    // An inherited member is a pointer to its declaring type, not a second copy
+    // of that type's documentation. The renderer turns it into a link.
+    return {
+      inheritedFrom,
+      isOptional: reflection.flags?.isOptional === true,
+      isReadonly: reflection.flags?.isReadonly === true,
+      isStatic: reflection.flags?.isStatic === true,
+      kind,
+      name: reflection.name,
+      parameters: [],
+    };
   }
 
   const comment = memberComment(reflection);
@@ -441,7 +482,9 @@ function sourceFileOf(target: Reflection): string | undefined {
  * Signature text is not produced here: {@link ReferenceSymbol.signature} and
  * {@link ReferenceMember.signature} are filled from the emitted `.d.ts` after this
  * model is built. `{@link Name}` inline tags are kept verbatim for the renderer to
- * resolve. Members inherited from outside the package (`flags.isExternal`) are dropped.
+ * resolve. Members inherited from outside the package (`flags.isExternal`) are
+ * dropped; members inherited from another type in the package are kept as a bare
+ * reference to that type, without repeating its signature or prose.
  * @param project Parsed `typedoc --json` output.
  * @param subpathByModule Maps each TypeDoc module name to its `exports` subpath key.
  * @returns The reference model, with entrypoints in the order `subpathByModule` iterates.

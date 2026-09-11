@@ -80,6 +80,7 @@ const project = {
               name: "message",
               kind: 1024,
               flags: { isExternal: true, isInherited: true },
+              inheritedFrom: { type: "reference", name: "Error.message" },
             },
             {
               id: 22,
@@ -87,6 +88,14 @@ const project = {
               kind: 1024,
               flags: { isReadonly: true, isOptional: true },
               comment: { summary: [textPart("Translation key.")] },
+            },
+            {
+              id: 23,
+              name: "isRetryable",
+              kind: 1024,
+              flags: { isReadonly: true, isInherited: true },
+              inheritedFrom: { type: "reference", name: "BaseError.isRetryable" },
+              comment: { summary: [textPart("Whether a retry may succeed.")] },
             },
           ],
         },
@@ -183,11 +192,20 @@ describe("buildReferenceModel", () => {
     expect(registries?.since).toBeUndefined();
   });
 
-  it("keeps a package's own interface members and drops externally inherited ones", () => {
+  it("drops externally inherited members, keeps in-package inherited ones as a bare reference, and keeps own ones", () => {
     const model = buildReferenceModel(project, subpaths);
     const iface = model.entrypoints[0]?.symbols.find((symbol) => symbol.name === "AppError");
 
     expect(iface?.members).toEqual([
+      {
+        name: "isRetryable",
+        kind: "property",
+        isOptional: false,
+        isReadonly: true,
+        isStatic: false,
+        inheritedFrom: "BaseError",
+        parameters: [],
+      },
       {
         name: "messageKey",
         kind: "property",

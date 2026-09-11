@@ -385,15 +385,15 @@ Represents a registered regex pattern definition and its feedback mapping.
 
 #### isRetryable
 
-Indicates if the operation can be safely retried.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### message
 
-A safe, user-facing error message description.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### messageKey
 
-An optional dot-separated localization key under the `error` namespace. Each segment after `error` uses lower camel case.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### pattern
 
@@ -405,7 +405,7 @@ The RegExp instance used to evaluate heuristic error matches.
 
 #### source
 
-An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+Inherited from [ErrorFeedback](#errorfeedback).
 
 ### ErrorPatternRegistryBucket
 
@@ -467,15 +467,15 @@ Represents a registered message prefix definition and its feedback mapping.
 
 #### isRetryable
 
-Indicates if the operation can be safely retried.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### message
 
-A safe, user-facing error message description.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### messageKey
 
-An optional dot-separated localization key under the `error` namespace. Each segment after `error` uses lower camel case.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### prefix
 
@@ -487,7 +487,7 @@ The message prefix matched after trimming trailing sentence punctuation.
 
 #### source
 
-An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+Inherited from [ErrorFeedback](#errorfeedback).
 
 ### ErrorPrefixRegistryBucket
 

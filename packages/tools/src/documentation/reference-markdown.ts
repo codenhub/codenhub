@@ -122,6 +122,14 @@ function notesSection(heading: string, items: readonly string[], link: (text: st
 
 function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: string) => string): string[] {
   const blocks = [`#### ${member.name}`];
+  if (member.inheritedFrom !== undefined) {
+    // An inherited member points at the type that declares it; that type's own
+    // section carries the signature and prose.
+    blocks.push(
+      member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
+    );
+    return blocks;
+  }
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
