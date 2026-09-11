@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-06
+last_updated: 2026-09-10
 scope: Documentation for public workspace packages.
 ---
 
@@ -86,6 +86,8 @@ Packages MUST export only values, types, files, and subpaths intended for consum
 
 Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/code-guidelines.md`.
 
+Complete coverage here means every import path is introduced and every consumer-facing capability is explained. It does not mean every exported symbol is enumerated in hand-authored prose. When a package ships a generated API reference (`docs/specs/packages-reference.md`), that reference is the exhaustive per-symbol catalogue, and the hand-authored docs are not required to repeat it; they still MUST cover the concepts, tasks, domain, and failure modes a first-time consumer needs, and MUST NOT shrink to a stub that only links to the reference.
+
 For packages covered by this spec, `hub check` reports `undocumented-export/missing-jsdoc` errors when top-level declarations exposed through typed `exports` lack JSDoc/TSDoc, following re-exports to their original declarations; class and interface members remain outside this check's scope.
 
 ## Public documentation
@@ -100,7 +102,7 @@ Organize public docs around consumer tasks, concepts, domains, or entrypoints. U
 
 Prefer focused documents over one oversized reference. Prefer grouping related APIs by domain or entrypoint over separating them mechanically into files such as `methods.md` and `types.md`.
 
-A package MAY additionally carry a generated API reference under `docs/reference/`, compiled from its TypeScript declarations and source TSDoc by `pnpm generate` and governed by `docs/specs/packages-reference.md`. That area is not the mechanical hand-authored split this section discourages: it is derived, never hand-edited, and regenerated in the same change as the code it documents. It supplements the hand-authored docs and does not relax any completeness requirement on them.
+A package MAY additionally carry a generated API reference under `docs/reference/`, compiled from its TypeScript declarations and source TSDoc by `pnpm generate` and governed by `docs/specs/packages-reference.md`. That area is not the mechanical hand-authored split this section discourages: it is derived, never hand-edited, and regenerated in the same change as the code it documents. It supplements the hand-authored docs: it satisfies the per-symbol catalogue, while the hand-authored docs keep the concept, task, domain, and failure-mode coverage described above.
 
 These structures are examples, not required names or checklists:
 

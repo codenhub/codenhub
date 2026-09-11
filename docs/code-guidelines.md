@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-06
+last_updated: 2026-09-10
 ---
 
 # Coding guidelines
@@ -97,6 +97,21 @@ For comprehensive details on test categorization (Unit, Integration, E2E), confi
 For `private: false` workspace packages, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
 
 Public API JSDoc/TSDoc MUST describe consumer-facing purpose, important inputs or properties, return values or side effects, and observable error or failure behavior. It MUST NOT restate the type signature in prose or document private implementation details.
+
+Specifically, public API JSDoc/TSDoc MUST:
+
+- Open with a one-sentence summary of what the symbol does for the caller, in the present tense. Longer explanation goes in `@remarks`, not the summary.
+- Document every parameter and type parameter with `@param` / `@typeParam`, giving intent and any constraint, unit, or accepted range rather than a restatement of the type. Omit `@param` only when the parameter name already fixes its meaning exactly.
+- Document the returned value with `@returns` whenever the symbol returns one, including the states a caller must handle — an empty collection, `null`, or a `Result` that is `Err`. Omit it for `void`.
+- Describe observable failure with one `@throws` per error type and the condition that triggers it. A symbol that reports failure by return value instead of throwing MUST say so where a reader would otherwise expect a throw.
+- Give `@defaultValue` to an optional parameter or property whose default a caller cannot infer.
+- Carry `@deprecated` with the replacement and, when known, the version that removes it.
+- Document each public member of a class or interface with its own TSDoc. A bare member is an incomplete public API.
+- Prefer `{@link OtherSymbol}` to repeating another symbol's contract.
+
+`@example` blocks are encouraged for any non-obvious usage; each MUST be realistic and compile against the current public API.
+
+Weak tags become weak public prose: the generated API reference (`docs/specs/packages-reference.md`) renders these tags directly, so a missing `@throws` or a type-restating `@param` reaches consumers, not just reviewers.
 
 Internal exports used only to compose package entrypoints SHOULD stay unexported from public entrypoints. If an internal export is necessary, mark it with `@internal` and keep it out of package README examples.
 
