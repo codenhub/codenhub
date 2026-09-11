@@ -287,6 +287,32 @@ test("composition utilities emit their own rule body, not just a mention inside 
   expect(problems).toEqual([]);
 });
 
+/* These five are core Tailwind utility names that also appear as literal words
+   in `src/`'s own declarations and comments -- `transform:` and `transition:`
+   as real CSS properties, `backdrop-filter` named in `surface.css`'s own
+   prose, "a container" and "a filter" used as ordinary English throughout.
+   The self-scan that makes the composition utilities above possible reads
+   that same text, so each one looks like a candidate. Verified against
+   Tailwind 4.3.2 that none of them compile into a real rule; this holds that
+   verification so a future scanner change does not ship a silent regression. */
+const COLLISION_PRONE_UTILITIES = ["filter", "backdrop-filter", "transition", "transform", "container"];
+
+test("utility names that collide with the package's own prose do not leak into the compiled output", async () => {
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/components.css", "dist/native.css"].map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+  const leaks = outputs.flatMap(({ output, target }) =>
+    COLLISION_PRONE_UTILITIES.filter((name) => emitsOwnRule(output, name)).map(
+      (name) => `${target} emits a stray .${name} rule`,
+    ),
+  );
+
+  expect(leaks).toEqual([]);
+});
+
 test("aggregate exports emit each public rule expansion once", async () => {
   const aggregateOutputs = await Promise.all(
     aggregateExportTargets.map(async (target) => ({
