@@ -52,8 +52,9 @@ const project = {
               comment: {
                 summary: [textPart("Builds a frozen "), { kind: "code", text: "`AppError`" }, textPart(".")],
                 blockTags: [
-                  { tag: "@param", name: "message", content: [textPart("Human-readable message.")] },
-                  { tag: "@typeParam", name: "T", content: [textPart("Source union.")] },
+                  // TypeDoc leaves an unmatched @param as a blockTag; "options" has
+                  // no parameter of its own below, so this is the fallback path.
+                  { tag: "@param", name: "options", content: [textPart("Normalization options.")] },
                   { tag: "@returns", content: [textPart("A frozen error.")] },
                   { tag: "@throws", content: [textPart("When the registry is missing.")] },
                   { tag: "@throws", content: [textPart("When maxDepth is negative.")] },
@@ -61,8 +62,31 @@ const project = {
                   { tag: "@deprecated", content: [textPart("Use createError instead.")] },
                 ],
               },
-              parameters: [{ id: 12, name: "message", variant: "param", kind: 32768, flags: {} }],
-              typeParameters: [{ id: 13, name: "T", variant: "typeParam", kind: 131072, flags: {} }],
+              // A matched @param/@typeParam is resolved onto the parameter's own
+              // comment by TypeDoc, not left as a blockTag on the signature.
+              parameters: [
+                {
+                  id: 12,
+                  name: "message",
+                  variant: "param",
+                  kind: 32768,
+                  flags: {},
+                  comment: { summary: [textPart("Human-readable message.")] },
+                },
+                // No comment of its own: its doc must come from the "@param options"
+                // blockTag above, since it is undocumented on the reflection itself.
+                { id: 14, name: "options", variant: "param", kind: 32768, flags: {} },
+              ],
+              typeParameters: [
+                {
+                  id: 13,
+                  name: "T",
+                  variant: "typeParam",
+                  kind: 131072,
+                  flags: {},
+                  comment: { summary: [textPart("Source union.")] },
+                },
+              ],
             },
           ],
         },
@@ -171,7 +195,12 @@ describe("buildReferenceModel", () => {
     const model = buildReferenceModel(project, subpaths);
     const fn = model.entrypoints[0]?.symbols.find((symbol) => symbol.name === "createAppError");
 
-    expect(fn?.parameters).toEqual([{ name: "message", doc: "Human-readable message." }]);
+    // "message" is documented on the parameter's own comment (the real TypeDoc
+    // shape for a matched tag); "options" falls back to the parent's blockTag.
+    expect(fn?.parameters).toEqual([
+      { name: "message", doc: "Human-readable message." },
+      { name: "options", doc: "Normalization options." },
+    ]);
     expect(fn?.typeParameters).toEqual([{ name: "T", doc: "Source union." }]);
     expect(fn?.returns).toBe("A frozen error.");
     expect(fn?.throws).toEqual(["When the registry is missing.", "When maxDepth is negative."]);

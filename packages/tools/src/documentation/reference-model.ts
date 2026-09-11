@@ -269,7 +269,17 @@ function deprecation(comment: Comment | undefined): string | true | undefined {
   return text === "" ? true : text;
 }
 
-/** Reads `@param` / `@typeParam` descriptions, keyed by the names the declaration provides. */
+/**
+ * Reads `@param` / `@typeParam` descriptions for a function's parameters or type
+ * parameters.
+ *
+ * TypeDoc resolves a `@param`/`@typeParam` tag it can match by name onto that
+ * parameter reflection's own `comment`, not onto a `blockTags` entry on the
+ * parent signature — so the declaration list is the primary source. A tag
+ * TypeDoc could not match (a stale name, for instance) stays a `blockTags`
+ * entry on the parent and is used only when the parameter has no comment of
+ * its own.
+ */
 function namedDocs(declared: Reflection[] | undefined, comment: Comment | undefined, tag: string): ReferenceNamedDoc[] {
   const described = new Map<string, string>();
   for (const entry of comment?.blockTags ?? []) {
@@ -278,13 +288,15 @@ function namedDocs(declared: Reflection[] | undefined, comment: Comment | undefi
     }
   }
 
-  return (declared ?? [])
-    .map((reflection) => reflection.name)
-    .filter((name): name is string => typeof name === "string")
-    .map((name) => {
-      const doc = described.get(name);
-      return doc === undefined || doc === "" ? { name } : { name, doc };
-    });
+  return (declared ?? []).flatMap((reflection) => {
+    const name = reflection.name;
+    if (typeof name !== "string") {
+      return [];
+    }
+    const own = renderParts(reflection.comment?.summary);
+    const doc = own !== "" ? own : described.get(name);
+    return doc === undefined || doc === "" ? [{ name }] : [{ name, doc }];
+  });
 }
 
 function memberKind(kind: number): ReferenceMemberKind | undefined {
