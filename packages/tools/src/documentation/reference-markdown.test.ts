@@ -182,6 +182,20 @@ describe("renderReferencePage", () => {
     expect(linked).toContain("#### origin\n\nInherited from [ErrorFeedback](feedback.md#errorfeedback).");
   });
 
+  it("omits an inherited member entirely when prose is false", () => {
+    const bare = renderReferencePage(entrypoint, {
+      title: "/",
+      heading: "@codenhub/error",
+      sourceRoot: "packages/error/src",
+      order: 0,
+      prose: false,
+    });
+    expect(bare).not.toContain("#### origin");
+    expect(bare).not.toContain("Inherited from");
+    // Own members are unaffected: they still get their heading and signature.
+    expect(bare).toContain("#### messageKey\n\n```ts\nreadonly messageKey?: string;\n```");
+  });
+
   it("renders a method member's documented parameters", () => {
     expect(page).toContain("#### toJSON");
     expect(page).toContain("Serializes the error.\n\n**Parameters**\n\n- `space` — Indentation passed through.");

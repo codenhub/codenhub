@@ -121,15 +121,22 @@ function notesSection(heading: string, items: readonly string[], link: (text: st
 }
 
 function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: string) => string): string[] {
-  const blocks = [`#### ${member.name}`];
   if (member.inheritedFrom !== undefined) {
+    if (!prose) {
+      // An inherited member has no signature of its own to put in a manifest-only
+      // page; the declaring type's own entry, and the `extends` clause in this
+      // type's signature, are how a reader finds it instead.
+      return [];
+    }
     // An inherited member points at the type that declares it; that type's own
     // section carries the signature and prose.
-    blocks.push(
+    return [
+      `#### ${member.name}`,
       member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
-    );
-    return blocks;
+    ];
   }
+
+  const blocks = [`#### ${member.name}`];
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
