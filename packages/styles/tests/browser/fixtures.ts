@@ -1,4 +1,4 @@
-import { test as base, type BrowserContext } from "@playwright/test";
+import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
 /* Playwright gives every test its own browser context, which is the right
    default when tests carry state: cookies, storage, and permissions cannot
@@ -20,9 +20,29 @@ import { test as base, type BrowserContext } from "@playwright/test";
 
    A test that needs a context of its own should build one from `browser`
    rather than widening this fixture. */
+/* `playground.js` is a real ES module, so it runs deferred -- after the
+   document has parsed, right before `load` -- rather than synchronously
+   mid-parse the way a classic script did. WebKit's `load` event does not
+   reliably wait for a script-inserted stylesheet (`env-stylesheet.js`'s
+   `document.write`d `<link>`) to finish being applied to computed style, and
+   the classic script's much earlier execution used to leave enough headroom
+   before `load` that the race never surfaced. `goto` now waits one settled
+   paint past `load`, which is what actually closes the race -- confirmed by
+   reproducing a transparent `document.body` background in WebKit until this
+   wait was added, on a page whose stylesheet had already finished loading. */
 export const test = base.extend<Record<string, unknown>, { sharedContext: BrowserContext }>({
   page: async ({ sharedContext }, use) => {
     const page = await sharedContext.newPage();
+    const goto = page.goto.bind(page);
+
+    page.goto = (async (...args: Parameters<Page["goto"]>) => {
+      const response = await goto(...args);
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      );
+      return response;
+    }) as Page["goto"];
+
     await use(page);
     await page.close();
   },

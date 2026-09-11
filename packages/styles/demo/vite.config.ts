@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from "node:fs";
+import { globSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,17 +29,6 @@ const sharedEntryCss = resolve(playgroundRoot, "shared/entry-vanilla.css");
 const nativeEntryCss = resolve(playgroundRoot, "native/entry-vanilla.css");
 const entryCssPaths = new Set([posix(sharedEntryCss), posix(nativeEntryCss)]);
 
-/* `dev` and `debug` serve `shared/playground.js` and `shared/matrix.js` over
-   HTTP from the playground root. A production build only bundles `type=module`
-   scripts and copies `publicDir`, so these classic scripts would be dropped;
-   `playground.js` also cannot become a module, because it `document.write`s its
-   stylesheet link. Inlining both verbatim keeps them in every built page with
-   no fork to drift. */
-/** Make a script body safe to drop between literal `<script>` tags. */
-const inlineScript = (source: string): string => source.replace(/<\/script/gi, "<\\/script");
-const playgroundJs = inlineScript(readFileSync(resolve(playgroundRoot, "shared/playground.js"), "utf8"));
-const matrixJs = inlineScript(readFileSync(resolve(playgroundRoot, "shared/matrix.js"), "utf8"));
-
 const CHROME_IDS = {
   native: "virtual:styles-demo-chrome-native",
   standard: "virtual:styles-demo-chrome",
@@ -50,16 +39,20 @@ const resolvedChromeId = (id: string): string => `\0${id}`;
 /**
  * Layers the deployable shell over the reused playground pages.
  *
- * - Pins the built-CSS entry (`env=vanilla`); the vanilla/build switch is a
- *   development affordance a deployed reference does not need.
- * - Inlines `playground.js` and `matrix.js` so the built pages keep the theme,
- *   aesthetic, and variant-grid wiring `dev` and `debug` load over HTTP.
- * - Loads the compiled `entry-vanilla.css` through Vite -- so it is a real
- *   stylesheet link that also resolves once mounted under `/<slug>/` -- and
- *   suppresses the root-absolute `document.write` of it that `playground.js`
- *   performs.
- * - Injects `chrome.ts`, which swaps the bare playground nav for the branded
- *   header and footer.
+ * - `playground.js` and `matrix.js` are real ES modules, so Vite bundles them
+ *   as ordinary entry-graph modules like any other `type="module"` script --
+ *   nothing in this plugin needs to touch them.
+ * - Drops `env-stylesheet.js`, the one script that stays a classic,
+ *   `document.write`-ing script rather than a module (see its own comment for
+ *   why): it exists to pick between the vanilla and built Tailwind CSS during
+ *   local development, a comparison a deployed demo has no use for. Leaving it
+ *   out is also what makes `playground.js` default to the "vanilla" build --
+ *   see its own comment.
+ * - Loads the compiled `entry-vanilla.css` through Vite instead, so it is a
+ *   real stylesheet link that also resolves once mounted under `/<slug>/`.
+ * - Injects `chrome.ts`, which listens for the `playground:nav-ready` event
+ *   `playground.js` dispatches and swaps the bare nav it hands over for the
+ *   branded header and footer.
  *
  * `@codenhub/styles` is left to resolve to the package's built `dist/`, per
  * `docs/specs/packages-development.md`: a demo must never run against `src/`.
@@ -93,42 +86,18 @@ function demoChrome(): Plugin {
       return { code: code.replace(/@source\s+("[^"]*"|'[^']*')\s*;?/g, ""), map: null };
     },
     transformIndexHtml: {
-      /* `pre`, so the inline module script below is in the HTML before Vite's
-         own build-html pass extracts and bundles module scripts, and so the
-         classic `<script src>` tags are already inlined before Vite tries (and
-         warns) that it cannot bundle them. */
+      /* `pre`, so `env-stylesheet.js`'s tag is gone before Vite's own
+         build-html pass scans the page for scripts it can bundle -- left in
+         place, that scan warns it cannot bundle a classic script it was never
+         going to keep anyway. */
       order: "pre",
       handler(html, ctx) {
         const isNative = ctx.path.includes("/native/");
         const chromeId = isNative ? CHROME_IDS.native : CHROME_IDS.standard;
 
-        const withInlineScripts = html
-          .replace('<script src="/shared/playground.js"></script>', `<script>\n${playgroundJs}\n</script>`)
-          .replace('<script src="/shared/matrix.js"></script>', `<script>\n${matrixJs}\n</script>`);
-
-        /* `entry-vanilla.css` is loaded through Vite by the chrome module, so
-           swallow the root-absolute `<link>` `playground.js` writes for it --
-           it would 404 under a mounted base and duplicate the sheet anywhere. */
-        const bootstrap = [
-          "(function () {",
-          "  var url = new URL(window.location.href);",
-          '  if (url.searchParams.get("env") !== "vanilla") {',
-          '    url.searchParams.set("env", "vanilla");',
-          '    window.history.replaceState(null, "", url);',
-          "  }",
-          "  var write = document.write.bind(document);",
-          "  document.write = function (markup) {",
-          "    var text = String(markup);",
-          "    if (/entry-[\\w-]*\\.css/.test(text)) { return; }",
-          "    return write(text);",
-          "  };",
-          "})();",
-        ].join("\n");
-
         return {
-          html: withInlineScripts,
+          html: html.replace('<script src="/shared/env-stylesheet.js"></script>', ""),
           tags: [
-            { tag: "script", injectTo: "head-prepend", children: bootstrap },
             {
               tag: "script",
               attrs: { type: "module" },
