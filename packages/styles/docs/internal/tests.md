@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-21
+last_updated: 2026-09-11
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -22,6 +22,7 @@ packages/styles/
   playground/
     index.html
     shared/
+    app-shell/
     buttons/
     feedback/
     forms/
@@ -68,6 +69,8 @@ Each fixture exists once. A component belongs to exactly one page, and the heade
 Variant grids render from the spec in `shared/matrix.js` rather than being spelled out in markup: a component crossed with every intent, presentation, and state is a few hundred nodes, and a new intent has to reach all of them at once. Cells are addressable as `<component>-<presentation>-<intent>[-<state>]`, and the `none` intent is a cell with no intent class, which is not the same as `.neutral`. A component that reads intent but not presentation declares that in the spec, so a page cannot claim a variant the component ignores.
 
 Input types are the one axis that is not intent crossed with presentation, so they have their own renderer: `data-fields` crosses every input type with the icon and state variants that type supports, as `field-<type>-<variant>`.
+
+A second kind of page lives alongside the matrices: a stress-test screen (`app-shell/` is the first) composes the components into a real, non-trivial layout instead of exhausting one in isolation. It exists to read under every aesthetic and both themes the same way the matrices do, but the output it is for is a written finding, not a computed-style assertion -- see [Roadmap](./roadmap.md) and `docs/internal/stress-test-findings.md`. It follows the matrices' conventions where they still apply (`data-testid` on what a reader or a future spec would address, `.table-wrap` around a `.data-table`, the shared nav and aesthetic/theme controls) and departs from them where a real screen requires it: `app-shell/` skips the `.sect`/`.sect-inn` centered reading column every matrix page uses, because a dense shell reads edge to edge in the real world and a fixed column would hide whether the model holds up at that width.
 
 ## `dev/`
 

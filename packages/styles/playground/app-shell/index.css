@@ -1,0 +1,91 @@
+/* This screen is deliberately full-bleed rather than the `.sect`/`.sect-inn`
+   centered column every other playground page uses: a dense app shell reads
+   sidebar-and-content edge to edge in the real world, and squeezing it into a
+   fixed reading column would hide whether the model holds up at that width. */
+.app-shell {
+  display: grid;
+  grid-template-columns: 17rem 1fr;
+  min-height: calc(100dvh - 4.5rem);
+}
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem 1.25rem;
+  border-inline-end: var(--border-width) solid var(--color-border);
+}
+
+.app-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.app-nav-link i {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+.app-nav-link:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.app-nav-link.active {
+  background: var(--color-foreground);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.app-content {
+  padding: 1.5rem clamp(1rem, 4vw, 2rem);
+}
+
+.app-toolbar {
+  flex-wrap: wrap;
+}
+
+.app-selection-bar {
+  padding: 0.625rem 1rem;
+}
+
+.app-actions-head {
+  text-align: end;
+}
+
+.app-row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.app-pagination {
+  flex-wrap: wrap;
+}
+
+/* `.select` composes `text-control`, which is `width: 100%` by design -- the
+   right default for a field stacked in a form. A page-size control sitting in
+   a toolbar next to its own label is a different context, and constraining it
+   is the same thing any consumer does when a full-width-by-default field sits
+   somewhere that is not a vertical form; not a correction to the component. */
+.app-page-size {
+  width: auto;
+  min-width: 4.5rem;
+}
+
+.app-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+}
+
+.app-dialog::backdrop {
+  background: color-mix(in srgb, var(--color-background) 60%, transparent);
+  backdrop-filter: blur(2px);
+}
