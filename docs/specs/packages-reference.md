@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-06
+last_updated: 2026-09-10
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -100,7 +100,7 @@ A page's H1 is the entrypoint's full import specifier — the package name for `
 - Each symbol section contains, in order:
   1. A fenced `ts` block with the symbol's declaration signature, taken from the emitted `.d.ts`. Overloads are listed as separate lines in source order. Long signatures are emitted as written; the site is responsible for horizontal scroll.
   2. When `prose` is `true`: the symbol's TSDoc summary and remarks, rendered as Markdown, followed by its `@param`, `@typeParam`, `@returns`, `@throws`, `@defaultValue`, `@since`, `@example`, and `@see` content under short bold labels. `@returns`, `@defaultValue`, `@since`, and a `@throws` or `@see` with a single entry, render as one `**Label** — text` line; `@param`, `@typeParam`, and a `@throws` or `@see` with several entries render as a bulleted list. `@deprecated` is surfaced first, as a blockquote, so it is impossible to miss.
-  3. For a class or interface: its public members, each with its own signature block and, when `prose` is `true`, its TSDoc.
+  3. For a class or interface: its public members, each with its own signature block and, when `prose` is `true`, its TSDoc. A member inherited from another type in the package is not repeated in full here: when `prose` is `true`, it is listed by name with a link to the type that declares it, since its signature and prose stay on that type's own section; when `prose` is `false`, it is omitted from the page instead of appearing as a bare heading with no signature — the `extends`/heritage clause already in this type's own signature is how a reader finds it. A member inherited from a type outside the package's documented surface is dropped in both modes.
 - `{@link Symbol}` references resolve to a fragment on whichever page documents the target. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
 - Re-exported symbols are documented on the entrypoint that exports them. A symbol exported from several entrypoints is documented on each, with the signature repeated; prose is repeated too, since these pages are read one at a time.
 
@@ -123,7 +123,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 
 ## Relationship to other documentation
 
-- **`README.md` / `docs/index.md`**: unchanged in purpose. When a package opts in, its README Documentation section and its `docs/index.md` MUST link to `docs/reference/index.md`, satisfying the "make complete API reference easy to find" requirement in `docs/specs/packages-readme.md`. The hand-authored docs MUST NOT be reduced to a stub that only points at the reference; `docs/specs/packages-documentation.md`'s completeness rules still apply to them.
+- **`README.md` / `docs/index.md`**: unchanged in purpose. When a package opts in, its README Documentation section and its `docs/index.md` MUST link to `docs/reference/index.md`, satisfying the "make complete API reference easy to find" requirement in `docs/specs/packages-readme.md`. The hand-authored docs MUST NOT be reduced to a stub that only points at the reference; the concept, task, domain, and failure-mode coverage `docs/specs/packages-documentation.md` requires still applies to them.
 - **Source TSDoc**: remains the single source of per-symbol truth. The reference is a rendering of it, not a second contract.
 - **`llms.txt`**: stays hand-authored; it MAY link to the reference area.
 - **`llms-full.txt`**: does NOT include the generated reference. `docs/specs/packages-documentation.md` is revised in the same change to exclude `docs/reference/` from the `llms-full.txt` compilation. The reference is regenerable from declarations and adds no hand-authored content an LLM cannot reconstruct from the `.d.ts` it already has; including it would multiply the file's size for little gain.

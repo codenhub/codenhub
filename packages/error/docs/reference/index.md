@@ -18,6 +18,16 @@ export declare const andThen: <T, U>(result: Result<T>, mapper: (value: T) => Re
 
 Maps the success value of a Result using the provided mapper function that returns another Result. Prevents nested Result structures like `Result<Result<U>>`.
 
+**Parameters**
+
+- `result` — The Result instance to process.
+- `mapper` — The function to map the success value to a new Result.
+
+**Type parameters**
+
+- `T` — The type of the original success value.
+- `U` — The type of the mapped success value.
+
 **Returns** — A new Result instance from the mapper or the original Err.
 
 **Throws** — The exception thrown by `mapper`; callback failures are not normalized.
@@ -29,6 +39,16 @@ export declare const andThenAsync: <T, U>(result: Result<T>, mapper: (value: T) 
 ```
 
 Maps the success value of a Result asynchronously using the provided mapper function that returns a Promise of another Result. Prevents nested Result structures in asynchronous pipelines.
+
+**Parameters**
+
+- `result` — The Result instance to process.
+- `mapper` — The asynchronous function to map the success value to a Promise of a new Result.
+
+**Type parameters**
+
+- `T` — The type of the original success value.
+- `U` — The type of the mapped success value.
 
 **Returns** — A Promise resolving to the Result returned by the mapper or the original Err. The promise rejects if `mapper` throws or rejects; callback failures are not normalized.
 
@@ -42,6 +62,15 @@ Runs a callback and captures a thrown value as a normalized `Err` instead of pro
 
 This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`, and anything thrown is normalized through the same pipeline as `createAppError`.
 
+**Parameters**
+
+- `operation` — The callback to run.
+- `options` — Configuration options for AppError normalization.
+
+**Type parameters**
+
+- `T` — The type returned by the callback on success.
+
 **Returns** — An Ok result holding the callback value, or an Err holding the normalized failure.
 
 **Throws** — TypeError - If `options` or any supplied option value is invalid.
@@ -53,6 +82,15 @@ export declare const attemptAsync: <T>(operation: () => Promise<T> | T, options?
 ```
 
 Runs an async callback and captures a thrown or rejected value as a normalized `Err`.
+
+**Parameters**
+
+- `operation` — The asynchronous callback to run.
+- `options` — Configuration options for AppError normalization.
+
+**Type parameters**
+
+- `T` — The type the callback resolves to on success.
 
 **Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`.
 
@@ -75,6 +113,11 @@ Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`
 
 A deep known match outranks a shallow unexpected match. Ordinary unknown input never throws, including objects and proxies whose inspected properties throw. A raw string is matched against the registry like any other candidate; when nothing matches, the resolved message is the fallback rather than the string itself, so raw text is never surfaced to consumers.
 
+**Parameters**
+
+- `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
+- `options` — Configuration controlling fallback message, registry source, and wrapper depth.
+
 **Returns** — A frozen AppError. An existing AppError is returned as-is only when no options are supplied.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
@@ -88,6 +131,10 @@ export declare const createErrorRegistry: (presets?: readonly (ErrorRegistry | R
 Creates an empty, isolated error registry.
 
 Optionally merges a list of preset registries into the newly created registry.
+
+**Parameters**
+
+- `presets` — Optional list of existing registries to merge during creation.
 
 **Returns** — A new, mutable ErrorRegistry instance.
 
@@ -103,6 +150,11 @@ Creates a failed Result instance wrapping a normalized AppError.
 
 A raw string is matched against the registry like any other value. An unmatched string does not become the message; supply `fallbackMessage` when user-facing text is needed.
 
+**Parameters**
+
+- `error` — The raw error value to normalize.
+- `options` — Configuration options for AppError normalization.
+
 **Returns** — An Err result object.
 
 **Throws** — TypeError - If `options` or any supplied option value is invalid.
@@ -114,6 +166,10 @@ export declare const freezeRegistry: (registry: ErrorRegistry) => ReadonlyErrorR
 ```
 
 Creates an immutable snapshot containing only read-facing bucket methods.
+
+**Parameters**
+
+- `registry` — The ErrorRegistry instance to freeze.
 
 **Returns** — An immutable `ReadonlyErrorRegistry` snapshot.
 
@@ -139,6 +195,10 @@ Type guard to determine if an unknown value is a normalized AppError instance.
 
 Verifies that a value was created by this package runtime.
 
+**Parameters**
+
+- `value` — The value to inspect.
+
 **Returns** — True if the value is a normalized AppError; otherwise, false.
 
 ### map
@@ -148,6 +208,16 @@ export declare const map: <T, U>(result: Result<T>, mapper: (value: T) => U) => 
 ```
 
 Maps the success value of a Result using the provided mapper function.
+
+**Parameters**
+
+- `result` — The Result instance to map.
+- `mapper` — The function to map the success value.
+
+**Type parameters**
+
+- `T` — The type of the original value.
+- `U` — The type of the mapped value.
 
 **Returns** — A new Result instance with the mapped value or the original Err.
 
@@ -161,6 +231,16 @@ export declare const mapAsync: <T, U>(result: Result<T>, mapper: (value: T) => P
 
 Maps the success value of a Result asynchronously using the provided async mapper function.
 
+**Parameters**
+
+- `result` — The Result instance to map.
+- `mapper` — The asynchronous function to map the success value.
+
+**Type parameters**
+
+- `T` — The type of the original value.
+- `U` — The type of the mapped value.
+
 **Returns** — A Promise resolving to a new Result instance with the mapped value or the original Err. The promise rejects if `mapper` throws or rejects; callback failures are not normalized.
 
 ### match
@@ -173,6 +253,16 @@ export declare const match: <T, U>(result: Result<T>, callbacks: {
 ```
 
 Pattern matches on a Result, executing the corresponding callback based on the outcome.
+
+**Parameters**
+
+- `result` — The Result instance to match.
+- `callbacks` — An object containing onOk and onErr callback functions.
+
+**Type parameters**
+
+- `T` — The type of the success value.
+- `U` — The type of the return value from the callbacks.
 
 **Returns** — The value returned by the executed callback.
 
@@ -199,6 +289,10 @@ Sets the active global error registry.
 
 Allows consumers to replace the default registry at application initialization. Throws a TypeError if the provided value does not implement the mutable registry interface.
 
+**Parameters**
+
+- `registry` — The ErrorRegistry instance to set as active.
+
 **Throws** — TypeError - If the parameter is not a valid ErrorRegistry.
 
 ### unwrap
@@ -208,6 +302,14 @@ export declare const unwrap: <T>(result: Result<T>) => T;
 ```
 
 Unwraps a Result, returning the value if successful, or throwing the normalized AppError if failed.
+
+**Parameters**
+
+- `result` — The Result instance to unwrap.
+
+**Type parameters**
+
+- `T` — The type of the value.
 
 **Returns** — The unwrapped success value.
 
@@ -220,6 +322,15 @@ export declare const unwrapOr: <T>(result: Result<T>, fallback: T) => T;
 ```
 
 Unwraps a Result, returning the value if successful, or the provided fallback value if failed.
+
+**Parameters**
+
+- `result` — The Result instance to unwrap.
+- `fallback` — The value to return if the result is an Err.
+
+**Type parameters**
+
+- `T` — The type of the value.
 
 **Returns** — The success value or the fallback value.
 
@@ -385,15 +496,15 @@ Represents a registered regex pattern definition and its feedback mapping.
 
 #### isRetryable
 
-Indicates if the operation can be safely retried.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### message
 
-A safe, user-facing error message description.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### messageKey
 
-An optional dot-separated localization key under the `error` namespace. Each segment after `error` uses lower camel case.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### pattern
 
@@ -405,7 +516,7 @@ The RegExp instance used to evaluate heuristic error matches.
 
 #### source
 
-An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+Inherited from [ErrorFeedback](#errorfeedback).
 
 ### ErrorPatternRegistryBucket
 
@@ -423,6 +534,11 @@ add(pattern: RegExp, feedback: ErrorFeedback): void;
 
 Adds or replaces a RegExp pattern and its feedback mapping.
 
+**Parameters**
+
+- `pattern` — The regular expression to evaluate against error messages.
+- `feedback` — The feedback metadata to attach on pattern match.
+
 #### addList
 
 ```ts
@@ -430,6 +546,10 @@ addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[
 ```
 
 Adds or replaces multiple RegExp pattern definitions from a list of tuples.
+
+**Parameters**
+
+- `entries` — List of tuples containing [pattern, feedback].
 
 #### clear
 
@@ -446,6 +566,10 @@ delete(pattern: RegExp): boolean;
 ```
 
 Removes a RegExp pattern and its feedback mapping.
+
+**Parameters**
+
+- `pattern` — The regular expression to remove.
 
 #### values
 
@@ -467,15 +591,15 @@ Represents a registered message prefix definition and its feedback mapping.
 
 #### isRetryable
 
-Indicates if the operation can be safely retried.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### message
 
-A safe, user-facing error message description.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### messageKey
 
-An optional dot-separated localization key under the `error` namespace. Each segment after `error` uses lower camel case.
+Inherited from [ErrorFeedback](#errorfeedback).
 
 #### prefix
 
@@ -487,7 +611,7 @@ The message prefix matched after trimming trailing sentence punctuation.
 
 #### source
 
-An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+Inherited from [ErrorFeedback](#errorfeedback).
 
 ### ErrorPrefixRegistryBucket
 
@@ -505,6 +629,11 @@ add(prefix: string, feedback: ErrorFeedback): void;
 
 Adds or replaces feedback for a given message prefix. Strips trailing punctuation from the prefix before registration.
 
+**Parameters**
+
+- `prefix` — The message prefix to register (e.g., `"Upload failed:"`).
+- `feedback` — The feedback metadata to assign when matching this prefix.
+
 #### addList
 
 ```ts
@@ -512,6 +641,10 @@ addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]
 ```
 
 Adds or replaces multiple prefix feedback definitions from a list of tuples.
+
+**Parameters**
+
+- `entries` — List of tuples containing [prefix, feedback].
 
 #### clear
 
@@ -528,6 +661,10 @@ delete(prefix: string): boolean;
 ```
 
 Removes prefix-based feedback definition for the specified prefix. Strips trailing punctuation from the prefix before deletion.
+
+**Parameters**
+
+- `prefix` — The message prefix to delete.
 
 #### values
 
@@ -603,6 +740,10 @@ merge(registry: ErrorRegistry | ReadonlyErrorRegistry): void;
 
 Merges all mappings from the source registry into this registry, overwriting matching identifiers. Leaves this registry unchanged when reading or validating the source fails.
 
+**Parameters**
+
+- `registry` — The source registry to merge. Accepts both mutable and read-only registries.
+
 ### ErrorRegistryBucket
 
 ```ts
@@ -619,6 +760,11 @@ add(identifier: string, feedback: ErrorFeedback): void;
 
 Adds or replaces error feedback for a given identifier. Code and name buckets trim whitespace. Message buckets also strip trailing sentence punctuation.
 
+**Parameters**
+
+- `identifier` — The exact identifier to match (e.g., `"23505"`, `"AbortError"`).
+- `feedback` — The feedback metadata to attach to this identifier.
+
 #### addList
 
 ```ts
@@ -626,6 +772,10 @@ addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback
 ```
 
 Adds or replaces multiple feedback entries from a list of tuple definitions.
+
+**Parameters**
+
+- `entries` — List of tuples containing [identifier, feedback].
 
 #### clear
 
@@ -643,6 +793,10 @@ delete(identifier: string): boolean;
 
 Removes error feedback mapped to the specified identifier. Uses the same bucket-specific normalization as `add`.
 
+**Parameters**
+
+- `identifier` — The exact identifier to delete.
+
 #### get
 
 ```ts
@@ -650,6 +804,10 @@ get(identifier: string): Readonly<ErrorFeedback> | undefined;
 ```
 
 Retrieves the frozen feedback mapping for the specified identifier.
+
+**Parameters**
+
+- `identifier` — The exact error identifier to lookup.
 
 #### values
 
@@ -666,6 +824,10 @@ export interface Ok<T>
 ```
 
 Represents a successful result value holding the resolved data.
+
+**Type parameters**
+
+- `T` — The type of the value wrapped in the success result.
 
 #### ok
 
@@ -758,6 +920,10 @@ export type Result<T> = Ok<T> | Err;
 ```
 
 A Result type representing either a successful outcome (`Ok<T>`) or a failure outcome (`Err`). Useful for handling asynchronous or fallible operations without throwing exceptions.
+
+**Type parameters**
+
+- `T` — The type of the value returned on success.
 
 ## Variables
 
