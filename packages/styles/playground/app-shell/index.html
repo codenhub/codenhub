@@ -11,30 +11,45 @@
   </head>
   <body>
     <main class="app-shell" data-testid="preview-root">
-      <aside class="app-sidebar panel edgeless" data-testid="app-sidebar">
+      <aside class="app-sidebar" data-testid="app-sidebar">
         <div class="stack loose">
-          <div class="stack tight">
-            <p class="text-label">Codenhub</p>
-            <p class="text-title-sm">Members</p>
-          </div>
           <nav class="stack tight" data-testid="app-nav" aria-label="Sections">
-            <a class="app-nav-link" href="#">Overview</a>
-            <a class="app-nav-link active" href="#" aria-current="page">Members</a>
-            <a class="app-nav-link" href="#">Teams</a>
-            <a class="app-nav-link" href="#">Billing</a>
-            <a class="app-nav-link" href="#">Settings</a>
+            <a class="app-nav-link" href="#">
+              <i class="ic-layout-dashboard" aria-hidden="true"></i>
+              <span>Overview</span>
+            </a>
+            <a class="app-nav-link active" href="#" aria-current="page">
+              <i class="ic-users" aria-hidden="true"></i>
+              <span>Members</span>
+            </a>
+            <a class="app-nav-link" href="#">
+              <i class="ic-users-round" aria-hidden="true"></i>
+              <span>Teams</span>
+            </a>
+            <a class="app-nav-link" href="#">
+              <i class="ic-credit-card" aria-hidden="true"></i>
+              <span>Billing</span>
+            </a>
+            <a class="app-nav-link" href="#">
+              <i class="ic-settings" aria-hidden="true"></i>
+              <span>Settings</span>
+            </a>
           </nav>
         </div>
-        <div class="card soft edgeless dense" data-testid="app-sidebar-card">
-          <p class="text-label">Plan</p>
-          <p class="text-body">Team -- 12 of 25 seats used</p>
+        <div class="card soft edged compact stack tight" data-testid="app-sidebar-card">
+          <div class="cluster between">
+            <p class="text-label">Team Plan</p>
+            <p class="text-label">12 / 25</p>
+          </div>
+          <p class="text-body text-text-secondary" data-testid="seats-used">13 seats remaining</p>
           <div
-            class="progress"
+            class="progress app-progress"
             style="--progress-value: 48%"
             role="progressbar"
             aria-valuenow="48"
             aria-valuemin="0"
             aria-valuemax="100"
+            aria-label="Seats used"
           ></div>
         </div>
       </aside>
@@ -45,10 +60,13 @@
             <h1 class="text-title-lg">Members</h1>
             <p class="text-body text-text-secondary">Everyone with access to this workspace.</p>
           </div>
-          <button class="btn primary" type="button" data-testid="invite-button">Invite member</button>
+          <button class="btn primary" type="button" data-testid="invite-button">
+            <i class="ic-user-plus" aria-hidden="true"></i>
+            Invite member
+          </button>
         </header>
 
-        <div class="app-toolbar panel soft edgeless cluster between" data-testid="app-toolbar">
+        <div class="cluster between app-toolbar" data-testid="app-toolbar">
           <div class="cluster tight">
             <div class="input-group" data-testid="search-group">
               <i class="ic-search" aria-hidden="true"></i>
@@ -67,16 +85,28 @@
               <option>Suspended</option>
             </select>
           </div>
-          <div class="cluster tight app-bulk-actions" data-testid="bulk-actions">
-            <span class="text-body text-text-secondary" data-testid="bulk-count">2 selected</span>
-            <button class="btn ghost edged" type="button">Change role</button>
-            <button class="btn destructive soft" type="button" data-testid="bulk-remove">Remove</button>
+        </div>
+
+        <div class="panel primary soft cluster between app-selection-bar" data-testid="bulk-actions">
+          <p class="text-body" data-testid="bulk-count">
+            <strong>2</strong>
+            selected
+          </p>
+          <div class="cluster tight">
+            <button class="btn soft" type="button">
+              <i class="ic-shield" aria-hidden="true"></i>
+              Change role
+            </button>
+            <button class="btn destructive solid" type="button" data-testid="bulk-remove">
+              <i class="ic-trash-2" aria-hidden="true"></i>
+              Remove
+            </button>
           </div>
         </div>
 
         <div class="table-wrap" data-testid="members-table-wrap">
-          <table class="data-table" data-testid="members-table">
-            <caption class="app-sr-only">Workspace members</caption>
+          <table class="data-table compact" data-testid="members-table">
+            <caption class="sr-only">Workspace members</caption>
             <thead>
               <tr>
                 <th scope="col">
@@ -86,7 +116,7 @@
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
                 <th scope="col">Last active</th>
-                <th scope="col">Actions</th>
+                <th class="app-actions-head" scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -102,11 +132,11 @@
                 <td><span class="badge success pill">Active</span></td>
                 <td>2 minutes ago</td>
                 <td class="app-row-actions">
-                  <button class="btn ghost" type="button" aria-label="Edit Dana Ferreira">
+                  <button class="btn icon ghost dense" type="button" aria-label="Edit Dana Ferreira">
                     <i class="ic-pencil" aria-hidden="true"></i>
                   </button>
                   <button
-                    class="btn ghost destructive"
+                    class="btn icon ghost destructive dense"
                     type="button"
                     aria-label="Remove Dana Ferreira"
                     data-testid="row-remove-trigger"
@@ -123,10 +153,10 @@
                 <td><span class="badge success pill">Active</span></td>
                 <td>1 hour ago</td>
                 <td class="app-row-actions">
-                  <button class="btn ghost" type="button" aria-label="Edit Priya Natarajan">
+                  <button class="btn icon ghost dense" type="button" aria-label="Edit Priya Natarajan">
                     <i class="ic-pencil" aria-hidden="true"></i>
                   </button>
-                  <button class="btn ghost destructive" type="button" aria-label="Remove Priya Natarajan">
+                  <button class="btn icon ghost destructive dense" type="button" aria-label="Remove Priya Natarajan">
                     <i class="ic-trash-2" aria-hidden="true"></i>
                   </button>
                 </td>
@@ -136,12 +166,12 @@
                 <td>Marcus Webb</td>
                 <td>Member</td>
                 <td><span class="badge warning pill">Invited</span></td>
-                <td>--</td>
+                <td>Never</td>
                 <td class="app-row-actions">
-                  <button class="btn ghost" type="button" aria-label="Resend invite to Marcus Webb">
+                  <button class="btn icon ghost dense" type="button" aria-label="Resend invite to Marcus Webb">
                     <i class="ic-send" aria-hidden="true"></i>
                   </button>
-                  <button class="btn ghost destructive" type="button" aria-label="Remove Marcus Webb">
+                  <button class="btn icon ghost destructive dense" type="button" aria-label="Remove Marcus Webb">
                     <i class="ic-trash-2" aria-hidden="true"></i>
                   </button>
                 </td>
@@ -153,10 +183,10 @@
                 <td><span class="badge destructive pill">Suspended</span></td>
                 <td>14 days ago</td>
                 <td class="app-row-actions">
-                  <button class="btn ghost" type="button" aria-label="Edit Elin Sorensen">
+                  <button class="btn icon ghost dense" type="button" aria-label="Edit Elin Sorensen">
                     <i class="ic-pencil" aria-hidden="true"></i>
                   </button>
-                  <button class="btn ghost destructive" type="button" aria-label="Remove Elin Sorensen">
+                  <button class="btn icon ghost destructive dense" type="button" aria-label="Remove Elin Sorensen">
                     <i class="ic-trash-2" aria-hidden="true"></i>
                   </button>
                 </td>
@@ -165,34 +195,52 @@
           </table>
         </div>
 
-        <div class="cluster between" data-testid="pagination">
-          <p class="text-body text-text-secondary">Showing 1-4 of 23 members</p>
-          <div class="cluster tight">
-            <button class="btn ghost edged" type="button" disabled>Previous</button>
-            <button class="btn soft" type="button" aria-current="page">1</button>
-            <button class="btn ghost edged" type="button">2</button>
-            <button class="btn ghost edged" type="button">3</button>
-            <button class="btn ghost edged" type="button">Next</button>
+        <div class="cluster between app-pagination" data-testid="pagination">
+          <p class="text-body text-text-secondary" data-testid="selection-summary">2 of 23 row(s) selected.</p>
+          <div class="cluster loose">
+            <label class="cluster tight" data-testid="page-size-field">
+              <span class="text-body text-text-secondary">Rows per page</span>
+              <select class="select app-page-size" aria-label="Rows per page" data-testid="page-size">
+                <option>10</option>
+                <option>25</option>
+                <option>50</option>
+              </select>
+            </label>
+            <p class="text-body" data-testid="page-indicator">Page 1 of 3</p>
+            <div class="cluster tight">
+              <button class="btn icon ghost edged" type="button" aria-label="First page" disabled>
+                <i class="ic-chevrons-left" aria-hidden="true"></i>
+              </button>
+              <button class="btn icon ghost edged" type="button" aria-label="Previous page" disabled>
+                <i class="ic-chevron-left" aria-hidden="true"></i>
+              </button>
+              <button class="btn icon ghost edged" type="button" aria-label="Next page">
+                <i class="ic-chevron-right" aria-hidden="true"></i>
+              </button>
+              <button class="btn icon ghost edged" type="button" aria-label="Last page">
+                <i class="ic-chevrons-right" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </main>
 
-    <dialog class="card floating app-dialog" id="remove-member-dialog" data-testid="remove-member-dialog">
-      <form method="dialog" class="stack loose">
-        <div class="stack tight">
-          <h2 class="text-title">Remove Dana Ferreira?</h2>
-          <p class="text-body text-text-secondary">
-            They will lose access to this workspace immediately. This cannot be undone.
-          </p>
-        </div>
-        <div class="cluster between">
-          <button class="btn ghost edged" type="submit" value="cancel">Cancel</button>
-          <button class="btn destructive" type="submit" value="remove" data-testid="confirm-remove">
-            Remove member
-          </button>
-        </div>
-      </form>
-    </dialog>
+      <dialog class="card floating app-dialog" id="remove-member-dialog" data-testid="remove-member-dialog">
+        <form method="dialog" class="stack">
+          <div class="stack tight">
+            <h2 class="text-title-sm">Remove Dana Ferreira?</h2>
+            <p class="text-body text-text-secondary">
+              They will lose access to this workspace immediately. This cannot be undone.
+            </p>
+          </div>
+          <div class="cluster">
+            <button class="btn soft" type="submit" value="cancel">Cancel</button>
+            <button class="btn destructive" type="submit" value="remove" data-testid="confirm-remove">
+              Remove member
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </main>
   </body>
 </html>
