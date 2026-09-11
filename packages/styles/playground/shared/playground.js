@@ -1,19 +1,11 @@
 const documentRoot = document.documentElement;
-const params = new URLSearchParams(window.location.search);
-const isNative = documentRoot.dataset.entry === "native";
-const environmentParam = params.get("env");
-const environment = environmentParam === "build" || (environmentParam === null && isNative) ? "build" : "vanilla";
-const nextEnvironment = environment === "build" ? "vanilla" : "build";
-const stylesheet = isNative
-  ? environment === "build"
-    ? "/native/entry-tw.css"
-    : "/native/entry-vanilla.css"
-  : environment === "build"
-    ? "/shared/entry-tw.css"
-    : "/shared/entry-vanilla.css";
 
-document.write(`<link rel="stylesheet" href="${stylesheet}" />`);
-documentRoot.dataset.env = environment;
+/* `env-stylesheet.js` runs first (a classic script, always) and sets this
+   before this module runs (modules are always deferred). Absent -- the demo
+   build drops that script entirely -- it defaults to "vanilla", the one build
+   a demo ever runs. */
+const environment = documentRoot.dataset.env === "build" ? "build" : "vanilla";
+const nextEnvironment = environment === "build" ? "vanilla" : "build";
 
 const setTheme = (isDark) => {
   documentRoot.classList.toggle("dark", isDark);
@@ -37,6 +29,7 @@ const AESTHETICS = [
   { label: "Chunky tile", value: "chunky-tile" },
 ];
 
+const params = new URLSearchParams(window.location.search);
 const aestheticParam = params.get("aesthetic");
 const storedAesthetic = localStorage.getItem("aesthetic");
 const isKnownAesthetic = (value) => AESTHETICS.some((aesthetic) => aesthetic.value === value);
@@ -91,7 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return currentPath === path || currentPath === path + "index.html" || currentPath.startsWith(path);
   };
 
-  if (!document.querySelector(".playground-nav")) {
+  let nav = document.querySelector(".playground-nav");
+
+  if (!nav) {
     const linksHtml = routes
       .map(
         (route) =>
@@ -132,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </nav>`,
     );
+    nav = document.querySelector(".playground-nav");
   }
 
   const environmentToggle = document.getElementById("environment-toggle");
@@ -172,4 +168,21 @@ document.addEventListener("DOMContentLoaded", () => {
     setTheme(isDarkTheme);
     localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
   });
+
+  /* The explicit hand-off a chrome layer (e.g. `demo/chrome.ts`) waits on to
+     swap this bare nav for branded chrome. Firing an event with the elements
+     already attached means a consumer needs neither `.playground-nav`'s class
+     name nor a DOMContentLoaded-registration-order coincidence to find them --
+     both were previously implicit and broke silently if either drifted. */
+  document.dispatchEvent(
+    new CustomEvent("playground:nav-ready", {
+      detail: {
+        aestheticSelect,
+        environmentToggle,
+        nav,
+        routeLinks: [...nav.querySelectorAll(".playground-nav-links a")],
+        themeToggle,
+      },
+    }),
+  );
 });

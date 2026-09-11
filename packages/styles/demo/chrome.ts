@@ -5,10 +5,11 @@
  *
  * `packages/styles/playground/shared/playground.js` still owns the theme and
  * aesthetic state, the boot transition, and the aesthetic `<select>`. It
- * builds a `.playground-nav` on `DOMContentLoaded`; this module runs after it
- * and swaps that bare nav for the branded header and footer, keeping the
- * controls `playground.js` already wired. Nothing under `playground/` is
- * touched: the demo is the playground worn as a reference.
+ * builds a bare nav and dispatches `playground:nav-ready` once that nav and
+ * its controls are fully wired; this module listens for that event and swaps
+ * the nav for the branded header and footer, reusing the controls handed over
+ * in the event rather than re-querying the DOM for them. Nothing under
+ * `playground/` is touched: the demo is the playground worn as a reference.
  */
 
 import "./chrome.css";
@@ -24,6 +25,15 @@ const GITHUB_ICON = `<svg aria-hidden="true" viewBox="0 0 16 16">
 const NPM_ICON = `<svg aria-hidden="true" viewBox="0 0 24 24">
   <path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" />
 </svg>`;
+
+/** The `playground:nav-ready` `CustomEvent` detail `playground.js` dispatches. */
+interface PlaygroundNavReadyDetail {
+  aestheticSelect: HTMLSelectElement;
+  environmentToggle: HTMLButtonElement;
+  nav: HTMLElement;
+  routeLinks: HTMLAnchorElement[];
+  themeToggle: HTMLButtonElement;
+}
 
 /** Resolve a root-absolute path against the mount base (`/` or `/styles/`). */
 function rebase(pathname: string): string {
@@ -59,23 +69,19 @@ function syncPill(): void {
   button.setAttribute("title", label);
 }
 
-function buildHeader(nav: HTMLElement): HTMLElement {
-  const routeLinks = [...nav.querySelectorAll<HTMLAnchorElement>(".playground-nav-links a")];
-  const aestheticSelect = nav.querySelector<HTMLSelectElement>("#aesthetic-select");
-  const themeToggle = nav.querySelector<HTMLButtonElement>("#theme-toggle");
-
-  /* The vanilla/build switch is a development affordance; a deployed reference
-     runs one build. `playground.js` has already read and wired it by now. */
-  nav.querySelector("#environment-toggle")?.remove();
-
+/**
+ * `environmentToggle` is deliberately unused: the vanilla/build switch is a
+ * development affordance, and a deployed reference runs one build. Not
+ * appending it anywhere is what drops it -- `nav`, which still holds it, is
+ * replaced wholesale rather than edited in place.
+ */
+function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNavReadyDetail): HTMLElement {
   for (const link of routeLinks) {
     link.setAttribute("href", rebase(link.getAttribute("href") ?? "/"));
   }
 
-  if (themeToggle) {
-    toPill(themeToggle);
-  }
-  aestheticSelect?.classList.add("demo-aesthetic");
+  toPill(themeToggle);
+  aestheticSelect.classList.add("demo-aesthetic");
 
   const header = document.createElement("header");
   header.className = "site-header";
@@ -100,12 +106,8 @@ function buildHeader(nav: HTMLElement): HTMLElement {
   `;
 
   const actions = header.querySelector<HTMLElement>(".header-actions");
-  if (actions && aestheticSelect) {
-    actions.insertBefore(aestheticSelect, actions.firstChild);
-  }
-  if (actions && themeToggle) {
-    actions.append(themeToggle);
-  }
+  actions?.insertBefore(aestheticSelect, actions.firstChild);
+  actions?.append(themeToggle);
   header.querySelector<HTMLElement>(".demo-routes")?.append(...routeLinks);
 
   return header;
@@ -131,13 +133,10 @@ function buildFooter(): HTMLElement {
   return footer;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const nav = document.querySelector<HTMLElement>(".playground-nav");
-  if (!nav) {
-    return;
-  }
+document.addEventListener("playground:nav-ready", (event) => {
+  const detail = (event as CustomEvent<PlaygroundNavReadyDetail>).detail;
 
-  nav.replaceWith(buildHeader(nav));
+  detail.nav.replaceWith(buildHeader(detail));
   document.body.append(buildFooter());
 
   syncPill();
