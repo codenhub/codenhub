@@ -1,17 +1,61 @@
 /* Elevation is a modifier, not an axis: depth is a per-element decision (raised
    tiles beside a flat panel in one aesthetic), so one unitless number multiplies
-   the aesthetic's shadow geometry where the component composes it. Unitless so
-   it inherits -- a container flattens a region, an element opts back in -- and
-   so `.flat` removes a part-based slab or blur without a conditional (complete
-   surface shadows like glass remain). The two classes that ask for depth carry
-   the geometry themselves; on a component it would inherit into everything
-   nested and a plain page would have a shadow under every card. See
-   model.md#elevation.
+   the aesthetic's shadow geometry where the component composes it. `.flat`
+   removes a part-based slab or blur without a conditional (complete surface
+   shadows like glass remain). See model.md#elevation.
+
+   `--ui-elevation`, and the plain-page fallback geometry (`--elevation-y`,
+   `--elevation-blur`) below, are registered non-inheriting: a class sets them
+   on the element it is written on and nothing else picks them up. They used to
+   be ordinary inherited custom properties, on the reasoning that a container
+   could flatten or lift a whole region in one class and any element inside
+   could opt back out -- but the same mechanism let a `.floating` dialog's
+   ambient ×2 reach its own unclassed "Cancel"/"Remove" buttons, doubling their
+   shadow with nothing in the markup asking for that. Depth is not the same
+   kind of thing as color or material: a button inside a raised card is not
+   itself more raised, it is just resting normally inside an already-raised
+   surface. `--ui-shadow-*` -- what an aesthetic supplies -- is unaffected and
+   still cascades normally; that is a different mechanism (the material tokens
+   in `src/aesthetics/*.css`), and an aesthetic still has to reach every nested
+   component uniformly the way it always did. Registering these three is what
+   scopes the change to the elevation modifier alone.
+
+   One component pays for it: `tooltip`'s bubble is a `::after` pseudo-element
+   of a wrapper the elevation classes are actually written on (`axesTarget` in
+   `registry.json`), and inheritance from a host to its own pseudo-element is
+   exactly what `inherits: false` also cuts -- even though a wrapper and its
+   bubble are one component, not a container and an unrelated descendant.
+   `tooltip.css` carries all three tokens back across that gap through
+   ordinary, still-inheriting proxies. See the comment there.
 
    `.flat`/`.raised`/`.floating` and `.elevation-none`/`-sm`/`-md` are
    interchangeable aliases, the second borrowing the raw `--elevation-*` scale's
    naming. Bare `sm`/`md`/`lg` would collide with the size modifier;
    `.elevation-lg` is reserved, not shipped. */
+
+/* `syntax: "*"` with no `initial-value` is deliberate: a numeric syntax would
+   require one (CSS Properties and Values API), and any initial-value at all
+   would mean the property is never actually unset on an element that does not
+   write it -- which is exactly the state `var(--ui-elevation, var(--_d-elevation,
+   1))` in `box.css` needs to fall through to a component's own default. With
+   no initial-value and `inherits: false`, an element that does not set the
+   property directly computes it as guaranteed-invalid, the same as if it had
+   never been registered at all -- `var()` takes its fallback precisely where
+   inheritance used to hand it an ambient value instead. */
+@property --ui-elevation {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --elevation-y {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --elevation-blur {
+  syntax: "*";
+  inherits: false;
+}
 
 /* No part-based depth. Complete surface shadow values, such as glass, are not
    reached by the elevation multiplier. */

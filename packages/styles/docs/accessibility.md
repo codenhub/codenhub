@@ -11,13 +11,18 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Focus and state
 
-| Feature            | Behavior                                                                                                                  |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                       |
-| Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                    |
-| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                          |
-| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported. |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                             |
+| Feature            | Behavior                                                                                                                                                                                                                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                                                                                                                                                                                                                             |
+| Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                                                                                                                                                                                                                          |
+| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                                                                                                                                                                                                                                |
+| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported.                                                                                                                                                                                                       |
+| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                                                                                                                                                                                                                                   |
+| Native `<dialog>`  | `dialog:not([open])` and a centered `dialog[open]` are restored in author origin, so `.card` composed onto a `<dialog>` (the closest primitive the package ships) does not render open on load or lose its centering to another rule. Focus trapping, escape handling, and inert-background behavior stay outside this package. |
+
+### Visually hidden content
+
+`.visually-hidden` hides content from sighted users while keeping it in the accessibility tree, using the standard clip-based recipe. It ships wherever the layout utilities do -- `.`, `./native`, `./tw`, `./tw/native`, and `./tw/utilities` -- including the vanilla entries with no Tailwind utility layer of their own; it is not part of `./components` or the narrower `./tw/components`/`./tw/*` component slices. See [Content and layout](./usage/content-and-layout.md).
 
 ### Control boundaries
 

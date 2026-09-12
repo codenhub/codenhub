@@ -50,6 +50,50 @@ test.describe("surfaces", () => {
     expect(styles.outlineBorderWidth).toBe("1px");
   });
 
+  /* `.card.soft` rests untinted (`--color-foreground`, `--ui-fill` effectively
+     0%) and only reveals the intent tint together with a `--color-surface`
+     ground on `.interactive`/`.hoverable` `:hover` -- see the comment in
+     `box.css` above `--_fill-cap` and in `surface.css` above `.card`'s
+     `&.soft`. The override composes a private `--_fill-cap` term rather than
+     writing `--ui-fill` directly: `presentation.css`'s `.soft` is unlayered
+     and `@utility card` compiles into Tailwind's `utilities` layer, so a
+     `--ui-fill` written there was silently losing the cascade to `.soft`'s
+     `12%` regardless of selector specificity, and the card kept its ordinary
+     soft tint with nothing to show for the override. This test pins the
+     numeric outcome so that regression cannot pass silently again. */
+  test("rests a neutral soft card untinted and reveals the tint only on hover", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const styles = await page.evaluate(() => {
+      const resolveToken = (tokenName: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(--color-${tokenName})`;
+        document.body.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+
+      return {
+        restBackground: getComputedStyle(document.querySelector('[data-testid="card-soft-edged-none"]')!)
+          .backgroundColor,
+        tokenForeground: resolveToken("foreground"),
+      };
+    });
+
+    expectSameColor(styles.restBackground, styles.tokenForeground, "neutral soft card rests untinted");
+
+    const card = page.locator('[data-testid="card-soft-edged-none-interactive"]');
+    const background = () => card.evaluate((element) => getComputedStyle(element).backgroundColor);
+
+    const restBackground = await background();
+    expectSameColor(restBackground, styles.tokenForeground, "interactive soft card rests untinted too");
+
+    await card.hover();
+
+    await expect.poll(background, "soft card deepens on hover").not.toBe(restBackground);
+  });
+
   test("changes only padding for the density modifiers", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
@@ -237,11 +281,11 @@ test.describe("surfaces", () => {
         default: get("elevation-default"),
         flat: get("elevation-flat"),
         floating: get("elevation-floating"),
-        inherited: get("elevation-inherited"),
-        optedOut: get("elevation-opt-out"),
+        ownClass: get("elevation-own-class"),
         panelFloating: get("elevation-panel-floating"),
         panelRaised: get("elevation-panel-raised"),
         raised: get("elevation-raised"),
+        unclassed: get("elevation-unclassed"),
       };
     });
 
@@ -275,13 +319,17 @@ test.describe("surfaces", () => {
     expect(lengths(shadows.panelRaised).slice(0, 4), "raised panel").toEqual(raised.slice(0, 4));
     expect(lengths(shadows.panelFloating).slice(0, 4), "floating panel").toEqual(floating.slice(0, 4));
 
-    /* The number is unitless, so it inherits: a container lifts its whole region
-       and an element inside it still opts out on itself. */
-    expect(lengths(shadows.inherited).slice(0, 4), "inherited from the container").toEqual(raised.slice(0, 4));
+    /* `--ui-elevation` is registered non-inheriting, so a container's own class
+       lifts only itself: an unclassed element inside it takes no depth, and an
+       element with its own elevation class takes exactly that, regardless of
+       what the container around it asks for. */
     expect(
-      lengths(shadows.optedOut).every((length) => length === 0),
-      "opted out of an inherited lift",
+      lengths(shadows.unclassed).every((length) => length === 0),
+      "unclassed, inside a raised container",
     ).toBe(true);
+    expect(lengths(shadows.ownClass).slice(0, 4), "own class, inside the same raised container").toEqual(
+      raised.slice(0, 4),
+    );
   });
 
   /* The division of labour the modifier exists for: the aesthetic decides what

@@ -24,6 +24,27 @@
 
   @apply relative;
 
+  /* `.raised`/`.floating` are written on this wrapper -- the bubble is the
+     pseudo-element below, and a class cannot target a pseudo-element directly.
+     Before the elevation modifier stopped cascading (see elevation.css), the
+     bubble read `--ui-elevation`, `--elevation-y`, and `--elevation-blur`
+     straight off its inheritance from this host, the same way any descendant
+     would have. Now that all three are registered non-inheriting, a
+     pseudo-element does not receive them from its host either -- inheritance
+     from host to pseudo-element is exactly what `inherits: false` also cuts,
+     even though this is the one case where the wrapper and its bubble are the
+     same component, not an ambient container and an unrelated descendant.
+     These three ordinary (still-inheriting) properties are the carriers: each
+     captures whatever the matching token resolved to on this element -- or
+     nothing, propagating the same guaranteed-invalid state, if no elevation
+     class is on it -- and the bubble below reads each back into its own local
+     token, which needs no inheritance because it is a direct declaration on
+     the pseudo-element itself. All three are needed: the multiplier alone
+     reads geometry of zero with no aesthetic in scope. */
+  --_tooltip-elevation: var(--ui-elevation);
+  --_tooltip-elevation-y: var(--elevation-y);
+  --_tooltip-elevation-blur: var(--elevation-blur);
+
   /* The trigger badge, for a page with no element to hang the message on. Quiet
      -- ghost, edged, on `--intent-subtle`, a key cap's resting shape -- because
      it marks that there is a message, it is not one. The line earns its keep:
@@ -94,6 +115,13 @@
        opt back in. */
     --_d-elevation: 0;
     --_d-ground: var(--ui-surface-ground, var(--intent-subtle));
+    /* Read back from the host, since this pseudo-element does not inherit
+       these directly any more. Invalid (no elevation class on the host) falls
+       through the same as an absent value always did, landing on
+       `--_d-elevation` above and zero geometry. */
+    --ui-elevation: var(--_tooltip-elevation);
+    --elevation-y: var(--_tooltip-elevation-y);
+    --elevation-blur: var(--_tooltip-elevation-blur);
 
     /* The bubble's line is a boundary against content nobody chose, so `box`'s
        edge blend is wrong here: at a full fill the line *is* the plate. Restate

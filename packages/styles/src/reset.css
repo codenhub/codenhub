@@ -127,3 +127,24 @@
     border-color: CanvasText;
   }
 }
+
+/* The user agent already promises both of these for a native `<dialog>` --
+   `dialog:not([open]) { display: none }` and a centered `margin: auto` on the
+   open box -- but both are user-agent origin, which loses to any author rule
+   at all. `.card`'s own `display: block` (`surface`'s `@apply box block`)
+   beats the first outright, so a `<dialog class="card">` renders open with no
+   `open` attribute and no `.showModal()` call -- the registry has no
+   dialog/modal component of its own, and `.card` is the closest primitive a
+   consumer reaches for. A margin reset on every element -- Tailwind's own
+   Preflight on the entries that carry it -- beats the second, so an opened
+   dialog pins to the top-left instead of centering. Restated here, unlayered like
+   the block above, for the same reason: a behavior override has to win over
+   any layered rule whatever the specificity, and `.card` is layered in the
+   utilities layer regardless of how it composes `box`. */
+dialog:not([open]) {
+  display: none;
+}
+
+dialog[open] {
+  margin: auto;
+}

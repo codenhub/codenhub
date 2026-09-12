@@ -107,3 +107,19 @@
   font-weight: 800;
   letter-spacing: 0.04em;
 }
+
+/* `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
+   itself (`--_tile-lift: var(--tile-lift, 4px)`), and inherits down already a
+   plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
+   declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually
+   multiplies by elevation, so that is the token restated here, at half the
+   resting lift. A `.btn.icon` at `.dense`/`.p-xs` is close to the smallest
+   button the package draws (~20px, once the size floor both tiers drop for
+   `.icon` is gone -- see `button.css`), and a flat 4px bar under a target that
+   size sits close enough to the glyph's own footprint to read as a solid fill
+   behind it -- a `.ghost` button that looks `.solid`. 2px keeps the bar
+   legible as depth without swallowing the icon. */
+.chunky-tile .btn.icon.dense,
+.chunky-tile .btn.icon.p-xs {
+  --ui-shadow-y: 2px;
+}

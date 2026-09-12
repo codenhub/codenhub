@@ -37,14 +37,17 @@
      ghost table is boundaries and type and nothing else -- which is what `.ghost`
      is for on this component, since the published resting fill is `soft`.
 
-     Any fill at all brings the ground back whole rather than in proportion. A
-     soft head mixed onto the page instead of onto `--intent-subtle` is a
-     different colour from the one this component has always drawn, and the fill
-     is meant to read as a step past the tint rather than as a replacement for
-     it. A saturating ramp says that, because the signal is a percentage and
-     there is no branch to hang off one: the smallest fill any presentation asks
-     for is 12%, so a multiplier of 100 puts every non-zero fill over the top and
-     leaves zero where it is.
+     Zero stays zero, and nothing past it saturates the same way any more. A
+     `* 100` multiplier used to put every non-zero fill over the `min(100%, ...)`
+     ceiling in one step -- `.soft`'s 12% and `.solid`'s 100% both landed on a
+     fully opaque plate, so the only thing left to tell them apart was how much
+     `--intent-color` got mixed onto it after (`--table-fill`, 12% vs 20% capped),
+     a difference too small to read as the volume-level step presentation
+     promises everywhere else in the model. `* 5` keeps zero at zero and a
+     `.solid`'s 100% raw fill still clears the ceiling -- the same fully opaque
+     head it always drew -- but stops `.soft`'s 12% short, at 60%: a visibly
+     lighter, partly-page-showing-through plate instead of a second opaque one,
+     which is what makes the two presentations separate again.
 
      It reads `--ui-fill` rather than `--table-fill` because that is the question
      being asked: what the presentation wanted, not what the intent cap and an
@@ -53,10 +56,48 @@
      the raw class value also keeps the expression a `calc()` over one `var()`
      rather than over `--table-fill`'s own `calc()`/`min()` chain, which matters
      for the reason `--table-rule-plated` below records. */
-  --table-ground: min(100%, calc(var(--ui-fill, var(--_d-fill)) * 100));
+  --table-ground: min(100%, calc(var(--ui-fill, var(--_d-fill)) * 5));
   --table-head-plate: color-mix(in oklab, var(--intent-subtle) var(--table-ground), transparent);
   --table-head-bg: color-mix(in oklab, var(--intent-color) var(--table-fill), var(--table-head-plate));
   --table-head-fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
+
+  /* Untinted rather than mixed, the same call `.card.soft` makes: 12% ink onto
+     `--intent-subtle` still reads as `.solid` on neutral, since neutral's ink
+     and ground are both on the same greyscale axis and no ramp over that ground
+     changes it much. A head has no hover or interaction state to reveal a tint
+     into the way a card does on `.interactive`/`.hoverable`, so there is no
+     second state to move a mechanism to -- `.soft` is `--color-foreground`,
+     flat, always, for every intent. That mutes a colored `.success`/`.destructive`
+     head at rest the way it mutes a non-interactive `.card.soft`; accepted for
+     the same reason, not solved a different way.
+
+     The table's own base plate rests the same way, for a reason the head fix
+     alone did not cover: a `.soft` head landing at `--color-foreground` (five
+     units off the page) sitting directly above a body still carrying the
+     ordinary 12% tint (twenty-four units past the head) read backwards -- the
+     seam that should read as one table read as the head belonging to the page
+     and the body being the odd one out. `--_fill-cap` is `box.css`'s override
+     slot (the same one `.card.soft` uses, for the same cascade-layer reason
+     the comment there gives), and `--_d-ground` is box's own private ground
+     slot, unclaimed here until now -- both land on the table's own element,
+     same as `--table-fill`/`--table-head-plate` do, so nothing here fights
+     `.soft` for `--ui-fill` either. `.ghost` is left at box's default
+     (`--_d-ground: transparent`), so it stays the fully bare boundaries-only
+     table it already was -- `.soft` now differs from it by keeping an opaque,
+     untinted plate and a head label strip, not by how much ink is in either.
+
+     `:not(.solid, .ghost)` rather than `.soft`: the published resting fill is
+     `soft`, so a bare `<table class="data-table">` -- the members table in
+     `playground/app-shell/`, with no fill class at all -- is the common case
+     this has to reach, not the edge case. `.soft` alone would miss every table
+     that gets soft by doing nothing. */
+  &:not(.solid, .ghost) {
+    --table-fill: 0%;
+    --table-head-plate: var(--color-foreground);
+    --_fill-cap: 0%;
+    --_d-ground: var(--color-foreground);
+  }
+
   /* How much rule there is between body rows, and none unless asked for. Ruling
      every row is a style choice rather than part of what a table is, and tying it
      to the edge axis made it arrive by implication instead: a table drew rules
@@ -148,14 +189,21 @@
     color: var(--table-head-fg);
   }
 
-  /* Every cell carries the hairline; what varies is whether it is painted. A rule
-     is structure rather than the silhouette, so it stays hairline under an
-     aesthetic that draws a thick edge, and it survives a fill that would
-     otherwise paint over it. */
+  /* Every cell carries the hairline; what varies is whether it is painted. The
+     width tracks the aesthetic's own line weight (`--_width`, the same token
+     `box` uses for the table's outer frame) rather than a fixed `1px`, so a
+     row rule reads as the same material as the boundary around it instead of
+     as a leftover default under an aesthetic whose whole point is thickness --
+     `.chunky-tile`'s 2px frame used to sit over a 1px row rule, which read as
+     unstyled rather than as a deliberate, quieter line. It still survives a
+     fill that would otherwise paint over it, because color and width are
+     independent here: `.ruleless` zeroes the color, not this. */
   & th,
   & td {
-    @apply border-b px-4 py-3 align-top;
+    @apply px-4 py-3 align-top;
 
+    border-bottom-style: solid;
+    border-bottom-width: var(--_width);
     border-color: var(--table-rule);
   }
 
@@ -173,8 +221,8 @@
   }
 
   & tfoot tr:first-child > * {
-    @apply border-t;
-
+    border-top-style: solid;
+    border-top-width: var(--_width);
     border-top-color: var(--table-boundary);
   }
 

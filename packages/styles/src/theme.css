@@ -35,7 +35,17 @@
   --color-accent-hover: light-dark(var(--color-neutral-700), var(--color-neutral-300));
   --color-accent-subtle: light-dark(var(--color-neutral-100), var(--color-neutral-800));
   --color-accent-strong: light-dark(var(--color-neutral-800), var(--color-neutral-200));
-  --color-border: light-dark(var(--color-neutral-300), var(--color-neutral-700));
+  /* Light was neutral-300 (1.42:1 against the page, already under 3:1 by the
+     text-control comment below) until a `.card.soft.edged` measured its own
+     border against its own fill rather than against the page: 12% of
+     `--intent-color` mixed into the ground and a line resolving to nearly the
+     same tone landed the two 4 RGB units apart, which reads as no boundary at
+     all. Dark's neutral-700 pairing already separated -- 27 units, still under
+     3:1 but at least legible -- so only light moved. Neutral-400 is not a new
+     number: `.chunky-tile` already measured it at 2.48:1 against the light
+     page and picked it for the same reason, "the heaviest grey that still
+     leaves a field legible." Dark is unchanged. */
+  --color-border: light-dark(var(--color-neutral-400), var(--color-neutral-700));
   --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
 
   /* A text control's line is the only thing identifying it: the box is
