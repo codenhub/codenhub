@@ -63,6 +63,48 @@ Revisited once more against the live app-shell screen, after the fixes above mad
 
 The app-shell members table's row actions (edit/remove/resend, `.btn.icon.ghost.dense`) looked visually undersized once seen next to the row's own badges and checkbox at real density -- `.compact` reads better there. Not a code change: `.dense` and `.compact` both work exactly as specified (this is the same floor-drop fix from the table above), it is a matter of which size tier suits a dense table's click targets. Fixture updated to `.compact` in `playground/app-shell/index.html`; left here in case the same preference shows up again and is worth a documented recommendation for table row-actions specifically.
 
-## Open threads for the next screen
+## `form/`
 
-Not yet exercised: a dense, real form (validation states mixed with real layout, not the forms page's per-control matrix), and a settings/detail screen to see cards and panels compose at a size between "component matrix cell" and "full app shell." Planned as the next stress-test screen -- the app-shell screen itself is considered done as of this checkpoint; further findings here would mostly re-exercise the same components (cards, tables, buttons, badges) rather than surface new combinations the way a form or settings screen would.
+A "create project" form: sectioned fields (project details, visibility, team access, billing), a validation-summary alert at the top, and several fields carrying `aria-invalid`/`.hint.error` together rather than one isolated invalid cell. Read under all five aesthetics and both themes.
+
+### `.alert.soft.edged`'s border misses 3:1 for some intents, and which ones flips with the theme
+
+The form's own validation-summary alert (`.alert.destructive.icon`) is the component's shipped default (`soft edged`, per the registry), not a chosen combination. Measured its border against its own fill -- the comparison [P3](./model.md#what-presentation-may-not-do)'s edge blend makes the right one -- across every intent on `.alert.soft.edged`, then reconfirmed the same numbers on the existing `feedback/` matrix so this is the shipped model, not something this fixture's markup did differently:
+
+| Intent            | Dark theme | Light theme |
+| ----------------- | ---------- | ----------- |
+| none / `.neutral` | 1.46:1     | 1.70:1      |
+| `.primary`        | 11.86:1    | 11.81:1     |
+| `.secondary`      | 5.44:1     | 4.80:1      |
+| `.success`        | 2.89:1     | 3.61:1      |
+| `.warning`        | 4.51:1     | 2.38:1      |
+| `.destructive`    | 2.56:1     | 4.09:1      |
+| `.info`           | 2.48:1     | 4.09:1      |
+
+Below 3:1 in dark theme: none, success, destructive, info. Below 3:1 in light theme: none, warning. `.panel.edged` composes the same seam and reproduces the same numbers -- confirmed against `settings/`'s destructive danger-zone panel below.
+
+The mechanism is the one `model.md` already documents (P3: an edge blends toward the component's own fill by the fill amount) and the fix that shipped for `.card.soft.edged`'s border in the app-shell pass touched the same token, `--color-border`, one step in light theme only. That fix was tuned against a neutral card; it was never checked against all seven intents, and an intent's own hue plus a 12% fill lands at a different distance from `--color-border` depending on the intent and the theme, which is why the failing set is not the same set in both themes. Not fixed here: `--color-border`/`--intent-border` is what every soft-or-partial-fill component's edge blends toward, so a change reaches `.alert`, `.panel`, `.badge`, `.kbd`, `.pre`/`.code`, and any consumer composition using the same seam, across all seven intents and both themes -- a wider blast radius than the single-token nudge that fixed the card. Left open; see [Open threads](#open-threads).
+
+### `.input-group` with a text affix instead of an icon -- considered, works
+
+Every documented and shipped `.input-group` example is an icon child (`docs/usage/forms.md`, `forms/index.html`). The URL-slug field here uses a plain `<span>` of text (`codenhub.dev/`) as the leading child instead, to see whether the wrapper's `flex items-center gap-2` assumes an icon's fixed square footprint. It does not: the group has no icon-specific sizing rule, so a text affix sits flush and vertically centered the same way an icon does. Not a finding, recorded because the composition is untested by anything else in the package.
+
+### `.pixel`'s numeral legibility reappears here
+
+The counter ("57 / 240") and the alert's "3 fields" reproduce the same small-numeral ambiguity already recorded against the app-shell pagination controls. Same open documentation question, not a new one -- see the app-shell section above.
+
+## `settings/`
+
+An account-settings page: profile, plan/usage, an API-keys table, a security card, and a destructive danger-zone panel, stacked in `.sect-inn.narrow` (768px) -- a size between a component-matrix cell and the full app-shell width. Read under all five aesthetics and both themes.
+
+### Danger-zone panel reproduces the `form/` border finding
+
+`.panel.destructive.edged` measured 2.56:1 (dark) / 4.09:1 (light) border-against-fill, the same numbers `.alert.destructive.soft.edged` measured in `form/` -- see [that finding](#alertsoftedgeds-border-misses-31-for-some-intents-and-which-ones-flips-with-the-theme) rather than repeating the table. Confirms the issue is the shared edge-blend seam, not something specific to alerts.
+
+### A long API key truncates cleanly in a compact table cell
+
+`kbd.settings-key` (a fixed `max-width` plus `overflow: hidden; text-overflow: ellipsis` in the fixture's own CSS) truncates `sk_live_51H8q••••••••••••••••AyBcDe` without widening the `Key` column or breaking `.table-wrap`'s horizontal scroll. Not a finding -- the package has no opinion on cell content width, and the fixture's own CSS is exactly where that opinion belongs.
+
+## Open threads
+
+Whether to fix the `.alert`/`.panel` soft-edged border contrast, and if so how -- a `--color-border` nudge like the card fix, a per-intent adjustment, or leaving it as a documented characteristic the way `.pixel`'s numerals are. Raised with the maintainer rather than decided here, since any fix changes a token every soft-or-partial-fill component's edge reads from.

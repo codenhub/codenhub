@@ -1,0 +1,28 @@
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+/* A radio option with a multi-line description is this screen's own
+   composition, not something `.cluster`'s always-`items-center` has an
+   opinion on -- align the input with the option's title line instead of the
+   midpoint of the whole two-line block. `.cluster`'s items size to their own
+   content with no `flex`, so the text block's un-wrapped preferred width can
+   exceed the row and push the whole block onto its own flex line under
+   `flex-wrap` instead of wrapping its own text next to the radio -- narrower
+   under `.pixel`'s wider set face. `flex: 1` gives it the remaining row
+   width to wrap within instead. */
+.option-row {
+  align-items: flex-start;
+}
+
+.option-row .radio {
+  flex-shrink: 0;
+  margin-top: 0.1875rem;
+}
+
+.option-row > .stack {
+  flex: 1 1 0%;
+  min-width: 0;
+}
