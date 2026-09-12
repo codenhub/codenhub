@@ -18,6 +18,7 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
 - `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
+- `.visually-hidden` hides content visually while keeping it in the accessibility tree, using the standard clip-based recipe. Not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind build already ships a real `.sr-only`, and a same-named utility of this package's own would silently collide with it in the cascade — the same reason `.data-table` is not named `.table`.
 
 The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
@@ -105,6 +106,8 @@ This is the one place intent cascades, because a table's rows are parts of the t
 
 On `.data-table` it removes the header plate along with the body tint, so `.data-table.ghost` is boundaries and type alone. The component rests at `soft`, so that is something to ask for rather than the default.
 
+`.soft` rests untinted throughout -- `--color-foreground`, no intent color mixed in, for every intent, including the resting default, on the head plate and the table's own base fill alike. A table has no hover or interaction state to reveal a tint into the way `.card.soft` does on `.interactive`/`.hoverable`, so unlike a card there is no state where a `.data-table.success.soft` reveals green; only the boundary and rule lines still read the intent.
+
 On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All three rest at `.soft` instead, which puts a real `12%` of the intent over the ground and separates them.
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
@@ -144,15 +147,17 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 Both read intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](./aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](./composing.md#elevation).
 
+`.card.soft` is untinted at rest — a plain `--color-foreground` plate, no intent color mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. `.solid` and `.ghost` are unaffected.
+
 On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
 `.interactive` is the pair `.hoverable` (hover response only, no pointer cursor) and `.pressable` (press response and pointer cursor) applied together. Take one half for a card that answers a single gesture: a card that warms on hover but holds its own action in a nested button takes `.hoverable`, so pressing that button does not dip the whole card.
 
 ```html
 <article class="card">Neutral card</article>
-<article class="card success soft">Tinted success card</article>
+<article class="card success solid">Filled success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card interactive" href="/package">Responds to hover and press</a>
+<a class="card success soft interactive" href="/package">Untinted at rest; success-tinted on hover</a>
 <article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```

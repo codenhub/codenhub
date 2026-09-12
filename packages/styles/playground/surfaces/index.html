@@ -231,19 +231,19 @@
           </div>
         </div>
         <div class="stack tight">
-          <h3 class="text-title-sm">Cascade</h3>
+          <h3 class="text-title-sm">No cascade</h3>
           <p class="text-body text-text-secondary">
-            The multiplier is a plain number, so it inherits. A container can lift or flatten a whole region and any
-            element inside it still opts out on itself.
+            `--ui-elevation` does not inherit. A `.raised`/`.floating` container lifts itself only; an element inside it
+            still needs its own elevation class to take depth.
           </p>
           <div class="raised auto-grid" data-testid="elevation-container">
-            <article class="card" data-testid="elevation-inherited">
-              <h4 class="text-title-sm">Inherited</h4>
-              <p class="text-body">No elevation class of its own.</p>
+            <article class="card" data-testid="elevation-unclassed">
+              <h4 class="text-title-sm">Unclassed</h4>
+              <p class="text-body">No elevation class of its own -- flat, despite the raised container.</p>
             </article>
-            <article class="card flat" data-testid="elevation-opt-out">
-              <h4 class="text-title-sm">Opted out</h4>
-              <p class="text-body">Flat on the element, which always wins.</p>
+            <article class="card raised" data-testid="elevation-own-class">
+              <h4 class="text-title-sm">Own class</h4>
+              <p class="text-body">Raised on the element itself, which is the only thing that reaches it now.</p>
             </article>
           </div>
         </div>

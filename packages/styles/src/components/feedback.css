@@ -114,10 +114,22 @@
 
 /* The same: intent only. The track is 10px tall, which is most of a border under
    any aesthetic thick enough to have an opinion, so the bar draws no edge and the
-   ceilings that used to keep one survivable are gone with it. */
+   ceilings that used to keep one survivable are gone with it.
+
+   `--progress-surface` used to mix `--intent-subtle` at 60% -- a tint of the
+   same tone the track already sits on (a bare page, or a `.soft` card), which
+   measured under 1.2:1 against both in either theme, well under the 3:1 WCAG
+   1.4.11 floor `registry.json` already cites for the checkbox, radio, and
+   switch. `--color-border` was tried next and measured no better (1.05:1): it
+   is calibrated for a line against the page, and a `.soft` card already sits
+   close to that same lightness, so a border-strength token disappears against
+   it too. Mixing `--color-text-secondary` instead is what actually separates
+   the track from both -- it is a step read against text at rest everywhere
+   else in the package, and stepping toward it here clears 3:1 (3.63-4.26:1
+   measured) on a bare page and a `.soft` card, in both themes. */
 @utility progress {
   --progress-color: var(--intent-color);
-  --progress-surface: color-mix(in srgb, var(--intent-subtle) 60%, transparent);
+  --progress-surface: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
 
   @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
   /* Round by default; an aesthetic that declares no radius squares the track and

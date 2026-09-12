@@ -105,3 +105,36 @@
     color: var(--color-primary);
   }
 }
+
+/* The gap this closes: `sr-only` is Tailwind's own name and the one a consumer
+   reaches for out of habit, but on the vanilla, ready-to-import entries (`.`,
+   `/native`) there is no Tailwind utility layer to reach -- those compile real
+   CSS from a scan of `src/` alone, which used the class nowhere, so `sr-only`
+   silently did nothing there. It worked fine on a `/tw` entry, where the
+   consumer's own Tailwind build supplies it, and that split made the gap easy
+   to miss: it read as a package decision rather than a hole in one build and
+   not the other.
+
+   Not published as `.sr-only` itself. `.table` already did that once --
+   shadowing Tailwind's own `display: table` utility until a consumer needed
+   the one this package ate -- and `registry.test.ts`'s collision check exists
+   because of it (see `data-table`'s `renamedFrom` in `registry.json`). Naming
+   this `sr-only` would trip the same trap from the other direction: on a `/tw`
+   entry a real Tailwind build runs too, and two same-named utilities in the
+   same cascade is exactly the silent collision that test polices.
+   `.visually-hidden` says the same thing under a name nothing else claims,
+   using the standard clip-based recipe. `@source inline("visually-hidden")` in
+   `utilities/index.css` force-emits it on the entries with no scannable markup
+   of their own, the same mechanism that file's inline list already uses for
+   every layout and content utility name in it. */
+@utility visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

@@ -46,7 +46,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   "./tw/components": {
     candidates: "alert btn loading",
     patterns: [
-      /\.alert\{--_capped:/,
+      /\.alert\{[^}]*--_capped:/,
       /\.btn\{[^}]*--_capped:/,
       /\.btn\.loading:after\{/,
       /mask-image:var\(--loader-art\)/,
@@ -54,7 +54,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/surface": {
     candidates: "panel",
-    patterns: [/\.panel\{--_capped:/, /backdrop-filter:var\(--ui-backdrop,none\)/],
+    patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--ui-backdrop,none\)/],
   },
   "./tw/button": {
     candidates: "btn loading",
@@ -62,11 +62,11 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
   },
   "./tw/form": {
     candidates: "ipt radio",
-    patterns: [/\.ipt\{--_capped:/, /\.radio\{--_capped:/, /background-color:var\(--_bg\)/],
+    patterns: [/\.ipt\{[^}]*--_capped:/, /\.radio\{[^}]*--_capped:/, /background-color:var\(--_bg\)/],
   },
   "./tw/feedback": {
     candidates: "alert badge progress",
-    patterns: [/\.alert\{--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
+    patterns: [/\.alert\{[^}]*--_capped:/, /\.badge\{[^}]*--_capped:/, /\.progress\{/],
   },
   "./tw/loader": {
     candidates: "loader dots-wave",
@@ -142,7 +142,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
-const representativePublicRules = [".box{--_capped:"];
+const representativePublicRules = [".box{--_fill-cap:100%;--_capped:"];
 
 test("every declared package export target exists after build", async () => {
   await Promise.all(

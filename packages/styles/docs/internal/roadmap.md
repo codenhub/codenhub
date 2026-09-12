@@ -18,11 +18,11 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**Exercising the shipped model.** `0.1.0` and `0.1.1` are on npm, `0.1.1` published from its tag through the repository's trusted-publishing workflow. The model, the machine-checked contract, and the shipped aesthetics are all in place; what is not yet known is how they hold up in anger. The near-term work is a deliberate stress-test -- build real screens with the package and record where it is strong, where it fights back, what a consumer reaches for and cannot find, and what ships but goes unused.
+**Exercising the shipped model, one screen at a time.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The first stress-test screen (`app-shell/`, [findings](./stress-test-findings.md)) is considered done as of this checkpoint and is turning into the next version, in progress -- draft changelog text lives in `docs/internal/next-release.md`, not yet a real `docs/changelog/` entry, because the version has not been cut. Every contested design question the screen surfaced has a decision recorded against it now, `.pixel`'s numeral legibility excepted (no code fix available -- the package ships no font binary, stays a documentation question). A second screen -- a dense, real form and a settings/detail screen -- is planned next.
 
 ## Planned
 
-- **Stress-test pass.** Compose non-trivial, real-world screens against the published package -- forms, tables, toolbars, dialogs, a dense app shell -- under each shipped aesthetic and both themes. The output is a written findings list: friction points, missing primitives, combinations that read wrong, and classes or tokens nothing exercises.
+- **Stress-test pass, continued.** The app-shell screen is done; a form/settings screen is next, under each shipped aesthetic and both themes. Same method: a written findings list, and a local fixture that composes layout but never patches a confirmed defect.
 - **Feed findings back into the contract.** Anything the stress-test turns up that changes behavior, the token surface, or the supported class list goes through a normal versioned change: [Model](./model.md) and `registry.json` first, then the public docs, then a `docs/changelog/` entry. `hub release --cut` raises the version and scaffolds the entry; the `changelog` check makes skipping it impossible.
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed.
 
@@ -55,6 +55,8 @@ Two measurements shaped the material tokens and outlive the change that needed t
 ## Versioning
 
 `0.1.1` is the current release. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+
+The app-shell stress-test's fixes are planned as one minor (`0.2.0`) rather than a run of patches once they land: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0. Not cut yet -- see [Current Focus](#current-focus).
 
 The package stays on `0.x` while the public contract is still young, so a necessary breaking correction stays explicit and cheap. Documentation status remains `active`: supported for normal consumer use, not frozen against future semver-major changes.
 

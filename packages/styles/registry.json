@@ -74,7 +74,7 @@
     },
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "dense", "compact", "spacious", "flush"],
-    "shape": ["pill"],
+    "shape": ["pill", "icon"],
     "state": ["loading", "disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
@@ -557,7 +557,8 @@
     "text-label-lg",
     "text-label",
     "text-body",
-    "selection-contrast"
+    "selection-contrast",
+    "visually-hidden"
   ],
   "aesthetics": [
     {
@@ -579,7 +580,7 @@
       "class": "chunky-tile",
       "completeShadow": false,
       "selectors": ["btn"],
-      "selectorReason": "A heavy, slightly tracked label is what makes an action read as a tile, and neither `font-weight` nor `letter-spacing` holds a material slot -- adding two would put typography into the material vocabulary for one aesthetic. A slot buys nothing either: `.btn` is the only action the package ships, so an action-scoped token would be this same list with an indirection in front of it. Casing is left alone deliberately: how a label is worded is the application's decision, not the aesthetic's."
+      "selectorReason": "A heavy, slightly tracked label is what makes an action read as a tile, and neither `font-weight` nor `letter-spacing` holds a material slot -- adding two would put typography into the material vocabulary for one aesthetic. A slot buys nothing either: `.btn` is the only action the package ships, so an action-scoped token would be this same list with an indirection in front of it. Casing is left alone deliberately: how a label is worded is the application's decision, not the aesthetic's. The same selector also scales `--ui-shadow-y` down for `.btn.icon` paired with `.dense`/`.p-xs`: the bar is a flat 4px slab at every size, and on a ~20px glyph-only button it is close enough to the icon's own footprint to read as a solid fill behind a `.ghost` button. `--tile-lift` is not enough on its own -- it resolves once, on `.chunky-tile` itself, and a nested override of it does not reach `--ui-shadow-y`, which already inherited the resolved value -- so the token `box` actually reads is the one restated here."
     }
   ]
 }

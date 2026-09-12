@@ -12,8 +12,30 @@
      by `--intent-fill-max` -- neutral stops early because a full fill of the
      page's ink is a slab. The cap lands before the hover step, so a capped
      intent still deepens on hover instead of pinning rest and hover together.
-     See model.md#the-ink-is-gated-by-the-plate-not-tied-to-the-fill. */
-  --_capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+     See model.md#the-ink-is-gated-by-the-plate-not-tied-to-the-fill.
+
+     `--_fill-cap` is the matching slot for a component that reinterprets what a
+     presentation means for itself rather than merely bounding it -- `.card.soft`
+     uses it to rest at 0% regardless of what `.soft` asks for. It has to be a
+     separate term rather than a rewrite of `--ui-fill`: `presentation.css`'s
+     `.soft` is unlayered CSS and `@utility card`'s own rule compiles into
+     Tailwind's `utilities` layer, and an unlayered declaration always wins over
+     a layered one for the same property, at any specificity -- so `.card.soft`
+     writing `--ui-fill: 0%` directly was silently losing to `.soft`'s `12%`
+     every time. `--_fill-cap` is a token `.soft` never touches, so nothing
+     contests it.
+
+     Restated here at `100%` -- a no-op -- for the same reason `--_d-ground`
+     is restated `transparent` below rather than left to its `var()` fallback:
+     `--_fill-cap` inherits like any custom property, so `.card.soft` setting
+     it to `0%` would otherwise reach every box nested inside, not just the
+     card itself -- a badge sitting in a `.data-table:not(.solid, .ghost)`
+     cell inherited the table's `0%` cap and rendered with no fill and no
+     visible chip at all. An own declaration beats an inherited one at any
+     specificity, so restating it here is what keeps a nested box reading its
+     own presentation instead of the container's reinterpretation of one. */
+  --_fill-cap: 100%;
+  --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
   --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
   /* How much of the foreground is the contrast ink: what the presentation asks

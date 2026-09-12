@@ -44,6 +44,8 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
+`.card` overrides `.soft`'s fill at rest to `0%` and reveals the intent tint on `:hover`/`.interactive`/`.hoverable` instead -- the one place a component remaps what a presentation class resolves to, the same way text controls cap it at `6%` cascaded. See [Content and layout → Surfaces](./content-and-layout.md#surfaces).
+
 The combinations mean exactly what they spell:
 
 ```html
@@ -140,4 +142,4 @@ Each is one unitless multiplier over whatever shadow geometry is in scope, so th
 <article class="card elevation-none">Flat, whatever the page or container says</article>
 ```
 
-The multiplier is a plain number, so it inherits: a container lifts or flattens a whole region and any element inside it still opts out on itself. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.
+The multiplier does not inherit: an elevation class lifts or flattens the element it is written on only, and an unclassed element inside it takes no depth of its own. Give each element that needs depth its own elevation class. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.

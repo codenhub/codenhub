@@ -67,6 +67,36 @@
     --surface-padding: 0;
   }
 
+  /* `.soft` rests untinted rather than mixing its 12% -- measured on a neutral
+     card, 12% of `--color-text` onto any of `--color-background`,
+     `--color-foreground`, or `--color-surface` lands within a few units of the
+     others (a near-black ink dominates the result regardless of which
+     near-white ground it is mixed onto), which is why swapping the ground
+     token alone does not read as quieter. A resting `.card.soft` is instead
+     `--color-foreground` with no ink mixed in at all -- a plain step up from
+     the page that marks a different container without drawing attention to
+     it, the way a card that is not currently interesting should. `--_fill-cap:
+     0%` (box.css's override slot, not `--ui-fill` directly -- see the comment
+     there) composed with `box-hover`'s own formula (`min(100%, resting + 14%)`)
+     is what reveals the intent on hover without a second fill declaration:
+     resting at 0% means hover lands at exactly the hover step, 14%, in
+     `--intent-hover` as always. The ground steps to `--color-surface` at the
+     same moment, through the public `--ui-surface-ground` escape hatch rather
+     than the private `--_d-ground`, so a consumer's own override still wins
+     over both states the way it always has. Scoped to `.interactive` and
+     `.hoverable`, the two classes that already opt a card into `box-hover` --
+     a plain `.card.soft` with neither has no hover state to reveal into and
+     stays at the quiet, untinted rest. */
+  &.soft {
+    --_fill-cap: 0%;
+    --ui-surface-ground: var(--color-foreground);
+
+    &.interactive:hover,
+    &.hoverable:hover {
+      --ui-surface-ground: var(--color-surface);
+    }
+  }
+
   /* Opt-in, because a card is only sometimes a control. Applications still owe
      it a real interactive element and an accessible name. Hover and press are
      the derived ones every other pressable box gets; there is nothing
