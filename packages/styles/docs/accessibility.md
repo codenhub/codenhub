@@ -22,7 +22,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Visually hidden content
 
-`.visually-hidden` hides content from sighted users while keeping it in the accessibility tree, using the standard clip-based recipe. It ships on every entry, including the vanilla ones with no Tailwind utility layer of their own; see [Content and layout](./usage/content-and-layout.md).
+`.visually-hidden` hides content from sighted users while keeping it in the accessibility tree, using the standard clip-based recipe. It ships wherever the layout utilities do -- `.`, `./native`, `./tw`, `./tw/native`, and `./tw/utilities` -- including the vanilla entries with no Tailwind utility layer of their own; it is not part of `./components` or the narrower `./tw/components`/`./tw/*` component slices. See [Content and layout](./usage/content-and-layout.md).
 
 ### Control boundaries
 
