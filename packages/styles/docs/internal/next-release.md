@@ -50,8 +50,10 @@ Working title `0.2.0`. This is scratch space for the changelog text as fixes lan
 
 - **`.panel` and `.alert`** were considered for the same untinted-at-rest treatment as `.card`/`data-table` and deliberately left out, in an earlier pass. Back then the fix under consideration was unconditional -- every intent, not just the neutral case -- and `.alert`'s whole job is status signaling: an `.alert.soft.destructive` untinted unconditionally would show no red anywhere, ever, a real regression rather than a quieter version of the same component. `.panel` carried the same tension at lower stakes. Both landed since, scoped to the no-named-intent case only -- `.panel` in the form/settings pass above, `.alert` in this one -- which was never the combination the original objection was about.
 
+## Documented, not fixed
+
+- **`.alert`/`.panel`'s soft-edged border misses 3:1 against its own fill for some intents, and which ones flips between themes.** Measured on the shipped default, not a chosen combination: any change reaches `--color-border`/`--intent-border`, the seam every soft-or-partial-fill component's edge blends toward (`.alert`, `.panel`, `.badge`, `.kbd`, `.pre`/`.code`), across all seven intents and both themes -- a wider blast radius than the single-token nudge that already fixed `.card.soft.edged`'s border. Raised with the maintainer and decided: recorded as a known characteristic in [Accessibility → Color and contrast](../accessibility.md#color-and-contrast) instead of chasing the token through every affected component. See [Stress-test findings](./stress-test-findings.md#form).
+
 ## Still open
 
 `.pixel`'s numeral legibility at UI sizes. No code fix available -- the package ships no font binary, so this stays a documentation question. See [Stress-test findings](./stress-test-findings.md).
-
-`.alert`/`.panel`'s soft-edged border misses 3:1 against its own fill for some intents, and which ones flips between themes -- measured on the shipped default, not a chosen combination. Left open rather than fixed: any change reaches `--color-border`/`--intent-border`, the seam every soft-or-partial-fill component's edge blends toward (`.alert`, `.panel`, `.badge`, `.kbd`, `.pre`/`.code`), across all seven intents and both themes. See [Stress-test findings](./stress-test-findings.md#form).
