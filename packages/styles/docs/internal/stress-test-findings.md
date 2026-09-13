@@ -75,13 +75,13 @@ The app-shell members table's row actions (edit/remove/resend, `.btn.icon.ghost.
 
 A "create project" form: sectioned fields (project details, visibility, team access, billing), a validation-summary alert at the top, and several fields carrying `aria-invalid`/`.hint.error` together rather than one isolated invalid cell. Read under all five aesthetics and both themes.
 
-### `.alert.soft.edged`'s border misses 3:1 for some intents, and which ones flips with the theme
+### `.alert.soft.edged`'s border misses 3:1 for some intents, and which ones flips with the theme -- documented, not fixed
 
 The form's own validation-summary alert (`.alert.destructive.icon`) is the component's shipped default (`soft edged`, per the registry), not a chosen combination. Measured its border against its own fill -- the comparison [P3](./model.md#what-presentation-may-not-do)'s edge blend makes the right one -- across every intent on `.alert.soft.edged`, then reconfirmed the same numbers on the existing `feedback/` matrix so this is the shipped model, not something this fixture's markup did differently:
 
 | Intent            | Dark theme | Light theme |
 | ----------------- | ---------- | ----------- |
-| none / `.neutral` | 1.46:1     | 1.70:1      |
+| none / `.neutral` | 1.60:1     | 2.13:1      |
 | `.primary`        | 11.86:1    | 11.81:1     |
 | `.secondary`      | 5.44:1     | 4.80:1      |
 | `.success`        | 2.89:1     | 3.61:1      |
@@ -90,6 +90,10 @@ The form's own validation-summary alert (`.alert.destructive.icon`) is the compo
 | `.info`           | 2.48:1     | 4.09:1      |
 
 Below 3:1 in dark theme: none, success, destructive, info. Below 3:1 in light theme: none, warning. `.panel.edged` composes the same seam and reproduces the same numbers -- confirmed against `settings/`'s destructive danger zone below (a panel when this was first measured; a card since the fix to `.card.soft` below, at identical numbers).
+
+The `none`/`.neutral` row is re-measured from the original `1.46:1`/`1.70:1`: the neutral untint fix below (`settings/`) dropped a no-intent `.alert`'s own fill from `12%` to `0%`, which moves what P3's edge blend lands on even though the border color formula itself did not change. Still below 3:1 in both themes either way, so the failing set above is unchanged -- only `none`'s exact ratio moved.
+
+**Decided: documented rather than fixed.** Raised with the maintainer -- see [Open threads](#open-threads) for the three options that were on the table. `--color-border`/`--intent-border` stays as-is; the miss is recorded as a known characteristic in `docs/accessibility.md`'s color-and-contrast table instead of chasing it through every soft-or-partial-fill component's edge across all seven intents and both themes. Revisit if a future pass finds the same friction independently, the way the neutral-fill carve-out above was revisited twice before it landed.
 
 The mechanism is the one `model.md` already documents (P3: an edge blends toward the component's own fill by the fill amount) and the fix that shipped for `.card.soft.edged`'s border in the app-shell pass touched the same token, `--color-border`, one step in light theme only. That fix was tuned against a neutral card; it was never checked against all seven intents, and an intent's own hue plus a 12% fill lands at a different distance from `--color-border` depending on the intent and the theme, which is why the failing set is not the same set in both themes. Not fixed here: `--color-border`/`--intent-border` is what every soft-or-partial-fill component's edge blends toward, so a change reaches `.alert`, `.panel`, `.badge`, `.kbd`, `.pre`/`.code`, and any consumer composition using the same seam, across all seven intents and both themes -- a wider blast radius than the single-token nudge that fixed the card. Left open; see [Open threads](#open-threads).
 
@@ -153,4 +157,4 @@ One cost carries over from `.card.soft` rather than being introduced fresh: an o
 
 ## Open threads
 
-Whether to fix the `.alert`/`.panel` soft-edged border contrast, and if so how -- a `--color-border` nudge like the card fix, a per-intent adjustment, or leaving it as a documented characteristic the way `.pixel`'s numerals are. Raised with the maintainer rather than decided here, since any fix changes a token every soft-or-partial-fill component's edge reads from.
+None currently. The last one -- whether to fix the `.alert`/`.panel` soft-edged border contrast, and if so how (a `--color-border` nudge like the card fix, a per-intent adjustment, or leaving it as a documented characteristic the way `.pixel`'s numerals are) -- was raised with the maintainer and decided: documented, not fixed. See the `form/` finding above.
