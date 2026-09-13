@@ -51,17 +51,21 @@ const PRESENTATIONS = [
    `--ui-border` out of it -- and now that it composes, their edge rows show a
    real difference.
 
-   No `ghost` row. The registry marks it unsupported on all three toggles, and
-   the playground is the support surface: rendering a row the package does not
-   maintain claims support for it. */
-const FILL_PRESENTATIONS = ["default", "solid", "soft"];
+   `ghost` is on this list now. It used to be unsupported on all three toggles
+   -- a checked one was a mark on nothing -- and stopped being once `:checked`
+   started pinning the fill to one plate regardless of presentation: a checked
+   `.ghost` toggle now renders the same filled mark every other checked toggle
+   does, so its unchecked silhouette is a real, published look rather than a
+   floored duplicate of `.soft`. */
+const FILL_PRESENTATIONS = ["default", "solid", "soft", "ghost"];
 /* The full grid minus the two `ghost` rows, for the components the registry
-   marks `.ghost` unsupported on while still reading both axes. A key cap, a
+   marks `.ghost` unsupported on while still reading both axes: a key cap, a
    code chip and a code block rest on a ground, so `.ghost` draws the plate
    anyway and the row teaches that a class does nothing -- and at zero fill the
    plate is `--intent-subtle` alone, which renders four of the eight intents as
-   the same near-page chip. A switch is on this list for a different reason,
-   recorded beside it. */
+   the same near-page chip. No longer used for the switch, which used to be on
+   this list for the toggle-wide ghost-unsupported reason `FILL_PRESENTATIONS`
+   records above; that reason no longer applies to any toggle. */
 const NO_GHOST_PRESENTATIONS = ["default", "solid", "soft edged", "soft edgeless"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose
@@ -196,8 +200,9 @@ const COMPONENTS = {
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
   /* A switch reads the edge axis where the other two floor it, so it takes the
-     full grid minus the `ghost` rows no toggle supports. */
-  switch: toggle("switch", "checkbox", NO_GHOST_PRESENTATIONS),
+     full grid -- both `ghost` rows included, now that no toggle floors it
+     unsupported. */
+  switch: toggle("switch", "checkbox", PRESENTATIONS),
   "data-table": {
     tag: "table",
     layout: "grid",

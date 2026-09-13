@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,11 +18,13 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**Exercising the shipped model, one screen at a time.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The first stress-test screen (`app-shell/`, [findings](./stress-test-findings.md)) is considered done as of this checkpoint and is turning into the next version, in progress -- draft changelog text lives in `docs/internal/next-release.md`, not yet a real `docs/changelog/` entry, because the version has not been cut. Every contested design question the screen surfaced has a decision recorded against it now, `.pixel`'s numeral legibility excepted (no code fix available -- the package ships no font binary, stays a documentation question). A second screen -- a dense, real form and a settings/detail screen -- is planned next.
+**Exercising the shipped model, one screen at a time.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The first stress-test screen (`app-shell/`, [findings](./stress-test-findings.md)) is done and turning into the next version, in progress -- draft changelog text lives in `docs/internal/next-release.md`, not yet a real `docs/changelog/` entry, because the version has not been cut. Every contested design question that screen surfaced has a decision recorded against it, `.pixel`'s numeral legibility excepted (no code fix available -- the package ships no font binary, stays a documentation question).
+
+The second screen -- a dense, real form (`form/`) and a settings/detail screen (`settings/`) -- is built and read under every aesthetic and both themes. Four findings have landed: `.input-group`'s icon-tuned gap (now a `--input-group-gap` token); a real model change to the three toggles, where a checked control used to vary by presentation into three different "on" identities while every unchecked one read the same washed-out plate close to the disabled look -- `:checked` now pins the fill and ink to one plate, `checkbox`/`radio` raise their resting cap to `40%` to separate `.ghost`/`.soft`/`.solid`, `.ghost` is no longer unsupported on any toggle, and the unclassed default moved from `.solid` (the loudest of the three separated plates) to `.soft`; a neutral `.panel`/`.alert`/`.kbd`/`.code`/`.pre` no longer mixes a full 12% of near-black ink at rest -- the app-shell pass's "untint only the no-intent case" idea, considered and set aside there for keying fill amount on intent identity, turned out to need only the same neutral/named-intent binary `--intent-fill-max` already uses; and `.card.soft`'s own untint, shipped unconditional in the app-shell pass, carries the identical guard now too: a named intent rests tinted again, caught fixing the settings screen's danger-zone panel, which reads a tier below `.card`'s own padding scale and now ships as a `.card.soft.destructive` instead, unchanged in color. `.badge` was considered for the same no-named-intent carve-out and set aside -- it has no border to fall back on at rest, so untinting it reads as bare text rather than a quieter chip, confirmed live rather than assumed. One finding is open pending a decision, not yet fixed: `.alert`/`.panel`'s soft-edged border misses 3:1 for some intents, which ones depending on the theme. See [findings](./stress-test-findings.md).
 
 ## Planned
 
-- **Stress-test pass, continued.** The app-shell screen is done; a form/settings screen is next, under each shipped aesthetic and both themes. Same method: a written findings list, and a local fixture that composes layout but never patches a confirmed defect.
+- **Stress-test pass, continued.** The app-shell, form, and settings screens are built and read. Same method throughout: a written findings list, and a local fixture that composes layout but never patches a confirmed defect.
 - **Feed findings back into the contract.** Anything the stress-test turns up that changes behavior, the token surface, or the supported class list goes through a normal versioned change: [Model](./model.md) and `registry.json` first, then the public docs, then a `docs/changelog/` entry. `hub release --cut` raises the version and scaffolds the entry; the `changelog` check makes skipping it impossible.
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed.
 

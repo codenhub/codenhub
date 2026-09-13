@@ -44,7 +44,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-`.card` overrides `.soft`'s fill at rest to `0%` and reveals the intent tint on `:hover`/`.interactive`/`.hoverable` instead -- the one place a component remaps what a presentation class resolves to, the same way text controls cap it at `6%` cascaded. See [Content and layout → Surfaces](./content-and-layout.md#surfaces).
+`.card`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the six keeps the ordinary `12%`. `.badge` reads the identical intent/presentation classes but keeps its 12% wash at rest even with no named intent, since it has no border to fall back on and would otherwise disappear rather than read quieter. See [Content and layout → Surfaces](./content-and-layout.md#surfaces) and [Feedback](./feedback.md).
 
 The combinations mean exactly what they spell:
 
@@ -76,7 +76,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
-Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`. A switch caps at `40%`, where its three fills separate far enough to read on a track.
+A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
 | On a text control | fill |
 | ----------------- | ---- |
@@ -84,6 +84,8 @@ Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text le
 | cascaded `.solid` | 6%   |
 | `.soft`           | 12%  |
 | `.solid`          | 20%  |
+
+A toggle's cap does not have that split: it is `40%` whether the presentation class is on the checkbox/radio/switch itself or cascaded from a container, the same value for all three. That is where an unchecked `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap) read as three distinct plates instead of shades of the same wash. Being checked pins the fill to `100%` instead, whatever the presentation class asks — a checkbox, a radio, and a switch each have one "on" look, and presentation only shapes them unchecked. See [Forms](./forms.md) for the full toggle reference.
 
 The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](./forms.md) for the full toggle and text control reference.
 

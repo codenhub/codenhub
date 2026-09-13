@@ -307,7 +307,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-`.card` overrides `.soft`'s fill at rest to `0%` and reveals the intent tint on `:hover`/`.interactive`/`.hoverable` instead -- the one place a component remaps what a presentation class resolves to, the same way text controls cap it at `6%` cascaded. See [Content and layout → Surfaces](docs/usage/content-and-layout.md#surfaces).
+`.card`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the six keeps the ordinary `12%`. `.badge` reads the identical intent/presentation classes but keeps its 12% wash at rest even with no named intent, since it has no border to fall back on and would otherwise disappear rather than read quieter. See [Content and layout → Surfaces](docs/usage/content-and-layout.md#surfaces) and [Feedback](docs/usage/feedback.md).
 
 The combinations mean exactly what they spell:
 
@@ -339,7 +339,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
-Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`. A switch caps at `40%`, where its three fills separate far enough to read on a track.
+A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
 | On a text control | fill |
 | ----------------- | ---- |
@@ -347,6 +347,8 @@ Text controls and toggles cap a **cascaded** fill at `6%`, keeping typed text le
 | cascaded `.solid` | 6%   |
 | `.soft`           | 12%  |
 | `.solid`          | 20%  |
+
+A toggle's cap does not have that split: it is `40%` whether the presentation class is on the checkbox/radio/switch itself or cascaded from a container, the same value for all three. That is where an unchecked `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap) read as three distinct plates instead of shades of the same wash. Being checked pins the fill to `100%` instead, whatever the presentation class asks — a checkbox, a radio, and a switch each have one "on" look, and presentation only shapes them unchecked. See [Forms](docs/usage/forms.md) for the full toggle reference.
 
 The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](docs/usage/forms.md) for the full toggle and text control reference.
 
@@ -879,23 +881,23 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                       |
-| --------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                       |
-| `.label`                                                              | Form label text.                                              |
-| `.hint`                                                               | Secondary helper text.                                        |
-| `.hint.error`                                                         | Helper text with destructive intent.                          |
-| `.surface`                                                            | Shared public container composition utility.                  |
-| `.text-control`                                                       | Shared public text-control composition utility.               |
-| `.ipt`                                                                | Input control styling.                                        |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry icons. |
-| `.textarea`                                                           | Textarea control styling.                                     |
-| `.select`                                                             | Select control styling.                                       |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                              |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                 |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                           |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                             |
+| Class or Selector                                                     | Purpose                                                                  |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `.field`                                                              | Vertical field wrapper.                                                  |
+| `.label`                                                              | Form label text.                                                         |
+| `.hint`                                                               | Secondary helper text.                                                   |
+| `.hint.error`                                                         | Helper text with destructive intent.                                     |
+| `.surface`                                                            | Shared public container composition utility.                             |
+| `.text-control`                                                       | Shared public text-control composition utility.                          |
+| `.ipt`                                                                | Input control styling.                                                   |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix. |
+| `.textarea`                                                           | Textarea control styling.                                                |
+| `.select`                                                             | Select control styling.                                                  |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                         |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                            |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                           |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                      |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                        |
 
 ## Icons
 
@@ -929,6 +931,17 @@ The group reads intent and both [presentation](docs/usage/composing.md#presentat
 
 Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
 
+The slot works the same way for a text affix — a URL host, a currency symbol, a unit — not just an icon:
+
+```html
+<div class="input-group">
+  <span>example.com/</span>
+  <input class="ipt" type="text" />
+</div>
+```
+
+The gap between the control and its adornment is `--input-group-gap`, `0.5rem` by default: the right amount of breathing room for a distinct icon glyph, and too much for text meant to read as glued to the value — `example.com/` followed by a gap reads as a stray space breaking the path apart. Set `--input-group-gap: 0` on the group for a flush affix; icon compositions keep the default unchanged.
+
 ## Toggles
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons to set the checked color:
@@ -943,16 +956,15 @@ Non-icon input types keep the browser's native `date` and `datetime-local` picke
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
-All three toggles rest at `.solid`, and **`.ghost` is not supported on any of them.** An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing — a tick floating on the page, a dot with no ring around it. A container that cascades `.ghost` onto a toggle is floored rather than obeyed.
+All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; checked is pinned to one look regardless of which class is on the element, so a checkbox, a radio, and a switch each have a single "on" identity rather than one per presentation:
 
-Presentation decides the fill in both states. Being checked lifts the cap rather than pinning a fill, so the class still chooses:
+| Toggle           | unchecked | checked                                  |
+| ---------------- | --------- | ---------------------------------------- |
+| `.ghost`         | 0%        | 100%, mark in the contrast tone (pinned) |
+| `.soft`, default | 12%       | 100%, mark in the contrast tone (pinned) |
+| `.solid`         | 40%       | 100%, mark in the contrast tone (pinned) |
 
-| Toggle            | unchecked       | checked                         |
-| ----------------- | --------------- | ------------------------------- |
-| `.solid`, default | 20%, switch 40% | 100%, mark in the contrast tone |
-| `.soft`           | 12%             | 12%, mark in the strong tone    |
-
-A checked checkbox and a checked switch cut their mark out of that plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, so `.radio.soft` is the classic ring-and-dot radio and `.radio.solid` is a filled circle whose dot stays readable — the mark follows the plate rather than being pinned to the intent color.
+A checked checkbox and a checked switch cut their mark out of that pinned plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, and the dot follows the same pinned plate, so `.radio.soft` and `.radio.solid` render the same filled circle once checked — presentation only changes what the radio looks like before it's picked.
 
 ## Text controls
 
@@ -1058,7 +1070,7 @@ Skeletons, loaders, progress bars, and dividers are indicators. They read intent
 
 `.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
 
-Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border.
+Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
 ## Example
 
@@ -1225,7 +1237,7 @@ On `.data-table` it removes the header plate along with the body tint, so `.data
 
 `.soft` rests untinted throughout -- `--color-foreground`, no intent color mixed in, for every intent, including the resting default, on the head plate and the table's own base fill alike. A table has no hover or interaction state to reveal a tint into the way `.card.soft` does on `.interactive`/`.hoverable`, so unlike a card there is no state where a `.data-table.success.soft` reveals green; only the boundary and rule lines still read the intent.
 
-On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All three rest at `.soft` instead, which puts a real `12%` of the intent over the ground and separates them.
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. A named intent rests at `.soft` instead, which puts a real `12%` of the intent over the ground and separates it from the others; the no-named-intent case reads no differently from `.ghost` either way, so it rests at the ground alone rather than adding an unmotivated wash of its own.
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
@@ -1264,7 +1276,9 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 Both read intent, [presentation](docs/usage/composing.md#presentation), and [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](docs/usage/composing.md#elevation).
 
-`.card.soft` is untinted at rest — a plain `--color-foreground` plate, no intent color mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. `.solid` and `.ghost` are unaffected.
+`.card.soft` with no named intent is untinted at rest — a plain `--color-foreground` plate, no ink mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. A named intent (`.card.soft.success`, `.card.soft.destructive`, and so on) keeps its ordinary tint at rest instead, and deepens further on hover the same way any other filled surface does — only the no-intent case is untinted, since removing an intent's own color would silence it rather than quiet it. `.solid` and `.ghost` are unaffected either way.
+
+`.panel` with no named intent behaves the same way, permanently rather than on hover: a plain `.panel` rests at the same untinted `--color-foreground` plate a neutral `.card.soft` does, because a panel has no hover state to reveal a tint into. `.panel.primary`, `.panel.destructive`, and every other named intent keep their ordinary tint. `.kbd`, `.code`, and `.pre` follow the same no-named-intent rule for their own fill, without moving off their `--intent-subtle` ground.
 
 On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](docs/usage/aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
@@ -1274,7 +1288,7 @@ On the base look, `.card.interactive` scales down slightly on press (`--ui-activ
 <article class="card">Neutral card</article>
 <article class="card success solid">Filled success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card success soft interactive" href="/package">Untinted at rest; success-tinted on hover</a>
+<a class="card success soft interactive" href="/package">Success-tinted at rest; deepens on hover</a>
 <article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```

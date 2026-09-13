@@ -67,27 +67,44 @@
     --surface-padding: 0;
   }
 
-  /* `.soft` rests untinted rather than mixing its 12% -- measured on a neutral
-     card, 12% of `--color-text` onto any of `--color-background`,
-     `--color-foreground`, or `--color-surface` lands within a few units of the
-     others (a near-black ink dominates the result regardless of which
-     near-white ground it is mixed onto), which is why swapping the ground
-     token alone does not read as quieter. A resting `.card.soft` is instead
-     `--color-foreground` with no ink mixed in at all -- a plain step up from
-     the page that marks a different container without drawing attention to
-     it, the way a card that is not currently interesting should. `--_fill-cap:
-     0%` (box.css's override slot, not `--ui-fill` directly -- see the comment
-     there) composed with `box-hover`'s own formula (`min(100%, resting + 14%)`)
-     is what reveals the intent on hover without a second fill declaration:
-     resting at 0% means hover lands at exactly the hover step, 14%, in
-     `--intent-hover` as always. The ground steps to `--color-surface` at the
-     same moment, through the public `--ui-surface-ground` escape hatch rather
-     than the private `--_d-ground`, so a consumer's own override still wins
-     over both states the way it always has. Scoped to `.interactive` and
-     `.hoverable`, the two classes that already opt a card into `box-hover` --
-     a plain `.card.soft` with neither has no hover state to reveal into and
-     stays at the quiet, untinted rest. */
-  &.soft {
+  /* `.soft` rests untinted for no named intent, rather than mixing its 12% --
+     measured on a neutral card, 12% of `--color-text` onto any of
+     `--color-background`, `--color-foreground`, or `--color-surface` lands
+     within a few units of the others (a near-black ink dominates the result
+     regardless of which near-white ground it is mixed onto), which is why
+     swapping the ground token alone does not read as quieter. A resting
+     no-intent `.card.soft` is instead `--color-foreground` with no ink mixed
+     in at all -- a plain step up from the page that marks a different
+     container without drawing attention to it, the way a card that is not
+     currently interesting should.
+
+     A named intent keeps its ordinary 12% wash rather than being untinted
+     unconditionally: 12% of an actual hue does not read as a slab the way
+     12% of near-black ink does -- measured, `.card.soft.destructive` at 12%
+     is a gentle `249, 225, 225`, nothing like the `217, 217, 217` a neutral
+     surface mixing the same 12% of its own ink used to read as -- and
+     untinting it anyway would silence a `.card.soft.destructive` at rest
+     rather than merely quiet it, the same reason `.panel`'s own carve-out
+     (below) is scoped the same way. `:not(...)` names every intent class for
+     that reason; a version of this fix that untinted every intent shipped
+     first and was corrected once `.panel` needed the identical, narrower
+     carve-out to keep a resting `.panel.destructive` legible.
+
+     `--_fill-cap: 0%` (box.css's override slot, not `--ui-fill` directly --
+     see the comment there) composed with `box-hover`'s own formula
+     (`min(100%, resting + 14%)`) is what reveals the intent on hover without
+     a second fill declaration, for the no-intent case: resting at 0% means
+     hover lands at exactly the hover step, 14%, in `--intent-hover` as
+     always. The ground steps to `--color-surface` at the same moment,
+     through the public `--ui-surface-ground` escape hatch rather than the
+     private `--_d-ground`, so a consumer's own override still wins over both
+     states the way it always has. Scoped to `.interactive` and `.hoverable`,
+     the two classes that already opt a card into `box-hover` -- a plain
+     `.card.soft` with neither has no hover state to reveal into and stays at
+     the quiet, untinted rest. A named intent needs neither special case: it
+     already rests tinted, so the same generic `box-hover` formula deepens it
+     on hover (12% to 26%) with no ground shift required. */
+  &.soft:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info) {
     --_fill-cap: 0%;
     --ui-surface-ground: var(--color-foreground);
 
@@ -148,5 +165,51 @@
 
   &.flush {
     --surface-padding: 0;
+  }
+
+  /* Neutral panels are the common case -- most are plain layout wells,
+     sidebars, and toolbars with no named intent -- and 12% of `--color-text`
+     (near-black) mixed onto the page is a far more assertive move than 12%
+     of an actual hue: measured, `217, 217, 217` against a `250, 250, 250`
+     page, the same "neutral ink reads louder" effect `.card.soft`'s fix
+     already answered, and the same reason `--intent-fill-max` stops
+     neutral's fill short everywhere else in the model.
+
+     Scoped to no named intent rather than untinted unconditionally the way
+     `data-table` is: a panel is not interactive, so there is no hover to
+     reveal a colored intent back into later, and it is edgeless by default,
+     so the fill is the only channel a `.primary` bulk-actions bar or a
+     `.destructive` danger-zone panel has to say what it is. Untinting those
+     unconditionally would silence them, not just quiet them -- measured, a
+     resting `.panel.destructive` is a gentle `249, 225, 225` warm wash,
+     nothing like the neutral slab above. `.card.soft` carries the identical
+     no-named-intent scoping now, corrected to match once this carve-out
+     shipped -- see the comment on `.card`'s own `&.soft`, above. `:not(...)`
+     names every intent class for that reason, plus `.solid`/`.ghost` so an
+     explicit presentation on the element is never clamped to a cap it did
+     not ask for -- the same guard `data-table`'s own `:not(.solid, .ghost)`
+     uses.
+
+     Grounds on `--color-foreground` through the public `--ui-surface-ground`
+     escape hatch, not the private `--_d-ground`, the same token `.card.soft`
+     steps to -- so a consumer's own override still wins, and a bare `.panel`
+     rests at exactly the plate a `.card.soft` does (measured: `245, 245, 245`
+     light, `23, 23, 23` dark, identical both ways). Permanent rather than
+     hover-revealed: neither a panel nor `data-table` has an interaction
+     state to reveal a tint into, so both rest quiet rather than reveal.
+
+     The one cost, inherited rather than new: an own declaration always beats
+     an inherited one, so this also beats `.glass` setting the same token on
+     an ancestor for its translucent ground -- a neutral panel under `.glass`
+     is quiet but opaque rather than blurred. `.card.soft` has carried this
+     exact trade-off since it shipped; nothing exercised it there because
+     `tests/browser/aesthetics.spec.ts`'s glass coverage tests a default
+     (ghost) card, never a soft one. Accepted rather than solved differently:
+     there is no way to ask "did an ancestor already set this token" in CSS,
+     only which declaration wins, and the quiet neutral rest is the more
+     common case a panel needs to get right. */
+  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
+    --_fill-cap: 0%;
+    --ui-surface-ground: var(--color-foreground);
   }
 }

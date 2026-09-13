@@ -37,6 +37,31 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
+  /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
+     mixes 12% of near-black ink onto the page, measured `217, 217, 217`
+     against `250, 250, 250` -- the identical slab `.panel` read before its
+     own fix, not a status-signaling problem, since this is scoped to no
+     named intent. A named intent keeps its ordinary wash; untinting
+     `.alert.soft.destructive` too would silence the status it exists to
+     carry rather than quiet it, which is why an earlier, unconditional
+     version of this fix was rejected for `.alert` specifically -- see
+     `docs/internal/stress-test-findings.md`. This version never reaches
+     that case: `:not(...)` names every intent class, plus `.solid`/`.ghost`
+     so an explicit presentation on the element is never clamped to a cap it
+     did not ask for.
+
+     Grounds on `--color-foreground` through the public `--ui-surface-ground`
+     escape hatch, exactly like `.panel` and a resting `.card.soft` -- an
+     alert has no hover state to reveal a tint into either, so this is
+     permanent rather than revealed. Unlike a neutral panel or badge, an
+     alert cannot lose its visual identity from this: `--_d-border: 100%`
+     above holds regardless of fill, so a neutral alert still reads as a
+     framed box, just a quiet one instead of a grey slab. */
+  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
+    --_fill-cap: 0%;
+    --ui-surface-ground: var(--color-foreground);
+  }
+
   &.icon {
     @apply relative ps-11;
 

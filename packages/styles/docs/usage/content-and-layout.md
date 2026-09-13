@@ -108,7 +108,7 @@ On `.data-table` it removes the header plate along with the body tint, so `.data
 
 `.soft` rests untinted throughout -- `--color-foreground`, no intent color mixed in, for every intent, including the resting default, on the head plate and the table's own base fill alike. A table has no hover or interaction state to reveal a tint into the way `.card.soft` does on `.interactive`/`.hoverable`, so unlike a card there is no state where a `.data-table.success.soft` reveals green; only the boundary and rule lines still read the intent.
 
-On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. All three rest at `.soft` instead, which puts a real `12%` of the intent over the ground and separates them.
+On `.kbd`, `.code`, and `.pre` it is **not supported**. All three rest on `--intent-subtle`, and that ground draws the plate whatever the fill says — so `.ghost` took the fill away and changed nothing visible. Worse, the ground alone is a near-page tint: a ghost chip measured the same `#e5e5e5` for neutral and primary on the light page, and `#f5f5f5` at 1.04:1 against it for secondary. A named intent rests at `.soft` instead, which puts a real `12%` of the intent over the ground and separates it from the others; the no-named-intent case reads no differently from `.ghost` either way, so it rests at the ground alone rather than adding an unmotivated wash of its own.
 
 Use `.table-wrap` around `.data-table` when table width may exceed its container:
 
@@ -147,7 +147,9 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 Both read intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](./aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](./composing.md#elevation).
 
-`.card.soft` is untinted at rest — a plain `--color-foreground` plate, no intent color mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. `.solid` and `.ghost` are unaffected.
+`.card.soft` with no named intent is untinted at rest — a plain `--color-foreground` plate, no ink mixed in, marking a different container without drawing attention to it. The intent tint and a `--color-surface` ground only appear together, on `:hover`, and only on `.card.interactive`/`.card.hoverable`: a plain `.card.soft` with neither has no hover state to reveal into and stays at the quiet rest. A named intent (`.card.soft.success`, `.card.soft.destructive`, and so on) keeps its ordinary tint at rest instead, and deepens further on hover the same way any other filled surface does — only the no-intent case is untinted, since removing an intent's own color would silence it rather than quiet it. `.solid` and `.ghost` are unaffected either way.
+
+`.panel` with no named intent behaves the same way, permanently rather than on hover: a plain `.panel` rests at the same untinted `--color-foreground` plate a neutral `.card.soft` does, because a panel has no hover state to reveal a tint into. `.panel.primary`, `.panel.destructive`, and every other named intent keep their ordinary tint. `.kbd`, `.code`, and `.pre` follow the same no-named-intent rule for their own fill, without moving off their `--intent-subtle` ground.
 
 On the base look, `.card.interactive` scales down slightly on press (`--ui-active-transform`, `scale(0.97)`); an [aesthetic](./aesthetics.md) substitutes its own press gesture, and `prefers-reduced-motion` turns it off.
 
@@ -157,7 +159,7 @@ On the base look, `.card.interactive` scales down slightly on press (`--ui-activ
 <article class="card">Neutral card</article>
 <article class="card success solid">Filled success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card success soft interactive" href="/package">Untinted at rest; success-tinted on hover</a>
+<a class="card success soft interactive" href="/package">Success-tinted at rest; deepens on hover</a>
 <article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```

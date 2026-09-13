@@ -546,11 +546,24 @@ test.describe("aesthetics", () => {
       await allowTransparency(page, browserName);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      const panel = await readStyles(page, "panel-default-none", BACKDROP_PROPERTIES);
+      /* A named intent, not `-none`: a neutral panel's own carve-out (surface.css,
+         next to `@utility panel`) writes `--ui-surface-ground` directly on the
+         element to stay quiet instead of drawing a slab, and an own declaration
+         always beats an ancestor's inherited one -- the same way `.card.soft`'s
+         already-shipped untint wins over this same glass ground, untested until
+         now because nothing exercised `.card.soft` under `.glass` either. A
+         `.destructive` panel carries no such carve-out, so it is what actually
+         proves glass reaches the component. */
+      const panel = await readStyles(page, "panel-default-destructive", BACKDROP_PROPERTIES);
 
       await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
 
-      const alert = await readStyles(page, "alert-default-none", BACKDROP_PROPERTIES);
+      /* Same reasoning as the panel above, now that `.alert` carries the
+         identical no-named-intent carve-out (feedback.css, next to `@utility
+         alert`): `-none` would write its own `--ui-surface-ground` and always
+         beat glass's ancestor-level one, so a named intent is what actually
+         exercises the component under glass. */
+      const alert = await readStyles(page, "alert-default-destructive", BACKDROP_PROPERTIES);
       const tooltip = page.getByTestId("tooltip-open");
 
       await tooltip.hover();

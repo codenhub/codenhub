@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Form | @codenhub/styles playground</title>
+    <script src="/shared/env-stylesheet.js"></script>
+    <script type="module" src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn narrow stack tight">
+        <p class="text-label">Stress test</p>
+        <h1 class="text-title-lg">Create project</h1>
+        <p class="text-body text-text-secondary">
+          A dense, real form -- validation states mixed into real layout, rather than the forms page's per-control
+          matrix.
+        </p>
+      </section>
+
+      <section class="sect-inn narrow" data-testid="project-form">
+        <form class="stack loose" novalidate>
+          <div class="alert destructive icon" role="alert" data-testid="form-alert">
+            3 fields need your attention before this project can be created.
+          </div>
+
+          <div class="stack tight">
+            <h2 class="text-title-sm">Project details</h2>
+            <div class="form-grid">
+              <label class="field" data-testid="field-name">
+                <span class="label">Project name</span>
+                <input class="ipt" type="text" value="Acme Labs" required />
+              </label>
+              <label class="field" data-testid="field-slug">
+                <span class="label">URL slug</span>
+                <div class="input-group" style="--input-group-gap: 0" data-testid="slug-group">
+                  <span class="text-body text-text-secondary" data-testid="slug-prefix">codenhub.dev/</span>
+                  <input class="ipt" type="text" value="acme-labs" required />
+                </div>
+                <span class="hint">Lowercase letters, numbers, and hyphens only.</span>
+              </label>
+            </div>
+            <label class="field" data-testid="field-description">
+              <span class="label">Description</span>
+              <textarea class="textarea" rows="3">Internal tools and dashboards for the Acme growth team.</textarea>
+              <span class="hint" data-testid="description-count">55 / 240</span>
+            </label>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="stack tight">
+            <h2 class="text-title-sm">Visibility</h2>
+            <div class="stack tight" role="radiogroup" aria-label="Visibility">
+              <label class="cluster option-row" data-testid="visibility-public">
+                <input class="radio" type="radio" name="visibility" checked />
+                <span class="stack tight">
+                  <span class="text-label">Public</span>
+                  <span class="text-body text-text-secondary">Anyone on the internet can view this project.</span>
+                </span>
+              </label>
+              <label class="cluster option-row" data-testid="visibility-internal">
+                <input class="radio" type="radio" name="visibility" />
+                <span class="stack tight">
+                  <span class="text-label">Internal</span>
+                  <span class="text-body text-text-secondary">
+                    Anyone signed into your workspace can view this project.
+                  </span>
+                </span>
+              </label>
+              <label class="cluster option-row" data-testid="visibility-private">
+                <input class="radio" type="radio" name="visibility" />
+                <span class="stack tight">
+                  <span class="text-label">Private</span>
+                  <span class="text-body text-text-secondary">Only people you invite can view this project.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="stack tight">
+            <h2 class="text-title-sm">Team access</h2>
+            <div class="form-grid">
+              <label class="field" data-testid="field-default-role">
+                <span class="label">Default role</span>
+                <select class="select">
+                  <option>Viewer</option>
+                  <option selected>Member</option>
+                  <option>Admin</option>
+                </select>
+              </label>
+              <label class="field" data-testid="field-workspace">
+                <span class="label">Workspace</span>
+                <select class="select" disabled data-testid="workspace-select">
+                  <option>Acme Corp</option>
+                </select>
+                <span class="hint">Contact an admin to move this project to a different workspace.</span>
+              </label>
+            </div>
+            <label class="field" data-testid="field-invite">
+              <span class="label">Invite by email</span>
+              <div class="input-group">
+                <i class="ic-mail" aria-hidden="true"></i>
+                <input class="ipt" type="email" placeholder="teammate@acme.com" />
+              </div>
+            </label>
+            <div class="cluster between" data-testid="field-notify">
+              <span class="stack tight">
+                <span class="text-label">Notify by email</span>
+                <span class="text-body text-text-secondary">Send an email when a teammate joins this project.</span>
+              </span>
+              <input class="switch primary" type="checkbox" checked aria-label="Notify by email" />
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="stack tight">
+            <h2 class="text-title-sm">Billing</h2>
+            <div class="form-grid">
+              <label class="field" data-testid="field-billing-email">
+                <span class="label">Billing email</span>
+                <input
+                  class="ipt"
+                  type="email"
+                  value="finance@acme"
+                  aria-invalid="true"
+                  aria-describedby="billing-email-error"
+                />
+                <span class="hint error" id="billing-email-error" data-testid="billing-email-error">
+                  Enter a complete email address.
+                </span>
+              </label>
+              <label class="field" data-testid="field-tax-id">
+                <span class="label">Tax ID</span>
+                <input class="ipt" type="text" placeholder="Optional" />
+              </label>
+            </div>
+            <div class="form-grid">
+              <label class="field" data-testid="field-company">
+                <span class="label">Company name</span>
+                <input class="ipt" type="text" value="" aria-invalid="true" aria-describedby="company-error" />
+                <span class="hint error" id="company-error" data-testid="company-error">Company name is required.</span>
+              </label>
+              <label class="field" data-testid="field-country">
+                <span class="label">Country</span>
+                <select class="select" aria-invalid="true" aria-describedby="country-error">
+                  <option value="">Select a country</option>
+                  <option>United States</option>
+                  <option>Brazil</option>
+                </select>
+                <span class="hint error" id="country-error" data-testid="country-error">
+                  Select a country to continue.
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="cluster between" data-testid="form-footer">
+            <p class="text-body text-text-secondary">All fields save when you create the project.</p>
+            <div class="cluster tight">
+              <button class="btn soft" type="button" data-testid="form-cancel">Cancel</button>
+              <button class="btn primary" type="submit" data-testid="form-submit">Create project</button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

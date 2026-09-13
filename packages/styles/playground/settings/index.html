@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings | @codenhub/styles playground</title>
+    <script src="/shared/env-stylesheet.js"></script>
+    <script type="module" src="/shared/playground.js"></script>
+    <link rel="stylesheet" href="/shared/playground.css" />
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <main class="sect" data-testid="preview-root">
+      <section class="sect-inn narrow stack tight">
+        <p class="text-label">Stress test</p>
+        <h1 class="text-title-lg">Account settings</h1>
+        <p class="text-body text-text-secondary">
+          Cards and panels at a size between a component-matrix cell and the full app shell.
+        </p>
+      </section>
+
+      <section class="sect-inn narrow stack loose" data-testid="settings-page">
+        <article class="card stack" data-testid="profile-card">
+          <div class="cluster between">
+            <div class="cluster">
+              <div class="settings-avatar" aria-hidden="true">AL</div>
+              <div class="stack tight">
+                <p class="text-title-sm">Acme Labs</p>
+                <p class="text-body text-text-secondary">owner@acme.com</p>
+              </div>
+            </div>
+            <button class="btn soft" type="button" data-testid="profile-edit">Edit profile</button>
+          </div>
+        </article>
+
+        <article class="card stack" data-testid="plan-card">
+          <div class="cluster between">
+            <h2 class="text-title-sm">Plan &amp; usage</h2>
+            <span class="badge primary pill" data-testid="plan-badge">Growth</span>
+          </div>
+          <div class="panel primary soft stack tight" data-testid="plan-panel">
+            <div class="cluster between">
+              <p class="text-label">Seats</p>
+              <p class="text-label">12 / 25</p>
+            </div>
+            <div
+              class="progress"
+              style="--progress-value: 48%"
+              role="progressbar"
+              aria-valuenow="48"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-label="Seats used"
+            ></div>
+            <p class="text-body text-text-secondary">13 seats remaining on the Growth plan.</p>
+          </div>
+          <div class="cluster between">
+            <p class="text-body text-text-secondary">Renews on October 12, 2026.</p>
+            <button class="btn primary" type="button" data-testid="plan-upgrade">Upgrade plan</button>
+          </div>
+        </article>
+
+        <article class="card stack" data-testid="api-keys-card">
+          <div class="cluster between">
+            <h2 class="text-title-sm">API keys</h2>
+            <button class="btn soft compact" type="button" data-testid="api-key-create">
+              <i class="ic-plus" aria-hidden="true"></i>
+              New key
+            </button>
+          </div>
+          <div class="table-wrap" data-testid="api-keys-table-wrap">
+            <table class="data-table compact" data-testid="api-keys-table">
+              <caption class="visually-hidden">API keys</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Name</th>
+                  <th scope="col">Key</th>
+                  <th scope="col">Created</th>
+                  <th class="settings-row-actions" scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr data-testid="api-key-row-1">
+                  <td>Production</td>
+                  <td><kbd class="kbd settings-key">sk_live_51H8q••••••••••••••••AyBcDe</kbd></td>
+                  <td>Jan 14, 2026</td>
+                  <td class="settings-row-actions">
+                    <button class="btn icon ghost compact" type="button" aria-label="Copy production key">
+                      <i class="ic-copy" aria-hidden="true"></i>
+                    </button>
+                    <button class="btn icon ghost destructive compact" type="button" aria-label="Revoke production key">
+                      <i class="ic-trash-2" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr data-testid="api-key-row-2">
+                  <td>Staging</td>
+                  <td><kbd class="kbd settings-key">sk_test_4eC39••••••••••••p7dc</kbd></td>
+                  <td>Mar 2, 2026</td>
+                  <td class="settings-row-actions">
+                    <button class="btn icon ghost compact" type="button" aria-label="Copy staging key">
+                      <i class="ic-copy" aria-hidden="true"></i>
+                    </button>
+                    <button class="btn icon ghost destructive compact" type="button" aria-label="Revoke staging key">
+                      <i class="ic-trash-2" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card stack" data-testid="security-card">
+          <h2 class="text-title-sm">Security</h2>
+          <div class="cluster between" data-testid="security-2fa">
+            <div class="cluster tight">
+              <span class="text-label">Two-factor authentication</span>
+              <span class="badge warning pill">Recommended</span>
+            </div>
+            <input class="switch primary" type="checkbox" aria-label="Two-factor authentication" />
+          </div>
+          <hr class="divider" />
+          <div class="cluster between" data-testid="security-alerts">
+            <div class="stack tight">
+              <span class="text-label">New sign-in alerts</span>
+              <span class="text-body text-text-secondary">Email the workspace when a new device signs in.</span>
+            </div>
+            <input class="switch primary" type="checkbox" checked aria-label="New sign-in alerts" />
+          </div>
+        </article>
+
+        <article class="card soft destructive stack" data-testid="danger-zone">
+          <div class="stack tight">
+            <h2 class="text-title-sm">Danger zone</h2>
+            <p class="text-body text-text-secondary">
+              Deleting this workspace removes every project, member, and API key. This cannot be undone.
+            </p>
+          </div>
+          <div>
+            <button
+              class="btn destructive solid"
+              type="button"
+              data-testid="delete-workspace-trigger"
+              onclick="document.getElementById('delete-workspace-dialog').showModal()"
+            >
+              Delete workspace
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <dialog
+        class="card floating settings-dialog"
+        id="delete-workspace-dialog"
+        data-testid="delete-workspace-dialog"
+        aria-labelledby="delete-workspace-dialog-title"
+      >
+        <form method="dialog" class="stack">
+          <div class="stack tight">
+            <h2 class="text-title-sm" id="delete-workspace-dialog-title">Delete Acme Labs?</h2>
+            <p class="text-body text-text-secondary">
+              Every project, member, and API key in this workspace will be permanently removed. This cannot be undone.
+            </p>
+          </div>
+          <div class="cluster">
+            <button class="btn soft" type="submit" value="cancel">Cancel</button>
+            <button class="btn destructive" type="submit" value="delete" data-testid="confirm-delete">
+              Delete workspace
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </main>
+  </body>
+</html>

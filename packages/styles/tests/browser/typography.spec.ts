@@ -420,7 +420,15 @@ test("reads presentation on key caps and tables", async ({ page }) => {
 
       return color;
     };
+    /* Kept neutral, as before: the border-blend formula below assumes
+       `--intent-border` is `var(--color-border)`, which is only true for
+       neutral -- a named intent's own `--intent-border` is its own color
+       token instead, so substituting one in here would need the formula to
+       change with it. A named intent is probed separately, only for the
+       surface-tone question the neutral carve-out (`content.css`, next to
+       `@utility kbd`) changed the answer to. */
     const resting = get("kbd-default-neutral");
+    const namedResting = get("kbd-default-success");
 
     const values = {
       defaultBorderColor: resting.borderTopColor,
@@ -431,6 +439,7 @@ test("reads presentation on key caps and tables", async ({ page }) => {
          approximated, so the assertion still names a colour. */
       expectedBorderColor: resolve(`color-mix(in oklab, ${resting.backgroundColor} 12%, var(--color-border))`),
       ghostHeadBackground: ghostHead.backgroundColor,
+      namedRestingBackground: namedResting.backgroundColor,
       restingBackground: resting.backgroundColor,
       softBackground: get("kbd-soft-edgeless-primary").backgroundColor,
       softBorderColor: get("kbd-soft-edgeless-primary").borderTopColor,
@@ -451,12 +460,18 @@ test("reads presentation on key caps and tables", async ({ page }) => {
      the three content chips: the ground draws the plate whatever the fill says,
      so a ghost chip was `--intent-subtle` alone -- #e5e5e5 for neutral and
      primary alike on the light page, and #f5f5f5 at 1.04:1 against it for
-     secondary. A real 12% of the intent over the same ground is what separates
-     them, and it is a visible step past the surface tone the chip sits on. */
+     secondary. A real 12% of a named intent over the same ground is what
+     separates it from another intent, and it is a visible step past the
+     surface tone the chip sits on. Neutral no longer takes that step: 12% of
+     `--color-text` (near-black) read as a slab rather than a quiet chip, so
+     the no-named-intent case drops the extra wash and rests exactly at
+     `--intent-subtle` (`--color-surface` for neutral) instead -- there is
+     nothing else for a neutral chip to separate itself from. */
   expect(
-    getColorDistance(styles.restingBackground, styles.tokenSurface),
-    "a resting key cap steps past the surface tone",
+    getColorDistance(styles.namedRestingBackground, styles.tokenSurface),
+    "a resting, intentful key cap steps past the surface tone",
   ).toBeGreaterThan(2);
+  expectSameColor(styles.restingBackground, styles.tokenSurface, "a neutral key cap now rests at it");
   // Each supported fill moves it somewhere different.
   expect(getColorDistance(styles.solidBackground, styles.softBackground)).toBeGreaterThan(2);
   expectSameColor(styles.solidBackground, styles.tokenPrimary, "solid kbd fill");

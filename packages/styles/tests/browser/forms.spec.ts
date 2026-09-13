@@ -488,21 +488,23 @@ test.describe("forms", () => {
     }
   });
 
-  /* A switch's three fills used to render as two looks, so the component varied
-     its *line* per fill class instead -- the only place in the package where a
-     fill class decided an edge, and the reason `.soft` meant something different
-     on a switch than on anything else. Raising the fill cap to 40% retired it.
+  /* A switch's three resting fills used to render as two looks, so the
+     component varied its *line* per fill class instead -- the only place in
+     the package where a fill class decided an edge, and the reason `.soft`
+     meant something different on a switch than on anything else. Raising the
+     fill cap to 40% retired it.
 
-     This is the assertion that rule is gone: the fills separate as fills, and the
-     line is drawn under every one of them. `axes.spec.ts` measures how far apart
-     the fills land; this measures that each is distinct and that none of them
-     reaches the line.
+     This is the assertion that rule is gone: the resting fills separate as
+     fills, and the line is drawn under every one of them. `axes.spec.ts`
+     measures how far apart the fills land; this measures that each is
+     distinct and that none of them reaches the line.
 
      The checked track is measured under each because a fill class leaking into
-     the edge would cut a page-colored ring out of a filled track. It is no
-     longer the same track under all of them: `:checked` lifts the fill bounds
-     rather than pinning a fill, so `.solid` reaches full and `.soft` keeps the
-     tint it named. */
+     the edge would cut a page-colored ring out of a filled track. It is the
+     same track under all of them: `:checked` pins the fill rather than lifting
+     the bounds and letting presentation keep composing through it (the
+     stress-test pass's reversal, see model.md#a-state-lifts-bounds-it-does-not-write-results),
+     so `.solid` and `.soft` both reach the pinned plate the default does. */
   test("separates a switch's presentations by its fill and keeps the line under all of them", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -523,9 +525,9 @@ test.describe("forms", () => {
     const solid = await read("solid");
     const soft = await read("soft edged");
 
-    /* The registry rests a switch at solid, so the two are the same element. */
-    expectSameColor(fallback.resting.fill, solid.resting.fill, "resting switch fill");
-    expectSameColor(fallback.resting.edge, solid.resting.edge, "resting switch line");
+    /* The registry rests a switch at soft, so the two are the same element. */
+    expectSameColor(fallback.resting.fill, soft.resting.fill, "resting switch fill");
+    expectSameColor(fallback.resting.edge, soft.resting.edge, "resting switch line");
 
     /* Two fills, two tracks. The pairwise distances are measured in
        `axes.spec.ts`; what matters here is that they are not the same colour. */
@@ -542,14 +544,17 @@ test.describe("forms", () => {
       expect(isTransparent(resting.edge), `${label} switch line`).toBe(false);
     }
 
-    /* The checked track follows the fill class now, so `.solid` is the one that
-       matches the default and `.soft` is deliberately quieter than both. */
+    /* The checked track is pinned now, so `.solid` and `.soft` both match the
+       default rather than `.soft` staying a quieter track of its own. */
     expect(
       getColorDistance(soft.checked.fill, solid.checked.fill),
-      "a checked soft switch is not a checked solid one",
-    ).toBeGreaterThan(20);
+      "a checked soft switch is the same plate as a checked solid one",
+    ).toBeLessThanOrEqual(2);
 
-    for (const { checked, label } of [{ checked: solid.checked, label: "solid" }]) {
+    for (const { checked, label } of [
+      { checked: solid.checked, label: "solid" },
+      { checked: soft.checked, label: "soft" },
+    ]) {
       expectSameColor(checked.fill, fallback.checked.fill, `checked ${label} switch track`);
       expectSameColor(checked.edge, fallback.checked.edge, `checked ${label} switch line`);
     }
@@ -583,11 +588,19 @@ test.describe("forms", () => {
   });
 
   /* A checkbox states itself by filling and cutting a tick out of the ground; a
-     radio states itself with a dot inside a ring. `.soft` is where that reads
-     most clearly, because the tint stays light enough for the ring to carry the
-     intent whole. The dot is no longer pinned to the intent -- it takes `box`'s
-     composed foreground, so it stays readable when a `.solid` radio fills. */
-  test("rings a soft checked radio in its intent instead of filling it", async ({ page }) => {
+     radio states itself with a dot inside a ring, thickened to twice the
+     resting line. That ring still takes the intent whole regardless of
+     presentation -- it always has, `:checked` sets `--_line-tone` directly on
+     `radio` rather than composing it from a fill class. The plate behind the
+     dot no longer varies by presentation the way it used to (a `.soft` radio
+     used to stay a light ring-and-dot, `.solid` a filled circle): `:checked`
+     now pins the fill the same way it does on a checkbox or a switch, so
+     `.soft` reaches the same filled circle `.solid` does, and the dot -- which
+     takes `box`'s composed foreground rather than a color pinned to the
+     intent -- stays readable against it either way. */
+  test("thickens and colors a checked radio's ring by intent, and pins its plate whatever the presentation", async ({
+    page,
+  }) => {
     await page.goto(FORMS_URL);
 
     const radios = await page.evaluate(() => {
@@ -610,26 +623,31 @@ test.describe("forms", () => {
         warning: resolveToken("warning"),
       };
 
-      return Object.keys(tokens).map((intent) => {
-        const checked = getComputedStyle(document.querySelector(`[data-testid="radio-soft-${intent}-checked"]`)!);
-        const resting = getComputedStyle(document.querySelector(`[data-testid="radio-soft-${intent}"]`)!);
+      return Object.keys(tokens).flatMap((intent) =>
+        ["soft", "solid"].map((presentation) => {
+          const checked = getComputedStyle(
+            document.querySelector(`[data-testid="radio-${presentation}-${intent}-checked"]`)!,
+          );
+          const resting = getComputedStyle(document.querySelector(`[data-testid="radio-${presentation}-${intent}"]`)!);
 
-        return {
-          dot: checked.color,
-          fill: checked.backgroundColor,
-          label: `radio ${intent}`,
-          restingWidth: Number.parseFloat(resting.borderTopWidth),
-          ring: checked.borderTopColor,
-          ringWidth: Number.parseFloat(checked.borderTopWidth),
-          token: tokens[intent]!,
-        };
-      });
+          return {
+            dot: checked.color,
+            fill: checked.backgroundColor,
+            label: `radio ${presentation} ${intent}`,
+            restingWidth: Number.parseFloat(resting.borderTopWidth),
+            ring: checked.borderTopColor,
+            ringWidth: Number.parseFloat(checked.borderTopWidth),
+            token: tokens[intent]!,
+          };
+        }),
+      );
     });
 
     for (const radio of radios) {
-      /* A tint rather than a fill: `.soft` asks for 12% and the checked state
-         lifts the cap without changing what the class asked for. */
-      expect(readSrgb(radio.fill).alpha, `${radio.label} fill`).toBeLessThan(0.5);
+      /* The pin, not a tint: `.soft` and `.solid` both reach the same, near-full
+         plate once checked. */
+      expect(readSrgb(radio.fill).alpha, `${radio.label} fill`).toBeGreaterThan(0.9);
+      expect(getColorDistance(radio.fill, radio.dot), `${radio.label} dot is not its own ground`).toBeGreaterThan(20);
       expectSameColor(radio.ring, radio.token, `${radio.label} ring`);
       expect(radio.ringWidth, `${radio.label} ring width`).toBeGreaterThan(radio.restingWidth);
     }
