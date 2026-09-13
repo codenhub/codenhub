@@ -59,6 +59,23 @@ The root follows the operating-system color-scheme preference. Apply `.light` or
 
 See [Concepts → Theme selection](./concepts.md#theme-selection) for how selectors resolve and [Usage → Theming](./usage/theming.md) for the full color token reference.
 
+### Dark variant
+
+`/tw` source entrypoints define a custom `dark:` variant for your own utilities. It fires under an explicit dark selector (`.dark`, `.theme-dark`, or `[data-theme="dark"]`, on the element or an ancestor), or under the system preference when nothing under it forces a theme explicitly:
+
+```html
+<html>
+  <body>
+    <p class="dark:text-white">Follows the OS preference here</p>
+    <div class="light">
+      <p class="dark:text-white">Stays light -- this subtree forced it</p>
+    </div>
+  </body>
+</html>
+```
+
+An explicit selector at any depth wins over the system preference, in either direction, the same as the token theme it tracks.
+
 ## Import paths
 
 Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.

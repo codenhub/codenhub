@@ -33,8 +33,6 @@ Finished work is not tracked here. The current token contract, component coverag
 
   Until the fixture set itself is trimmed, a change to a `playground/*/index.html` page still touches three consumers at once: `dev` and `debug` both `root` at `playground/`, the built `demo` still bundles the same pages under its own chrome, and `tests/browser/*.spec.ts` asserts against the `data-testid`s in the markup. So a fixture edit still needs `pnpm test:browser styles` and a `pnpm --filter=@codenhub/styles-demo build` to be trusted.
 
-- **`dark:` variant under system preference**: the `@custom-variant dark` in `theme.css` now covers all three explicit spellings (`.dark`, `.theme-dark`, `[data-theme="dark"]`) but deliberately not `prefers-color-scheme: dark`, so a consumer's `dark:` utilities do not respond to the OS default the way the token palette does through `light-dark()`. Adding a system arm is possible but cannot cleanly exclude a forced-light subtree in a single `@custom-variant`, so it would be an imperfect match to the "explicit selector decides" rule the theme model states. Not urgent, but a real inconsistency rather than a hypothetical one -- worth a proper design pass and a fix as soon as there is time for one, once a way to exclude a forced-light subtree cleanly turns up.
-
 ## Aesthetics assessed and deferred
 
 Both were costed against the current model and neither fits it. Recorded so the question is not reopened from scratch.

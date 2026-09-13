@@ -235,10 +235,33 @@
   color-scheme: dark;
 }
 
-/* The selector list mirrors the `color-scheme: dark` block above, all three
+/* The first arm mirrors the `color-scheme: dark` block above, all three
    spellings included -- a consumer writing `.theme-dark` for the token theme
-   was otherwise left without the matching `dark:` variant. System preference is
-   deliberately out: the variant follows an explicit theme selector, the same
-   rule the rest of the theme model states, so `dark:` utilities track the theme
-   a subtree was actually put in rather than the OS default. */
-@custom-variant dark (&:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *));
+   was otherwise left without the matching `dark:` variant.
+
+   The second arm closes the gap that left open: `--color-*` tokens resolve
+   through `light-dark()` against the computed `color-scheme`, so with no
+   explicit selector at all `:root`'s `color-scheme: light dark` already
+   follows the OS preference -- see `concepts.md#theme-selection`. A selector
+   list cannot query computed style the way `light-dark()` does, but it can
+   still match "OS prefers dark, and not under a forced-light subtree" with a
+   plain descendant exclusion: `:not(:where(.light, .light *, ...))` matches
+   only when no ancestor (or the element itself) carries one of the three
+   light spellings. That is the one case the exclusion cannot see -- a
+   subtree forced light through some means other than these three selectors,
+   where `light-dark()` would still honor it but this variant could not
+   detect it. Out of contract: those three spellings are the only supported
+   way to force a theme, so nothing else is expected to set `color-scheme`
+   directly. Each arm is independent, so an explicit selector still wins at
+   any depth even inside a subtree the other arm would otherwise match. */
+@custom-variant dark {
+  &:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    &:not(:where(.light, .light *, .theme-light, .theme-light *, [data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+}
