@@ -159,7 +159,7 @@ On the base look, `.card.interactive` scales down slightly on press (`--ui-activ
 <article class="card">Neutral card</article>
 <article class="card success solid">Filled success card</article>
 <article class="card primary ghost edged">Intent border, no fill</article>
-<a class="card success soft interactive" href="/package">Untinted at rest; success-tinted on hover</a>
+<a class="card success soft interactive" href="/package">Success-tinted at rest; deepens on hover</a>
 <article class="card hoverable">Warms on hover; the action is a nested button</article>
 <aside class="panel">Flush panel</aside>
 ```

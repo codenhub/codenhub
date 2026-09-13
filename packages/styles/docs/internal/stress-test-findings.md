@@ -101,7 +101,7 @@ Landed as a token rather than a new class: `--input-group-gap: 0.5rem` in `src/c
 
 ### `.pixel`'s numeral legibility reappears here
 
-The counter ("57 / 240") and the alert's "3 fields" reproduce the same small-numeral ambiguity already recorded against the app-shell pagination controls. Same open documentation question, not a new one -- see the app-shell section above.
+The counter ("55 / 240") and the alert's "3 fields" reproduce the same small-numeral ambiguity already recorded against the app-shell pagination controls. Same open documentation question, not a new one -- see the app-shell section above.
 
 ### Unchecked toggles read as disabled next to a checked one that varied by presentation -- landed
 

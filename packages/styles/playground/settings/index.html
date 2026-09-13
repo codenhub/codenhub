@@ -150,10 +150,15 @@
         </article>
       </section>
 
-      <dialog class="card floating settings-dialog" id="delete-workspace-dialog" data-testid="delete-workspace-dialog">
+      <dialog
+        class="card floating settings-dialog"
+        id="delete-workspace-dialog"
+        data-testid="delete-workspace-dialog"
+        aria-labelledby="delete-workspace-dialog-title"
+      >
         <form method="dialog" class="stack">
           <div class="stack tight">
-            <h2 class="text-title-sm">Delete Acme Labs?</h2>
+            <h2 class="text-title-sm" id="delete-workspace-dialog-title">Delete Acme Labs?</h2>
             <p class="text-body text-text-secondary">
               Every project, member, and API key in this workspace will be permanently removed. This cannot be undone.
             </p>
