@@ -161,6 +161,8 @@ See [Concepts → Theme selection](docs/concepts.md#theme-selection) for how sel
 
 An explicit selector at any depth wins over the system preference, in either direction, the same as the token theme it tracks.
 
+The one place it does not track the token theme: nesting an explicit selector inside the opposite one. `color-scheme` inherits, so a `.light` nested inside `.dark` themes its own tokens correctly regardless of depth -- the nearest declaration always wins. `dark:` matches by selector instead, and `.dark *` matches every descendant of a `.dark` element with no way to stop at a nearer `.light` in between, so a `dark:` utility inside that nested `.light` still fires even though the tokens around it are light. Apply one theme per subtree rather than nesting opposite ones if a page uses both tokens and `dark:` utilities together.
+
 ## Import paths
 
 Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
@@ -257,7 +259,7 @@ The root follows the operating-system `color-scheme` preference until an explici
 - A nested explicit selector overrides an inherited theme, so the nearest themed ancestor controls that subtree at any depth.
 - If conflicting light and dark selectors are placed on the same element, the dark declaration wins because it appears later with equal specificity. Do not rely on this conflict behavior; apply one theme per element.
 - Component colors resolve from tokens or `currentColor`, so they follow the theme without separate dark-variant rules, with no exception: every glyph the package draws is a `currentColor` mask. Icon artwork a consumer brings is theirs to theme.
-- The Tailwind source entrypoints' `dark:` variant tracks the same rule: it fires under an explicit dark selector, or under the system preference when the subtree carries no explicit selector at all. An explicit selector at any depth still wins over the system preference, in either direction -- see [Setup → Dark variant](docs/setup.md#dark-variant).
+- The Tailwind source entrypoints' `dark:` variant tracks this rule for the explicit-selector-versus-system-preference choice: it fires under an explicit dark selector, or under the system preference when the subtree carries no explicit selector at all. It does not track the previous rule the same way: that one holds because `color-scheme` inherits, so the nearest declaration always wins regardless of depth, while `dark:` matches by selector -- `.dark *` matches every descendant of a `.dark` element, with no way to stop at a nearer `.light` in between. A `.light` subtree nested inside `.dark` themes its tokens correctly but still matches `dark:`'s explicit arm. See [Setup → Dark variant](docs/setup.md#dark-variant).
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below it, because that is the only signal the palette reads. This also themes native UI such as scrollbars and form-control internals to match.
 
