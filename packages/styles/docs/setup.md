@@ -59,6 +59,25 @@ The root follows the operating-system color-scheme preference. Apply `.light` or
 
 See [Concepts → Theme selection](./concepts.md#theme-selection) for how selectors resolve and [Usage → Theming](./usage/theming.md) for the full color token reference.
 
+### Dark variant
+
+`/tw` source entrypoints define a custom `dark:` variant for your own utilities. It fires under an explicit dark selector (`.dark`, `.theme-dark`, or `[data-theme="dark"]`, on the element or an ancestor), or under the system preference when nothing under it forces a theme explicitly:
+
+```html
+<html>
+  <body>
+    <p class="dark:text-white">Follows the OS preference here</p>
+    <div class="light">
+      <p class="dark:text-white">Stays light -- this subtree forced it</p>
+    </div>
+  </body>
+</html>
+```
+
+An explicit selector at any depth wins over the system preference, in either direction, the same as the token theme it tracks.
+
+The one place it does not track the token theme: nesting an explicit selector inside the opposite one. `color-scheme` inherits, so a `.light` nested inside `.dark` themes its own tokens correctly regardless of depth -- the nearest declaration always wins. `dark:` matches by selector instead, and `.dark *` matches every descendant of a `.dark` element with no way to stop at a nearer `.light` in between, so a `dark:` utility inside that nested `.light` still fires even though the tokens around it are light. Apply one theme per subtree rather than nesting opposite ones if a page uses both tokens and `dark:` utilities together.
+
 ## Import paths
 
 Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.

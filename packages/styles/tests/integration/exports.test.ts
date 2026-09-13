@@ -42,7 +42,18 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     candidates: "btn",
     patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
   },
-  "./tw/theme": { patterns: [/--color-primary:/] },
+  /* `dark:` compiles to two independent arms -- an explicit selector and a
+     system-preference fallback excluded from a forced-light subtree -- so a
+     single candidate has to prove both are present rather than just that the
+     variant exists at all. */
+  "./tw/theme": {
+    candidates: "dark:hidden",
+    patterns: [
+      /--color-primary:/,
+      /\.dark\\:hidden:where\(\.dark,\.dark \*,\.theme-dark,\.theme-dark \*,\[data-theme=dark\],\[data-theme=dark\] \*\)/,
+      /@media \(prefers-color-scheme:dark\)\{\.dark\\:hidden:not\(:where\(\.light,\.light \*,\.theme-light,\.theme-light \*,\[data-theme=light\],\[data-theme=light\] \*\)\)/,
+    ],
+  },
   "./tw/components": {
     candidates: "alert btn loading",
     patterns: [
