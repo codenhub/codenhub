@@ -307,7 +307,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-`.card`, `.panel`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the five keeps the ordinary `12%`. See [Content and layout → Surfaces](docs/usage/content-and-layout.md#surfaces).
+`.card`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the six keeps the ordinary `12%`. `.badge` reads the identical intent/presentation classes but keeps its 12% wash at rest even with no named intent, since it has no border to fall back on and would otherwise disappear rather than read quieter. See [Content and layout → Surfaces](docs/usage/content-and-layout.md#surfaces) and [Feedback](docs/usage/feedback.md).
 
 The combinations mean exactly what they spell:
 
@@ -1070,7 +1070,7 @@ Skeletons, loaders, progress bars, and dividers are indicators. They read intent
 
 `.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
 
-Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border.
+Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
 ## Example
 

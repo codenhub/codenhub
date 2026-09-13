@@ -558,7 +558,12 @@ test.describe("aesthetics", () => {
 
       await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
 
-      const alert = await readStyles(page, "alert-default-none", BACKDROP_PROPERTIES);
+      /* Same reasoning as the panel above, now that `.alert` carries the
+         identical no-named-intent carve-out (feedback.css, next to `@utility
+         alert`): `-none` would write its own `--ui-surface-ground` and always
+         beat glass's ancestor-level one, so a named intent is what actually
+         exercises the component under glass. */
+      const alert = await readStyles(page, "alert-default-destructive", BACKDROP_PROPERTIES);
       const tooltip = page.getByTestId("tooltip-open");
 
       await tooltip.hover();

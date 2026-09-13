@@ -44,7 +44,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-`.card`, `.panel`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the five keeps the ordinary `12%`. See [Content and layout → Surfaces](./content-and-layout.md#surfaces).
+`.card`, `.panel`, `.alert`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the six keeps the ordinary `12%`. `.badge` reads the identical intent/presentation classes but keeps its 12% wash at rest even with no named intent, since it has no border to fall back on and would otherwise disappear rather than read quieter. See [Content and layout → Surfaces](./content-and-layout.md#surfaces) and [Feedback](./feedback.md).
 
 The combinations mean exactly what they spell:
 
