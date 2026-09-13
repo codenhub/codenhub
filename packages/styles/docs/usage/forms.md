@@ -6,23 +6,23 @@ order: 6
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                       |
-| --------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                       |
-| `.label`                                                              | Form label text.                                              |
-| `.hint`                                                               | Secondary helper text.                                        |
-| `.hint.error`                                                         | Helper text with destructive intent.                          |
-| `.surface`                                                            | Shared public container composition utility.                  |
-| `.text-control`                                                       | Shared public text-control composition utility.               |
-| `.ipt`                                                                | Input control styling.                                        |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry icons. |
-| `.textarea`                                                           | Textarea control styling.                                     |
-| `.select`                                                             | Select control styling.                                       |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                              |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                 |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                           |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                             |
+| Class or Selector                                                     | Purpose                                                                  |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `.field`                                                              | Vertical field wrapper.                                                  |
+| `.label`                                                              | Form label text.                                                         |
+| `.hint`                                                               | Secondary helper text.                                                   |
+| `.hint.error`                                                         | Helper text with destructive intent.                                     |
+| `.surface`                                                            | Shared public container composition utility.                             |
+| `.text-control`                                                       | Shared public text-control composition utility.                          |
+| `.ipt`                                                                | Input control styling.                                                   |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix. |
+| `.textarea`                                                           | Textarea control styling.                                                |
+| `.select`                                                             | Select control styling.                                                  |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                         |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                            |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                           |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                      |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                        |
 
 ## Icons
 
@@ -56,6 +56,17 @@ The group reads intent and both [presentation](./composing.md#presentation) axes
 
 Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
 
+The slot works the same way for a text affix — a URL host, a currency symbol, a unit — not just an icon:
+
+```html
+<div class="input-group">
+  <span>example.com/</span>
+  <input class="ipt" type="text" />
+</div>
+```
+
+The gap between the control and its adornment is `--input-group-gap`, `0.5rem` by default: the right amount of breathing room for a distinct icon glyph, and too much for text meant to read as glued to the value — `example.com/` followed by a gap reads as a stray space breaking the path apart. Set `--input-group-gap: 0` on the group for a flush affix; icon compositions keep the default unchanged.
+
 ## Toggles
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons to set the checked color:
@@ -70,16 +81,15 @@ Non-icon input types keep the browser's native `date` and `datetime-local` picke
 | `.destructive`, `.danger`, `.error` | Destructive color.      |
 | `.info`                             | Info color.             |
 
-All three toggles rest at `.solid`, and **`.ghost` is not supported on any of them.** An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing — a tick floating on the page, a dot with no ring around it. A container that cascades `.ghost` onto a toggle is floored rather than obeyed.
+All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; checked is pinned to one look regardless of which class is on the element, so a checkbox, a radio, and a switch each have a single "on" identity rather than one per presentation:
 
-Presentation decides the fill in both states. Being checked lifts the cap rather than pinning a fill, so the class still chooses:
+| Toggle           | unchecked | checked                                  |
+| ---------------- | --------- | ---------------------------------------- |
+| `.ghost`         | 0%        | 100%, mark in the contrast tone (pinned) |
+| `.soft`, default | 12%       | 100%, mark in the contrast tone (pinned) |
+| `.solid`         | 40%       | 100%, mark in the contrast tone (pinned) |
 
-| Toggle            | unchecked       | checked                         |
-| ----------------- | --------------- | ------------------------------- |
-| `.solid`, default | 20%, switch 40% | 100%, mark in the contrast tone |
-| `.soft`           | 12%             | 12%, mark in the strong tone    |
-
-A checked checkbox and a checked switch cut their mark out of that plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, so `.radio.soft` is the classic ring-and-dot radio and `.radio.solid` is a filled circle whose dot stays readable — the mark follows the plate rather than being pinned to the intent color.
+A checked checkbox and a checked switch cut their mark out of that pinned plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, and the dot follows the same pinned plate, so `.radio.soft` and `.radio.solid` render the same filled circle once checked — presentation only changes what the radio looks like before it's picked.
 
 ## Text controls
 

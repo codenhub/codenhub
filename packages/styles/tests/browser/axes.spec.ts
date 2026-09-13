@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
-import { getColorDistance, readSrgb } from "./test-utils";
+import { flattenColor, getColorDistance, readSrgb } from "./test-utils";
 
 /* The registry says which axes each component reads. This asserts it, in both
    directions, and that pairing is the point: an axis listed as live must change
@@ -157,82 +157,77 @@ test.describe("axes", () => {
     });
   }
 
-  /* The bound that replaced the switch's fill-decides-edge exception. Its fills
-     used to land on one look, so the component varied the line per fill class
-     instead -- the only place in the package where a fill class decided an edge.
-     Raising the cap retires that, and this is the measurement the cap was chosen
-     against: two resting fills that separate from each other and from the page,
-     both clearly below a checked track.
-
-     `.ghost` is not probed. It is unsupported on a toggle, so what it renders is
-     not a promise the package keeps.
+  /* The bound behind a toggle's resting plate, generalized across all three:
+     `checkbox`/`radio` raise their own cap to the same `40%` `.switch` was
+     already measured against, for the same reason -- at `text-control`'s `6%`
+     the resting fills collapsed toward one look. This is the measurement the
+     cap is chosen against: three resting fills (`.ghost`, `.soft`, `.solid`)
+     that separate from each other, both clearly below a checked plate.
 
      Measured on the composited pixel rather than the computed string, because a
      `color-mix()` carrying alpha says nothing about what the eye gets. */
-  test("switch fills separate from each other and from checked", async ({ page }) => {
-    await page.goto(SURFACES_URL);
-
-    const tracks = await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
-      const ground = getComputedStyle(document.body).backgroundColor;
-
-      const read = (className: string, checked: boolean) => {
-        const element = document.createElement("input");
-
-        element.type = "checkbox";
-        element.className = className;
-        element.checked = checked;
-        host.append(element);
-
-        const background = getComputedStyle(element).backgroundColor;
-
-        element.remove();
-
-        return background;
-      };
-
-      return {
-        checked: read("switch primary", true),
-        ground,
-        soft: read("switch primary soft", false),
-        solid: read("switch primary solid", false),
-      };
-    });
-
-    const flatten = (color: string) => {
-      const top = readSrgb(color);
-      const bottom = readSrgb(tracks.ground);
-      const channel = (key: "blue" | "green" | "red") =>
-        Math.round(top[key] * top.alpha + bottom[key] * (1 - top.alpha));
-
-      return `rgb(${channel("red")} ${channel("green")} ${channel("blue")})`;
-    };
-
-    const page_ = tracks.ground;
-    const soft = flatten(tracks.soft);
-    const solid = flatten(tracks.solid);
-    const checked = flatten(tracks.checked);
-
-    /* Roughly 20 sRGB steps is a clearly visible difference, which is the
-       threshold the hover step was measured against. Each neighbouring pair
-       clears it, and the gap from an unchecked `.solid` to a checked track is
-       what keeps the two states from reading alike. */
-    expect(getColorDistance(page_, soft), `page ${page_} vs soft ${soft}`).toBeGreaterThan(10);
-    expect(getColorDistance(soft, solid), `soft ${soft} vs solid ${solid}`).toBeGreaterThan(20);
-    expect(getColorDistance(solid, checked), `solid ${solid} vs checked ${checked}`).toBeGreaterThan(40);
-  });
-
-  /* Presentation reaches the checked state, which it did not until `:checked`
-     stopped writing `--_fill` and `--_fg` outright and started lifting the
-     bounds instead. Every checked toggle used to render the same filled box
-     whatever fill class it carried.
-
-     Three things are asserted together because they are one rule seen from three
-     sides: the fill class decides the checked plate, the mark stays readable on
-     whatever plate that is, and an unsupported `.ghost` is floored rather than
-     left as a mark on nothing. */
   for (const control of ["checkbox", "radio", "switch"] as const) {
-    test(`${control} composes its checked fill and keeps the mark on a ground`, async ({ page }) => {
+    test(`${control} resting fill separates by presentation, below a checked plate`, async ({ page }) => {
+      await page.goto(SURFACES_URL);
+
+      const read = await page.evaluate(
+        ({ className, type }) => {
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const ground = getComputedStyle(document.body).backgroundColor;
+          const probe = (extra: string, checked: boolean) => {
+            const element = document.createElement("input");
+
+            element.type = type;
+            element.className = `${className} primary ${extra}`.trim();
+            element.checked = checked;
+            host.append(element);
+
+            const background = getComputedStyle(element).backgroundColor;
+
+            element.remove();
+
+            return background;
+          };
+
+          return {
+            checked: probe("", true),
+            ghost: probe("ghost", false),
+            ground,
+            soft: probe("soft", false),
+            solid: probe("solid", false),
+          };
+        },
+        { className: control, type: control === "radio" ? "radio" : "checkbox" },
+      );
+
+      const ghost = flattenColor(read.ghost, read.ground);
+      const soft = flattenColor(read.soft, read.ground);
+      const solid = flattenColor(read.solid, read.ground);
+      const checked = flattenColor(read.checked, read.ground);
+
+      /* `.ghost` asks for zero fill, same as the page underneath it. */
+      expect(getColorDistance(read.ground, ghost), `${control} ghost vs page ${read.ground}`).toBeLessThanOrEqual(2);
+
+      /* Roughly 20 sRGB steps is a clearly visible difference, which is the
+         threshold the hover step was measured against. Each neighbouring pair
+         clears it, and the gap from a resting `.solid` to a checked plate is
+         what keeps the two states from reading alike. */
+      expect(getColorDistance(ghost, soft), `${control} ghost ${ghost} vs soft ${soft}`).toBeGreaterThan(10);
+      expect(getColorDistance(soft, solid), `${control} soft ${soft} vs solid ${solid}`).toBeGreaterThan(20);
+      expect(getColorDistance(solid, checked), `${control} solid ${solid} vs checked ${checked}`).toBeGreaterThan(40);
+    });
+  }
+
+  /* `:checked` used to lift the fill bounds and let presentation keep deciding
+     through them -- a checked `.soft` stayed a pale tint, the classic
+     ring-and-dot radio. The stress-test pass found that cost more on a real,
+     dense screen than it bought: three checked identities to learn instead of
+     one. `:checked` now pins the fill, so every presentation composes the same
+     checked plate, and that is what this asserts -- together with the mark
+     staying readable on it, and the resting fill still separating by
+     presentation (the test above), which is where the axis moved to instead. */
+  for (const control of ["checkbox", "radio", "switch"] as const) {
+    test(`${control} composes one checked fill regardless of presentation`, async ({ page }) => {
       await page.goto(SURFACES_URL);
 
       const read = await page.evaluate(
@@ -267,16 +262,20 @@ test.describe("axes", () => {
 
       const alpha = (color: string) => readSrgb(color).alpha;
 
-      /* `.solid` reaches the full fill its name asks for; `.soft` stays at the
-         tint its name asks for. Equal here is the old behaviour returning. */
+      /* Every checked plate reaches the same, near-full fill, whatever
+         presentation asked for -- the pin working. */
       expect(alpha(read.solidChecked.fill), `${control} checked .solid fills`).toBeGreaterThan(0.9);
-      expect(alpha(read.softChecked.fill), `${control} checked .soft stays a tint`).toBeLessThan(0.5);
-      expect(alpha(read.solidChecked.fill), `${control} checked .solid and .soft are different plates`).toBeGreaterThan(
-        alpha(read.softChecked.fill),
-      );
+      expect(
+        getColorDistance(read.solidChecked.fill, read.softChecked.fill),
+        `${control} checked .solid and .soft are the same plate`,
+      ).toBeLessThanOrEqual(2);
+      expect(
+        getColorDistance(read.solidChecked.fill, read.ghostChecked.fill),
+        `${control} checked .solid and .ghost are the same plate`,
+      ).toBeLessThanOrEqual(2);
 
-      /* The cap lifts only for the checked state, so `.solid` still separates
-         from itself across the two. */
+      /* The pin only applies once checked, so `.solid` still separates from its
+         own resting plate. */
       expect(alpha(read.solidChecked.fill), `${control} .solid checked outfills its resting plate`).toBeGreaterThan(
         alpha(read.solidResting.fill),
       );
@@ -289,9 +288,10 @@ test.describe("axes", () => {
         expect(ground, `${control} ${label} mark is not its own ground`).toBeGreaterThan(20);
       }
 
-      /* `.ghost` is unsupported on a toggle, so the checked floor gives its mark
-         a ground rather than leaving a tick on the page. */
-      expect(alpha(read.ghostChecked.fill), `${control} checked .ghost is floored`).toBeGreaterThan(0);
+      /* `.ghost` used to be unsupported here because a checked one was a mark
+         on nothing; the pin gives it the same ground every other checked
+         plate gets. */
+      expect(alpha(read.ghostChecked.fill), `${control} checked .ghost still fills`).toBeGreaterThan(0.9);
       expect(alpha(read.softResting.fill), `${control} resting .soft still tints`).toBeGreaterThan(0);
     });
   }

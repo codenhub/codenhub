@@ -222,35 +222,45 @@ So a `.edgeless` toolbar cannot erase the line of a field inside it, and `.ipt.e
 R8 says a state re-declares an input rather than a painted property, and P6 adds the same discipline one level down: an input, not a composed result. `:checked` was the rule that broke both without looking like it.
 
 ```css
-/* was */
+/* was, before 0.1's edge rewrite */
 &:checked {
   --_fill: 100%;
   --_fg: var(--intent-contrast);
 }
-/* is */
+/* was, 0.1 through 0.1.1 */
 &:checked {
   --_fill-cap: 100%;
   --_fill-floor: 12%;
 }
+/* is, from the stress-test pass */
+&:checked {
+  --_fill-cap: 100%;
+  --_fill-floor: 100%;
+  --_fg-on-fill-floor: 100%;
+}
 ```
 
-The first form is why every checked toggle rendered as the same filled box whatever presentation it carried: the fill class had nothing left to decide. Lifting the bounds leaves it deciding -- `.solid` reaches the 100% it asks for, `.soft` stays at the 12% it asks for -- and the ink follows the plate through `--_on-fill` rather than being told what to be.
+The first form is why every checked toggle rendered as the same filled box whatever presentation it carried: the fill class had nothing left to decide. The second form lifted the cap and floored the result at `12%` instead, which let the fill class keep deciding through the checked state -- `.solid` reached the 100% it asked for, `.soft` stayed at the 12% it asked for, and the ink followed the plate through `--_on-fill` rather than being told what to be. A checked `.radio.soft` was the classic ring-and-dot: a pale plate, a mark at full strength.
 
-The floor is the bound that pairs with it. A container's fill class can still hand a checked toggle a fill it never asked for, and a mark with no ground under it is a tick floating on the page. Our own cascade produces that, so the bound is one the test allows.
+The stress-test pass reversed that. Composing real, dense screens (`form/`, `settings/`) rather than an isolated matrix cell showed the cost was on the other side of the axis: a checkbox, a radio, and a switch each had three different "on" identities to learn depending on which presentation class happened to be nearby, while every _unchecked_ toggle read the same washed-out plate no matter which class asked for it -- close enough to the disabled treatment (the same colors at a lower opacity, nothing else) that a form full of ordinary, unchecked controls read as half-disabled. Presentation was doing the wrong side's job. The floor now equals the cap, so `clamp()` returns exactly `100%` whatever `--ui-fill` asks -- still a bound on the input, still P6-compliant, just pinned rather than merely raised. Presentation instead separates the _unchecked_ plate: `checkbox`/`radio` raise their own resting cap to `40%` for it (see [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)), matching `.switch`'s already-measured value, so `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap) read as three distinct plates instead of three shades of the same wash.
 
-One intent slot moves with the state. `--intent-fill-max` stops neutral at 20% because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of the one component whose whole job is to be unmistakably on. So a checked toggle lifts it, declared where intents are declared for the reason [Precedence](#precedence) gives.
+A second look at the same screens moved the unclassed rest itself. All three toggles used to default to `.solid` -- `--_d-fill`/`--_d-fg-on-fill` named the same pair `.solid` does -- which meant a bare, no-intent `<input class="checkbox">` sat at the loudest of the three plates the cap now separates, next to fields and buttons that all default quieter. `--_d-fill`/`--_d-fg-on-fill` now name `.soft`'s pair (`12%`/`0%`) instead, so the unclassed toggle rests at the quiet tint and `.solid` is what a consumer reaches for to ask for the louder plate. Checked is unaffected either way: the pin in `text-control`'s `:checked` composes the same plate regardless of which presentation an element rests at.
+
+Pinning the fill alone was not enough. `--ui-fg-on-fill` is the other half of what a fill class asks for -- `0%` is `.ghost`/`.soft` declaring "no contrast ink, my plate stays quiet" -- and a checked `.ghost`/`.soft` toggle with its fill pinned to an opaque plate but its ink still asking for none rendered a mark within a dozen sRGB steps of its own background, close to invisible. The fix is not `--ui-fg-on-fill: 100%` written into `:checked` the way `--intent-fill-max` is: `.ghost`/`.soft` are unlayered CSS and `text-control` compiles into Tailwind's `utilities` layer, so a layered write there loses to `.ghost`'s unlayered `--ui-fg-on-fill: 0%` regardless of specificity -- the exact trap `--_fill-cap` exists to route around for the fill itself (see [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)). `--_on-fill`'s formula gained the same seam: `max(var(--_fg-on-fill-floor, 0%), min(...))`, and `:checked` pins that private floor instead, which nothing unlayered contests.
+
+One intent slot moves with this. `--intent-fill-max` stops neutral at 20% everywhere else, because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of a toggle at rest, where the common case carries no intent class at all and still has to look like a present, interactive control rather than a washed-out one. So the three toggles lift it unconditionally now, not only at `:checked`, declared where intents are declared for the reason [Precedence](#precedence) gives.
 
 ### Unsupported values
 
-`.ghost` is not supported on `.checkbox`, `.radio`, or `.switch`. Unchecked it is the silhouette every toggle already has; checked it is a mark on nothing.
-
-It is not supported on `.kbd`, `.code`, or `.pre` either, for the opposite reason. Those three rest on a ground, and a ground draws the plate whatever the fill says -- so `.ghost` took the fill away and changed nothing visible. What was left was `--intent-subtle` alone, which is a near-page tint rather than a distinguishing one: on the light page a ghost chip measured `#e5e5e5` for both neutral and primary, and `#f5f5f5` at 1.04:1 against the page for secondary. Four of eight intents rendering as one invisible chip is not a variation. All three rest at `soft` now, which puts a real 12% of the intent over the same ground and separates them.
+`.ghost` is not supported on `.kbd`, `.code`, or `.pre`. Those three rest on a ground, and a ground draws the plate whatever the fill says -- so `.ghost` took the fill away and changed nothing visible. What was left was `--intent-subtle` alone, which is a near-page tint rather than a distinguishing one: on the light page a ghost chip measured `#e5e5e5` for both neutral and primary, and `#f5f5f5` at 1.04:1 against the page for secondary. Four of eight intents rendering as one invisible chip is not a variation. All three rest at `soft` now, which puts a real 12% of the intent over the same ground and separates them.
 
 `.data-table` is the counter-example that keeps the rule honest. Its plate is a head tone rather than a chip ground, and dropping it at zero fill is exactly what `.ghost` should mean -- so there the class is supported, it is the component's default -- and a ghost table is boundaries and type alone.
 
 That is a third thing a component can say about an axis, alongside reading it and bounding it, and it is recorded as `unsupported` in the registry with its reason. The playground does not render those rows -- it is the support surface, so a row it draws is a claim -- and `axes.spec.ts` drops them from its probe rather than asserting about them, because requiring an unmaintained combination to behave is testing a promise nobody made.
 
-Unsupported is not unreachable. A container can still cascade `.ghost` onto a toggle, which is what the checked fill floor is for: the package clamps such a combination to the nearest supported thing rather than rendering it broken.
+Unsupported is not unreachable. A container can still cascade `.ghost` onto `.kbd`/`.code`/`.pre`, which is why each keeps its ground rather than reading `--_d-ground` as transparent: the package clamps such a combination to the nearest supported thing rather than rendering it broken.
+
+`.ghost` used to be unsupported on `.checkbox`, `.radio`, and `.switch` the same way -- an unchecked one was the silhouette every toggle already has, but a checked one was a mark on nothing, a tick floating on the page. Pinning the checked fill (above) removed the reason: a checked `.ghost` toggle now renders the exact plate every other checked toggle does, so its unchecked silhouette is a real, published look rather than a floored duplicate of `.soft`. None of the three toggles reads `.ghost` as unsupported any more.
 
 ## Elevation
 
@@ -335,8 +345,8 @@ Eight pass it today, and they are the same argument in different materials. Ever
 | Component            | Bound                                      | What our own composition does to it                                                                                                                                                                                                           |
 | -------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `text-control`       | Cascaded fill capped at 6%                 | A container's `.solid` cascades onto a field nobody classed and fills it with its own text color. A fill class on the element names its own cap.                                                                                              |
-| Toggles              | Fill capped at 20%, switch 40%             | The 6% cap keeps _typed text_ legible and a toggle has none; it inherited the number with the utility. Lifted whole by `:checked`.                                                                                                            |
-| Toggles              | Checked fill floored at 12%                | A container's `.ghost` cascades onto a checked toggle and leaves its mark with no ground under it.                                                                                                                                            |
+| Toggles              | Resting fill capped at 40%                 | The 6% cap keeps _typed text_ legible and a toggle has none; 40% is where `.ghost`/`.soft`/`.solid` separate as three plates, measured. Escaped by the default and the element's own `.soft` (both `12%`); lifted whole by `:checked`.        |
+| Toggles              | Checked fill floored at 100%               | Paired with a checked cap of the same value (the bound above's escape): `.ghost`, `.soft`, and `.solid` all pin to one plate once checked, so the mark never lands with no ground under it and every toggle has one "on" identity.            |
 | Text controls        | Edge floored at 100%                       | A container's `.edgeless` leaves a field with no mark of where typing goes. Lifted by the element's own `.edgeless`.                                                                                                                          |
 | `.checkbox` `.radio` | Edge floored at 100%, absolutely           | The same, with nothing left when the line goes. Lifted by nothing.                                                                                                                                                                            |
 | `.tooltip`           | Edge floored at 100%                       | A container's `.solid` or `.edgeless` takes the boundary off a bubble nobody classed. In light its plate is near-white, so the line is the only thing separating the message from what is behind it. Lifted by the element's own `.edgeless`. |
@@ -518,8 +528,8 @@ Every component declares its resting pair in the registry. There is no "plain" a
 | `.btn`                                       | solid edgeless |
 | `.ipt` `.textarea` `.select`                 | ghost edged    |
 | `.input-group`                               | ghost edged    |
-| `.checkbox` `.radio`                         | solid edged    |
-| `.switch`                                    | solid edged    |
+| `.checkbox` `.radio`                         | soft edged     |
+| `.switch`                                    | soft edged     |
 | `.card`                                      | ghost edged    |
 | `.panel`                                     | soft edgeless  |
 | `.alert`                                     | soft edged     |

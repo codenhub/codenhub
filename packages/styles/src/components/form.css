@@ -58,8 +58,21 @@
      tick on light grey.
 
      Ramping against `--_fill` keeps the two in step at every bound, including
-     the checked state that lifts them. */
-  --_on-fill: min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_fill) * 2 - 100%)));
+     the checked state that lifts them.
+
+     `--_fg-on-fill-floor` is the seam `:checked` pins instead of touching
+     `--ui-fg-on-fill` directly. `.ghost`/`.soft` are unlayered CSS (P3, and see
+     model.md's `--_fill-cap` history) and `text-control` compiles into
+     Tailwind's `utilities` layer, so a layered `:checked` writing
+     `--ui-fg-on-fill` the way it writes `--_fill-cap`/`--_fill-floor` would
+     lose to `.ghost`'s unlayered `--ui-fg-on-fill: 0%` regardless of
+     specificity -- the same trap `--_fill-cap` exists to avoid on the fill
+     itself. A private floor `.ghost`/`.soft` never touch has nothing
+     unlayered contesting it. */
+  --_on-fill: max(
+    var(--_fg-on-fill-floor, 0%),
+    min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_fill) * 2 - 100%)))
+  );
   /* The resting line is a fraction of the intent rather than all of it, and the
      fraction is what makes the pointer visible. Drawn at full strength a control
      already sits at its intent's darkest, and hover moves it to a neighbouring
@@ -120,14 +133,41 @@
     --_line-tone: var(--intent-color);
   }
 
-  /* R8, P6: `:checked` lifts the bounds and lets the fill class compose, rather
-     than pinning `--_fill`/`--_fg` (which made every checked toggle render
-     identically). The floor keeps a mark on a ground when a container's `.ghost`
-     would take it away. Lives here, not on the toggles, because a text input is
-     never `:checked`. */
+  /* R8, P6: `:checked` pins the fill by making the floor and the cap the same
+     value, so `clamp()` returns exactly that value whatever `--ui-fill` asks --
+     still a bound on the input, still lifted rather than a rewrite of the
+     result (the failure mode P6 exists for: an early version pinned `--_fill`
+     and `--_fg` directly, which made a checked toggle ignore its own aesthetic
+     and elevation along with presentation).
+
+     The floor used to sit at `12%` rather than `100%`, which kept presentation
+     live on the checked mark too -- a checked `.soft` toggle rendered a pale
+     plate with just the mark at full strength, the classic ring-and-dot radio.
+     The stress-test pass found that cost more than it bought on a real screen:
+     three presentations gave a checkbox, a radio, and a switch three different
+     "on" identities to learn, while every *unchecked* toggle read the same
+     washed-out plate regardless of which class asked for it -- close enough to
+     the disabled look that a form full of ordinary, unchecked, un-intended
+     controls read as half-disabled. Pinning checked to one plate and freeing
+     presentation to separate the *unchecked* one instead (see
+     `checkbox`/`radio`/`switch` below) moves the axis to where it was doing
+     something. Lives here, not on the toggles, because a text input is never
+     `:checked`.
+
+     The ink is pinned alongside the fill, through `--_fg-on-fill-floor` rather
+     than `--ui-fg-on-fill` directly (see that seam, above): the other half of
+     what a fill class asks for is how much contrast ink it wants
+     (`--ui-fg-on-fill: 0%` is `.ghost`/`.soft` declaring "none, my plate stays
+     quiet"), and pinning the fill without pinning this left a checked
+     `.ghost`/`.soft` toggle with an opaque plate and a mark that still read as
+     though the plate were quiet -- both derived from the same intent tone,
+     close enough to disappear into each other. `--_on-fill` ramps against the
+     *composed* `--_fill`, so once that is pinned to 100% the ink has to reach
+     full contrast too, or the ramp's own ceiling has nothing to reach. */
   &:checked {
     --_fill-cap: 100%;
-    --_fill-floor: 12%;
+    --_fill-floor: 100%;
+    --_fg-on-fill-floor: 100%;
   }
 
   /* Native decorations a field replaces with its own artwork. */
@@ -164,11 +204,25 @@
   --_fill-cap: 20%;
 }
 
-/* A checked toggle fills with its own intent, so neutral has to drop its 20%
-   cap here. Declared where the intents are (0-2-0, unlayered): inside
-   `text-control` `.neutral` would overrule it and a checked toggle would fill to
-   a fifth of its colour. */
-:is(.text-control, .checkbox, .radio, .switch, input):checked {
+/* A checked text-control fills with its own intent, so neutral has to drop its
+   20% cap here. No toggle needs this arm any more (see below), but a text
+   input is never `:checked` in practice either -- kept for whatever custom
+   `.text-control` composition does check itself. Declared where the intents
+   are (0-2-0, unlayered): inside `text-control` `.neutral` would overrule it. */
+:is(.text-control, input):checked {
+  --intent-fill-max: 100%;
+}
+
+/* The three toggles read their own component cap (`--_fill-cap`, below) as the
+   ceiling regardless of intent, checked or not -- not just at `:checked`, the
+   way the arm above still works for a hypothetical checked text-control. A
+   neutral fill stops at 20% everywhere else because it is the page's own ink,
+   and a full one reads as a slab on a badge or a card. That reasoning does not
+   hold for a toggle at rest: a neutral checkbox is the common case, most
+   controls carry no intent class at all, and it has to look like a present,
+   interactive box rather than a washed-out one just because nothing colored
+   it. Declared where the intents are, for the reason given above. */
+:is(.checkbox, .radio, .switch) {
   --intent-fill-max: 100%;
 }
 
@@ -307,9 +361,17 @@
    No icons ship. Any element works in a slot -- an inline `<svg>`, an `<img>`,
    or a class from an icon set such as `@codenhub/icons` -- placed before the
    control for a leading adornment and after it for a trailing one. See
-   docs/usage/forms.md#icons. */
+   docs/usage/forms.md#icons.
+
+   The gap between the control and its adornment is a token, `--input-group-gap`,
+   rather than a bare Tailwind `gap-2`: an icon reads that 0.5rem as the normal
+   breathing room a distinct glyph needs, but a text affix meant to glue onto the
+   value -- a URL host, a currency symbol, a unit -- reads the same gap as a
+   stray space breaking the two apart. A consumer sets `--input-group-gap: 0` on
+   their own `.input-group` for a flush affix; the default stays the icon-tuned
+   0.5rem so every existing icon composition is unchanged. */
 @utility input-group {
-  @apply text-control flex w-full items-center gap-2;
+  @apply text-control flex w-full items-center;
 
   /* After the `@apply`, for the reason `ipt` states it: `text-control` inlines
      its own resting geometry there, so a default written above it loses to the
@@ -320,9 +382,11 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
+  --input-group-gap: 0.5rem;
   --input-group-pad: 0.75rem;
 
   min-height: var(--control-height);
+  gap: var(--input-group-gap);
   padding-inline: var(--input-group-pad);
 
   /* The focus ring the wrapper cannot get from `:focus-visible` -- a `<div>` is
@@ -382,18 +446,26 @@
 
 /* The three toggles compose `text-control` for its bounds, not its chrome: the
    edge floor keeps a container's `.edgeless` from erasing the closed silhouette
-   (WCAG 1.4.11), and the checked state that lifts the fill bounds lives there.
-   They raise the fill cap to 20% -- the 6% one keeps typed text legible and a
-   toggle has none; 20% is a `.solid` badge's plate and separates the three
-   fills. `.ghost` is unsupported (an unchecked ghost toggle is the silhouette
-   it already has, a checked one a mark on nothing); the registry records it and
-   the checked fill floor clamps a cascaded one. See model.md#unsupported-values. */
+   (WCAG 1.4.11), and the checked state that pins the fill (see `text-control`'s
+   `:checked` above) lives there. They raise the fill cap to 40% -- the 6% one
+   keeps typed text legible and a toggle has none, and 40% is where a resting
+   `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap itself) read as
+   three distinct plates rather than three shades of the same wash, the same
+   separation `.switch` was already measured against. Unclassed rests at
+   `.soft` rather than at the cap: `--_d-fill`/`--_d-fg-on-fill` below name the
+   same pair `.soft` does, so a bare `<input class="checkbox">` reads as the
+   quiet tint the stress-test pass preferred over the louder plate `.solid`
+   asks for -- a consumer still reaches that plate by writing `.solid` itself.
+   `.ghost` used to be unsupported here -- a checked one used to be a mark on
+   nothing -- and is not any more, now that checked reads the same plate
+   whatever the presentation.
+   See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
 @utility checkbox {
   @apply text-control inline-grid size-4 cursor-pointer place-content-center;
 
-  --_d-fill: 100%;
-  --_d-fg-on-fill: 100%;
-  --_fill-cap: 20%;
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_fill-cap: 40%;
   --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
@@ -439,13 +511,14 @@
   }
 }
 
-/* The same control with a round silhouette and a dot for its mark. */
+/* The same control with a round silhouette and a dot for its mark, and the
+   same fill cap raise given on `checkbox`. */
 @utility radio {
   @apply text-control inline-grid size-4 cursor-pointer place-content-center rounded-full;
 
-  --_d-fill: 100%;
-  --_d-fg-on-fill: 100%;
-  --_fill-cap: 20%;
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_fill-cap: 40%;
   --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
@@ -470,12 +543,14 @@
     content: "";
   }
 
-  /* A checked radio thickens its ring and takes the intent whole on the line;
-     the fill is left to the presentation. The dot takes `box`'s composed
-     foreground, which walks to the contrast tone as the plate fills, so a
-     filled circle still carries a readable dot. `--_line-tone` rather than
-     `--_edge`, so `text-control`'s edge floor still draws the ring under a
-     container's `.edgeless`. */
+  /* A checked radio thickens its ring and takes the intent whole on the line.
+     The fill is pinned by `text-control`'s `:checked` now, not left to the
+     presentation -- a filled circle at every checked radio, whatever fill
+     class it carries, rather than the classic ring-and-dot a checked `.soft`
+     used to draw. The dot still takes `box`'s composed foreground, which walks
+     to the contrast tone as the (now always full) plate fills, so it stays
+     readable. `--_line-tone` rather than `--_edge`, so `text-control`'s edge
+     floor still draws the ring under a container's `.edgeless`. */
   &:checked {
     --_line-tone: var(--intent-color);
 
@@ -491,24 +566,28 @@
 }
 
 /* A2: every dimension derives from the border width `box` resolved, so the knob
-   cannot drift out of a track a thick aesthetic widened. A switch caps its fill
-   higher than the other toggles because its track is the whole component. */
+   cannot drift out of a track a thick aesthetic widened. */
 @utility switch {
   @apply text-control relative cursor-pointer;
 
-  --_d-fill: 100%;
-  --_d-fg-on-fill: 100%;
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
   --_line-rest: 100%;
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* 40%, measured: at `text-control`'s 6% the three fills collapsed to two looks
-     and the switch had to vary its *line* per fill class -- the one place a fill
-     class decided an edge. 40% separates all three (29/67/144 sRGB steps on the
-     light page, against ~20 for a visible one) without reaching a checked
-     track's 100%, so the knob's position still says which. `axes.spec.ts`
-     asserts all three. `--intent-fill-max` still caps neutral at 20%. A cap
-     rather than a resting value, because it answers the cascade case. */
+  /* 40%, measured: at `text-control`'s 6% the three resting fills collapsed to
+     two looks and the switch had to vary its *line* per fill class instead --
+     the one place a fill class decided an edge. 40% separates all three
+     (29/67/144 sRGB steps on the light page, against ~20 for a visible one)
+     without reaching a checked track's pinned 100%, so the knob's position
+     still says which. `axes.spec.ts` asserts all three. `checkbox`/`radio`
+     raise their own cap to the same value for the same reason -- a switch does
+     not need a higher one, a track is just the component every toggle's box
+     already was. A cap rather than a resting value, because it answers the
+     cascade case; `--intent-fill-max` (declared where the intents are, above)
+     lifts to 100% for all three toggles so a neutral one reads this cap too,
+     not the 20% ceiling a badge or a card stays under. */
   --_fill-cap: 40%;
 
   --switch-height: 1.25rem;

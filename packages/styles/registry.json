@@ -240,7 +240,7 @@
     {
       "class": "checkbox",
       "default": {
-        "fill": "solid",
+        "fill": "soft",
         "edge": "edged",
         "elevation": 0
       },
@@ -250,16 +250,16 @@
         {
           "token": "--ui-fill",
           "kind": "cap",
-          "value": "20%",
-          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
-          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+          "value": "40%",
+          "escape": "the default, or the element's own .soft (both 12%), or :checked, which pins the fill to 100% together with the floor below",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 40% is where a resting .ghost (0%), .soft (12%), and this cap read as three distinct plates, measured -- the same separation .switch was already tuned to."
         },
         {
           "token": "--ui-fill",
           "kind": "floor",
-          "value": "12%",
+          "value": "100%",
           "escape": null,
-          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+          "reason": "Checked pins the fill to one plate regardless of presentation, matched by the cap above raising to the same value: .ghost, .soft, and .solid all render the same filled box once checked, so every toggle has one 'on' identity instead of three, and the mark stays legible on whatever plate a cascaded .ghost would otherwise have left empty."
         },
         {
           "token": "--ui-border",
@@ -275,19 +275,12 @@
           "escape": null,
           "reason": "Under .pixel the aesthetic draws its edge as an inset ring spending shadow spread, and a 16px box cannot spend four pixels a side: the ring leaves an eight-pixel hole and an unchecked box reads as filled. Capped at the line width the aesthetic draws elsewhere."
         }
-      ],
-      "unsupported": [
-        {
-          "axis": "fill",
-          "class": "ghost",
-          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
-        }
       ]
     },
     {
       "class": "radio",
       "default": {
-        "fill": "solid",
+        "fill": "soft",
         "edge": "edged",
         "elevation": 0
       },
@@ -297,16 +290,16 @@
         {
           "token": "--ui-fill",
           "kind": "cap",
-          "value": "20%",
-          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
-          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 20% is the plate a .solid badge draws."
+          "value": "40%",
+          "escape": "the default, or the element's own .soft (both 12%), or :checked, which pins the fill to 100% together with the floor below",
+          "reason": "The 6% cap text controls carry is written to keep typed text legible over its own field, and a toggle has no typed text. 40% is where a resting .ghost (0%), .soft (12%), and this cap read as three distinct plates, measured -- the same separation .switch was already tuned to."
         },
         {
           "token": "--ui-fill",
           "kind": "floor",
-          "value": "12%",
+          "value": "100%",
           "escape": null,
-          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+          "reason": "Checked pins the fill to one plate regardless of presentation, matched by the cap above raising to the same value: .ghost, .soft, and .solid all render the same filled box once checked, so every toggle has one 'on' identity instead of three, and the mark stays legible on whatever plate a cascaded .ghost would otherwise have left empty."
         },
         {
           "token": "--ui-border",
@@ -329,19 +322,12 @@
           "escape": null,
           "reason": "A checked radio doubles its line, and a thick aesthetic doubled would close the circle over its own dot. 3px leaves 10px of interior for an 8px mark."
         }
-      ],
-      "unsupported": [
-        {
-          "axis": "fill",
-          "class": "ghost",
-          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
-        }
       ]
     },
     {
       "class": "switch",
       "default": {
-        "fill": "solid",
+        "fill": "soft",
         "edge": "edged",
         "elevation": 0
       },
@@ -352,15 +338,15 @@
           "token": "--ui-fill",
           "kind": "cap",
           "value": "40%",
-          "escape": "the element's own .soft (12%), or :checked, which lifts the cap to 100%",
-          "reason": "A switch track is the whole component, so its three fills have to separate as fills; 40% is where they do, measured."
+          "escape": "the default, or the element's own .soft (both 12%), or :checked, which pins the fill to 100% together with the floor below",
+          "reason": "A switch track is the whole component, so its three resting fills have to separate as fills; 40% is where they do, measured. .checkbox and .radio raise their own cap to the same value for the same reason."
         },
         {
           "token": "--ui-fill",
           "kind": "floor",
-          "value": "12%",
+          "value": "100%",
           "escape": null,
-          "reason": "A container's .ghost cascading onto a checked toggle leaves the mark with no ground under it."
+          "reason": "Checked pins the fill to one plate regardless of presentation, matched by the cap above raising to the same value: .ghost, .soft, and .solid all render the same filled track once checked, so every toggle has one 'on' identity instead of three, and the knob's mark stays legible on whatever plate a cascaded .ghost would otherwise have left empty."
         },
         {
           "token": "--ui-border",
@@ -375,13 +361,6 @@
           "value": "--ui-border-width",
           "escape": null,
           "reason": "The inset ring, for the reason given on .checkbox: a 20px track has no more room for a thick inset edge than a 16px box, so the spread is capped at the line width the aesthetic draws elsewhere."
-        }
-      ],
-      "unsupported": [
-        {
-          "axis": "fill",
-          "class": "ghost",
-          "reason": "An unchecked ghost toggle is the silhouette every toggle already has, and a checked one is a mark on nothing: a tick floating on the page, a dot with no ring. The checked fill floor keeps a cascaded .ghost from producing it."
         }
       ]
     },
