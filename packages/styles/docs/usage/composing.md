@@ -44,7 +44,7 @@ Values each class ships:
 | `.edged`    |             |                   | `100%`        |
 | `.edgeless` |             |                   | `0%`          |
 
-`.card` overrides `.soft`'s fill at rest to `0%` and reveals the intent tint on `:hover`/`.interactive`/`.hoverable` instead -- the one place a component remaps what a presentation class resolves to, the same way text controls cap it at `6%` cascaded. See [Content and layout → Surfaces](./content-and-layout.md#surfaces).
+`.card`, `.panel`, `.kbd`, `.code`, and `.pre` override `.soft`'s fill at rest to `0%` for the no-named-intent case only, and reveal it on `.card`'s own `:hover`/`.interactive`/`.hoverable` -- the one place a component remaps what a presentation class resolves to for part of its intent range, the same way text controls cap it at `6%` cascaded. A named intent on any of the five keeps the ordinary `12%`. See [Content and layout → Surfaces](./content-and-layout.md#surfaces).
 
 The combinations mean exactly what they spell:
 

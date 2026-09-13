@@ -295,6 +295,20 @@
    itself, and amber-600 on amber-100 is a smudge. `box` now mixes toward
    `--intent-strong`, which is what these three were reaching for, so the three
    copies are gone and the ground is the only thing left to declare. */
+/* Neutral, for the same reason `.panel`'s own carve-out is: 12% of
+   `--color-text` mixed onto `--intent-subtle` (`--color-surface` for
+   neutral) reads as an assertive slab rather than a quiet chip -- measured,
+   `199, 199, 199` on a light page whose own `--color-surface` step is
+   `229, 229, 229`, further off than the ground alone already carries a key
+   cap. A named intent keeps its wash unchanged: a colored chip needs it to
+   separate from the others the way `.ghost` being unsupported here already
+   protects (dropping *all* fill collapsed every intent's ghost chip onto the
+   same near-page `--intent-subtle` tone) -- the neutral case has nothing to
+   separate from, so it alone drops the extra ink. The ground itself is not
+   moved the way `.panel`'s is: `--intent-subtle` already resolves to
+   `--color-surface` for neutral, a real, visible step past the page on its
+   own, so only the wash on top of it goes. `:not(.solid)` so an explicit
+   `.solid` chip is never clamped to a cap it did not ask for. */
 @utility kbd {
   @apply box inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium;
 
@@ -308,6 +322,10 @@
      cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
   border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+    --_fill-cap: 0%;
+  }
 }
 
 /* The same plate with no line around it. */
@@ -322,6 +340,10 @@
 
   border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
+
+  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+    --_fill-cap: 0%;
+  }
 }
 
 /* And at block scale, where the radius is a control's rather than a chip's. */
@@ -333,6 +355,10 @@
   --_d-border: 0%;
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
+
+  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+    --_fill-cap: 0%;
+  }
 }
 
 /* Typography wearing a component's name, so it composes none of `box`: `box`
