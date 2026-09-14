@@ -1646,13 +1646,13 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Control boundaries
 
-| Feature              | Behavior                                                                                                               |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Control boundaries   | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.        |
-| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.     |
-| Cascaded `.edgeless` | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                  |
-| Own `.edgeless`      | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest.       |
-| `.checkbox`/`.radio` | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged. |
+| Feature              | Behavior                                                                                                                                                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Control boundaries   | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.                                                                                                                                                                          |
+| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.                                                                                                                                                                       |
+| Cascaded `.edgeless` | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                                                                                                                                                                                    |
+| Own `.edgeless`      | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest, except `.switch.ghost`: `.ghost` already asks for zero fill, so dropping the line too would leave no boundary at all, and `.switch.ghost.edgeless` keeps it up instead. |
+| `.checkbox`/`.radio` | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged.                                                                                                                                                                   |
 
 ### Motion and transparency
 
