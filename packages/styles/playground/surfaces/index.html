@@ -28,7 +28,12 @@
             A card with no presentation class is a ghost, edged, flat container. Only an explicit fill tints it.
           </p>
         </div>
-        <div data-matrix="card" data-matrix-states="rest" data-testid="card-matrix"></div>
+        <div
+          data-matrix="card"
+          data-matrix-intents="none,primary,success,destructive"
+          data-matrix-states="rest"
+          data-testid="card-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Interactive</h3>
           <p class="text-body text-text-secondary">
@@ -51,6 +56,8 @@
           </p>
           <div
             data-matrix="card"
+            data-matrix-intents="none,primary"
+            data-matrix-presentations="default,soft edged"
             data-matrix-states="interactive, hoverable, pressable"
             data-testid="card-interactive-matrix"
           ></div>
@@ -115,7 +122,13 @@
           <h2 class="text-title">Panels</h2>
           <p class="text-body text-text-secondary">A soft, edgeless container for sidebars, toolbars, and wells.</p>
         </div>
-        <div data-matrix="panel" data-matrix-states="rest" data-testid="panel-matrix"></div>
+        <div
+          data-matrix="panel"
+          data-matrix-intents="none,primary,destructive"
+          data-matrix-presentations="default,solid,soft edged,ghost edged"
+          data-matrix-states="rest"
+          data-testid="panel-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Padding</h3>
           <div class="auto-grid">
@@ -152,7 +165,12 @@
             removes it.
           </p>
         </div>
-        <div data-matrix="divider" data-matrix-states="rest" data-testid="divider-matrix"></div>
+        <div
+          data-matrix="divider"
+          data-matrix-intents="none,primary,info"
+          data-matrix-states="rest"
+          data-testid="divider-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Vertical</h3>
           <p class="text-body text-text-secondary">

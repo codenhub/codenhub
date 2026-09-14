@@ -15,8 +15,8 @@
         <p class="text-label">Content utilities</p>
         <h1 class="text-title-lg">Typography and content</h1>
         <p class="text-body text-text-secondary">
-          The type scale, and the content primitives that carry it: tables, key caps, code, and quotations. Key caps and
-          tables read presentation; code, blocks, and quotes read intent only.
+          The type scale, and the content primitives that carry it: tables, key caps, code, and quotations. Every one of
+          them reads both intent and presentation.
         </p>
       </section>
 
@@ -48,7 +48,12 @@
             A key cap reads the whole presentation contract: fill, text, border, and border width.
           </p>
         </div>
-        <div data-matrix="kbd" data-matrix-states="rest" data-testid="kbd-matrix"></div>
+        <div
+          data-matrix="kbd"
+          data-matrix-intents="none,primary,neutral,success,destructive"
+          data-matrix-states="rest"
+          data-testid="kbd-matrix"
+        ></div>
       </section>
 
       <section class="sect-inn stack loose">
@@ -59,14 +64,26 @@
             content rather than structure.
           </p>
         </div>
-        <div data-matrix="code" data-matrix-states="rest" data-testid="code-matrix"></div>
+        <div
+          data-matrix="code"
+          data-matrix-intents="none,primary,success,destructive"
+          data-matrix-presentations="default,solid,soft edged"
+          data-matrix-states="rest"
+          data-testid="code-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Blocks</h3>
           <p class="text-body text-text-secondary">
             <code class="code">.pre</code>
             is the scrollable block form, with larger padding.
           </p>
-          <div data-matrix="pre" data-matrix-states="rest" data-testid="pre-matrix"></div>
+          <div
+            data-matrix="pre"
+            data-matrix-intents="none,primary,success,destructive"
+            data-matrix-presentations="default,solid,soft edged"
+            data-matrix-states="rest"
+            data-testid="pre-matrix"
+          ></div>
         </div>
       </section>
 
@@ -79,7 +96,12 @@
             takes attribution styling.
           </p>
         </div>
-        <div data-matrix="quote" data-matrix-states="rest" data-testid="quote-matrix"></div>
+        <div
+          data-matrix="quote"
+          data-matrix-intents="none,primary,info,destructive"
+          data-matrix-states="rest"
+          data-testid="quote-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Inline</h3>
           <p class="text-body">
@@ -98,7 +120,13 @@
             hover.
           </p>
         </div>
-        <div data-matrix="data-table" data-matrix-states="rest" data-testid="data-table-matrix"></div>
+        <div
+          data-matrix="data-table"
+          data-matrix-intents="none,primary,success,destructive"
+          data-matrix-presentations="default,solid,soft edged"
+          data-matrix-states="rest"
+          data-testid="data-table-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Full anatomy</h3>
           <p class="text-body text-text-secondary">

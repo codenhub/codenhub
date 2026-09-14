@@ -13,6 +13,16 @@ test("links to each focused playground route", async ({ page }) => {
   );
 });
 
+test("carries the composed screens in the persistent nav, not just the home page's route cards", async ({ page }) => {
+  await page.goto(PLAYGROUND_URL);
+
+  const screenRoutes = ["/app-shell/", "/form/", "/settings/"];
+
+  await Promise.all(
+    screenRoutes.map((path) => expect(page.locator(`.playground-nav-links a[href="${path}"]`), path).toBeVisible()),
+  );
+});
+
 test("puts the chosen aesthetic on the preview root and leaves the chrome alone", async ({ page }) => {
   await page.goto(`${BUTTONS_URL}&aesthetic=neobrutalism`);
 

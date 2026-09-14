@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**Between passes.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or explicitly deferred; see [findings](./stress-test-findings.md) for the record and [Planned](#planned) for what is left before it ships. Next focus is being chosen from [Later / Possible](#later--possible) below.
+**Between passes.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or explicitly deferred; see [findings](./stress-test-findings.md) for the record and [Planned](#planned) for what is left before it ships. [Later / Possible](#later--possible) is empty for now -- next focus is open.
 
 ## Planned
 
@@ -27,11 +27,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Later / Possible
 
-- **Fixture-only playground**: `demo/` reuses the playground pages as a branded, deployable reference, aggregated by `apps/demo`. The playground still doubles as the test-fixture surface for `tests/browser/`. Not urgent, but a standing itch rather than a someday idea: three consumers rewriting the same markup for different purposes is real friction every time a fixture changes, and it is due to be trimmed to a minimal fixture set behind the demo now that the stress-test pass is done -- that pass moved fixtures around by design (`form/`, `settings/` both new), and trimming earlier would have meant redoing the work.
-
-  The mechanical half of the coupling is done ahead of that, since it does not depend on which fixtures exist and would only have been redone otherwise: `playground.js` and `matrix.js` are real ES modules now, loaded the same way by `dev`, `debug`, and the built `demo`, so `demo`'s Vite plugin no longer inlines either as a string or patches `document.write`. The one piece that stays a classic, `document.write`ing script is `env-stylesheet.js` -- extracted out of `playground.js` -- because picking the vanilla/build stylesheet still has to happen before first paint, which only a synchronous script can do; the built `demo` drops its tag entirely rather than special-casing it, since a deployed reference always runs one build and needs no such comparison. `playground.js` also no longer reaches into the DOM by `.playground-nav`'s class name to hand a chrome layer its nav: it dispatches a `playground:nav-ready` `CustomEvent` carrying the nav and its wired controls once they exist, and `demo/chrome.ts` listens for it, so neither a class rename nor DOMContentLoaded registration order can break the hand-off silently.
-
-  Until the fixture set itself is trimmed, a change to a `playground/*/index.html` page still touches three consumers at once: `dev` and `debug` both `root` at `playground/`, the built `demo` still bundles the same pages under its own chrome, and `tests/browser/*.spec.ts` asserts against the `data-testid`s in the markup. So a fixture edit still needs `pnpm test:browser styles` and a `pnpm --filter=@codenhub/styles-demo build` to be trusted.
+None currently. The last item here, trimming the playground's exhaustive matrix pages to a curated default set behind the demo, has landed -- see `docs/internal/tests.md` for how a `data-matrix` host narrows what it renders.
 
 ## Aesthetics assessed and deferred
 

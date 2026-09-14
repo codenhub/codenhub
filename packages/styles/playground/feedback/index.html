@@ -16,8 +16,8 @@
         <h1 class="text-title-lg">Feedback</h1>
         <p class="text-body text-text-secondary">
           Everything that reports state back: alerts, badges, progress, skeletons, loaders, and tooltips. Each grid is
-          one row per presentation and one column per intent, in the order neutral, primary, secondary, success,
-          warning, destructive, info, preceded by a cell with no intent class at all.
+          one row per presentation and one column per intent, a cell with no intent class at all always first -- a
+          curated subset of both axes rather than every combination, sized to read as a reference.
         </p>
       </section>
 
@@ -28,7 +28,13 @@
             Without a presentation an alert is tinted, intent-colored, and softly bordered.
           </p>
         </div>
-        <div data-matrix="alert" data-matrix-states="rest" data-testid="alert-matrix"></div>
+        <div
+          data-matrix="alert"
+          data-matrix-intents="none,primary,success,warning,destructive,info"
+          data-matrix-presentations="default,ghost edged,soft edgeless,solid"
+          data-matrix-states="rest"
+          data-testid="alert-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Icon</h3>
           <p class="text-body text-text-secondary">
@@ -36,7 +42,13 @@
             adds padding and a symbol. Success, warning, and destructive have their own; everything else uses the
             information symbol.
           </p>
-          <div data-matrix="alert" data-matrix-states="icon" data-testid="alert-icon-matrix"></div>
+          <div
+            data-matrix="alert"
+            data-matrix-intents="none,primary,success"
+            data-matrix-presentations="default,soft edged"
+            data-matrix-states="icon"
+            data-testid="alert-icon-matrix"
+          ></div>
         </div>
         <div class="stack tight">
           <h3 class="text-title-sm">Intent aliases</h3>
@@ -63,7 +75,13 @@
           <h2 class="text-title">Badges</h2>
           <p class="text-body text-text-secondary">A badge reads the same presentation classes as an alert.</p>
         </div>
-        <div data-matrix="badge" data-matrix-states="rest" data-testid="badge-matrix"></div>
+        <div
+          data-matrix="badge"
+          data-matrix-intents="none,primary,secondary,success,info"
+          data-matrix-presentations="default,solid,soft edgeless"
+          data-matrix-states="rest"
+          data-testid="badge-matrix"
+        ></div>
       </section>
 
       <section class="sect-inn stack loose">
@@ -82,6 +100,7 @@
           </p>
           <div
             data-matrix="progress"
+            data-matrix-intents="none,primary,success"
             data-matrix-presentations="default"
             data-matrix-states="active"
             data-testid="progress-active-matrix"
@@ -97,6 +116,7 @@
           </p>
           <div
             data-matrix="progress"
+            data-matrix-intents="none,primary"
             data-matrix-presentations="default"
             data-matrix-states="indeterminate"
             data-testid="progress-indeterminate-matrix"
@@ -109,7 +129,12 @@
           <h2 class="text-title">Skeletons</h2>
           <p class="text-body text-text-secondary">Presentation changes placeholder fill and edge strength.</p>
         </div>
-        <div data-matrix="skeleton" data-matrix-states="rest" data-testid="skeleton-matrix"></div>
+        <div
+          data-matrix="skeleton"
+          data-matrix-intents="none,primary"
+          data-matrix-states="rest"
+          data-testid="skeleton-matrix"
+        ></div>
       </section>
 
       <section class="sect-inn stack loose">
@@ -121,7 +146,12 @@
             , so it matches whatever text surrounds it.
           </p>
         </div>
-        <div data-matrix="loader" data-matrix-states="rest" data-testid="loader-matrix"></div>
+        <div
+          data-matrix="loader"
+          data-matrix-intents="none,primary,success"
+          data-matrix-states="rest"
+          data-testid="loader-matrix"
+        ></div>
         <div class="stack tight">
           <h3 class="text-title-sm">Sizes</h3>
           <div class="cluster">

@@ -80,6 +80,15 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
     link.setAttribute("href", rebase(link.getAttribute("href") ?? "/"));
   }
 
+  /* The brand logo below is deliberately NOT `rebase()`d: `/assets/logo/...`
+     is the aggregator's own root-level asset per the URL scheme in
+     `docs/specs/packages-demo.md`, guaranteed by `apps/demo`'s own build
+     regardless of this package's mount path. Rebasing it under `base`
+     (`/styles/assets/...`) would depend on this package's own `codenhub.assets`
+     sync running too -- a separate, easy-to-miss step a build command that
+     bypasses `hub`'s dependency-ordered `prepare` (e.g. a bare `astro build`
+     or `pnpm --filter`) can silently skip. */
+
   toPill(themeToggle);
   aestheticSelect.classList.add("demo-aesthetic");
 
@@ -89,8 +98,8 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
     <div class="site-header-content cluster between">
       <div class="header-start cluster loose">
         <a class="brand" href="${base}" aria-label="@codenhub/styles home">
-          <img class="brand-logo brand-logo-on-light" src="${rebase("/assets/logo/logo-dark.svg")}" alt="@codenhub/styles" width="984" height="255" />
-          <img class="brand-logo brand-logo-on-dark" src="${rebase("/assets/logo/logo-light.svg")}" alt="@codenhub/styles" width="984" height="255" />
+          <img class="brand-logo brand-logo-on-light" src="/assets/logo/logo-dark.svg" alt="@codenhub/styles" width="984" height="255" />
+          <img class="brand-logo brand-logo-on-dark" src="/assets/logo/logo-light.svg" alt="@codenhub/styles" width="984" height="255" />
         </a>
         <nav class="primary-navigation" aria-label="Primary">
           <a href="https://docs.codenhub.dev/styles">Docs</a>

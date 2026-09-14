@@ -74,6 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
     { text: "Typography", path: "/typography/" },
     { text: "Layout", path: "/layout/" },
     { text: "Native", path: "/native/" },
+    { text: "App shell", path: "/app-shell/" },
+    { text: "Form", path: "/form/" },
+    { text: "Settings", path: "/settings/" },
   ];
 
   const currentPath = window.location.pathname;
