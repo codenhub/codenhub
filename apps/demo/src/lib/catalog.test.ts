@@ -8,7 +8,7 @@ describe("demoPackages", () => {
       description: "Icon registry, CSS mask generator, and scanner module for Codenhub icon system.",
       label: "IconKit",
       slug: "icons",
-      status: "experimental",
+      status: "active",
     });
   });
 
