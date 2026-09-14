@@ -46,7 +46,7 @@ test.describe("feedback", () => {
     expect(alertStyles.borderWidth).not.toBe("0px");
     expect(alertStyles.color).not.toBe("rgba(0, 0, 0, 0)");
     expect(iconLayout.gap).not.toBe("0px");
-    expect(iconLayout.iconWidth).toBeGreaterThan(0);
+    expect(iconLayout.iconWidth).toBe(20);
   });
 
   test("animates skeletons and styles progress tracks", async ({ page }) => {
