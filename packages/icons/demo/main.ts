@@ -1,6 +1,7 @@
 import { generateIconSetCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
 import type { IconFamilyData } from "@codenhub/icons";
 
+import "virtual:icons.css";
 import "./style.css";
 
 import { createModal } from "./modal.ts";
