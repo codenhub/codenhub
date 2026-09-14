@@ -649,6 +649,9 @@ importers:
 
   packages/styles/demo:
     devDependencies:
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../app-shell
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../../icons

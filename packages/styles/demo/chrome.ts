@@ -12,6 +12,7 @@
  * `playground/` is touched: the demo is the playground worn as a reference.
  */
 
+import "virtual:icons.css";
 import "./chrome.css";
 
 /* "/" when the demo is served on its own, "/styles/" when `apps/demo` mounts
@@ -42,27 +43,40 @@ function rebase(pathname: string): string {
 
 /** Markup for one external header link: an icon that opens in a new tab. */
 function iconLink(href: string, label: string, svg: string): string {
-  return `<a class="header-icon-link" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${svg}</a>`;
+  return `<a class="shell-action" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${svg.replace("<svg ", '<svg class="shell-action-brand" ')}</a>`;
 }
 
-/** Restyle `playground.js`'s theme button into the icons-demo sliding pill. */
+/** Restyle `playground.js`'s theme button into the shell's sliding pill. */
 function toPill(button: HTMLElement): void {
-  button.className = "theme-toggle";
+  button.className = "shell-theme-switch";
   button.setAttribute("role", "switch");
   button.innerHTML =
-    '<span class="theme-toggle-knob">' +
-    '<i class="ic-moon theme-icon theme-icon-moon" aria-hidden="true"></i>' +
-    '<i class="ic-sun theme-icon theme-icon-sun" aria-hidden="true"></i>' +
+    '<span class="shell-theme-switch-track">' +
+    '<span class="shell-theme-switch-knob">' +
+    '<i class="ic-lucide-moon shell-theme-icon shell-theme-icon-moon" aria-hidden="true"></i>' +
+    '<i class="ic-lucide-sun shell-theme-icon shell-theme-icon-sun" aria-hidden="true"></i>' +
+    "</span>" +
     "</span>";
 }
 
-/** Mirror the current theme onto the pill's switch semantics. */
+/**
+ * Mirror the current theme onto the pill's switch semantics and onto
+ * `data-theme`. `shared/playground.js` toggles a `.dark` class, the
+ * `@codenhub/styles` package's own dark-mode trigger; the imported
+ * `@codenhub/app-shell/styles.css` is plain CSS applied on top of that
+ * package rather than compiled through it, and only recognizes the
+ * `data-theme="dark"` attribute -- so the shell's logo swap, knob position,
+ * and sun/moon icons need this attribute kept in sync to react at all.
+ */
 function syncPill(): void {
   const button = document.getElementById("theme-toggle");
+  const isDark = document.documentElement.classList.contains("dark");
+
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+
   if (!button) {
     return;
   }
-  const isDark = document.documentElement.classList.contains("dark");
   const label = `Switch to ${isDark ? "light" : "dark"} theme`;
   button.setAttribute("aria-checked", String(isDark));
   button.setAttribute("aria-label", label);
@@ -93,20 +107,24 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
   aestheticSelect.classList.add("demo-aesthetic");
 
   const header = document.createElement("header");
-  header.className = "site-header";
+  header.className = "shell-header";
   header.innerHTML = `
-    <div class="site-header-content cluster between">
-      <div class="header-start cluster loose">
-        <a class="brand" href="${base}" aria-label="@codenhub/styles home">
-          <img class="brand-logo brand-logo-on-light" src="/assets/logo/logo-dark.svg" alt="@codenhub/styles" width="984" height="255" />
-          <img class="brand-logo brand-logo-on-dark" src="/assets/logo/logo-light.svg" alt="@codenhub/styles" width="984" height="255" />
+    <div class="shell-header-content">
+      <a class="shell-brand" href="${base}" aria-label="@codenhub/styles home">
+        <img class="shell-brand-logo shell-brand-logo-on-light" src="/assets/logo/logo-dark.svg" alt="@codenhub/styles" width="984" height="255" />
+        <img class="shell-brand-logo shell-brand-logo-on-dark" src="/assets/logo/logo-light.svg" alt="@codenhub/styles" width="984" height="255" />
+      </a>
+      <nav class="shell-nav" aria-label="Primary">
+        <a class="shell-nav-link" href="https://docs.codenhub.dev/styles" target="_blank" rel="noopener noreferrer">
+          Docs
+          <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
         </a>
-        <nav class="primary-navigation" aria-label="Primary">
-          <a href="https://docs.codenhub.dev/styles">Docs</a>
-          <a href="https://github.com/codenhub/codenhub">CodenHub</a>
-        </nav>
-      </div>
-      <div class="header-actions">
+        <a class="shell-nav-link" href="https://github.com/codenhub/codenhub" target="_blank" rel="noopener noreferrer">
+          CodenHub
+          <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
+        </a>
+      </nav>
+      <div class="shell-actions">
         ${iconLink("https://github.com/codenhub/codenhub/tree/main/packages/styles", "@codenhub/styles on GitHub", GITHUB_ICON)}
         ${iconLink("https://www.npmjs.com/package/@codenhub/styles", "@codenhub/styles on npm", NPM_ICON)}
       </div>
@@ -114,7 +132,7 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
     <nav class="demo-routes" aria-label="Pages"></nav>
   `;
 
-  const actions = header.querySelector<HTMLElement>(".header-actions");
+  const actions = header.querySelector<HTMLElement>(".shell-actions");
   actions?.insertBefore(aestheticSelect, actions.firstChild);
   actions?.append(themeToggle);
   header.querySelector<HTMLElement>(".demo-routes")?.append(...routeLinks);
@@ -125,11 +143,11 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
 /** Build the site footer: copyright and the "Made with … by Coden" credit. */
 function buildFooter(): HTMLElement {
   const footer = document.createElement("footer");
-  footer.className = "site-footer";
+  footer.className = "shell-footer";
   footer.innerHTML = `
-    <div class="site-footer-content cluster between">
-      <p class="footer-copyright">© <span id="footer-year"></span> Coden</p>
-      <p class="footer-credit">
+    <div class="shell-footer-content">
+      <p>© <span id="footer-year"></span> Coden</p>
+      <p>
         Made with <i class="ic-heart" aria-hidden="true"></i> by
         <a href="https://coden.agency" target="_blank" rel="noopener noreferrer">Coden</a>
       </p>
