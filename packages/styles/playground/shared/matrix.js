@@ -209,10 +209,18 @@ const COMPONENTS = {
   }),
   checkbox: toggle("checkbox", "checkbox"),
   radio: toggle("radio", "radio"),
-  /* A switch reads the edge axis where the other two floor it, so it takes the
-     full grid -- both `ghost` rows included, now that no toggle floors it
-     unsupported. */
-  switch: toggle("switch", "checkbox", PRESENTATIONS),
+  /* A switch reads the edge axis where the other two floor it, so it takes
+     most of the full grid -- but not `ghost edgeless`: `.ghost` already asks
+     for zero fill, so with the line gone too there is nothing left to mark
+     the track, just a knob floating with no bounds. `.switch.ghost.edgeless`
+     (`form.css`) holds the floor up for that one pairing, so it renders
+     identically to `ghost edged` -- a duplicate row that teaches nothing,
+     the same reason `.solid`'s edge rows collapse to one above. */
+  switch: toggle(
+    "switch",
+    "checkbox",
+    PRESENTATIONS.filter((presentation) => presentation !== "ghost edgeless"),
+  ),
   "data-table": {
     tag: "table",
     layout: "grid",
