@@ -33,7 +33,10 @@ function createPlugin(options: Parameters<typeof viteIcons>[0] = {}) {
     plugin,
     resolveId: plugin.resolveId as (id: string) => string | null,
     transform: plugin.transform as (code: string, id: string) => { code: string } | null,
-    transformIndexHtml: plugin.transformIndexHtml as (html: string, ctx: { filename?: string }) => unknown,
+    transformIndexHtml: plugin.transformIndexHtml as (
+      html: string,
+      ctx: { filename?: string; server?: unknown },
+    ) => unknown,
   };
 }
 
@@ -579,6 +582,42 @@ describe("viteIcons dev invalidation", () => {
     fire("add", "notes.md");
 
     expect(invalidated).toEqual([]);
+  });
+});
+
+describe("viteIcons dev HTML injection", () => {
+  it("injects the stylesheet script at the site root by default", () => {
+    const { plugin, transformIndexHtml } = createPlugin();
+    (plugin.configResolved as (config: { base: string }) => void)({ base: "/" });
+
+    const result = transformIndexHtml("<html><head></head></html>", { server: {} }) as { attrs: { src: string } }[];
+
+    expect(result[0].attrs.src).toBe("/@id/virtual:icons.css");
+  });
+
+  it("prefixes the injected script with a configured base", () => {
+    // Regression test: a root-absolute `/@id/...` script `src` bypasses
+    // Vite's own base-prefixed serving, so under a non-root base (an app
+    // mounted at a subpath behind a reverse proxy, e.g. `packages/icons/demo`
+    // run with `--base /icons/` under `apps/demo`'s dev proxy) the browser
+    // requested the stylesheet at the wrong, un-prefixed URL -- which a
+    // path-based proxy never forwards to this dev server at all, so a
+    // different (or no) plugin instance silently answered instead.
+    const { plugin, transformIndexHtml } = createPlugin();
+    (plugin.configResolved as (config: { base: string }) => void)({ base: "/icons/" });
+
+    const result = transformIndexHtml("<html><head></head></html>", { server: {} }) as { attrs: { src: string } }[];
+
+    expect(result[0].attrs.src).toBe("/icons/@id/virtual:icons.css");
+  });
+
+  it("inlines the stylesheet instead of injecting a script outside a dev server", () => {
+    const { plugin, transformIndexHtml } = createPlugin();
+    (plugin.configResolved as (config: { base: string }) => void)({ base: "/icons/" });
+
+    const result = transformIndexHtml("<html><head></head></html>", {}) as { tag: string }[];
+
+    expect(result[0].tag).toBe("style");
   });
 });
 
