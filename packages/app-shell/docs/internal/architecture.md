@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 
@@ -16,6 +16,8 @@ Through `exports`, as source:
 - `./components/site-header.astro`, `./components/site-footer.astro`, `./components/theme-toggle.astro` — used by the layout; exported so an app can compose them directly if it needs to.
 - `./components/status-badge.astro` — the deprecated/experimental package badge. Used by `apps/www`, `apps/docs`, and `apps/demo` wherever a package catalog shows its status; not used by `packages/*/demo`, since a package demo never lists other packages.
 - `./package-grid` — `initPackageGrid()`, the search-filter and name-sort behavior for a package/demo index grid. Wired by `apps/www`, `apps/docs`, and `apps/demo`'s own index pages.
+- `./nav` — `resolveNavLinks(siteConfig)`, the header's cross-surface link list. Pure: takes a `SiteConfig`, returns link/label pairs, touches nothing. `site-header.astro` calls it internally; a non-Astro host calls it too, and renders the result in its own markup — see `docs/internal/vanilla-host-markup.md`.
+- `./theme` — `resolveInitialTheme`, `nextTheme`, `themeToggleAria`, and the shared `THEME_STORAGE_KEY` constant. Pure functions with no DOM or storage access; every consumer, `base-layout.astro` included, writes its own few lines of glue calling them. See "Theme" below and `docs/internal/vanilla-host-markup.md`.
 - `./site-config` — the `SiteConfig` type each app fills in.
 - `./seo` — `buildRobotsTxt(baseUrl)` and `buildSitemapXml(baseUrl, routePaths)`.
 - `./styles.css` — the chrome stylesheet.
@@ -46,7 +48,7 @@ Chrome icons are `@codenhub/icons` classes (`ic-lucide-*`) in **CSS mode**. GitH
 
 CSS mode is required because the icons Vite plugin skips `node_modules` in both its `transform` and its scan, and a pnpm workspace package resolves under `node_modules`. In CSS mode the plugin instead generates mask rules from a `content` glob, and those rules apply to any `<i class="ic-…">` element regardless of which file authored it. SVG mode would leave the shell's icons unrendered.
 
-`packages/icons/demo` and `packages/styles/demo` also consume `./styles.css` directly, as non-Astro Vite hosts — the shell's markup is plain HTML/CSS, so nothing here requires Astro specifically. See the Host contract below for what each still has to do itself without a `base-layout.astro` to do it for them.
+`packages/icons/demo` and `packages/styles/demo` also consume `./styles.css` directly, as non-Astro Vite hosts — the shell's markup is plain HTML/CSS, so nothing here requires Astro specifically. See the Host contract below for the build-time integration steps, and `docs/internal/vanilla-host-markup.md` for the literal markup those two hosts hand-author to match, since neither has a `base-layout.astro` to render it for them.
 
 ## Host contract
 
@@ -59,7 +61,8 @@ Any host consuming the shell — Astro or not — must:
 5. Give its `<main>` `id="main-content"` for the skip link, and wrap its content in `.shell-content` (or match `--shell-max-width` and `--shell-gutter` itself) so the page lines up with the header and footer.
 6. Place the brand assets the header references at `/assets/logo/logo-dark.svg` and `/assets/logo/logo-light.svg` via `codenhub.assets` (`docs/specs/packages-demo.md`).
 7. If the host's own theming convention doesn't already set `data-theme="dark"|"light"` on the root element, mirror it there (see the dark-mode bridge under "Layout width" above) — `styles.css`'s dark-mode rules only key off that attribute.
+8. Hand-author the header/footer/theme-toggle markup per `docs/internal/vanilla-host-markup.md`, and wire theme behavior and nav links using `./theme` and `./nav` — see "Theme" below.
 
 ## Theme
 
-One `localStorage` key, `codenhub-theme`, shared by name across the surfaces (each origin has its own storage). The inline bootstrap sets `data-theme` before first paint; the deferred script wires the switch, mirrors the active theme onto its `role="switch"` `aria-checked`, and writes the key. The switch itself is a sliding pill (`theme-toggle.astro`) whose knob carries the icon of the theme in effect. A surface that wants a theme package later swaps the two scripts in `base-layout.astro` and nothing else.
+One `localStorage` key, `codenhub-theme` (`THEME_STORAGE_KEY` from `./theme`), shared by name across the surfaces (each origin has its own storage). The inline bootstrap sets `data-theme` before first paint; the deferred script wires the switch, mirrors the active theme onto its `role="switch"` `aria-checked`, and writes the key — both using `./theme`'s `resolveInitialTheme`/`nextTheme`/`themeToggleAria`, which compute values only and never touch `document`, `window`, or `localStorage` themselves. `base-layout.astro` writes that glue for Astro hosts; a non-Astro host writes the same kind of glue itself, against its own elements (`docs/internal/vanilla-host-markup.md`). The switch itself is a sliding pill (`theme-toggle.astro`) whose knob carries the icon of the theme in effect. A surface that wants a theme package later swaps the two scripts in `base-layout.astro` and nothing else.
