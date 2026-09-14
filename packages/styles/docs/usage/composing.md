@@ -87,7 +87,7 @@ A text control caps a **cascaded** fill at `6%`, keeping typed text legible when
 
 A toggle's cap does not have that split: it is `40%` whether the presentation class is on the checkbox/radio/switch itself or cascaded from a container, the same value for all three. That is where an unchecked `.ghost` (0%), `.soft`/default (12%), and `.solid` (the cap) read as three distinct plates instead of shades of the same wash. Being checked pins the fill to `100%` instead, whatever the presentation class asks — a checkbox, a radio, and a switch each have one "on" look, and presentation only shapes them unchecked. See [Forms](./forms.md) for the full toggle reference.
 
-The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](./forms.md) for the full toggle and text control reference.
+The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all, and on `.switch.ghost`, which keeps its line specifically against its own `.edgeless`: `.ghost` already asks for zero fill, so removing the line too would leave nothing marking the track but the knob. `.switch.ghost.edgeless` renders the same as `.switch.ghost.edged` rather than as a distinct, boundary-less look. See [Forms](./forms.md) for the full toggle and text control reference.
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
 

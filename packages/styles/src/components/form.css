@@ -236,6 +236,21 @@
   --_edge-floor: 0%;
 }
 
+/* `.switch`'s one exception to the opt-out above: `.ghost` already asks for
+   zero fill, so a `.switch.ghost.edgeless` track has neither a line nor a
+   plate and disappears entirely -- nothing marks its bounds but the floating
+   knob. Every other fill on this component still has something to paint
+   (`.soft`/`.solid`/default all rest above 0%), so only this one pairing
+   needs the floor held up. `.switch.ghost.edgeless` renders identically to
+   `.switch.ghost.edged` now, published unsupported as a distinct look --
+   the same "produces a row indistinguishable from its neighbour" reason
+   `.solid.edgeless`/`.solid.edged` already collapse to one row for. Higher
+   specificity than the rule above (three classes, not an `:is()` of one)
+   wins regardless of source order. */
+.switch.ghost.edgeless {
+  --_edge-floor: 100%;
+}
+
 /* An invalid control is destructive whatever else it was asked to be. A plain
    unlayered rule, not `&[aria-invalid]` inside `@utility`: the intent reset is
    unlayered too and would overrule a layered version (leaving a grey line and
