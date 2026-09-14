@@ -90,6 +90,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
 - The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none` because the docs call it a circular fixed identity, the same reason `.radio` forces it: the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square either one.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
+- Numeral legibility depends on the face you pick. At UI sizes -- pagination, counters, small badges -- some pixel/bitmap faces render lookalike digits such as `2`/`8` or `3`/`9` closely enough to misread at a glance; this is a property of the font, not something the aesthetic's CSS can correct. Prefer a face with clearly distinct digit shapes wherever small numeric text matters.
 
 ## Chunky tile
 

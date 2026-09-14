@@ -44,11 +44,10 @@
      named intent. A named intent keeps its ordinary wash; untinting
      `.alert.soft.destructive` too would silence the status it exists to
      carry rather than quiet it, which is why an earlier, unconditional
-     version of this fix was rejected for `.alert` specifically -- see
-     `docs/internal/stress-test-findings.md`. This version never reaches
-     that case: `:not(...)` names every intent class, plus `.solid`/`.ghost`
-     so an explicit presentation on the element is never clamped to a cap it
-     did not ask for.
+     version of this fix was rejected for `.alert` specifically. This
+     version never reaches that case: `:not(...)` names every intent class,
+     plus `.solid`/`.ghost` so an explicit presentation on the element is
+     never clamped to a cap it did not ask for.
 
      Grounds on `--color-foreground` through the public `--ui-surface-ground`
      escape hatch, exactly like `.panel` and a resting `.card.soft` -- an
