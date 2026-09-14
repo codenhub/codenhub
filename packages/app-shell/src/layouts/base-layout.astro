@@ -4,6 +4,7 @@ import "virtual:icons.css";
 import type { SiteConfig } from "../site-config";
 import SiteFooter from "../components/site-footer.astro";
 import SiteHeader from "../components/site-header.astro";
+import { THEME_STORAGE_KEY } from "../theme";
 
 interface Props {
   siteConfig: SiteConfig;
@@ -23,8 +24,6 @@ const pageTitle =
     : sectionTitle === undefined
       ? `${title} | ${siteConfig.title}`
       : `${title} | ${sectionTitle} | ${siteConfig.title}`;
-
-const THEME_STORAGE_KEY = "codenhub-theme";
 ---
 
 <!doctype html>
@@ -33,6 +32,14 @@ const THEME_STORAGE_KEY = "codenhub-theme";
     <meta charset="UTF-8" />
     <meta content="width=device-width" name="viewport" />
     <meta content={description} name="description" />
+    <!--
+      Mirrors `resolveInitialTheme` from `../theme` rather than importing it:
+      `is:inline` is required here so this runs synchronously before first
+      paint (a normal Astro script tag is a deferred module and would let a
+      flash of the wrong theme through), and `is:inline` scripts never go
+      through Vite/ESM, so they cannot `import`. `../theme.test.ts` is what
+      keeps this logic honest.
+    -->
     <script define:vars={{ storageKey: THEME_STORAGE_KEY }} is:inline>
       (() => {
         const systemTheme = () =>
@@ -57,7 +64,9 @@ const THEME_STORAGE_KEY = "codenhub-theme";
     </SiteHeader>
     <slot />
     <SiteFooter />
-    <script define:vars={{ storageKey: THEME_STORAGE_KEY }}>
+    <script>
+      import { nextTheme, themeToggleAria, THEME_STORAGE_KEY } from "../theme";
+
       const themeToggle = document.querySelector("[data-theme-toggle]");
       const footerYear = document.querySelector("[data-footer-year]");
 
@@ -70,19 +79,20 @@ const THEME_STORAGE_KEY = "codenhub-theme";
           return;
         }
         const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-        const next = current === "dark" ? "light" : "dark";
-        themeToggle.setAttribute("aria-checked", String(current === "dark"));
-        themeToggle.setAttribute("aria-label", `Switch to ${next} theme`);
-        themeToggle.title = `Switch to ${next} theme`;
+        const { checked, label } = themeToggleAria(current);
+        themeToggle.setAttribute("aria-checked", String(checked));
+        themeToggle.setAttribute("aria-label", label);
+        themeToggle.title = label;
       };
 
       syncToggleLabel();
 
       themeToggle?.addEventListener("click", () => {
-        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+        const next = nextTheme(current);
         document.documentElement.dataset.theme = next;
         try {
-          localStorage.setItem(storageKey, next);
+          localStorage.setItem(THEME_STORAGE_KEY, next);
         } catch {
           // The choice still applies to this page when storage is unavailable.
         }

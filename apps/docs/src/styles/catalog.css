@@ -94,13 +94,11 @@
 }
 
 .status-badge {
-  @apply shrink-0 px-1.5;
+  @apply shrink-0;
 }
 
 .status-badge-icon {
-  @apply size-3.5 fill-none stroke-current stroke-2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  --ic-size: 0.875rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

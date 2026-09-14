@@ -488,6 +488,15 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
   const usedFamilies = new Map<string, IconFamilyData>();
   const unreplacedClasses = new Map<string, string>();
   let devServer: ViteDevServer | undefined;
+  // Vite's own default; overwritten by `configResolved` before any hook that
+  // reads it can run. Used to make the dev stylesheet's injected `<script>`
+  // `src` respect a non-root `base` -- Vite does not rewrite a plugin's
+  // injected tag attributes for `base` itself, so an un-prefixed root-absolute
+  // `src` would resolve to the wrong origin path when this app is mounted
+  // under a subpath (e.g. behind a reverse proxy that only forwards that
+  // subpath), silently reaching a *different* dev server's plugin instance
+  // instead of erroring.
+  let base = "/";
 
   /**
    * Marks the generated stylesheet stale and asks the browser for it again.
@@ -652,7 +661,9 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
         return [
           {
             tag: "script",
-            attrs: { type: "module", src: `/@id/${VIRTUAL_ID}` },
+            // `base` already ends in "/" (Vite's own guarantee), so this
+            // does not need its own separator.
+            attrs: { type: "module", src: `${base}@id/${VIRTUAL_ID}` },
             injectTo: "head",
           },
         ];
@@ -734,6 +745,10 @@ export function viteIcons(options: ViteIconsOptions = {}): Plugin {
       if (notice) {
         this.emitFile({ fileName: ATTRIBUTION_FILE, source: `${notice}\n`, type: "asset" });
       }
+    },
+
+    configResolved(config) {
+      base = config.base;
     },
 
     configureServer(server) {

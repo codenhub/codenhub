@@ -209,6 +209,9 @@ importers:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../tools
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -219,6 +222,9 @@ importers:
       astro:
         specifier: 'catalog:'
         version: 7.0.7(@astrojs/markdown-remark@7.2.1)(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.2)(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0)
+      jsdom:
+        specifier: 'catalog:'
+        version: 29.1.1
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -364,6 +370,9 @@ importers:
 
   packages/icons/demo:
     devDependencies:
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../app-shell
       '@codenhub/icons':
         specifier: workspace:*
         version: link:..
@@ -640,6 +649,9 @@ importers:
 
   packages/styles/demo:
     devDependencies:
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../app-shell
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../../icons

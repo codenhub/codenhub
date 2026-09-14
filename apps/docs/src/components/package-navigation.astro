@@ -1,8 +1,9 @@
 ---
+import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+
 import type { PublicPackage } from "../lib/catalog";
 import type { DocumentSection } from "../lib/document-section";
 import { buildPackageSidebar, groupContainsRoute } from "../lib/package-navigation";
-import StatusBadge from "./status-badge.astro";
 
 interface Props {
   currentPackage: PublicPackage;

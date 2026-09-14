@@ -99,12 +99,12 @@ describe("documentation chrome", () => {
 
   it("shows warning status beside both desktop and mobile package labels", async () => {
     const html = await readOutput("validation/index.html");
-    // The badge renders as an icon, so its accessible name is what carries the
-    // status to a screen reader and is what this asserts.
+    // `@codenhub/app-shell`'s shared status badge (also used by apps/www and
+    // apps/demo) shows a visible text label alongside the icon.
     const chromeLabels = html.match(/class="package-navigation-title"[^>]*>.*?ValidationKit.*?Experimental.*?<\/div>/g);
 
     expect(chromeLabels).toHaveLength(2);
-    expect(html).toContain('<span class="sr-only">Experimental</span>');
+    expect(html).toContain('<i aria-hidden="true" class="ic-lucide-flask-conical status-badge-icon"></i>Experimental');
   });
 
   it("groups a package's folder pages into collapsible sections, open on the active one", async () => {

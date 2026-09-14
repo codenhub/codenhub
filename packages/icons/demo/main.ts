@@ -1,6 +1,9 @@
+import { resolveNavLinks } from "@codenhub/app-shell/nav";
+import { nextTheme, resolveInitialTheme, themeToggleAria, THEME_STORAGE_KEY } from "@codenhub/app-shell/theme";
 import { generateIconSetCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
 import type { IconFamilyData } from "@codenhub/icons";
 
+import "virtual:icons.css";
 import "./style.css";
 
 import { createModal } from "./modal.ts";
@@ -45,30 +48,32 @@ function element<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
 }
 
+function currentTheme(): "dark" | "light" {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
 function updateThemeToggleLabel(): void {
   const button = element<HTMLButtonElement>("theme-toggle");
   if (!button) {
     return;
   }
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-  const label = `Switch to ${isDark ? "light" : "dark"} theme`;
+  const { checked, label } = themeToggleAria(currentTheme());
   button.setAttribute("aria-label", label);
-  button.setAttribute("aria-checked", String(isDark));
+  button.setAttribute("aria-checked", String(checked));
   button.title = label;
 }
 
 function initTheme(): void {
-  const stored = localStorage.getItem("theme");
-  const isDark = stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", resolveInitialTheme(stored, prefersDark));
   updateThemeToggleLabel();
 }
 
 function toggleTheme(): void {
-  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-  const next = isDark ? "light" : "dark";
+  const next = nextTheme(currentTheme());
   document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("theme", next);
+  localStorage.setItem(THEME_STORAGE_KEY, next);
   updateThemeToggleLabel();
 }
 
@@ -393,10 +398,36 @@ function initControls(): void {
 }
 
 function initFooterYear(): void {
-  const year = element<HTMLElement>("footer-year");
+  const year = document.querySelector<HTMLElement>("[data-footer-year]");
   if (year) {
     year.textContent = String(new Date().getFullYear());
   }
+}
+
+/**
+ * Renders the header's standard cross-surface nav from `resolveNavLinks`.
+ *
+ * A package demo isn't a top-level surface, so it carries no `demoUrl` — it's
+ * already inside the demo surface — leaving `resolveNavLinks` to naturally
+ * drop the self-referential "Demo" link with no special-casing.
+ */
+function initNav(): void {
+  const nav = element<HTMLElement>("shell-nav");
+  if (!nav) {
+    return;
+  }
+  const links = resolveNavLinks({ docsUrl: "https://docs.codenhub.dev", wwwUrl: "https://codenhub.dev" });
+  nav.replaceChildren(
+    ...links.map(({ href, label }) => {
+      const link = document.createElement("a");
+      link.className = "shell-nav-link";
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.innerHTML = `${label}<i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>`;
+      return link;
+    }),
+  );
 }
 
 initTheme();
@@ -404,4 +435,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initControls();
   initFamilySelect();
   initFooterYear();
+  initNav();
 });

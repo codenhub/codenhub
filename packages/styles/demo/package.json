@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@codenhub/app-shell": "workspace:*",
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",
     "@tailwindcss/vite": "catalog:",

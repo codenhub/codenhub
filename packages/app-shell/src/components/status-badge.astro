@@ -1,4 +1,11 @@
 ---
+/**
+ * Renders the deprecated/experimental badge for a package status. `active`
+ * carries no badge: marking every healthy package makes the ones that need
+ * attention harder to spot.
+ *
+ * @param status - The package's lifecycle status.
+ */
 import type { PackageStatus } from "@codenhub/tools/documentation";
 
 interface Props {
@@ -7,8 +14,6 @@ interface Props {
 
 const { status } = Astro.props;
 
-/* `active` is the norm and carries no badge: marking every healthy package
-   makes the ones that need attention harder to spot. */
 const badges = {
   deprecated: { icon: "ic-lucide-ban", label: "Deprecated", tone: "destructive" },
   experimental: { icon: "ic-lucide-flask-conical", label: "Experimental", tone: "warning" },

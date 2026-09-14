@@ -7,54 +7,49 @@
     <script type="module" src="./main.ts"></script>
   </head>
   <body>
-    <header class="site-header">
-      <div class="site-header-content cluster between">
-        <div class="header-start cluster loose">
-          <a class="brand" href="/" aria-label="@codenhub/icons home">
-            <img
-              class="brand-logo brand-logo-on-light"
-              src="/assets/logo/logo-dark.svg"
-              alt="@codenhub/icons"
-              width="984"
-              height="255"
-            />
-            <img
-              class="brand-logo brand-logo-on-dark"
-              src="/assets/logo/logo-light.svg"
-              alt="@codenhub/icons"
-              width="984"
-              height="255"
-            />
-          </a>
+    <header class="shell-header">
+      <div class="shell-header-content">
+        <a class="shell-brand" href="https://demo.codenhub.dev" aria-label="@codenhub/icons home">
+          <img
+            class="shell-brand-logo shell-brand-logo-on-light"
+            src="/assets/logo/logo-dark.svg"
+            alt="@codenhub/icons"
+            width="984"
+            height="255"
+          />
+          <img
+            class="shell-brand-logo shell-brand-logo-on-dark"
+            src="/assets/logo/logo-light.svg"
+            alt="@codenhub/icons"
+            width="984"
+            height="255"
+          />
+        </a>
 
-          <nav class="primary-navigation" aria-label="Primary">
-            <a href="https://docs.codenhub.dev/icons">Docs</a>
-            <a href="https://github.com/codenhub/codenhub">CodenHub</a>
-          </nav>
-        </div>
+        <nav class="shell-nav" aria-label="Sites" id="shell-nav"></nav>
 
-        <nav class="header-actions" aria-label="Site actions">
+        <div class="shell-actions">
           <a
-            class="header-icon-link"
-            href="https://github.com/codenhub/codenhub/tree/main/packages/icons"
+            class="shell-action"
+            href="https://github.com/codenhub/codenhub"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="@codenhub/icons on GitHub"
+            aria-label="CodenHub on GitHub"
           >
-            <svg aria-hidden="true" viewBox="0 0 16 16">
+            <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 16 16">
               <path
                 d="M8 0C3.58 0 0 3.64 0 8.13c0 3.59 2.29 6.64 5.47 7.71.4.08.55-.17.55-.39 0-.19-.01-.83-.01-1.51-2.01.38-2.53-.5-2.69-.96-.09-.23-.48-.96-.82-1.15-.28-.15-.68-.53-.01-.54.63-.01 1.08.59 1.23.83.72 1.23 1.87.88 2.33.67.07-.53.28-.88.51-1.08-1.78-.21-3.64-.91-3.64-4.02 0-.89.31-1.62.82-2.19-.08-.2-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.48 7.48 0 0 1 8 3.91c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.96.08 2.16.51.57.82 1.29.82 2.19 0 3.12-1.87 3.81-3.65 4.02.29.25.54.74.54 1.51 0 1.09-.01 1.97-.01 2.24 0 .22.15.47.55.39A8.12 8.12 0 0 0 16 8.13C16 3.64 12.42 0 8 0Z"
               />
             </svg>
           </a>
           <a
-            class="header-icon-link"
-            href="https://www.npmjs.com/package/@codenhub/icons"
+            class="shell-action"
+            href="https://www.npmjs.com/org/codenhub"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="@codenhub/icons on npm"
+            aria-label="CodenHub on npm"
           >
-            <svg aria-hidden="true" viewBox="0 0 24 24">
+            <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 24 24">
               <path
                 d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"
               />
@@ -62,24 +57,26 @@
           </a>
           <button
             id="theme-toggle"
-            class="theme-toggle"
+            class="shell-theme-switch"
             type="button"
             role="switch"
             aria-checked="false"
             aria-label="Toggle theme"
             title="Toggle theme"
           >
-            <span class="theme-toggle-knob">
-              <i class="ic-moon theme-icon theme-icon-moon" aria-hidden="true"></i>
-              <i class="ic-sun theme-icon theme-icon-sun" aria-hidden="true"></i>
+            <span class="shell-theme-switch-track">
+              <span class="shell-theme-switch-knob">
+                <i class="ic-lucide-moon shell-theme-icon shell-theme-icon-moon" aria-hidden="true"></i>
+                <i class="ic-lucide-sun shell-theme-icon shell-theme-icon-sun" aria-hidden="true"></i>
+              </span>
             </span>
           </button>
-        </nav>
+        </div>
       </div>
     </header>
 
     <main class="demo-main" id="main-content">
-      <div class="demo-container section-content">
+      <div class="demo-container shell-content section-content">
         <h1 class="demo-title text-title-sm">@codenhub/icons</h1>
 
         <div class="demo-toolbar cluster between">
@@ -153,20 +150,15 @@
       </div>
     </main>
 
-    <footer class="site-footer">
-      <div class="site-footer-content cluster between">
-        <p class="footer-copyright">
-          ©
-          <span id="footer-year"></span>
+    <footer class="shell-footer">
+      <div class="shell-footer-content">
+        <p>
+          &copy;
+          <span data-footer-year></span>
           Coden
         </p>
-
-        <p class="footer-credit">
-          Made with
-          <i class="ic-heart" aria-hidden="true"></i>
-          by
-          <a href="https://coden.agency" target="_blank" rel="noopener noreferrer">Coden</a>
-        </p>
+        <!-- prettier-ignore -->
+        <p>Built by <a href="https://coden.agency/" target="_blank" rel="noopener noreferrer">coden</a>.</p>
       </div>
     </footer>
 
