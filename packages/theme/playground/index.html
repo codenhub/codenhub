@@ -219,50 +219,52 @@
         justify-content: center;
       "
     >
-      <button
-        id="btn-toggle"
-        class="tooltip"
-        data-tooltip="Toggle theme"
-        data-tooltip-position="left"
-        style="
-          height: 2.5rem;
-          width: 2.5rem;
-          padding: 0.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--color-surface);
-          border-radius: 50%;
-          cursor: pointer;
-          color: var(--color-text);
-          border: 1px solid var(--color-border);
-        "
-        data-testid="btn-toggle"
-      >
-        <i class="ic-contrast h-full w-full"></i>
-      </button>
-      <button
-        id="btn-clear"
-        class="tooltip"
-        data-tooltip="Clear preference"
-        data-tooltip-position="left"
-        style="
-          height: 2.5rem;
-          width: 2.5rem;
-          padding: 0.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--color-surface);
-          border-radius: 50%;
-          cursor: pointer;
-          color: var(--color-text);
-          border: 1px solid var(--color-border);
-        "
-        data-testid="btn-clear"
-      >
-        <i class="ic-trash-2 h-full w-full"></i>
-      </button>
+      <span class="tooltip" data-tooltip-position="left">
+        <button
+          id="btn-toggle"
+          style="
+            height: 2.5rem;
+            width: 2.5rem;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-surface);
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+          "
+          data-testid="btn-toggle"
+          aria-describedby="btn-toggle-tooltip"
+        >
+          <i class="ic-contrast h-full w-full"></i>
+        </button>
+        <span class="tooltip-bubble" role="tooltip" id="btn-toggle-tooltip">Toggle theme</span>
+      </span>
+      <span class="tooltip" data-tooltip-position="left">
+        <button
+          id="btn-clear"
+          style="
+            height: 2.5rem;
+            width: 2.5rem;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-surface);
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+          "
+          data-testid="btn-clear"
+          aria-describedby="btn-clear-tooltip"
+        >
+          <i class="ic-trash-2 h-full w-full"></i>
+        </button>
+        <span class="tooltip-bubble" role="tooltip" id="btn-clear-tooltip">Clear preference</span>
+      </span>
     </div>
   </body>
 </html>
