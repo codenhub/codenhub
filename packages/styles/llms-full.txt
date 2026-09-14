@@ -167,28 +167,28 @@ The one place it does not track the token theme: nesting an explicit selector in
 
 Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
 
-| Import path                      | Composition and effects                                                                                                                                                                                             |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                     |
-| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                    |
-| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                        |
-| `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                  |
-| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` classes. Adds no tokens or components of its own; import after the base stylesheet.                                                                |
-| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic: `/neobrutalism`, `/glass`, `/pixel`, or `/chunky-tile`. Same rules and ordering as the combined file.                                                                                       |
-| `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                          |
-| `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                        |
-| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings.   |
-| `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                                |
-| `@codenhub/styles/tw/button`     | Published Tailwind source for theme and `.btn`, including its `.loading` state's mask application. Pair it with `/tw/loader` for `--loader-art` — the spinner artwork and its reduced-motion fallback — to resolve. |
-| `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                     |
-| `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                               |
-| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                                |
-| `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                                |
-| `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                                 |
-| `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                  |
-| `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                    |
-| `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                     |
-| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                               |
+| Import path                      | Composition and effects                                                                                                                                                                                           |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                   |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                  |
+| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                      |
+| `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                |
+| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` classes. Adds no tokens or components of its own; import after the base stylesheet.                                                              |
+| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic: `/neobrutalism`, `/glass`, `/pixel`, or `/chunky-tile`. Same rules and ordering as the combined file.                                                                                     |
+| `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                        |
+| `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                      |
+| `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings. |
+| `@codenhub/styles/tw/surface`    | Source theme plus `.surface`, `.card`, and `.panel`.                                                                                                                                                              |
+| `@codenhub/styles/tw/button`     | Published Tailwind source for theme and `.btn`. Pair it with `/tw/loader` for a loading state composed from `.loader`.                                                                                            |
+| `@codenhub/styles/tw/form`       | Source theme plus field, public `text-control`, input, textarea, select, checkbox, radio, and switch utilities.                                                                                                   |
+| `@codenhub/styles/tw/feedback`   | Source theme plus alert, badge, skeleton, and progress utilities and their keyframes.                                                                                                                             |
+| `@codenhub/styles/tw/loader`     | Published Tailwind source for activity indicators and loaders, including static reduced-motion masks. It has no theme or reset side effects and uses `currentColor`.                                              |
+| `@codenhub/styles/tw/tooltip`    | Source theme plus tooltip utilities.                                                                                                                                                                              |
+| `@codenhub/styles/tw/reset`      | Source theme, typography utilities, and global reset/accessibility rules. It changes root/body/elements and selection, motion, focus, scrollbar, and forced colors.                                               |
+| `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                |
+| `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                  |
+| `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                   |
+| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                             |
 
 Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
 
@@ -356,7 +356,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
 | `.switch`                                       | Border, border width, and a capped fill.    |
 | `.quote`                                        | Fill, text, border, and width.              |
-| `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
@@ -372,11 +372,11 @@ A toggle's cap does not have that split: it is `40%` whether the presentation cl
 
 The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](docs/usage/forms.md) for the full toggle and text control reference.
 
-A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip.destructive` is a red bubble.
+A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
 
 With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent. Composed like everything else it was `20%` of the page's ink over the surface tone, which steps _lighter_ than the surface on a dark page and _darker_ on a light one — so the dark bubble read as lifted and the light one as a mid-grey slab two steps darker than every card on the screen. The token states each direction instead: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
 
-Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](docs/usage/aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](docs/usage/tooltips.md) for the full tooltip reference.
+Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip-bubble.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](docs/usage/aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](docs/usage/tooltips.md) for the full tooltip reference.
 
 ## Component axis reference
 
@@ -398,7 +398,7 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
 | `.progress`                                               | Yes    | No   | No   | No                 |
 | `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
-| `.tooltip`                                                | Yes    | Yes  | Yes  | Shape and overlay  |
+| `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
 `.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
@@ -758,7 +758,7 @@ Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` in
 
 An explicit presentation on the element still wins over the aesthetic's defaults. The aesthetic supplies edge thickness; presentation only decides whether that edge is drawn.
 
-An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip pseudo-elements: `.tooltip.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip.pixel` gets the complete stepped bubble under a glass ancestor.
+An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip bubbles: `.tooltip-bubble.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip-bubble.pixel` gets the complete stepped bubble under a glass ancestor.
 
 Each aesthetic that scales from one number publishes it as a knob — see [Customizing → Aesthetic tokens](docs/usage/customizing.md#aesthetic-tokens) for how knobs resolve and where they can be set. This page covers what each aesthetic looks like and where it makes documented exceptions.
 
@@ -811,7 +811,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 - Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table's `overflow: hidden` fights the clip and the corners square off where the two meet, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
-- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none`, since a stepped badge would clip its own bubble away with it. `.radio` forces the same, because the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square it.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none` because the docs call it a circular fixed identity, the same reason `.radio` forces it: the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square either one.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 
 ## Chunky tile
@@ -877,7 +877,6 @@ Size and shape classes:
 | `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
 | `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
 | `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                                                                                                                                                                               |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 
 Examples:
@@ -888,10 +887,15 @@ Examples:
 <button class="btn warning soft">Warning soft</button>
 <button class="btn destructive ghost edgeless">Danger ghost</button>
 <button class="btn icon primary" aria-label="Create">+</button>
-<button class="btn primary loading" disabled>Saving</button>
+<button class="btn primary" disabled>
+  <span class="loader sm" aria-hidden="true"></span>
+  Saving
+</button>
 ```
 
-`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work. Loading buttons keep only opacity and transform transitions active so spinner and surface colors stay synchronized when theme tokens change.
+## Loading
+
+The package ships no loading state of its own: a loading button is a disabled `.btn` composed with a real [`.loader`](docs/usage/feedback.md) child, the same activity indicator every other component uses. Disable the button so users cannot trigger duplicate work, and drop a `.loader` in beside the label — any of its variants (`.dots-wave`, `.bars-wave`, and so on) work the same way. Whether to also hide the label is your call; the package has no built-in mechanism for that.
 
 On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](docs/usage/aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 
@@ -923,7 +927,7 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 
 No icon is shipped for text inputs — that's what this section covers. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons for `.input-group` are the consumer's to choose now.
 
-This is separate from the toggle marks below and the alert icons in [Feedback](docs/usage/feedback.md#example): those are small, fixed, built-in glyphs — not a per-input icon system — and aren't affected by this change.
+This is separate from the toggle marks below, which stay small, fixed, built-in glyphs. `.alert`'s icon followed the same path since — see [Feedback → Icon](docs/usage/feedback.md#example) — the package no longer paints one there either.
 
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 
@@ -1046,7 +1050,7 @@ Use labels, `type`, validation logic, `aria-describedby`, and error message rela
 | Class            | Purpose                                                                      |
 | ---------------- | ---------------------------------------------------------------------------- |
 | `.alert`         | Inline feedback surface.                                                     |
-| `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
+| `.alert-icon`    | Sizing and alignment for an icon element dropped in as a child of `.alert`.  |
 | `.badge`         | Compact status pill.                                                         |
 | `.loader-mask`   | Low-level activity indicator composition utility. Applies the spinner mask.  |
 | `.loader`        | Standalone inline loader artwork.                                            |
@@ -1074,11 +1078,11 @@ These variants retain their embedded SVG animations normally. Under `prefers-red
 
 Loader size modifiers:
 
-| Class    | Size              |
-| -------- | ----------------- |
-| _(none)_ | Default (`2rem`). |
-| `.sm`    | Small (`1.5rem`). |
-| `.lg`    | Large (`2.5rem`). |
+| Class    | Size                 |
+| -------- | -------------------- |
+| _(none)_ | Default (`1.75rem`). |
+| `.sm`    | Small (`1.25rem`).   |
+| `.lg`    | Large (`2.25rem`).   |
 
 Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
@@ -1088,7 +1092,7 @@ Skeletons, loaders, progress bars, and dividers are indicators. They read intent
 <span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
 ```
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
+The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3` with nothing to trigger. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](docs/usage/forms.md#icons) documents.
 
 Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
@@ -1097,7 +1101,14 @@ Alerts and badges read the shared [presentation](docs/usage/composing.md#present
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
 <div class="alert primary solid" role="status">Deployment started.</div>
-<div class="alert warning soft icon" role="status">Review required.</div>
+<div class="alert warning soft" role="status">
+  <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </svg>
+  Review required.
+</div>
 <div class="alert destructive ghost edged" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success solid">Live</span>
@@ -1119,37 +1130,63 @@ Add `role="status"` or `role="alert"` to alerts based on announcement urgency, m
 
 # Tooltips
 
-| Class or Attribute                      | Purpose                                                        |
-| --------------------------------------- | -------------------------------------------------------------- |
-| `.tooltip`                              | Tooltip host. Uses `data-tooltip` as pseudo-element content.   |
-| `.tooltip.tooltip-icon`                 | Circular icon-style tooltip host.                              |
-| `[data-tooltip-position="top"]`         | Positions tooltip above host.                                  |
-| `[data-tooltip-position="bottom"]`      | Positions tooltip below host.                                  |
-| `[data-tooltip-position="left"]`        | Positions tooltip left of host.                                |
-| `[data-tooltip-position="right"]`       | Positions tooltip right of host.                               |
-| No `data-tooltip-position`              | Defaults to top placement.                                     |
-| `[data-state="open"]`                   | Shows tooltip without hover.                                   |
-| `.tooltip.raised` / `.tooltip.floating` | Adds one or two units of depth. The bubble is flat by default. |
+| Class or Attribute                     | Purpose                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.            |
+| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.              |
+| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on. |
+| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                   |
+| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                   |
+| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                 |
+| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                |
+| No `data-tooltip-position`             | Defaults to top placement.                                               |
+| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                           |
+| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.           |
 
-A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](docs/usage/composing.md#presentation), and its material follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope, including the pseudo-element itself.
+A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. This replaced a `::after` pseudo-element that carried the message as `content: attr(data-tooltip)` — CSS generated content is not reliably exposed to assistive tech, and cannot be the target of an `aria-describedby`, since that needs a real element with a real `id`. A real bubble can be. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
 
-The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](docs/usage/composing.md#elevation) to lift it — `.tooltip.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
+A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](docs/usage/composing.md#presentation), and its material follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. Intent, presentation, aesthetic, and elevation classes go on `.tooltip-bubble` — the element that actually paints — not on `.tooltip`, the same rule every component in this package follows: put the class on the element that shows it.
 
-Intent works on a tooltip the same way it works on a filled component: `.tooltip.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent — near-white in light, mid-grey in dark; see [Composing → Presentation](docs/usage/composing.md#presentation) for why.
+The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](docs/usage/composing.md#elevation) to lift it, on the bubble itself — `.tooltip-bubble.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
+
+Intent works on a tooltip bubble the same way it works on a filled component: `.tooltip-bubble.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip-bubble.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent; see [Composing → Presentation](docs/usage/composing.md#presentation) for why.
 
 ## Example
 
 ```html
-<button class="tooltip" data-tooltip="Saved 2 minutes ago">Status</button>
-<button class="tooltip" data-tooltip="Opens in a new tab" data-tooltip-position="bottom">Docs</button>
-<button class="tooltip primary raised" data-tooltip="Primary intent, lifted a step">Deploy</button>
-<button class="tooltip" data-tooltip="Always visible, no hover needed" data-state="open">Pinned</button>
-<button class="tooltip tooltip-icon" data-tooltip="More details" data-tooltip-position="right" aria-label="More details">?</button>
+<span class="tooltip">
+  <button aria-describedby="status-bubble">Status</button>
+  <span class="tooltip-bubble" role="tooltip" id="status-bubble">Saved 2 minutes ago</span>
+</span>
+
+<span class="tooltip" data-tooltip-position="bottom">
+  <button aria-describedby="docs-bubble">Docs</button>
+  <span class="tooltip-bubble" role="tooltip" id="docs-bubble">Opens in a new tab</span>
+</span>
+
+<span class="tooltip">
+  <button class="btn primary" aria-describedby="deploy-bubble">Deploy</button>
+  <span class="tooltip-bubble raised primary" role="tooltip" id="deploy-bubble">Primary intent, lifted a step</span>
+</span>
+
+<span class="tooltip" data-state="open">
+  <span aria-describedby="pinned-bubble">Pinned</span>
+  <span class="tooltip-bubble" role="tooltip" id="pinned-bubble">Always visible, no hover needed</span>
+</span>
+
+<span class="tooltip" data-tooltip-position="right">
+  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="icon-bubble">?</span>
+  <span class="tooltip-bubble" role="tooltip" id="icon-bubble">More details</span>
+</span>
 ```
 
-The first two show plain hosts with default (top) and explicit bottom placement. The third combines an intent with `.raised` to show they compose freely — the intent decides the bubble's fill, `.raised` decides whether it casts depth. The fourth uses `data-state="open"` to keep a tooltip visible without a hover or focus interaction, useful for a tooltip that should be demonstrated or tested without simulating pointer input. The fifth is the circular icon variant.
+The first two show plain triggers with default (top) and explicit bottom placement. The third combines an intent with `.raised` on the bubble to show they compose freely — the intent decides the bubble's fill, `.raised` decides whether it casts depth. The fourth uses `data-state="open"` on the wrapper to keep a tooltip visible without a hover or focus interaction, useful for a tooltip that should be demonstrated or tested without simulating pointer input. The fifth uses `.tooltip-icon` as the trigger, for a message with no other element to hang it on.
 
-CSS pseudo-element tooltips are presentational. They are not a complete accessible tooltip implementation by themselves — provide accessible names/descriptions outside the CSS; see [Accessibility](docs/accessibility.md).
+`.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the circular chip for the case where there is nothing else to be the trigger.
+
+Showing and hiding the bubble is CSS-only — `:hover` and `:focus-within` on `.tooltip` — but that is presentational. It is not a complete accessible tooltip implementation by itself: provide the `id`/`aria-describedby`/`role="tooltip"` association outside the CSS; see [Accessibility](docs/accessibility.md).
+
+Next: [Content and layout](docs/usage/content-and-layout.md) covers layout helpers, content chips and tables, surfaces, and typography utilities.
 
 <!-- Source: docs/usage/content-and-layout.md -->
 
@@ -1659,7 +1696,7 @@ Use semantic HTML and behavior appropriate for the component.
 | Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
 | Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
 | Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.       |
 | Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
 | Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
 | Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
@@ -1675,7 +1712,11 @@ Prefer native attributes first:
 Use ARIA or data attributes when native attributes are not available for the element or library:
 
 ```html
-<a class="btn secondary" aria-disabled="true">Unavailable</a> <button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+<a class="btn secondary" aria-disabled="true">Unavailable</a>
+<span class="tooltip" data-state="open">
+  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="more-details-bubble">?</span>
+  <span class="tooltip-bubble" role="tooltip" id="more-details-bubble">More details</span>
+</span>
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.

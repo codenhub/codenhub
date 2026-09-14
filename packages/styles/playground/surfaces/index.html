@@ -235,15 +235,16 @@
             </div>
             <div class="stack tight">
               <p class="text-label text-text-secondary">Bubble</p>
-              <span
-                class="tooltip tooltip-icon"
-                data-tooltip="A bubble rests at two"
-                data-tooltip-position="right"
-                data-testid="elevation-tooltip"
-                tabindex="0"
-                aria-label="A bubble rests at two"
-              >
-                ?
+              <span class="tooltip" data-tooltip-position="right" data-testid="elevation-tooltip">
+                <span
+                  class="tooltip-icon"
+                  tabindex="0"
+                  aria-label="A bubble rests at two"
+                  aria-describedby="elevation-tooltip-bubble"
+                >
+                  ?
+                </span>
+                <span class="tooltip-bubble" role="tooltip" id="elevation-tooltip-bubble">A bubble rests at two</span>
               </span>
             </div>
           </div>

@@ -10,9 +10,9 @@ const DEFAULT_NATIVE_URL = "http://localhost:5184/native/";
 test.describe("preview environments", () => {
   test("shows the alternate preview environment in the environment toggle tooltip", async ({ page }) => {
     await page.goto(VANILLA_FEEDBACK_URL);
-    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See build");
+    await expect(page.getByTestId("environment-toggle-tooltip")).toHaveText("See build");
     await page.goto(BUILD_FEEDBACK_URL);
-    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
+    await expect(page.getByTestId("environment-toggle-tooltip")).toHaveText("See vanilla");
   });
 
   test("loads shared and native stylesheets from their owning folders", async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe("preview environments", () => {
 
     await expect(page.locator("html")).toHaveAttribute("data-env", "build");
     await expect(page.locator('link[href="/native/entry-tw.css"]')).toHaveCount(1);
-    await expect(page.getByTestId("environment-toggle")).toHaveAttribute("data-tooltip", "See vanilla");
+    await expect(page.getByTestId("environment-toggle-tooltip")).toHaveText("See vanilla");
   });
 
   test("switches between preview environments from the environment toggle", async ({ page }) => {

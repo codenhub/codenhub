@@ -390,11 +390,15 @@ test.describe("aesthetics", () => {
       await host.hover();
 
       return host.evaluate((element, extra) => {
+        const bubble = element.querySelector(".tooltip-bubble");
+        if (!bubble) {
+          throw new Error("Expected the fallback tooltip fixture to contain a .tooltip-bubble child.");
+        }
         if (extra) {
-          element.classList.add(extra);
+          bubble.classList.add(extra);
         }
 
-        const styles = getComputedStyle(element, "::after");
+        const styles = getComputedStyle(bubble);
 
         return { boxShadow: styles.boxShadow, clipPath: styles.clipPath, filter: styles.filter };
       }, extraClass);
@@ -441,15 +445,18 @@ test.describe("aesthetics", () => {
       const read = (ancestorClass: string, directClass: string) => {
         const ancestor = document.createElement("div");
         const tooltip = document.createElement("span");
+        const bubble = document.createElement("span");
 
         ancestor.className = ancestorClass;
-        tooltip.className = `tooltip ${directClass}`;
+        tooltip.className = "tooltip";
         tooltip.dataset.state = "open";
-        tooltip.dataset.tooltip = `${directClass} tooltip`;
+        bubble.className = `tooltip-bubble ${directClass}`.trim();
+        bubble.textContent = `${directClass} tooltip`;
+        tooltip.append(bubble);
         ancestor.append(tooltip);
         root.append(ancestor);
 
-        const styles = getComputedStyle(tooltip, "::after");
+        const styles = getComputedStyle(bubble);
         const result = {
           backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
           borderRadius: styles.borderRadius,
@@ -569,7 +576,11 @@ test.describe("aesthetics", () => {
       await tooltip.hover();
 
       const tooltipBackdrop = await tooltip.evaluate((element) => {
-        const styles = getComputedStyle(element, "::after");
+        const bubble = element.querySelector(".tooltip-bubble");
+        if (!bubble) {
+          throw new Error("Expected the tooltip-open fixture to contain a .tooltip-bubble child.");
+        }
+        const styles = getComputedStyle(bubble);
 
         return (
           (styles.backdropFilter !== "none" && styles.backdropFilter) ||

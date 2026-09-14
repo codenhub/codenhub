@@ -1,6 +1,5 @@
 @reference "tailwindcss";
 @import "../theme.css";
-@reference "./loader.css";
 @reference "../box.css";
 
 /* A filled, edgeless, raised box you can press. `box` paints it; everything
@@ -94,30 +93,5 @@
 
   &.pill {
     @apply rounded-full;
-  }
-
-  &.loading {
-    /* `text-transparent!` forces the label invisible whatever the intent
-       resolved to, so the spinner is the only thing left to read. */
-    @apply pointer-events-none text-transparent!;
-
-    & > * {
-      opacity: 0 !important;
-    }
-
-    /* The spinner takes the label's colour, which `box` already resolved
-       against this button's own intent and presentation. It reads `--_fg`
-       rather than `currentColor`: the rule above forces `color` to transparent
-       to hide the label, and a spinner painted in `currentColor` inherits that
-       and paints nothing at all. */
-    &::after {
-      @apply loader-mask absolute block size-4 -translate-x-1/2 -translate-y-1/2;
-
-      background-color: var(--_fg);
-
-      top: calc(50% + var(--border-width));
-      left: calc(50% + var(--border-width));
-      content: "";
-    }
   }
 }

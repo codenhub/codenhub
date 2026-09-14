@@ -35,7 +35,8 @@ test("defines every intent slot on each component that reads them", async ({ pag
       "pre",
       "quote",
       "divider",
-      "tooltip",
+      "tooltip-bubble",
+      "tooltip-icon",
     ];
     const slots = [
       "--intent-color",

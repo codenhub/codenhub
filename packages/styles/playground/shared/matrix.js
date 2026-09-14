@@ -116,7 +116,7 @@ const COMPONENTS = {
   btn: {
     tag: "button",
     text: (intent) => title(intent),
-    states: { disabled: { disabled: "" }, loading: { class: "loading" } },
+    states: { disabled: { disabled: "" } },
   },
   badge: {
     tag: "span",
@@ -152,7 +152,17 @@ const COMPONENTS = {
     tag: "div",
     layout: "grid",
     text: (intent) => `${title(intent)} alert`,
-    states: { icon: { class: "icon" } },
+    /* No class: the package no longer picks an icon for `.alert`, so this state
+       drops in a real `.alert-icon` child the same way a consumer would --
+       `gap-3` on `.alert` spaces it with nothing to trigger. `@codenhub/icons`
+       is already a playground dependency (see `.ic-mail` on the forms fixture),
+       so this uses it rather than hand-rolled SVG. One glyph for every intent,
+       since the point here is the composition, not a per-intent icon set. */
+    states: {
+      icon: {
+        html: (intent) => `<i class="alert-icon ic-circle-alert" aria-hidden="true"></i>${title(intent)} alert`,
+      },
+    },
   },
   card: {
     tag: "div",
@@ -245,16 +255,22 @@ const COMPONENTS = {
     attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
     states: {},
   },
+  /* `.tooltip` is a wrapper around a real trigger and a real `.tooltip-bubble`
+     now, not a single classed host -- see `docs/usage/tooltips.md`. The cell
+     is the wrapper; intent lives on the bubble inside it. */
   tooltip: {
     tag: "span",
     presentations: INTENT_ONLY,
-    extra: "tooltip-icon",
-    text: () => "?",
-    attrs: (intent) => ({
-      "data-tooltip": `${title(intent)} tooltip`,
-      tabindex: "0",
-      "aria-label": `${title(intent)} tooltip`,
-    }),
+    wrapperOnly: true,
+    html: (intent) => {
+      const bubbleId = `tooltip-matrix-bubble-${intent}`;
+      const intentClass = intent === "none" ? "" : intent;
+
+      return (
+        `<span class="tooltip-icon" tabindex="0" role="button" aria-label="${title(intent)} tooltip" aria-describedby="${bubbleId}">?</span>` +
+        `<span class="tooltip-bubble ${intentClass}" role="tooltip" id="${bubbleId}">${title(intent)} tooltip</span>`
+      );
+    },
     states: {},
   },
 };
@@ -263,12 +279,13 @@ const buildCell = (key, component, intent, presentation, state) => {
   const stateSpec = state === "rest" ? {} : (component.states[state] ?? {});
   const element = document.createElement(component.tag);
 
-  element.className = classesFor(
-    key,
-    intent,
-    presentation,
-    [component.extra, stateSpec.class].filter(Boolean).join(" "),
-  );
+  /* A tooltip's cell is a wrapper around a real trigger and bubble now, not a
+     single classed element -- intent and presentation belong on the bubble
+     markup `component.html` builds, not on the host, so the host takes only
+     its own structural class. */
+  element.className = component.wrapperOnly
+    ? key
+    : classesFor(key, intent, presentation, [component.extra, stateSpec.class].filter(Boolean).join(" "));
   element.dataset.testid = `${key}-${slug(presentation)}-${intent}${state === "rest" ? "" : `-${state}`}`;
 
   for (const [name, value] of Object.entries(component.attrs?.(intent) ?? {})) {
@@ -276,7 +293,7 @@ const buildCell = (key, component, intent, presentation, state) => {
   }
 
   for (const [name, value] of Object.entries(stateSpec)) {
-    if (name !== "class" && name !== "remove") {
+    if (name !== "class" && name !== "remove" && name !== "html") {
       element.setAttribute(name, value);
     }
   }
@@ -285,7 +302,12 @@ const buildCell = (key, component, intent, presentation, state) => {
     element.removeAttribute(name);
   }
 
-  if (component.html) {
+  if (stateSpec.html) {
+    /* A state can replace the cell's own markup rather than just add an
+       attribute -- `.alert`'s "icon" state needs a real `.alert-icon` child
+       now that the package no longer paints one on its own. */
+    element.innerHTML = stateSpec.html(intent);
+  } else if (component.html) {
     element.innerHTML = component.html(intent);
   } else if (component.text) {
     element.textContent = component.text(intent);

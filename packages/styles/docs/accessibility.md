@@ -76,7 +76,7 @@ Use semantic HTML and behavior appropriate for the component.
 | Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
 | Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
 | Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Provide accessible names/descriptions. CSS pseudo-element content is not enough for all assistive tech.         |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.       |
 | Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
 | Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
 | Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
@@ -92,7 +92,11 @@ Prefer native attributes first:
 Use ARIA or data attributes when native attributes are not available for the element or library:
 
 ```html
-<a class="btn secondary" aria-disabled="true">Unavailable</a> <button class="tooltip tooltip-icon" data-state="open" data-tooltip="More details" aria-label="More details">?</button>
+<a class="btn secondary" aria-disabled="true">Unavailable</a>
+<span class="tooltip" data-state="open">
+  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="more-details-bubble">?</span>
+  <span class="tooltip-bubble" role="tooltip" id="more-details-bubble">More details</span>
+</span>
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.

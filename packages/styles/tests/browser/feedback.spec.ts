@@ -25,20 +25,28 @@ test.describe("feedback", () => {
     expect(badgeStyles.borderRadius).not.toBe("0px");
   });
 
-  test("pads an alert around its icon and keeps a readable border", async ({ page }) => {
+  /* The package no longer paints an icon: `.alert`'s own `gap-3` spaces a real
+     `.alert-icon` child from the message with nothing to trigger, the same way
+     `.input-group`'s gap spaces an icon from a control. */
+  test("spaces an alert's icon from its message and keeps a readable border", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const alertStyles = await page.getByTestId("alert-default-success").evaluate((element) => {
       const styles = getComputedStyle(element);
       return { borderWidth: styles.borderWidth, color: styles.color };
     });
-    const alertIconPaddingLeft = await page
-      .getByTestId("alert-default-success-icon")
-      .evaluate((element) => getComputedStyle(element).paddingLeft);
+    const iconLayout = await page.getByTestId("alert-default-success-icon").evaluate((element) => {
+      const icon = element.querySelector(".alert-icon");
+      if (!icon) {
+        throw new Error("Expected the icon-state alert fixture to contain a .alert-icon child.");
+      }
+      return { gap: getComputedStyle(element).columnGap, iconWidth: icon.getBoundingClientRect().width };
+    });
 
     expect(alertStyles.borderWidth).not.toBe("0px");
     expect(alertStyles.color).not.toBe("rgba(0, 0, 0, 0)");
-    expect(alertIconPaddingLeft).toBe("44px");
+    expect(iconLayout.gap).not.toBe("0px");
+    expect(iconLayout.iconWidth).toBeGreaterThan(0);
   });
 
   test("animates skeletons and styles progress tracks", async ({ page }) => {
@@ -176,7 +184,7 @@ test.describe("feedback", () => {
       ),
     );
 
-    expect(loaderWidths).toEqual(["24px", "32px", "40px"]);
+    expect(loaderWidths).toEqual(["20px", "28px", "36px"]);
     expect(loaderDefaultMask).not.toBe("none");
     for (const [index, image] of variantImages.entries()) {
       expect(image, variantIds[index]).toContain("data:image/svg+xml");
@@ -453,10 +461,11 @@ test.describe("feedback", () => {
     expect(indeterminateProgressStyles.width).not.toBe("0px");
   });
 
-  /* The bubble rests flat in 0.1.0: no depth of its own with no aesthetic in
-     scope. Depth is opt-in through the elevation modifier like any other
-     component, and `.tooltip.floating` -- two units against a raised card's one
-     -- is the pre-0.1.0 look. */
+  /* The bubble rests flat: no depth of its own with no aesthetic in scope.
+     Depth is opt-in through the elevation modifier like any other component,
+     and it is asked for on `.tooltip-bubble` directly now, the same as on any
+     other component -- `.tooltip-bubble.floating`, two units against a raised
+     card's one, is the pre-0.1.0 look. */
   test("rests a tooltip bubble flat and lifts it only when asked", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
@@ -466,29 +475,32 @@ test.describe("feedback", () => {
       const verticalOffset = (shadow: string) => Number.parseFloat(shadow.split(") ")[1]!.split(" ")[1]!);
       const host = document.querySelector('[data-testid="preview-root"]')!;
 
-      const bubble = (className: string) => {
+      const bubble = (bubbleClassName: string) => {
         const wrapper = document.createElement("span");
-        wrapper.className = className;
-        wrapper.dataset.tooltip = "Message";
+        const bubbleEl = document.createElement("span");
+        wrapper.className = "tooltip";
         wrapper.dataset.state = "open";
+        bubbleEl.className = bubbleClassName;
+        bubbleEl.textContent = "Message";
+        wrapper.append(bubbleEl);
         host.append(wrapper);
-        return wrapper;
+        return bubbleEl;
       };
 
-      const flat = bubble("tooltip");
-      const floating = bubble("tooltip floating");
+      const flat = bubble("tooltip-bubble");
+      const floating = bubble("tooltip-bubble floating");
       const card = document.createElement("div");
       card.className = "card raised";
       host.append(card);
 
       const values = {
-        flat: verticalOffset(getComputedStyle(flat, "::after").boxShadow),
-        floating: verticalOffset(getComputedStyle(floating, "::after").boxShadow),
+        flat: verticalOffset(getComputedStyle(flat).boxShadow),
+        floating: verticalOffset(getComputedStyle(floating).boxShadow),
         card: verticalOffset(getComputedStyle(card).boxShadow),
       };
 
-      flat.remove();
-      floating.remove();
+      flat.closest(".tooltip")!.remove();
+      floating.closest(".tooltip")!.remove();
       card.remove();
 
       return values;
@@ -503,7 +515,11 @@ test.describe("feedback", () => {
     await page.goto(FEEDBACK_URL);
 
     const tooltipStyles = await page.getByTestId("fallback-tooltip").evaluate((element) => {
-      const styles = getComputedStyle(element, "::after");
+      const bubbleEl = element.querySelector(".tooltip-bubble");
+      if (!bubbleEl) {
+        throw new Error("Expected the fallback tooltip fixture to contain a .tooltip-bubble child.");
+      }
+      const styles = getComputedStyle(bubbleEl);
 
       return {
         left: styles.left,
@@ -535,17 +551,27 @@ test.describe("feedback", () => {
       const host = document.createElement("div");
       document.body.append(host);
 
+      /* "own" is a class read directly on the element that paints -- the bubble
+         -- and "container" is the same class one level up, on an ancestor of
+         the whole `.tooltip` wrapper. Both directions matter because they fail
+         differently: "own" is what a consumer writes on the bubble itself,
+         "container" is what our own cascade does to a bubble nobody classed,
+         and the second one is the case that used to produce a boundaryless
+         bubble floating over arbitrary content. */
       const read = ({ container, own }: { container: string; own: string }) => {
         const wrapper = document.createElement("div");
         wrapper.className = container;
         const tooltip = document.createElement("span");
-        tooltip.className = `tooltip ${own}`.trim();
-        tooltip.dataset.tooltip = "Message";
+        const bubble = document.createElement("span");
+        tooltip.className = "tooltip";
         tooltip.dataset.state = "open";
+        bubble.className = `tooltip-bubble ${own}`.trim();
+        bubble.textContent = "Message";
+        tooltip.append(bubble);
         wrapper.append(tooltip);
         host.append(wrapper);
 
-        const styles = getComputedStyle(tooltip, "::after");
+        const styles = getComputedStyle(bubble);
         const values = { background: styles.backgroundColor, foreground: styles.color, label: `${container}>${own}` };
 
         wrapper.remove();
