@@ -31,8 +31,10 @@ describe("initPackageGrid", () => {
     input.value = "typed";
     input.dispatchEvent(new Event("input"));
 
+    // DOM order is already sorted ascending on init (Error, Icons, Router);
+    // only "Error"'s haystack contains "typed".
     const cards = document.querySelectorAll<HTMLElement>("#package-grid > *");
-    expect([...cards].map((card) => card.hidden)).toEqual([true, false, true]);
+    expect([...cards].map((card) => card.hidden)).toEqual([false, true, true]);
   });
 
   it("shows the empty message once every card is filtered out", () => {
@@ -57,12 +59,11 @@ describe("initPackageGrid", () => {
     expect([...cards].every((card) => !card.hidden)).toBe(true);
   });
 
-  it("sorts cards by label ascending by default", () => {
+  it("sorts cards by label ascending on init, before any sort-button click", () => {
+    // The fixture's server-rendered order (Router, Error, Icons) does not
+    // already match the button's declared "asc" state -- this only passes
+    // if initPackageGrid() applies that state itself.
     const grid = document.getElementById("package-grid");
-    const button = document.getElementById("package-sort") as HTMLButtonElement;
-
-    button.click();
-    button.click(); // toggling twice returns to the initial ascending order, re-applied
 
     const labels = [...(grid?.children ?? [])].map((child) => (child as HTMLElement).dataset.label);
     expect(labels).toEqual(["Error", "Icons", "Router"]);

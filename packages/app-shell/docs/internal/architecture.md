@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-15
+last_updated: 2026-09-14
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 

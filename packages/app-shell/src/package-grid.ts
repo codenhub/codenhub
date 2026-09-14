@@ -98,4 +98,10 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
 
   searchInput?.addEventListener("input", applyFilter);
   sortButton?.addEventListener("click", toggleSortDirection);
+
+  // The sort button's own markup declares its initial direction (`asc`,
+  // "A–Z"), but nothing guarantees the server-rendered card order already
+  // matches it -- applying it once up front makes the rendered order and
+  // the button's claimed state agree from the first paint.
+  applySort();
 }
