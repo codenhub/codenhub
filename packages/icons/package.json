@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/icons",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "description": "Icon registry, CSS mask generator, and scanner module for Codenhub icon system.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/icons",
@@ -170,7 +170,7 @@
   "codenhub": {
     "docs": {
       "label": "IconKit",
-      "status": "experimental",
+      "status": "active",
       "demoUrl": "https://icons.codenhub.dev"
     }
   }

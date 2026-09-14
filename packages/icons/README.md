@@ -4,8 +4,6 @@ Zero-runtime icon system for the web. Write `ic-lucide-heart` in your markup and
 
 `@codenhub/icons` ships 13 generated icon families totalling over 34,000 icons, each with the license notices its artwork requires, so a project can adopt icons without auditing licenses itself.
 
-> [!WARNING] This package is experimental. Its data schema, exports, and plugin options may change before 1.0. Version 0.2.0 removed the semantic alias map and replaced the `ic-stroke-*` class with the `ic-heart/1.5` modifier; see [Notes](#notes).
-
 ## Installation
 
 ```sh

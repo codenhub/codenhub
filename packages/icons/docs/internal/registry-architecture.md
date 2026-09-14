@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-24
+last_updated: 2026-09-14
 scope: Icon data model, family catalog, generation pipeline, and resolution core of `@codenhub/icons`.
 ---
 
@@ -227,7 +227,7 @@ Build-time consumers — the scanner, the CSS generator, both plugins — stay o
 
 ## Breaking changes
 
-The package is pre-1.0 and documents itself as experimental. The rewrite breaks freely and documents what breaks; no compatibility shims are kept, per `docs/code-guidelines.md`.
+The package is pre-1.0. The rewrite breaks freely and documents what breaks; no compatibility shims are kept, per `docs/code-guidelines.md`.
 
 - `lucideIconSet` and `lucideProvider` are removed. Family data moves to `@codenhub/icons/data/lucide`.
 - `IconProvider` and `registerProvider` are removed in favor of `registerFamily`/`registerLoader`.
@@ -249,5 +249,4 @@ Not scheduled, recorded so the design leaves room:
 
 - A first-party Codenhub family owning the semantic names.
 - Per-icon virtual modules for bundlers other than Vite; only the Vite plugin serves them today.
-- A searchable catalog surface in `apps/docs` built from `info` and `tags`.
 - Per-family Tailwind plugin entry points, e.g. `@plugin "@codenhub/icons/tailwind/lucide"`. A Tailwind plugin handler must be synchronous — utilities registered after an `await` are dropped — so the generated `dist/tw/plugin.js` imports all thirteen families statically and every build pays to load them: measured at ~130 ms and ~101 MB RSS, against ~11 ms and ~62 MB for one family. A per-family entry would load only what a project names, at the cost of thirteen generated modules, a `./tailwind/*` export, and a rule for how `default:` resolves across several `@plugin` imports (`default: true` per plugin, last import wins bare names by cascade). `/tw` stays all-families: that is the price of its zero configuration. The cost is per build and does not grow with project size, so this is optimisation, not correctness.
