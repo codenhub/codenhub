@@ -6,7 +6,7 @@ scope: Draft changelog text for the next release. Not a released version, not li
 
 # Next release (draft)
 
-Working title `0.2.0`. This is scratch space for the changelog text as fixes land, not a commitment to the version number, the scope, or the release date. The stress-test pass that drove most of what is below is complete -- see [Stress-test findings](./stress-test-findings.md) for the record; nothing there is still open. Nothing here ships until it is copied into a real `docs/changelog/<version>.md` and the manifest version is raised in the same change that merges it.
+Working title `0.2.0`. This is scratch space for the changelog text as fixes land, not a commitment to the version number, the scope, or the release date. The stress-test pass that drove most of what is below is complete -- see [Stress-test findings](./stress-test-findings.md) for the record. One documentation question remains open, [below](#still-open). Nothing here ships until it is copied into a real `docs/changelog/<version>.md` and the manifest version is raised in the same change that merges it.
 
 ## Landed so far
 
