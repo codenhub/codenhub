@@ -25,9 +25,11 @@ packages/styles/
     app-shell/
     buttons/
     feedback/
+    form/
     forms/
     layout/
     native/
+    settings/
     surfaces/
     typography/
   dev/
@@ -62,15 +64,15 @@ packages/styles/
 
 Shared manual and automated preview routes, and the reference the package documents against. The root index links to focused pages; common playground assets live under `shared/`.
 
-Each page is exhaustive for what it holds: every component crossed with every intent and every presentation it reads, plus the modifiers that sit outside that grid. A page is split by what a component is for -- buttons, forms, feedback, surfaces, typography and content, layout, native -- because a single page holding every grid is too long to read.
+A page is split by what a component is for -- buttons, forms, feedback, surfaces, typography and content, layout, native -- because a single page holding every grid is too long to read. Each grid renders a curated subset of intents and presentations by default rather than the full cross-product: `apps/demo` mounts these same pages verbatim as the deployed public reference (see `docs/internal/roadmap.md`), so the default view is sized to read as a reference rather than an exhaustive wall, while `shared/matrix.js` can still render the complete grid a host asks for.
 
 Each fixture exists once. A component belongs to exactly one page, and the header's aesthetic selector puts the aesthetic class on the preview root, so every page can be read under every aesthetic rather than a separate page restating a subset of the components under each one. The aesthetic tests drive that selector and read the same fixtures as everything else, which is what keeps them from drifting apart. A spec therefore follows its fixtures: `feedback.spec.ts` reads the feedback page, and `components.spec.ts` keeps only the contracts that belong to no single component and builds its own elements.
 
-Variant grids render from the spec in `shared/matrix.js` rather than being spelled out in markup: a component crossed with every intent, presentation, and state is a few hundred nodes, and a new intent has to reach all of them at once. Cells are addressable as `<component>-<presentation>-<intent>[-<state>]`, and the `none` intent is a cell with no intent class, which is not the same as `.neutral`. A component that reads intent but not presentation declares that in the spec, so a page cannot claim a variant the component ignores.
+Variant grids render from the spec in `shared/matrix.js` rather than being spelled out in markup: a component crossed with every intent, presentation, and state is a few hundred nodes, and a new intent has to reach all of them at once. Cells are addressable as `<component>-<presentation>-<intent>[-<state>]`, and the `none` intent is a cell with no intent class, which is not the same as `.neutral`. A component that reads intent but not presentation declares that in the spec, so a page cannot claim a variant the component ignores. A `data-matrix` host narrows what it renders with `data-matrix-intents`/`data-matrix-presentations`/`data-matrix-states`; a host with none of those falls back to the full grid. Narrowing a host is safe only when nothing in `tests/browser/` depends on the combination being dropped -- check both fixed literal `data-testid` lookups and any test that builds one dynamically by iterating a list of intents or presentations, since both count as load-bearing.
 
 Input types are the one axis that is not intent crossed with presentation, so they have their own renderer: `data-fields` crosses every input type with the icon and state variants that type supports, as `field-<type>-<variant>`.
 
-A second kind of page lives alongside the matrices: a stress-test screen (`app-shell/` is the first) composes the components into a real, non-trivial layout instead of exhausting one in isolation. It exists to read under every aesthetic and both themes the same way the matrices do, but the output it is for is a written finding, not a computed-style assertion -- see [Roadmap](./roadmap.md) and `docs/internal/stress-test-findings.md`. It follows the matrices' conventions where they still apply (`data-testid` on what a reader or a future spec would address, `.table-wrap` around a `.data-table`, the shared nav and aesthetic/theme controls) and departs from them where a real screen requires it: `app-shell/` skips the `.sect`/`.sect-inn` centered reading column every matrix page uses, because a dense shell reads edge to edge in the real world and a fixed column would hide whether the model holds up at that width.
+A second kind of page lives alongside the matrices: a stress-test screen (`app-shell/`, `form/`, and `settings/`) composes the components into a real, non-trivial layout instead of exhausting one in isolation. It exists to read under every aesthetic and both themes the same way the matrices do, but the output it is for is a written finding, not a computed-style assertion -- see [Roadmap](./roadmap.md) and `docs/internal/stress-test-findings.md`. It follows the matrices' conventions where they still apply (`data-testid` on what a reader or a future spec would address, `.table-wrap` around a `.data-table`, the shared nav and aesthetic/theme controls) and departs from them where a real screen requires it: `app-shell/` skips the `.sect`/`.sect-inn` centered reading column every matrix page uses, because a dense shell reads edge to edge in the real world and a fixed column would hide whether the model holds up at that width; `form/` and `settings/` keep that column, since a form or a settings page is read narrow in the real world too.
 
 ## `dev/`
 
