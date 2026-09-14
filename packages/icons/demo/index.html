@@ -9,7 +9,7 @@
   <body>
     <header class="shell-header">
       <div class="shell-header-content">
-        <a class="shell-brand" href="/" aria-label="@codenhub/icons home">
+        <a class="shell-brand" href="https://demo.codenhub.dev" aria-label="@codenhub/icons home">
           <img
             class="shell-brand-logo shell-brand-logo-on-light"
             src="/assets/logo/logo-dark.svg"
@@ -26,29 +26,15 @@
           />
         </a>
 
-        <nav class="shell-nav" aria-label="Primary">
-          <a class="shell-nav-link" href="https://docs.codenhub.dev/icons" target="_blank" rel="noopener noreferrer">
-            Docs
-            <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
-          </a>
-          <a
-            class="shell-nav-link"
-            href="https://github.com/codenhub/codenhub"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            CodenHub
-            <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
-          </a>
-        </nav>
+        <nav class="shell-nav" aria-label="Sites" id="shell-nav"></nav>
 
         <div class="shell-actions">
           <a
             class="shell-action"
-            href="https://github.com/codenhub/codenhub/tree/main/packages/icons"
+            href="https://github.com/codenhub/codenhub"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="@codenhub/icons on GitHub"
+            aria-label="CodenHub on GitHub"
           >
             <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 16 16">
               <path
@@ -58,10 +44,10 @@
           </a>
           <a
             class="shell-action"
-            href="https://www.npmjs.com/package/@codenhub/icons"
+            href="https://www.npmjs.com/org/codenhub"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="@codenhub/icons on npm"
+            aria-label="CodenHub on npm"
           >
             <svg aria-hidden="true" class="shell-action-brand" viewBox="0 0 24 24">
               <path
@@ -164,20 +150,15 @@
       </div>
     </main>
 
-    <footer class="site-footer">
-      <div class="site-footer-content cluster between">
-        <p class="footer-copyright">
-          ©
-          <span id="footer-year"></span>
+    <footer class="shell-footer">
+      <div class="shell-footer-content">
+        <p>
+          &copy;
+          <span data-footer-year></span>
           Coden
         </p>
-
-        <p class="footer-credit">
-          Made with
-          <i class="ic-heart" aria-hidden="true"></i>
-          by
-          <a href="https://coden.agency" target="_blank" rel="noopener noreferrer">Coden</a>
-        </p>
+        <!-- prettier-ignore -->
+        <p>Built by <a href="https://coden.agency/" target="_blank" rel="noopener noreferrer">coden</a>.</p>
       </div>
     </footer>
 
