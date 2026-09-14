@@ -73,7 +73,7 @@ With no presentation class in scope, each component keeps its own default: butto
 | `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
 | `.switch`                                       | Border, border width, and a capped fill.    |
 | `.quote`                                        | Fill, text, border, and width.              |
-| `.code`, `.pre`, `.tooltip`                     | Fill, text, border, and material.           |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.           |
 | `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
@@ -89,11 +89,11 @@ A toggle's cap does not have that split: it is `40%` whether the presentation cl
 
 The same split governs the edge: a cascaded `.edgeless` is floored and the element's own is honoured — except on `.checkbox` and `.radio`, which never drop their line at all. See [Forms](./forms.md) for the full toggle and text control reference.
 
-A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip.destructive` is a red bubble.
+A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
 
 With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent. Composed like everything else it was `20%` of the page's ink over the surface tone, which steps _lighter_ than the surface on a dark page and _darker_ on a light one — so the dark bubble read as lifted and the light one as a mid-grey slab two steps darker than every card on the screen. The token states each direction instead: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
 
-Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](./aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](./tooltips.md) for the full tooltip reference.
+Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip-bubble.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](./aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](./tooltips.md) for the full tooltip reference.
 
 ## Component axis reference
 
@@ -115,14 +115,14 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
 | `.progress`                                               | Yes    | No   | No   | No                 |
 | `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
-| `.tooltip`                                                | Yes    | Yes  | Yes  | Shape and overlay  |
+| `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
 `.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
-Intent aliases such as `.danger` and `.error` occupy the same intent axis as `.destructive`; they do not add component behavior. State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.loading`, `.invalid`, `.compact`, and `.vertical` sit above this map and are documented with their component.
+Intent aliases such as `.danger` and `.error` occupy the same intent axis as `.destructive`; they do not add component behavior. State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.compact`, and `.vertical` sit above this map and are documented with their component.
 
 ## Elevation
 

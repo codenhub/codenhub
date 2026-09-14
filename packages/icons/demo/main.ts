@@ -255,8 +255,13 @@ function updateStrokeAvailability(): void {
     return;
   }
   const enabled = isStrokeConfigurable();
+  const label = enabled ? "Stroke width" : "This family is drawn as filled paths";
   button.disabled = !enabled;
-  button.dataset.tooltip = enabled ? "Stroke width" : "This family is drawn as filled paths";
+  button.setAttribute("aria-label", label);
+  const bubble = document.getElementById("stroke-width-tooltip");
+  if (bubble) {
+    bubble.textContent = label;
+  }
   if (!enabled) {
     element<HTMLElement>("stroke-width-popover")?.classList.remove("open");
   }

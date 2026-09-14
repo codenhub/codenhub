@@ -35,7 +35,7 @@ Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` in
 
 An explicit presentation on the element still wins over the aesthetic's defaults. The aesthetic supplies edge thickness; presentation only decides whether that edge is drawn.
 
-An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip pseudo-elements: `.tooltip.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip.pixel` gets the complete stepped bubble under a glass ancestor.
+An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip bubbles: `.tooltip-bubble.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip-bubble.pixel` gets the complete stepped bubble under a glass ancestor.
 
 Each aesthetic that scales from one number publishes it as a knob — see [Customizing → Aesthetic tokens](./customizing.md#aesthetic-tokens) for how knobs resolve and where they can be set. This page covers what each aesthetic looks like and where it makes documented exceptions.
 
@@ -88,7 +88,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 - Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table's `overflow: hidden` fights the clip and the corners square off where the two meet, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
-- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none`, since a stepped badge would clip its own bubble away with it. `.radio` forces the same, because the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square it.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none` because the docs call it a circular fixed identity, the same reason `.radio` forces it: the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square either one.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 
 ## Chunky tile

@@ -37,7 +37,6 @@ Size and shape classes:
 | `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
 | `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
 | `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
-| `.loading`                                                             | Loading state. Hides text and shows CSS activity indicator.                                                                                                                                                                               |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 
 Examples:
@@ -48,10 +47,15 @@ Examples:
 <button class="btn warning soft">Warning soft</button>
 <button class="btn destructive ghost edgeless">Danger ghost</button>
 <button class="btn icon primary" aria-label="Create">+</button>
-<button class="btn primary loading" disabled>Saving</button>
+<button class="btn primary" disabled>
+  <span class="loader sm" aria-hidden="true"></span>
+  Saving
+</button>
 ```
 
-`.loading` is a state, not a color or presentation class. Prefer combining it with disabled behavior so users cannot trigger duplicate work. Loading buttons keep only opacity and transform transitions active so spinner and surface colors stay synchronized when theme tokens change.
+## Loading
+
+The package ships no loading state of its own: a loading button is a disabled `.btn` composed with a real [`.loader`](./feedback.md) child, the same activity indicator every other component uses. Disable the button so users cannot trigger duplicate work, and drop a `.loader` in beside the label — any of its variants (`.dots-wave`, `.bars-wave`, and so on) work the same way. Whether to also hide the label is your call; the package has no built-in mechanism for that.
 
 On the base look a press scales the button down a little (`--ui-active-transform`, `scale(0.97)`). [Aesthetics](./aesthetics.md) swap in their own press gesture, and `prefers-reduced-motion` turns it off.
 

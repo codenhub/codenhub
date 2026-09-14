@@ -66,33 +66,32 @@
         <div class="stack tight">
           <h2 class="text-title">Loading</h2>
           <p class="text-body text-text-secondary">
-            <code class="code" data-testid="code-chip">.loading</code>
-            replaces the label with a spinner and keeps the button's width.
+            The package ships no loading state of its own: disable the button and drop a
+            <code class="code" data-testid="code-chip">.loader</code>
+            in beside the label, the same
+            <code class="code">.loader</code>
+            every activity indicator uses.
           </p>
         </div>
-        <div
-          data-matrix="btn"
-          data-matrix-intents="none,primary"
-          data-matrix-presentations="default,soft edged"
-          data-matrix-states="loading"
-          data-testid="btn-loading-matrix"
-        ></div>
-        <div class="stack tight">
-          <h3 class="text-title-sm">Loader variants</h3>
-          <div class="cluster">
-            <button class="btn primary loading" disabled data-testid="loading-button">Loading</button>
-            <button class="btn primary loading" disabled data-testid="loading-button-nested">
-              <span data-testid="loading-nested-text">Invisible Label</span>
-            </button>
-            <button class="btn secondary loading dots-wave" disabled data-testid="loading-button-dots">
-              Loading Dots
-            </button>
-            <button class="btn success loading bars-wave" disabled data-testid="loading-button-bars">
-              Loading Bars
-            </button>
-            <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
-            <button class="btn destructive" disabled>Native Disabled</button>
-          </div>
+        <div class="cluster">
+          <button class="btn primary" disabled data-testid="loading-button">
+            <span class="loader sm" aria-hidden="true"></span>
+            Saving
+          </button>
+          <button class="btn primary" disabled data-testid="loading-button-nested">
+            <span class="loader sm" aria-hidden="true"></span>
+            <span data-testid="loading-nested-text">Saving</span>
+          </button>
+          <button class="btn secondary" disabled data-testid="loading-button-dots">
+            <span class="loader sm dots-wave" aria-hidden="true"></span>
+            Saving
+          </button>
+          <button class="btn success" disabled data-testid="loading-button-bars">
+            <span class="loader sm bars-wave" aria-hidden="true"></span>
+            Saving
+          </button>
+          <button class="btn primary" aria-disabled="true" data-testid="aria-disabled-button">Disabled</button>
+          <button class="btn destructive" disabled>Native Disabled</button>
         </div>
       </section>
 

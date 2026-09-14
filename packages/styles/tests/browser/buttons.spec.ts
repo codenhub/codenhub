@@ -22,14 +22,11 @@ test.describe("buttons", () => {
     /* A filled button is one whose fill resolves to `.solid`, which since
        presentation cascades means no quieter fill on the button or on an
        ancestor. `.btn`'s published default is solid, so the absence of a fill
-       class is the filled case. `.loading` is excluded too: it forces `color`
-       to transparent and shows a spinner instead, so there is no label text to
-       read contrast on, and `getContrastRatio` does not weigh alpha -- it would
-       otherwise score that transparent black as if it were opaque. */
+       class is the filled case. */
     const buttonColors = await page.evaluate(() =>
       [
         ...document.querySelectorAll(
-          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .ghost, .loading)):not(:is(.soft, .ghost) *)",
+          ":is(.btn.success, .btn.warning, .btn.destructive, .btn.info):not(:is(.soft, .ghost)):not(:is(.soft, .ghost) *)",
         ),
       ].map((button) => {
         const styles = getComputedStyle(button);
@@ -112,68 +109,18 @@ test.describe("buttons", () => {
       .toBe(false);
   });
 
-  /* `.loading` hides the label by forcing `color` to transparent, so the spinner
-     cannot paint in `currentColor`: it has to read the foreground `box`
-     resolved. A spinner painted in the hidden colour is invisible, which looks
-     exactly like a button that never entered the loading state. */
-  test("centers a visible loading spinner in the label's own color", async ({ page }) => {
+  /* The package ships no loading state of its own any more -- a loading button
+     is a disabled `.btn` composed with a real `.loader` child (see
+     docs/usage/buttons.md), and `.loader`'s own color and variant behavior is
+     already covered generically in feedback.spec.ts. Nothing button-specific
+     is left to assert here beyond the fixture rendering at all. */
+  test("composes a loading state from a disabled button and a real loader child", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
-    const styles = await page.evaluate(() => {
-      const read = (testId: string) => {
-        const button = document.querySelector(`[data-testid="${testId}"]`)!;
-        const spinner = getComputedStyle(button, "::after");
+    const spinner = page.getByTestId("loading-button").locator(".loader");
 
-        return {
-          buttonHeight: button.getBoundingClientRect().height,
-          buttonWidth: button.getBoundingClientRect().width,
-          labelColor: getComputedStyle(button).color,
-          spinnerColor: spinner.backgroundColor,
-          spinnerHeight: spinner.height,
-          spinnerLeft: spinner.left,
-          spinnerMask: spinner.maskImage || spinner.webkitMaskImage || "none",
-          spinnerTop: spinner.top,
-          spinnerTranslate: spinner.translate,
-          spinnerWidth: spinner.width,
-        };
-      };
-
-      return { soft: read("btn-soft-edged-primary-loading"), solid: read("loading-button") };
-    });
-
-    for (const [label, measured] of Object.entries(styles)) {
-      expect(measured.spinnerMask, `${label} artwork`).not.toBe("none");
-      expect(Number.parseFloat(measured.spinnerTop), `${label} top`).toBeCloseTo(measured.buttonHeight / 2, 1);
-      expect(Number.parseFloat(measured.spinnerLeft), `${label} left`).toBeCloseTo(measured.buttonWidth / 2, 1);
-      expect(measured.spinnerTranslate, `${label} translate`).toBe("-50% -50%");
-      expect(measured.spinnerWidth, `${label} width`).not.toBe("0px");
-      expect(measured.spinnerHeight, `${label} height`).not.toBe("0px");
-      /* The label is hidden and the spinner is not. */
-      expect(isTransparent(measured.labelColor), `${label} label`).toBe(true);
-      expect(isTransparent(measured.spinnerColor), `${label} spinner`).toBe(false);
-    }
-
-    /* A solid button's spinner is the contrast tone and a soft one's is the
-       intent tone, so reading `--_fg` rather than a fixed colour is what makes
-       both legible. */
-    expect(getColorDistance(styles.solid.spinnerColor, styles.soft.spinnerColor)).toBeGreaterThan(2);
-  });
-
-  test("uses loader variants on loading buttons", async ({ page }) => {
-    await page.goto(BUTTONS_URL);
-
-    const images = await Promise.all(
-      ["loading-button", "loading-button-dots", "loading-button-bars"].map((testId) =>
-        page
-          .getByTestId(testId)
-          .evaluate((button) => getComputedStyle(button, "::after").getPropertyValue("--loader-art")),
-      ),
-    );
-
-    for (const [index, image] of images.entries()) {
-      expect(image, `${index}`).toContain("data:image/svg+xml");
-    }
-    expect(new Set(images).size).toBe(images.length);
+    await expect(spinner).toBeVisible();
+    await expect(page.getByTestId("loading-button")).toBeDisabled();
   });
 
   test("styles disabled and error button states", async ({ page }) => {
@@ -246,18 +193,6 @@ test.describe("buttons", () => {
        actually shows: the fill composited over the page behind it. */
     const plate = flattenColor(values.background, values.page);
     expect(getContrastRatio(values.foreground, plate), "no-intent button label").toBeGreaterThanOrEqual(4.5);
-  });
-
-  test("hides nested elements inside loading buttons", async ({ page }) => {
-    await page.goto(BUTTONS_URL);
-    const childOpacity = await page.evaluate(() => {
-      const child = document.querySelector('[data-testid="loading-nested-text"]');
-      if (!child) {
-        throw new Error("Nested text fixture not found");
-      }
-      return getComputedStyle(child).opacity;
-    });
-    expect(childOpacity).toBe("0");
   });
 
   test("uses intent tone slots for button presentation classes", async ({ page }) => {

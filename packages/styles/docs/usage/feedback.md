@@ -9,7 +9,7 @@ order: 7
 | Class            | Purpose                                                                      |
 | ---------------- | ---------------------------------------------------------------------------- |
 | `.alert`         | Inline feedback surface.                                                     |
-| `.icon`          | Subclass of `.alert`. Adds a corresponding intent icon and padding.          |
+| `.alert-icon`    | Sizing and alignment for an icon element dropped in as a child of `.alert`.  |
 | `.badge`         | Compact status pill.                                                         |
 | `.loader-mask`   | Low-level activity indicator composition utility. Applies the spinner mask.  |
 | `.loader`        | Standalone inline loader artwork.                                            |
@@ -37,11 +37,11 @@ These variants retain their embedded SVG animations normally. Under `prefers-red
 
 Loader size modifiers:
 
-| Class    | Size              |
-| -------- | ----------------- |
-| _(none)_ | Default (`2rem`). |
-| `.sm`    | Small (`1.5rem`). |
-| `.lg`    | Large (`2.5rem`). |
+| Class    | Size                 |
+| -------- | -------------------- |
+| _(none)_ | Default (`1.75rem`). |
+| `.sm`    | Small (`1.25rem`).   |
+| `.lg`    | Large (`2.25rem`).   |
 
 Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
@@ -51,7 +51,7 @@ Skeletons, loaders, progress bars, and dividers are indicators. They read intent
 <span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
 ```
 
-`.icon` is a subclass of `.alert`. When applied as `.alert.icon`, it increases the left padding and adds an embedded SVG. Success, warning, and destructive intents use corresponding symbols; other intents use the information symbol.
+The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3` with nothing to trigger. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](./forms.md#icons) documents.
 
 Alerts and badges read the shared [presentation](./composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
@@ -60,7 +60,14 @@ Alerts and badges read the shared [presentation](./composing.md#presentation) cl
 ```html
 <div class="alert success" role="status">Saved successfully.</div>
 <div class="alert primary solid" role="status">Deployment started.</div>
-<div class="alert warning soft icon" role="status">Review required.</div>
+<div class="alert warning soft" role="status">
+  <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+    <path d="M12 9v4" />
+    <path d="M12 17h.01" />
+  </svg>
+  Review required.
+</div>
 <div class="alert destructive ghost edged" role="alert">Deployment failed.</div>
 <span class="badge warning">Queued</span>
 <span class="badge success solid">Live</span>

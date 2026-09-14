@@ -60,22 +60,35 @@ test("gives every loader fixture a unique ID matching its variant", async ({ pag
   );
 });
 
-test("makes tooltip examples keyboard-focusable and accessibly named", async ({ page }) => {
+/* A pseudo-element bubble's text was never reliably exposed to assistive tech
+   and could not be the target of an `aria-describedby`, since that needs a
+   real element with a real `id` -- see docs/usage/tooltips.md. This asserts
+   the fixture actually wires that association: each trigger's
+   `aria-describedby` has to resolve to the real `.tooltip-bubble` element
+   carrying the message. */
+test("makes tooltip examples keyboard-focusable and describes them with a real bubble element", async ({ page }) => {
   await page.goto(FEEDBACK_URL);
 
   const tooltips = page.locator(".tooltip-icon");
   await expect(tooltips.first()).toBeVisible();
   const tooltipAttributes = await tooltips.evaluateAll((elements) =>
-    elements.map((tooltip) => ({
-      accessibleName: tooltip.getAttribute("aria-label"),
-      tooltipText: tooltip.getAttribute("data-tooltip"),
-      tabIndex: tooltip.getAttribute("tabindex"),
-    })),
+    elements.map((tooltip) => {
+      const describedById = tooltip.getAttribute("aria-describedby");
+      const bubble = describedById ? document.getElementById(describedById) : null;
+
+      return {
+        accessibleName: tooltip.getAttribute("aria-label"),
+        bubbleText: bubble?.textContent?.trim() ?? null,
+        isBubble: bubble?.classList.contains("tooltip-bubble") ?? false,
+        tabIndex: tooltip.getAttribute("tabindex"),
+      };
+    }),
   );
 
   for (const attributes of tooltipAttributes) {
     expect(attributes.tabIndex).toBe("0");
-    expect(attributes.accessibleName).toBe(attributes.tooltipText);
+    expect(attributes.isBubble).toBe(true);
+    expect(attributes.accessibleName).toBe(attributes.bubbleText);
   }
 });
 

@@ -102,27 +102,31 @@
               title="Custom icon color"
               aria-label="Icon color picker"
             />
-            <button
-              type="button"
-              id="color-reset-btn"
-              class="btn soft sm icon tooltip"
-              data-tooltip="Reset color"
-              data-tooltip-position="top"
-              aria-label="Reset color"
-            >
-              <i class="ic-rotate-ccw/2.5"></i>
-            </button>
-            <div class="popover-wrapper">
+            <span class="tooltip" data-tooltip-position="top">
               <button
                 type="button"
-                id="stroke-width-btn"
-                class="btn soft sm icon tooltip"
-                data-tooltip="Stroke width"
-                data-tooltip-position="top"
-                aria-label="Stroke width"
+                id="color-reset-btn"
+                class="btn soft sm icon"
+                aria-label="Reset color"
+                aria-describedby="color-reset-tooltip"
               >
-                <i class="ic-settings/2.5"></i>
+                <i class="ic-rotate-ccw/2.5"></i>
               </button>
+              <span class="tooltip-bubble" role="tooltip" id="color-reset-tooltip">Reset color</span>
+            </span>
+            <div class="popover-wrapper">
+              <span class="tooltip" data-tooltip-position="top">
+                <button
+                  type="button"
+                  id="stroke-width-btn"
+                  class="btn soft sm icon"
+                  aria-label="Stroke width"
+                  aria-describedby="stroke-width-tooltip"
+                >
+                  <i class="ic-settings/2.5"></i>
+                </button>
+                <span class="tooltip-bubble" role="tooltip" id="stroke-width-tooltip">Stroke width</span>
+              </span>
               <div id="stroke-width-popover" class="stroke-width-popover">
                 <div class="popover-content stack tight">
                   <div class="label-wrapper cluster between">

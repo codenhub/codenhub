@@ -20,14 +20,6 @@
    component uniformly the way it always did. Registering these three is what
    scopes the change to the elevation modifier alone.
 
-   One component pays for it: `tooltip`'s bubble is a `::after` pseudo-element
-   of a wrapper the elevation classes are actually written on (`axesTarget` in
-   `registry.json`), and inheritance from a host to its own pseudo-element is
-   exactly what `inherits: false` also cuts -- even though a wrapper and its
-   bubble are one component, not a container and an unrelated descendant.
-   `tooltip.css` carries all three tokens back across that gap through
-   ordinary, still-inheriting proxies. See the comment there.
-
    `.flat`/`.raised`/`.floating` and `.elevation-none`/`-sm`/`-md` are
    interchangeable aliases, the second borrowing the raw `--elevation-*` scale's
    naming. Bare `sm`/`md`/`lg` would collide with the size modifier;

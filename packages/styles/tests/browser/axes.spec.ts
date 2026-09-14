@@ -72,10 +72,11 @@ const TYPES: Record<string, string> = { checkbox: "checkbox", radio: "radio", sw
 
 type Painted = { background: string; borderColor: string; borderWidth: string };
 
-/* Most components paint their own box. A tooltip does not: the element is a
-   positioning wrapper and the bubble is its `::after`, so probing the element
-   would report "reads no axes" for a component that reads both. The registry
-   carries the target, so the exception is data rather than a branch here. */
+/* Most components paint their own box. `axesTarget` exists for one that paints
+   somewhere other than its own root -- none currently do, since `tooltip`'s
+   bubble stopped being a `::after` pseudo-element and became a directly
+   probeable `.tooltip-bubble` -- but the field stays generic rather than
+   removed, so a future exception is data here rather than a branch. */
 const readPainted = async (
   page: Page,
   className: string,
@@ -94,7 +95,6 @@ const readPainted = async (
         element.setAttribute("type", probeType);
       }
 
-      element.setAttribute("data-tooltip", "Probe");
       element.textContent = "Probe";
       host.append(element);
 

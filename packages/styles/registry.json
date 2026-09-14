@@ -75,7 +75,7 @@
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "dense", "compact", "spacious", "flush"],
     "shape": ["pill", "icon"],
-    "state": ["loading", "disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
+    "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
   },
@@ -429,7 +429,7 @@
       "axes": ["fill", "edge"]
     },
     {
-      "class": "tooltip",
+      "class": "tooltip-bubble",
       "default": {
         "fill": "solid",
         "edge": "edged",
@@ -438,8 +438,6 @@
       },
       "native": [],
       "axes": ["fill", "edge"],
-      "axesTarget": "::after",
-      "axesTargetReason": "The tooltip element is a positioning wrapper; the bubble that reads intent and presentation is its ::after pseudo-element.",
       "bounds": [
         {
           "token": "--ui-border",
@@ -523,6 +521,9 @@
     "hint",
     "table-wrap",
     "quote-inline",
+    "alert-icon",
+    "tooltip",
+    "tooltip-icon",
     "view",
     "stack",
     "cluster",

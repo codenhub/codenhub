@@ -38,9 +38,19 @@
         <div class="stack tight">
           <h3 class="text-title-sm">Icon</h3>
           <p class="text-body text-text-secondary">
-            <code class="code">.icon</code>
-            adds padding and a symbol. Success, warning, and destructive have their own; everything else uses the
-            information symbol.
+            The package ships no icon of its own.
+            <code class="code">.alert-icon</code>
+            sizes and aligns whatever icon element you drop in as a child -- an inline
+            <code class="code">&lt;svg&gt;</code>
+            , an
+            <code class="code">&lt;img&gt;</code>
+            , or a class from an icon set such as
+            <code class="code">@codenhub/icons</code>
+            -- and
+            <code class="code">.alert</code>
+            's own
+            <code class="code">gap-3</code>
+            spaces it from the message with nothing to trigger.
           </p>
           <div
             data-matrix="alert"
@@ -58,7 +68,7 @@
             <code class="code">error</code>
             alias
             <code class="code">destructive</code>
-            , down to the icon.
+            .
           </p>
           <div
             data-matrix="alert"
@@ -220,58 +230,39 @@
         <div class="stack tight">
           <h3 class="text-title-sm">Positions</h3>
           <p class="text-body text-text-secondary">
+            <code class="code">.tooltip</code>
+            is a wrapper around a trigger and a real
+            <code class="code">.tooltip-bubble</code>
+            , shown on hover or focus.
             <code class="code">data-tooltip-position</code>
-            places the bubble; with no attribute it goes above the host.
+            on the wrapper places the bubble; with no attribute it goes above the trigger.
           </p>
           <div class="cluster">
-            <span
-              class="tooltip tooltip-icon"
-              data-tooltip="Fallback tooltip"
-              data-testid="fallback-tooltip"
-              tabindex="0"
-              aria-label="Fallback tooltip"
-            >
-              ?
+            <span class="tooltip" data-testid="fallback-tooltip">
+              <span class="tooltip-icon" tabindex="0" aria-label="Fallback tooltip" aria-describedby="fallback-bubble">
+                ?
+              </span>
+              <span class="tooltip-bubble" role="tooltip" id="fallback-bubble">Fallback tooltip</span>
             </span>
-            <span
-              class="tooltip tooltip-icon"
-              data-tooltip="Top tooltip"
-              data-tooltip-position="top"
-              data-testid="top-tooltip"
-              tabindex="0"
-              aria-label="Top tooltip"
-            >
-              ?
+            <span class="tooltip" data-tooltip-position="top" data-testid="top-tooltip">
+              <span class="tooltip-icon" tabindex="0" aria-label="Top tooltip" aria-describedby="top-bubble">?</span>
+              <span class="tooltip-bubble" role="tooltip" id="top-bubble">Top tooltip</span>
             </span>
-            <span
-              class="tooltip tooltip-icon"
-              data-tooltip="Right tooltip"
-              data-tooltip-position="right"
-              data-testid="right-tooltip"
-              tabindex="0"
-              aria-label="Right tooltip"
-            >
-              ?
+            <span class="tooltip" data-tooltip-position="right" data-testid="right-tooltip">
+              <span class="tooltip-icon" tabindex="0" aria-label="Right tooltip" aria-describedby="right-bubble">
+                ?
+              </span>
+              <span class="tooltip-bubble" role="tooltip" id="right-bubble">Right tooltip</span>
             </span>
-            <span
-              class="tooltip tooltip-icon"
-              data-tooltip="Bottom tooltip"
-              data-tooltip-position="bottom"
-              data-testid="bottom-tooltip"
-              tabindex="0"
-              aria-label="Bottom tooltip"
-            >
-              ?
+            <span class="tooltip" data-tooltip-position="bottom" data-testid="bottom-tooltip">
+              <span class="tooltip-icon" tabindex="0" aria-label="Bottom tooltip" aria-describedby="bottom-bubble">
+                ?
+              </span>
+              <span class="tooltip-bubble" role="tooltip" id="bottom-bubble">Bottom tooltip</span>
             </span>
-            <span
-              class="tooltip tooltip-icon"
-              data-tooltip="Left tooltip"
-              data-tooltip-position="left"
-              data-testid="left-tooltip"
-              tabindex="0"
-              aria-label="Left tooltip"
-            >
-              ?
+            <span class="tooltip" data-tooltip-position="left" data-testid="left-tooltip">
+              <span class="tooltip-icon" tabindex="0" aria-label="Left tooltip" aria-describedby="left-bubble">?</span>
+              <span class="tooltip-bubble" role="tooltip" id="left-bubble">Left tooltip</span>
             </span>
           </div>
         </div>
@@ -279,35 +270,26 @@
           <h3 class="text-title-sm">Any host</h3>
           <p class="text-body text-text-secondary">
             <code class="code">.tooltip</code>
-            is a host, not a shape.
+            wraps any element; it composes rather than replaces the trigger's own classes, so a
+            <code class="code">.btn</code>
+            or a
+            <code class="code">.badge</code>
+            keeps its own look and gains a bubble beside it.
             <code class="code">.tooltip-icon</code>
-            is the circular chip; without it any element can carry a bubble.
+            is only the circular chip for a trigger with nothing else to hang the message on.
           </p>
           <div class="cluster">
-            <button
-              class="btn primary tooltip"
-              data-tooltip="Runs the deploy"
-              data-tooltip-position="bottom"
-              data-testid="tooltip-host-button"
-            >
-              Deploy
-            </button>
-            <span
-              class="badge success tooltip"
-              data-tooltip="Last checked a minute ago"
-              data-testid="tooltip-host-badge"
-            >
-              Live
+            <span class="tooltip" data-tooltip-position="bottom" data-testid="tooltip-host-button">
+              <button class="btn primary" aria-describedby="deploy-bubble">Deploy</button>
+              <span class="tooltip-bubble" role="tooltip" id="deploy-bubble">Runs the deploy</span>
             </span>
-            <span
-              class="tooltip"
-              data-tooltip="Shown without hover"
-              data-state="open"
-              data-tooltip-position="right"
-              data-testid="tooltip-open"
-              tabindex="0"
-            >
-              Always open
+            <span class="tooltip" data-testid="tooltip-host-badge">
+              <span class="badge success" tabindex="0" aria-describedby="live-bubble">Live</span>
+              <span class="tooltip-bubble" role="tooltip" id="live-bubble">Last checked a minute ago</span>
+            </span>
+            <span class="tooltip" data-state="open" data-tooltip-position="right" data-testid="tooltip-open">
+              <span tabindex="0">Always open</span>
+              <span class="tooltip-bubble" role="tooltip">Shown without hover</span>
             </span>
           </div>
         </div>

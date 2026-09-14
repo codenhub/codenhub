@@ -55,21 +55,16 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     ],
   },
   "./tw/components": {
-    candidates: "alert btn loading",
-    patterns: [
-      /\.alert\{[^}]*--_capped:/,
-      /\.btn\{[^}]*--_capped:/,
-      /\.btn\.loading:after\{/,
-      /mask-image:var\(--loader-art\)/,
-    ],
+    candidates: "alert btn alert-icon",
+    patterns: [/\.alert\{[^}]*--_capped:/, /\.btn\{[^}]*--_capped:/, /\.alert-icon\{/],
   },
   "./tw/surface": {
     candidates: "panel",
     patterns: [/\.panel\{[^}]*--_capped:/, /backdrop-filter:var\(--ui-backdrop,none\)/],
   },
   "./tw/button": {
-    candidates: "btn loading",
-    patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\.loading:after\{/, /mask-image:var\(--loader-art\)/],
+    candidates: "btn",
+    patterns: [/\.btn\{[^}]*--_capped:/, /\.btn\{[^}]*background-color:var\(--_bg\)/],
   },
   "./tw/form": {
     candidates: "ipt radio",
@@ -84,8 +79,13 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     patterns: [/\.loader/, /\.dots-wave/, /mask-image:/],
   },
   "./tw/tooltip": {
-    candidates: "tooltip",
-    patterns: [/\.tooltip\{/, /\.tooltip\.tooltip-icon\{/, /--_capped:/, /background-color:var\(--_bg\)/],
+    candidates: "tooltip tooltip-bubble tooltip-icon",
+    patterns: [
+      /\.tooltip\{/,
+      /\.tooltip-bubble\{[^}]*--_capped:/,
+      /\.tooltip-icon\{[^}]*--_capped:/,
+      /background-color:var\(--_bg\)/,
+    ],
   },
   "./tw/reset": { candidates: "text-body", patterns: [/:focus-visible\{/] },
   "./tw/native": { candidates: "btn", patterns: [/h1\{/, /button,/] },
@@ -131,6 +131,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
       /\.loader\{/,
       /\.text-title\{/,
       /\.tooltip\{/,
+      /\.tooltip-bubble\{/,
       /--_capped:/,
     ],
   },

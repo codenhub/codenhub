@@ -119,12 +119,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 <path d="M14 19.8v-8.1" />
                 <path d="M18 17.5V9.4" />
               </svg>
+              <span class="tooltip-bubble" role="tooltip" data-testid="environment-toggle-tooltip"></span>
             </button>
-            <button id="theme-toggle" class="tooltip playground-control" data-testid="theme-toggle" data-tooltip="Toggle theme" data-tooltip-position="bottom">
+            <button id="theme-toggle" class="tooltip playground-control" data-testid="theme-toggle" data-tooltip-position="bottom" aria-label="Toggle theme">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10" />
                 <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
               </svg>
+              <span class="tooltip-bubble" role="tooltip">Toggle theme</span>
             </button>
           </div>
         </div>
@@ -137,7 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const themeToggle = document.getElementById("theme-toggle");
 
   const environmentLabel = `See ${nextEnvironment}`;
-  environmentToggle.dataset.tooltip = environmentLabel;
+  environmentToggle.querySelector(".tooltip-bubble").textContent = environmentLabel;
   environmentToggle.setAttribute("aria-label", environmentLabel);
   environmentToggle.addEventListener("click", () => {
     const nextUrl = new URL(window.location.href);

@@ -133,7 +133,8 @@
   .data-table,
   .pre,
   .quote,
-  .tooltip,
+  .tooltip-bubble,
+  .tooltip-icon,
   .badge,
   .kbd,
   .code,
@@ -168,8 +169,8 @@
 }
 
 /* The bubble a tooltip draws is the one plate in the package that is chosen
-   rather than composed, so the tooltip resolves the no-intent case onto its own
-   pair instead of onto the shared neutral. Composed, it was 20% of the page's
+   rather than composed, so it resolves the no-intent case onto its own pair
+   instead of onto the shared neutral. Composed, it was 20% of the page's
    ink over `--color-surface`, which lifts off a dark page and sinks into a light
    one -- see `--color-tooltip` in `theme.css` for the measurements.
 
@@ -178,17 +179,20 @@
    rather than an ink, so a full fill of it is the plate and there is nothing to
    stop short of.
 
-   `--intent-subtle` stays the surface token. It is what the trigger badge rests
-   on, and a badge is a quiet marker on the page rather than the message, so it
-   keeps the tone every other unclassed component sits on.
+   `--intent-subtle` stays the surface token, the same tone every other
+   unclassed component sits on. `.tooltip-icon`, the trigger badge, is a
+   separate element now and does not read this block at all -- it never fills
+   past `0%`, so the generic neutral reset above it is enough, and it keeps its
+   own resting ground and line independent of whatever intent the bubble shows.
 
    Two selectors, because `none` and `neutral` have to agree here. `:where()`
-   loses to any intent class, so `.tooltip.primary` still floods with primary;
-   `.tooltip.neutral` carries 0-2-0 and beats `.neutral`, so writing the intent
-   out gives the same bubble as writing nothing. Without the second selector the
-   two would differ on a component where they mean the same thing. */
-:where(.tooltip),
-.tooltip.neutral {
+   loses to any intent class, so `.tooltip-bubble.primary` still floods with
+   primary; `.tooltip-bubble.neutral` carries 0-2-0 and beats `.neutral`, so
+   writing the intent out gives the same bubble as writing nothing. Without the
+   second selector the two would differ on a component where they mean the
+   same thing. */
+:where(.tooltip-bubble),
+.tooltip-bubble.neutral {
   --intent-color: var(--color-tooltip);
   --intent-contrast: var(--color-tooltip-contrast);
   --intent-hover: var(--color-tooltip);

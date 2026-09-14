@@ -125,38 +125,40 @@
         justify-content: center;
       "
     >
-      <button
-        id="btn-toggle-theme"
-        class="tooltip"
-        data-tooltip="Toggle theme"
-        data-tooltip-position="left"
-        style="
-          height: 2.5rem;
-          width: 2.5rem;
-          padding: 0.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--color-surface);
-          border-radius: 50%;
-          cursor: pointer;
-          color: var(--color-text);
-          border: 1px solid var(--color-border);
-        "
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          style="width: 100%; height: 100%"
+      <span class="tooltip" data-tooltip-position="left">
+        <button
+          id="btn-toggle-theme"
+          aria-label="Toggle theme"
+          style="
+            height: 2.5rem;
+            width: 2.5rem;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-surface);
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--color-text);
+            border: 1px solid var(--color-border);
+          "
+          aria-describedby="btn-toggle-theme-tooltip"
         >
-          <circle cx="12" cy="12" r="10" />
-          <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
-        </svg>
-      </button>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="width: 100%; height: 100%"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path fill="currentColor" d="M12 18a6 6 0 0 0 0-12v12z" />
+          </svg>
+        </button>
+        <span class="tooltip-bubble" role="tooltip" id="btn-toggle-theme-tooltip">Toggle theme</span>
+      </span>
     </div>
   </body>
 </html>
