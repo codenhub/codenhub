@@ -12,6 +12,9 @@
  * `playground/` is touched: the demo is the playground worn as a reference.
  */
 
+import { resolveNavLinks } from "@codenhub/app-shell/nav";
+import { themeToggleAria } from "@codenhub/app-shell/theme";
+
 import "virtual:icons.css";
 import "./chrome.css";
 
@@ -70,15 +73,15 @@ function toPill(button: HTMLElement): void {
  */
 function syncPill(): void {
   const button = document.getElementById("theme-toggle");
-  const isDark = document.documentElement.classList.contains("dark");
+  const theme = document.documentElement.classList.contains("dark") ? "dark" : "light";
 
-  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  document.documentElement.dataset.theme = theme;
 
   if (!button) {
     return;
   }
-  const label = `Switch to ${isDark ? "light" : "dark"} theme`;
-  button.setAttribute("aria-checked", String(isDark));
+  const { checked, label } = themeToggleAria(theme);
+  button.setAttribute("aria-checked", String(checked));
   button.setAttribute("aria-label", label);
   button.setAttribute("title", label);
 }
@@ -106,27 +109,25 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
   toPill(themeToggle);
   aestheticSelect.classList.add("demo-aesthetic");
 
+  const navLinks = resolveNavLinks({ docsUrl: "https://docs.codenhub.dev", wwwUrl: "https://codenhub.dev" })
+    .map(
+      ({ href, label }) =>
+        `<a class="shell-nav-link" href="${href}" target="_blank" rel="noopener noreferrer">${label}<i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i></a>`,
+    )
+    .join("");
+
   const header = document.createElement("header");
   header.className = "shell-header";
   header.innerHTML = `
     <div class="shell-header-content">
-      <a class="shell-brand" href="${base}" aria-label="@codenhub/styles home">
+      <a class="shell-brand" href="https://demo.codenhub.dev" aria-label="@codenhub/styles home">
         <img class="shell-brand-logo shell-brand-logo-on-light" src="/assets/logo/logo-dark.svg" alt="@codenhub/styles" width="984" height="255" />
         <img class="shell-brand-logo shell-brand-logo-on-dark" src="/assets/logo/logo-light.svg" alt="@codenhub/styles" width="984" height="255" />
       </a>
-      <nav class="shell-nav" aria-label="Primary">
-        <a class="shell-nav-link" href="https://docs.codenhub.dev/styles" target="_blank" rel="noopener noreferrer">
-          Docs
-          <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
-        </a>
-        <a class="shell-nav-link" href="https://github.com/codenhub/codenhub" target="_blank" rel="noopener noreferrer">
-          CodenHub
-          <i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i>
-        </a>
-      </nav>
+      <nav class="shell-nav" aria-label="Sites">${navLinks}</nav>
       <div class="shell-actions">
-        ${iconLink("https://github.com/codenhub/codenhub/tree/main/packages/styles", "@codenhub/styles on GitHub", GITHUB_ICON)}
-        ${iconLink("https://www.npmjs.com/package/@codenhub/styles", "@codenhub/styles on npm", NPM_ICON)}
+        ${iconLink("https://github.com/codenhub/codenhub", "CodenHub on GitHub", GITHUB_ICON)}
+        ${iconLink("https://www.npmjs.com/org/codenhub", "CodenHub on npm", NPM_ICON)}
       </div>
     </div>
     <nav class="demo-routes" aria-label="Pages"></nav>
@@ -140,20 +141,17 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
   return header;
 }
 
-/** Build the site footer: copyright and the "Made with … by Coden" credit. */
+/** Build the site footer: copyright and the "Built by coden" credit. */
 function buildFooter(): HTMLElement {
   const footer = document.createElement("footer");
   footer.className = "shell-footer";
   footer.innerHTML = `
     <div class="shell-footer-content">
-      <p>© <span id="footer-year"></span> Coden</p>
-      <p>
-        Made with <i class="ic-heart" aria-hidden="true"></i> by
-        <a href="https://coden.agency" target="_blank" rel="noopener noreferrer">Coden</a>
-      </p>
+      <p>&copy; <span data-footer-year></span> Coden</p>
+      <p>Built by <a href="https://coden.agency/" target="_blank" rel="noopener noreferrer">coden</a>.</p>
     </div>
   `;
-  const year = footer.querySelector<HTMLElement>("#footer-year");
+  const year = footer.querySelector<HTMLElement>("[data-footer-year]");
   if (year) {
     year.textContent = String(new Date().getFullYear());
   }
