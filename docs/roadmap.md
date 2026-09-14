@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-13
+last_updated: 2026-09-14
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -32,7 +32,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
   - `@codenhub/kbd`: key-combo recording / remapping helper.
   - `@codenhub/skills`: npm-publish validation and a clean-machine `npx` / `pnpm dlx` path; more core skill templates.
   - `@codenhub/components`: property / event declaration API stabilization; expanded component library.
-  - `@codenhub/icons`: searchable icon catalog in the documentation site; a first-party family owning the semantic names.
+  - `@codenhub/icons`: a first-party family owning the semantic names.
 
 ## Later / Possible
 
@@ -54,7 +54,6 @@ Durable direction for the workspace: what is being worked on now, what is intend
 - **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and nothing else: no deploy workflow, no credentials. `docs/ci.md` records each project's build watch-path excludes and the reasoning.
 - **Release model.** A maintainer authorizes a release by pushing a `<package name>@<version>` tag; `.github/workflows/publish.yml` publishes through trusted publishing (OIDC, provenance), refusing a tag whose version disagrees with the manifest. The first release of a name is manual, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` and `docs/ci.md` own the rules.
 - **Unlisted packages.** `router`, `store`, `theme`, the plugins, and `ui-kit` are internal, WIP, deprecated, or evaluated separately, and are absent from the per-package list above by intent.
-- **Icon delivery decisions** — the `<i>` / `.ic` element model, the `ic-xs`–`ic-xl` size axis, and what an inlined icon loses — are shipped and documented in the `@codenhub/icons` package docs.
 
 ## References
 
