@@ -1,12 +1,12 @@
 ---
 status: DRAFT
 last_updated: 2026-09-13
-scope: Draft changelog text for the next release. Not a released version, not linked from `docs/changelog/index.md`, and not read by `hub check`'s `changelog` rule -- writing the real entry and cutting the version happens together, via `hub release --cut`, once the stress-test pass is actually done.
+scope: Draft changelog text for the next release. Not a released version, not linked from `docs/changelog/index.md`, and not read by `hub check`'s `changelog` rule -- writing the real entry and cutting the version happens together, via `hub release --cut`.
 ---
 
 # Next release (draft)
 
-Working title `0.2.0`. This is scratch space for the changelog text as fixes land, not a commitment to the version number, the scope, or the release date -- see [Stress-test findings](./stress-test-findings.md) for what is still open and why. Nothing here ships until it is copied into a real `docs/changelog/<version>.md` and the manifest version is raised in the same change that merges it.
+Working title `0.2.0`. This is scratch space for the changelog text as fixes land, not a commitment to the version number, the scope, or the release date. The stress-test pass that drove most of what is below is complete -- see [Stress-test findings](./stress-test-findings.md) for the record. One documentation question remains open, [below](#still-open). Nothing here ships until it is copied into a real `docs/changelog/<version>.md` and the manifest version is raised in the same change that merges it.
 
 ## Landed so far
 
