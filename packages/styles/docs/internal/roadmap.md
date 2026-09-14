@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**Between passes.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or explicitly deferred; see [findings](./stress-test-findings.md) for the record and [Planned](#planned) for what is left before it ships. [Later / Possible](#later--possible) is empty for now -- next focus is open.
+**Preparing the `0.2.0` cut.** `0.1.0` and `0.1.1` are on npm; that is still the current release. The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or explicitly deferred; see [findings](./stress-test-findings.md) for the record. [Planned](#planned) is what is left before it ships. [Later / Possible](#later--possible) is empty for now.
 
 ## Planned
 
@@ -27,7 +27,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Later / Possible
 
-None currently. The last item here, trimming the playground's exhaustive matrix pages to a curated default set behind the demo, has landed -- see `docs/internal/tests.md` for how a `data-matrix` host narrows what it renders.
+None currently.
 
 ## Aesthetics assessed and deferred
 
