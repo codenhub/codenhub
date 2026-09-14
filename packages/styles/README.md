@@ -34,6 +34,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 - [Usage](./docs/usage/index.md): Composing, theming, customizing, aesthetics, and each component family.
 - [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
 - [Accessibility](./docs/accessibility.md): CSS accessibility hooks and non-goals.
+- [Changelog](./docs/changelog/index.md): Release history, including breaking changes.
 
 ## Requirements
 
@@ -46,7 +47,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Notes
 
-This package has no JavaScript behavior. `--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens, and `--color-text-subtle` is removed because nothing read it; no compatibility aliases are provided.
+This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. See the [changelog](./docs/changelog/index.md) for the complete history.
 
 ## License
 
