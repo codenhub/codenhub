@@ -7,8 +7,6 @@ description: Zero-runtime icon system for the web — icon classes in your marku
 
 `@codenhub/icons` turns an icon class such as `ic-lucide-heart` into a CSS mask rule. There is no component layer, no icon library in your bundle, and nothing to import per icon. The package ships 13 generated icon families totalling over 34,000 icons, each carrying the license notices its artwork requires.
 
-This package is experimental: its data schema, exports, and plugin options may change before 1.0.
-
 ## Setup
 
 ### Installation
