@@ -9,5 +9,11 @@ and call `destroy()` to release media-query/storage listeners and subscribers.
 ## Documentation
 
 - [Documentation overview](docs/index.md): Purpose, status, and starting points.
-- [API, persistence, DOM, and SSR behavior](docs/reference.md): Complete exports,
-  configuration, tokens, listeners, failures, pre-paint behavior, and cleanup.
+- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md): Token
+  resolution priority, `localStorage` persistence, and cross-tab sync.
+- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md): FOUC prevention, SSR
+  fallbacks, and Tailwind `dark` class toggling.
+
+## Optional
+
+- [API reference](docs/reference/index.md): Generated per-symbol signatures and prose.

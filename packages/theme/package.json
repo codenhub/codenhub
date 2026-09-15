@@ -54,7 +54,10 @@
   "codenhub": {
     "docs": {
       "label": "ThemeSystem",
-      "status": "active"
+      "status": "active",
+      "reference": {
+        "prose": true
+      }
     }
   }
 }

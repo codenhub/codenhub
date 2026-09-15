@@ -26,7 +26,9 @@ theme.destroy({ revertDom: true });
 ## Documentation
 
 - [Documentation overview](docs/index.md)
-- [API, persistence, DOM, and SSR behavior](docs/reference.md)
+- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md)
+- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md)
+- [API reference](docs/reference/index.md)
 
 ## Requirements
 
