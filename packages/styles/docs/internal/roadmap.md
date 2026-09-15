@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-13
+last_updated: 2026-09-15
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,11 +18,10 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.2.0` is cut, pending merge and the release tag.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is now recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). The scratch notes that tracked the pass, `stress-test-findings.md` and `next-release.md`, have served their purpose and are retired in this same change. `0.1.1` remains the published npm version until this change merges and `@codenhub/styles@0.2.0` is tagged. [Planned](#planned) is what is left. [Later / Possible](#later--possible) is empty for now.
+**`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) is empty for now.
 
 ## Planned
 
-- **Merge and tag `0.2.0`.** The version is raised and the changelog is written; what is left is merging the release pull request and pushing the `@codenhub/styles@0.2.0` tag that authorizes `.github/workflows/publish.yml` to publish it.
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed.
 
 ## Later / Possible
@@ -43,7 +42,7 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.1.1` is the current published release; `0.2.0` is cut in the manifest and awaits merge and tag -- see [Planned](#planned). `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+`0.2.0` is the current published release, cut through the same tag workflow as `0.1.1` before it. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
 
