@@ -15,10 +15,9 @@ export interface PackageGridElementIds {
  *
  * Expects each grid item to carry `data-search` (the lowercased haystack a
  * query matches against) and `data-label` (the value sorted on), and the sort
- * button to carry a `data-sort-direction` attribute plus `[data-sort-label]`
- * and `[data-sort-icon]` descendants. No-ops for any element that is missing,
- * so a page without one of the pieces (e.g. no sort control) still gets
- * filtering.
+ * button to carry a `data-sort-direction` attribute plus `[data-sort-icon]`
+ * descendants. No-ops for any element that is missing, so a page without one
+ * of the pieces (e.g. no sort control) still gets filtering.
  *
  * @param ids - Overrides for the default element ids/selectors.
  */
@@ -32,7 +31,6 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
 
   const searchInput = document.getElementById(searchInputId);
   const sortButton = document.getElementById(sortButtonId);
-  const sortLabel = sortButton?.querySelector("[data-sort-label]");
   const grid = document.getElementById(gridId);
   const emptyMessage = document.querySelector(emptyMessageSelector);
   const cards = grid
@@ -79,15 +77,11 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
     }
 
     const nextDirection = sortButton.dataset.sortDirection === "desc" ? "asc" : "desc";
+    const label = nextDirection === "desc" ? "Sort by name, descending" : "Sort by name, ascending";
     sortButton.dataset.sortDirection = nextDirection;
     sortButton.setAttribute("aria-pressed", String(nextDirection === "desc"));
-    sortButton.setAttribute(
-      "aria-label",
-      nextDirection === "desc" ? "Sort by name, descending" : "Sort by name, ascending",
-    );
-    if (sortLabel instanceof HTMLElement) {
-      sortLabel.textContent = nextDirection === "desc" ? "Z–A" : "A–Z";
-    }
+    sortButton.setAttribute("aria-label", label);
+    sortButton.title = label;
 
     for (const icon of sortButton.querySelectorAll<HTMLElement>("[data-sort-icon]")) {
       icon.hidden = icon.dataset.sortIcon !== nextDirection;
@@ -99,9 +93,9 @@ export function initPackageGrid(ids: PackageGridElementIds = {}): void {
   searchInput?.addEventListener("input", applyFilter);
   sortButton?.addEventListener("click", toggleSortDirection);
 
-  // The sort button's own markup declares its initial direction (`asc`,
-  // "A–Z"), but nothing guarantees the server-rendered card order already
-  // matches it -- applying it once up front makes the rendered order and
-  // the button's claimed state agree from the first paint.
+  // The sort button's own markup declares its initial direction (`asc`), but
+  // nothing guarantees the server-rendered card order already matches it --
+  // applying it once up front makes the rendered order and the button's
+  // claimed state agree from the first paint.
   applySort();
 }

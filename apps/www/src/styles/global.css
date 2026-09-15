@@ -158,8 +158,8 @@
   border-color: var(--color-border-hover);
 }
 
-.package-sort .ic-lucide-arrow-up-narrow-wide,
-.package-sort .ic-lucide-arrow-down-wide-narrow {
+.package-sort .ic-lucide-arrow-down-a-z,
+.package-sort .ic-lucide-arrow-down-z-a {
   --ic-size: 1rem;
 }
 
