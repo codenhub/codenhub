@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -12,8 +12,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Current Focus
 
-- **Public surface stabilization.** `apps/www` is the site index at `codenhub.dev` — the canonical package list and the entry point to docs, demos, and source. `@codenhub/app-shell` is the private package the three deploy surfaces share so their chrome is identical, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list that routes into their own surface.
-- **`@codenhub/styles` post-`0.1` evaluation.** `0.1.0` and `0.1.1` are published, `0.1.1` through the tag workflow. The stress-test pass across all three planned screens is complete -- every finding it turned up is landed, documented, or explicitly deferred -- and the focus is now preparing the `0.2.0` cut. Direction is in `packages/styles/docs/internal/roadmap.md`.
+- **Per-package landing pages.** Public surface stabilization is otherwise done: `apps/www`'s package list is the canonical entry point at `codenhub.dev`, `@codenhub/app-shell` gives the three deploy surfaces identical chrome, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list. What is left is a landing page per package at `codenhub.dev`, closer to a commercial page than a docs page, making the case for why a consumer should reach for it.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
 - **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error`. Next: opt in packages with different shapes (`icons`, `kbd`, `router`, `validation`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
 
@@ -37,17 +36,12 @@ Durable direction for the workspace: what is being worked on now, what is intend
 ## Later / Possible
 
 - **New packages.** `@codenhub/a11y` (focus management, ARIA primitives, accessibility utilities); `@codenhub/ui` (high-level layout and composite primitives).
-- **Better playgrounds** for `kbd`, `error`, and `icons`, built on the internal packages rather than in isolation.
-- **CSS-mode unresolved-icon-class warning** for `@codenhub/icons`. Worth doing; the open question is where it would be raised from, since the scan sees classes one module at a time and never knows the set is complete.
-- **`.md` / `.mdx` icon rewriting** in an Astro host. An integration working on the emitted HTML at `astro:build:done` would cover them, at the cost of a new public entrypoint and of missing per-request output — not obviously worth it yet.
-- **A `prose: false` signature-only reference manifest**, which could go wider than the prose reference before per-package TSDoc quality is known.
 
 ## Not Planned
 
 - **Changesets.** It brings its own versioning model, file format, and release-PR bot next to a `hub release` that already knows this workspace. `hub release --cut` raises the version and scaffolds the changelog entry; a `changelog` check makes skipping it impossible.
 - **Dependabot.** `docs/ci.md` accepts that action pins are updated by hand; automating them is a decision to revisit there, not a gap here.
 - **Publish-on-merge.** A merge is a decision to change `main`, not to release, and a version bump has to stay revertible until someone tags it (`docs/specs/packages-lifecycle.md`).
-- **Deeper `apps/docs` sidebar nesting.** Deep trees are their own navigation cost.
 
 ## Notes
 
@@ -62,5 +56,4 @@ Durable direction for the workspace: what is being worked on now, what is intend
 - `docs/specs/packages-reference.md` — generated API reference contract.
 - `docs/specs/packages-demo.md` — package demo and aggregator contract.
 - `docs/specs/roadmaps.md` — how this file is structured.
-- `packages/styles/docs/internal/roadmap.md` — `@codenhub/styles` direction and open questions.
 - `packages/app-shell/docs/internal/architecture.md`, `apps/demo/docs/internal/architecture.md` — deploy-surface architecture.
