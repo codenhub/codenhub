@@ -73,6 +73,11 @@ function assertKebabEntrypoints(plans: readonly EntrypointPlan[]): void {
 async function convertProject(pkgDir: string, plans: readonly EntrypointPlan[]): Promise<unknown> {
   const application = await Application.bootstrap(
     {
+      // Without this, TypeDoc collapses a single entry point's exports onto the
+      // project root instead of a `Module` reflection, and `buildReferenceModel`'s
+      // `root.children.filter(isModule)` finds nothing for it — every symbol on a
+      // package with exactly one documented entrypoint would render as an empty page.
+      alwaysCreateEntryPointModule: true,
       entryPoints: plans.map((plan) => `${pkgDir}/src/${plan.sourceRel}`),
       entryPointStrategy: "resolve",
       excludeInternal: true,
