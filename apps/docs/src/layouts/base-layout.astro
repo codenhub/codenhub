@@ -1,7 +1,9 @@
 ---
+import type { SiteConfig } from "@codenhub/app-shell/site-config";
 import ShellLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 
 import SearchPalette from "../components/search-palette.astro";
+import type { PublicPackage } from "../lib/catalog";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -9,12 +11,36 @@ interface Props {
   description?: string;
   sectionTitle?: string;
   title?: string;
+  /**
+   * The package this page belongs to, when it is package-scoped. Scopes the
+   * header's Demo, npm, and GitHub links to this package instead of the site
+   * root; "Documentation" is already omitted everywhere on this site, since
+   * every page here already is documentation.
+   */
+  currentPackage?: Pick<PublicPackage, "demoUrl" | "githubLabel" | "githubUrl" | "npmLabel" | "npmUrl">;
 }
 
-const { description, sectionTitle, title } = Astro.props;
+const { currentPackage, description, sectionTitle, title } = Astro.props;
+
+const scopedSiteConfig: SiteConfig =
+  currentPackage === undefined
+    ? siteConfig
+    : {
+        ...siteConfig,
+        demoUrl: currentPackage.demoUrl,
+        githubUrl: currentPackage.githubUrl ?? siteConfig.githubUrl,
+        npmUrl: currentPackage.npmUrl ?? siteConfig.npmUrl,
+      };
 ---
 
-<ShellLayout description={description} sectionTitle={sectionTitle} siteConfig={siteConfig} title={title}>
+<ShellLayout
+  description={description}
+  githubLabel={currentPackage?.githubLabel}
+  npmLabel={currentPackage?.npmLabel}
+  sectionTitle={sectionTitle}
+  siteConfig={scopedSiteConfig}
+  title={title}
+>
   <SearchPalette slot="actions" />
   <slot />
   <script>

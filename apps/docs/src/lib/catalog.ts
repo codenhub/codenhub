@@ -1,3 +1,4 @@
+import { packageDemoUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
 import {
   assertSingleH1,
   buildPackageDefinitions,
@@ -9,6 +10,7 @@ import {
 } from "@codenhub/tools/documentation";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
+import { siteConfig } from "../site-config";
 import { applyFolderCuration } from "./folder-curation";
 import { rewritePackageMarkdownLinks } from "./markdown-links";
 
@@ -71,7 +73,17 @@ export function insertReferenceDeck(html: string, meta: { description?: string; 
 export interface PublicPackage {
   description?: string;
   documents: PublicDocument[];
+  /** Scoped `demo.codenhub.dev` URL, only when this package publishes a `demo/`. */
+  demoUrl?: string;
+  /** GitHub URL from the package's manifest `homepage`, when it points there. */
+  githubUrl?: string;
+  /** Accessible label for the GitHub action when {@link githubUrl} is set. */
+  githubLabel?: string;
   label: string;
+  /** npmjs.com URL, when the package is published. */
+  npmUrl?: string;
+  /** Accessible label for the npm action when {@link npmUrl} is set. */
+  npmLabel?: string;
   slug: string;
   status: PackageStatus;
 }
@@ -84,6 +96,22 @@ const documentModules = import.meta.glob<PublicDocumentModule>([
   "../../../../packages/**/docs/**/*.md",
   "!../../../../packages/**/docs/internal/**",
 ]);
+// Keys only: whether a package has a `demo/` at all is enough to decide
+// whether its scoped Demo link exists; the aggregator contract in
+// `docs/specs/packages-demo.md` is what actually mounts it.
+const demoManifestPaths = new Set(
+  Object.keys(import.meta.glob("../../../../packages/*/demo/package.json")).map(
+    (manifestPath) => /\/packages\/([^/]+)\/demo\/package\.json$/.exec(manifestPath)?.[1],
+  ),
+);
+
+function readManifestString(manifest: unknown, key: string): string | undefined {
+  if (typeof manifest !== "object" || manifest === null) {
+    return undefined;
+  }
+  const value = (manifest as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : undefined;
+}
 
 interface LoadedDocument extends PublicDocument {
   /** Whether this document is a folder's curated entrypoint. Stripped before publication. */
@@ -138,10 +166,24 @@ async function loadCatalog(): Promise<PublicPackage[]> {
       );
       documents.sort(comparePublicDocuments);
 
+      const manifest = manifestModules[packageDefinition.manifestPath];
+      const name = readManifestString(manifest, "name");
+      const homepage = readManifestString(manifest, "homepage");
+      const githubUrl = homepage?.startsWith("https://github.com/") === true ? homepage : undefined;
+      const npmUrl = name === undefined ? undefined : packageNpmUrl(name);
+
       return {
+        demoUrl:
+          siteConfig.demoUrl !== undefined && demoManifestPaths.has(packageDefinition.slug)
+            ? packageDemoUrl(siteConfig.demoUrl, packageDefinition.slug)
+            : undefined,
         description: packageDefinition.description,
         documents,
+        githubLabel: githubUrl === undefined ? undefined : `${name} on GitHub`,
+        githubUrl,
         label: packageDefinition.label,
+        npmLabel: npmUrl === undefined ? undefined : `${name} on npm`,
+        npmUrl,
         slug: packageDefinition.slug,
         status: packageDefinition.status,
       };

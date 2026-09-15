@@ -1,4 +1,5 @@
 import { resolveNavLinks } from "@codenhub/app-shell/nav";
+import { packageDocsUrl } from "@codenhub/app-shell/package-links";
 import { nextTheme, resolveInitialTheme, themeToggleAria, THEME_STORAGE_KEY } from "@codenhub/app-shell/theme";
 import { generateIconSetCss, IconRegistry, renderSvg, setStrokeWidth } from "@codenhub/icons";
 import type { IconFamilyData } from "@codenhub/icons";
@@ -414,14 +415,18 @@ function initFooterYear(): void {
  *
  * A package demo isn't a top-level surface, so it carries no `demoUrl` — it's
  * already inside the demo surface — leaving `resolveNavLinks` to naturally
- * drop the self-referential "Demo" link with no special-casing.
+ * drop the self-referential "Demo" link with no special-casing. "Documentation"
+ * scopes to this package's own docs page rather than the docs site's root.
  */
 function initNav(): void {
   const nav = element<HTMLElement>("shell-nav");
   if (!nav) {
     return;
   }
-  const links = resolveNavLinks({ docsUrl: "https://docs.codenhub.dev", wwwUrl: "https://codenhub.dev" });
+  const links = resolveNavLinks({
+    docsUrl: packageDocsUrl("https://docs.codenhub.dev", "icons"),
+    wwwUrl: "https://codenhub.dev",
+  });
   nav.replaceChildren(
     ...links.map(({ href, label }) => {
       const link = document.createElement("a");
