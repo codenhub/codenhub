@@ -14,9 +14,21 @@ interface Props {
   sectionTitle?: string;
   /** Home link target passed through to the header. */
   homeHref?: string;
+  /** Passed through to the header's GitHub action. */
+  githubLabel?: string;
+  /** Passed through to the header's npm action. */
+  npmLabel?: string;
 }
 
-const { siteConfig, title, description = siteConfig.description, sectionTitle, homeHref } = Astro.props;
+const {
+  siteConfig,
+  title,
+  description = siteConfig.description,
+  sectionTitle,
+  homeHref,
+  githubLabel,
+  npmLabel,
+} = Astro.props;
 
 const pageTitle =
   title === undefined
@@ -59,7 +71,7 @@ const pageTitle =
   </head>
   <body class="shell-body">
     <a class="shell-skip-link" href="#main-content">Skip to main content</a>
-    <SiteHeader homeHref={homeHref} siteConfig={siteConfig}>
+    <SiteHeader githubLabel={githubLabel} homeHref={homeHref} npmLabel={npmLabel} siteConfig={siteConfig}>
       <slot name="actions" slot="actions" />
     </SiteHeader>
     <slot />

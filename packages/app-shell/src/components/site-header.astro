@@ -7,9 +7,13 @@ interface Props {
   siteConfig: SiteConfig;
   /** Home link target. Defaults to this surface's own root. */
   homeHref?: string;
+  /** Accessible label for the GitHub action, when `siteConfig.githubUrl` points at a specific package rather than the monorepo root. */
+  githubLabel?: string;
+  /** Accessible label for the npm action, when `siteConfig.npmUrl` points at a specific package rather than the org page. */
+  npmLabel?: string;
 }
 
-const { siteConfig, homeHref = "/" } = Astro.props;
+const { siteConfig, homeHref = "/", githubLabel = "CodenHub on GitHub", npmLabel = "CodenHub on npm" } = Astro.props;
 
 /*
  * The standard cross-surface links, left of the brand actions. Every one
@@ -58,7 +62,7 @@ const navLinks = resolveNavLinks(siteConfig);
     <div class="shell-actions">
       <slot name="actions" />
       <a
-        aria-label="CodenHub on GitHub"
+        aria-label={githubLabel}
         class="shell-action"
         href={siteConfig.githubUrl}
         rel="noopener noreferrer"
@@ -73,7 +77,7 @@ const navLinks = resolveNavLinks(siteConfig);
       {
         siteConfig.npmUrl !== undefined && (
           <a
-            aria-label="CodenHub on npm"
+            aria-label={npmLabel}
             class="shell-action"
             href={siteConfig.npmUrl}
             rel="noopener noreferrer"

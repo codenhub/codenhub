@@ -46,7 +46,6 @@
      page and picked it for the same reason, "the heaviest grey that still
      leaves a field legible." Dark is unchanged. */
   --color-border: light-dark(var(--color-neutral-400), var(--color-neutral-700));
-  --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
 
   /* A text control's line is the only thing identifying it: the box is
      transparent at rest, so nothing else marks where typing goes.
@@ -147,6 +146,20 @@
 
   --breakpoint-xs: 30rem;
   --breakpoint-2xl: 90rem;
+}
+
+/* Tailwind only keeps a `@theme` variable in the compiled output when it
+   detects that variable being used somewhere in this package's own source --
+   everything above earns its keep that way, through `intent.css` or a
+   component reading it. `--color-border-hover` is different: `docs/usage/
+   theming.md` documents it as a public override point like every other row
+   in that table, but nothing in this package draws a border that darkens on
+   hover, so nothing here ever references it, and Tailwind quietly dropped it
+   from every compiled stylesheet. `static` forces it to compile regardless,
+   so the token a consumer's docs promise is the token their `var()` actually
+   resolves. */
+@theme static {
+  --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
 }
 
 :root {

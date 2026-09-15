@@ -13,6 +13,7 @@
  */
 
 import { resolveNavLinks } from "@codenhub/app-shell/nav";
+import { packageDocsUrl, packageNpmUrl } from "@codenhub/app-shell/package-links";
 import { themeToggleAria } from "@codenhub/app-shell/theme";
 
 import "virtual:icons.css";
@@ -109,7 +110,10 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
   toPill(themeToggle);
   aestheticSelect.classList.add("demo-aesthetic");
 
-  const navLinks = resolveNavLinks({ docsUrl: "https://docs.codenhub.dev", wwwUrl: "https://codenhub.dev" })
+  const navLinks = resolveNavLinks({
+    docsUrl: packageDocsUrl("https://docs.codenhub.dev", "styles"),
+    wwwUrl: "https://codenhub.dev",
+  })
     .map(
       ({ href, label }) =>
         `<a class="shell-nav-link" href="${href}" target="_blank" rel="noopener noreferrer">${label}<i aria-hidden="true" class="ic-lucide-arrow-up-right shell-nav-link-arrow"></i></a>`,
@@ -126,8 +130,8 @@ function buildHeader({ aestheticSelect, routeLinks, themeToggle }: PlaygroundNav
       </a>
       <nav class="shell-nav" aria-label="Sites">${navLinks}</nav>
       <div class="shell-actions">
-        ${iconLink("https://github.com/codenhub/codenhub", "CodenHub on GitHub", GITHUB_ICON)}
-        ${iconLink("https://www.npmjs.com/org/codenhub", "CodenHub on npm", NPM_ICON)}
+        ${iconLink("https://github.com/codenhub/codenhub/tree/main/packages/styles", "@codenhub/styles on GitHub", GITHUB_ICON)}
+        ${iconLink(packageNpmUrl("@codenhub/styles"), "@codenhub/styles on npm", NPM_ICON)}
       </div>
     </div>
     <nav class="demo-routes" aria-label="Pages"></nav>

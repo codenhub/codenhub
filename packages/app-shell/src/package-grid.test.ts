@@ -9,7 +9,6 @@ function renderGrid(): void {
     <button id="package-sort" data-sort-direction="asc">
       <i data-sort-icon="asc"></i>
       <i data-sort-icon="desc" hidden></i>
-      <span data-sort-label>A–Z</span>
     </button>
     <div id="package-grid">
       <a data-label="Router" data-search="router browser router"></a>
@@ -77,7 +76,8 @@ describe("initPackageGrid", () => {
 
     expect(button.dataset.sortDirection).toBe("desc");
     expect(button.getAttribute("aria-pressed")).toBe("true");
-    expect(button.querySelector("[data-sort-label]")?.textContent).toBe("Z–A");
+    expect(button.getAttribute("aria-label")).toBe("Sort by name, descending");
+    expect(button.title).toBe("Sort by name, descending");
 
     const labels = [...(grid?.children ?? [])].map((child) => (child as HTMLElement).dataset.label);
     expect(labels).toEqual(["Router", "Icons", "Error"]);
