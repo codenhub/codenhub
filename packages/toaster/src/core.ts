@@ -8,7 +8,7 @@ import type { LoadingContext, LoadingDispatcher } from "./managers/loading";
 import { createSemanticDispatcher } from "./managers/semantic";
 import type { SemanticContext, SemanticDispatcher } from "./managers/semantic";
 import { ModalController } from "./modal";
-import { DEFAULT_CONFIG, assertToastAppearance, assertToastPosition } from "./options";
+import { DEFAULT_CONFIG, assertToastPosition } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
 import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
@@ -272,7 +272,6 @@ class ToastManager implements Toaster {
       shouldAutoDismiss: config.shouldAutoDismiss ?? DEFAULT_CONFIG.shouldAutoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
-      appearance: config.appearance ?? DEFAULT_CONFIG.appearance,
       className: config.className,
     };
   }
@@ -280,9 +279,6 @@ class ToastManager implements Toaster {
   private validateConfig(config: ToasterConfig): void {
     if (config.position !== undefined) {
       assertToastPosition(config.position);
-    }
-    if (config.appearance !== undefined) {
-      assertToastAppearance(config.appearance);
     }
     [config.semantic?.position, config.loading?.position, config.custom?.position].forEach((position) => {
       if (position !== undefined) {

@@ -61,7 +61,6 @@ describe("configuration boundaries", () => {
   it("should reject invalid runtime enum values", () => {
     expect(() => createToaster({ position: "sideways" as never })).toThrow(/position/);
     const toaster = createToaster();
-    expect(() => toaster.configure({ appearance: "glass" as never })).toThrow(/appearance/);
     expect(() => toaster.semantic.success("Invalid", { role: "log" as never })).toThrow(/role/);
     expect(() => toaster.semantic.show({ message: "Invalid", type: "critical" as never })).toThrow(/type/);
     toaster.destroy();

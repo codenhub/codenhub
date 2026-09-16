@@ -1,13 +1,5 @@
 import { assertValidTokens, replaceTokens } from "./tokens";
-import type {
-  ToastAppearance,
-  ToastContent,
-  ToastIcon,
-  ToastPosition,
-  ToastRole,
-  ToastTokens,
-  ToastUpdateOptions,
-} from "./types";
+import type { ToastContent, ToastIcon, ToastPosition, ToastRole, ToastTokens, ToastUpdateOptions } from "./types";
 
 /**
  * Resolved runtime configurations for a Toaster instance.
@@ -27,8 +19,6 @@ export interface ResolvedToastConfig {
   readonly maxVisible: number;
   /** Viewport margin configurations. */
   readonly margin?: string | { x?: string; y?: string };
-  /** Default visual appearance style. */
-  readonly appearance: ToastAppearance;
   /** Extra CSS class name applied to every toast and dialog from this instance. */
   readonly className?: string;
 }
@@ -39,7 +29,6 @@ export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> 
   isDismissable: false,
   shouldAutoDismiss: true,
   maxVisible: 5,
-  appearance: "soft-bordered",
 };
 
 export const DEFAULT_ROLE: ToastRole = "status";
@@ -53,18 +42,11 @@ const TOAST_POSITIONS: readonly ToastPosition[] = [
   "bottom-center",
   "center",
 ];
-const TOAST_APPEARANCES: readonly ToastAppearance[] = ["flat", "soft", "soft-bordered", "left-accent"];
 const TOAST_ROLES: readonly ToastRole[] = ["alert", "status"];
 
 export function assertToastPosition(value: unknown): asserts value is ToastPosition {
   if (!TOAST_POSITIONS.includes(value as ToastPosition)) {
     throw new Error(`Invalid toast position: ${String(value)}`);
-  }
-}
-
-export function assertToastAppearance(value: unknown): asserts value is ToastAppearance {
-  if (!TOAST_APPEARANCES.includes(value as ToastAppearance)) {
-    throw new Error(`Invalid toast appearance: ${String(value)}`);
   }
 }
 
@@ -106,7 +88,6 @@ export interface NormalizedToastOptions {
   readonly instanceClassName?: string;
   readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
-  readonly appearance: ToastAppearance;
 }
 
 export interface ToastPresetOptions {
@@ -263,7 +244,6 @@ export interface RawToastOptions {
   className?: string;
   role?: ToastRole;
   margin?: string | { x?: string; y?: string };
-  appearance?: ToastAppearance;
 }
 
 export function normalizeToastOptions(params: {
@@ -286,10 +266,8 @@ export function normalizeToastOptions(params: {
   assertDuration(options.duration);
   assertValidTokens(options.tokens, documentRef);
 
-  const appearance = options.appearance ?? config.appearance ?? "soft-bordered";
   const position = options.position ?? config.position;
   const role = options.role ?? preset?.role ?? DEFAULT_ROLE;
-  assertToastAppearance(appearance);
   assertToastPosition(position);
   assertToastRole(role);
 
@@ -303,12 +281,11 @@ export function normalizeToastOptions(params: {
     message: content === undefined ? (message ?? "") : null,
     position,
     role,
-    rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, `toast-appearance-${appearance}`),
+    rootClassName: preset?.rootClassName ?? DEFAULT_TOAST_CLASS,
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
     tokens: options.tokens ?? null,
     margin: options.margin ?? config.margin,
-    appearance,
   });
 }
 

@@ -1,5 +1,5 @@
 import { createToaster } from "@codenhub/toaster";
-import type { ToastPosition, ToastAppearance } from "@codenhub/toaster";
+import type { ToastPosition } from "@codenhub/toaster";
 
 const toaster = createToaster();
 
@@ -19,14 +19,12 @@ if (btnToggleTheme) {
 // --- Shared dispatch options -------------------------------------------------
 function getOptions() {
   const positionSelect = document.getElementById("select-position") as HTMLSelectElement;
-  const appearanceSelect = document.getElementById("select-appearance") as HTMLSelectElement;
   const durationInput = document.getElementById("input-duration") as HTMLInputElement;
   const autoDismissCheck = document.getElementById("check-auto-dismiss") as HTMLInputElement;
   const dismissableCheck = document.getElementById("check-dismissable") as HTMLInputElement;
 
   return {
     position: (positionSelect?.value || "bottom-right") as ToastPosition,
-    appearance: (appearanceSelect?.value || "soft-bordered") as ToastAppearance,
     duration: Number(durationInput?.value) || 4000,
     shouldAutoDismiss: autoDismissCheck ? autoDismissCheck.checked : true,
     isDismissable: dismissableCheck ? dismissableCheck.checked : true,
@@ -104,7 +102,6 @@ document.getElementById("btn-loading-sim")?.addEventListener("click", () => {
     toaster.semantic.success("Data loaded successfully!", {
       position: opts.position,
       duration: opts.duration,
-      appearance: opts.appearance,
     });
   }, 2000);
 });

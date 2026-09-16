@@ -128,17 +128,4 @@ describe("Toast rendering", () => {
     expect(links[6]?.getAttribute("href")).toBe("tel:+12345");
     expect(links[7]?.getAttribute("href")).toBe("/dashboard");
   });
-
-  it("should apply default appearance to root class name", () => {
-    const element = renderToast(makeToast({ message: "Default appearance" }));
-    expect(element.className).toContain("toast-appearance-soft-bordered");
-  });
-
-  it.each(["flat", "soft", "soft-bordered", "left-accent"] as const)(
-    "should apply %s appearance to root class name",
-    (appearance) => {
-      const element = renderToast(makeToast({ message: `${appearance} appearance`, appearance }));
-      expect(element.className).toContain(`toast-appearance-${appearance}`);
-    },
-  );
 });

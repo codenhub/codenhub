@@ -26,11 +26,6 @@ export type ToastIcon = "success" | "error" | "warning" | "info" | "loader";
 export type ToastState = "queued" | "visible" | "hiding" | "hidden";
 
 /**
- * Visual aesthetics configurations for toast notifications.
- */
-export type ToastAppearance = "flat" | "soft" | "soft-bordered" | "left-accent";
-
-/**
  * Design tokens for overriding colors per toast or globally per instance.
  */
 export interface ToastTokens {
@@ -223,8 +218,6 @@ export interface SemanticToastOptions {
   role?: ToastRole;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
-  /** Visual appearance style of the toast. */
-  appearance?: ToastAppearance;
 }
 
 /**
@@ -248,8 +241,6 @@ export interface LoadingToastOptions {
   className?: string;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
-  /** Visual appearance style of the toast. */
-  appearance?: ToastAppearance;
 }
 
 /**
@@ -274,8 +265,6 @@ export interface CustomToastOptions {
   role?: ToastRole;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
-  /** Visual appearance style of the toast. */
-  appearance?: ToastAppearance;
 }
 
 /**
@@ -402,13 +391,11 @@ export interface ToasterConfig {
   custom?: CustomDefaults;
   /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
   margin?: string | { x?: string; y?: string };
-  /** Default visual appearance style for toasts. */
-  appearance?: ToastAppearance;
   /**
    * Extra CSS class name applied to every toast and dialog dispatched from
-   * this instance. Unlike `duration`, `position`, and `appearance` above,
-   * this does not get overridden by a per-call `className` — the two are
-   * appended together (instance default first, then the call's own class).
+   * this instance. Unlike `duration` and `position` above, this does not get
+   * overridden by a per-call `className` — the two are appended together
+   * (instance default first, then the call's own class).
    */
   className?: string;
 }

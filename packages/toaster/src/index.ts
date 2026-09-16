@@ -22,6 +22,5 @@ export type {
   SemanticDefaults,
   LoadingDefaults,
   CustomDefaults,
-  ToastAppearance,
   ToastContent,
 } from "./types";
