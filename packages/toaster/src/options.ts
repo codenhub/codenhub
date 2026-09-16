@@ -100,6 +100,10 @@ export interface NormalizedToastOptions {
   readonly role: ToastRole;
   readonly rootClassName: string;
   readonly className?: string;
+  /** The instance-level `ToasterConfig.className` alone, kept separate so an
+   *  `update()` can re-append it instead of dropping it (see
+   *  `applyUpdateToElement`). */
+  readonly instanceClassName?: string;
   readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
   readonly appearance: ToastAppearance;
@@ -301,6 +305,7 @@ export function normalizeToastOptions(params: {
     role,
     rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, `toast-appearance-${appearance}`),
     className: joinClassNames(config.className, options.className),
+    instanceClassName: config.className,
     tokens: options.tokens ?? null,
     margin: options.margin ?? config.margin,
     appearance,
@@ -321,8 +326,10 @@ export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdat
   }
 
   if (update.className !== undefined) {
-    // Replace only the user-added class portion — keep root class intact
+    // Replace only the per-call class portion — keep the root class and the
+    // instance-level config default intact, so update() can't drop it.
     const dataClass = element.getAttribute("data-root-class") ?? "";
-    element.className = joinClassNames(dataClass, update.className);
+    const instanceClass = element.getAttribute("data-instance-class") ?? "";
+    element.className = joinClassNames(dataClass, instanceClass, update.className);
   }
 }

@@ -137,6 +137,22 @@ describe("instance-level className", () => {
     await handle.settled;
     toaster.destroy();
   });
+
+  it("keeps the config-level className after handle.update() replaces the per-call className", () => {
+    const toaster = createToaster({ className: "glass" });
+    const handle = toaster.semantic.success("Styled", { className: "class-one" });
+
+    const element = document.body.querySelector("[role='status']");
+    expect(element?.className).toContain("glass");
+    expect(element?.className).toContain("class-one");
+
+    handle.update({ className: "class-two" });
+    expect(element?.className).toContain("glass");
+    expect(element?.className).toContain("class-two");
+    expect(element?.className).not.toContain("class-one");
+
+    toaster.destroy();
+  });
 });
 
 describe("toaster.semantic", () => {

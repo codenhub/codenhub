@@ -4,7 +4,16 @@ import type { ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
   NormalizedToastOptions,
-  "content" | "icon" | "isDismissable" | "message" | "role" | "rootClassName" | "className" | "tokens" | "instanceId"
+  | "content"
+  | "icon"
+  | "isDismissable"
+  | "message"
+  | "role"
+  | "rootClassName"
+  | "className"
+  | "instanceClassName"
+  | "tokens"
+  | "instanceId"
 >;
 
 const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
@@ -89,6 +98,7 @@ export function createToastElement(
 
   container.className = options.className ? `${options.rootClassName} ${options.className}` : options.rootClassName;
   container.setAttribute("data-root-class", options.rootClassName);
+  container.setAttribute("data-instance-class", options.instanceClassName ?? "");
   container.setAttribute("data-toast-instance", options.instanceId);
   container.setAttribute("role", options.role);
   container.setAttribute("aria-live", ariaLive);
