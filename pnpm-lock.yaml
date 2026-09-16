@@ -113,6 +113,9 @@ importers:
       '@codenhub/theme-demo':
         specifier: workspace:*
         version: link:../../packages/theme/demo
+      '@codenhub/toaster-demo':
+        specifier: workspace:*
+        version: link:../../packages/toaster/demo
       '@codenhub/tools':
         specifier: workspace:*
         version: link:../../packages/tools
@@ -811,6 +814,30 @@ importers:
 
   packages/toaster/debug:
     devDependencies:
+      '@codenhub/styles':
+        specifier: workspace:*
+        version: link:../../styles
+      '@codenhub/toaster':
+        specifier: workspace:*
+        version: link:..
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.2(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0)
+
+  packages/toaster/demo:
+    devDependencies:
+      '@codenhub/app-shell':
+        specifier: workspace:*
+        version: link:../../app-shell
+      '@codenhub/icons':
+        specifier: workspace:*
+        version: link:../../icons
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../styles

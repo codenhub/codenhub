@@ -1,0 +1,61 @@
+/* The demo shell. Preview-only scaffolding, never part of @codenhub/toaster. */
+
+@import "@codenhub/app-shell/styles.css";
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* The reused playground page puts its content straight in `.playground-content`,
+   which is now a direct flex item of `body` above. `flex: 1 0 auto` lets it take
+   the slack so the footer rests at the bottom of the viewport on short pages
+   instead of floating up under the content. `width: 100%` counters a flexbox
+   quirk: an item with an `auto` inline margin (its own `mx-auto`, for centering
+   under its `max-w-4xl`) is sized by content instead of stretching, so without
+   this it renders narrower than its max-width and drifts out of alignment with
+   the header/footer, whose own `mx-auto` sits one level deeper and never hits
+   this. */
+.playground-content {
+  flex: 1 0 auto;
+  width: 100%;
+}
+
+/* The reused playground page caps itself at `max-w-4xl` (56rem) for its own
+   standalone use in `dev`/`debug`. The shell's header and footer cap at
+   `--shell-max-width` (80rem, see `@codenhub/app-shell/styles.css`), so
+   without this the content column reads narrower and misaligned against
+   both. Two classes on one element (`.playground-content.max-w-4xl`) always
+   beats the single-class Tailwind utility on specificity, so this wins
+   regardless of stylesheet load order. */
+.playground-content.max-w-4xl {
+  max-width: var(--shell-max-width, 80rem);
+}
+
+/* app-shell's theme-switch pill and brand logo swap both key off
+   `[data-theme="dark"]` literally. `chrome.ts` mirrors the playground's own
+   `documentElement.style.colorScheme` onto `data-shell-scheme` on every
+   change; these repeat app-shell's own dark-state rules against that
+   attribute instead. */
+[data-shell-scheme="dark"] .shell-theme-switch-knob {
+  translate: 1.125rem;
+}
+
+[data-shell-scheme="dark"] .shell-theme-switch .shell-theme-icon-sun {
+  display: block;
+}
+
+[data-shell-scheme="dark"] .shell-theme-switch .shell-theme-icon-moon {
+  display: none;
+}
+
+[data-shell-scheme="dark"] .shell-brand-logo-on-light {
+  display: none;
+}
+
+[data-shell-scheme="dark"] .shell-brand-logo-on-dark {
+  display: block;
+}
