@@ -24,7 +24,7 @@ Inject the returned string into a blocking `<script>` in the document `<head>`, 
 </head>
 ```
 
-Pass the same `themes`, `defaultTheme`, `systemTheme`, `storageKey`, `attribute`, `shouldApplyClass`, and `isTailwindCss` options used to construct the manager, so the pre-paint script and the later `init()` call resolve to the same theme. `getPrePaintScript()` only serializes **static** tokens from each theme's `ThemeDefinition.tokens` — runtime overrides passed to `init(tokens)` are applied after hydration, during client-side execution, and cannot be part of a script that runs before any application code.
+Pass the same `themes`, `tokenSchema`, `defaultTheme`, `systemTheme`, `storageKey`, `attribute`, `shouldApplyClass`, and `isTailwindCss` options used to construct the manager, so the pre-paint script and the later `init()` call resolve to the same theme. `getPrePaintScript()` only serializes **static** tokens from each theme's `ThemeDefinition.tokens` — and only when `tokenSchema` is passed to it — runtime overrides passed to `init(tokens)` are applied after hydration, during client-side execution, and cannot be part of a script that runs before any application code.
 
 ## Server-side rendering
 

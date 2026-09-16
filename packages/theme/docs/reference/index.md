@@ -23,7 +23,7 @@ Factory function that creates and returns a `Theme` instance.
 
 **Returns** — A `Theme` instance.
 
-**Throws** — If configured theme names are empty, duplicated, invalid for CSS class application, or if the default/system themes are not present in the configured list.
+**Throws** — If configured theme names are empty, duplicated, invalid for CSS class application, have an invalid `colorScheme`, or if the default/system themes are not present in the configured list.
 
 ### getPrePaintScript
 
@@ -87,7 +87,7 @@ Removes the explicit user theme preference from storage and resets the theme to 
 destroy(options?: { revertDom?: boolean; }): void;
 ```
 
-Cleans up the theme instance by removing all in-process change listeners and the system preference media query listener. Resets active tokens and the active theme name to the configured `defaultTheme` so the instance can be safely re-initialized with `init()`.
+Cleans up the theme instance by removing all in-process change listeners, the system preference media query listener, and the cross-tab storage listener. Resets active tokens and the active theme name to the configured `defaultTheme` so the instance can be safely re-initialized with `init()`.
 
 **Parameters**
 
@@ -178,7 +178,7 @@ Registers a callback listener to receive notifications when the theme or its tok
 toggle(tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
 ```
 
-Switches the theme between the configured system light and dark themes and persists the change. The next theme is always selected from `systemTheme.light` or `systemTheme.dark` based on the active theme's `colorScheme`, not by cycling the active theme name. In multi-theme setups where the active theme is not one of the system themes, `toggle()` still targets `systemTheme.light` or `systemTheme.dark`.
+Switches away from the active theme and persists the change. If the active theme configures a `pairedTheme`, that theme is activated. Otherwise the next theme is selected from `systemTheme.light` or `systemTheme.dark` based on the active theme's `colorScheme`, not by cycling the active theme name.
 
 **Parameters**
 

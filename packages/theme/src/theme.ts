@@ -260,7 +260,8 @@ class ThemeImpl<TSchema extends Record<string, string> = Record<string, string>>
  *
  * @param options - Configuration options for theme definitions, persistence keys, DOM attributes, custom class resolvers, and dynamic token schemas.
  * @returns A `Theme` instance.
- * @throws {Error} If configured theme names are empty, duplicated, invalid for CSS class application, or if the default/system themes are not present in the configured list.
+ * @throws {Error} If configured theme names are empty, duplicated, invalid for CSS class application, have an
+ *   invalid `colorScheme`, or if the default/system themes are not present in the configured list.
  */
 export function createTheme<TSchema extends Record<string, string> = Record<string, string>>(
   options: ThemeOptions<TSchema> = {},
