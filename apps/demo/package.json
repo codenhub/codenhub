@@ -20,6 +20,7 @@
     "@codenhub/styles": "workspace:*",
     "@codenhub/styles-demo": "workspace:*",
     "@codenhub/theme-demo": "workspace:*",
+    "@codenhub/toaster-demo": "workspace:*",
     "@codenhub/tools": "workspace:*",
     "@types/node": "catalog:",
     "astro": "catalog:",
