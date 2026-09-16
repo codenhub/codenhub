@@ -29,6 +29,8 @@ export interface ResolvedToastConfig {
   readonly margin?: string | { x?: string; y?: string };
   /** Default visual appearance style. */
   readonly appearance: ToastAppearance;
+  /** Extra CSS class name applied to every toast and dialog from this instance. */
+  readonly className?: string;
 }
 
 export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> = {
@@ -114,7 +116,7 @@ function hasNonEmptyString(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function joinClassNames(...classNames: Array<string | undefined>): string {
+export function joinClassNames(...classNames: Array<string | undefined>): string {
   return classNames.filter((c): c is string => hasNonEmptyString(c)).join(" ");
 }
 
@@ -298,7 +300,7 @@ export function normalizeToastOptions(params: {
     position,
     role,
     rootClassName: joinClassNames(preset?.rootClassName ?? DEFAULT_TOAST_CLASS, `toast-appearance-${appearance}`),
-    className: options.className,
+    className: joinClassNames(config.className, options.className),
     tokens: options.tokens ?? null,
     margin: options.margin ?? config.margin,
     appearance,

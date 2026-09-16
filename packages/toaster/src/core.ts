@@ -241,7 +241,7 @@ class ToastManager implements Toaster {
 
   private getModalController(): ModalController {
     if (!this.modalController) {
-      this.modalController = new ModalController(this.getParent(), this.instanceId);
+      this.modalController = new ModalController(this.getParent(), this.instanceId, () => this.resolved.className);
     }
     return this.modalController;
   }
@@ -273,6 +273,7 @@ class ToastManager implements Toaster {
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
       appearance: config.appearance ?? DEFAULT_CONFIG.appearance,
+      className: config.className,
     };
   }
 

@@ -44,7 +44,8 @@ Pass `ToasterConfig` to `createToaster()` to set position, visible capacity, dur
 - Rendering requires a browser DOM and `@codenhub/toaster/styles`.
 - Construction is SSR-safe unless initial tokens need the DOM. Rendering and DOM-dependent configuration throw without a document.
 - Interactive APIs require native `<dialog>` support. No polyfill or non-modal fallback is included.
-- `@codenhub/styles >=0.0.4` is an optional peer. Standalone fallback colors are included, and consumers do not need Tailwind configuration.
+- `@codenhub/styles >=0.0.4` is an optional peer. Standalone fallback colors are included, and consumers do not need Tailwind configuration. When present, an active aesthetic (e.g. `.glass`, `.neobrutalism`) also cascades its material tokens (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`) into toast and dialog radius, border width, and shadow.
+- Dark-mode styling activates under a `.dark` class or `data-theme="dark"` attribute on an ancestor (usually `<html>`) — the same DOM contract `@codenhub/theme` produces. Toaster has no dependency on `@codenhub/theme`; any mechanism that sets those attributes works.
 
 ## Next steps
 
