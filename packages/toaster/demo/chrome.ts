@@ -33,8 +33,15 @@ function iconLink(href: string, label: string, svg: string): string {
   return `<a class="shell-action" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${label}">${svg.replace("<svg ", '<svg class="shell-action-brand" ')}</a>`;
 }
 
-/** Restyle the playground's plain toggle button into the shell's sliding pill. */
+/**
+ * Restyle the playground's plain toggle button into the shell's sliding
+ * pill. The floating button carries its own inline `style` (size, circular
+ * background, border) from `playground/index.html`; an inline style beats
+ * any class-based rule regardless of specificity, so it has to be cleared
+ * for `.shell-theme-switch`'s own look to actually apply.
+ */
 function toPill(button: HTMLElement): void {
+  button.removeAttribute("style");
   button.className = "shell-theme-switch";
   button.setAttribute("role", "switch");
   button.innerHTML =
