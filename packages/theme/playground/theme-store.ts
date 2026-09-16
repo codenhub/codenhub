@@ -96,24 +96,55 @@ export interface ThemeStore {
   themes: StoredTheme[];
 }
 
-function readJson<T>(key: string): T | undefined {
+function readJson(key: string): unknown {
   try {
     const raw = localStorage.getItem(key);
-    return raw === null ? undefined : (JSON.parse(raw) as T);
+    return raw === null ? undefined : JSON.parse(raw);
   } catch (err) {
     console.error(`Failed to read "${key}" from storage`, err);
     return undefined;
   }
 }
 
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => typeof entry === "string")
+  );
+}
+
+function isStoredTheme(value: unknown): value is StoredTheme {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<StoredTheme>;
+  return (
+    typeof candidate.name === "string" &&
+    (candidate.colorScheme === "light" || candidate.colorScheme === "dark") &&
+    isStringRecord(candidate.tokens)
+  );
+}
+
 function writeJson(key: string, value: unknown): void {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.error(`Failed to write "${key}" to storage`, err);
+  }
 }
 
 /** Loads the persisted schema/themes, seeding defaults and backfilling any schema keys older data is missing. */
 export function loadThemeStore(): ThemeStore {
-  const schema = readJson<Record<string, string>>(SCHEMA_STORAGE_KEY) ?? { ...DEFAULT_SCHEMA };
-  let themes = readJson<StoredTheme[]>(THEMES_STORAGE_KEY) ?? DEFAULT_THEMES.map((theme) => ({ ...theme }));
+  const rawSchema = readJson(SCHEMA_STORAGE_KEY);
+  const schema = isStringRecord(rawSchema) ? rawSchema : { ...DEFAULT_SCHEMA };
+
+  const rawThemes = readJson(THEMES_STORAGE_KEY);
+  let themes =
+    Array.isArray(rawThemes) && rawThemes.every(isStoredTheme)
+      ? rawThemes
+      : DEFAULT_THEMES.map((theme) => ({ ...theme }));
 
   const missingKeys = Object.keys(DEFAULT_SCHEMA).filter((key) => !(key in schema));
   if (missingKeys.length > 0) {
