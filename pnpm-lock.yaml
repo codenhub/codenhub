@@ -110,6 +110,9 @@ importers:
       '@codenhub/styles-demo':
         specifier: workspace:*
         version: link:../../packages/styles/demo
+      '@codenhub/theme-demo':
+        specifier: workspace:*
+        version: link:../../packages/theme/demo
       '@codenhub/tools':
         specifier: workspace:*
         version: link:../../packages/tools

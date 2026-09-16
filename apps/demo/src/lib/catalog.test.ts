@@ -21,6 +21,15 @@ describe("demoPackages", () => {
     });
   });
 
+  it("discovers @codenhub/theme-demo from the real workspace, enriched from @codenhub/theme's own manifest", () => {
+    expect(demoPackages).toContainEqual({
+      description: "Zero-dependency browser theme preference helper for TypeScript apps.",
+      label: "ThemeSystem",
+      slug: "theme",
+      status: "active",
+    });
+  });
+
   it("is sorted by label", () => {
     const labels = demoPackages.map((demoPackage) => demoPackage.label);
     expect(labels).toEqual([...labels].sort((left, right) => left.localeCompare(right)));
