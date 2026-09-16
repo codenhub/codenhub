@@ -19,6 +19,7 @@ export function createSchemaDialog(handlers: SchemaDialogHandlers): SchemaDialog
   const variableInput = document.getElementById("new-token-var") as HTMLInputElement | null;
 
   document.getElementById("btn-close-schema")?.addEventListener("click", () => dialog?.close());
+  dialog?.addEventListener("close", () => form?.reset());
 
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -40,18 +41,28 @@ export function createSchemaDialog(handlers: SchemaDialogHandlers): SchemaDialog
       ...Object.entries(schema).map(([key, cssVariable]) => {
         const row = document.createElement("div");
         row.className = "flex items-center justify-between rounded-md bg-background p-2 text-xs";
-        row.innerHTML = `
-          <div class="flex flex-col">
-            <span class="font-semibold text-text-strong">${key}</span>
-            <code class="text-[10px] text-text-secondary">${cssVariable}</code>
-          </div>
-          <button type="button" class="btn destructive sm icon" data-delete-schema="${key}" aria-label="Delete ${key}">
-            <i class="ic-trash-2 size-3.5"></i>
-          </button>
-        `;
-        row.querySelector<HTMLButtonElement>("[data-delete-schema]")?.addEventListener("click", () => {
+
+        const info = document.createElement("div");
+        info.className = "flex flex-col";
+        const name = document.createElement("span");
+        name.className = "font-semibold text-text-strong";
+        name.textContent = key;
+        const variable = document.createElement("code");
+        variable.className = "text-[10px] text-text-secondary";
+        variable.textContent = cssVariable;
+        info.append(name, variable);
+
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className = "btn destructive sm icon";
+        deleteButton.dataset.deleteSchema = key;
+        deleteButton.ariaLabel = `Delete ${key}`;
+        deleteButton.innerHTML = '<i class="ic-trash-2 size-3.5"></i>';
+        deleteButton.addEventListener("click", () => {
           handlers.onDelete(key);
         });
+
+        row.append(info, deleteButton);
         return row;
       }),
     );

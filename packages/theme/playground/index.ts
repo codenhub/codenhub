@@ -47,6 +47,10 @@ function updateStateDisplay(): void {
       }
     },
     onDelete: (index) => {
+      const theme = store.themes[index];
+      if (!theme || theme.name === "light" || theme.name === "dark") {
+        return;
+      }
       store.themes.splice(index, 1);
       saveThemeStore(store);
       initThemeManager();
@@ -90,6 +94,11 @@ const schemaDialog = createSchemaDialog({
 
 const themeDialog = createThemeDialog({
   onSave: (theme: StoredTheme, editIndex: number) => {
+    const isDuplicate = store.themes.some((existing, index) => index !== editIndex && existing.name === theme.name);
+    if (isDuplicate) {
+      window.alert(`A theme named "${theme.name}" already exists.`);
+      return false;
+    }
     if (editIndex >= 0) {
       store.themes[editIndex] = theme;
     } else {
@@ -97,6 +106,7 @@ const themeDialog = createThemeDialog({
     }
     saveThemeStore(store);
     initThemeManager();
+    return true;
   },
 });
 

@@ -1,8 +1,8 @@
 import type { StoredTheme } from "./theme-store";
 
-/** Action the theme editor dialog hands back to the caller on save. */
+/** Action the theme editor dialog hands back to the caller on save. Returns `false` to keep the dialog open, e.g. on a rejected duplicate name. */
 export interface ThemeDialogHandlers {
-  onSave: (theme: StoredTheme, editIndex: number) => void;
+  onSave: (theme: StoredTheme, editIndex: number) => boolean;
 }
 
 /** Controls the shared "Create/Edit Theme" dialog. */
@@ -37,10 +37,19 @@ export function createThemeDialog(handlers: ThemeDialogHandlers): ThemeDialog {
       ...Object.keys(schema).map((key) => {
         const row = document.createElement("div");
         row.className = "grid grid-cols-3 items-center gap-2 text-xs";
-        row.innerHTML = `
-          <label class="truncate text-text-secondary">${key}</label>
-          <input type="text" data-token-key="${key}" class="col-span-2 w-full" placeholder="#ffffff or rgb(...)" value="${tokens[key] ?? ""}" />
-        `;
+
+        const label = document.createElement("label");
+        label.className = "truncate text-text-secondary";
+        label.textContent = key;
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.dataset.tokenKey = key;
+        input.className = "col-span-2 w-full";
+        input.placeholder = "#ffffff or rgb(...)";
+        input.value = tokens[key] ?? "";
+
+        row.append(label, input);
         return row;
       }),
     );
@@ -63,8 +72,9 @@ export function createThemeDialog(handlers: ThemeDialogHandlers): ThemeDialog {
     });
 
     const editIndex = Number(editIndexInput?.value ?? "-1");
-    handlers.onSave({ name, colorScheme, tokens }, editIndex);
-    close();
+    if (handlers.onSave({ name, colorScheme, tokens }, editIndex)) {
+      close();
+    }
   });
 
   return {

@@ -20,20 +20,37 @@ function buildCard(theme: StoredTheme, index: number, isActive: boolean, handler
 
   const header = document.createElement("div");
   header.className = "flex items-center justify-between";
-  header.innerHTML = `
-    <div class="flex items-center gap-2">
-      <span class="text-sm font-semibold text-text-strong">${theme.name}</span>
-      <span class="badge soft">${theme.colorScheme}</span>
-    </div>
-    <div class="flex gap-1" data-actions>
-      <button type="button" class="btn secondary sm icon" data-edit-theme="${index}" aria-label="Edit ${theme.name}">
-        <i class="ic-pencil size-3.5"></i>
-      </button>
-      <button type="button" class="btn destructive sm icon" data-delete-theme="${index}" aria-label="Delete ${theme.name}">
-        <i class="ic-trash-2 size-3.5"></i>
-      </button>
-    </div>
-  `;
+
+  const info = document.createElement("div");
+  info.className = "flex items-center gap-2";
+  const name = document.createElement("span");
+  name.className = "text-sm font-semibold text-text-strong";
+  name.textContent = theme.name;
+  const badge = document.createElement("span");
+  badge.className = "badge soft";
+  badge.textContent = theme.colorScheme;
+  info.append(name, badge);
+
+  const actions = document.createElement("div");
+  actions.className = "flex gap-1";
+  actions.dataset.actions = "";
+
+  const editButton = document.createElement("button");
+  editButton.type = "button";
+  editButton.className = "btn secondary sm icon";
+  editButton.dataset.editTheme = String(index);
+  editButton.ariaLabel = `Edit ${theme.name}`;
+  editButton.innerHTML = '<i class="ic-pencil size-3.5"></i>';
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "btn destructive sm icon";
+  deleteButton.dataset.deleteTheme = String(index);
+  deleteButton.ariaLabel = `Delete ${theme.name}`;
+  deleteButton.innerHTML = '<i class="ic-trash-2 size-3.5"></i>';
+
+  actions.append(editButton, deleteButton);
+  header.append(info, actions);
   card.appendChild(header);
 
   const swatches = document.createElement("div");
