@@ -31,171 +31,121 @@
     <script type="module" src="./index.ts"></script>
   </head>
   <body class="bg-background text-text font-default min-h-screen transition-colors duration-200">
-    <div class="mx-auto max-w-6xl px-4 py-8">
-      <h1 class="text-title text-text-strong mb-8">Theme Playground</h1>
-
-      <main class="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <!-- Sidebar / Configurator -->
-        <section class="flex flex-col gap-8 lg:col-span-4">
-          <!-- Theme State Info -->
-          <div class="flex flex-col gap-4">
-            <h2 class="text-title-sm text-text-strong font-semibold">Theme State</h2>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <span class="text-text-secondary">Active Theme:</span>
-              <span id="state-active" class="text-text-strong font-semibold" data-testid="state-active">-</span>
-
-              <span class="text-text-secondary">Color Scheme:</span>
-              <span id="state-scheme" class="text-text-strong font-semibold">-</span>
-
-              <span class="text-text-secondary">System Preference:</span>
-              <span id="state-system" class="text-text-strong font-semibold">-</span>
-
-              <span class="text-text-secondary">Stored Preference:</span>
-              <span id="state-stored" class="text-text-strong font-semibold" data-testid="state-stored">-</span>
+    <div class="playground-content mx-auto max-w-[80rem] px-6 py-8">
+      <!-- Header: title, live state summary, configuration entry point -->
+      <header class="playground-header mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 class="text-title text-text-strong">Theme Playground</h1>
+          <dl class="text-text-secondary mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <div class="flex gap-1">
+              <dt>Active:</dt>
+              <dd id="state-active" class="text-text-strong font-semibold" data-testid="state-active">-</dd>
             </div>
-          </div>
+            <div class="flex gap-1">
+              <dt>Scheme:</dt>
+              <dd id="state-scheme" class="text-text-strong font-semibold">-</dd>
+            </div>
+            <div class="flex gap-1">
+              <dt>System:</dt>
+              <dd id="state-system" class="text-text-strong font-semibold">-</dd>
+            </div>
+            <div class="flex gap-1">
+              <dt>Stored:</dt>
+              <dd id="state-stored" class="text-text-strong font-semibold" data-testid="state-stored">-</dd>
+            </div>
+          </dl>
+        </div>
 
-          <!-- Token Schema -->
-          <div class="flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-              <h2 class="text-title-sm text-text-strong font-semibold">Token Schema</h2>
-              <button id="btn-add-token" class="btn primary sm flex items-center gap-1.5" data-testid="btn-add-token">
-                <i class="ic-plus size-3.5"></i>
-                Add Token
+        <button id="btn-toggle" class="btn ghost sm icon" data-testid="btn-toggle" aria-label="Toggle theme">
+          <i class="ic-contrast size-3.5"></i>
+        </button>
+      </header>
+
+      <main class="flex flex-col gap-8">
+        <!-- Themes -->
+        <section class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-title-sm text-text-strong font-semibold">Themes</h2>
+            <div class="flex items-center gap-2">
+              <button id="btn-add-token" class="btn secondary sm flex items-center gap-1.5" data-testid="btn-add-token">
+                <i class="ic-settings size-3.5"></i>
+                Configure Tokens
               </button>
-            </div>
-            <div id="token-schema-list" class="flex flex-col gap-2" data-testid="token-schema-list">
-              <!-- Schema items injected here -->
-            </div>
-
-            <!-- Add Token Form (Hidden initially) -->
-            <form id="form-add-token" class="bg-surface flex hidden flex-col gap-3 rounded-lg p-4">
-              <h3 class="text-text-strong text-sm font-semibold">Add Schema Token</h3>
-              <div class="flex flex-col gap-1">
-                <label class="text-text-secondary text-xs" for="new-token-key">Token Key</label>
-                <input type="text" id="new-token-key" placeholder="e.g. primary" required />
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-text-secondary text-xs" for="new-token-var">CSS Custom Property</label>
-                <input type="text" id="new-token-var" placeholder="e.g. --color-primary" required />
-              </div>
-              <div class="mt-2 flex justify-end gap-2">
-                <button type="button" id="btn-cancel-token" class="btn secondary sm">Cancel</button>
-                <button type="submit" class="btn primary sm">Save</button>
-              </div>
-            </form>
-          </div>
-
-          <!-- Themes CRUD -->
-          <div class="flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-              <h2 class="text-title-sm text-text-strong font-semibold">Themes List</h2>
+              <button
+                id="btn-clear"
+                class="btn secondary sm flex items-center gap-1.5"
+                data-testid="btn-clear"
+                aria-label="Clear preference"
+              >
+                <i class="ic-trash-2 size-3.5"></i>
+                Clear Preference
+              </button>
               <button id="btn-new-theme" class="btn primary sm flex items-center gap-1.5" data-testid="btn-new-theme">
                 <i class="ic-plus size-3.5"></i>
                 New Theme
               </button>
             </div>
+          </div>
 
-            <div id="themes-list" class="flex flex-col gap-2" data-testid="themes-list">
-              <!-- Themes items injected here -->
-            </div>
-
-            <!-- Theme Editor Form -->
-            <form id="form-theme" class="bg-surface flex hidden flex-col gap-4 rounded-lg p-4">
-              <h3 id="form-theme-title" class="text-text-strong text-sm font-semibold">Create / Edit Theme</h3>
-              <input type="hidden" id="theme-edit-index" value="-1" />
-
-              <div class="flex flex-col gap-1">
-                <label class="text-text-secondary text-xs" for="theme-name">Theme Name</label>
-                <input type="text" id="theme-name" placeholder="e.g. emerald-dream" required />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <label class="text-text-secondary text-xs" for="theme-scheme">Color Scheme</label>
-                <select id="theme-scheme" required>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-
-              <div class="flex flex-col gap-2">
-                <span class="text-text-strong text-xs font-semibold">Token Values</span>
-                <div id="theme-token-values" class="flex max-h-48 flex-col gap-2 overflow-y-auto pr-1">
-                  <!-- Inputs for token values injected here -->
-                </div>
-              </div>
-
-              <div class="mt-2 flex justify-end gap-2">
-                <button type="button" id="btn-cancel-theme" class="btn secondary sm">Cancel</button>
-                <button type="submit" class="btn primary sm" data-testid="btn-save-theme">Save Theme</button>
-              </div>
-            </form>
+          <div id="themes-list" class="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="themes-list">
+            <!-- Theme cards injected here -->
           </div>
         </section>
 
-        <!-- Main Preview Area -->
-        <section class="flex flex-col gap-6 lg:col-span-8">
-          <div class="flex flex-col gap-4">
-            <div>
-              <h2 class="text-title-lg text-text-strong font-semibold">Dynamic Preview</h2>
-              <p class="text-text-secondary text-sm">
-                Changes to theme custom properties instantly style these components.
+        <!-- Live preview -->
+        <section class="flex flex-col gap-4">
+          <div>
+            <h2 class="text-title-sm text-text-strong font-semibold">Live Preview</h2>
+            <p class="text-text-secondary text-sm">The active theme's tokens style these components instantly.</p>
+          </div>
+
+          <div id="preview-pane" class="bg-surface flex flex-col gap-8 rounded-lg p-6" data-testid="preview-pane">
+            <div class="flex flex-col gap-2">
+              <h3 class="text-text-secondary text-xs font-semibold">Typography</h3>
+              <h1 class="text-display">Display Heading</h1>
+              <h2 class="text-title-lg">Title Large Heading</h2>
+              <p class="text-text">
+                Body text showing general copy. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                <span class="text-primary font-semibold">Primary highlighted text</span>
+                is colored via theme tokens.
               </p>
             </div>
 
-            <div id="preview-pane" class="bg-surface flex flex-col gap-8 rounded-lg p-6" data-testid="preview-pane">
-              <!-- Typography Section -->
-              <div class="flex flex-col gap-2">
-                <h3 class="text-text-secondary text-xs font-semibold">Typography</h3>
-                <h1 class="text-display">Display Heading</h1>
-                <h2 class="text-title-lg">Title Large Heading</h2>
-                <p class="text-text">
-                  Body text showing general copy. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                  <span class="text-primary font-semibold">Primary highlighted text</span>
-                  is colored via theme tokens.
-                </p>
+            <div class="flex flex-col gap-2">
+              <h3 class="text-text-secondary text-xs font-semibold">Buttons</h3>
+              <div class="flex flex-wrap gap-3">
+                <button class="btn primary" data-testid="preview-btn-primary">Primary Button</button>
+                <button class="btn secondary">Secondary Button</button>
+                <button class="btn success">Success</button>
+                <button class="btn warning">Warning</button>
+                <button class="btn destructive">Destructive</button>
+                <button class="btn out">Outline</button>
               </div>
+            </div>
 
-              <!-- Buttons Section -->
-              <div class="flex flex-col gap-2">
-                <h3 class="text-text-secondary text-xs font-semibold">Buttons</h3>
-                <div class="flex flex-wrap gap-3">
-                  <button class="btn primary" data-testid="preview-btn-primary">Primary Button</button>
-                  <button class="btn secondary">Secondary Button</button>
-                  <button class="btn success">Success</button>
-                  <button class="btn warning">Warning</button>
-                  <button class="btn destructive">Destructive</button>
-                  <button class="btn out">Outline</button>
-                </div>
-              </div>
-
-              <!-- Form Controls Section -->
-              <div class="flex flex-col gap-2">
-                <h3 class="text-text-secondary text-xs font-semibold">Forms & Cards</h3>
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div class="bg-background flex flex-col gap-3 rounded-lg p-4">
-                    <h4 class="text-title-sm font-semibold">User Settings</h4>
-                    <div class="flex flex-col gap-1">
-                      <label class="text-text-secondary text-xs" for="preview-username">Username</label>
-                      <input type="text" id="preview-username" value="gustavo" readonly />
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <input type="checkbox" id="preview-check" checked disabled />
-                      <label class="text-text-secondary text-xs" for="preview-check">Receive notifications</label>
-                    </div>
+            <div class="flex flex-col gap-2">
+              <h3 class="text-text-secondary text-xs font-semibold">Forms &amp; Cards</h3>
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="bg-background flex flex-col gap-3 rounded-lg p-4">
+                  <h4 class="text-title-sm font-semibold">User Settings</h4>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-text-secondary text-xs" for="preview-username">Username</label>
+                    <input type="text" id="preview-username" value="gustavo" readonly />
                   </div>
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" id="preview-check" checked disabled />
+                    <label class="text-text-secondary text-xs" for="preview-check">Receive notifications</label>
+                  </div>
+                </div>
 
-                  <div class="bg-background flex flex-col justify-between gap-3 rounded-lg p-4">
-                    <div>
-                      <h4 class="text-title-sm font-semibold">Status Feed</h4>
-                      <p class="text-text-secondary text-xs">
-                        Current connection is secure and theme updates are live.
-                      </p>
-                    </div>
-                    <div class="text-success flex items-center gap-2 text-xs font-medium">
-                      <span class="bg-success inline-block h-2 w-2 rounded-full"></span>
-                      Theme Engine: Active
-                    </div>
+                <div class="bg-background flex flex-col justify-between gap-3 rounded-lg p-4">
+                  <div>
+                    <h4 class="text-title-sm font-semibold">Status Feed</h4>
+                    <p class="text-text-secondary text-xs">Current connection is secure and theme updates are live.</p>
+                  </div>
+                  <div class="text-success flex items-center gap-2 text-xs font-medium">
+                    <span class="bg-success inline-block h-2 w-2 rounded-full"></span>
+                    Theme Engine: Active
                   </div>
                 </div>
               </div>
@@ -205,68 +155,77 @@
       </main>
     </div>
 
-    <!-- Theme Toggle Floating Action Buttons -->
-    <div
-      style="
-        position: fixed;
-        bottom: 1rem;
-        right: 1rem;
-        z-index: 9999;
-        display: inline-flex;
-        gap: 0.5rem;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      "
-    >
-      <span class="tooltip" data-tooltip-position="left">
-        <button
-          id="btn-toggle"
-          style="
-            height: 2.5rem;
-            width: 2.5rem;
-            padding: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-surface);
-            border-radius: 50%;
-            cursor: pointer;
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-          "
-          data-testid="btn-toggle"
-          aria-label="Toggle theme"
-          aria-describedby="btn-toggle-tooltip"
+    <!-- Configuration dialog: token schema CRUD -->
+    <dialog id="schema-dialog" class="card">
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-text-strong text-sm font-semibold">Configure Token Schema</h3>
+          <button type="button" id="btn-close-schema" class="btn ghost sm icon" aria-label="Close">
+            <i class="ic-x size-3.5"></i>
+          </button>
+        </div>
+
+        <div
+          id="token-schema-list"
+          class="flex max-h-64 flex-col gap-2 overflow-y-auto"
+          data-testid="token-schema-list"
         >
-          <i class="ic-contrast h-full w-full"></i>
-        </button>
-        <span class="tooltip-bubble" role="tooltip" id="btn-toggle-tooltip">Toggle theme</span>
-      </span>
-      <span class="tooltip" data-tooltip-position="left">
-        <button
-          id="btn-clear"
-          style="
-            height: 2.5rem;
-            width: 2.5rem;
-            padding: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-surface);
-            border-radius: 50%;
-            cursor: pointer;
-            color: var(--color-text);
-            border: 1px solid var(--color-border);
-          "
-          data-testid="btn-clear"
-          aria-label="Clear preference"
-          aria-describedby="btn-clear-tooltip"
-        >
-          <i class="ic-trash-2 h-full w-full"></i>
-        </button>
-        <span class="tooltip-bubble" role="tooltip" id="btn-clear-tooltip">Clear preference</span>
-      </span>
-    </div>
+          <!-- Schema items injected here -->
+        </div>
+      </div>
+
+      <form id="form-add-token" class="mt-4 flex flex-col gap-3 border-t pt-4">
+        <h4 class="text-text-strong text-sm font-semibold">Add Schema Token</h4>
+        <div class="flex flex-col gap-1">
+          <label class="text-text-secondary text-xs" for="new-token-key">Token Key</label>
+          <input type="text" id="new-token-key" placeholder="e.g. primary" required />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-text-secondary text-xs" for="new-token-var">CSS Custom Property</label>
+          <input type="text" id="new-token-var" placeholder="e.g. --color-primary" required />
+        </div>
+        <div class="mt-1 flex justify-end">
+          <button type="submit" class="btn primary sm">Add Token</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Theme editor dialog: shared between "New Theme" and per-card "Edit" -->
+    <dialog id="theme-dialog" class="card">
+      <form id="form-theme" class="flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <h3 id="form-theme-title" class="text-text-strong text-sm font-semibold">Create Theme</h3>
+          <button type="button" id="btn-cancel-theme" class="btn ghost sm icon" aria-label="Close">
+            <i class="ic-x size-3.5"></i>
+          </button>
+        </div>
+        <input type="hidden" id="theme-edit-index" value="-1" />
+
+        <div class="flex flex-col gap-1">
+          <label class="text-text-secondary text-xs" for="theme-name">Theme Name</label>
+          <input type="text" id="theme-name" placeholder="e.g. emerald-dream" required />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-text-secondary text-xs" for="theme-scheme">Color Scheme</label>
+          <select id="theme-scheme" required>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <span class="text-text-strong text-xs font-semibold">Token Values</span>
+          <div id="theme-token-values" class="flex max-h-48 flex-col gap-2 overflow-y-auto pr-1">
+            <!-- Inputs for token values injected here -->
+          </div>
+        </div>
+
+        <div class="mt-2 flex justify-end gap-2">
+          <button type="button" id="btn-cancel-theme-secondary" class="btn secondary sm">Cancel</button>
+          <button type="submit" class="btn primary sm" data-testid="btn-save-theme">Save Theme</button>
+        </div>
+      </form>
+    </dialog>
   </body>
 </html>

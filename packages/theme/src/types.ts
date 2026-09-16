@@ -130,11 +130,10 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
   set(name: string, tokens?: Partial<Record<keyof TSchema, string>>): ThemeDefinition<TSchema>;
 
   /**
-   * Switches the theme between the configured system light and dark themes and persists the change.
-   * The next theme is always selected from `systemTheme.light` or `systemTheme.dark` based on the
-   * active theme's `colorScheme`, not by cycling the active theme name. In multi-theme setups where
-   * the active theme is not one of the system themes, `toggle()` still targets `systemTheme.light`
-   * or `systemTheme.dark`.
+   * Switches away from the active theme and persists the change. If the active theme configures a
+   * `pairedTheme`, that theme is activated. Otherwise the next theme is selected from
+   * `systemTheme.light` or `systemTheme.dark` based on the active theme's `colorScheme`, not by
+   * cycling the active theme name.
    *
    * @param tokens - Optional runtime override token values to apply. Active overrides persist across subsequent theme changes unless cleared (by passing new overrides or an empty object).
    * @returns The activated `ThemeDefinition` with merged and resolved tokens.
@@ -182,9 +181,10 @@ export interface Theme<TSchema extends Record<string, string> = Record<string, s
   getPrePaintScript(): string;
 
   /**
-   * Cleans up the theme instance by removing all in-process change listeners and the system
-   * preference media query listener. Resets active tokens and the active theme name to the
-   * configured `defaultTheme` so the instance can be safely re-initialized with `init()`.
+   * Cleans up the theme instance by removing all in-process change listeners, the system
+   * preference media query listener, and the cross-tab storage listener. Resets active tokens
+   * and the active theme name to the configured `defaultTheme` so the instance can be safely
+   * re-initialized with `init()`.
    *
    * @param options - Optional cleanup options. Set `revertDom: true` to remove configured DOM attributes, classes, and CSS custom properties applied to `document.documentElement`.
    * @sideEffect Removes event listeners from `window` and clears internal subscriber sets. If `revertDom: true`, removes theme attributes, classes, and custom properties from the DOM root.

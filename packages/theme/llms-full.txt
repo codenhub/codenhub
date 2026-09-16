@@ -28,7 +28,9 @@ theme.destroy({ revertDom: true });
 ## Documentation
 
 - [Documentation overview](docs/index.md)
-- [API, persistence, DOM, and SSR behavior](docs/reference.md)
+- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md)
+- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md)
+- [API reference](docs/reference/index.md)
 
 ## Requirements
 
@@ -48,9 +50,7 @@ Licensed under Apache-2.0.
 
 # Manage Browser Themes
 
-`@codenhub/theme` resolves stored and system theme preferences, applies theme state to the document root, synchronizes browser tabs, exposes change events, and maps typed tokens to CSS custom properties.
-
-It fits browser applications that need one owner for theme preference and DOM synchronization while keeping selectors, visual design, and CSS in application code.
+`@codenhub/theme` owns one thing for a browser application: deciding which theme is active, keeping it in sync with `localStorage` and the OS `prefers-color-scheme` setting, and reflecting it onto the DOM as an attribute, a class, and CSS custom properties. It fits applications that want one place to own that decision instead of scattering `matchMedia` listeners and `localStorage` reads across the codebase, while keeping selectors, visual design, and CSS entirely in application code.
 
 ## Setup
 
@@ -69,71 +69,145 @@ const theme = createTheme().init();
 theme.set("dark");
 ```
 
-Call `destroy()` when the manager's owner is removed. The package persists an explicit preference and follows system preference when appropriate.
+`createTheme()` with no arguments configures the built-in `light` and `dark` themes. `init()` resolves the theme to apply — a stored preference if one is valid, otherwise the OS preference — and applies it to `document.documentElement`. Call `destroy()` when the manager's owner is torn down, such as in a framework component's cleanup hook; it stops listening but leaves the DOM and stored preference as they were unless told otherwise (see [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md)).
+
+### Configuration
+
+Most applications configure at least `themes` and `tokenSchema` up front:
+
+```ts
+import { createTheme } from "@codenhub/theme";
+
+const theme = createTheme({
+  themes: [
+    { name: "light", colorScheme: "light", tokens: { primary: "#171717" } },
+    { name: "dark", colorScheme: "dark", tokens: { primary: "#f9fafb" } },
+  ],
+  tokenSchema: { primary: "--color-primary" },
+  storageKey: "app-theme-preference",
+  isTailwindCss: true,
+}).init();
+```
+
+`themes` replaces the built-in list entirely — include `light` and `dark` (or whatever names `defaultTheme` and `systemTheme` point at) when defining custom themes. `tokenSchema` maps the typed token names used in `ThemeDefinition.tokens` and `get()` to the CSS custom property each one writes to `document.documentElement`. See [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md) for how token values are resolved and stored, and [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md) for flash-of-unstyled-content prevention and OS-preference-only applications like `isTailwindCss`.
+
+Construction validates every option and throws on invalid configuration: empty or duplicate theme names, a `defaultTheme` or `systemTheme` name that is not in `themes`, an invalid `colorScheme`, or a `shouldApplyClass` resolver that would produce an empty or whitespace-containing class.
 
 ## Requirements
 
-- Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`.
-- SSR is supported by skipping unavailable browser work and using the configured default theme.
-- Consumers provide CSS selectors, variables, visual tokens, and any pre-paint script needed to prevent a theme flash.
-
-The package cannot produce server HTML attributes or prevent a flash before initialization. Applications that need pre-paint consistency must apply matching theme logic before rendering.
+- Browser integration uses `document.documentElement`, `localStorage`, `matchMedia`, `storage` events, and `CustomEvent`. Every one of these is read defensively: an unavailable or throwing API is treated as absent rather than crashing the caller.
+- SSR is supported by skipping unavailable browser work and using the configured `defaultTheme`. The package cannot produce server HTML attributes or prevent a flash on its own — see [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md).
+- Consumers provide CSS selectors, variables, and visual tokens. The package only ever writes an attribute, optional classes, and CSS custom properties — it ships no CSS or token values beyond the built-in `light`/`dark` definitions' names.
 
 ## Next steps
 
-- [API, persistence, DOM, and SSR behavior](docs/reference.md): Complete exports, configuration, tokens, browser synchronization, validation, pre-paint concerns, and cleanup.
+- [Tokens, persistence, and cross-tab sync](docs/tokens-and-persistence.md): How `get()` resolves token values, how preferences persist to `localStorage` and sync across tabs, and how to read or clear the stored preference.
+- [SSR, pre-paint, and Tailwind](docs/ssr-and-pre-paint.md): Preventing a flash of unstyled content before hydration, server-rendering considerations, and toggling Tailwind's `dark` class.
+- [API reference](docs/reference/index.md): Every exported function, type, and interface member with its full signature.
 
-<!-- Source: docs/reference.md -->
+<!-- Source: docs/ssr-and-pre-paint.md -->
 
-# Theme API, Persistence, DOM, and SSR Behavior
+# SSR, Pre-Paint, and Tailwind
 
-## Create and Initialize
+## Preventing a flash of unstyled content
 
-`createTheme<TSchema>(options?): Theme<TSchema>` validates configuration and creates a manager. `ThemeOptions` contains:
+A client-side `init()` call runs after the page has already painted once, which is visible as a flash from the default theme to the resolved one. `getPrePaintScript()` — available as a method on an existing manager, or as the standalone `getPrePaintScript(options)` export when no manager exists yet — returns a synchronous, minified inline IIFE string that duplicates the same stored-preference-then-system-preference resolution, and applies the configured attribute, classes, and any static tokens before the browser paints:
 
-- `themes`: definitions, defaulting to `LIGHT_THEME` and `DARK_THEME`.
-- `defaultTheme`: pre-init and SSR fallback, default `"light"`.
-- `systemTheme`: configured names for light/dark OS preference.
-- `storageKey`: `localStorage` key, default `"app-theme-preference"`.
-- `attribute`: document-root attribute, default `"data-theme"`.
-- `isTailwindCss`: toggle the root `dark` class, default `false`.
-- `shouldApplyClass`: add `theme-${name}` by default, disable classes, or return one custom class token with a `ThemeClassResolver`.
-- `tokenSchema`: maps typed token names to CSS custom-property names.
+```ts
+import { getPrePaintScript } from "@codenhub/theme";
 
-`ThemeDefinition` has a unique `name`, `colorScheme` (`light` or `dark`), optional static tokens, and optional `pairedTheme` target for `toggle()`. `SystemThemeMap` maps OS light and dark preferences.
+const script = getPrePaintScript({ storageKey: "app-theme-preference" });
+```
 
-`init(tokens?)` is idempotent until `destroy()`. It registers media-query and cross-tab storage listeners, selects valid stored preference before system preference, applies the theme, and emits an `"init"` change.
+Inject the returned string into a blocking `<script>` in the document `<head>`, before any stylesheet or content that depends on the theme:
 
-## Theme Operations
+```html
+<head>
+  <script>
+    /* inline the string returned by getPrePaintScript() here */
+  </script>
+</head>
+```
 
-- `get(options?)` returns the active definition. Tokens merge computed CSS values, static theme values, then runtime overrides. Reading computed values can force style calculation; pass `{ skipComputed: true }` to bypass reading computed DOM styles.
-- `set(name, tokens?)` applies and persists a configured theme; unknown names throw.
-- `toggle(tokens?)` switches to `pairedTheme` if defined on the active theme, or otherwise by active `colorScheme` between the names in `systemTheme`, then persists the choice.
-- `clearPreference()` removes storage and applies the current system theme.
-- `getStored()` returns a valid configured stored name or `null`.
-- `getSystem()` returns the mapped system theme, or `defaultTheme` when media queries are unavailable.
-- `getPrePaintScript()` returns a synchronous inline IIFE script string to inject into document `<head>` to prevent flash of unstyled content (FOUC). Supports custom class resolvers and static token custom properties. Also available as standalone export `getPrePaintScript(options?)`.
+Pass the same `themes`, `tokenSchema`, `defaultTheme`, `systemTheme`, `storageKey`, `attribute`, `shouldApplyClass`, and `isTailwindCss` options used to construct the manager, so the pre-paint script and the later `init()` call resolve to the same theme. `getPrePaintScript()` only serializes **static** tokens from each theme's `ThemeDefinition.tokens` — and only when `tokenSchema` is passed to it — runtime overrides passed to `init(tokens)` are applied after hydration, during client-side execution, and cannot be part of a script that runs before any application code.
 
-Runtime token overrides persist across theme changes. Passing a new object, including `{}`, replaces them. Tokens require a schema and unknown token keys throw.
+## Server-side rendering
 
-## DOM, Persistence, and Events
+Without browser APIs, `Theme` methods skip storage reads/writes, DOM updates, and listener registration; `getSystem()` falls back to `defaultTheme`. Every method call remains safe to make during SSR — nothing throws for a missing `window`, `document`, or `localStorage` — but the package cannot produce server-rendered HTML attributes on its own. To avoid a flash on a server-rendered page, either:
 
-Applying a theme sets the configured root attribute and `document.documentElement.style.colorScheme`, updates configured theme classes, toggles Tailwind's `dark` class when enabled, and writes mapped token values as CSS custom properties. The package supplies no CSS or token values beyond the built-in light/dark definitions.
+- Render the server markup with the same attribute/class the pre-paint script would apply (requiring the server to read the same cookie or header a real theme service would use), or
+- Rely on the pre-paint script above to correct the DOM before first paint, accepting that server-rendered markup itself does not carry theme state.
 
-Explicit preferences use `localStorage`. `storage` events synchronize valid changes from other tabs. OS preference changes apply only while no valid stored preference exists. Storage read/write/remove failures are logged with `console.error` and treated as unavailable.
+Keep any server-side resolution logic — stored names, system mapping, storage key, attribute, classes, color scheme — aligned with the options passed to `createTheme()` and `getPrePaintScript()`; a mismatch reintroduces the flash it exists to prevent.
 
-`subscribe(ThemeChangeListener)` returns an unsubscribe function. Subscribers receive `ThemeChangeDetail` with `name`, `theme`, and `ThemeChangeSource`: `"init"`, `"set"`, `"toggle"`, `"clearPreference"`, or `"system"`. Subscriber errors are logged and do not stop later listeners. Browsers also receive a window `CustomEvent` named by `THEME_CHANGE_EVENT` (`"themechange"`).
+## Tailwind's `dark` class
 
-## Validation and Cleanup
+Set `isTailwindCss: true` to toggle Tailwind CSS's `dark` class on `document.documentElement` alongside the configured attribute, for every theme whose `colorScheme` is `"dark"`. This is independent of `shouldApplyClass` (below) — a Tailwind app commonly wants both the `dark` class for Tailwind's `dark:` variant and, when `shouldApplyClass` is left at its default, a `theme-${name}` class for custom per-theme CSS.
 
-Creation throws for invalid attributes/storage keys, malformed or duplicate themes, invalid color schemes/classes/token schemas, and missing default/system theme names. Applying a custom class resolver can throw if it returns an empty or whitespace-containing class. Runtime token calls throw without a matching schema.
+## Classes and cleanup
 
-`destroy(options?)` removes media-query and storage listeners, clears in-process subscribers and runtime tokens, and resets internal active state. By default, it does not remove persisted preference or revert attributes, classes, custom properties, or `colorScheme` already applied to the document; pass `{ revertDom: true }` to remove configured DOM attributes, classes, and CSS custom properties from `document.documentElement`.
+`shouldApplyClass` controls whether and how a class is applied to `document.documentElement` alongside the attribute: `true` (the default) applies `theme-${name}`, `false` applies no class, and a `ThemeClassResolver` function receives the active `ThemeDefinition` and returns one custom class token — throwing if it returns an empty or whitespace-containing string.
 
-## SSR and Pre-Paint Behavior
+`destroy(options?)` removes the media-query and storage listeners and clears in-process subscribers and runtime tokens, leaving the instance safe to `init()` again. By default it does **not** touch the DOM or stored preference. Pass `{ revertDom: true }` to also remove the configured attribute, classes, and CSS custom properties from `document.documentElement` — useful when unmounting a scoped theme manager that should leave no trace, such as in a component test or a preview pane.
 
-Without browser APIs, storage, DOM, events, and listeners are skipped; `getSystem()` uses `defaultTheme`. Calls remain usable but cannot produce server HTML attributes. To avoid a flash, applications must apply equivalent validated storage/system logic in a blocking pre-paint script or render matching server markup. Keep that logic aligned with custom names, mappings, storage key, attribute, classes, and color scheme. Note that `getPrePaintScript()` serializes static tokens defined on configured theme definitions (`ThemeDefinition.tokens`); runtime token overrides passed to `init(tokens)` or `set(name, tokens)` are applied during client-side execution after hydration.
+<!-- Source: docs/tokens-and-persistence.md -->
 
-## Public Exports
+# Tokens, Persistence, and Cross-Tab Sync
 
-The root exports `createTheme`, `getPrePaintScript`, `THEME_CHANGE_EVENT`, `LIGHT_THEME`, and `DARK_THEME`, plus `Theme`, `ThemeDefinition`, `SystemThemeMap`, `ThemeClassResolver`, `ThemeChangeSource`, `ThemeChangeDetail`, `ThemeChangeListener`, and `ThemeOptions` types.
+## Token resolution
+
+`tokenSchema` maps typed token names to the CSS custom property each one writes, such as `{ primary: "--color-primary" }`. Once configured, `get()` returns the active `ThemeDefinition` with every schema key resolved from three sources, in this priority order (last wins):
+
+1. **Computed style** — for a token not defined in JS, the value is read from `window.getComputedStyle(document.documentElement)` in browser environments.
+2. **Theme static tokens** — values set on the active theme's own `ThemeDefinition.tokens`.
+3. **Runtime overrides** — values passed to `init()`, `set()`, or `toggle()`.
+
+```ts
+const theme = createTheme({
+  themes: [{ name: "brand", colorScheme: "light", tokens: { accent: "#ff6600" } }],
+  tokenSchema: { accent: "--color-accent" },
+}).init();
+
+theme.set("brand", { accent: "#00c853" }); // runtime override wins over the static "#ff6600"
+theme.get().tokens?.accent; // "#00c853"
+```
+
+Reading computed values can force a synchronous layout reflow. Pass `{ skipComputed: true }` to `get()` to skip that source and avoid the reflow when only the JS-known values are needed.
+
+Runtime overrides persist across subsequent theme changes until explicitly replaced — pass a new object, including `{}`, to `init()`, `set()`, or `toggle()` to clear or replace them. Passing a token key that is not in `tokenSchema` throws.
+
+## Persistence
+
+An explicit preference set through `set()` or `toggle()` is written to `localStorage` under `storageKey` (default `"app-theme-preference"`). `getStored()` returns that value when it names a currently configured theme, or `null` when it is unset, invalid, or storage is unavailable (for example during SSR). `clearPreference()` removes the stored value and re-applies whichever theme `getSystem()` currently resolves to.
+
+Storage reads, writes, and removals that throw — a full quota, a disabled storage API, a private-browsing restriction — are logged with `console.error` and treated the same as unavailable storage; they never throw out of `Theme` methods.
+
+## Cross-tab sync
+
+Every tab running `createTheme().init()` against the same `storageKey` stays in sync: a `storage` event fires in every other tab when one tab writes a new preference, and each one applies the change if it names a valid configured theme. A tab with its own runtime token overrides keeps them — only the active theme name changes from cross-tab sync, not tokens passed in-process.
+
+The OS `prefers-color-scheme` media query applies automatically only while no valid stored preference exists. Once a tab (or a previous session) has stored an explicit preference, later system-preference changes are ignored until `clearPreference()` runs.
+
+## Reacting to changes
+
+`subscribe(listener)` registers a callback invoked after every applied change — from `init()`, `set()`, `toggle()`, `clearPreference()`, or an accepted `system` or cross-tab update — and returns an unsubscribe function:
+
+```ts
+const unsubscribe = theme.subscribe(({ name, source }) => {
+  console.log(`theme is now "${name}" (${source})`);
+});
+```
+
+A subscriber that throws is logged and does not stop other subscribers from running. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that prefers DOM events over `subscribe()`.
+
+<!-- Source: docs/changelog/0.1.2.md -->
+
+# 0.1.2
+
+## Added
+
+- A generated API reference, `docs/reference/index.md`, covering every exported symbol from its TSDoc directly — regenerated on every release instead of hand-maintained separately, so it can't drift out of sync with the source.
+
+## Changed
+
+- Documentation split from one page, `docs/reference.md`, into three focused ones: `docs/index.md` (setup and configuration), `docs/tokens-and-persistence.md` (token resolution, `skipComputed`, persistence, cross-tab sync), and `docs/ssr-and-pre-paint.md` (`getPrePaintScript()`, SSR fallback, Tailwind's `isTailwindCss`, `shouldApplyClass`, `destroy({ revertDom: true })`), plus the generated reference above. Update any link that pointed at `docs/reference.md`.
