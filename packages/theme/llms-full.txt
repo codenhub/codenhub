@@ -199,3 +199,15 @@ const unsubscribe = theme.subscribe(({ name, source }) => {
 ```
 
 A subscriber that throws is logged and does not stop other subscribers from running. Browsers also receive a `window` `CustomEvent` named by the exported `THEME_CHANGE_EVENT` constant (`"themechange"`) carrying the same detail, for code that prefers DOM events over `subscribe()`.
+
+<!-- Source: docs/changelog/0.1.2.md -->
+
+# 0.1.2
+
+## Added
+
+- A generated API reference, `docs/reference/index.md`, covering every exported symbol from its TSDoc directly — regenerated on every release instead of hand-maintained separately, so it can't drift out of sync with the source.
+
+## Changed
+
+- Documentation split from one page, `docs/reference.md`, into three focused ones: `docs/index.md` (setup and configuration), `docs/tokens-and-persistence.md` (token resolution, `skipComputed`, persistence, cross-tab sync), and `docs/ssr-and-pre-paint.md` (`getPrePaintScript()`, SSR fallback, Tailwind's `isTailwindCss`, `shouldApplyClass`, `destroy({ revertDom: true })`), plus the generated reference above. Update any link that pointed at `docs/reference.md`.
