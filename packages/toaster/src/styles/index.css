@@ -66,8 +66,10 @@
   min-width: 10rem;
   max-width: min(24rem, calc(100vw - 2rem));
   padding: 0.75rem;
-  border: 2px solid;
-  border-radius: 0.75rem;
+  border-style: solid;
+  border-width: var(--ui-border-width, 2px);
+  border-radius: var(--ui-radius, 0.75rem);
+  box-shadow: var(--ui-surface-shadow, none);
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
   font-size: 0.875rem;
   font-weight: 500;
@@ -244,7 +246,8 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   max-height: calc(100dvh - 2rem);
   padding: 1.5rem;
   overflow: auto;
-  border-radius: 0.75rem;
+  border-radius: var(--ui-radius-surface, 0.75rem);
+  box-shadow: var(--ui-surface-shadow, none);
   background: var(--toast-color-surface, var(--color-surface, #ffffff));
   color: var(--toast-color-text, var(--color-text, #0f172a));
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
@@ -277,8 +280,10 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   width: 100%;
   min-height: 2.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--toast-color-border, var(--color-border, #64748b));
-  border-radius: 0.375rem;
+  border-style: solid;
+  border-width: var(--ui-border-width, 1px);
+  border-color: var(--toast-color-border, var(--color-border, #64748b));
+  border-radius: var(--ui-radius, 0.375rem);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -305,7 +310,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   min-height: 2.75rem;
   padding: 0.5rem 1rem;
   border: 0;
-  border-radius: 0.375rem;
+  border-radius: var(--ui-radius, 0.375rem);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;

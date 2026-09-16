@@ -92,6 +92,69 @@ describe("configure", () => {
   });
 });
 
+describe("instance-level className", () => {
+  it("applies the config-level className to a toast with no per-call className", () => {
+    const toaster = createToaster({ className: "glass" });
+    toaster.semantic.success("Styled");
+
+    const element = document.body.querySelector("[role='status']");
+    expect(element?.className).toContain("glass");
+    toaster.destroy();
+  });
+
+  it("appends the config-level className with the per-call className, config first", () => {
+    const toaster = createToaster({ className: "glass" });
+    toaster.semantic.success("Styled", { className: "urgent" });
+
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']");
+    expect(element?.className).toContain("glass");
+    expect(element?.className).toContain("urgent");
+    expect(element!.className.indexOf("glass")).toBeLessThan(element!.className.indexOf("urgent"));
+    toaster.destroy();
+  });
+
+  it("applies the config-level className to an interactive dialog", async () => {
+    const toaster = createToaster({ className: "glass" });
+    const handle = toaster.interactive.alert("Notice!");
+
+    const dialog = document.body.querySelector("dialog");
+    expect(dialog?.className).toContain("glass");
+
+    handle.dismiss();
+    await handle.settled;
+    toaster.destroy();
+  });
+
+  it("appends the config-level className with a per-call dialog className", async () => {
+    const toaster = createToaster({ className: "glass" });
+    const handle = toaster.interactive.confirm("Delete?", { className: "danger-dialog" });
+
+    const dialog = document.body.querySelector("dialog");
+    expect(dialog?.className).toContain("glass");
+    expect(dialog?.className).toContain("danger-dialog");
+
+    handle.dismiss();
+    await handle.settled;
+    toaster.destroy();
+  });
+
+  it("keeps the config-level className after handle.update() replaces the per-call className", () => {
+    const toaster = createToaster({ className: "glass" });
+    const handle = toaster.semantic.success("Styled", { className: "class-one" });
+
+    const element = document.body.querySelector("[role='status']");
+    expect(element?.className).toContain("glass");
+    expect(element?.className).toContain("class-one");
+
+    handle.update({ className: "class-two" });
+    expect(element?.className).toContain("glass");
+    expect(element?.className).toContain("class-two");
+    expect(element?.className).not.toContain("class-one");
+
+    toaster.destroy();
+  });
+});
+
 describe("toaster.semantic", () => {
   it("show() renders a toast and returns a handle", () => {
     const toaster = createToaster();

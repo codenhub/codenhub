@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) is empty for now.
+**`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) holds one deferred, not-yet-started ask.
 
 ## Planned
 
@@ -26,7 +26,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Later / Possible
 
-None currently.
+- **A literal (non-token) translucent surface utility.** `@codenhub/toaster` wants a way for a consumer to apply a real glass/blur treatment to its toast and dialog surfaces without `@codenhub/toaster` depending on this package or consuming its component classes. The existing `.glass` aesthetic only reassigns `--ui-*` material tokens (see [Model](./model.md)), which a foreign component's own CSS must already read for anything to change -- toaster's CSS does not, and is not planned to compose translucent/alpha-mixed backgrounds this session. What toaster's own escape hatch (a per-instance/per-call `className`) actually needs is a self-contained utility class with literal `background`/`backdrop-filter`/`border-radius`/`box-shadow` values (the same values `.glass` already assembles from `--ui-bg-alpha`, `--ui-backdrop`, `--ui-surface-ground`, `--ui-surface-shadow`), so that applying just that one class to an arbitrary element works regardless of whether that element reads any `--ui-*` token. This is smaller than the rejected "Liquid glass" above (no refraction, no specular highlight) and reuses values the aesthetic already computes; it cannot be named `.glass` (already taken by the token-only aesthetic) and is new public API surface, so it needs its own exports/README/docs pass when picked up. Not started.
 
 ## Aesthetics assessed and deferred
 

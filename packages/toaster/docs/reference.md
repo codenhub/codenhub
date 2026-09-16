@@ -9,11 +9,15 @@ title: Reference
 - `@codenhub/toaster` exports `createToaster` and all public types.
 - `@codenhub/toaster/styles` exports required prebuilt CSS for layout, variants, dialogs, animation, and responsive behavior.
 
-Import the stylesheet once. The optional `@codenhub/styles >=0.0.4` peer can supply shared variables; fallback colors allow standalone use. No Tailwind consumer configuration is required.
+Import the stylesheet once. The optional `@codenhub/styles >=0.0.4` peer can supply shared variables; fallback colors allow standalone use. No Tailwind consumer configuration is required. When `@codenhub/styles` is present, an active aesthetic (e.g. `.glass`, `.neobrutalism`) also cascades its material tokens (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`) into toast and dialog radius, border width, and shadow, falling back to the current fixed values when unset.
+
+Dark-mode styling activates under a `.dark` class or `data-theme="dark"` attribute on an ancestor (usually `<html>`) — the same DOM contract `@codenhub/theme` produces. Toaster has no dependency on `@codenhub/theme`; any mechanism that sets those attributes works.
 
 ## Create and Configure
 
-`createToaster(config?): Toaster` creates an independent instance. Defaults are position `"top-right"`, `maxVisible: 5`, duration `4000`, no dismiss button, auto-dismiss enabled, and appearance `"soft-bordered"`. `ToasterConfig` also accepts a fixed `container`, color `tokens`, margin, and semantic/loading/custom category defaults. `ToasterRuntimeConfig` is the same partial shape without `container`.
+`createToaster(config?): Toaster` creates an independent instance. Defaults are position `"top-right"`, `maxVisible: 5`, duration `4000`, no dismiss button, auto-dismiss enabled, and appearance `"soft-bordered"`. `ToasterConfig` also accepts a fixed `container`, color `tokens`, margin, `className`, and semantic/loading/custom category defaults. `ToasterRuntimeConfig` is the same partial shape without `container`.
+
+Unlike `position`, `duration`, and `appearance`, a config-level `className` is not overridden by a per-call `className` — the two are appended (config first, then the call's own class) on every toast and every interactive dialog dispatched from that instance.
 
 Construction validates positions, appearances, finite non-negative durations, positive integer capacity, and CSS color tokens. Invalid values throw. `configure()` validates runtime changes; attempting to change `container` throws. Configuring tokens or margins needs a DOM.
 

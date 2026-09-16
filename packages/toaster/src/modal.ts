@@ -2,6 +2,7 @@ import { createAlertRenderer, createConfirmRenderer, createPromptRenderer } from
 import type { ModalRenderContext, ModalRenderResult } from "./modal-renderers";
 import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
+import { joinClassNames } from "./options";
 import { assertValidTokens } from "./tokens";
 import type { AlertOptions, ConfirmOptions, InteractiveToastHandle, PromptOptions, ToastState } from "./types";
 
@@ -37,6 +38,7 @@ export class ModalController {
   public constructor(
     private readonly parent: HTMLElement,
     private readonly instanceId: string,
+    private readonly getDefaultClassName: () => string | undefined = () => undefined,
   ) {}
 
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
@@ -188,7 +190,7 @@ export class ModalController {
           message: params.message,
           title: params.options.title,
           tokens: params.options.tokens,
-          className: params.options.className,
+          className: joinClassNames(this.getDefaultClassName(), params.options.className),
           titleId: `${idBase}-title`,
           messageId,
         });

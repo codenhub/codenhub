@@ -404,6 +404,13 @@ export interface ToasterConfig {
   margin?: string | { x?: string; y?: string };
   /** Default visual appearance style for toasts. */
   appearance?: ToastAppearance;
+  /**
+   * Extra CSS class name applied to every toast and dialog dispatched from
+   * this instance. Unlike `duration`, `position`, and `appearance` above,
+   * this does not get overridden by a per-call `className` — the two are
+   * appended together (instance default first, then the call's own class).
+   */
+  className?: string;
 }
 
 /** Runtime configuration fields that can change after construction. */
