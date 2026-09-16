@@ -30,6 +30,16 @@ describe("demoPackages", () => {
     });
   });
 
+  it("discovers @codenhub/toaster-demo from the real workspace, enriched from @codenhub/toaster's own manifest", () => {
+    expect(demoPackages).toContainEqual({
+      description:
+        "Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.",
+      label: "Toaster",
+      slug: "toaster",
+      status: "experimental",
+    });
+  });
+
   it("is sorted by label", () => {
     const labels = demoPackages.map((demoPackage) => demoPackage.label);
     expect(labels).toEqual([...labels].sort((left, right) => left.localeCompare(right)));
