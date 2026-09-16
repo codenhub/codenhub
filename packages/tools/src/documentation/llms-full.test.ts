@@ -37,6 +37,7 @@ describe("orderLlmsFullSources", () => {
         "docs/guides/setup.md",
         "docs/index.md",
         "docs/internal/decisions.md",
+        "docs/plans/rollout.md",
         "src/index.ts",
       ]),
     ).toEqual(["README.md", "docs/index.md", "docs/guides/setup.md", "docs/reference.md"]);

@@ -65,6 +65,8 @@ export interface ValidationIssue {
     | "missing-target"
     | "npm-unpublished-target"
     | "package-root-escape"
+    | "plans-published"
+    | "plans-target"
     | "site-unpublished-target";
   /** Human-readable explanation. */
   message: string;
@@ -104,6 +106,11 @@ function normalizePath(filePath: string): string {
 
 /**
  * Reports whether a package-relative path is validated as public documentation.
+ *
+ * `docs/internal/` is validated separately, under its own governance model.
+ * `docs/plans/` is neither -- it is a git-ignored planning aid (per
+ * `docs/docs-guidelines.md`) that never reaches a real build, so it carries
+ * no frontmatter contract at all.
  * @param filePath Package-relative POSIX path.
  * @returns `true` for the README, LLM files, and public `docs/` Markdown.
  */
@@ -112,7 +119,10 @@ export function isValidationSurface(filePath: string): boolean {
     filePath === "README.md" ||
     filePath === "llms.txt" ||
     filePath === "llms-full.txt" ||
-    (filePath.startsWith("docs/") && filePath.endsWith(".md") && !filePath.startsWith("docs/internal/"))
+    (filePath.startsWith("docs/") &&
+      filePath.endsWith(".md") &&
+      !filePath.startsWith("docs/internal/") &&
+      !filePath.startsWith("docs/plans/"))
   );
 }
 
@@ -278,6 +288,15 @@ function addLinkIssues(
     });
     return;
   }
+  if (resolved.path.startsWith("docs/plans/")) {
+    issues.push({
+      code: "plans-target",
+      message: `Link targets a git-ignored plan, which will not exist for another reader.`,
+      sourcePath: document.path,
+      target: resolved.path,
+    });
+    return;
+  }
   if (
     document.path.startsWith("docs/") &&
     !resolved.path.startsWith("docs/") &&
@@ -421,6 +440,9 @@ export function validateDocumentGraph(
   for (const filePath of npmFiles ?? []) {
     if (filePath.startsWith("docs/internal/")) {
       issues.push({ code: "internal-published", message: `Internal documentation is published.`, target: filePath });
+    }
+    if (filePath.startsWith("docs/plans/")) {
+      issues.push({ code: "plans-published", message: `A git-ignored plan is published.`, target: filePath });
     }
   }
   for (const filePath of siteFiles ?? []) {

@@ -16,7 +16,7 @@ function getIssueCodes(
     (filePath) =>
       filePath === "LICENSE" ||
       filePath === "NOTICE" ||
-      (filePath.startsWith("docs/") && !filePath.startsWith("docs/internal/")),
+      (filePath.startsWith("docs/") && !filePath.startsWith("docs/internal/") && !filePath.startsWith("docs/plans/")),
   ),
 ): string[] {
   const graph = createDocumentGraph(files);
@@ -65,11 +65,12 @@ describe("same-document link targets", () => {
 });
 
 describe("package document graph", () => {
-  it("discovers every validation surface and excludes internal Markdown", () => {
+  it("discovers every validation surface and excludes internal and plan Markdown", () => {
     const graph = createDocumentGraph({
       ...BASE_FILES,
       "docs/guide.md": "# Guide",
       "docs/internal/decision.md": "# Decision\n\n[Missing](missing.md)",
+      "docs/plans/rollout.md": "# Rollout",
     });
 
     expect(graph.documents.map(({ path }) => path)).toEqual([
@@ -107,6 +108,16 @@ describe("package document graph", () => {
         "docs/internal/decision.md": "# Decision",
       }),
     ).toContain("internal-target");
+  });
+
+  it("rejects links from public docs into a git-ignored plan", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "docs/index.md": "# Example\n\n[Rollout](plans/rollout.md)",
+        "docs/plans/rollout.md": "# Rollout",
+      }),
+    ).toContain("plans-target");
   });
 
   it("rejects a missing local target including image assets", () => {
@@ -218,6 +229,12 @@ describe("package document graph", () => {
   it("reports internal documentation included by npm pack", () => {
     expect(getIssueCodes(BASE_FILES, [...Object.keys(BASE_FILES), "docs/internal/decision.md"])).toContain(
       "internal-published",
+    );
+  });
+
+  it("reports a git-ignored plan included by npm pack", () => {
+    expect(getIssueCodes(BASE_FILES, [...Object.keys(BASE_FILES), "docs/plans/rollout.md"])).toContain(
+      "plans-published",
     );
   });
 

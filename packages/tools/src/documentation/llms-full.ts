@@ -227,8 +227,10 @@ export function rebaseMarkdownTargets(body: string, sourceDirectory: string): st
  *
  * The README comes first, then `docs/index.md`, then every remaining public
  * document by path, which is the deterministic order the documentation spec
- * requires. `docs/internal/` is maintainer-only and `docs/reference/` is a
- * generated area (per `docs/specs/packages-reference.md`); both are excluded.
+ * requires. `docs/internal/` is maintainer-only, `docs/plans/` is a
+ * git-ignored planning aid that never reaches a real package build (per
+ * `docs/docs-guidelines.md`), and `docs/reference/` is a generated area (per
+ * `docs/specs/packages-reference.md`); all three are excluded.
  * @param packageFiles Every package-relative file path.
  * @returns Package-relative document paths in compilation order.
  */
@@ -239,6 +241,7 @@ export function orderLlmsFullSources(packageFiles: readonly string[]): string[] 
         packagePath.startsWith("docs/") &&
         packagePath.endsWith(".md") &&
         !packagePath.startsWith("docs/internal/") &&
+        !packagePath.startsWith("docs/plans/") &&
         !packagePath.startsWith("docs/reference/"),
     )
     .map((packagePath) => packagePath.slice("docs/".length))
