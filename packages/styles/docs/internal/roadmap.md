@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) is empty for now.
+**`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) holds one deferred, not-yet-started ask.
 
 ## Planned
 
