@@ -122,14 +122,49 @@ test.describe("generated palette", () => {
         await page.locator(`[data-key="${probe.key}"]`).hover();
         /* `:hover` matches immediately, but `background-color: var(--_bg)` on
            `.box` does not visibly repaint to `.box-hover`'s new, winning
-           `--_bg` until the browser's next style flush -- the same settling
-           `scripts/generate-palette.mjs` waits out before its own hover read. */
-        await page.waitForTimeout(30);
-        const hovered = await page.evaluate((key) => {
-          const element = document.querySelector(`[data-key="${key}"]`)!;
-          const styles = getComputedStyle(element);
-          return { bg: styles.backgroundColor, edge: styles.borderTopColor };
-        }, probe.key);
+           `--_bg` until the browser's next style flush, and that flush can
+           take more than one animation frame under load. A fixed wait raced
+           it and read the still-resting value back; two consecutive equal
+           samples can race it too, since two frames can both land before the
+           repaint and agree on the stale resting value. Waiting for the read
+           to actually move off the already-known resting value first, then
+           for it to stop moving, is what actually settles on the real one --
+           the same two-phase settling `scripts/generate-palette.mjs` polls
+           for before its own hover read. */
+        const hovered = await page.evaluate(
+          ({ key, restingBg, restingEdge }) => {
+            const element = document.querySelector(`[data-key="${key}"]`)!;
+            const read = () => {
+              const styles = getComputedStyle(element);
+              return { bg: styles.backgroundColor, edge: styles.borderTopColor };
+            };
+            const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+            return (async () => {
+              let current = read();
+
+              for (let frame = 0; frame < 60 && current.bg === restingBg && current.edge === restingEdge; frame += 1) {
+                await nextFrame();
+                current = read();
+              }
+
+              let previous = current;
+
+              for (let frame = 0; frame < 60; frame += 1) {
+                await nextFrame();
+                current = read();
+
+                if (current.bg === previous.bg && current.edge === previous.edge) {
+                  return current;
+                }
+                previous = current;
+              }
+
+              return previous;
+            })();
+          },
+          { key: probe.key, restingBg: rest[probe.key].bg, restingEdge: rest[probe.key].edge },
+        );
 
         rest[probe.key].bgHover = hovered.bg;
         rest[probe.key].edgeHover = hovered.edge;
