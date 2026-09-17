@@ -497,12 +497,21 @@
     {
       "class": "progress",
       "default": {
+        "fill": "soft",
+        "edge": "edgeless",
         "elevation": 0
       },
       "native": [],
       "composition": "none",
-      "compositionReason": "An indicator paints its own track and fill and has no box presentation.",
-      "axes": []
+      "compositionReason": "The track is a box, but the value fill is a `::after` rather than the element's own background, so `box` cannot be applied whole. The cost is that the fill and edge blend are reimplemented here and must agree with `box`: the ordering fix that stops `.edgeless` painting a ring over its own fill had to be made in both `box` and `.quote`, and now here too.",
+      "axes": ["fill", "edge"],
+      "unsupported": [
+        {
+          "axis": "fill",
+          "class": "solid",
+          "reason": "The value fill is always `--intent-color` at full strength; a fully-filled track composes the same colour and the one thing a progress bar exists to show -- how much is filled versus not -- disappears."
+        }
+      ]
     },
     {
       "class": "divider",

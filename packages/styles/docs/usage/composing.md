@@ -63,18 +63,19 @@ The edge is the silhouette and nothing else. Rules _inside_ a component that has
 
 With no presentation class in scope, each component keeps its own default: buttons are filled, alerts and badges are tinted, surfaces and controls are neutral and bordered.
 
-| Component                                       | Reads                                       |
-| ----------------------------------------------- | ------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.       |
-| `.kbd`                                          | Fill, text, border, and border width.       |
-| `.data-table`                                   | Header fill and text, border, border width. |
-| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
-| `.input-group`                                  | Border, border width, and a capped fill.    |
-| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
-| `.switch`                                       | Border, border width, and a capped fill.    |
-| `.quote`                                        | Fill, text, border, and width.              |
-| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.           |
-| `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
+| Component                                       | Reads                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.                                            |
+| `.kbd`                                          | Fill, text, border, and border width.                                            |
+| `.data-table`                                   | Header fill and text, border, border width.                                      |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                         |
+| `.input-group`                                  | Border, border width, and a capped fill.                                         |
+| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                            |
+| `.switch`                                       | Border, border width, and a capped fill.                                         |
+| `.quote`                                        | Fill, text, border, and width.                                                   |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                |
+| `.progress`                                     | Track fill and border; the value fill is always the intent color, full strength. |
+| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                   |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
@@ -113,12 +114,14 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
-| `.progress`                                               | Yes    | No   | No   | No                 |
+| `.progress`                                               | Yes    | Yes  | Yes  | Radius and edge    |
 | `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
 | `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
 `.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
+
+`.progress` reads both axes on its track; the value fill, the moving bar itself, is always the intent color at full strength and never changes. `.solid` is unsupported on the track: at full fill the track and the value fill compose the same color, and the one thing the component exists to show — how much is filled versus not — disappears. `.ghost.edgeless` renders (no fill, no border) but is not recommended: `.ghost.edged` — an outline capsule around the moving fill — keeps a visible frame at rest, while pairing `.ghost` with `.edgeless` leaves the track with none.
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 

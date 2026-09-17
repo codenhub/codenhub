@@ -262,6 +262,8 @@ Unsupported is not unreachable. A container can still cascade `.ghost` onto `.kb
 
 `.ghost` used to be unsupported on `.checkbox`, `.radio`, and `.switch` the same way -- an unchecked one was the silhouette every toggle already has, but a checked one was a mark on nothing, a tick floating on the page. Pinning the checked fill (above) removed the reason: a checked `.ghost` toggle now renders the exact plate every other checked toggle does, so its unchecked silhouette is a real, published look rather than a floored duplicate of `.soft`. None of the three toggles reads `.ghost` as unsupported any more.
 
+`.solid` is unsupported on `.progress`, unconditionally rather than in one ground: the value fill is always `--intent-color` at full strength, so a fully-filled track composes the same colour and the one thing a progress bar exists to show -- how much of the track is filled -- disappears. `.ghost.edgeless` is a related but different case, one degenerate _combination_ rather than a whole unsupported value: `.ghost.edged` renders fine, an outline capsule around the moving fill, and only pairing it with `.edgeless` leaves the track with no visible frame at rest. A consumer who writes both chose that pairing explicitly, the same way `.badge.edged` under `.neobrutalism` is a consumer's own combination of two documented features (see [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)) rather than something the cascade produced by accident, so it is documented in prose rather than recorded as `unsupported` -- that field names a whole axis value, not a pair of them. See [`.progress` gains presentation](./progress-presentation-axes.md#supported-and-unsupported-combinations) for the full table.
+
 ## Elevation
 
 Depth is not uniform within an aesthetic. In the chunky-tile look, white option cards sit on a darker slab while the blue promo panel beside them is flat, the word-bank chips are raised, and the disabled submit button is flat. Same aesthetic, same components, different depth -- decided per element by whoever builds the screen.
@@ -523,23 +525,24 @@ Three steps, and there is no fourth. The replaced model's fourth step was "compo
 
 Every component declares its resting pair in the registry. There is no "plain" and no implicit default: a component with no presentation class renders the pair the registry names for it, and that pair is published.
 
-| Component                                    | Default        |
-| -------------------------------------------- | -------------- |
-| `.btn`                                       | solid edgeless |
-| `.ipt` `.textarea` `.select`                 | ghost edged    |
-| `.input-group`                               | ghost edged    |
-| `.checkbox` `.radio`                         | soft edged     |
-| `.switch`                                    | soft edged     |
-| `.card`                                      | ghost edged    |
-| `.panel`                                     | soft edgeless  |
-| `.alert`                                     | soft edged     |
-| `.data-table`                                | soft edgeless  |
-| `.tooltip`                                   | solid edged    |
-| `.pre` `.code`                               | soft edgeless  |
-| `.kbd`                                       | soft edged     |
-| `.badge`                                     | soft edgeless  |
-| `.quote`                                     | ghost edged    |
-| `.loader` `.skeleton` `.progress` `.divider` | n/a            |
+| Component                        | Default        |
+| -------------------------------- | -------------- |
+| `.btn`                           | solid edgeless |
+| `.ipt` `.textarea` `.select`     | ghost edged    |
+| `.input-group`                   | ghost edged    |
+| `.checkbox` `.radio`             | soft edged     |
+| `.switch`                        | soft edged     |
+| `.card`                          | ghost edged    |
+| `.panel`                         | soft edgeless  |
+| `.alert`                         | soft edged     |
+| `.data-table`                    | soft edgeless  |
+| `.tooltip`                       | solid edged    |
+| `.pre` `.code`                   | soft edgeless  |
+| `.kbd`                           | soft edged     |
+| `.badge`                         | soft edgeless  |
+| `.quote`                         | ghost edged    |
+| `.progress`                      | soft edgeless  |
+| `.loader` `.skeleton` `.divider` | n/a            |
 
 Four of those name a ground as well. `.pre`, `.code` and `.kbd` are not transparent at rest -- each is a quiet tinted block -- and that tone is not a fill of the component's intent, it is `--intent-subtle`. They rest at `soft` over `--_d-ground: var(--intent-subtle)`, the mechanism `surface` already uses for its own ground, so the plate is 12% of the intent over that tone and `.solid` fills with the intent. They rested at `ghost` until the ground made that class meaningless on them; see [Unsupported values](#unsupported-values). The tooltip bubble names one too, and reads `--ui-surface-ground` ahead of it so a glass tooltip stays glass. The registry records the ground beside the pair.
 
@@ -557,11 +560,11 @@ Two deviations from a lone field, both because a `<div>` is not a control. `:foc
 
 ### Components that do not take the whole of `box`
 
-Six of them, and the registry says which rather than leaving it to be found by reading CSS. Four are indicators: `.loader`, `.skeleton`, `.progress`, and `.divider` paint their own artwork and do not take box presentation.
+Six of them, and the registry says which rather than leaving it to be found by reading CSS. Three are indicators: `.loader`, `.skeleton`, and `.divider` paint their own artwork and do not take box presentation at all -- see [`.progress` gains presentation](./progress-presentation-axes.md#why-loader-skeleton-and-divider-are-not-part-of-this-decision) for why the frame/value split that makes `.progress` eligible for a fill and an edge does not apply to any of the three.
 
-`.quote` composes none of it, because `box` draws a border on four sides and a quotation wants one. A radius, a clip and a shadow are inert on a left bar as well, so what is left of `box` after removing the border is not worth composing.
+`.quote` and `.progress` each compose none of `box`, but both still read `fill` and `edge` -- they hand-reimplement the formula rather than taking it whole. `.quote` cannot, because `box` draws a border on four sides and a quotation wants one; a radius, a clip and a shadow are inert on a left bar as well, so what is left of `box` after removing the border is not worth composing. `.progress` cannot for a different reason: its value fill is a `::after`, not the element's own background, so there is nowhere for `box`'s single `--_bg` to land without also painting behind the value it is supposed to measure. Only the track -- the element's own box -- composes the formula; the value fill stays `--intent-color` at full strength, the same contract `.loader` and `.skeleton` have.
 
-The cost is that the quotation reimplements the fill and the edge blend rather than taking them, and the two copies have to agree: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made twice, once in `box` and later in `.quote`, because the second copy was not where anyone looked. The registry entry says so, so the next edge change knows there are two places.
+The cost is that each reimplements the fill and the edge blend rather than taking them, and every copy has to agree with `box`: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made in `box`, then again in `.quote` because the second copy was not where anyone looked, and now a third time in `.progress`. Each registry entry says so, so the next edge change knows how many places it has.
 
 `.data-table` takes the frame -- border, radius, clip -- and paints its head, cell rules and row hover from private tokens, because none of those have an equivalent on the three axes, and because its `overflow: hidden` over `border-separate` does not compose with an aesthetic's `clip-path`.
 
@@ -822,7 +825,7 @@ Four do not:
 
 The three toggles were checked against the same real-child treatment `.alert`'s icon and `.tooltip`'s bubble got in 0.2.0, and rejected: an `<input>` is a void element, so composing a mark in means wrapping every checkbox, radio, and switch in a span whether or not anything ever reaches for the freed slot -- a cost paid by every consumer of the package's single most common form control, for a slot that is already free. Their `::after` is spoken for by the checked state itself, generated by the control rather than authored by a consumer -- exactly what a pseudo-element is for, unlike the icon or the message the alert and tooltip fixes moved out of one. An aesthetic wanting a treatment on a toggle writes it to the open `::before`.
 
-`.progress` has no free slot, and the composing argument applies harder, not softer: the fill's width and the shimmer are the bar's only visible state, so a real child would still need a wrapper around it and still would not be a consumer's own content. An aesthetic reaching `.progress` goes through `--progress-color`/`--progress-surface` ([Tier 1](#tier-1----material-tokens)) or a selector rule on the track itself, `.my-aesthetic .progress` (Tier 2's second option) -- never a third pseudo-element, because there is not one to spend.
+`.progress` has no free slot, and the composing argument applies harder, not softer: the fill's width and the shimmer are the bar's only visible state, so a real child would still need a wrapper around it and still would not be a consumer's own content. An aesthetic reaching `.progress` goes through `--progress-color`/`--progress-surface`/`--progress-edge` ([Tier 1](#tier-1----material-tokens)) or a selector rule on the track itself, `.my-aesthetic .progress` (Tier 2's second option) -- never a third pseudo-element, because there is not one to spend.
 
 ### Worked example: the chunky-tile look
 

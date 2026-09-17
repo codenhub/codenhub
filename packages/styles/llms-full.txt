@@ -347,18 +347,19 @@ The edge is the silhouette and nothing else. Rules _inside_ a component that has
 
 With no presentation class in scope, each component keeps its own default: buttons are filled, alerts and badges are tinted, surfaces and controls are neutral and bordered.
 
-| Component                                       | Reads                                       |
-| ----------------------------------------------- | ------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.       |
-| `.kbd`                                          | Fill, text, border, and border width.       |
-| `.data-table`                                   | Header fill and text, border, border width. |
-| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.    |
-| `.input-group`                                  | Border, border width, and a capped fill.    |
-| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.       |
-| `.switch`                                       | Border, border width, and a capped fill.    |
-| `.quote`                                        | Fill, text, border, and width.              |
-| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.           |
-| `.loader`, `.skeleton`, `.progress`, `.divider` | Intent only, not presentation.              |
+| Component                                       | Reads                                                                            |
+| ----------------------------------------------- | -------------------------------------------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.                                            |
+| `.kbd`                                          | Fill, text, border, and border width.                                            |
+| `.data-table`                                   | Header fill and text, border, border width.                                      |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                         |
+| `.input-group`                                  | Border, border width, and a capped fill.                                         |
+| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                            |
+| `.switch`                                       | Border, border width, and a capped fill.                                         |
+| `.quote`                                        | Fill, text, border, and width.                                                   |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                |
+| `.progress`                                     | Track fill and border; the value fill is always the intent color, full strength. |
+| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                   |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
@@ -397,12 +398,14 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 | `.surface`                                                | Yes    | Yes  | Yes  | Shape              |
 | `.checkbox`, `.radio`                                     | Yes    | Yes  | No   | Radius and edge    |
 | `.switch`                                                 | Yes    | Yes  | Yes  | Radius and edge    |
-| `.progress`                                               | Yes    | No   | No   | No                 |
+| `.progress`                                               | Yes    | Yes  | Yes  | Radius and edge    |
 | `.code`, `.pre`                                           | Yes    | Yes  | Yes  | Radius and clip    |
 | `.tooltip-bubble`                                         | Yes    | Yes  | Yes  | Shape and overlay  |
 | `.table-wrap`, `.quote-inline`, layout and text utilities | No     | No   | No   | No                 |
 
 `.checkbox` and `.radio` are the only components that read one axis and not the other. Their line is the only thing marking an unchecked box, so it is drawn whatever the edge class says, from a container or from the element itself. `.edgeless` on either is unsupported rather than merely discouraged.
+
+`.progress` reads both axes on its track; the value fill, the moving bar itself, is always the intent color at full strength and never changes. `.solid` is unsupported on the track: at full fill the track and the value fill compose the same color, and the one thing the component exists to show — how much is filled versus not — disappears. `.ghost.edgeless` renders (no fill, no border) but is not recommended: `.ghost.edged` — an outline capsule around the moving fill — keeps a visible frame at rest, while pairing `.ghost` with `.edgeless` leaves the track with none.
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
@@ -1088,7 +1091,7 @@ Loader size modifiers:
 
 Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
-Skeletons, loaders, progress bars, and dividers are indicators. They read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation).
+Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
 
 ```html
 <span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
@@ -1123,6 +1126,7 @@ Alerts and badges read the shared [presentation](docs/usage/composing.md#present
 <span class="loader dots-grow lg" aria-hidden="true"></span>
 <div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress primary ghost edged" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress info indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"></div>
 ```
 
@@ -1648,13 +1652,14 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Control boundaries
 
-| Feature              | Behavior                                                                                                                                                                                                                                                                                 |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Control boundaries   | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.                                                                                                                                                                          |
-| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.                                                                                                                                                                       |
-| Cascaded `.edgeless` | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                                                                                                                                                                                    |
-| Own `.edgeless`      | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest, except `.switch.ghost`: `.ghost` already asks for zero fill, so dropping the line too would leave no boundary at all, and `.switch.ghost.edgeless` keeps it up instead. |
-| `.checkbox`/`.radio` | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged.                                                                                                                                                                   |
+| Feature              | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Control boundaries   | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice; hover and focus take the tone whole.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Cascaded `.edgeless` | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Own `.edgeless`      | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest, except `.switch.ghost`: `.ghost` already asks for zero fill, so dropping the line too would leave no boundary at all, and `.switch.ghost.edgeless` keeps it up instead.                                                                                                                                                                                                                                                                             |
+| `.checkbox`/`.radio` | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged.                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Progress track       | Known gap. `.progress`'s registered default, `.soft.edgeless`, does not meet 1.4.11 at rest -- measured ~1.1-1.3:1 against the page in both themes and across intents, down from the ~3.6-4.3:1 the prior fixed-neutral track cleared. An `.edged` presentation restores a boundary through the line for most intents (`primary.soft.edged` ~15:1), but not every one clears 3:1 there either (`warning.soft.edged` ~2.7:1). A consumer whose track must meet 1.4.11 should choose an `.edged` presentation and verify the intents they use, until this is resolved. |
 
 ### Motion and transparency
 
@@ -1722,6 +1727,15 @@ Use ARIA or data attributes when native attributes are not available for the ele
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
+
+<!-- Source: docs/changelog/0.3.0.md -->
+
+# 0.3.0
+
+## Changed
+
+- **`.progress`'s track reads presentation.** It used to be intent-only, like `.loader`, `.skeleton`, and `.divider`; now it composes a fill and an edge like `.quote` does, while the moving value fill stays `--intent-color` at full strength, unaffected by presentation. The registered default is `.soft.edgeless`, chosen to stay closest to the previous fixed-neutral look, but it renders differently than before: it now tints by intent instead of a fixed grey, and every existing `.progress` gets that new look with no markup change. `.solid` is unsupported on the track (a fully-filled track and the value fill it carries would become the same color); `.ghost.edgeless` renders but is discouraged, since it leaves the track with neither fill nor line.
+- **Known issue: the new `.progress.soft.edgeless` default does not meet WCAG 1.4.11's 3:1 non-text contrast floor.** Measured at roughly 1.1-1.3:1 against the page, in both themes and across intents -- down from the ~3.6-4.3:1 the prior fixed-neutral track cleared. An `.edged` presentation restores a boundary through the line for most intents, but not all of them clear 3:1 there either (`warning.soft.edged` measured ~2.7:1). A consumer whose track must meet 1.4.11 should choose an `.edged` presentation and verify the intents they use. See [Accessibility](docs/accessibility.md#control-boundaries).
 
 <!-- Source: docs/changelog/0.2.0.md -->
 
