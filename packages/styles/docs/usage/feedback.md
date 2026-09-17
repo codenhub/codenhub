@@ -45,7 +45,7 @@ Loader size modifiers:
 
 Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
-Skeletons, loaders, progress bars, and dividers are indicators. They read intent but ignore fill and edge [presentation](./composing.md#presentation).
+Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.
 
 ```html
 <span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
@@ -80,6 +80,7 @@ Alerts and badges read the shared [presentation](./composing.md#presentation) cl
 <span class="loader dots-grow lg" aria-hidden="true"></span>
 <div class="progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress secondary active" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
+<div class="progress primary ghost edged" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64" style="--progress-value: 64%"></div>
 <div class="progress info indeterminate" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"></div>
 ```
 

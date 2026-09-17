@@ -65,6 +65,60 @@ test.describe("feedback", () => {
     expect(progressStyles.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
   });
 
+  /* `.progress` cannot `@apply box` -- the value fill is a `::after`, not the
+     element's own background -- so the track hand-reimplements the formula the
+     way `.quote` does, and `composition: "none"` drops it from `axes.spec.ts`'s
+     generic probe the same way it drops `.quote`. This is that component's own
+     dedicated coverage instead. See docs/internal/progress-presentation-axes.md. */
+  test("renders every progress track presentation", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const styles = await page.evaluate(() => {
+      const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+
+      return {
+        defaultBackground: get("progress-default-primary").backgroundColor,
+        defaultBorder: get("progress-default-primary").borderTopColor,
+        defaultBorderWidth: get("progress-default-primary").borderTopWidth,
+        ghostEdgedBackground: get("progress-ghost-edged-primary").backgroundColor,
+        ghostEdgedBorder: get("progress-ghost-edged-primary").borderTopColor,
+        ghostEdgelessBackground: get("progress-ghost-edgeless-primary").backgroundColor,
+        ghostEdgelessBorder: get("progress-ghost-edgeless-primary").borderTopColor,
+        softEdgedBackground: get("progress-soft-edged-primary").backgroundColor,
+        softEdgedBorder: get("progress-soft-edged-primary").borderTopColor,
+        softEdgedBorderWidth: get("progress-soft-edged-primary").borderTopWidth,
+        softEdgelessBackground: get("progress-soft-edgeless-primary").backgroundColor,
+        softEdgelessBorder: get("progress-soft-edgeless-primary").borderTopColor,
+      };
+    });
+
+    /* The registry default is `.soft.edgeless`: tinted track, no line. */
+    expect(isTransparent(styles.defaultBackground), "default track tints").toBe(false);
+    expect(isTransparent(styles.defaultBorder), "default track draws no line").toBe(true);
+    expectSameColor(styles.defaultBackground, styles.softEdgelessBackground, "default is soft edgeless");
+
+    /* `.ghost` asks for zero fill, so the track stays on its `transparent`
+       ground. `.ghost.edged` is an outline around the moving fill; pairing it
+       with `.edgeless` -- discouraged, not unsupported -- leaves the track with
+       neither fill nor line. */
+    expect(isTransparent(styles.ghostEdgedBackground), "ghost edged track has no fill").toBe(true);
+    expect(isTransparent(styles.ghostEdgedBorder), "ghost edged track draws a line").toBe(false);
+    expect(isTransparent(styles.ghostEdgelessBackground), "ghost edgeless track has no fill").toBe(true);
+    expect(isTransparent(styles.ghostEdgelessBorder), "ghost edgeless track draws no line").toBe(true);
+
+    /* `.soft` tints the track either way; only `.edged` draws the line. P3
+       blends the line toward the track's own background before the edge amount
+       is applied, so `.edgeless` reads as no line at every fill, not only at
+       zero -- the same property `.quote`'s equivalent test holds it to. */
+    expect(isTransparent(styles.softEdgedBackground), "soft edged track has no fill").toBe(false);
+    expect(isTransparent(styles.softEdgedBorder), "soft edged track draws no line").toBe(false);
+    expect(isTransparent(styles.softEdgelessBorder), "soft edgeless track draws a line").toBe(true);
+
+    /* No presentation scales the track's border, only whether it is drawn. */
+    expect(Number.parseFloat(styles.defaultBorderWidth)).toBeGreaterThan(0);
+    expect(styles.softEdgedBorderWidth).toBe(styles.defaultBorderWidth);
+  });
+
   /* A loader used to be a bordered box wrapped around a masked pseudo-element,
      and it read every presentation class through that box. It is now the mask
      itself: a coloured shape with no fill, no edge and no silhouette. The

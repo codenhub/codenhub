@@ -67,6 +67,14 @@ const FILL_PRESENTATIONS = ["default", "solid", "soft", "ghost"];
    this list for the toggle-wide ghost-unsupported reason `FILL_PRESENTATIONS`
    records above; that reason no longer applies to any toggle. */
 const NO_GHOST_PRESENTATIONS = ["default", "solid", "soft edged", "soft edgeless"];
+/* The full grid minus `.solid`, for `.progress`: a fully-filled track and the
+   value fill it carries compose the same color, so the one thing the
+   component exists to show -- how much is filled -- disappears. `registry.json`
+   marks the fill axis unsupported for `.solid` there, and the playground is the
+   support surface, so a row it draws is a claim. `.ghost.edgeless` stays on the
+   grid: it renders, just with no visible frame at rest, a consumer's own
+   combination rather than something the composition breaks. */
+const NO_SOLID_PRESENTATIONS = ["default", "soft edged", "soft edgeless", "ghost edged", "ghost edgeless"];
 /* Components that read intent but not presentation: the indicators, which stand
    in for content rather than being a box with a look, and the tooltip, whose
    cell is the trigger badge rather than the bubble. The bubble does read
@@ -232,7 +240,7 @@ const COMPONENTS = {
   progress: {
     tag: "div",
     layout: "stack",
-    presentations: INTENT_ONLY,
+    presentations: NO_SOLID_PRESENTATIONS,
     attrs: (intent) => ({
       style: "--progress-value: 60%",
       role: "progressbar",

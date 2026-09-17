@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-15
+last_updated: 2026-09-17
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -19,6 +19,8 @@ Finished work is not tracked here. The current token contract, component coverag
 ## Current Focus
 
 **`0.2.0` is merged, tagged, and published.** The stress-test pass across all three planned screens (`app-shell/`, `form/`, `settings/`) is complete -- every finding it turned up is landed, documented, or deferred, and is recorded in [`docs/changelog/0.2.0.md`](../changelog/0.2.0.md). `@codenhub/styles@0.2.0` is the current published npm version. [Planned](#planned) is what is left. [Later / Possible](#later--possible) holds one deferred, not-yet-started ask.
+
+**`.progress` gains real track presentation, cut as `0.3.0`**, per the `APPROVED` decision in [`docs/internal/progress-presentation-axes.md`](./progress-presentation-axes.md): the track now composes a fill and an edge like every other presentation-reading component, while the value fill stays `--intent-color` at full strength. This changes the rendered output of every existing `.progress` consumer, so it ships the same way `0.2.0`'s `--progress-surface` change did -- as a minor, not a patch. See [`docs/changelog/0.3.0.md`](../changelog/0.3.0.md), including its recorded WCAG 1.4.11 known issue on the new default.
 
 ## Planned
 

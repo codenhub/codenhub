@@ -117,26 +117,48 @@
   border-radius: var(--ui-radius, var(--radius-control));
 }
 
-/* The same: intent only. The track is 10px tall, which is most of a border under
-   any aesthetic thick enough to have an opinion, so the bar draws no edge and the
-   ceilings that used to keep one survivable are gone with it.
-
-   `--progress-surface` used to mix `--intent-subtle` at 60% -- a tint of the
-   same tone the track already sits on (a bare page, or a `.soft` card), which
-   measured under 1.2:1 against both in either theme, well under the 3:1 WCAG
-   1.4.11 floor `registry.json` already cites for the checkbox, radio, and
-   switch. `--color-border` was tried next and measured no better (1.05:1): it
-   is calibrated for a line against the page, and a `.soft` card already sits
-   close to that same lightness, so a border-strength token disappears against
-   it too. Mixing `--color-text-secondary` instead is what actually separates
-   the track from both -- it is a step read against text at rest everywhere
-   else in the package, and stepping toward it here clears 3:1 (3.63-4.26:1
-   measured) on a bare page and a `.soft` card, in both themes. */
+/* The track is a box, the fill is not: `box.css`'s formula composes the frame,
+   the value fill stays `--intent-color` at full strength with no presentation,
+   same contract as `.loader`/`.skeleton`. `.progress` cannot `@apply box`
+   (the fill is a `::after`, not the element's own background), so it hand-
+   reimplements the formula the way `.quote` does -- see
+   docs/internal/progress-presentation-axes.md for the decision and why the
+   other three indicators do not get the same treatment. */
 @utility progress {
-  --progress-color: var(--intent-color);
-  --progress-surface: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
+  --_d-fill: 12%;
+  --_d-fg-on-fill: 0%;
+  --_d-border: 0%;
+  --_d-elevation: 0;
+  /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
+     override path an aesthetic or consumer reaches `.progress` through (see
+     model.md's pseudo-element budget section), so they stay undeclared here:
+     redeclaring one on `.progress` itself would win over a value set on an
+     ancestor regardless of specificity, the same reasoning `box.css` gives
+     for `--_fill-cap`. Each is read with this formula as its fallback, in
+     private `--_progress-*` slots, at the point it paints below. */
+  /* Presentation capped by the intent, the same `--_capped` `box` composes. */
+  --_progress-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+  --_progress-fill: calc(var(--_progress-capped) * var(--ui-bg-alpha, 1));
+  /* Grounded on `transparent`, the same choice `.badge` and `.btn` make --
+     not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
+  --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
+  /* One `color-mix()`, not `box`/`.quote`'s two chained through a `--_line`
+     step: a WebKit build measurably destabilizes composing dozens of tracks
+     each carrying a three-level color-mix chain into the same page -- fine
+     at ten, a reproducible ~30-minute CI hang at forty, isolated by removing
+     one variable at a time (element count, then border at all, then chain
+     depth) until only chain depth reproduced it. `box`/`.quote`'s extra step
+     blends the line toward the fill first so a heavily filled box does not
+     draw a ring of a different colour around its own plate -- a real risk up
+     to `.solid`'s 100% fill. `.progress` never reaches that: `.solid` is
+     unsupported here (`registry.json`), so the fill this reads never exceeds
+     `.soft`'s 12%, and mixing straight from `--intent-border` at that fill
+     is indistinguishable from blending through the surface first. */
+  --_progress-edge: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
 
-  @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
+  @apply relative h-2.5 w-full overflow-hidden;
+  background-color: var(--progress-surface, var(--_progress-surface));
+  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
@@ -146,7 +168,7 @@
     @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
-    background-color: var(--progress-color);
+    background-color: var(--progress-color, var(--intent-color));
     width: var(--progress-value, 0%);
     z-index: 2;
   }
@@ -158,7 +180,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, var(--progress-color) 15%, transparent),
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) 15%, transparent),
       transparent
     );
     background-size: 200% 100%;
