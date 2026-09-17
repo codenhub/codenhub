@@ -152,10 +152,10 @@
 
   @apply relative h-2.5 w-full overflow-hidden;
   background-color: var(--progress-surface, var(--_progress-surface));
-  /* DIAGNOSTIC round 2: plain fixed-color border (no color-mix chain) to
-     isolate whether the border itself or the color-mix computation is the
-     cost driver. Not for merge. */
-  border: 1px solid transparent;
+  /* DIAGNOSTIC round 3: full color-mix chain restored on border; testing
+     whether it's chain cost or matrix element count (40 instances) that's
+     the driver, by shrinking the matrix separately. Not for merge. */
+  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
