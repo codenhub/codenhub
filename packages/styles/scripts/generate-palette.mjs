@@ -18,7 +18,7 @@
 import { execFile } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { chromium } from "@playwright/test";
@@ -153,7 +153,7 @@ async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
        resting hover value, which is exactly what made two runs of this script
        disagree before this was added. */
     await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.goto(`file://${htmlPath.replaceAll("\\", "/")}`, { waitUntil: "load" });
+    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
 
     const rest = await page.evaluate(() => {
       const values = {};

@@ -33,12 +33,17 @@ interface Probe {
   key: string;
   name: string;
   readsBg: boolean;
+  readsFg: boolean;
   style?: string;
 }
 
 /* Mirrors `scripts/generate-palette.mjs`'s own `buildProbes`, and has to: this
    test's whole point is proving the generator's output against the same
-   shape of input it was generated from. */
+   shape of input it was generated from. `readsBg` and `readsFg` are
+   independent: `.solid` bakes both a `-fg` and a `-bg`/`-edge` pair from the
+   same cell (`toDeclarations` reads `.fg` off every solid probe regardless of
+   what else it reads), where `.soft`/`.ghost` split them across two probes
+   because their `-fg` does not vary by ground but their `-bg`/`-edge` does. */
 function buildProbes(): Probe[] {
   const probes: Probe[] = [];
 
@@ -48,6 +53,7 @@ function buildProbes(): Probe[] {
       key: `${intent}-solid`,
       name: `${intent}-solid`,
       readsBg: true,
+      readsFg: true,
     });
     for (const presentation of ["soft", "ghost"] as const) {
       probes.push({
@@ -55,6 +61,7 @@ function buildProbes(): Probe[] {
         key: `${intent}-${presentation}-fg`,
         name: `${intent}-${presentation}`,
         readsBg: false,
+        readsFg: true,
       });
       for (const ground of GROUNDS) {
         const name = ground.suffix === "" ? `${intent}-${presentation}` : `${intent}-${presentation}-${ground.suffix}`;
@@ -64,6 +71,7 @@ function buildProbes(): Probe[] {
           key: name,
           name,
           readsBg: true,
+          readsFg: false,
           style: ground.token === undefined ? undefined : `--_d-ground: ${ground.token}`,
         });
       }
@@ -185,17 +193,17 @@ test.describe("generated palette", () => {
         > = {};
 
         for (const probe of probeList) {
-          const slots = probe.readsBg
-            ? { bg: read(`--palette-${probe.name}-bg`), edge: read(`--palette-${probe.name}-edge`) }
-            : { fg: read(`--palette-${probe.name}-fg`) };
-          const hoverSlots = probe.readsBg
+          const bgSlots = probe.readsBg
             ? {
+                bg: read(`--palette-${probe.name}-bg`),
+                edge: read(`--palette-${probe.name}-edge`),
                 bgHover: read(`--palette-${probe.name}-bg-hover`),
                 edgeHover: read(`--palette-${probe.name}-edge-hover`),
               }
             : {};
+          const fgSlots = probe.readsFg ? { fg: read(`--palette-${probe.name}-fg`) } : {};
 
-          values[probe.key] = { ...slots, ...hoverSlots };
+          values[probe.key] = { ...bgSlots, ...fgSlots };
         }
 
         return values;
@@ -206,14 +214,19 @@ test.describe("generated palette", () => {
       for (const probe of probes) {
         const live = rest[probe.key];
         const expected = generated[probe.key];
-        const checks: [string, string | undefined, string | undefined][] = probe.readsBg
-          ? [
-              [`${probe.name} bg`, live.bg, expected.bg],
-              [`${probe.name} edge`, live.edge, expected.edge],
-              [`${probe.name} bg-hover`, live.bgHover, expected.bgHover],
-              [`${probe.name} edge-hover`, live.edgeHover, expected.edgeHover],
-            ]
-          : [[`${probe.name} fg`, live.fg, expected.fg]];
+        const checks: [string, string | undefined, string | undefined][] = [];
+
+        if (probe.readsBg) {
+          checks.push(
+            [`${probe.name} bg`, live.bg, expected.bg],
+            [`${probe.name} edge`, live.edge, expected.edge],
+            [`${probe.name} bg-hover`, live.bgHover, expected.bgHover],
+            [`${probe.name} edge-hover`, live.edgeHover, expected.edgeHover],
+          );
+        }
+        if (probe.readsFg) {
+          checks.push([`${probe.name} fg`, live.fg, expected.fg]);
+        }
 
         for (const [label, actual, wanted] of checks) {
           if (actual === undefined || wanted === undefined || getColorDistance(actual, wanted) > 2) {
