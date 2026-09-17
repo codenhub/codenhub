@@ -129,23 +129,30 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 0%;
   --_d-elevation: 0;
-  --progress-color: var(--intent-color);
+  /* `--progress-color`/`--progress-surface`/`--progress-edge` are the Tier 1
+     override path an aesthetic or consumer reaches `.progress` through (see
+     model.md's pseudo-element budget section), so they stay undeclared here:
+     redeclaring one on `.progress` itself would win over a value set on an
+     ancestor regardless of specificity, the same reasoning `box.css` gives
+     for `--_fill-cap`. Each is read with this formula as its fallback, in
+     private `--_progress-*` slots, at the point it paints below. */
   /* Presentation capped by the intent, the same `--_capped` `box` composes. */
-  --progress-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
-  --progress-fill: calc(var(--progress-capped) * var(--ui-bg-alpha, 1));
+  --_progress-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
+  --_progress-fill: calc(var(--_progress-capped) * var(--ui-bg-alpha, 1));
   /* Grounded on `transparent`, the same choice `.badge` and `.btn` make --
      not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
-  --progress-surface: color-mix(in oklab, var(--intent-color) var(--progress-fill), transparent);
+  --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
   /* P3: the line blends toward the track's own background by the fill amount
      before the edge amount is applied, so a filled track does not draw a ring
      of a different colour around its own plate. Same order `box` draws it in,
      and the same order `.quote` reimplements it in -- the two copies have to
      agree, and a future edge change has two homes, not one. */
-  --progress-line: color-mix(in oklab, var(--progress-surface) var(--ui-fill, var(--_d-fill)), var(--intent-border));
-  --progress-edge: color-mix(in oklab, var(--progress-line) var(--ui-border, var(--_d-border)), transparent);
+  --_progress-line: color-mix(in oklab, var(--_progress-surface) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  --_progress-edge: color-mix(in oklab, var(--_progress-line) var(--ui-border, var(--_d-border)), transparent);
 
-  @apply relative h-2.5 w-full overflow-hidden bg-(--progress-surface);
-  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge);
+  @apply relative h-2.5 w-full overflow-hidden;
+  background-color: var(--progress-surface, var(--_progress-surface));
+  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
@@ -155,7 +162,7 @@
     @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
-    background-color: var(--progress-color);
+    background-color: var(--progress-color, var(--intent-color));
     width: var(--progress-value, 0%);
     z-index: 2;
   }
@@ -167,7 +174,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, var(--progress-color) 15%, transparent),
+      color-mix(in srgb, var(--progress-color, var(--intent-color)) 15%, transparent),
       transparent
     );
     background-size: 200% 100%;

@@ -347,19 +347,19 @@ The edge is the silhouette and nothing else. Rules _inside_ a component that has
 
 With no presentation class in scope, each component keeps its own default: buttons are filled, alerts and badges are tinted, surfaces and controls are neutral and bordered.
 
-| Component                                       | Reads                                                                            |
-| ----------------------------------------------- | -------------------------------------------------------------------------------- |
-| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.                                            |
-| `.kbd`                                          | Fill, text, border, and border width.                                            |
-| `.data-table`                                   | Header fill and text, border, border width.                                      |
-| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                         |
-| `.input-group`                                  | Border, border width, and a capped fill.                                         |
-| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                            |
-| `.switch`                                       | Border, border width, and a capped fill.                                         |
-| `.quote`                                        | Fill, text, border, and width.                                                   |
-| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                |
-| `.progress`                                     | Track fill and border; the value fill is always the intent color, full strength. |
-| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                   |
+| Component                                       | Reads                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `.btn`, `.alert`, `.badge`, `.card`, `.panel`   | Fill, text, border, and border width.                                                           |
+| `.kbd`                                          | Fill, text, border, and border width.                                                           |
+| `.data-table`                                   | Header fill and text, border, border width.                                                     |
+| `.ipt`, `.textarea`, `.select`, `.text-control` | Border, border width, and a capped fill.                                                        |
+| `.input-group`                                  | Border, border width, and a capped fill.                                                        |
+| `.checkbox`, `.radio`                           | A capped fill, checked and unchecked.                                                           |
+| `.switch`                                       | Border, border width, and a capped fill.                                                        |
+| `.quote`                                        | Fill, text, border, and width.                                                                  |
+| `.code`, `.pre`, `.tooltip-bubble`              | Fill, text, border, and material.                                                               |
+| `.progress`                                     | Track fill, border, and border width; the value fill is always the intent color, full strength. |
+| `.loader`, `.skeleton`, `.divider`              | Intent only, not presentation.                                                                  |
 
 A text control caps a **cascaded** fill at `6%`, keeping typed text legible when a `.solid` container reaches a field nobody classed. A fill class written on the control itself names its own cap instead, because that is a consumer describing what they want: `.soft` takes `12%` and `.solid` takes `20%`.
 
