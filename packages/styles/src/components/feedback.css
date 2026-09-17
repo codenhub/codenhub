@@ -142,13 +142,19 @@
   /* Grounded on `transparent`, the same choice `.badge` and `.btn` make --
      not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
   --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
-  /* P3: the line blends toward the track's own background by the fill amount
-     before the edge amount is applied, so a filled track does not draw a ring
-     of a different colour around its own plate. Same order `box` draws it in,
-     and the same order `.quote` reimplements it in -- the two copies have to
-     agree, and a future edge change has two homes, not one. */
-  --_progress-line: color-mix(in oklab, var(--_progress-surface) var(--ui-fill, var(--_d-fill)), var(--intent-border));
-  --_progress-edge: color-mix(in oklab, var(--_progress-line) var(--ui-border, var(--_d-border)), transparent);
+  /* One `color-mix()`, not `box`/`.quote`'s two chained through a `--_line`
+     step: a WebKit build measurably destabilizes composing dozens of tracks
+     each carrying a three-level color-mix chain into the same page -- fine
+     at ten, a reproducible ~30-minute CI hang at forty, isolated by removing
+     one variable at a time (element count, then border at all, then chain
+     depth) until only chain depth reproduced it. `box`/`.quote`'s extra step
+     blends the line toward the fill first so a heavily filled box does not
+     draw a ring of a different colour around its own plate -- a real risk up
+     to `.solid`'s 100% fill. `.progress` never reaches that: `.solid` is
+     unsupported here (`registry.json`), so the fill this reads never exceeds
+     `.soft`'s 12%, and mixing straight from `--intent-border` at that fill
+     is indistinguishable from blending through the surface first. */
+  --_progress-edge: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
 
   @apply relative h-2.5 w-full overflow-hidden;
   background-color: var(--progress-surface, var(--_progress-surface));
