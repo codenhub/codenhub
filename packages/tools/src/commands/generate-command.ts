@@ -1,14 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-
-import { hasContentDrift, type GeneratedFile } from "../generators/generator.ts";
+import { applyGenerated } from "../generators/apply-generated.ts";
+import type { GeneratedFile } from "../generators/generator.ts";
 import type { SummaryRow } from "../reporting/reporter.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
-
-interface GeneratedOutcome {
-  file: GeneratedFile;
-  hasDrift: boolean;
-}
 
 async function generateFiles(context: CommandContext): Promise<GeneratedFile[]> {
   // The generators pull in a Markdown parser, which every other command can do without.
@@ -24,11 +17,6 @@ async function generateFiles(context: CommandContext): Promise<GeneratedFile[]> 
   return results.flat();
 }
 
-async function measureDrift(root: string, file: GeneratedFile): Promise<GeneratedOutcome> {
-  const authored = await readFile(resolve(root, file.path), "utf8").catch(() => undefined);
-  return { file, hasDrift: authored === undefined || hasContentDrift(file.contents, authored) };
-}
-
 /**
  * Creates the command that regenerates derived repository files.
  *
@@ -42,7 +30,7 @@ export function createGenerateCommand(): CommandDefinition {
     run: async (context) => {
       const root = context.workspace.root;
       const files = await generateFiles(context);
-      const outcomes = await Promise.all(files.map(async (file) => measureDrift(root, file)));
+      const outcomes = await applyGenerated(files, { dryRun: context.options.isDryRun, root });
       const stale = outcomes.filter(({ hasDrift }) => hasDrift);
 
       if (context.options.isDryRun) {
@@ -52,16 +40,6 @@ export function createGenerateCommand(): CommandDefinition {
         }
         return stale.length > 0 ? EXIT_FAILURE : EXIT_SUCCESS;
       }
-
-      await Promise.all(
-        stale.map(async ({ file }) => {
-          // A generator may own a file in a directory that does not exist yet,
-          // such as the first build of a new icon family.
-          const target = resolve(root, file.path);
-          await mkdir(dirname(target), { recursive: true });
-          await writeFile(target, file.contents, "utf8");
-        }),
-      );
 
       const rows = outcomes.map<SummaryRow>(({ file, hasDrift }) => ({
         detail: hasDrift ? "written" : "unchanged",

@@ -380,8 +380,10 @@ Anything else implements `CommandDefinition` directly and receives a `CommandCon
 
 Checks live in `packages/tools/src/checks/` and implement `CheckRule`: a name, an `appliesTo` predicate, and a `run` that returns findings. Register it in `checks/registry.ts`. Rules report rather than throw so every package can be inspected in one pass, and each finding needs a stable code because that code is what the exception register bypasses.
 
-Generators live in `packages/tools/src/generators/` and implement `Generator`, returning the contents a file should have rather than writing it. The command diffs and writes, so `--dry-run` and change detection are not reimplemented per generator. Use `replaceGeneratedRegion` for a generated region inside an otherwise hand-written file.
+Generators live in `packages/tools/src/generators/` and implement `Generator`, returning the contents a file should have rather than writing it. Use `replaceGeneratedRegion` for a generated region inside an otherwise hand-written file.
 
-The documentation model both of them build on lives in `packages/tools/src/documentation/` and is published as `@codenhub/tools/documentation`. `apps/docs` consumes the same module, so the documentation contract has one implementation rather than two.
+Diffing and writing are not the generate command's own logic: `applyGenerated`, published alongside the `Generator` contract as `@codenhub/tools/generators`, compares generated content against disk with `hasContentDrift`, and writes what drifted unless asked for a dry run. `hub generate`'s own command calls it the same way any other consumer would, so `--dry-run` and change detection are implemented once rather than once per caller. The same export carries `findWorkspaceRoot`, the walk-up-to-`pnpm-workspace.yaml` search `hub` itself starts from, for a caller that has no `hub`-resolved workspace to hand it.
+
+The documentation model both checks and generators build on lives in `packages/tools/src/documentation/` and is published as `@codenhub/tools/documentation`. `apps/docs` consumes the same module, so the documentation contract has one implementation rather than two.
 
 Checks and generators are siblings and neither imports the other's rules. What both need lives below them: predicates over a package in `packages/tools/src/workspace/package-policy.ts`, and the documents an `llms-full.txt` compiles in `packages/tools/src/documentation/llms-full.ts`.

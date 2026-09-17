@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { findWorkspaceRoot } from "../workspace/find-root.ts";
 import type { GeneratedFile, Generator } from "./generator.ts";
 import { buildFamily } from "./icon-data/build-family.ts";
 import { ICON_FAMILIES, type IconFamilyDefinition } from "./icon-data/family-definitions.ts";
@@ -20,11 +21,8 @@ async function readUpstreamVersion(packageDirectory: string): Promise<string> {
   return manifest.version;
 }
 
-async function locateUpstream(
-  definition: IconFamilyDefinition,
-  iconsPackage: WorkspacePackage,
-  workspaceRoot: string,
-): Promise<string> {
+async function locateUpstream(definition: IconFamilyDefinition, iconsPackage: WorkspacePackage): Promise<string> {
+  const workspaceRoot = await findWorkspaceRoot(iconsPackage.directory);
   const candidates = [
     resolve(iconsPackage.directory, NODE_MODULES, definition.upstreamPackage),
     resolve(workspaceRoot, NODE_MODULES, definition.upstreamPackage),
@@ -60,7 +58,7 @@ async function locateUpstream(
  */
 export function createIconDataGenerator(): Generator {
   return {
-    generate: async ({ packages, workspace }) => {
+    generate: async ({ packages }) => {
       const iconsPackage = packages.find(({ name }) => name === ICONS_PACKAGE);
       if (!iconsPackage) {
         return [];
@@ -68,7 +66,7 @@ export function createIconDataGenerator(): Generator {
 
       const families = await Promise.all(
         ICON_FAMILIES.map(async (definition) => {
-          const packageDirectory = await locateUpstream(definition, iconsPackage, workspace.root);
+          const packageDirectory = await locateUpstream(definition, iconsPackage);
           const version = await readUpstreamVersion(packageDirectory);
           const { attributionText, document, licenseText } = await buildFamily(definition, packageDirectory, version);
           const familyDirectory = `${iconsPackage.location}/${DATA_DIRECTORY}/${definition.prefix}`;

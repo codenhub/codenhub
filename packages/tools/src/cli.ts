@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-import { stat } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-
 import { renderCommandHelp, renderHelp } from "./cli/help.ts";
 import { parseArguments } from "./cli/parse-arguments.ts";
 import { resolveCommandLine } from "./cli/resolve-command-line.ts";
@@ -11,40 +8,8 @@ import { listCommands, resolveCommand } from "./commands/registry.ts";
 import { createReporter } from "./reporting/reporter.ts";
 import { findChangedPaths } from "./workspace/changed-packages.ts";
 import { discoverWorkspace } from "./workspace/discover.ts";
+import { findWorkspaceRoot } from "./workspace/find-root.ts";
 import { selectPackages } from "./workspace/select-packages.ts";
-
-const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
-
-async function isFile(candidate: string): Promise<boolean> {
-  try {
-    return (await stat(candidate)).isFile();
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Walks up from a directory to the repository root.
- *
- * The root is identified by the pnpm workspace manifest so the executable behaves
- * the same from any package directory.
- * @param startDirectory Directory to start searching from.
- * @returns Absolute repository root.
- * @throws When no workspace manifest exists in any parent directory.
- */
-export async function findWorkspaceRoot(startDirectory: string): Promise<string> {
-  async function search(directory: string): Promise<string> {
-    if (await isFile(resolve(directory, WORKSPACE_MANIFEST))) {
-      return directory;
-    }
-    const parent = dirname(directory);
-    if (parent === directory) {
-      throw new Error(`Could not find ${WORKSPACE_MANIFEST} in ${startDirectory} or any parent directory.`);
-    }
-    return search(parent);
-  }
-  return search(resolve(startDirectory));
-}
 
 async function main(): Promise<number> {
   const reporter = createReporter();
