@@ -38,6 +38,7 @@ export function discoverPublicResources(slug: string, packageFiles: readonly str
     if (
       !packagePath.startsWith("docs/") ||
       packagePath.startsWith("docs/internal/") ||
+      packagePath.startsWith("docs/plans/") ||
       packagePath
         .slice("docs/".length)
         .split("/")
@@ -53,6 +54,7 @@ export function discoverPublicResources(slug: string, packageFiles: readonly str
       (packagePath) =>
         packagePath.startsWith("docs/") &&
         !packagePath.startsWith("docs/internal/") &&
+        !packagePath.startsWith("docs/plans/") &&
         packagePath.toLowerCase().endsWith(".md"),
     )
     .map((packagePath) => {

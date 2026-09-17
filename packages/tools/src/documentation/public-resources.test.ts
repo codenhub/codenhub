@@ -11,6 +11,7 @@ describe("discoverPublicResources", () => {
         "docs/.npmignore",
         "docs/assets/diagram.svg",
         "docs/internal/secret.txt",
+        "docs/plans/draft.txt",
         "docs/reference.md",
       ]),
     ).toEqual([
