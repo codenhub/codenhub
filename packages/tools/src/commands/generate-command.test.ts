@@ -160,3 +160,99 @@ describe("hub generate", () => {
     expect(await readFile(join(fixture.root, "packages/example/llms-full.txt"), "utf8")).toContain("New guidance.");
   });
 });
+
+describe("hub generate › package-owned generate scripts", () => {
+  /**
+   * Writes a repository holding one package with its own `generate` script and
+   * one without, so dispatch to the owning package and skipping the other can
+   * both be proven from the same fixture.
+   */
+  async function createPackageScriptFixture(): Promise<WorkspaceFixture> {
+    const root = await mkdtemp(join(tmpdir(), "codenhub-generate-pkg-"));
+    const withScriptDirectory = join(root, "packages/with-script");
+    const withoutScriptDirectory = join(root, "packages/without-script");
+
+    await mkdir(withScriptDirectory, { recursive: true });
+    await mkdir(withoutScriptDirectory, { recursive: true });
+    await writeFile(join(root, "README.md"), README, "utf8");
+    await writeFile(
+      join(withScriptDirectory, "README.md"),
+      "# @codenhub/with-script\n\nHas a generate script.\n",
+      "utf8",
+    );
+    await writeFile(
+      join(withoutScriptDirectory, "README.md"),
+      "# @codenhub/without-script\n\nHas no generate script.\n",
+      "utf8",
+    );
+    // Records whether it was asked to check or write, then fails a dry run
+    // unconditionally -- proof the command forwards `--dry-run` rather than
+    // deciding drift on its own behalf.
+    await writeFile(
+      join(withScriptDirectory, "generate.mjs"),
+      [
+        'import { writeFileSync } from "node:fs";',
+        'const isDryRun = process.argv.includes("--dry-run");',
+        'writeFileSync("ran.json", JSON.stringify({ isDryRun }));',
+        "if (isDryRun) {",
+        "  process.exitCode = 1;",
+        "}",
+      ].join("\n"),
+      "utf8",
+    );
+
+    return {
+      packages: [
+        {
+          directory: withScriptDirectory,
+          directoryName: "with-script",
+          isPrivate: false,
+          location: "packages/with-script",
+          manifest: { description: "Has a generate script.", name: "@codenhub/with-script" },
+          name: "@codenhub/with-script",
+          scripts: { generate: "node generate.mjs" },
+          unscopedName: "with-script",
+          workspaceDependencies: [],
+        },
+        {
+          directory: withoutScriptDirectory,
+          directoryName: "without-script",
+          isPrivate: false,
+          location: "packages/without-script",
+          manifest: { description: "Has no generate script.", name: "@codenhub/without-script" },
+          name: "@codenhub/without-script",
+          scripts: {},
+          unscopedName: "without-script",
+          workspaceDependencies: [],
+        },
+      ],
+      root,
+    };
+  }
+
+  it("runs the generate script a package owns", async () => {
+    const fixture = await createPackageScriptFixture();
+
+    await runGenerate(fixture);
+
+    const ran: unknown = JSON.parse(await readFile(join(fixture.packages[0]!.directory, "ran.json"), "utf8"));
+    expect(ran).toEqual({ isDryRun: false });
+  });
+
+  it("leaves a package with no generate script alone", async () => {
+    const fixture = await createPackageScriptFixture();
+
+    await runGenerate(fixture);
+
+    await expect(readFile(join(fixture.packages[1]!.directory, "ran.json"), "utf8")).rejects.toThrow("ENOENT");
+  });
+
+  it("forwards --dry-run and fails when a package's own script reports drift", async () => {
+    const fixture = await createPackageScriptFixture();
+
+    expect(await runGenerate(fixture, ["generate", "--dry-run"])).toBe(EXIT_FAILURE);
+
+    const ran: unknown = JSON.parse(await readFile(join(fixture.packages[0]!.directory, "ran.json"), "utf8"));
+    expect(ran).toEqual({ isDryRun: true });
+  });
+});

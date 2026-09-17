@@ -616,6 +616,9 @@ importers:
 
   packages/styles:
     devDependencies:
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
