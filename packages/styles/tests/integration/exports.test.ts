@@ -121,6 +121,10 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
     patterns: [/--color-primary:/, /\.btn\{/, /\.stack\{/, /--_capped:/],
   },
   "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
+  "./palette": {
+    target: "dist/palette.css",
+    patterns: [/--palette-primary-solid-bg:/, /--palette-success-soft-page-bg:/, /--palette-info-ghost-subtle-edge:/],
+  },
   "./components": {
     target: "dist/components.css",
     patterns: [

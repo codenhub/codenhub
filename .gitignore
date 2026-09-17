@@ -12,6 +12,7 @@ node_modules
 
 # Build output
 dist
+**/.palette-tmp
 .astro
 .wrangler
 coverage

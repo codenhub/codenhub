@@ -22,6 +22,8 @@ Finished work is not tracked here. The current token contract, component coverag
 
 **`.progress` gains real track presentation, cut as `0.3.0`**, per the `APPROVED` decision in [`docs/internal/progress-presentation-axes.md`](./progress-presentation-axes.md): the track now composes a fill and an edge like every other presentation-reading component, while the value fill stays `--intent-color` at full strength. This changes the rendered output of every existing `.progress` consumer, so it ships the same way `0.2.0`'s `--progress-surface` change did -- as a minor, not a patch. See [`docs/changelog/0.3.0.md`](../changelog/0.3.0.md), including its recorded WCAG 1.4.11 known issue on the new default.
 
+**A generated `./palette` export lands, also cut as `0.3.0`**, per the `APPROVED` decision in [`docs/internal/generated-palette.md`](./generated-palette.md): every `intent x presentation` cell's composed `bg`/`fg`/`edge`, rest and hover, light and dark, baked to flat `--palette-*` custom properties for a consumer that cannot take this package as a build-time dependency. The generator (`packages/styles/scripts/generate-palette.mjs`, run through `packages/tools`' `styles-palette` `pnpm generate` step) reads real composed values from a real headless browser rather than reimplementing `color-mix()` math by hand, and `tests/browser/palette.spec.ts` checks every baked value against a freshly live-composed one on every run. This is additive, new public surface rather than a default-value change.
+
 ## Planned
 
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed.

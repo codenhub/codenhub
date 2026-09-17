@@ -3,6 +3,7 @@ import { createIconDataGenerator } from "./icon-data-generator.ts";
 import { createLlmsFullGenerator } from "./llms-full-generator.ts";
 import { createReadmePackagesGenerator } from "./readme-packages-generator.ts";
 import { createReferenceGenerator } from "./reference-generator.ts";
+import { createStylesPaletteGenerator } from "./styles-palette-generator.ts";
 
 /**
  * Every generator `hub generate` runs.
@@ -11,6 +12,7 @@ import { createReferenceGenerator } from "./reference-generator.ts";
 export function createGenerators(): Generator[] {
   return [
     createIconDataGenerator(),
+    createStylesPaletteGenerator(),
     createLlmsFullGenerator(),
     createReadmePackagesGenerator(),
     createReferenceGenerator(),
