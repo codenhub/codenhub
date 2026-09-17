@@ -1,8 +1,4 @@
-/** Obligation a license places on output that ships the artwork. */
-export type IconAttribution = "none" | "notice" | "credit";
-
-/** Catalog tier a family belongs to. */
-export type IconFamilyTier = "core" | "extended";
+import type { IconAttribution, IconFamilyTier } from "../../src/core/types.ts";
 
 /** Everything the generator needs to turn an upstream package into a family. */
 export interface IconFamilyDefinition {
