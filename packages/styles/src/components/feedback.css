@@ -152,7 +152,8 @@
 
   @apply relative h-2.5 w-full overflow-hidden;
   background-color: var(--progress-surface, var(--_progress-surface));
-  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
+  /* DIAGNOSTIC: border temporarily removed to isolate whether it's the cause
+     of CI's webkit hang. Not for merge. */
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
