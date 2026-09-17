@@ -1,59 +1,20 @@
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { mapConcurrent } from "../../process/concurrency.ts";
+import type { IconAttribution, IconData, IconFamilyData } from "../../src/core/types.ts";
+import { mapConcurrent } from "./concurrency.ts";
 import {
   CORE_TIER_OBLIGATIONS,
   LICENSE_OBLIGATIONS,
   RESERVED_PREFIXES,
   RESERVED_SIZE_TOKENS,
-  type IconAttribution,
   type IconFamilyDefinition,
 } from "./family-definitions.ts";
 import { normalizeSvg } from "./normalize-svg.ts";
 
-/** Icon entry as it is written to family data. */
-interface IconEntry {
-  body: string;
-  width?: number;
-  height?: number;
-  left?: number;
-  top?: number;
-  tags?: string[];
-}
-
-/**
- * Family data as it is written to disk.
- *
- * The shape is declared here rather than imported from `@codenhub/icons` so the
- * tooling stays independent of the package it generates for. The icons package
- * types each generated document as `IconFamilyData` when it builds them, which
- * is what fails the build if the two ever disagree.
- */
-export interface IconFamilyDocument {
-  prefix: string;
-  info: {
-    name: string;
-    total: number;
-    author: { name: string; url: string };
-    license: { title: string; spdx: string; url: string };
-    attribution: IconAttribution;
-    tier: "core" | "extended";
-    upstream: { package: string; version: string };
-    strokeWidth?: number;
-    style?: string;
-    weight?: string;
-  };
-  width: number;
-  height: number;
-  left: number;
-  top: number;
-  icons: Record<string, IconEntry>;
-}
-
 /** A generated family, with the license material that has to travel with it. */
 export interface BuiltFamily {
-  document: IconFamilyDocument;
+  document: IconFamilyData;
   licenseText: string;
   attributionText: string;
 }
@@ -128,7 +89,7 @@ function readViewBoxKey(viewBox: ViewBox): string {
   return `${viewBox.left} ${viewBox.top} ${viewBox.width} ${viewBox.height}`;
 }
 
-function renderAttribution(document: IconFamilyDocument): string {
+function renderAttribution(document: IconFamilyData): string {
   const { author, license, name, upstream } = document.info;
   return `# ${name}
 
@@ -194,7 +155,7 @@ export async function buildFamily(
 
   const familyViewBox = pickDominantViewBox([...normalized.values()].map(readViewBoxKey));
 
-  const icons: Record<string, IconEntry> = {};
+  const icons: Record<string, IconData> = {};
   for (const [iconName, icon] of normalized) {
     const iconTags = tags[iconName];
     icons[iconName] = {
@@ -207,7 +168,7 @@ export async function buildFamily(
     };
   }
 
-  const document: IconFamilyDocument = {
+  const document: IconFamilyData = {
     height: familyViewBox.height,
     icons,
     info: {

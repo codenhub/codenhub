@@ -127,6 +127,7 @@
     "dev": "pnpm --filter=@codenhub/icons-dev dev",
     "debug": "pnpm build && pnpm --filter=@codenhub/icons-debug dev",
     "demo": "pnpm --filter=@codenhub/icons-demo dev",
+    "generate": "node scripts/generate-icon-data.ts",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/icons version dist-tags time --json && npm dist-tag ls @codenhub/icons && npm access get status @codenhub/icons",
     "status:pack": "npm pack --dry-run --ignore-scripts",
@@ -136,6 +137,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@codenhub/tools": "workspace:*",
     "@material-symbols/svg-400": "0.46.0",
     "@phosphor-icons/core": "2.1.1",
     "@types/node": "catalog:",

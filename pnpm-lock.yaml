@@ -328,6 +328,9 @@ importers:
 
   packages/icons:
     devDependencies:
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@material-symbols/svg-400':
         specifier: 0.46.0
         version: 0.46.0

@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "composite": true,
-    "lib": ["DOM", "ES2024"],
+    "lib": ["DOM", "ESNext"],
     "module": "Preserve",
     "moduleResolution": "bundler",
     "noEmit": true
   },
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "scripts/**/*"]
 }
