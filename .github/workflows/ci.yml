@@ -142,6 +142,21 @@ jobs:
       - name: Set up the workspace
         uses: ./.github/actions/setup
 
+      # `@codenhub/styles`' `styles-palette` generator reads real composed
+      # colors from a real headless browser rather than reimplementing
+      # `color-mix()` math by hand (see `docs/internal/generated-palette.md`),
+      # so the drift check needs Chromium the same way the browser job's
+      # chromium leg does -- restored from the same cache key, installed with
+      # the same command, just the one engine this generator launches.
+      - name: Restore the browser cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install browsers
+        run: pnpm hub browsers --with-deps styles -- chromium
+
       # Generated files are derived from READMEs, package docs, and manifests, so
       # a change that edits a source without regenerating leaves the repository
       # describing itself incorrectly. The dry run reports which files are stale

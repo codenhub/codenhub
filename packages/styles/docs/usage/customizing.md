@@ -137,6 +137,31 @@ Knobs and material tokens reach in opposite directions, and telling them apart m
 
 Shipped aesthetics set the shared material tokens above. `.neobrutalism` and `.pixel` set `--ui-ink` for their neutral outline; intent classes still override the intent slots on each component.
 
+## Generated palette
+
+`@codenhub/styles/palette` is a generated, self-contained stylesheet of every `intent x presentation` cell's composed colors, baked to flat `--palette-*` custom properties -- the same values `box.css` composes live, computed once at build time rather than re-derived. It exists for a consumer that cannot take `@codenhub/styles` as a build-time dependency (an optional peer, for example) but still wants to look consistent with it, not as a replacement for the components themselves when Tailwind is available.
+
+```css
+@import "@codenhub/styles/palette";
+```
+
+```css
+.my-badge {
+  background: var(--palette-success-soft-page-bg);
+  color: var(--palette-success-soft-fg);
+  border-color: var(--palette-success-soft-page-edge);
+}
+```
+
+Every value is already the composited color -- never a `var(--color-background)` or `var(--intent-subtle)` reference -- so this file never needs `./theme` loaded alongside it to resolve anything.
+
+Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of the seven published intents (`neutral`, `primary`, `secondary`, `success`, `warning`, `destructive`, `info`) and `<presentation>` is `solid`, `soft`, or `ghost`. `<slot>` is `bg`, `fg`, or `edge`. Two qualifiers layer on only where they apply:
+
+- A ground qualifier (`page` or `subtle`) inserted before the slot, present only on `.soft`/`.ghost`'s `bg` and `edge` -- `.solid` is ground-independent at full fill, and `fg` never varies by ground. No qualifier means the `transparent` ground (`.badge`/`.btn`'s ground): `--palette-success-soft-bg`. `page` is `.alert`'s ground (`--color-background`): `--palette-success-soft-page-bg`. `subtle` is `.pre`/`.code`/`.kbd`/`.tooltip-bubble`'s ground (that intent's own `--intent-subtle`): `--palette-success-soft-subtle-bg`.
+- A `-hover` suffix on `bg` and `edge` only -- `fg` never changes on hover: `--palette-success-soft-page-bg-hover`.
+
+Dark values are scoped the same way `@codenhub/styles`' own explicit theme override is: `.dark`, `.theme-dark`, and `[data-theme="dark"]`, on the element or an ancestor. There is no `prefers-color-scheme` fallback in this file -- a consumer reaching for a standalone palette is already handling its own theme switching, so the OS-preference case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use.
+
 ## Component internals
 
 Component classes may define scoped implementation variables such as `--surface-padding`, `--field-gap`, `--input-group-pad`, `--switch-*`, `--table-*`, `--quote-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.
