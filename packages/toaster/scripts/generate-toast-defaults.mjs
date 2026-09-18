@@ -238,14 +238,35 @@ async function main() {
     const paletteValues = (block) => {
       const values = {};
       for (const intent of TOAST_INTENTS) {
+        // Default look: .soft, page ground -- .alert's own unstyled default.
         values[`${intent}-bg`] = readPaletteValue(block, `${intent}-soft-page-bg`);
         values[`${intent}-fg`] = readPaletteValue(block, `${intent}-soft-fg`);
         values[`${intent}-edge`] = readPaletteValue(block, `${intent}-soft-page-edge`);
+        // .solid, ground-independent -- read so a .solid toast (cascaded from
+        // an ancestor the same way every other @codenhub/styles presentation
+        // class cascades) has something real to switch to.
+        values[`${intent}-solid-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
+        values[`${intent}-solid-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
+        values[`${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
       }
       for (const intent of BUTTON_INTENTS) {
+        // Default look: .solid, ground-independent -- .btn's own unstyled default.
         values[`btn-${intent}-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
         values[`btn-${intent}-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
         values[`btn-${intent}-bg-hover`] = readPaletteValue(block, `${intent}-solid-bg-hover`);
+        // .edged on the default .solid button.
+        values[`btn-${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
+        values[`btn-${intent}-solid-edge-hover`] = readPaletteValue(block, `${intent}-solid-edge-hover`);
+        // .soft and .ghost, transparent ground (.btn's own ground) -- read so
+        // those presentation classes have something real to switch to too.
+        for (const presentation of ["soft", "ghost"]) {
+          for (const slot of ["bg", "fg", "edge", "bg-hover", "edge-hover"]) {
+            values[`btn-${intent}-${presentation}-${slot}`] = readPaletteValue(
+              block,
+              `${intent}-${presentation}-${slot}`,
+            );
+          }
+        }
       }
       return values;
     };
