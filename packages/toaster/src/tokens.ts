@@ -22,15 +22,19 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   primaryBg: "--toast-color-primary-bg",
   primaryFg: "--toast-color-primary-fg",
   primaryBgHover: "--toast-color-primary-bg-hover",
+  primaryEdge: "--toast-color-primary-edge",
   secondaryBg: "--toast-color-secondary-bg",
   secondaryFg: "--toast-color-secondary-fg",
   secondaryBgHover: "--toast-color-secondary-bg-hover",
+  secondaryEdge: "--toast-color-secondary-edge",
   successBtnBg: "--toast-color-success-btn-bg",
   successBtnFg: "--toast-color-success-btn-fg",
   successBtnBgHover: "--toast-color-success-btn-bg-hover",
+  successBtnEdge: "--toast-color-success-btn-edge",
   destructiveBtnBg: "--toast-color-destructive-btn-bg",
   destructiveBtnFg: "--toast-color-destructive-btn-fg",
   destructiveBtnBgHover: "--toast-color-destructive-btn-bg-hover",
+  destructiveBtnEdge: "--toast-color-destructive-btn-edge",
 };
 
 const ownedStyleElements = new Map<string, HTMLStyleElement>();

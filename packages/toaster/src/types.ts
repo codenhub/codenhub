@@ -78,24 +78,32 @@ export interface ToastTokens {
   primaryFg?: string;
   /** Hover background color for the primary dialog action button. */
   primaryBgHover?: string;
+  /** Border color for the primary dialog action button when `.edged` is active. */
+  primaryEdge?: string;
   /** Background color for the secondary dialog action button. */
   secondaryBg?: string;
   /** Foreground color for the secondary dialog action button. */
   secondaryFg?: string;
   /** Hover background color for the secondary dialog action button. */
   secondaryBgHover?: string;
+  /** Border color for the secondary dialog action button when `.edged` is active. */
+  secondaryEdge?: string;
   /** Background color for the success dialog action button. */
   successBtnBg?: string;
   /** Foreground color for the success dialog action button. */
   successBtnFg?: string;
   /** Hover background color for the success dialog action button. */
   successBtnBgHover?: string;
+  /** Border color for the success dialog action button when `.edged` is active. */
+  successBtnEdge?: string;
   /** Background color for the destructive dialog action button. */
   destructiveBtnBg?: string;
   /** Foreground color for the destructive dialog action button. */
   destructiveBtnFg?: string;
   /** Hover background color for the destructive dialog action button. */
   destructiveBtnBgHover?: string;
+  /** Border color for the destructive dialog action button when `.edged` is active. */
+  destructiveBtnEdge?: string;
 }
 
 /**

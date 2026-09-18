@@ -318,11 +318,12 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   }
 }
 
-/* No fill axis here: the container carries no severity, so mixing --ui-fill
-   against an --intent-color that resolves to page ink under an ambient .solid
-   would slab the whole dialog. Border-width defaults to 1px (not 0) so a bare
-   .edged with no aesthetic active still draws something, but the 0% edge
-   default keeps it fully transparent -- and so pixel-identical -- until asked. */
+/* No fill axis here: the container carries no severity, so there is no
+   `.solid`/`.soft`/`.ghost` cell to switch between -- only the edge axis
+   applies. Border-color defaults to transparent, matching .edgeless, the
+   same "borderless until asked" default every other surface in this file
+   uses; .edged below is what draws one, from the same border-token chain
+   the input already reads. */
 :where(dialog[data-toast-instance] .toast-dialog-container) {
   box-sizing: border-box;
   display: flex;
@@ -334,17 +335,17 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   overflow: auto;
   border-style: solid;
   border-width: var(--ui-border-width, var(--border-width, 1px));
-  border-color: color-mix(
-    in oklab,
-    var(--toast-color-border, var(--color-border, var(--toast-default-border))) var(--ui-border, 0%),
-    transparent
-  );
+  border-color: transparent;
   border-radius: var(--ui-radius-surface, var(--radius-surface, 0.75rem));
   box-shadow: var(--ui-surface-shadow, none);
   background: var(--toast-color-surface, var(--color-surface, var(--toast-default-surface)));
   color: var(--toast-color-text, var(--color-text, var(--toast-default-text)));
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
   overflow-wrap: anywhere;
+}
+
+:where(.edged) :where(dialog[data-toast-instance] .toast-dialog-container) {
+  border-color: var(--toast-color-border, var(--color-border, var(--toast-default-border)));
 }
 
 :where(dialog[data-toast-instance] .toast-dialog-title) {
@@ -382,9 +383,15 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   font: inherit;
 }
 
+/* Reuses the primary action button's own token/palette/generated-default
+   chain rather than inventing a separate "ring" concept or a hand-picked
+   literal: a focus ring is the same brand-primary accent a real .btn.primary
+   already renders, so a consumer who customizes tokens.primaryBg gets a
+   matching ring for free, and there is nothing left here for this package
+   to guess at on its own. */
 :where(dialog[data-toast-instance] .toast-dialog-input:focus-visible) {
-  border-color: var(--toast-color-info, var(--color-primary, #2563eb));
-  outline: 2px solid var(--toast-color-info, var(--color-primary, #2563eb));
+  border-color: var(--toast-color-primary-bg, var(--palette-primary-solid-bg, var(--toast-default-btn-primary-bg)));
+  outline: 2px solid var(--toast-color-primary-bg, var(--palette-primary-solid-bg, var(--toast-default-btn-primary-bg)));
   outline-offset: 2px;
 }
 
@@ -547,8 +554,15 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   );
 }
 
+/* .ghost's background is always the literal `transparent`, never a token
+   var() chain: this matches every other .ghost surface in this file (the
+   toast body, the dialog container, the cancel button) and matches
+   box.css's own math -- 0% fill mixes 0% of any color, custom or not, into
+   the ground, so a real .btn.ghost renders transparent even with a custom
+   --intent-color set. Text stays on its normal token chain: the fill axis
+   is the only thing .ghost zeroes, not foreground. */
 :where(.ghost) :where(dialog[data-toast-instance] .toast-dialog-btn-primary) {
-  background: var(--toast-color-primary-bg, var(--palette-primary-ghost-bg, var(--toast-default-btn-primary-ghost-bg)));
+  background: transparent;
   color: var(--toast-color-primary-fg, var(--palette-primary-ghost-fg, var(--toast-default-btn-primary-ghost-fg)));
 }
 
@@ -560,10 +574,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 }
 
 :where(.ghost) :where(dialog[data-toast-instance] .toast-dialog-btn-secondary) {
-  background: var(
-    --toast-color-secondary-bg,
-    var(--palette-secondary-ghost-bg, var(--toast-default-btn-secondary-ghost-bg))
-  );
+  background: transparent;
   color: var(
     --toast-color-secondary-fg,
     var(--palette-secondary-ghost-fg, var(--toast-default-btn-secondary-ghost-fg))
@@ -578,10 +589,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 }
 
 :where(.ghost) :where(dialog[data-toast-instance] .toast-dialog-btn-success) {
-  background: var(
-    --toast-color-success-btn-bg,
-    var(--palette-success-ghost-bg, var(--toast-default-btn-success-ghost-bg))
-  );
+  background: transparent;
   color: var(--toast-color-success-btn-fg, var(--palette-success-ghost-fg, var(--toast-default-btn-success-ghost-fg)));
 }
 
@@ -593,10 +601,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 }
 
 :where(.ghost) :where(dialog[data-toast-instance] .toast-dialog-btn-danger) {
-  background: var(
-    --toast-color-destructive-btn-bg,
-    var(--palette-destructive-ghost-bg, var(--toast-default-btn-destructive-ghost-bg))
-  );
+  background: transparent;
   color: var(
     --toast-color-destructive-btn-fg,
     var(--palette-destructive-ghost-fg, var(--toast-default-btn-destructive-ghost-fg))
@@ -613,53 +618,91 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 /* .edged adds the border back regardless of which fill presentation (default
    .solid, .soft, or .ghost above) is active -- box.css's own edge axis is
    independent of fill, so each fill state needs its own edge cell rather
-   than one flat override. */
+   than one flat override. A consumer's own edge token (ToastTokens'
+   primaryEdge/secondaryEdge/successBtnEdge/destructiveBtnEdge) is checked
+   first here too, the same as every other color on this button. */
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-primary) {
-  border-color: var(--palette-primary-solid-edge, var(--toast-default-btn-primary-solid-edge));
+  border-color: var(
+    --toast-color-primary-edge,
+    var(--palette-primary-solid-edge, var(--toast-default-btn-primary-solid-edge))
+  );
 }
 
 :where(.soft.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-primary) {
-  border-color: var(--palette-primary-soft-edge, var(--toast-default-btn-primary-soft-edge));
+  border-color: var(
+    --toast-color-primary-edge,
+    var(--palette-primary-soft-edge, var(--toast-default-btn-primary-soft-edge))
+  );
 }
 
 :where(.ghost.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-primary) {
-  border-color: var(--palette-primary-ghost-edge, var(--toast-default-btn-primary-ghost-edge));
+  border-color: var(
+    --toast-color-primary-edge,
+    var(--palette-primary-ghost-edge, var(--toast-default-btn-primary-ghost-edge))
+  );
 }
 
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-secondary) {
-  border-color: var(--palette-secondary-solid-edge, var(--toast-default-btn-secondary-solid-edge));
+  border-color: var(
+    --toast-color-secondary-edge,
+    var(--palette-secondary-solid-edge, var(--toast-default-btn-secondary-solid-edge))
+  );
 }
 
 :where(.soft.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-secondary) {
-  border-color: var(--palette-secondary-soft-edge, var(--toast-default-btn-secondary-soft-edge));
+  border-color: var(
+    --toast-color-secondary-edge,
+    var(--palette-secondary-soft-edge, var(--toast-default-btn-secondary-soft-edge))
+  );
 }
 
 :where(.ghost.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-secondary) {
-  border-color: var(--palette-secondary-ghost-edge, var(--toast-default-btn-secondary-ghost-edge));
+  border-color: var(
+    --toast-color-secondary-edge,
+    var(--palette-secondary-ghost-edge, var(--toast-default-btn-secondary-ghost-edge))
+  );
 }
 
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-success) {
-  border-color: var(--palette-success-solid-edge, var(--toast-default-btn-success-solid-edge));
+  border-color: var(
+    --toast-color-success-btn-edge,
+    var(--palette-success-solid-edge, var(--toast-default-btn-success-solid-edge))
+  );
 }
 
 :where(.soft.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-success) {
-  border-color: var(--palette-success-soft-edge, var(--toast-default-btn-success-soft-edge));
+  border-color: var(
+    --toast-color-success-btn-edge,
+    var(--palette-success-soft-edge, var(--toast-default-btn-success-soft-edge))
+  );
 }
 
 :where(.ghost.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-success) {
-  border-color: var(--palette-success-ghost-edge, var(--toast-default-btn-success-ghost-edge));
+  border-color: var(
+    --toast-color-success-btn-edge,
+    var(--palette-success-ghost-edge, var(--toast-default-btn-success-ghost-edge))
+  );
 }
 
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-danger) {
-  border-color: var(--palette-destructive-solid-edge, var(--toast-default-btn-destructive-solid-edge));
+  border-color: var(
+    --toast-color-destructive-btn-edge,
+    var(--palette-destructive-solid-edge, var(--toast-default-btn-destructive-solid-edge))
+  );
 }
 
 :where(.soft.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-danger) {
-  border-color: var(--palette-destructive-soft-edge, var(--toast-default-btn-destructive-soft-edge));
+  border-color: var(
+    --toast-color-destructive-btn-edge,
+    var(--palette-destructive-soft-edge, var(--toast-default-btn-destructive-soft-edge))
+  );
 }
 
 :where(.ghost.edged) :where(dialog[data-toast-instance] .toast-dialog-btn-danger) {
-  border-color: var(--palette-destructive-ghost-edge, var(--toast-default-btn-destructive-ghost-edge));
+  border-color: var(
+    --toast-color-destructive-btn-edge,
+    var(--palette-destructive-ghost-edge, var(--toast-default-btn-destructive-ghost-edge))
+  );
 }
 
 :where(dialog[data-toast-instance] .toast-dialog-btn-cancel) {
