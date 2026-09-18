@@ -793,6 +793,9 @@ importers:
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles
+      '@codenhub/tools':
+        specifier: workspace:*
+        version: link:../tools
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1

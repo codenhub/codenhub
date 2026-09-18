@@ -209,12 +209,12 @@ describe("toast lifecycle", () => {
 
 describe("content and token security", () => {
   it("should reject token values that are not CSS colors", () => {
-    expect(() => createToaster({ tokens: { success: "red; } body { display: none" } })).toThrow(/color/);
+    expect(() => createToaster({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
   });
 
   it("should reject invalid per-toast and dialog token colors", () => {
     const toaster = createToaster();
-    const tokens = { success: "red; } body { display: none" };
+    const tokens = { successBg: "red; } body { display: none" };
 
     expect(() => toaster.semantic.success("Unsafe", { tokens })).toThrow(/color/);
     expect(() => toaster.interactive.confirm("Unsafe", { tokens })).toThrow(/color/);
@@ -225,7 +225,7 @@ describe("content and token security", () => {
     const toaster = createToaster();
     const handle = toaster.semantic.success("Safe");
 
-    expect(() => handle.update({ tokens: { success: "red; } body { display: none" } })).toThrow(/color/);
+    expect(() => handle.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
     toaster.destroy();
   });
 

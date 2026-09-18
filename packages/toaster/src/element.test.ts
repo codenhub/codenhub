@@ -88,13 +88,13 @@ describe("Toast rendering", () => {
       makeToast({
         message: "Custom styled",
         tokens: {
-          success: "rgb(255, 0, 0)",
-          successSubtle: "rgb(0, 255, 0)",
+          successBg: "rgb(255, 0, 0)",
+          successFg: "rgb(0, 255, 0)",
         },
       }),
     );
-    expect(element.style.getPropertyValue("--toast-color-success")).toBe("rgb(255, 0, 0)");
-    expect(element.style.getPropertyValue("--toast-color-success-subtle")).toBe("rgb(0, 255, 0)");
+    expect(element.style.getPropertyValue("--toast-color-success-bg")).toBe("rgb(255, 0, 0)");
+    expect(element.style.getPropertyValue("--toast-color-success-fg")).toBe("rgb(0, 255, 0)");
   });
 
   it("should sanitize nested script elements inside invalid elements", () => {

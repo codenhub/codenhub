@@ -37,6 +37,7 @@
     "build": "pnpm build:scripts && pnpm build:styles",
     "build:scripts": "tsdown src/index.ts --format esm --dts --clean --no-fixed-extension",
     "build:styles": "tailwindcss -i ./src/styles/index.css -o ./dist/styles/index.css --minify",
+    "generate": "node scripts/generate-toast-defaults.mjs",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/toaster version dist-tags time --json && npm dist-tag ls @codenhub/toaster && npm access get status @codenhub/toaster",
     "status:pack": "npm pack --dry-run --ignore-scripts",
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@codenhub/styles": "workspace:*",
+    "@codenhub/tools": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@vitest/coverage-v8": "catalog:",
