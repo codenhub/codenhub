@@ -1,12 +1,12 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-18
-scope: Proposal to extend `./palette` with `--color-border`/`--color-surface`/`--color-text`'s flat values, for the same optional-peer consumers `./palette` already serves.
+scope: Extends `./palette` with `--color-border`/`--color-surface`/`--color-text`'s flat values, for the same optional-peer consumers `./palette` already serves.
 ---
 
 # Flat neutral tokens in the generated palette
 
-This is a proposal, not agreed direction. It extends [A generated palette for consumers outside the Tailwind pipeline](./generated-palette.md) and should be read after it -- this document assumes that one's problem statement, evidence method, and "Public surface" precedent, and does not repeat them.
+This is agreed direction, implemented in `scripts/generate-palette.mjs` and shipped in `src/palette.css`. It extends [A generated palette for consumers outside the Tailwind pipeline](./generated-palette.md) and should be read after it -- this document assumes that one's problem statement, evidence method, and "Public surface" precedent, and does not repeat them.
 
 ## The problem
 
@@ -22,7 +22,7 @@ That is roughly half of a generator script -- a Tailwind CLI invocation plus a f
 
 This costs nothing at runtime -- `generate-toast-defaults.mjs` only ever runs at `pnpm generate` time, never in a published package or a consumer's build -- so the case for this document is maintainer tooling weight, not a consumer-facing defect. `@codenhub/toaster` cited only as the concrete example; this is not a proposal to change that package, matching how [`generated-palette.md`](./generated-palette.md#evidence) cites it.
 
-## The decision (proposed)
+## The decision
 
 Add three more declarations to `./palette`'s generator, alongside the existing `intent x presentation` cross: `--palette-border`, `--palette-surface`, `--palette-text`, each read from `--color-border`/`--color-surface`/`--color-text` the same way the generator already resolves any other theme value that needs the real Tailwind build to exist. Light values unscoped, dark values under the same `.dark`, `.theme-dark`, `[data-theme="dark"]` selector set the rest of `./palette` already uses.
 
@@ -36,11 +36,11 @@ Same file, same export -- `./palette` already ships as one flat stylesheet a non
 
 ### Verification
 
-Same instrument `./palette`'s own cells are checked against: `tests/browser/test-utils.ts`'s `readSrgb`/`expectSameColor`, comparing the generated `--palette-border`/`-surface`/`-text` values against the live, Tailwind-compiled `--color-border`/`-surface`/`-text` for the same theme, light and dark.
+Same instrument `./palette`'s own cells are checked against: `tests/browser/palette.spec.ts`'s `getColorDistance` (from `tests/browser/test-utils.ts`), comparing the generated `--palette-border`/`-surface`/`-text` values against the live, Tailwind-compiled `--color-border`/`-surface`/`-text` for the same theme, light and dark.
 
 ## What this unblocks
 
-Once published, `@codenhub/toaster`'s `generate-toast-defaults.mjs` can read `--palette-border`/`-surface`/`-text` as plain text off `palette.css`, the same way it already reads every `--palette-<intent>-*` cell -- `compileThemeHarness` and `readNeutralTokens` (the Tailwind CLI shell-out, the Playwright launch, the OKLab-to-sRGB conversion) become dead code to delete. `src/styles/index.css`'s existing `var(--toast-color-*, var(--palette-*, var(--toast-default-*)))` chains for the dialog container/cancel button/input already read `--color-border`/`-surface`/`-text` as their live-link tier (not `--palette-*`, since that tier didn't exist for these yet) -- that middle link should move to `--palette-border`/`-surface`/`-text` to match the pattern every other cell in that file already follows.
+`@codenhub/toaster`'s `generate-toast-defaults.mjs` can now read `--palette-border`/`-surface`/`-text` as plain text off `palette.css`, the same way it already reads every `--palette-<intent>-*` cell -- `compileThemeHarness` and `readNeutralTokens` (the Tailwind CLI shell-out, the Playwright launch, the OKLab-to-sRGB conversion) become dead code to delete once `@codenhub/toaster` picks up a `@codenhub/styles` version that ships this. `src/styles/index.css`'s existing `var(--toast-color-*, var(--palette-*, var(--toast-default-*)))` chains for the dialog container/cancel button/input already read `--color-border`/`-surface`/`-text` as their live-link tier (not `--palette-*`, since that tier didn't exist for these yet) -- that middle link should move to `--palette-border`/`-surface`/`-text` to match the pattern every other cell in that file already follows. Tracked as toaster-side follow-up work, not part of this change.
 
 ## Non-goals
 

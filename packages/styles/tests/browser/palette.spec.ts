@@ -13,7 +13,11 @@ import { getColorDistance } from "./test-utils";
    `.box`/`.box-hover` classes and real `registry.json` intents
    `scripts/generate-palette.mjs` used to generate `src/palette.css` -- through
    the same `getColorDistance` contract the rest of this suite already trusts.
-   A `box.css` change nobody regenerated the palette for fails here. */
+   A `box.css` change nobody regenerated the palette for fails here. The three
+   flat neutral tokens (`docs/internal/generated-palette-neutral-tokens.md`)
+   get the same live-vs-generated check below, just without the `.box`
+   probe/hover apparatus, since they carry no intent, presentation, or
+   hover state of their own. */
 
 const packageRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const registry = JSON.parse(await readFile(path.join(packageRoot, "registry.json"), "utf8")) as {
@@ -209,7 +213,30 @@ test.describe("generated palette", () => {
         return values;
       }, probes);
 
+      const neutral = await page.evaluate(() => {
+        const read = (token: string) => {
+          const probe = document.createElement("span");
+          probe.style.color = `var(${token})`;
+          document.body.append(probe);
+          const value = getComputedStyle(probe).color;
+          probe.remove();
+          return value;
+        };
+
+        return {
+          border: { generated: read("--palette-border"), live: read("--color-border") },
+          surface: { generated: read("--palette-surface"), live: read("--color-surface") },
+          text: { generated: read("--palette-text"), live: read("--color-text") },
+        };
+      });
+
       const mismatches: string[] = [];
+
+      for (const [name, { generated: expected, live }] of Object.entries(neutral)) {
+        if (getColorDistance(live, expected) > 2) {
+          mismatches.push(`${name}: live ${live} vs generated ${expected}`);
+        }
+      }
 
       for (const probe of probes) {
         const live = rest[probe.key];
