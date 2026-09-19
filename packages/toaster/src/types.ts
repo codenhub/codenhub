@@ -134,9 +134,13 @@ export interface ToastHandle {
   dismiss(): void;
 
   /**
-   * Patches the message text, styles, or classes of a live toast.
+   * Patches the message text, styles, or classes of a toast. Applied
+   * immediately when the toast is visible; if it is still queued, the
+   * update is stored and applied once a slot opens rather than discarded.
+   * Has no effect once the toast has settled.
    *
    * @param options Partial updates to apply.
+   * @throws {Error} If `options.tokens` contains an invalid CSS color.
    */
   update(options: ToastUpdateOptions): void;
 
@@ -237,7 +241,14 @@ export interface SemanticToastOptions {
   className?: string;
   /** Accessibility role. Defaults to variant default. */
   role?: ToastRole;
-  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  /**
+   * Margin from the border of the viewport. Can be a CSS length (e.g.
+   * "24px", "1.5rem") or an object. This is a property of the shared stack
+   * at this position, not of an individual toast: the most recent value
+   * dispatched to a given position applies to every toast already showing
+   * there, and omitting it clears a previously set margin for that stack.
+   * Toasts at the same position always share one margin.
+   */
   margin?: string | { x?: string; y?: string };
 }
 
@@ -260,7 +271,14 @@ export interface LoadingToastOptions {
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
-  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  /**
+   * Margin from the border of the viewport. Can be a CSS length (e.g.
+   * "24px", "1.5rem") or an object. This is a property of the shared stack
+   * at this position, not of an individual toast: the most recent value
+   * dispatched to a given position applies to every toast already showing
+   * there, and omitting it clears a previously set margin for that stack.
+   * Toasts at the same position always share one margin.
+   */
   margin?: string | { x?: string; y?: string };
 }
 
@@ -284,7 +302,14 @@ export interface CustomToastOptions {
   className?: string;
   /** Accessibility role. Defaults to "status". */
   role?: ToastRole;
-  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  /**
+   * Margin from the border of the viewport. Can be a CSS length (e.g.
+   * "24px", "1.5rem") or an object. This is a property of the shared stack
+   * at this position, not of an individual toast: the most recent value
+   * dispatched to a given position applies to every toast already showing
+   * there, and omitting it clears a previously set margin for that stack.
+   * Toasts at the same position always share one margin.
+   */
   margin?: string | { x?: string; y?: string };
 }
 
@@ -406,11 +431,24 @@ export interface ToasterConfig {
   shouldAutoDismiss?: boolean;
   /** Dynamic CSS variables applied to all toasts inside this instance. */
   tokens?: ToastTokens;
+  /**
+   * Nonce applied to the `<style>` element `tokens` are written through, for
+   * a host `style-src` Content Security Policy that requires one. Has no
+   * effect without `tokens`.
+   */
+  nonce?: string;
   /** Scoped fallback overrides per notification type. */
   semantic?: SemanticDefaults;
   loading?: LoadingDefaults;
   custom?: CustomDefaults;
-  /** Margin from the border of the viewport. Can be a CSS length (e.g. "24px", "1.5rem") or an object. */
+  /**
+   * Margin from the border of the viewport. Can be a CSS length (e.g.
+   * "24px", "1.5rem") or an object. This is a property of the shared stack
+   * at this position, not of an individual toast: the most recent value
+   * dispatched to a given position applies to every toast already showing
+   * there, and omitting it clears a previously set margin for that stack.
+   * Toasts at the same position always share one margin.
+   */
   margin?: string | { x?: string; y?: string };
   /**
    * Extra CSS class name applied to every toast and dialog dispatched from

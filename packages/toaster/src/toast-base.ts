@@ -1,8 +1,21 @@
-import { animateIn, animateStackChange, createToastElement, getOrCreateContainer } from "./dom";
+import { animateIn, animateStackChange, createToastShell, getOrCreateContainer, populateToastContent } from "./dom";
 import { applyUpdateToElement, normalizeToastOptions } from "./options";
 import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
 import { releaseSlot, removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
+import { assertValidTokens } from "./tokens";
 import type { ToastHandle, ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
+
+/** Reports an error with no caller to propagate to, the same way a browser reports an unhandled rejection. */
+function reportUncaughtError(error: unknown): void {
+  const globalWithReportError = globalThis as typeof globalThis & { reportError?: (error: unknown) => void };
+  if (globalWithReportError.reportError) {
+    globalWithReportError.reportError(error);
+  } else {
+    queueMicrotask(() => {
+      throw error;
+    });
+  }
+}
 
 type ToastLifecycleEventName = "show" | "shown" | "hide" | "hidden";
 
@@ -41,6 +54,7 @@ export class Toast {
   private visiblePosition: ToastPosition | null = null;
   private isHovered = false;
   private isFocused = false;
+  private pendingUpdate: ToastUpdateOptions | null = null;
   private readonly parent: HTMLElement;
   private readonly maxVisible: number;
 
@@ -86,6 +100,14 @@ export class Toast {
    */
   public get publicState(): ToastState {
     return convertToPublicState(this.internalState);
+  }
+
+  /**
+   * Whether overflow eviction must skip this toast: it is being actively
+   * hovered or focused, or it is a loader representing ongoing work.
+   */
+  public get isProtected(): boolean {
+    return this.isHovered || this.isFocused || this.options.icon === "loader";
   }
 
   /**
@@ -137,12 +159,29 @@ export class Toast {
   }
 
   /**
-   * Updates properties of a visible toast in place.
-   * This is a no-op if the toast is not currently visible.
+   * Updates properties of a toast in place. Applied immediately when the
+   * toast is visible; stored and applied on admission when it is still
+   * queued, so an update sent before a slot opens is not silently
+   * discarded. This is a no-op once the toast has settled.
    *
    * @param updateOpts Scoped updates to apply to the toast element.
+   * @throws {Error} If `updateOpts.tokens` contains an invalid CSS color.
    */
   public update(updateOpts: ToastUpdateOptions): void {
+    if (this.internalState === "queued") {
+      if (updateOpts.tokens !== undefined) {
+        assertValidTokens(updateOpts.tokens, this.parent.ownerDocument);
+      }
+      // Snapshot the caller-owned tokens object -- the same boundary
+      // normalizeToastOptions draws for construction-time tokens -- so a
+      // mutation after this call cannot change what admission applies.
+      this.pendingUpdate = {
+        ...this.pendingUpdate,
+        ...updateOpts,
+        ...(updateOpts.tokens !== undefined ? { tokens: { ...updateOpts.tokens } } : {}),
+      };
+      return;
+    }
     if (this.internalState !== "visible" || this.element === null) {
       return;
     }
@@ -186,7 +225,21 @@ export class Toast {
       return;
     }
     const position = this.options.position;
-    const element = createToastElement(this.options, () => this.hide(), this.parent.ownerDocument);
+
+    let element: HTMLDivElement;
+    let container: HTMLDivElement;
+    try {
+      element = createToastShell(this.options, this.parent.ownerDocument);
+      container = getOrCreateContainer({
+        parent: this.parent,
+        position,
+        instanceId: this.options.instanceId,
+        margin: this.options.margin,
+      });
+    } catch (error) {
+      this.failRender(null, error);
+      return;
+    }
 
     if (this.options.shouldAutoDismiss) {
       element.addEventListener("mouseenter", () => {
@@ -211,13 +264,6 @@ export class Toast {
       });
     }
 
-    const container = getOrCreateContainer({
-      parent: this.parent,
-      position,
-      instanceId: this.options.instanceId,
-      margin: this.options.margin,
-    });
-
     this.element = element;
     this.internalState = "visible";
     this.visiblePosition = position;
@@ -230,9 +276,24 @@ export class Toast {
       return;
     }
 
+    // The shell is inserted empty first (a distinct mutation an assistive
+    // technology's live-region observer can pick up), then filled -- see
+    // `createToastShell`'s own doc comment for why the order matters.
     animateStackChange(container, () => {
       container.appendChild(element);
     });
+
+    try {
+      populateToastContent(element, this.options, () => this.hide(), this.parent.ownerDocument);
+      if (this.pendingUpdate) {
+        applyUpdateToElement(element, this.pendingUpdate);
+        this.pendingUpdate = null;
+      }
+    } catch (error) {
+      this.failRender(element, error);
+      return;
+    }
+
     animateIn({
       element,
       position,
@@ -244,6 +305,33 @@ export class Toast {
         this.scheduleAutoDismiss(element);
       },
     });
+  }
+
+  /**
+   * Releases everything a failed render would otherwise leak: the reserved
+   * stack slot (so queued work isn't starved by a toast that never
+   * actually appeared) and any partial DOM, then settles the handle and
+   * reports the error to whatever the environment's uncaught-error channel
+   * is, since there is no caller here to propagate it to synchronously.
+   */
+  private failRender(element: HTMLDivElement | null, error: unknown): void {
+    if (element) {
+      toastByElement.delete(element);
+      element.remove();
+    }
+    this.element = null;
+    this.internalState = "hiding";
+    this.notify("hide");
+    this.internalState = "done";
+    this.notify("hidden");
+    releaseSlot({
+      owner: this,
+      parent: this.parent,
+      position: this.options.position,
+      instanceId: this.options.instanceId,
+    });
+    this.settledResolve();
+    reportUncaughtError(error);
   }
 
   /**
@@ -372,14 +460,7 @@ export class Toast {
         subscriber(this.handle);
       }
     } catch (error) {
-      const globalWithReportError = globalThis as typeof globalThis & { reportError?: (error: unknown) => void };
-      if (globalWithReportError.reportError) {
-        globalWithReportError.reportError(error);
-      } else {
-        queueMicrotask(() => {
-          throw error;
-        });
-      }
+      reportUncaughtError(error);
     }
   }
 }

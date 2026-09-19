@@ -271,6 +271,8 @@ export function normalizeToastOptions(params: {
   assertToastPosition(position);
   assertToastRole(role);
 
+  const margin = options.margin ?? config.margin;
+
   return Object.freeze({
     instanceId: config.instanceId,
     shouldAutoDismiss: options.shouldAutoDismiss ?? preset?.shouldAutoDismiss ?? config.shouldAutoDismiss,
@@ -284,12 +286,22 @@ export function normalizeToastOptions(params: {
     rootClassName: preset?.rootClassName ?? DEFAULT_TOAST_CLASS,
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
-    tokens: options.tokens ?? null,
-    margin: options.margin ?? config.margin,
+    // Snapshotted rather than referenced: a caller-owned object mutated
+    // after this call must not reach an already-admitted or still-queued
+    // toast (see toast-base.ts's queued-update path for the same
+    // boundary on a later update() call).
+    tokens: options.tokens ? { ...options.tokens } : null,
+    margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
   });
 }
 
 export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdateOptions): void {
+  // Validate everything before mutating anything: a rejected update must be
+  // atomic, not leave an earlier field in this same call already applied.
+  if (update.tokens !== undefined) {
+    assertValidTokens(update.tokens, element.ownerDocument);
+  }
+
   if (update.message !== undefined) {
     const messageEl = element.querySelector("[data-toast-message]");
     if (messageEl) {
@@ -298,7 +310,6 @@ export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdat
   }
 
   if (update.tokens !== undefined) {
-    assertValidTokens(update.tokens, element.ownerDocument);
     replaceTokens(element.style, update.tokens);
   }
 
