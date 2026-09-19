@@ -27,62 +27,83 @@ export type ToastState = "queued" | "visible" | "hiding" | "hidden";
 
 /**
  * Design tokens for overriding colors per toast or globally per instance.
+ *
+ * Every color here is final -- a background, a border, or a foreground exactly
+ * as it renders -- never an ingredient this package mixes further. Unset, each
+ * one already matches `@codenhub/styles`' own real, composed look (its
+ * `./palette` export when that package is around, this package's own
+ * generated defaults when it is not); setting one only replaces that single
+ * final value.
  */
 export interface ToastTokens {
-  /** Border/accent color for the toast-success variant. */
-  success?: string;
-  /** Foreground-on-accent color for the toast-success variant (used with filled/solid styles). */
-  successContrast?: string;
-  /** Muted background color for the toast-success variant. */
-  successSubtle?: string;
-  /** High-contrast foreground color for the toast-success variant. */
-  successStrong?: string;
-  /** Border/accent color for the toast-error variant. */
-  destructive?: string;
-  /** Foreground-on-accent color for the toast-error variant (used with filled/solid styles). */
-  destructiveContrast?: string;
-  /** Muted background color for the toast-error variant. */
-  destructiveSubtle?: string;
-  /** High-contrast foreground color for the toast-error variant. */
-  destructiveStrong?: string;
-  /** Border/accent color for the toast-warning variant. */
-  warning?: string;
-  /** Foreground-on-accent color for the toast-warning variant (used with filled/solid styles). */
-  warningContrast?: string;
-  /** Muted background color for the toast-warning variant. */
-  warningSubtle?: string;
-  /** High-contrast foreground color for the toast-warning variant. */
-  warningStrong?: string;
-  /** Border/accent color for the toast-info variant. */
-  info?: string;
-  /** Foreground-on-accent color for the toast-info variant (used with filled/solid styles). */
-  infoContrast?: string;
-  /** Muted background color for the toast-info variant. */
-  infoSubtle?: string;
-  /** High-contrast foreground color for the toast-info variant. */
-  infoStrong?: string;
-  /** Border color for the toast-default variant. */
+  /** Background color for the toast-success variant. */
+  successBg?: string;
+  /** Foreground (text/icon) color for the toast-success variant. */
+  successFg?: string;
+  /** Border color for the toast-success variant. */
+  successEdge?: string;
+  /** Background color for the toast-error variant. */
+  destructiveBg?: string;
+  /** Foreground (text/icon) color for the toast-error variant. */
+  destructiveFg?: string;
+  /** Border color for the toast-error variant. */
+  destructiveEdge?: string;
+  /** Background color for the toast-warning variant. */
+  warningBg?: string;
+  /** Foreground (text/icon) color for the toast-warning variant. */
+  warningFg?: string;
+  /** Border color for the toast-warning variant. */
+  warningEdge?: string;
+  /** Background color for the toast-info variant. */
+  infoBg?: string;
+  /** Foreground (text/icon) color for the toast-info variant. */
+  infoFg?: string;
+  /** Border color for the toast-info variant. */
+  infoEdge?: string;
+  /** Background color for the toast-default (no-severity) variant. */
+  defaultBg?: string;
+  /** Foreground (text/icon) color for the toast-default (no-severity) variant. */
+  defaultFg?: string;
+  /** Border color for the toast-default (no-severity) variant. */
+  defaultEdge?: string;
+  /** Border color for the dialog container, cancel button, and input. */
   border?: string;
-  /** Background color for the toast-default variant. */
+  /** Background color for the dialog container and cancel button. */
   surface?: string;
-  /** Text color for the toast-default variant. */
+  /** Text color for the dialog container and cancel button. */
   text?: string;
-  /** Background color for primary action buttons. */
-  primary?: string;
-  /** Foreground/contrast color for primary action buttons. */
-  primaryContrast?: string;
-  /** Hover background color for primary action buttons. */
-  primaryHover?: string;
-  /** Background color for secondary action buttons. */
-  accent?: string;
-  /** Foreground/contrast color for secondary action buttons. */
-  accentContrast?: string;
-  /** Hover background color for secondary action buttons. */
-  accentHover?: string;
-  /** Hover background color for success action buttons. */
-  successHover?: string;
-  /** Hover background color for destructive action buttons. */
-  destructiveHover?: string;
+  /** Background color for the primary dialog action button. */
+  primaryBg?: string;
+  /** Foreground color for the primary dialog action button. */
+  primaryFg?: string;
+  /** Hover background color for the primary dialog action button. */
+  primaryBgHover?: string;
+  /** Border color for the primary dialog action button when `.edged` is active. */
+  primaryEdge?: string;
+  /** Background color for the secondary dialog action button. */
+  secondaryBg?: string;
+  /** Foreground color for the secondary dialog action button. */
+  secondaryFg?: string;
+  /** Hover background color for the secondary dialog action button. */
+  secondaryBgHover?: string;
+  /** Border color for the secondary dialog action button when `.edged` is active. */
+  secondaryEdge?: string;
+  /** Background color for the success dialog action button. */
+  successBtnBg?: string;
+  /** Foreground color for the success dialog action button. */
+  successBtnFg?: string;
+  /** Hover background color for the success dialog action button. */
+  successBtnBgHover?: string;
+  /** Border color for the success dialog action button when `.edged` is active. */
+  successBtnEdge?: string;
+  /** Background color for the destructive dialog action button. */
+  destructiveBtnBg?: string;
+  /** Foreground color for the destructive dialog action button. */
+  destructiveBtnFg?: string;
+  /** Hover background color for the destructive dialog action button. */
+  destructiveBtnBgHover?: string;
+  /** Border color for the destructive dialog action button when `.edged` is active. */
+  destructiveBtnEdge?: string;
 }
 
 /**
