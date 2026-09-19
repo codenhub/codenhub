@@ -91,7 +91,17 @@ export class ModalController {
     if (params.message.trim().length === 0) {
       throw new Error("Interactive dialog message must not be empty.");
     }
-    assertValidTokens(params.options.tokens, this.parent.ownerDocument);
+    // Snapshotted rather than referenced: a queued dialog can sit for a
+    // while before its job runs, and a caller-owned options object mutated
+    // in that window must not reach the eventually-rendered dialog (the
+    // same boundary `normalizeToastOptions` in options.ts applies to toasts).
+    const options: ModalOptions = {
+      title: params.options.title,
+      shouldBackdropDismiss: params.options.shouldBackdropDismiss,
+      tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
+      className: params.options.className,
+    };
+    assertValidTokens(options.tokens, this.parent.ownerDocument);
 
     let resolveResult!: (value: T) => void;
     let rejectResult!: (reason: unknown) => void;
@@ -188,9 +198,9 @@ export class ModalController {
         const container = buildDialogContent({
           dialog,
           message: params.message,
-          title: params.options.title,
-          tokens: params.options.tokens,
-          className: joinClassNames(this.getDefaultClassName(), params.options.className),
+          title: options.title,
+          tokens: options.tokens,
+          className: joinClassNames(this.getDefaultClassName(), options.className),
           titleId: `${idBase}-title`,
           messageId,
         });
@@ -219,7 +229,7 @@ export class ModalController {
         // `close()` itself is idempotent through `closeDialog`'s own
         // already-closed fast path, so replaying it here is safe.
         dialog.addEventListener("close", () => close(params.cancelValue), { signal: abortController.signal });
-        if (params.options.shouldBackdropDismiss !== false) {
+        if (options.shouldBackdropDismiss !== false) {
           dialog.addEventListener(
             "click",
             (event) => {

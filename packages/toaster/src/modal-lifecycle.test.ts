@@ -54,6 +54,29 @@ describe("native dialog close reconciliation", () => {
   });
 });
 
+describe("queued dialog option safety", () => {
+  it("does not let a caller mutate a queued dialog's options before it renders", async () => {
+    const toaster = createToaster();
+    const first = toaster.interactive.alert("First");
+    const options = { title: "Original title" };
+    const queued = toaster.interactive.confirm("Queued message", options);
+
+    // Mutated after enqueueing but before the queue reaches this job.
+    options.title = "Mutated title";
+
+    const dialog = document.body.querySelector("dialog")!;
+    dialog.close();
+    await first.result;
+
+    expect(document.body.textContent).toContain("Original title");
+    expect(document.body.textContent).not.toContain("Mutated title");
+
+    queued.dismiss();
+    await queued.settled;
+    toaster.destroy();
+  });
+});
+
 describe("entrance animation cancellation", () => {
   it("still notifies shown and schedules auto-dismiss when the entrance animation is canceled", () => {
     vi.useFakeTimers();
