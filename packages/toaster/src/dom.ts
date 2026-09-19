@@ -26,11 +26,45 @@ const POSITION_CONTAINER_CLASSES: Record<ToastPosition, string> = {
   center: "coden-toast-stack coden-toast-stack-center",
 };
 
-const ANIMATION_OPTIONS: KeyframeAnimationOptions = {
-  duration: 400,
-  easing: "ease-in-out",
-  fill: "both",
-};
+const FALLBACK_ANIMATION_DURATION_MS = 400;
+const FALLBACK_ANIMATION_EASING = "cubic-bezier(0.2, 0, 0, 1)";
+
+/**
+ * Reads `--motion-duration-slow` off the element's computed style, so a
+ * consumer or aesthetic that overrides @codenhub/styles' motion tokens
+ * changes toast entrance/exit timing along with everything else it styles.
+ * Falls back to this package's own default when the token is unset --
+ * standalone, or in an environment (such as jsdom) that does not resolve
+ * custom properties from a stylesheet.
+ */
+function readAnimationDuration(element: Element): number {
+  const raw = element.ownerDocument.defaultView
+    ?.getComputedStyle(element)
+    .getPropertyValue("--motion-duration-slow")
+    .trim();
+  if (!raw) {
+    return FALLBACK_ANIMATION_DURATION_MS;
+  }
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) {
+    return FALLBACK_ANIMATION_DURATION_MS;
+  }
+  return raw.endsWith("ms") ? parsed : parsed * 1000;
+}
+
+/** Reads `--motion-ease` the same way {@link readAnimationDuration} reads its duration token. */
+function readAnimationEasing(element: Element): string {
+  const raw = element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue("--motion-ease").trim();
+  return raw && raw.length > 0 ? raw : FALLBACK_ANIMATION_EASING;
+}
+
+function getAnimationOptions(element: Element): KeyframeAnimationOptions {
+  return {
+    duration: readAnimationDuration(element),
+    easing: readAnimationEasing(element),
+    fill: "both",
+  };
+}
 
 const SVG_SUCCESS =
   '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
@@ -253,7 +287,7 @@ function runAnimation(
 
   if (!finish) {
     try {
-      element.animate(keyframes, ANIMATION_OPTIONS);
+      element.animate(keyframes, getAnimationOptions(element));
     } catch {
       // Animation support unavailable, nothing pending.
     }
@@ -266,7 +300,7 @@ function runAnimation(
   }
 
   try {
-    const animation = element.animate(keyframes, ANIMATION_OPTIONS);
+    const animation = element.animate(keyframes, getAnimationOptions(element));
     animation.onfinish = finish;
     if (shouldCompleteOnCancel) {
       animation.oncancel = finish;
