@@ -66,65 +66,156 @@ function getAnimationOptions(element: Element): KeyframeAnimationOptions {
   };
 }
 
-const SVG_SUCCESS =
-  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" /></svg>';
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
-const SVG_ERROR =
-  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>';
+interface SvgChildSpec {
+  readonly tag: "circle" | "path";
+  readonly attributes: Readonly<Record<string, string>>;
+}
 
-const SVG_WARNING =
-  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>';
+interface SvgSpec {
+  readonly className?: string;
+  readonly rootAttributes?: Readonly<Record<string, string>>;
+  readonly children: readonly SvgChildSpec[];
+}
 
-const SVG_INFO =
-  '<svg class="coden-toast-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>';
+const STROKE_ICON_ATTRIBUTES = {
+  fill: "none",
+  stroke: "currentColor",
+  "stroke-width": "2",
+  "stroke-linecap": "round",
+  "stroke-linejoin": "round",
+} as const;
 
-const SVG_LOADER =
-  '<svg class="coden-toast-icon coden-toast-spinner" aria-hidden="true" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9.5" fill="none" stroke-width="3" stroke-linecap="round" stroke-dasharray="42 150"></circle></svg>';
-
-const SVG_CLOSE =
-  '<svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>';
-
-const TOAST_ICON_HTML: Record<ToastIcon, string> = {
-  success: SVG_SUCCESS,
-  error: SVG_ERROR,
-  warning: SVG_WARNING,
-  info: SVG_INFO,
-  loader: SVG_LOADER,
+/**
+ * Built-in icon geometry, declared as data rather than markup: every element
+ * is constructed with `createElementNS` below, never parsed from an HTML/SVG
+ * string. `Element.innerHTML` is a Trusted-Types-guarded sink -- even a
+ * hardcoded, trusted string reaches it and throws under a host policy that
+ * requires a `TrustedHTML` assignment, which stranded these otherwise-safe
+ * built-in icons alongside genuinely untrusted custom content. Constructing
+ * the DOM directly sidesteps that sink entirely, so a security policy that
+ * blocks the custom-content path (see `options.ts`) does not also block a
+ * plain semantic toast.
+ */
+const ICON_SPECS: Record<ToastIcon, SvgSpec> = {
+  success: {
+    className: "coden-toast-icon",
+    rootAttributes: STROKE_ICON_ATTRIBUTES,
+    children: [
+      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
+      { tag: "path", attributes: { d: "m9 12 2 2 4-4" } },
+    ],
+  },
+  error: {
+    className: "coden-toast-icon",
+    rootAttributes: STROKE_ICON_ATTRIBUTES,
+    children: [
+      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
+      { tag: "path", attributes: { d: "m15 9-6 6" } },
+      { tag: "path", attributes: { d: "m9 9 6 6" } },
+    ],
+  },
+  warning: {
+    className: "coden-toast-icon",
+    rootAttributes: STROKE_ICON_ATTRIBUTES,
+    children: [
+      { tag: "path", attributes: { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" } },
+      { tag: "path", attributes: { d: "M12 9v4" } },
+      { tag: "path", attributes: { d: "M12 17h.01" } },
+    ],
+  },
+  info: {
+    className: "coden-toast-icon",
+    rootAttributes: STROKE_ICON_ATTRIBUTES,
+    children: [
+      { tag: "circle", attributes: { cx: "12", cy: "12", r: "10" } },
+      { tag: "path", attributes: { d: "M12 16v-4" } },
+      { tag: "path", attributes: { d: "M12 8h.01" } },
+    ],
+  },
+  loader: {
+    className: "coden-toast-icon coden-toast-spinner",
+    rootAttributes: { stroke: "currentColor" },
+    children: [
+      {
+        tag: "circle",
+        attributes: {
+          cx: "12",
+          cy: "12",
+          r: "9.5",
+          fill: "none",
+          "stroke-width": "3",
+          "stroke-linecap": "round",
+          "stroke-dasharray": "42 150",
+        },
+      },
+    ],
+  },
 };
 
-function parseSVGString(svgString: string, documentRef: Document): Element {
-  const template = documentRef.createElement("template");
-  template.innerHTML = svgString;
-  const element = template.content.firstElementChild;
-  if (element === null) {
-    throw new Error("SVG string could not be parsed into an element.");
+const CLOSE_ICON_SPEC: SvgSpec = {
+  rootAttributes: STROKE_ICON_ATTRIBUTES,
+  children: [
+    { tag: "path", attributes: { d: "M18 6 6 18" } },
+    { tag: "path", attributes: { d: "m6 6 12 12" } },
+  ],
+};
+
+function buildSvg(spec: SvgSpec, documentRef: Document): SVGElement {
+  const svgElement = documentRef.createElementNS(SVG_NAMESPACE, "svg");
+  svgElement.setAttribute("aria-hidden", "true");
+  svgElement.setAttribute("viewBox", "0 0 24 24");
+  if (spec.className) {
+    svgElement.setAttribute("class", spec.className);
   }
-  return element;
+  for (const [name, value] of Object.entries(spec.rootAttributes ?? {})) {
+    svgElement.setAttribute(name, value);
+  }
+  for (const child of spec.children) {
+    const childElement = documentRef.createElementNS(SVG_NAMESPACE, child.tag);
+    for (const [name, value] of Object.entries(child.attributes)) {
+      childElement.setAttribute(name, value);
+    }
+    svgElement.appendChild(childElement);
+  }
+  return svgElement;
 }
 
 function createDismissButton(onDismiss: () => void, documentRef: Document): HTMLButtonElement {
   const button = documentRef.createElement("button");
   button.type = "button";
   button.className = "coden-toast-dismiss";
-
-  const svgEl = parseSVGString(SVG_CLOSE, documentRef) as SVGElement;
-  button.appendChild(svgEl);
+  button.appendChild(buildSvg(CLOSE_ICON_SPEC, documentRef));
   button.setAttribute("aria-label", "Dismiss toast");
   button.addEventListener("click", onDismiss);
   return button;
 }
 
-function createIcon(icon: ToastIcon, documentRef: Document): Element {
-  const element = parseSVGString(TOAST_ICON_HTML[icon], documentRef);
+function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
+  const element = buildSvg(ICON_SPECS[icon], documentRef);
   if (icon === "loader" && documentRef.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-    (element as SVGElement).style.animation = "none";
+    element.style.animation = "none";
   }
   return element;
 }
 
-export function createToastElement(
-  options: ToastElementOptions,
-  onDismiss: () => void,
+/**
+ * Builds the toast's outer, empty announcement region: `role`/`aria-live`
+ * carried from the first moment it exists, with no content inside yet.
+ *
+ * Deliberately separate from {@link populateToastContent}: assistive
+ * technology tracks a live region from the mutation that inserts it, and a
+ * region that arrives already full of content is one mutation an AT's
+ * observer never had the chance to start watching (the ARIA22 technique).
+ * Insert the empty shell this returns into the document first, then call
+ * {@link populateToastContent} on the now-connected element.
+ */
+export function createToastShell(
+  options: Pick<
+    ToastElementOptions,
+    "className" | "instanceClassName" | "instanceId" | "role" | "rootClassName" | "tokens"
+  >,
   documentRef: Document,
 ): HTMLDivElement {
   const ariaLive = options.role === "alert" ? "assertive" : "polite";
@@ -137,7 +228,22 @@ export function createToastElement(
   container.setAttribute("role", options.role);
   container.setAttribute("aria-live", ariaLive);
   container.setAttribute("aria-atomic", "true");
+  applyTokens(container.style, options.tokens);
 
+  return container;
+}
+
+/**
+ * Fills an already-connected {@link createToastShell} region with its
+ * message/icon or custom content and dismiss control. Call only after the
+ * shell has been inserted into the document.
+ */
+export function populateToastContent(
+  container: HTMLDivElement,
+  options: Pick<ToastElementOptions, "content" | "icon" | "isDismissable" | "message">,
+  onDismiss: () => void,
+  documentRef: Document,
+): void {
   if (options.content !== null) {
     container.append(...options.content);
   } else if (options.message !== null) {
@@ -154,10 +260,6 @@ export function createToastElement(
   if (options.isDismissable) {
     container.appendChild(createDismissButton(onDismiss, documentRef));
   }
-
-  applyTokens(container.style, options.tokens);
-
-  return container;
 }
 
 interface ContainerParams {
@@ -183,6 +285,13 @@ export function getContainer(params: ContainerParams): HTMLDivElement | null {
   );
 }
 
+/**
+ * Margin is written onto the shared position container, not a per-toast
+ * element, so it is deliberately a property of the stack rather than of any
+ * one toast: the most recently dispatched value wins for every toast already
+ * showing at that position, and dispatching without `margin` clears it. See
+ * `ToasterConfig.margin`'s own doc comment for the consumer-facing contract.
+ */
 export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
   const { parent, position, instanceId, margin } = params;
   let container = getContainer({ parent, position, instanceId });

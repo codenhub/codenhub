@@ -80,36 +80,65 @@ export function replaceTokens(style: CSSStyleDeclaration, tokens: ToastTokens | 
   applyTokens(style, tokens);
 }
 
-/** Applies instance tokens using an owned stylesheet and CSSOM declarations. */
+/**
+ * Applies instance tokens using an owned stylesheet and CSSOM declarations.
+ *
+ * @param tokens Consumer-provided token overrides, or `null`/`undefined` to clear them.
+ * @param styleId Toaster instance ID the owned `<style>` element is scoped to.
+ * @param documentRef Document the style element is created in.
+ * @param nonce Nonce to set on a newly created style element, for a host
+ *   `style-src` CSP that requires one.
+ * @throws {Error} If the created style element's stylesheet cannot be read
+ *   back as a `CSSStyleRule` -- typically a CSP blocking the element outright.
+ *   The element is removed before this throws, so a caught failure leaves no
+ *   owned node behind.
+ */
 export function applyGlobalTokens(
   tokens: ToastTokens | null | undefined,
   styleId: string,
   documentRef: Document = document,
+  nonce?: string,
 ): void {
   assertValidTokens(tokens, documentRef);
-  let styleElement = ownedStyleElements.get(styleId);
+  const existingElement = ownedStyleElements.get(styleId);
 
   if (!tokens || Object.keys(tokens).length === 0) {
-    styleElement?.remove();
+    existingElement?.remove();
     ownedStyleElements.delete(styleId);
     return;
   }
 
-  if (!styleElement || styleElement.ownerDocument !== documentRef || !styleElement.isConnected) {
-    styleElement?.remove();
-    styleElement = documentRef.createElement("style");
+  const isReusable = Boolean(
+    existingElement && existingElement.ownerDocument === documentRef && existingElement.isConnected,
+  );
+  if (!isReusable) {
+    existingElement?.remove();
+  }
+  const styleElement = isReusable ? existingElement! : documentRef.createElement("style");
+  if (!isReusable) {
     styleElement.dataset.toastTokenOwner = styleId;
-    documentRef.head.appendChild(styleElement);
-    styleElement.sheet?.insertRule(`[data-toast-instance="${styleId}"] {}`);
-    ownedStyleElements.set(styleId, styleElement);
+    if (nonce) {
+      styleElement.nonce = nonce;
+    }
   }
 
-  const rule = styleElement.sheet?.cssRules[0];
-  if (!(rule instanceof documentRef.defaultView!.CSSStyleRule)) {
-    throw new Error("Toast token stylesheet could not be initialized.");
+  try {
+    if (!isReusable) {
+      documentRef.head.appendChild(styleElement);
+      styleElement.sheet?.insertRule(`[data-toast-instance="${styleId}"] {}`);
+    }
+    const rule = styleElement.sheet?.cssRules[0];
+    if (!(rule instanceof documentRef.defaultView!.CSSStyleRule)) {
+      throw new Error("Toast token stylesheet could not be initialized.");
+    }
+    rule.style.cssText = "";
+    applyTokens(rule.style, tokens);
+    ownedStyleElements.set(styleId, styleElement);
+  } catch (error) {
+    styleElement.remove();
+    ownedStyleElements.delete(styleId);
+    throw error;
   }
-  rule.style.cssText = "";
-  applyTokens(rule.style, tokens);
 }
 
 /** Removes only the stylesheet owned by the matching toaster instance. */

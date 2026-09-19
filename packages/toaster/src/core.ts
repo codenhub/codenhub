@@ -11,6 +11,7 @@ import { ModalController } from "./modal";
 import { DEFAULT_CONFIG, assertToastPosition } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
+import { reconcileCapacity } from "./toast-helpers";
 import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
 import type { ToasterConfig, ToasterRuntimeConfig, ToastHandle, ToastUpdateOptions } from "./types";
 
@@ -125,7 +126,12 @@ class ToastManager implements Toaster {
     this.resolved = this.buildResolvedConfig(this.config);
 
     if (this.config.tokens && typeof document !== "undefined") {
-      applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container?.ownerDocument ?? document);
+      applyGlobalTokens(
+        this.config.tokens,
+        this.instanceId,
+        this.config.container?.ownerDocument ?? document,
+        this.config.nonce,
+      );
     }
 
     const getContextConfig = () => this.config;
@@ -172,7 +178,15 @@ class ToastManager implements Toaster {
 
     if (config.tokens !== undefined) {
       const parent = this.getParent();
-      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument);
+      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
+    }
+
+    if (config.maxVisible !== undefined) {
+      reconcileCapacity({
+        parent: this.getParent(),
+        instanceId: this.instanceId,
+        maxVisible: this.resolved.maxVisible,
+      });
     }
 
     if (config.margin !== undefined) {
@@ -249,14 +263,14 @@ class ToastManager implements Toaster {
   private getParent(): HTMLElement {
     if (this.config.container) {
       if (this.config.tokens) {
-        applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container.ownerDocument);
+        applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container.ownerDocument, this.config.nonce);
       }
       return this.config.container;
     }
     if (typeof document !== "undefined") {
       const parent = document.body ?? document.documentElement;
       if (this.config.tokens) {
-        applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument);
+        applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
       }
       return parent;
     }

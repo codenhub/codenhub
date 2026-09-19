@@ -3,6 +3,13 @@ import type { ToastPosition } from "./types";
 
 export interface HideableToast {
   hide(): void;
+  /**
+   * Whether this owner must survive overflow eviction right now -- an
+   * active loader, or a toast the user is currently hovering or has
+   * focused. Checked on every eviction pass; never bypassed to force a
+   * capacity or queue-pressure target.
+   */
+  readonly isProtected: boolean;
 }
 
 interface SlotRequest {
@@ -83,8 +90,15 @@ function getStackState(params: RequestSlotParams): StackState {
   return state;
 }
 
+/**
+ * Evicts the oldest eligible (unprotected, not already evicting) active
+ * owners to relieve overflow pressure -- either a queue waiting for room or
+ * a `maxVisible` lowered below current occupancy. A protected owner is
+ * never evicted to reach either target: if every active owner is
+ * protected, pressure simply persists and queued work keeps waiting.
+ */
 function evictForQueue(state: StackState): void {
-  let neededSlots = state.queue.length - state.evicting.size;
+  let neededSlots = Math.max(state.queue.length - state.evicting.size, state.active.length - state.maxVisible);
   if (neededSlots <= 0) {
     return;
   }
@@ -94,7 +108,7 @@ function evictForQueue(state: StackState): void {
     if (neededSlots <= 0) {
       break;
     }
-    if (!state.evicting.has(owner)) {
+    if (!state.evicting.has(owner) && !owner.isProtected) {
       state.evicting.add(owner);
       ownersToHide.push(owner);
       neededSlots -= 1;
@@ -126,6 +140,18 @@ export function requestSlot(params: RequestSlotParams): (() => void) | null {
   };
 }
 
+function promoteQueued(state: StackState): void {
+  const availableCallbacks: Array<() => void> = [];
+  while (state.active.length < state.maxVisible && state.queue.length > 0) {
+    const request = state.queue.shift()!;
+    if (!request.isCanceled) {
+      state.active.push(request.owner);
+      availableCallbacks.push(request.onAvailable);
+    }
+  }
+  availableCallbacks.forEach((callback) => callback());
+}
+
 export function releaseSlot(params: Omit<RequestSlotParams, "onAvailable" | "maxVisible">): void {
   const parentStates = stackStates.get(params.parent);
   const key = getStackKey(params.instanceId, params.position);
@@ -140,18 +166,40 @@ export function releaseSlot(params: Omit<RequestSlotParams, "onAvailable" | "max
   }
   state.evicting.delete(params.owner);
 
-  const availableCallbacks: Array<() => void> = [];
-  while (state.active.length < state.maxVisible && state.queue.length > 0) {
-    const request = state.queue.shift()!;
-    if (!request.isCanceled) {
-      state.active.push(request.owner);
-      availableCallbacks.push(request.onAvailable);
-    }
-  }
-  availableCallbacks.forEach((callback) => callback());
+  promoteQueued(state);
   evictForQueue(state);
 
   if (state.active.length === 0 && state.queue.length === 0) {
     parentStates?.delete(key);
+  }
+}
+
+export interface ReconcileCapacityParams {
+  parent: HTMLElement;
+  instanceId: string;
+  maxVisible: number;
+}
+
+/**
+ * Applies a runtime `maxVisible` change to every position stack this
+ * instance already owns: promotes queued work into any newly-opened slots,
+ * then evicts down to the new capacity among eligible (unprotected) active
+ * owners. A limit lowered below the number of currently protected owners
+ * is not enforced by evicting one of them -- the stack stays over capacity
+ * until protection naturally releases, same as overflow admission.
+ */
+export function reconcileCapacity(params: ReconcileCapacityParams): void {
+  const parentStates = stackStates.get(params.parent);
+  if (!parentStates) {
+    return;
+  }
+  const prefix = `${params.instanceId}:`;
+  for (const [key, state] of parentStates) {
+    if (!key.startsWith(prefix)) {
+      continue;
+    }
+    state.maxVisible = params.maxVisible;
+    promoteQueued(state);
+    evictForQueue(state);
   }
 }
