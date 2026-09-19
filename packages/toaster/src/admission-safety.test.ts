@@ -191,6 +191,24 @@ describe("token stylesheet CSP compatibility", () => {
 
     toaster.destroy();
   });
+
+  it("keeps a previously working token stylesheet intact when a later update fails", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" } });
+    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
+    expect(styleElement).not.toBeNull();
+
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ tokens: { successBg: "blue" } })).toThrow(/could not be initialized/);
+    sheetSpy.mockRestore();
+
+    // The failed replacement must not have torn down the element that was
+    // already working before this call.
+    expect(document.head.querySelector("style[data-toast-token-owner]")).toBe(styleElement);
+    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
+    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
+
+    toaster.destroy();
+  });
 });
 
 describe("live region announcement ordering", () => {

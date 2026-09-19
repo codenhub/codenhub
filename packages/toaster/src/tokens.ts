@@ -88,10 +88,11 @@ export function replaceTokens(style: CSSStyleDeclaration, tokens: ToastTokens | 
  * @param documentRef Document the style element is created in.
  * @param nonce Nonce to set on a newly created style element, for a host
  *   `style-src` CSP that requires one.
- * @throws {Error} If the created style element's stylesheet cannot be read
- *   back as a `CSSStyleRule` -- typically a CSP blocking the element outright.
- *   The element is removed before this throws, so a caught failure leaves no
- *   owned node behind.
+ * @throws {Error} If the stylesheet cannot be read back as a `CSSStyleRule`
+ *   -- typically a CSP blocking the element outright. A newly created
+ *   element is removed before this throws, so a caught failure leaves no
+ *   owned node behind; a previously working, reused element is left exactly
+ *   as it was instead of being torn down.
  */
 export function applyGlobalTokens(
   tokens: ToastTokens | null | undefined,
@@ -135,8 +136,14 @@ export function applyGlobalTokens(
     applyTokens(rule.style, tokens);
     ownedStyleElements.set(styleId, styleElement);
   } catch (error) {
-    styleElement.remove();
-    ownedStyleElements.delete(styleId);
+    // A reused element was already working before this call: the failing
+    // check above runs before any mutation, so its prior declarations are
+    // untouched. Only a newly created element -- which never had a working
+    // state to preserve -- is torn down here.
+    if (!isReusable) {
+      styleElement.remove();
+      ownedStyleElements.delete(styleId);
+    }
     throw error;
   }
 }
