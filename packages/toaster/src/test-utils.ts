@@ -28,7 +28,13 @@ export function installDialogMocks(): void {
     this.setAttribute("open", "");
   });
   HTMLDialogElement.prototype.close = vi.fn().mockImplementation(function (this: HTMLDialogElement) {
+    // Matches the real element: a no-op, no event, when already closed;
+    // `close` fires only on an actual open-to-closed transition.
+    const wasOpen = this.hasAttribute("open");
     this.removeAttribute("open");
+    if (wasOpen) {
+      this.dispatchEvent(new Event("close"));
+    }
   });
 }
 

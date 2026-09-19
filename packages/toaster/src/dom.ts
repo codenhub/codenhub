@@ -421,7 +421,12 @@ function runAnimation(
 
 export function animateIn(params: { element: HTMLDivElement; position: ToastPosition; onFinish?: () => void }): void {
   const { element, position, onFinish } = params;
-  runAnimation(element, getKeyframes(position), onFinish);
+  // Complete on cancellation too, same as animateOut: a canceled entrance
+  // animation previously fired neither callback, leaving the toast stuck
+  // "visible" with no "shown" notification and no auto-dismiss timer ever
+  // scheduled -- see Toast.render()'s onFinish, which still guards against
+  // running twice or after the toast has already moved on.
+  runAnimation(element, getKeyframes(position), onFinish, true);
 }
 
 export function animateOut(params: { element: HTMLDivElement; position: ToastPosition; onComplete: () => void }): void {
