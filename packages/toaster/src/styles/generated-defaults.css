@@ -95,9 +95,9 @@
   --toast-default-btn-destructive-ghost-edge: oklab(0.514 0.212373 0.0646656);
   --toast-default-btn-destructive-ghost-bg-hover: oklab(0.51189 0.194868 0.0640785 / 0.14);
   --toast-default-btn-destructive-ghost-edge-hover: oklab(0.51189 0.194868 0.0640785);
-  --toast-default-border: #a1a1a1;
-  --toast-default-surface: #e5e5e5;
-  --toast-default-text: #0a0a0a;
+  --toast-default-border: oklch(0.708 0 0);
+  --toast-default-surface: oklch(0.922 0 0);
+  --toast-default-text: oklch(0.145 0 0);
 }
 
 .dark,
@@ -193,7 +193,7 @@
   --toast-default-btn-destructive-ghost-edge: oklab(0.514 0.212373 0.0646656);
   --toast-default-btn-destructive-ghost-bg-hover: oklab(0.549356 0.21195 0.0500346 / 0.14);
   --toast-default-btn-destructive-ghost-edge-hover: oklab(0.549356 0.21195 0.0500346);
-  --toast-default-border: #404040;
-  --toast-default-surface: #262626;
-  --toast-default-text: #fafafa;
+  --toast-default-border: oklch(0.371 0 0);
+  --toast-default-surface: oklch(0.269 0 0);
+  --toast-default-text: oklch(0.985 0 0);
 }

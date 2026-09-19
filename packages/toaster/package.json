@@ -61,7 +61,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@codenhub/styles": ">=0.0.4"
+    "@codenhub/styles": ">=0.3.0"
   },
   "peerDependenciesMeta": {
     "@codenhub/styles": {

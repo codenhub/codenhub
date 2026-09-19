@@ -4,29 +4,23 @@
  * and its dialog buttons look right out of the box, without ever computing a
  * fill/edge/ground formula themselves.
  *
- * Two sources, both real:
- * - `packages/styles/src/palette.css`, styles' own generated output, is
- *   plain text: the composed `--palette-<intent>-<presentation>[-<ground>]-<slot>`
- *   declarations this script needs are read directly off it, light and dark.
- * - `--color-border`/`--color-surface`/`--color-text` are not part of the
- *   published palette (they are not intent x presentation cells), so they are
- *   read the same way `@codenhub/styles`' own palette generator reads
- *   anything: compiled through the real Tailwind CLI from the real
- *   `src/theme.css`, then read back from a real browser via Playwright.
+ * `packages/styles/src/palette.css`, styles' own generated output, is plain
+ * text: every declaration this script needs -- the composed
+ * `--palette-<intent>-<presentation>[-<ground>]-<slot>` cells and the flat
+ * `--palette-border`/`--palette-surface`/`--palette-text` neutral tokens --
+ * is read directly off it, light and dark. Nothing here compiles Tailwind or
+ * launches a browser; `@codenhub/styles`' own generator already did that
+ * work once, and this script only reads its output as text.
  *
  * Run as this package's own `generate` script, the way `hub generate` runs
  * any package that owns one. `--dry-run` reports drift without writing.
  */
-import { execFile } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 import { applyGenerated, findWorkspaceRoot } from "@codenhub/tools/generators";
-import { chromium } from "@playwright/test";
 
-const executeFile = promisify(execFile);
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
 /** Toast-body cells: soft, page ground -- `.alert`'s own unstyled default. */
@@ -64,126 +58,45 @@ function readPaletteValue(block, name) {
 }
 
 /**
- * Compiles a throwaway stylesheet from `@codenhub/styles`' real `src/theme.css`
- * through the real Tailwind CLI, the same way that package's own palette
- * generator compiles its harness -- see
- * `packages/styles/scripts/generate-palette.mjs`'s `compileHarnessStylesheet`
- * for why Windows needs `cmd.exe` in the loop.
- * @param stylesRoot Absolute path to `packages/styles`.
- * @param temporaryRoot Directory to write the throwaway entry and output into.
- * @returns Path to the compiled CSS file.
+ * Reads one theme block's full set of values this package needs: every
+ * `TOAST_INTENTS`/`BUTTON_INTENTS` cell plus the flat neutral tokens.
+ * @param block Light or dark declaration block from {@link splitPaletteThemes}.
+ * @returns Flat `{ name: value }` map, keyed the same way `renderCss` expects.
  */
-async function compileThemeHarness(stylesRoot, temporaryRoot) {
-  const inputPath = path.join(temporaryRoot, "input.css");
-  const outputPath = path.join(temporaryRoot, "output.css");
-  const themePath = path.join(stylesRoot, "src", "theme.css").replaceAll("\\", "/");
-
-  await writeFile(inputPath, `@import "${themePath}";\n`);
-
-  const binName = process.platform === "win32" ? "tailwindcss.CMD" : "tailwindcss";
-  const binPath = path.join(stylesRoot, "node_modules", ".bin", binName);
-  const relativeInput = path.relative(stylesRoot, inputPath);
-  const relativeOutput = path.relative(stylesRoot, outputPath);
-
-  if (process.platform === "win32") {
-    const commandLine = `"${binPath}" -i ${relativeInput} -o ${relativeOutput}`;
-    await executeFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", commandLine], {
-      cwd: stylesRoot,
-      windowsVerbatimArguments: true,
-    });
-  } else {
-    await executeFile(binPath, ["-i", relativeInput, "-o", relativeOutput], { cwd: stylesRoot });
+function readThemeValues(block) {
+  const values = {};
+  for (const intent of TOAST_INTENTS) {
+    // Default look: .soft, page ground -- .alert's own unstyled default.
+    values[`${intent}-bg`] = readPaletteValue(block, `${intent}-soft-page-bg`);
+    values[`${intent}-fg`] = readPaletteValue(block, `${intent}-soft-fg`);
+    values[`${intent}-edge`] = readPaletteValue(block, `${intent}-soft-page-edge`);
+    // .solid, ground-independent -- read so a .solid toast (cascaded from
+    // an ancestor the same way every other @codenhub/styles presentation
+    // class cascades) has something real to switch to.
+    values[`${intent}-solid-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
+    values[`${intent}-solid-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
+    values[`${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
   }
-
-  return outputPath;
-}
-
-/**
- * Reads `--color-border`/`--color-surface`/`--color-text` as real, computed
- * 8-bit sRGB, light and dark, from a real browser rendering the compiled
- * harness.
- * @param stylesheetPath Compiled harness CSS, written to disk.
- * @param temporaryRoot Directory to write the throwaway probe page into.
- * @returns Light and dark hex values for each of the three tokens.
- */
-async function readNeutralTokens(stylesheetPath, temporaryRoot) {
-  const tokens = ["border", "surface", "text"];
-  const stylesheetHref = pathToFileURL(stylesheetPath).href;
-  const style = tokens.map((token) => `.${token} { background: var(--color-${token}); }`).join("\n");
-  const body = tokens.map((token) => `<div class="${token}" id="${token}"></div>`).join("\n");
-
-  const browser = await chromium.launch();
-
-  try {
-    const readTheme = async (theme) => {
-      const htmlPath = path.join(temporaryRoot, `neutral-${theme}.html`);
-      await writeFile(
-        htmlPath,
-        `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><link rel="stylesheet" href="${stylesheetHref}" /><style>${style}</style></head><body>${body}</body></html>`,
-      );
-      const page = await browser.newPage();
-      try {
-        await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
-        return await page.evaluate((ids) => {
-          // Normalizes a computed color to 8-bit sRGB hex -- the resolved
-          // `oklch()`/`color(srgb ...)` values these plain (non-color-mix)
-          // tokens serialize as need the same oklab round-trip
-          // `tests/browser/test-utils.ts` uses, not a bare rgb() parse.
-          const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-          const toGamma = (c) => (c <= 0.0031308 ? c * 12.92 : 1.055 * c ** (1 / 2.4) - 0.055);
-          const clamp = (c) => Math.min(1, Math.max(0, c));
-          const components = (body) =>
-            body
-              .split(/[,\s/]+/)
-              .filter(Boolean)
-              .map((c) => (c === "none" ? 0 : Number.parseFloat(c)));
-          const oklabToLinear = ({ a, b, lightness }) => {
-            const long = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-            const medium = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-            const short = (lightness - 0.0894841775 * a - 1.291485548 * b) ** 3;
-            return {
-              blue: clamp(-0.0041960863 * long - 0.7034186147 * medium + 1.707614701 * short),
-              green: clamp(-1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short),
-              red: clamp(4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short),
-            };
-          };
-          const toHex = (color) => {
-            const oklch = color.match(/oklch\(([^)]+)\)/);
-            let linear;
-            if (oklch) {
-              const [lightness = 0, chroma = 0, hue = 0] = components(oklch[1]);
-              const hueRadians = (hue * Math.PI) / 180;
-              linear = oklabToLinear({ a: chroma * Math.cos(hueRadians), b: chroma * Math.sin(hueRadians), lightness });
-            } else {
-              const rgb = color.match(/rgba?\(([^)]+)\)/);
-              const [r = 0, g = 0, b = 0] = components(rgb[1]);
-              linear = { blue: toLinear(b / 255), green: toLinear(g / 255), red: toLinear(r / 255) };
-            }
-            const channel = (c) =>
-              Math.round(toGamma(c) * 255)
-                .toString(16)
-                .padStart(2, "0");
-            return `#${channel(linear.red)}${channel(linear.green)}${channel(linear.blue)}`;
-          };
-          const out = {};
-          for (const id of ids) {
-            out[id] = toHex(getComputedStyle(document.getElementById(id)).backgroundColor);
-          }
-          return out;
-        }, tokens);
-      } finally {
-        await page.close();
+  for (const intent of BUTTON_INTENTS) {
+    // Default look: .solid, ground-independent -- .btn's own unstyled default.
+    values[`btn-${intent}-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
+    values[`btn-${intent}-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
+    values[`btn-${intent}-bg-hover`] = readPaletteValue(block, `${intent}-solid-bg-hover`);
+    // .edged on the default .solid button.
+    values[`btn-${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
+    values[`btn-${intent}-solid-edge-hover`] = readPaletteValue(block, `${intent}-solid-edge-hover`);
+    // .soft and .ghost, transparent ground (.btn's own ground) -- read so
+    // those presentation classes have something real to switch to too.
+    for (const presentation of ["soft", "ghost"]) {
+      for (const slot of ["bg", "fg", "edge", "bg-hover", "edge-hover"]) {
+        values[`btn-${intent}-${presentation}-${slot}`] = readPaletteValue(block, `${intent}-${presentation}-${slot}`);
       }
-    };
-
-    // Sequential on purpose: two pages against one shared browser process
-    // racing file:// navigation intermittently closed the target mid-read.
-    const light = await readTheme("light");
-    const dark = await readTheme("dark");
-    return { dark, light };
-  } finally {
-    await browser.close();
+    }
   }
+  values.border = readPaletteValue(block, "border");
+  values.surface = readPaletteValue(block, "surface");
+  values.text = readPaletteValue(block, "text");
+  return values;
 }
 
 /**
@@ -223,69 +136,13 @@ async function main() {
   const isDryRun = process.argv.includes("--dry-run");
   const workspaceRoot = await findWorkspaceRoot(packageRoot);
   const stylesRoot = path.join(workspaceRoot, "packages", "styles");
-  const temporaryRoot = path.join(packageRoot, ".toast-defaults-tmp");
 
-  await rm(temporaryRoot, { force: true, recursive: true });
-  await mkdir(temporaryRoot, { recursive: true });
+  const paletteText = await readFile(path.join(stylesRoot, "src", "palette.css"), "utf8");
+  const { dark: darkBlock, light: lightBlock } = splitPaletteThemes(paletteText);
 
-  let light;
-  let dark;
-
-  try {
-    const paletteText = await readFile(path.join(stylesRoot, "src", "palette.css"), "utf8");
-    const { dark: darkBlock, light: lightBlock } = splitPaletteThemes(paletteText);
-
-    const paletteValues = (block) => {
-      const values = {};
-      for (const intent of TOAST_INTENTS) {
-        // Default look: .soft, page ground -- .alert's own unstyled default.
-        values[`${intent}-bg`] = readPaletteValue(block, `${intent}-soft-page-bg`);
-        values[`${intent}-fg`] = readPaletteValue(block, `${intent}-soft-fg`);
-        values[`${intent}-edge`] = readPaletteValue(block, `${intent}-soft-page-edge`);
-        // .solid, ground-independent -- read so a .solid toast (cascaded from
-        // an ancestor the same way every other @codenhub/styles presentation
-        // class cascades) has something real to switch to.
-        values[`${intent}-solid-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
-        values[`${intent}-solid-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
-        values[`${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
-      }
-      for (const intent of BUTTON_INTENTS) {
-        // Default look: .solid, ground-independent -- .btn's own unstyled default.
-        values[`btn-${intent}-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
-        values[`btn-${intent}-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
-        values[`btn-${intent}-bg-hover`] = readPaletteValue(block, `${intent}-solid-bg-hover`);
-        // .edged on the default .solid button.
-        values[`btn-${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
-        values[`btn-${intent}-solid-edge-hover`] = readPaletteValue(block, `${intent}-solid-edge-hover`);
-        // .soft and .ghost, transparent ground (.btn's own ground) -- read so
-        // those presentation classes have something real to switch to too.
-        for (const presentation of ["soft", "ghost"]) {
-          for (const slot of ["bg", "fg", "edge", "bg-hover", "edge-hover"]) {
-            values[`btn-${intent}-${presentation}-${slot}`] = readPaletteValue(
-              block,
-              `${intent}-${presentation}-${slot}`,
-            );
-          }
-        }
-      }
-      return values;
-    };
-
-    console.error("Reading composed cells from the real palette.css...");
-    const lightPalette = paletteValues(lightBlock);
-    const darkPalette = paletteValues(darkBlock);
-
-    console.error("Compiling the real theme through the real Tailwind CLI...");
-    const stylesheetPath = await compileThemeHarness(stylesRoot, temporaryRoot);
-
-    console.error("Launching a browser to read the real neutral tokens...");
-    const neutral = await readNeutralTokens(stylesheetPath, temporaryRoot);
-
-    light = { ...lightPalette, border: neutral.light.border, surface: neutral.light.surface, text: neutral.light.text };
-    dark = { ...darkPalette, border: neutral.dark.border, surface: neutral.dark.surface, text: neutral.dark.text };
-  } finally {
-    await rm(temporaryRoot, { force: true, recursive: true });
-  }
+  console.error("Reading composed cells from the real palette.css...");
+  const light = readThemeValues(lightBlock);
+  const dark = readThemeValues(darkBlock);
 
   const output = renderCss(light, dark);
   const [outcome] = await applyGenerated([{ contents: output, path: "src/styles/generated-defaults.css" }], {

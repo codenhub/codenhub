@@ -338,14 +338,14 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   border-color: transparent;
   border-radius: var(--ui-radius-surface, var(--radius-surface, 0.75rem));
   box-shadow: var(--ui-surface-shadow, none);
-  background: var(--toast-color-surface, var(--color-surface, var(--toast-default-surface)));
-  color: var(--toast-color-text, var(--color-text, var(--toast-default-text)));
+  background: var(--toast-color-surface, var(--palette-surface, var(--toast-default-surface)));
+  color: var(--toast-color-text, var(--palette-text, var(--toast-default-text)));
   font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif);
   overflow-wrap: anywhere;
 }
 
 :where(.edged) :where(dialog[data-toast-instance] .toast-dialog-container) {
-  border-color: var(--toast-color-border, var(--color-border, var(--toast-default-border)));
+  border-color: var(--toast-color-border, var(--palette-border, var(--toast-default-border)));
 }
 
 :where(dialog[data-toast-instance] .toast-dialog-title) {
@@ -376,7 +376,7 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
   padding: 0.5rem 0.75rem;
   border-style: solid;
   border-width: var(--ui-border-width, var(--border-width, 1px));
-  border-color: var(--toast-color-border, var(--color-border, var(--toast-default-border)));
+  border-color: var(--toast-color-border, var(--palette-border, var(--toast-default-border)));
   border-radius: var(--ui-radius, var(--radius-control, 0.375rem));
   background: transparent;
   color: inherit;
@@ -706,8 +706,8 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 }
 
 :where(dialog[data-toast-instance] .toast-dialog-btn-cancel) {
-  background: var(--toast-color-surface, var(--color-surface, var(--toast-default-surface)));
-  color: var(--toast-color-text, var(--color-text, var(--toast-default-text)));
+  background: var(--toast-color-surface, var(--palette-surface, var(--toast-default-surface)));
+  color: var(--toast-color-text, var(--palette-text, var(--toast-default-text)));
 }
 
 /* Cancel has no severity, so .ghost has nothing to zero out there via the
@@ -718,8 +718,8 @@ dialog[data-toast-instance].toast-dialog[open]::backdrop {
 }
 
 :where(.dark, [data-theme="dark"]) :where(dialog[data-toast-instance] .toast-dialog-container) {
-  background: var(--toast-color-surface, var(--color-surface, var(--toast-default-surface)));
-  color: var(--toast-color-text, var(--color-text, var(--toast-default-text)));
+  background: var(--toast-color-surface, var(--palette-surface, var(--toast-default-surface)));
+  color: var(--toast-color-text, var(--palette-text, var(--toast-default-text)));
 }
 
 /* Same "no background, full stop" contract as the toast body. The container
