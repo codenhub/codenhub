@@ -1,15 +1,18 @@
 /**
  * Computes `src/palette.css`: every `intent x presentation` cell's `bg`, `fg`,
- * and `edge`, rest and hover, light and dark, baked to a flat custom property.
+ * and `edge`, rest and hover, light and dark, baked to a flat custom
+ * property, plus the three flat neutral tokens (`border`/`surface`/`text`)
+ * `docs/internal/generated-palette-neutral-tokens.md` adds.
  *
  * This does not reimplement `box.css`'s formula -- that would be exactly the
  * hand-retyping this file exists to prevent (see
  * `docs/internal/generated-palette.md`). Instead it compiles the package's own
  * real `src/index.css` through the real Tailwind CLI, then renders real
- * `.box`-composed probe elements in a real browser and reads their computed
- * styles -- the same `getComputedStyle()` contract `tests/browser/test-
- * utils.ts` already uses for verification. The published value is therefore
- * the browser's own answer, not a re-derivation of it.
+ * `.box`-composed probe elements (and, for the neutral tokens, plain probes
+ * reading straight off their `theme.css` token) in a real browser and reads
+ * their computed styles -- the same `getComputedStyle()` contract
+ * `tests/browser/test-utils.ts` already uses for verification. The published
+ * value is therefore the browser's own answer, not a re-derivation of it.
  *
  * Run as this package's own `generate` script, the way `hub generate` runs
  * any package that owns one. `--dry-run` reports drift on `src/palette.css`
@@ -46,6 +49,17 @@ const GROUNDS = [
    `[data-theme="dark"]`), not the `prefers-color-scheme` arm -- the doc's
    "Dark mode" section is explicit that no OS-preference fallback is generated. */
 const THEMES = ["light", "dark"];
+/* The three neutral surface tokens `docs/internal/generated-palette-neutral-
+   tokens.md` adds: no intent, no presentation, no ground, no hover -- so each
+   is one flat probe reading straight off its `theme.css` token, not a
+   `.box`-composed cell. `channel` picks which computed field `toDeclarations`
+   reads back off the probe: `border`/`surface` render as a background,
+   `text` as a foreground, matching how each token is actually used. */
+const NEUTRAL_TOKENS = [
+  { channel: "bg", key: "border", token: "--color-border" },
+  { channel: "bg", key: "surface", token: "--color-surface" },
+  { channel: "fg", key: "text", token: "--color-text" },
+];
 
 /**
  * Compiles the package's own real `src/index.css` through the real Tailwind
@@ -113,6 +127,15 @@ function buildProbes() {
         });
       }
     }
+  }
+
+  for (const { channel, key, token } of NEUTRAL_TOKENS) {
+    probes.push({
+      classes: "",
+      key: `neutral-${key}`,
+      readsBg: false,
+      style: `${channel === "bg" ? "background-color" : "color"}: var(${token})`,
+    });
   }
 
   return probes;
@@ -260,6 +283,10 @@ function toDeclarations(values) {
         lines.push(`--palette-${name}-edge-hover: ${cell.edgeHover};`);
       }
     }
+  }
+
+  for (const { channel, key } of NEUTRAL_TOKENS) {
+    lines.push(`--palette-${key}: ${values[`neutral-${key}`][channel]};`);
   }
 
   return lines.map((line) => `  ${line}`).join("\n");

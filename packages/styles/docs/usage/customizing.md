@@ -162,6 +162,8 @@ Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of t
 
 Dark values are scoped the same way `@codenhub/styles`' own explicit theme override is: `.dark`, `.theme-dark`, and `[data-theme="dark"]`, on the element or an ancestor. There is no `prefers-color-scheme` fallback in this file -- a consumer reaching for a standalone palette is already handling its own theme switching, so the OS-preference case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use.
 
+Three more tokens sit alongside the intent cells for the same reason, without an intent, presentation, ground, or hover axis of their own: `--palette-border`, `--palette-surface`, and `--palette-text`, flat values for `--color-border`, `--color-surface`, and `--color-text` -- the resting colors anything that is not intent-colored needs (a container's border, a dialog's background, its text), which an optional-peer consumer needs just as much as the intent cells.
+
 ## Component internals
 
 Component classes may define scoped implementation variables such as `--surface-padding`, `--field-gap`, `--input-group-pad`, `--switch-*`, `--table-*`, `--quote-*`, and `--tooltip-*`. These variables are internal wiring for class composition and are not the public token contract.

@@ -220,6 +220,9 @@
   --palette-info-ghost-subtle-edge: oklab(0.511 0.0317755 -0.260066);
   --palette-info-ghost-subtle-bg-hover: oklab(0.8685 0.00575617 -0.0640304);
   --palette-info-ghost-subtle-edge-hover: oklab(0.490714 0.0309565 -0.24875);
+  --palette-border: oklch(0.708 0 0);
+  --palette-surface: oklch(0.922 0 0);
+  --palette-text: oklch(0.145 0 0);
 }
 
 .dark,
@@ -442,4 +445,7 @@
   --palette-info-ghost-subtle-edge: oklab(0.511 0.0317755 -0.260066);
   --palette-info-ghost-subtle-bg-hover: oklab(0.38601 0.0239578 -0.155809);
   --palette-info-ghost-subtle-edge-hover: oklab(0.551929 0.0373722 -0.238521);
+  --palette-border: oklch(0.371 0 0);
+  --palette-surface: oklch(0.269 0 0);
+  --palette-text: oklch(0.985 0 0);
 }
