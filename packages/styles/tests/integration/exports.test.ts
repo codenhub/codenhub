@@ -123,7 +123,14 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./theme": { target: "dist/theme.css", patterns: [/--color-primary:/, /\.soft\{/] },
   "./palette": {
     target: "dist/palette.css",
-    patterns: [/--palette-primary-solid-bg:/, /--palette-success-soft-page-bg:/, /--palette-info-ghost-subtle-edge:/],
+    patterns: [
+      /--palette-primary-solid-bg:/,
+      /--palette-success-soft-page-bg:/,
+      /--palette-info-ghost-subtle-edge:/,
+      /--palette-border:/,
+      /--palette-surface:/,
+      /--palette-text:/,
+    ],
   },
   "./components": {
     target: "dist/components.css",
