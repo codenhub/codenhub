@@ -16,7 +16,7 @@ export default defineConfig({
       "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
       "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),
       "@codenhub/toaster": resolve(__dirname, "../src/index.ts"),
-      "toaster-styles-under-test": resolve(__dirname, "../src/styles/index.css"),
+      "virtual:toaster-styles": resolve(__dirname, "../src/styles/index.css"),
     },
   },
   server: {

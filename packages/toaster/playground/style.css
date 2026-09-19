@@ -7,5 +7,7 @@
    import resolver settles it via normal package resolution before an alias
    ever gets a say, the same way it would for any consumer. This name can
    never resolve on its own, which is what forces `dev`'s and `debug`'s
-   different aliases below to actually apply. */
-@import "toaster-styles-under-test";
+   different aliases below to actually apply. The `virtual:` prefix also
+   keeps it out of `hub check`'s dependency scan, the same convention
+   `virtual:icons.css` and `virtual:toaster-demo-chrome` already use here. */
+@import "virtual:toaster-styles";

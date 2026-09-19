@@ -93,7 +93,7 @@ export default defineConfig({
       "@codenhub/styles/tw": resolve(__dirname, "../../styles/src/index.css"),
       "@codenhub/styles/native": resolve(__dirname, "../../styles/dist/native.css"),
       "@codenhub/styles": resolve(__dirname, "../../styles/dist/index.css"),
-      "toaster-styles-under-test": resolve(__dirname, "../dist/styles/index.css"),
+      "virtual:toaster-styles": resolve(__dirname, "../dist/styles/index.css"),
     },
   },
   server: {
