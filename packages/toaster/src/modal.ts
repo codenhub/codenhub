@@ -210,6 +210,15 @@ export class ModalController {
           },
           { signal: abortController.signal },
         );
+        // Reconciles a dialog closed through some means other than this
+        // controller -- a direct `dialog.close()` call reaching past
+        // `close()`/`fail()` entirely. Scoped to the same signal as every
+        // other listener here, so it is already removed by the time this
+        // controller's own close path runs `abortController.abort()`, and
+        // never double-fires for a close this controller itself initiated.
+        // `close()` itself is idempotent through `closeDialog`'s own
+        // already-closed fast path, so replaying it here is safe.
+        dialog.addEventListener("close", () => close(params.cancelValue), { signal: abortController.signal });
         if (params.options.shouldBackdropDismiss !== false) {
           dialog.addEventListener(
             "click",
