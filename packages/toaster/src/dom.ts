@@ -288,9 +288,11 @@ export function getContainer(params: ContainerParams): HTMLDivElement | null {
 /**
  * Margin is written onto the shared position container, not a per-toast
  * element, so it is deliberately a property of the stack rather than of any
- * one toast: the most recently dispatched value wins for every toast already
- * showing at that position, and dispatching without `margin` clears it. See
- * `ToasterConfig.margin`'s own doc comment for the consumer-facing contract.
+ * one toast: the most recently dispatched explicit value wins for every
+ * toast already showing at that position, and a dispatch that omits
+ * `margin` leaves the stack's current value untouched rather than clearing
+ * it. See `ToasterConfig.margin`'s own doc comment for the consumer-facing
+ * contract.
  */
 export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
   const { parent, position, instanceId, margin } = params;
@@ -305,25 +307,27 @@ export function getOrCreateContainer(params: ContainerParams): HTMLDivElement {
     parent.appendChild(container);
   }
 
-  if (margin) {
-    if (typeof margin === "string") {
-      container.style.setProperty("--toast-margin-x", margin);
-      container.style.setProperty("--toast-margin-y", margin);
+  if (margin !== undefined) {
+    if (margin) {
+      if (typeof margin === "string") {
+        container.style.setProperty("--toast-margin-x", margin);
+        container.style.setProperty("--toast-margin-y", margin);
+      } else {
+        if (margin.x) {
+          container.style.setProperty("--toast-margin-x", margin.x);
+        } else {
+          container.style.removeProperty("--toast-margin-x");
+        }
+        if (margin.y) {
+          container.style.setProperty("--toast-margin-y", margin.y);
+        } else {
+          container.style.removeProperty("--toast-margin-y");
+        }
+      }
     } else {
-      if (margin.x) {
-        container.style.setProperty("--toast-margin-x", margin.x);
-      } else {
-        container.style.removeProperty("--toast-margin-x");
-      }
-      if (margin.y) {
-        container.style.setProperty("--toast-margin-y", margin.y);
-      } else {
-        container.style.removeProperty("--toast-margin-y");
-      }
+      container.style.removeProperty("--toast-margin-x");
+      container.style.removeProperty("--toast-margin-y");
     }
-  } else {
-    container.style.removeProperty("--toast-margin-x");
-    container.style.removeProperty("--toast-margin-y");
   }
 
   return container;

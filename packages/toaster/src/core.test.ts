@@ -496,6 +496,21 @@ describe("positioning and margins", () => {
 
     toaster.destroy();
   });
+
+  it("does not clear an explicit per-toast margin when an unrelated toast dispatches without one", () => {
+    const toaster = createToaster();
+    toaster.semantic.success("Custom margin", { position: "top-left", margin: "50px" });
+
+    const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("50px");
+
+    toaster.semantic.info("No opinion on margin", { position: "top-left" });
+
+    expect(container.style.getPropertyValue("--toast-margin-x")).toBe("50px");
+    expect(container.style.getPropertyValue("--toast-margin-y")).toBe("50px");
+
+    toaster.destroy();
+  });
 });
 
 describe("Toast update", () => {

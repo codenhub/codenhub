@@ -42,29 +42,35 @@ export class ModalController {
   ) {}
 
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
+    // Cloned before use: the renderer closure below reads label/type fields
+    // lazily when the queued job eventually runs, not synchronously here, so
+    // a caller-owned object must not still be live at that point.
+    const snapshot: ConfirmOptions = { ...options };
     return this.createModal<boolean>({
       message,
-      options,
+      options: snapshot,
       cancelValue: false,
-      render: createConfirmRenderer(options),
+      render: createConfirmRenderer(snapshot),
     });
   }
 
   public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
+    const snapshot: PromptOptions = { ...options };
     return this.createModal<string | null>({
       message,
-      options,
+      options: snapshot,
       cancelValue: null,
-      render: createPromptRenderer(options),
+      render: createPromptRenderer(snapshot),
     });
   }
 
   public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
+    const snapshot: AlertOptions = { ...options };
     return this.createModal({
       message,
-      options,
+      options: snapshot,
       cancelValue: undefined,
-      render: createAlertRenderer(options),
+      render: createAlertRenderer(snapshot),
     });
   }
 
@@ -91,7 +97,17 @@ export class ModalController {
     if (params.message.trim().length === 0) {
       throw new Error("Interactive dialog message must not be empty.");
     }
-    assertValidTokens(params.options.tokens, this.parent.ownerDocument);
+    // Snapshotted rather than referenced: a queued dialog can sit for a
+    // while before its job runs, and a caller-owned options object mutated
+    // in that window must not reach the eventually-rendered dialog (the
+    // same boundary `normalizeToastOptions` in options.ts applies to toasts).
+    const options: ModalOptions = {
+      title: params.options.title,
+      shouldBackdropDismiss: params.options.shouldBackdropDismiss,
+      tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
+      className: params.options.className,
+    };
+    assertValidTokens(options.tokens, this.parent.ownerDocument);
 
     let resolveResult!: (value: T) => void;
     let rejectResult!: (reason: unknown) => void;
@@ -188,9 +204,9 @@ export class ModalController {
         const container = buildDialogContent({
           dialog,
           message: params.message,
-          title: params.options.title,
-          tokens: params.options.tokens,
-          className: joinClassNames(this.getDefaultClassName(), params.options.className),
+          title: options.title,
+          tokens: options.tokens,
+          className: joinClassNames(this.getDefaultClassName(), options.className),
           titleId: `${idBase}-title`,
           messageId,
         });
@@ -219,7 +235,7 @@ export class ModalController {
         // `close()` itself is idempotent through `closeDialog`'s own
         // already-closed fast path, so replaying it here is safe.
         dialog.addEventListener("close", () => close(params.cancelValue), { signal: abortController.signal });
-        if (params.options.shouldBackdropDismiss !== false) {
+        if (options.shouldBackdropDismiss !== false) {
           dialog.addEventListener(
             "click",
             (event) => {

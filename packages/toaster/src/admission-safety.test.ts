@@ -171,6 +171,44 @@ describe("token stylesheet CSP compatibility", () => {
 
     sheetSpy.mockRestore();
   });
+
+  it("does not partially apply a configure() call when its token stylesheet fails", () => {
+    const toaster = createToaster({ maxVisible: 3, shouldAutoDismiss: false });
+    const first = toaster.semantic.info("A");
+    const second = toaster.semantic.info("B");
+    const third = toaster.semantic.info("C");
+    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
+
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ maxVisible: 1, tokens: { successBg: "red" } })).toThrow(
+      /could not be initialized/,
+    );
+    sheetSpy.mockRestore();
+
+    // The rejected token application must not have let `maxVisible` (bundled
+    // in the same call) take effect: capacity reconciliation never ran.
+    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
+
+    toaster.destroy();
+  });
+
+  it("keeps a previously working token stylesheet intact when a later update fails", () => {
+    const toaster = createToaster({ tokens: { successBg: "red" } });
+    const styleElement = document.head.querySelector<HTMLStyleElement>("style[data-toast-token-owner]");
+    expect(styleElement).not.toBeNull();
+
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ tokens: { successBg: "blue" } })).toThrow(/could not be initialized/);
+    sheetSpy.mockRestore();
+
+    // The failed replacement must not have torn down the element that was
+    // already working before this call.
+    expect(document.head.querySelector("style[data-toast-token-owner]")).toBe(styleElement);
+    const rule = styleElement!.sheet!.cssRules[0] as CSSStyleRule;
+    expect(rule.style.getPropertyValue("--toast-color-success-bg")).toBe("red");
+
+    toaster.destroy();
+  });
 });
 
 describe("live region announcement ordering", () => {

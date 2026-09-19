@@ -54,6 +54,103 @@ describe("native dialog close reconciliation", () => {
   });
 });
 
+describe("queued dialog option safety", () => {
+  it("does not let a caller mutate a queued dialog's options before it renders", async () => {
+    const toaster = createToaster();
+    const first = toaster.interactive.alert("First");
+    const options = { title: "Original title" };
+    const queued = toaster.interactive.confirm("Queued message", options);
+
+    // Mutated after enqueueing but before the queue reaches this job.
+    options.title = "Mutated title";
+
+    const dialog = document.body.querySelector("dialog")!;
+    dialog.close();
+    await first.result;
+
+    expect(document.body.textContent).toContain("Original title");
+    expect(document.body.textContent).not.toContain("Mutated title");
+
+    queued.dismiss();
+    await queued.settled;
+    toaster.destroy();
+  });
+
+  it("does not let a caller mutate a queued confirm dialog's labels or type", async () => {
+    const toaster = createToaster();
+    const first = toaster.interactive.alert("First");
+    const options: { confirmLabel: string; cancelLabel: string; type: "primary" | "danger" } = {
+      confirmLabel: "Original confirm",
+      cancelLabel: "Original cancel",
+      type: "primary",
+    };
+    const queued = toaster.interactive.confirm("Queued confirm", options);
+
+    options.confirmLabel = "Mutated confirm";
+    options.cancelLabel = "Mutated cancel";
+    options.type = "danger";
+
+    const dialog = document.body.querySelector("dialog")!;
+    dialog.close();
+    await first.result;
+
+    expect(document.body.textContent).toContain("Original confirm");
+    expect(document.body.textContent).toContain("Original cancel");
+    expect(document.body.textContent).not.toContain("Mutated confirm");
+    expect(document.querySelector(".toast-dialog-btn-danger")).toBeNull();
+    expect(document.querySelector(".toast-dialog-btn-primary")).not.toBeNull();
+
+    queued.dismiss();
+    await queued.settled;
+    toaster.destroy();
+  });
+
+  it("does not let a caller mutate a queued prompt dialog's default value or placeholder", async () => {
+    const toaster = createToaster();
+    const first = toaster.interactive.alert("First");
+    const options = { defaultValue: "Original value", placeholder: "Original placeholder" };
+    const queued = toaster.interactive.prompt("Queued prompt", options);
+
+    options.defaultValue = "Mutated value";
+    options.placeholder = "Mutated placeholder";
+
+    const dialog = document.body.querySelector("dialog")!;
+    dialog.close();
+    await first.result;
+
+    const input = document.body.querySelector<HTMLInputElement>(".toast-dialog-input")!;
+    expect(input.value).toBe("Original value");
+    expect(input.placeholder).toBe("Original placeholder");
+
+    queued.dismiss();
+    await queued.settled;
+    toaster.destroy();
+  });
+
+  it("does not let a caller mutate a queued alert dialog's label or type", async () => {
+    const toaster = createToaster();
+    const first = toaster.interactive.alert("First");
+    const options: { okLabel: string; type: "primary" | "danger" } = { okLabel: "Original OK", type: "primary" };
+    const queued = toaster.interactive.alert("Queued alert", options);
+
+    options.okLabel = "Mutated OK";
+    options.type = "danger";
+
+    const dialog = document.body.querySelector("dialog")!;
+    dialog.close();
+    await first.result;
+
+    expect(document.body.textContent).toContain("Original OK");
+    expect(document.body.textContent).not.toContain("Mutated OK");
+    expect(document.querySelector(".toast-dialog-btn-danger")).toBeNull();
+    expect(document.querySelector(".toast-dialog-btn-primary")).not.toBeNull();
+
+    queued.dismiss();
+    await queued.settled;
+    toaster.destroy();
+  });
+});
+
 describe("entrance animation cancellation", () => {
   it("still notifies shown and schedules auto-dismiss when the entrance animation is canceled", () => {
     vi.useFakeTimers();

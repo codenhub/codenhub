@@ -172,14 +172,25 @@ class ToastManager implements Toaster {
     if ("container" in config) {
       throw new Error("Toaster container cannot be changed after construction.");
     }
-    this.validateConfig({ ...this.config, ...config });
-    this.config = copyConfig({ ...this.config, ...config });
-    this.resolved = this.buildResolvedConfig(this.config);
+    const merged = { ...this.config, ...config };
+    this.validateConfig(merged);
+    const nextConfig = copyConfig(merged);
 
+    // Applied against the not-yet-committed config, before anything below is
+    // assigned: a host policy that rejects the stylesheet must reject the
+    // whole call, not leave unrelated fields bundled in the same call (e.g.
+    // `maxVisible`) already in effect.
     if (config.tokens !== undefined) {
-      const parent = this.getParent();
-      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
+      applyGlobalTokens(
+        nextConfig.tokens,
+        this.instanceId,
+        this.resolveParentElement().ownerDocument,
+        nextConfig.nonce,
+      );
     }
+
+    this.config = nextConfig;
+    this.resolved = this.buildResolvedConfig(this.config);
 
     if (config.maxVisible !== undefined) {
       reconcileCapacity({
@@ -260,21 +271,22 @@ class ToastManager implements Toaster {
     return this.modalController;
   }
 
-  private getParent(): HTMLElement {
+  private resolveParentElement(): HTMLElement {
     if (this.config.container) {
-      if (this.config.tokens) {
-        applyGlobalTokens(this.config.tokens, this.instanceId, this.config.container.ownerDocument, this.config.nonce);
-      }
       return this.config.container;
     }
     if (typeof document !== "undefined") {
-      const parent = document.body ?? document.documentElement;
-      if (this.config.tokens) {
-        applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
-      }
-      return parent;
+      return document.body ?? document.documentElement;
     }
     throw new Error("DOM document is not available. Toaster operations require a browser environment.");
+  }
+
+  private getParent(): HTMLElement {
+    const parent = this.resolveParentElement();
+    if (this.config.tokens) {
+      applyGlobalTokens(this.config.tokens, this.instanceId, parent.ownerDocument, this.config.nonce);
+    }
+    return parent;
   }
 
   private buildResolvedConfig(config: ToasterConfig): ResolvedToastConfig {
