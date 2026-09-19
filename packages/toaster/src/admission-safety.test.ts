@@ -171,6 +171,26 @@ describe("token stylesheet CSP compatibility", () => {
 
     sheetSpy.mockRestore();
   });
+
+  it("does not partially apply a configure() call when its token stylesheet fails", () => {
+    const toaster = createToaster({ maxVisible: 3, shouldAutoDismiss: false });
+    const first = toaster.semantic.info("A");
+    const second = toaster.semantic.info("B");
+    const third = toaster.semantic.info("C");
+    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
+
+    const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
+    expect(() => toaster.configure({ maxVisible: 1, tokens: { successBg: "red" } })).toThrow(
+      /could not be initialized/,
+    );
+    sheetSpy.mockRestore();
+
+    // The rejected token application must not have let `maxVisible` (bundled
+    // in the same call) take effect: capacity reconciliation never ran.
+    expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
+
+    toaster.destroy();
+  });
 });
 
 describe("live region announcement ordering", () => {
