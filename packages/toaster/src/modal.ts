@@ -42,29 +42,35 @@ export class ModalController {
   ) {}
 
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
+    // Cloned before use: the renderer closure below reads label/type fields
+    // lazily when the queued job eventually runs, not synchronously here, so
+    // a caller-owned object must not still be live at that point.
+    const snapshot: ConfirmOptions = { ...options };
     return this.createModal<boolean>({
       message,
-      options,
+      options: snapshot,
       cancelValue: false,
-      render: createConfirmRenderer(options),
+      render: createConfirmRenderer(snapshot),
     });
   }
 
   public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
+    const snapshot: PromptOptions = { ...options };
     return this.createModal<string | null>({
       message,
-      options,
+      options: snapshot,
       cancelValue: null,
-      render: createPromptRenderer(options),
+      render: createPromptRenderer(snapshot),
     });
   }
 
   public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
+    const snapshot: AlertOptions = { ...options };
     return this.createModal({
       message,
-      options,
+      options: snapshot,
       cancelValue: undefined,
-      render: createAlertRenderer(options),
+      render: createAlertRenderer(snapshot),
     });
   }
 
