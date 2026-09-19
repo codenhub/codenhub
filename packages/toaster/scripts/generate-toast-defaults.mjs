@@ -1,16 +1,27 @@
 /**
- * Bakes `@codenhub/styles`' real, composed colors into this package's own
- * generated defaults -- `src/styles/generated-defaults.css` -- so the toast
- * and its dialog buttons look right out of the box, without ever computing a
- * fill/edge/ground formula themselves.
+ * Bakes `@codenhub/styles`' real, uncomposed color inputs into this package's
+ * own generated defaults -- `src/styles/generated-defaults.css` -- so a toast
+ * or dialog rendered with no `@codenhub/styles` on the page still has a real
+ * accent color, contrast tone, and strong tone to compose against.
+ *
+ * Earlier versions of this generator baked fully pre-composed cells (one per
+ * severity per presentation). That is no longer this package's model: color
+ * composition now happens live, at render time, in `src/styles/index.css`,
+ * against whichever inputs are in scope -- `@codenhub/styles`' live
+ * `--color-*` tokens when it is loaded, or these baked `--toast-default-*`
+ * inputs when it is not. Baking the raw inputs rather than the composed
+ * result is what lets the same formula produce both.
  *
  * `packages/styles/src/palette.css`, styles' own generated output, is plain
- * text: every declaration this script needs -- the composed
- * `--palette-<intent>-<presentation>[-<ground>]-<slot>` cells and the flat
- * `--palette-border`/`--palette-surface`/`--palette-text` neutral tokens --
- * is read directly off it, light and dark. Nothing here compiles Tailwind or
- * launches a browser; `@codenhub/styles`' own generator already did that
- * work once, and this script only reads its output as text.
+ * text: every raw input this package needs can be read off it without
+ * resolving Tailwind's own color scale, because a "solid" cell (100% fill,
+ * 100% on-fill) IS the uncomposed accent and contrast color for any intent
+ * whose fill is uncapped (`--intent-fill-max: 100%` -- every named severity
+ * and button role), and a "soft" cell's foreground IS the uncomposed
+ * "strong" tone (0% on-fill at any fill at or under 50%, styles.css `box`'s
+ * own formula). Nothing here compiles Tailwind or launches a browser;
+ * `@codenhub/styles`' own generator already did that work once, and this
+ * script only reads its output as text.
  *
  * Run as this package's own `generate` script, the way `hub generate` runs
  * any package that owns one. `--dry-run` reports drift without writing.
@@ -23,11 +34,11 @@ import { applyGenerated, findWorkspaceRoot } from "@codenhub/tools/generators";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
-/** Toast-body cells: soft, page ground -- `.alert`'s own unstyled default. */
-const TOAST_INTENTS = ["neutral", "success", "destructive", "warning", "info"];
+/** Toast-severity intents. `neutral` backs the unclassed "default" toast. */
+const NAMED_SEVERITIES = ["success", "destructive", "warning", "info"];
 
-/** Dialog-button cells: solid, ground-independent -- `.btn`'s own unstyled default. */
-const BUTTON_INTENTS = ["primary", "secondary", "success", "destructive"];
+/** Dialog-button intents. Share the same accent as the matching severity. */
+const BUTTON_ROLES = ["primary", "secondary", "success", "destructive"];
 
 /**
  * Splits `palette.css` into its light (`:root`) and dark
@@ -58,52 +69,77 @@ function readPaletteValue(block, name) {
 }
 
 /**
- * Reads one theme block's full set of values this package needs: every
- * `TOAST_INTENTS`/`BUTTON_INTENTS` cell plus the flat neutral tokens.
+ * Reads one theme block's raw, uncomposed inputs: an accent, contrast, and
+ * strong tone per named severity; the flat neutral tokens a "default"
+ * severity and dialog surface/text/border read; and an accent/contrast/hover
+ * per button role.
  * @param block Light or dark declaration block from {@link splitPaletteThemes}.
- * @returns Flat `{ name: value }` map, keyed the same way `renderCss` expects.
+ * @returns Flat `{ name: value }` map, keyed the same way {@link buildTheme} expects.
  */
-function readThemeValues(block) {
+function readRawValues(block) {
+  const raw = {};
+  for (const severity of NAMED_SEVERITIES) {
+    // Uncapped intent (fill-max 100%): the "solid" cell IS the accent and
+    // contrast color, with no fill or ground mixed in to recover from.
+    raw[`${severity}-color`] = readPaletteValue(block, `${severity}-solid-bg`);
+    raw[`${severity}-contrast`] = readPaletteValue(block, `${severity}-solid-fg`);
+    // The "soft" cell's foreground is the strong tone at any fill at or
+    // under 50%, styles.css `box`'s own on-fill formula.
+    raw[`${severity}-strong`] = readPaletteValue(block, `${severity}-soft-fg`);
+  }
+  // Neutral maps its color to the flat text token and its border to the flat
+  // border token -- the two differ, unlike a named severity's own intent
+  // mapping its border to its color.
+  raw["neutral-color"] = readPaletteValue(block, "text");
+  raw["neutral-border"] = readPaletteValue(block, "border");
+  raw["neutral-strong"] = readPaletteValue(block, "neutral-soft-fg");
+  raw["neutral-contrast"] = readPaletteValue(block, "neutral-solid-fg");
+  for (const role of BUTTON_ROLES) {
+    raw[`btn-${role}-color`] = readPaletteValue(block, `${role}-solid-bg`);
+    raw[`btn-${role}-contrast`] = readPaletteValue(block, `${role}-solid-fg`);
+    raw[`btn-${role}-hover`] = readPaletteValue(block, `${role}-solid-bg-hover`);
+  }
+  raw.surface = readPaletteValue(block, "surface");
+  raw.text = readPaletteValue(block, "text");
+  raw.border = readPaletteValue(block, "border");
+  return raw;
+}
+
+/**
+ * Assembles one theme's `--toast-default-*` values from its own raw inputs
+ * and the *other* theme's raw text color -- `--color-background` is not its
+ * own palette cell, but is always the opposite theme's `--color-text`
+ * (styles.css's `theme.css` defines the two as the same neutral pair, read
+ * in opposite order).
+ * @param raw This theme's raw inputs from {@link readRawValues}.
+ * @param otherThemeText The other theme's raw `text` value.
+ * @returns Flat `{ name: value }` map, keyed the way {@link renderCss} expects.
+ */
+function buildTheme(raw, otherThemeText) {
   const values = {};
-  for (const intent of TOAST_INTENTS) {
-    // Default look: .soft, page ground -- .alert's own unstyled default.
-    values[`${intent}-bg`] = readPaletteValue(block, `${intent}-soft-page-bg`);
-    values[`${intent}-fg`] = readPaletteValue(block, `${intent}-soft-fg`);
-    values[`${intent}-edge`] = readPaletteValue(block, `${intent}-soft-page-edge`);
-    // .solid, ground-independent -- read so a .solid toast (cascaded from
-    // an ancestor the same way every other @codenhub/styles presentation
-    // class cascades) has something real to switch to.
-    values[`${intent}-solid-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
-    values[`${intent}-solid-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
-    values[`${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
+  for (const severity of [...NAMED_SEVERITIES, "neutral"]) {
+    values[`color-${severity}`] = raw[`${severity}-color`];
+    values[`color-${severity}-contrast`] = raw[`${severity}-contrast`];
+    values[`color-${severity}-strong`] = raw[`${severity}-strong`];
   }
-  for (const intent of BUTTON_INTENTS) {
-    // Default look: .solid, ground-independent -- .btn's own unstyled default.
-    values[`btn-${intent}-bg`] = readPaletteValue(block, `${intent}-solid-bg`);
-    values[`btn-${intent}-fg`] = readPaletteValue(block, `${intent}-solid-fg`);
-    values[`btn-${intent}-bg-hover`] = readPaletteValue(block, `${intent}-solid-bg-hover`);
-    // .edged on the default .solid button.
-    values[`btn-${intent}-solid-edge`] = readPaletteValue(block, `${intent}-solid-edge`);
-    values[`btn-${intent}-solid-edge-hover`] = readPaletteValue(block, `${intent}-solid-edge-hover`);
-    // .soft and .ghost, transparent ground (.btn's own ground) -- read so
-    // those presentation classes have something real to switch to too.
-    for (const presentation of ["soft", "ghost"]) {
-      for (const slot of ["bg", "fg", "edge", "bg-hover", "edge-hover"]) {
-        values[`btn-${intent}-${presentation}-${slot}`] = readPaletteValue(block, `${intent}-${presentation}-${slot}`);
-      }
-    }
+  values["color-neutral-border"] = raw["neutral-border"];
+  for (const role of BUTTON_ROLES) {
+    values[`color-btn-${role}`] = raw[`btn-${role}-color`];
+    values[`color-btn-${role}-contrast`] = raw[`btn-${role}-contrast`];
+    values[`color-btn-${role}-hover`] = raw[`btn-${role}-hover`];
   }
-  values.border = readPaletteValue(block, "border");
-  values.surface = readPaletteValue(block, "surface");
-  values.text = readPaletteValue(block, "text");
+  values["color-surface"] = raw.surface;
+  values["color-text"] = raw.text;
+  values["color-border"] = raw.border;
+  values["color-background"] = otherThemeText;
   return values;
 }
 
 /**
  * Builds the generated CSS: toaster's own `--toast-default-*` custom
- * properties, light and dark, one per cell this package's CSS reads.
- * @param light Light-theme values, palette cells and neutral tokens.
- * @param dark Dark-theme values, palette cells and neutral tokens.
+ * properties, light and dark, one per raw input this package's CSS reads.
+ * @param light Light-theme values from {@link buildTheme}.
+ * @param dark Dark-theme values from {@link buildTheme}.
  * @returns The full `generated-defaults.css` file contents.
  */
 function renderCss(light, dark) {
@@ -115,9 +151,12 @@ function renderCss(light, dark) {
   return [
     "/* Generated by `pnpm generate` from `@codenhub/styles`, through",
     "   `scripts/generate-toast-defaults.mjs`. Do not hand-edit -- these are",
-    "   this package's own baked-in defaults, read from the real",
-    "   `@codenhub/styles` composition so the toast and its dialog buttons",
-    "   look right with no styles-package dependency at all. */",
+    "   this package's own baked-in, uncomposed color inputs, read from the",
+    "   real `@codenhub/styles` palette so a toast or dialog rendered with no",
+    "   `@codenhub/styles` on the page still composes against the real thing",
+    "   instead of a hand-typed guess. `src/styles/index.css` runs the same",
+    "   composition formula against these that it runs against",
+    "   `@codenhub/styles`' own live tokens. */",
     "",
     ":root {",
     lines(light),
@@ -140,9 +179,11 @@ async function main() {
   const paletteText = await readFile(path.join(stylesRoot, "src", "palette.css"), "utf8");
   const { dark: darkBlock, light: lightBlock } = splitPaletteThemes(paletteText);
 
-  console.error("Reading composed cells from the real palette.css...");
-  const light = readThemeValues(lightBlock);
-  const dark = readThemeValues(darkBlock);
+  console.error("Reading raw color inputs from the real palette.css...");
+  const lightRaw = readRawValues(lightBlock);
+  const darkRaw = readRawValues(darkBlock);
+  const light = buildTheme(lightRaw, darkRaw.text);
+  const dark = buildTheme(darkRaw, lightRaw.text);
 
   const output = renderCss(light, dark);
   const [outcome] = await applyGenerated([{ contents: output, path: "src/styles/generated-defaults.css" }], {

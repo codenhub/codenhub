@@ -1,4 +1,13 @@
 @import "tailwindcss";
 @import "@codenhub/styles/tw";
 @import "@codenhub/styles/tw/native";
-@import "../src/styles/index.css";
+/* Resolved only through each Vite config's own alias below -- not a real
+   package specifier, deliberately: `@codenhub/toaster/styles` is a real,
+   exports-declared subpath once this package is built, so Tailwind's own
+   import resolver settles it via normal package resolution before an alias
+   ever gets a say, the same way it would for any consumer. This name can
+   never resolve on its own, which is what forces `dev`'s and `debug`'s
+   different aliases below to actually apply. The `virtual:` prefix also
+   keeps it out of `hub check`'s dependency scan, the same convention
+   `virtual:icons.css` and `virtual:toaster-demo-chrome` already use here. */
+@import "virtual:toaster-styles";
