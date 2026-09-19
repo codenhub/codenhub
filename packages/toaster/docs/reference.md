@@ -27,7 +27,7 @@ A restrictive `style-src` Content Security Policy that blocks an unnonced inline
 
 `createToaster(config?): Toaster` creates an independent instance. Defaults are position `"top-right"`, `maxVisible: 5`, duration `4000`, no dismiss button, and auto-dismiss enabled. `ToasterConfig` also accepts a fixed `container`, color `tokens`, a CSP `nonce` for the token stylesheet, margin, `className`, and semantic/loading/custom category defaults. `ToasterRuntimeConfig` is the same partial shape without `container`.
 
-Margin is a property of the shared stack at a position, not of an individual toast: the most recently dispatched value applies to every toast already showing at that position, and dispatching without `margin` clears it.
+Margin is a property of the shared stack at a position, not of an individual toast: the most recently dispatched explicit value applies to every toast already showing at that position, and a dispatch that omits `margin` leaves the stack's current margin unchanged.
 
 Unlike `position` and `duration`, a config-level `className` is not overridden by a per-call `className` — the two are appended (config first, then the call's own class) on every toast and every interactive dialog dispatched from that instance.
 

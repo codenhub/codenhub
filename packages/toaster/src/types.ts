@@ -244,10 +244,10 @@ export interface SemanticToastOptions {
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
    * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent value
-   * dispatched to a given position applies to every toast already showing
-   * there, and omitting it clears a previously set margin for that stack.
-   * Toasts at the same position always share one margin.
+   * at this position, not of an individual toast: the most recent explicit
+   * value dispatched to a given position applies to every toast already
+   * showing there, and a dispatch that omits it leaves the stack's current
+   * margin unchanged. Toasts at the same position always share one margin.
    */
   margin?: string | { x?: string; y?: string };
 }
@@ -274,10 +274,10 @@ export interface LoadingToastOptions {
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
    * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent value
-   * dispatched to a given position applies to every toast already showing
-   * there, and omitting it clears a previously set margin for that stack.
-   * Toasts at the same position always share one margin.
+   * at this position, not of an individual toast: the most recent explicit
+   * value dispatched to a given position applies to every toast already
+   * showing there, and a dispatch that omits it leaves the stack's current
+   * margin unchanged. Toasts at the same position always share one margin.
    */
   margin?: string | { x?: string; y?: string };
 }
@@ -305,10 +305,10 @@ export interface CustomToastOptions {
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
    * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent value
-   * dispatched to a given position applies to every toast already showing
-   * there, and omitting it clears a previously set margin for that stack.
-   * Toasts at the same position always share one margin.
+   * at this position, not of an individual toast: the most recent explicit
+   * value dispatched to a given position applies to every toast already
+   * showing there, and a dispatch that omits it leaves the stack's current
+   * margin unchanged. Toasts at the same position always share one margin.
    */
   margin?: string | { x?: string; y?: string };
 }
@@ -444,10 +444,10 @@ export interface ToasterConfig {
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
    * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent value
-   * dispatched to a given position applies to every toast already showing
-   * there, and omitting it clears a previously set margin for that stack.
-   * Toasts at the same position always share one margin.
+   * at this position, not of an individual toast: the most recent explicit
+   * value dispatched to a given position applies to every toast already
+   * showing there, and a dispatch that omits it leaves the stack's current
+   * margin unchanged. Toasts at the same position always share one margin.
    */
   margin?: string | { x?: string; y?: string };
   /**
