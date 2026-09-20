@@ -522,18 +522,38 @@ export function animateOut(params: {
   return runAnimation(element, [...getKeyframes(position)].reverse(), onComplete, true);
 }
 
-export function animateStackChange(container: HTMLDivElement, updateStack: () => void): void {
-  const previousRects = new Map<HTMLDivElement, DOMRect>();
-  let stackOffset = 0;
-
+/**
+ * Snapshots every current child's position before a stack mutation that will
+ * shift them -- the "first" half of the FLIP technique {@link playStackShift}
+ * completes. Split from it (rather than one function wrapping the mutation)
+ * so a caller that inserts an *empty* shell before populating it -- see
+ * `Toast.render()` -- can defer measuring the "next" positions until the
+ * shell has its real, final content height; measuring right after insertion
+ * would capture the empty shell's much shorter height, understating how far
+ * existing siblings actually need to move and letting the true, larger shift
+ * happen later as an unanimated snap.
+ */
+export function captureStackRects(container: HTMLDivElement): Map<HTMLDivElement, DOMRect> {
+  const rects = new Map<HTMLDivElement, DOMRect>();
   Array.from(container.children).forEach((child) => {
     if (child.tagName === "DIV") {
-      const div = child as HTMLDivElement;
-      previousRects.set(div, div.getBoundingClientRect());
+      rects.set(child as HTMLDivElement, child.getBoundingClientRect());
     }
   });
+  return rects;
+}
 
-  updateStack();
+/**
+ * The "invert and play" half of the FLIP technique: compares each
+ * previously-captured child against its current (post-mutation) position and
+ * animates the difference away, so a stack reflow reads as a smooth push
+ * instead of an instant jump. Also nudges any child absent from
+ * `previousRects` (a newly-inserted toast) by the same offset, so it slides
+ * into place alongside its siblings rather than appearing to teleport
+ * straight into its resting slot.
+ */
+export function playStackShift(container: HTMLDivElement, previousRects: Map<HTMLDivElement, DOMRect>): void {
+  let stackOffset = 0;
 
   previousRects.forEach((previousRect, child) => {
     if (!container.contains(child)) {
@@ -561,4 +581,11 @@ export function animateStackChange(container: HTMLDivElement, updateStack: () =>
     }
     runAnimation(child as HTMLDivElement, [{ translate: `0 ${stackOffset}px` }, { translate: "0 0" }]);
   });
+}
+
+/** Convenience wrapper over {@link captureStackRects}/{@link playStackShift} for a mutation that already leaves every child at its final size (e.g. removal) -- see their own doc comments for when a caller needs the two halves split instead. */
+export function animateStackChange(container: HTMLDivElement, updateStack: () => void): void {
+  const previousRects = captureStackRects(container);
+  updateStack();
+  playStackShift(container, previousRects);
 }

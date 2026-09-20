@@ -270,6 +270,48 @@ test("keeps a narrower toast flush against the stack's anchored edge when a wide
   await page.locator("#check-auto-dismiss").check();
 });
 
+test("computes the stack-push animation's delta from the new toast's real height, not its empty shell", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator("#check-auto-dismiss").uncheck();
+
+  await page.getByRole("button", { name: "Success Toast" }).click();
+  await expect(page.getByRole("status")).toHaveCount(1);
+
+  // The new toast's own entrance keyframes and the sibling's push keyframes
+  // are both created synchronously in the same render() call, so reading
+  // them right after dispatch (no wait) is fine -- unlike a live bounding
+  // box, a keyframe's own recorded values never change after creation.
+  await page.getByRole("button", { name: "Info Toast" }).click();
+  await expect(page.getByRole("status")).toHaveCount(2);
+
+  const { deltaFromKeyframe, expectedDelta } = await page.evaluate(() => {
+    const stack = document.querySelector("[data-toast-container]") as HTMLElement;
+    const [firstToast, secondToast] = Array.from(document.querySelectorAll(".coden-toast")) as HTMLElement[];
+    const pushAnimation = firstToast
+      .getAnimations()
+      .find(
+        (animation) => typeof (animation.effect as KeyframeEffect | null)?.getKeyframes()[0].translate === "string",
+      );
+    const startTranslate = (pushAnimation?.effect as KeyframeEffect | undefined)?.getKeyframes()[0].translate;
+    const deltaFromKeyframe =
+      typeof startTranslate === "string" ? Math.abs(Number.parseFloat(startTranslate.split(" ")[1] ?? "0")) : 0;
+    const gap = Number.parseFloat(getComputedStyle(stack).columnGap || "0");
+    const expectedDelta = secondToast.getBoundingClientRect().height + gap;
+    return { deltaFromKeyframe, expectedDelta };
+  });
+
+  // The bug: measuring the sibling's "next" position right after inserting
+  // the new toast's still-empty shell (before populateToastContent gives it
+  // real height) understated this delta to the empty shell's much shorter
+  // height, leaving the true, larger move to happen later as an unanimated
+  // snap -- see captureStackRects's doc comment in dom.ts.
+  expect(deltaFromKeyframe).toBeCloseTo(expectedDelta, 0);
+
+  await page.locator("#check-auto-dismiss").check();
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 

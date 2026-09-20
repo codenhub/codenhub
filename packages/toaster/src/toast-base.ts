@@ -1,10 +1,11 @@
 import {
   animateIn,
-  animateStackChange,
   applyRootClassChange,
+  captureStackRects,
   createToastShell,
   getOrCreateContainer,
   isTopAnchoredPosition,
+  playStackShift,
   populateToastContent,
   updateToastIcon,
 } from "./dom";
@@ -548,20 +549,25 @@ export class Toast {
     }
 
     const isTopAnchored = isTopAnchoredPosition(position);
-    // The shell is inserted empty first (a distinct mutation an assistive
-    // technology's live-region observer can pick up), then filled -- see
-    // `createToastShell`'s own doc comment for why the order matters. A
-    // top-anchored stack inserts at the start rather than appending -- see
-    // `isTopAnchoredPosition` -- so the newest toast still renders
-    // immediately below the anchored edge without needing
+    // Existing siblings' positions are captured before insertion, but the
+    // push animation itself is not played until after the shell has its
+    // real content (below) -- measuring "next" position right after
+    // inserting the still-empty shell would capture its much shorter empty
+    // height, understating the push and letting the true, larger shift
+    // happen later as an unanimated snap the clipping stack then cuts into.
+    // The shell is still inserted empty first, then filled, since that is a
+    // distinct mutation an assistive technology's live-region observer can
+    // pick up -- see `createToastShell`'s own doc comment for why the order
+    // matters. A top-anchored stack inserts at the start rather than
+    // appending -- see `isTopAnchoredPosition` -- so the newest toast still
+    // renders immediately below the anchored edge without needing
     // `flex-direction: column-reverse` to get there.
-    animateStackChange(container, () => {
-      if (isTopAnchored) {
-        container.insertBefore(element, container.firstChild);
-      } else {
-        container.appendChild(element);
-      }
-    });
+    const previousStackRects = captureStackRects(container);
+    if (isTopAnchored) {
+      container.insertBefore(element, container.firstChild);
+    } else {
+      container.appendChild(element);
+    }
 
     try {
       populateToastContent(element, this.contentOptions, () => this.hide(), this.parent.ownerDocument);
@@ -573,6 +579,7 @@ export class Toast {
       this.failRender(element, error);
       return;
     }
+    playStackShift(container, previousStackRects);
     // Keeps the newly-inserted toast in view when the stack has overflowed
     // into its own scroll area (see the stack's max-height/overflow-y in
     // index.css): the toast just dispatched -- the one a consumer most
