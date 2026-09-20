@@ -112,6 +112,26 @@ jobs:
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
 
+      # `apps/docs` now reads each package's docs from its own latest release
+      # tag rather than the working tree (docs/ci.md, "The documentation
+      # site"), so a merge to `main` is no longer the event that should
+      # rebuild it — this publish is. A deploy hook is a direct command to
+      # Cloudflare rather than something the site build has to notice on its
+      # own, and it can only trigger a rebuild, never read or change anything.
+      # Non-fatal: the version is already on npm by this point, and a rebuild
+      # that did not fire is a docs-site staleness issue, not a failed release.
+      - name: Trigger the documentation site rebuild
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DOCS_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::warning::CLOUDFLARE_DOCS_DEPLOY_HOOK_URL is not set; trigger a codenhub-docs rebuild by hand."
+            exit 0
+          fi
+          if ! curl --fail --silent --show-error --request POST "$DEPLOY_HOOK_URL"; then
+            echo "::warning::Could not reach the codenhub-docs deploy hook; trigger a rebuild by hand."
+          fi
+
   release:
     name: GitHub release
     needs: publish
