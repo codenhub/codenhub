@@ -25,6 +25,9 @@ playwright-report
 **/playwright-report
 **/tests/**/output.css
 
+# Build-time tag-scoped documentation snapshot (docs/ci.md, "The documentation site")
+/apps/docs/.codenhub-published-docs/
+
 # Build-time copies of root assets/ (docs/specs/packages-demo.md)
 **/.codenhub-assets.json
 /apps/www/public/assets/

@@ -88,14 +88,32 @@ export interface PublicPackage {
   status: PackageStatus;
 }
 
-const manifestModules = import.meta.glob<unknown>("../../../../packages/**/package.json", {
+// Two roots, chosen by `import.meta.env.PROD`: `astro dev` keeps reading the
+// working tree directly, so editing a package's docs locally still
+// hot-reloads. A production build reads `.codenhub-published-docs` instead,
+// which `published-docs-snapshot-integration.ts` populates before Vite scans
+// these globs — each package's docs there come from its latest published
+// release tag, not from whatever else happens to be on `main`.
+// (docs/ci.md, "The documentation site")
+const manifestModulesLive = import.meta.glob<unknown>("../../../../packages/**/package.json", {
   eager: true,
   import: "default",
 });
-const documentModules = import.meta.glob<PublicDocumentModule>([
+const manifestModulesSnapshot = import.meta.glob<unknown>("../../.codenhub-published-docs/packages/**/package.json", {
+  eager: true,
+  import: "default",
+});
+const manifestModules = import.meta.env.PROD ? manifestModulesSnapshot : manifestModulesLive;
+
+const documentModulesLive = import.meta.glob<PublicDocumentModule>([
   "../../../../packages/**/docs/**/*.md",
   "!../../../../packages/**/docs/internal/**",
 ]);
+const documentModulesSnapshot = import.meta.glob<PublicDocumentModule>([
+  "../../.codenhub-published-docs/packages/**/docs/**/*.md",
+  "!../../.codenhub-published-docs/packages/**/docs/internal/**",
+]);
+const documentModules = import.meta.env.PROD ? documentModulesSnapshot : documentModulesLive;
 // Keys only: whether a package has a `demo/` at all is enough to decide
 // whether its scoped Demo link exists; the aggregator contract in
 // `docs/specs/packages-demo.md` is what actually mounts it.

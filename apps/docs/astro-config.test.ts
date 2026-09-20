@@ -21,8 +21,11 @@ describe("Astro Markdown configuration", () => {
     ]);
   });
 
-  it("installs package documentation validation and resource publication", () => {
-    expect(config.integrations).toEqual([expect.objectContaining({ name: "codenhub-package-documentation" })]);
+  it("installs package documentation validation, resource publication, and the published-docs snapshot", () => {
+    expect(config.integrations).toEqual([
+      expect.objectContaining({ name: "codenhub-package-documentation" }),
+      expect.objectContaining({ name: "codenhub-published-docs-snapshot" }),
+    ]);
   });
 
   it("sets the canonical site and delivers shell icons in CSS mode", () => {
