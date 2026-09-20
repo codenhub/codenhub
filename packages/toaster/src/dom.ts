@@ -5,6 +5,7 @@ import type { ToastIcon, ToastPosition } from "./types";
 type ToastElementOptions = Pick<
   NormalizedToastOptions,
   | "content"
+  | "dismissLabel"
   | "icon"
   | "isDismissable"
   | "message"
@@ -182,12 +183,12 @@ function buildSvg(spec: SvgSpec, documentRef: Document): SVGElement {
   return svgElement;
 }
 
-function createDismissButton(onDismiss: () => void, documentRef: Document): HTMLButtonElement {
+function createDismissButton(onDismiss: () => void, documentRef: Document, dismissLabel: string): HTMLButtonElement {
   const button = documentRef.createElement("button");
   button.type = "button";
   button.className = "coden-toast-dismiss";
   button.appendChild(buildSvg(CLOSE_ICON_SPEC, documentRef));
-  button.setAttribute("aria-label", "Dismiss toast");
+  button.setAttribute("aria-label", dismissLabel);
   button.addEventListener("click", onDismiss);
   return button;
 }
@@ -198,6 +199,65 @@ function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
     element.style.animation = "none";
   }
   return element;
+}
+
+/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class. */
+function findToastIcon(container: HTMLDivElement): Element | null {
+  return (
+    Array.from(container.children).find(
+      (child) => child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon"),
+    ) ?? null
+  );
+}
+
+/**
+ * Swaps, inserts, or removes a message-based toast's icon in place, without
+ * touching the message text or dismiss button. Used by `Toast.update()`
+ * (see `toast-base.ts`) when a live toast's icon or severity `type` changes.
+ * A content-based toast (no `[data-toast-message]` slot) has nowhere
+ * sensible to put an icon and is left untouched, the same silent no-op
+ * precedent a message update on a content-based toast already has.
+ */
+export function updateToastIcon(container: HTMLDivElement, icon: ToastIcon | null, documentRef: Document): void {
+  const existing = findToastIcon(container);
+
+  if (icon === null) {
+    existing?.remove();
+    return;
+  }
+
+  const next = createIcon(icon, documentRef);
+  if (existing) {
+    existing.replaceWith(next);
+    return;
+  }
+
+  const messageEl = container.querySelector("[data-toast-message]");
+  if (messageEl) {
+    container.insertBefore(next, messageEl);
+  }
+}
+
+/**
+ * Swaps a toast element's severity root class (e.g. `coden-toast-default`
+ * -> `coden-toast-success`) in place, leaving every other class -- the
+ * instance default and any per-call extra class -- untouched. Used by
+ * `Toast.update()`'s `type` field.
+ */
+export function applyRootClassChange(
+  element: HTMLElement,
+  previousRootClassName: string,
+  nextRootClassName: string,
+): void {
+  const previousTokens = previousRootClassName.split(" ").filter(Boolean);
+  const nextTokens = nextRootClassName.split(" ").filter(Boolean);
+  if (previousTokens.length > 0) {
+    element.classList.remove(...previousTokens);
+  }
+  if (nextTokens.length > 0) {
+    element.classList.add(...nextTokens);
+  }
+  element.setAttribute("data-root-class", nextRootClassName);
 }
 
 /**
@@ -240,7 +300,7 @@ export function createToastShell(
  */
 export function populateToastContent(
   container: HTMLDivElement,
-  options: Pick<ToastElementOptions, "content" | "icon" | "isDismissable" | "message">,
+  options: Pick<ToastElementOptions, "content" | "dismissLabel" | "icon" | "isDismissable" | "message">,
   onDismiss: () => void,
   documentRef: Document,
 ): void {
@@ -258,7 +318,7 @@ export function populateToastContent(
   }
 
   if (options.isDismissable) {
-    container.appendChild(createDismissButton(onDismiss, documentRef));
+    container.appendChild(createDismissButton(onDismiss, documentRef, options.dismissLabel));
   }
 }
 
@@ -340,6 +400,19 @@ export function removeInstanceContainers(params: { parent: HTMLElement; instance
     .forEach((element) => element.remove());
 }
 
+const TOP_ANCHORED_POSITIONS = new Set<ToastPosition>(["top-left", "top-right", "top-center"]);
+
+/**
+ * Whether a position's stack is anchored to the top of the viewport. These
+ * use plain `column` with a new toast inserted at the *start* of the DOM
+ * (see `Toast.render()`), not `column-reverse` with one appended at the
+ * end: a reversed flex container cannot be scrolled via `scrollTop` in
+ * every engine, which would defeat the stack's own overflow scrolling.
+ */
+export function isTopAnchoredPosition(position: ToastPosition): boolean {
+  return TOP_ANCHORED_POSITIONS.has(position);
+}
+
 function getKeyframes(position: ToastPosition): Keyframe[] {
   if (position === "top-center") {
     return [
@@ -382,12 +455,13 @@ function createSingleRunCallback(callback?: () => void): (() => void) | undefine
   };
 }
 
+/** @returns The running `Animation`, so a caller (e.g. `Toast.destroyImmediately()`) can cancel it early; `null` when nothing is actually animating (reduced motion, no `Element.animate`, or an already-finished synchronous path). */
 function runAnimation(
   element: HTMLDivElement,
   keyframes: Keyframe[],
   onFinish?: () => void,
   shouldCompleteOnCancel = false,
-): void {
+): Animation | null {
   const finish = createSingleRunCallback(onFinish);
   const prefersReducedMotion = element.ownerDocument.defaultView?.matchMedia?.(
     "(prefers-reduced-motion: reduce)",
@@ -395,21 +469,21 @@ function runAnimation(
 
   if (prefersReducedMotion) {
     finish?.();
-    return;
+    return null;
   }
 
   if (!finish) {
     try {
-      element.animate(keyframes, getAnimationOptions(element));
+      return element.animate(keyframes, getAnimationOptions(element));
     } catch {
       // Animation support unavailable, nothing pending.
+      return null;
     }
-    return;
   }
 
   if (typeof element.animate !== "function") {
     finish();
-    return;
+    return null;
   }
 
   try {
@@ -418,24 +492,34 @@ function runAnimation(
     if (shouldCompleteOnCancel) {
       animation.oncancel = finish;
     }
+    return animation;
   } catch {
     finish();
+    return null;
   }
 }
 
-export function animateIn(params: { element: HTMLDivElement; position: ToastPosition; onFinish?: () => void }): void {
+export function animateIn(params: {
+  element: HTMLDivElement;
+  position: ToastPosition;
+  onFinish?: () => void;
+}): Animation | null {
   const { element, position, onFinish } = params;
   // Complete on cancellation too, same as animateOut: a canceled entrance
   // animation previously fired neither callback, leaving the toast stuck
   // "visible" with no "shown" notification and no auto-dismiss timer ever
   // scheduled -- see Toast.render()'s onFinish, which still guards against
   // running twice or after the toast has already moved on.
-  runAnimation(element, getKeyframes(position), onFinish, true);
+  return runAnimation(element, getKeyframes(position), onFinish, true);
 }
 
-export function animateOut(params: { element: HTMLDivElement; position: ToastPosition; onComplete: () => void }): void {
+export function animateOut(params: {
+  element: HTMLDivElement;
+  position: ToastPosition;
+  onComplete: () => void;
+}): Animation | null {
   const { element, position, onComplete } = params;
-  runAnimation(element, [...getKeyframes(position)].reverse(), onComplete, true);
+  return runAnimation(element, [...getKeyframes(position)].reverse(), onComplete, true);
 }
 
 export function animateStackChange(container: HTMLDivElement, updateStack: () => void): void {

@@ -389,6 +389,37 @@ describe("queued toast updates", () => {
     expect(() => queued.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
     toaster.destroy();
   });
+
+  it("applies a type/icon update sent while queued once the toast is admitted", () => {
+    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    toaster.semantic.info("First");
+    const queued = toaster.loading.show({ message: "Working" });
+    expect(queued.state).toBe("queued");
+
+    queued.update({ type: "success", message: "Done" });
+    flushAnimations();
+
+    expect(queued.state).toBe("visible");
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.className).toContain("coden-toast-success");
+    expect(element.textContent).toContain("Done");
+    toaster.destroy();
+  });
+
+  it("applies a content update sent while queued once the toast is admitted", () => {
+    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    toaster.semantic.info("First");
+    const queued = toaster.semantic.info("Second");
+
+    const replacement = document.createElement("span");
+    replacement.textContent = "Queued replacement";
+    queued.update({ content: replacement });
+    flushAnimations();
+
+    expect(document.body.textContent).toContain("Queued replacement");
+    expect(document.body.textContent).not.toContain("Second");
+    toaster.destroy();
+  });
 });
 
 describe("option mutation safety", () => {

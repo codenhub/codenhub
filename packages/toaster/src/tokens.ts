@@ -37,7 +37,13 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   destructiveBtnEdge: "--toast-color-destructive-btn-edge",
 };
 
-const ownedStyleElements = new Map<string, HTMLStyleElement>();
+interface OwnedStyleEntry {
+  readonly element: HTMLStyleElement;
+  /** The exact `tokens` object last successfully applied, for the reference-equality skip in {@link applyGlobalTokens}. */
+  tokens: ToastTokens;
+}
+
+const ownedStyleElements = new Map<string, OwnedStyleEntry>();
 
 function assertColor(value: string, documentRef?: Document): void {
   if (value.trim().length === 0 || /[;{}]/.test(value)) {
@@ -101,17 +107,29 @@ export function applyGlobalTokens(
   nonce?: string,
 ): void {
   assertValidTokens(tokens, documentRef);
-  const existingElement = ownedStyleElements.get(styleId);
+  const existing = ownedStyleElements.get(styleId);
 
   if (!tokens || Object.keys(tokens).length === 0) {
-    existingElement?.remove();
+    existing?.element.remove();
     ownedStyleElements.delete(styleId);
     return;
   }
 
   const isReusable = Boolean(
-    existingElement && existingElement.ownerDocument === documentRef && existingElement.isConnected,
+    existing && existing.element.ownerDocument === documentRef && existing.element.isConnected,
   );
+
+  // A toaster instance reapplies its own tokens on every dispatch (see
+  // core.ts's getParent()), not only when they actually change. `tokens` is
+  // the same object reference across those repeat calls unless configure()
+  // assigned a new one, so skipping here when it's still connected and
+  // unchanged avoids resetting and rewriting the rule for nothing --
+  // reconnection or a document change still falls through and reapplies.
+  if (isReusable && existing!.tokens === tokens) {
+    return;
+  }
+
+  const existingElement = existing?.element;
   if (!isReusable) {
     existingElement?.remove();
   }
@@ -134,7 +152,7 @@ export function applyGlobalTokens(
     }
     rule.style.cssText = "";
     applyTokens(rule.style, tokens);
-    ownedStyleElements.set(styleId, styleElement);
+    ownedStyleElements.set(styleId, { element: styleElement, tokens });
   } catch (error) {
     // A reused element was already working before this call: the failing
     // check above runs before any mutation, so its prior declarations are
@@ -150,6 +168,6 @@ export function applyGlobalTokens(
 
 /** Removes only the stylesheet owned by the matching toaster instance. */
 export function removeGlobalTokens(styleId: string): void {
-  ownedStyleElements.get(styleId)?.remove();
+  ownedStyleElements.get(styleId)?.element.remove();
   ownedStyleElements.delete(styleId);
 }

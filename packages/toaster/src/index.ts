@@ -12,6 +12,7 @@ export type {
   ToastRole,
   ToastLifecycleSubscriber,
   ToastTokens,
+  ToastLabels,
   SemanticToastOptions,
   SemanticType,
   LoadingToastOptions,

@@ -117,6 +117,90 @@ test("draws a visible edge on an edged dialog button", async ({ page }) => {
   await page.evaluate(() => document.body.classList.remove("edged"));
 });
 
+test("restores focus to the trigger after dismissing a focused toast", async ({ page }) => {
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "Success Toast" });
+  // Focused explicitly rather than via trigger.click(): WebKit does not
+  // focus a <button> on a mouse click (real Safari behavior), so a
+  // keyboard user is simulated directly instead of relying on click-to-focus.
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+
+  const toast = page.getByRole("status");
+  await expect(toast).toBeVisible();
+  const dismissButton = toast.getByRole("button", { name: "Dismiss toast" });
+  await dismissButton.focus();
+  await expect(dismissButton).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(toast).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test("keeps the dismiss button at the trailing edge in a right-to-left layout", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    document.documentElement.dir = "rtl";
+  });
+  await page.getByRole("button", { name: "Success Toast" }).click();
+
+  const toast = page.getByRole("status");
+  await expect(toast).toBeVisible();
+  const dismissButton = toast.getByRole("button", { name: "Dismiss toast" });
+  const toastBox = (await toast.boundingBox())!;
+  const buttonBox = (await dismissButton.boundingBox())!;
+  const distFromLeft = buttonBox.x - toastBox.x;
+  const distFromRight = toastBox.x + toastBox.width - (buttonBox.x + buttonBox.width);
+
+  // In RTL, the trailing edge is the left; the button should sit snug
+  // against it, not the physical right (a physical `margin-left: auto`
+  // would instead push it toward the physical right regardless of
+  // direction).
+  expect(distFromLeft).toBeLessThan(distFromRight);
+
+  await page.evaluate(() => {
+    document.documentElement.dir = "";
+  });
+});
+
+test("scrolls an overflowing stack instead of running off-screen, keeping the newest toast in view", async ({
+  page,
+}) => {
+  // Short enough that even the default maxVisible (5) of ordinary short
+  // toasts cannot all fit -- maxVisible caps how many render at once
+  // regardless of how many times the trigger is clicked, so the viewport
+  // (not the click count) is what has to force the overflow here.
+  await page.setViewportSize({ width: 400, height: 120 });
+  await page.goto("/");
+  await page.locator("#select-position").selectOption("top-right");
+  await page.locator("#check-auto-dismiss").uncheck();
+
+  // Dispatched one at a time, in order: each click must be its own
+  // sequential toast dispatch for the "newest is first" assertion below
+  // to mean anything, so this can't be parallelized.
+  const trigger = page.getByRole("button", { name: "Success Toast" });
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+
+  const stack = page.locator("[data-toast-container]");
+  await expect.poll(() => stack.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+  const stackBox = (await stack.boundingBox())!;
+  expect(stackBox.y).toBeGreaterThanOrEqual(0);
+  expect(stackBox.y + stackBox.height).toBeLessThanOrEqual(121);
+
+  // Newest is inserted first for a top-anchored stack (see
+  // isTopAnchoredPosition in dom.ts) and should already be visible without
+  // any further scrolling -- the whole point of scrolling-to-reveal on
+  // dispatch.
+  await expect(page.locator(".coden-toast").first()).toBeInViewport();
+
+  await page.locator("#check-auto-dismiss").check();
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 

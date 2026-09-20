@@ -211,3 +211,22 @@ describe("modal transition completion", () => {
     toaster.destroy();
   });
 });
+
+describe("dialog content cleanup", () => {
+  it("clears a prompt's draft input value as soon as it closes, not only on reuse", async () => {
+    const toaster = createToaster();
+    const handle = toaster.interactive.prompt("Enter a value");
+
+    const input = document.body.querySelector<HTMLInputElement>(".toast-dialog-input")!;
+    input.value = "Sensitive draft";
+
+    handle.dismiss();
+    await handle.settled;
+
+    const dialog = document.body.querySelector("dialog")!;
+    expect(dialog.children.length).toBe(0);
+    expect(dialog.querySelector(".toast-dialog-input")).toBeNull();
+
+    toaster.destroy();
+  });
+});

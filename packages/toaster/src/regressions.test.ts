@@ -242,6 +242,15 @@ describe("content and token security", () => {
     toaster.destroy();
   });
 
+  it("should reject content that sanitization empties out entirely, rather than rendering a blank toast", () => {
+    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+
+    expect(() => toaster.custom.show({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
+    expect(() => toaster.semantic.success("Still available")).not.toThrow();
+    expect(document.body.textContent).toContain("Still available");
+    toaster.destroy();
+  });
+
   it("should support containers whose IDs contain selector metacharacters", () => {
     const container = document.createElement("section");
     container.id = 'quoted"id';

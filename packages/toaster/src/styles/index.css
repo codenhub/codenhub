@@ -38,49 +38,77 @@
   --ui-border: 0%;
 }
 
+/* `max-height`/`overflow-y` let the stack scroll instead of silently
+   running off-screen with no way back when more toasts are showing than
+   fit in the viewport (a short viewport, several simultaneous toasts, or
+   tall content can all produce this). That scrolling only works if the
+   stack itself is a valid pointer/wheel target, which is why this is
+   `auto` rather than the `none` a fixed-position overlay would otherwise
+   default to -- the container is already sized tightly to its toasts (no
+   padding, gap-only spacing), so the only click-through lost is the few
+   pixels of gap between adjacent toasts, not any real dead zone. */
 :where([data-toast-instance].coden-toast-stack) {
   position: fixed;
   z-index: 9999;
   display: flex;
   gap: 0.5rem;
   max-width: calc(100vw - (2 * var(--toast-margin-x, 1rem)));
-  pointer-events: none;
+  max-height: calc(100vh - (2 * var(--toast-margin-y, 1rem)));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
 }
 
+/* The fallback (used only while `margin`/`ToasterConfig.margin` is unset)
+   floors at `env(safe-area-inset-*)` rather than a flat 1rem, so a device
+   with a notch or home-indicator -- where that env var is nonzero -- does
+   not render a corner stack underneath it. An explicit configured margin
+   always wins outright and is never combined with the inset: a consumer
+   who set one asked for that exact value. `env()` reads 0 with no inset
+   (and its own fallback covers a browser with no safe-area support at
+   all), so this is identical to the flat 1rem everywhere else. */
+/* `column`, not `column-reverse`: a reversed flex container cannot be
+   scrolled via `scrollTop` in every engine (verified: it silently refuses
+   the assignment), which would defeat the stack's own overflow scrolling
+   above. A new toast is inserted at the *start* of the DOM for these
+   top-anchored positions instead (see `toast-base.ts`'s `render()`), so it
+   still renders first -- immediately below the anchored top edge -- with
+   no need for `-reverse` to achieve that. */
 :where([data-toast-instance].coden-toast-stack-top-left) {
-  top: var(--toast-margin-y, 1rem);
-  left: var(--toast-margin-x, 1rem);
-  flex-direction: column-reverse;
+  top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
+  left: var(--toast-margin-x, max(1rem, env(safe-area-inset-left, 0px)));
+  flex-direction: column;
 }
 
 :where([data-toast-instance].coden-toast-stack-top-right) {
-  top: var(--toast-margin-y, 1rem);
-  right: var(--toast-margin-x, 1rem);
-  flex-direction: column-reverse;
+  top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
+  right: var(--toast-margin-x, max(1rem, env(safe-area-inset-right, 0px)));
+  flex-direction: column;
 }
 
 :where([data-toast-instance].coden-toast-stack-bottom-left) {
-  bottom: var(--toast-margin-y, 1rem);
-  left: var(--toast-margin-x, 1rem);
+  bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
+  left: var(--toast-margin-x, max(1rem, env(safe-area-inset-left, 0px)));
   flex-direction: column;
 }
 
 :where([data-toast-instance].coden-toast-stack-bottom-right) {
-  right: var(--toast-margin-x, 1rem);
-  bottom: var(--toast-margin-y, 1rem);
+  right: var(--toast-margin-x, max(1rem, env(safe-area-inset-right, 0px)));
+  bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
 }
 
 :where([data-toast-instance].coden-toast-stack-top-center) {
-  top: var(--toast-margin-y, 1rem);
+  top: var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px)));
   left: 50%;
   align-items: center;
-  flex-direction: column-reverse;
+  flex-direction: column;
   transform: translateX(-50%);
 }
 
 :where([data-toast-instance].coden-toast-stack-bottom-center) {
-  bottom: var(--toast-margin-y, 1rem);
+  bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   left: 50%;
   align-items: center;
   flex-direction: column;
@@ -192,8 +220,16 @@
   align-items: center;
   gap: 0.5rem;
   width: max-content;
-  min-width: 10rem;
-  max-width: min(24rem, calc(100vw - 2rem));
+  /* Both floor and ceiling stay within what the stack's own margin leaves
+     available (see .coden-toast-stack's matching max-width), not just a
+     flat 2rem allowance: a large configured margin on a narrow viewport
+     would otherwise let this toast -- whether forced wide by its own
+     min-width floor, or simply by naturally wide `width: max-content`
+     content -- render wider than its container, overflowing past the
+     margin it was supposed to respect. `--toast-margin-x` inherits from
+     the stack container this toast renders inside. */
+  min-width: min(10rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
+  max-width: min(24rem, calc(100vw - (2 * var(--toast-margin-x, 1rem))));
   padding: 0.75rem;
   border-style: solid;
   border-width: var(--_width);
@@ -261,7 +297,13 @@
   min-width: 1.5rem;
   height: 1.5rem;
   min-height: 1.5rem;
-  margin: -0.25rem -0.25rem -0.25rem auto;
+  /* Logical, not physical: `auto` on the start side pushes the button to
+     the end of the row -- physical right in LTR, physical left in RTL --
+     the same edge the negative end offset then tucks it against. A
+     physical `margin-left: auto` would keep pushing toward the physical
+     right even in RTL, away from the row's actual end. */
+  margin-block: -0.25rem;
+  margin-inline: auto -0.25rem;
   padding: 0;
   border: 0;
   border-radius: 999px;

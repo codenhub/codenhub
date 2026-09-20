@@ -1,9 +1,54 @@
-import { animateIn, animateStackChange, createToastShell, getOrCreateContainer, populateToastContent } from "./dom";
-import { applyUpdateToElement, normalizeToastOptions } from "./options";
-import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
+import {
+  animateIn,
+  animateStackChange,
+  applyRootClassChange,
+  createToastShell,
+  getOrCreateContainer,
+  isTopAnchoredPosition,
+  populateToastContent,
+  updateToastIcon,
+} from "./dom";
+import {
+  SEMANTIC_ICONS,
+  SEMANTIC_ROLES,
+  SEMANTIC_ROOT_CLASS_NAMES,
+  applyUpdateToElement,
+  assertDuration,
+  assertSemanticType,
+  normalizeToastOptions,
+  resolveToastContent,
+} from "./options";
+import type {
+  LiveStyleUpdate,
+  NormalizedToastOptions,
+  RawToastOptions,
+  ResolvedToastConfig,
+  ToastPresetOptions,
+} from "./options";
 import { releaseSlot, removeToastElement, requestSlot, retryQueue, toastByElement } from "./toast-helpers";
 import { assertValidTokens } from "./tokens";
-import type { ToastHandle, ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
+import type {
+  SemanticType,
+  ToastHandle,
+  ToastIcon,
+  ToastLifecycleSubscriber,
+  ToastPosition,
+  ToastRole,
+  ToastState,
+  ToastUpdateOptions,
+} from "./types";
+
+/** `Toast.update()`'s fields, resolved and validated once up front so applying them is infallible. */
+interface NormalizedUpdate {
+  message?: string;
+  content?: readonly Node[];
+  icon?: ToastIcon | null;
+  type?: SemanticType;
+  duration?: number;
+  shouldAutoDismiss?: boolean;
+  tokens?: LiveStyleUpdate["tokens"];
+  className?: string;
+}
 
 /** Reports an error with no caller to propagate to, the same way a browser reports an unhandled rejection. */
 function reportUncaughtError(error: unknown): void {
@@ -54,7 +99,24 @@ export class Toast {
   private visiblePosition: ToastPosition | null = null;
   private isHovered = false;
   private isFocused = false;
-  private pendingUpdate: ToastUpdateOptions | null = null;
+  /** Deferred tokens/className from an `update()` call sent while still queued; message, content, icon, and type updates go through the `current*` fields below instead, applied automatically since `render()` reads them directly. */
+  private pendingStyleUpdate: LiveStyleUpdate | null = null;
+  private currentIcon: ToastIcon | null;
+  private currentRootClassName: string;
+  private currentRole: ToastRole;
+  private currentShouldAutoDismiss: boolean;
+  private currentMessage: string | null;
+  private currentContent: readonly Node[] | null;
+  /** The in-flight entrance or exit `Animation`, if any -- canceled by `destroyImmediately()` instead of left to finish on its own. */
+  private currentAnimation: Animation | null = null;
+  /** Whether the owning document is currently in a background tab -- pauses auto-dismiss the same way hover/focus do, so time nobody could have read the toast doesn't count against its duration. */
+  private isPageHidden = false;
+  /** Detaches the document-level `visibilitychange` listener `render()` adds; unlike the hover/focus listeners above, it is not scoped to this toast's own element, so it needs an explicit removal once this toast settles. */
+  private removeVisibilityListener: (() => void) | null = null;
+  /** Whatever had focus immediately before this toast rendered, captured the same way `ModalController` captures its own restore target. Restored on removal only if focus is still (or again) inside this toast at that point -- see `shouldRestoreFocus`. */
+  private restoreTarget: HTMLElement | null = null;
+  /** Whether focus was inside this toast's element at the moment `hide()`/`destroyImmediately()` was called, captured before removal moves focus away on its own (typically to `<body>`) with nothing to undo that. */
+  private shouldRestoreFocus = false;
   private readonly parent: HTMLElement;
   private readonly maxVisible: number;
 
@@ -81,6 +143,12 @@ export class Toast {
       documentRef: parent.ownerDocument,
     });
     this.remainingDuration = this.options.duration;
+    this.currentIcon = this.options.icon;
+    this.currentRootClassName = this.options.rootClassName;
+    this.currentRole = this.options.role;
+    this.currentShouldAutoDismiss = this.options.shouldAutoDismiss;
+    this.currentMessage = this.options.message;
+    this.currentContent = this.options.content;
     this._settled = new Promise<void>((resolve) => {
       this.settledResolve = resolve;
     });
@@ -107,7 +175,7 @@ export class Toast {
    * hovered or focused, or it is a loader representing ongoing work.
    */
   public get isProtected(): boolean {
-    return this.isHovered || this.isFocused || this.options.icon === "loader";
+    return this.isHovered || this.isFocused || this.currentIcon === "loader";
   }
 
   /**
@@ -164,28 +232,165 @@ export class Toast {
    * queued, so an update sent before a slot opens is not silently
    * discarded. This is a no-op once the toast has settled.
    *
-   * @param updateOpts Scoped updates to apply to the toast element.
-   * @throws {Error} If `updateOpts.tokens` contains an invalid CSS color.
+   * @param updateOpts Scoped updates to apply to the toast.
+   * @throws {Error} If `updateOpts.tokens` contains an invalid CSS color,
+   *   `updateOpts.duration` is not a finite number >= 0, `updateOpts.type`
+   *   is not a recognized severity, or `updateOpts.content` resolves to
+   *   nothing renderable (including a string emptied entirely by sanitization).
    */
   public update(updateOpts: ToastUpdateOptions): void {
-    if (this.internalState === "queued") {
-      if (updateOpts.tokens !== undefined) {
-        assertValidTokens(updateOpts.tokens, this.parent.ownerDocument);
+    if (this.internalState !== "queued" && (this.internalState !== "visible" || this.element === null)) {
+      return;
+    }
+
+    const normalized = this.normalizeUpdate(updateOpts);
+    const previousIcon = this.currentIcon;
+    const previousRootClassName = this.currentRootClassName;
+
+    if (normalized.content !== undefined) {
+      // Content and message/icon are mutually exclusive, the same rule
+      // construction itself applies -- see normalizeToastOptions.
+      this.currentContent = normalized.content;
+      this.currentMessage = null;
+      this.currentIcon = null;
+    } else {
+      if (normalized.message !== undefined) {
+        this.currentMessage = normalized.message;
       }
-      // Snapshot the caller-owned tokens object -- the same boundary
-      // normalizeToastOptions draws for construction-time tokens -- so a
-      // mutation after this call cannot change what admission applies.
-      this.pendingUpdate = {
-        ...this.pendingUpdate,
-        ...updateOpts,
-        ...(updateOpts.tokens !== undefined ? { tokens: { ...updateOpts.tokens } } : {}),
-      };
+      if (normalized.icon !== undefined) {
+        this.currentIcon = normalized.icon;
+      } else if (normalized.type !== undefined) {
+        this.currentIcon = SEMANTIC_ICONS[normalized.type];
+      }
+    }
+
+    if (normalized.type !== undefined) {
+      this.currentRootClassName = SEMANTIC_ROOT_CLASS_NAMES[normalized.type];
+      this.currentRole = SEMANTIC_ROLES[normalized.type];
+    }
+    if (normalized.duration !== undefined) {
+      this.remainingDuration = normalized.duration;
+    }
+    if (normalized.shouldAutoDismiss !== undefined) {
+      this.currentShouldAutoDismiss = normalized.shouldAutoDismiss;
+    }
+
+    if (this.internalState === "queued") {
+      if (normalized.tokens !== undefined || normalized.className !== undefined) {
+        this.pendingStyleUpdate = {
+          ...this.pendingStyleUpdate,
+          ...(normalized.tokens !== undefined ? { tokens: normalized.tokens } : {}),
+          ...(normalized.className !== undefined ? { className: normalized.className } : {}),
+        };
+      }
+      // Everything else above already lives in the `current*` fields render()
+      // reads once this toast is admitted -- nothing further to defer.
       return;
     }
-    if (this.internalState !== "visible" || this.element === null) {
+
+    this.applyVisibleUpdate(normalized, previousIcon, previousRootClassName);
+  }
+
+  /**
+   * Validates and resolves every field of an `update()` call up front, the
+   * same "validate everything before mutating anything" boundary the rest
+   * of this package draws: a rejected update must not leave an earlier
+   * field from the same call already applied.
+   */
+  private normalizeUpdate(update: ToastUpdateOptions): NormalizedUpdate {
+    if (update.tokens !== undefined) {
+      assertValidTokens(update.tokens, this.parent.ownerDocument);
+    }
+    if (update.duration !== undefined) {
+      assertDuration(update.duration);
+    }
+    if (update.type !== undefined) {
+      assertSemanticType(update.type);
+    }
+
+    return {
+      message: update.message,
+      content:
+        update.content !== undefined ? resolveToastContent(update.content, this.parent.ownerDocument) : undefined,
+      icon: update.icon,
+      type: update.type,
+      duration: update.duration,
+      shouldAutoDismiss: update.shouldAutoDismiss,
+      // Snapshotted rather than referenced: the same boundary
+      // normalizeToastOptions draws for construction-time tokens, so a
+      // caller mutation after this call cannot change what gets applied.
+      tokens: update.tokens ? { ...update.tokens } : update.tokens,
+      className: update.className,
+    };
+  }
+
+  /** Applies an already-normalized update to a currently-visible toast's live DOM element and, for duration/shouldAutoDismiss, its running timer. */
+  private applyVisibleUpdate(
+    normalized: NormalizedUpdate,
+    previousIcon: ToastIcon | null,
+    previousRootClassName: string,
+  ): void {
+    const element = this.element;
+    if (element === null) {
       return;
     }
-    applyUpdateToElement(this.element, updateOpts);
+
+    if (normalized.content !== undefined) {
+      element.replaceChildren();
+      populateToastContent(
+        element,
+        {
+          content: this.currentContent,
+          dismissLabel: this.options.dismissLabel,
+          icon: null,
+          isDismissable: this.options.isDismissable,
+          message: null,
+        },
+        () => this.hide(),
+        this.parent.ownerDocument,
+      );
+    } else {
+      if (normalized.message !== undefined) {
+        const messageEl = element.querySelector("[data-toast-message]");
+        if (messageEl) {
+          messageEl.textContent = normalized.message;
+        }
+      }
+      if (this.currentIcon !== previousIcon) {
+        updateToastIcon(element, this.currentIcon, this.parent.ownerDocument);
+      }
+    }
+
+    if (normalized.type !== undefined && this.currentRootClassName !== previousRootClassName) {
+      applyRootClassChange(element, previousRootClassName, this.currentRootClassName);
+      element.setAttribute("role", this.currentRole);
+      element.setAttribute("aria-live", this.currentRole === "alert" ? "assertive" : "polite");
+    }
+
+    if (normalized.tokens !== undefined || normalized.className !== undefined) {
+      applyUpdateToElement(element, { tokens: normalized.tokens, className: normalized.className });
+    }
+
+    if (normalized.duration !== undefined || normalized.shouldAutoDismiss !== undefined) {
+      this.restartAutoDismissIfShown();
+    }
+  }
+
+  /**
+   * Restarts the auto-dismiss timer against the current duration/enabled
+   * state after an update() changes either one. A no-op before "shown" (no
+   * timer could be running yet -- render()'s own animateIn callback will
+   * schedule it) and while hovered/focused (pauseAutoDismiss already owns
+   * the timer in that state; resuming re-reads the updated fields itself).
+   */
+  private restartAutoDismissIfShown(): void {
+    if (!this.reachedEvents.has("shown") || this.element === null || this.isHovered || this.isFocused) {
+      return;
+    }
+    this.clearAutoDismiss();
+    if (this.currentShouldAutoDismiss) {
+      this.scheduleAutoDismiss(this.element);
+    }
   }
 
   /**
@@ -220,16 +425,55 @@ export class Toast {
     this.render();
   }
 
+  /** `createToastShell`'s input, reading the mutable role/rootClassName fields `update()` can change instead of the frozen construction-time baseline. */
+  private get shellOptions(): Pick<
+    NormalizedToastOptions,
+    "className" | "instanceClassName" | "instanceId" | "role" | "rootClassName" | "tokens"
+  > {
+    return {
+      className: this.options.className,
+      instanceClassName: this.options.instanceClassName,
+      instanceId: this.options.instanceId,
+      role: this.currentRole,
+      rootClassName: this.currentRootClassName,
+      tokens: this.options.tokens,
+    };
+  }
+
+  /** `populateToastContent`'s input, reading the mutable content/icon/message fields `update()` can change instead of the frozen construction-time baseline. */
+  private get contentOptions(): Pick<
+    NormalizedToastOptions,
+    "content" | "dismissLabel" | "icon" | "isDismissable" | "message"
+  > {
+    return {
+      content: this.currentContent,
+      dismissLabel: this.options.dismissLabel,
+      icon: this.currentIcon,
+      isDismissable: this.options.isDismissable,
+      message: this.currentMessage,
+    };
+  }
+
   private render(): void {
     if (this.internalState !== "queued") {
       return;
     }
     const position = this.options.position;
+    const documentRef = this.parent.ownerDocument;
+    // Captured the same way ModalController captures its own restore
+    // target, and at the same point -- admission, not dispatch -- since a
+    // toast that sat queued for a while should restore whatever had focus
+    // when it actually appeared, not whatever had it back when it was
+    // first requested.
+    this.restoreTarget =
+      documentRef.activeElement instanceof documentRef.defaultView!.HTMLElement
+        ? (documentRef.activeElement as HTMLElement)
+        : null;
 
     let element: HTMLDivElement;
     let container: HTMLDivElement;
     try {
-      element = createToastShell(this.options, this.parent.ownerDocument);
+      element = createToastShell(this.shellOptions, this.parent.ownerDocument);
       container = getOrCreateContainer({
         parent: this.parent,
         position,
@@ -277,6 +521,20 @@ export class Toast {
       this.retryQueueIfUnprotected();
     });
 
+    if (typeof documentRef.hidden === "boolean") {
+      this.isPageHidden = documentRef.hidden;
+      const handleVisibilityChange = () => {
+        this.isPageHidden = documentRef.hidden;
+        if (this.isPageHidden) {
+          this.pauseAutoDismiss();
+        } else {
+          this.resumeAutoDismiss();
+        }
+      };
+      documentRef.addEventListener("visibilitychange", handleVisibilityChange);
+      this.removeVisibilityListener = () => documentRef.removeEventListener("visibilitychange", handleVisibilityChange);
+    }
+
     this.element = element;
     this.internalState = "visible";
     this.visiblePosition = position;
@@ -289,28 +547,48 @@ export class Toast {
       return;
     }
 
+    const isTopAnchored = isTopAnchoredPosition(position);
     // The shell is inserted empty first (a distinct mutation an assistive
     // technology's live-region observer can pick up), then filled -- see
-    // `createToastShell`'s own doc comment for why the order matters.
+    // `createToastShell`'s own doc comment for why the order matters. A
+    // top-anchored stack inserts at the start rather than appending -- see
+    // `isTopAnchoredPosition` -- so the newest toast still renders
+    // immediately below the anchored edge without needing
+    // `flex-direction: column-reverse` to get there.
     animateStackChange(container, () => {
-      container.appendChild(element);
+      if (isTopAnchored) {
+        container.insertBefore(element, container.firstChild);
+      } else {
+        container.appendChild(element);
+      }
     });
 
     try {
-      populateToastContent(element, this.options, () => this.hide(), this.parent.ownerDocument);
-      if (this.pendingUpdate) {
-        applyUpdateToElement(element, this.pendingUpdate);
-        this.pendingUpdate = null;
+      populateToastContent(element, this.contentOptions, () => this.hide(), this.parent.ownerDocument);
+      if (this.pendingStyleUpdate) {
+        applyUpdateToElement(element, this.pendingStyleUpdate);
+        this.pendingStyleUpdate = null;
       }
     } catch (error) {
       this.failRender(element, error);
       return;
     }
+    // Keeps the newly-inserted toast in view when the stack has overflowed
+    // into its own scroll area (see the stack's max-height/overflow-y in
+    // index.css): the toast just dispatched -- the one a consumer most
+    // needs to see -- is always at the start for a top-anchored stack and
+    // the end otherwise (see above), so scrolling to that same edge always
+    // reveals it. Measured only now, after content population above, so
+    // its final height (not the empty shell's) is what scrollHeight
+    // reflects. Removal deliberately leaves scroll position alone instead,
+    // so it doesn't fight a user who scrolled to read an older toast.
+    container.scrollTop = isTopAnchored ? 0 : container.scrollHeight;
 
-    animateIn({
+    this.currentAnimation = animateIn({
       element,
       position,
       onFinish: () => {
+        this.currentAnimation = null;
         if (this.internalState !== "visible" || this.element !== element) {
           return;
         }
@@ -343,6 +621,8 @@ export class Toast {
     this.notify("hide");
     this.internalState = "done";
     this.notify("hidden");
+    this.removeVisibilityListener?.();
+    this.removeVisibilityListener = null;
     releaseSlot({
       owner: this,
       parent: this.parent,
@@ -374,16 +654,89 @@ export class Toast {
     this.clearAutoDismiss();
     const element = this.element;
     const position = this.visiblePosition;
+    // Captured now, before removal moves focus away on its own (typically
+    // to <body>) with nothing left to undo that -- see finishHide().
+    this.shouldRestoreFocus = element.contains(this.parent.ownerDocument.activeElement);
 
     this.internalState = "hiding";
     this.notify("hide");
-    removeToastElement({
+    this.currentAnimation = removeToastElement({
       element,
       parent: this.parent,
       position,
       instanceId: this.options.instanceId,
-      onComplete: () => this.finishHide(element),
+      onComplete: () => {
+        this.currentAnimation = null;
+        this.finishHide(element);
+      },
     });
+  }
+
+  /**
+   * Settles this toast immediately and synchronously as part of tearing
+   * down its whole toaster instance (see `ToastManager.destroy()`):
+   * cancels any in-flight entrance or exit animation instead of waiting for
+   * it, and resolves `settled` before this call returns, rather than
+   * `hide()`'s normal animated dismissal (which the destroyed instance's
+   * containers are removed out from under, leaving nothing left to see).
+   * A no-op once already settled.
+   */
+  public destroyImmediately(): void {
+    if (this.internalState === "idle" || this.internalState === "done") {
+      return;
+    }
+
+    this.clearAutoDismiss();
+    // Cancel only after every state field below is already at its terminal
+    // value: canceling can synchronously invoke this same animation's own
+    // finish/cancel handler (render()'s onFinish, or hide()'s onComplete),
+    // and each one only guards against running twice by reading these same
+    // fields -- reordering this would let entrance's onFinish see a
+    // still-"visible" state and wrongly notify "shown" and schedule an
+    // auto-dismiss timer on a toast that is being torn down right now.
+    const animation = this.currentAnimation;
+    this.currentAnimation = null;
+
+    if (this.internalState === "queued") {
+      this.clearQueuedShow();
+      // Matches failRender's own reasoning: a subscriber must still see
+      // every lifecycle stage instead of hanging forever waiting for one
+      // that a queued toast, never rendered, never actually reached.
+      this.notify("show");
+      this.internalState = "hiding";
+      this.notify("hide");
+      this.internalState = "done";
+      this.notify("hidden");
+      this.settledResolve();
+      animation?.cancel();
+      return;
+    }
+
+    const shouldRestoreFocus = this.element !== null && this.element.contains(this.parent.ownerDocument.activeElement);
+    if (this.element) {
+      toastByElement.delete(this.element);
+      this.element = null;
+    }
+    if (this.internalState !== "hiding") {
+      this.internalState = "hiding";
+      this.notify("hide");
+    }
+    this.internalState = "done";
+    this.visiblePosition = null;
+    releaseSlot({
+      owner: this,
+      parent: this.parent,
+      position: this.options.position,
+      instanceId: this.options.instanceId,
+    });
+    this.removeVisibilityListener?.();
+    this.removeVisibilityListener = null;
+    if (shouldRestoreFocus && this.restoreTarget?.isConnected) {
+      this.restoreTarget.focus();
+    }
+    this.notify("hidden");
+    this.settledResolve();
+    animation?.cancel();
   }
 
   private clearAutoDismiss(): void {
@@ -434,6 +787,11 @@ export class Toast {
       position: this.options.position,
       instanceId: this.options.instanceId,
     });
+    this.removeVisibilityListener?.();
+    this.removeVisibilityListener = null;
+    if (this.shouldRestoreFocus && this.restoreTarget?.isConnected) {
+      this.restoreTarget.focus();
+    }
     this.notify("hidden");
     this.settledResolve();
   }
@@ -446,7 +804,7 @@ export class Toast {
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
-    if (!this.options.shouldAutoDismiss || this.isHovered || this.isFocused) {
+    if (!this.currentShouldAutoDismiss || this.isHovered || this.isFocused || this.isPageHidden) {
       return;
     }
     if (typeof window === "undefined") {
@@ -465,7 +823,7 @@ export class Toast {
 
   private resumeAutoDismiss(): void {
     if (
-      !this.options.shouldAutoDismiss ||
+      !this.currentShouldAutoDismiss ||
       this.internalState !== "visible" ||
       this.element === null ||
       !this.reachedEvents.has("shown")
