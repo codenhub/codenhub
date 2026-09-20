@@ -4,6 +4,7 @@ import { vi } from "vitest";
 export interface MockAnimation {
   onfinish: (() => void) | null;
   oncancel: (() => void) | null;
+  cancel: () => void;
 }
 
 export let animations: MockAnimation[] = [];
@@ -17,7 +18,16 @@ export function flushAnimations(): void {
 export function installAnimateMock(): void {
   animations = [];
   HTMLElement.prototype.animate = vi.fn().mockImplementation(() => {
-    const anim: MockAnimation = { onfinish: null, oncancel: null };
+    const anim: MockAnimation = {
+      onfinish: null,
+      oncancel: null,
+      // Mirrors the real Animation#cancel() contract closely enough for
+      // tests: firing oncancel (not onfinish) and never firing both.
+      cancel(): void {
+        anim.onfinish = null;
+        anim.oncancel?.();
+      },
+    };
     animations.push(anim);
     return anim as unknown as Animation;
   });

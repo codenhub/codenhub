@@ -110,8 +110,36 @@ export interface ToastTokens {
  * Options that can be dynamically updated on a live toast instance.
  */
 export interface ToastUpdateOptions {
-  /** The new message text. */
+  /**
+   * The new message text. Ignored if `content` is also given in this same
+   * call; has no effect on a toast that was built from `content` rather
+   * than `message` (there is no message slot to write into).
+   */
   message?: string;
+  /**
+   * Replaces the toast's content entirely. Follows the same rules as
+   * construction: a string is sanitized, a DOM node is trusted and used
+   * as-is. Supersedes `message` and `icon` in this same call, the same
+   * mutual exclusivity construction itself applies.
+   */
+  content?: ToastContent;
+  /**
+   * Swaps the icon glyph, or `null` to remove it. Ignored in a call that
+   * also gives `content`. If `type` is given in the same call and `icon`
+   * is not, the icon matching that type is used automatically.
+   */
+  icon?: ToastIcon | null;
+  /**
+   * Switches the toast's severity color and accessibility role to match --
+   * the same success/error/warning/info categories a semantic toast is
+   * dispatched with -- so e.g. a loading toast can complete into a success
+   * toast: `update({ type: "success" })`.
+   */
+  type?: SemanticType;
+  /** New visibility duration in milliseconds, applied the next time an auto-dismiss timer would run. */
+  duration?: number;
+  /** Enables or disables automatic dismissal after `duration`. */
+  shouldAutoDismiss?: boolean;
   /** Scoped design token color overrides. */
   tokens?: ToastTokens;
   /** Extra CSS classes to append. */
@@ -134,13 +162,16 @@ export interface ToastHandle {
   dismiss(): void;
 
   /**
-   * Patches the message text, styles, or classes of a toast. Applied
-   * immediately when the toast is visible; if it is still queued, the
-   * update is stored and applied once a slot opens rather than discarded.
-   * Has no effect once the toast has settled.
+   * Patches the message, content, icon, severity, timing, styles, or
+   * classes of a toast. Applied immediately when the toast is visible; if
+   * it is still queued, the update is stored and applied once a slot
+   * opens rather than discarded. Has no effect once the toast has settled.
    *
    * @param options Partial updates to apply.
-   * @throws {Error} If `options.tokens` contains an invalid CSS color.
+   * @throws {Error} If `options.tokens` contains an invalid CSS color,
+   *   `options.duration` is not a finite number >= 0, `options.type` is
+   *   not a recognized severity, or `options.content` resolves to nothing
+   *   renderable.
    */
   update(options: ToastUpdateOptions): void;
 
@@ -376,6 +407,26 @@ export interface AlertOptions {
 }
 
 /**
+ * Instance-level default labels, letting a consumer localize every built-in
+ * piece of text this package renders without repeating the same override on
+ * every dialog call. A per-call label (`ConfirmOptions.confirmLabel`, etc.)
+ * still wins over its matching entry here, the same precedence `position`
+ * and `duration` already have between `ToasterConfig` and a per-call option.
+ */
+export interface ToastLabels {
+  /** Accessible label for a toast's dismiss button. Defaults to "Dismiss toast". */
+  dismiss?: string;
+  /** Default label for a confirm dialog's positive action button. Defaults to "Confirm". */
+  confirm?: string;
+  /** Default label for a confirm or prompt dialog's negative action button. Defaults to "Cancel". */
+  cancel?: string;
+  /** Default label for a prompt dialog's submit button. Defaults to "Submit". */
+  submit?: string;
+  /** Default label for an alert dialog's acknowledgement button. Defaults to "OK". */
+  ok?: string;
+}
+
+/**
  * Fallback defaults for semantic toasts.
  */
 export interface SemanticDefaults {
@@ -429,6 +480,8 @@ export interface ToasterConfig {
   isDismissable?: boolean;
   /** Dismiss automatically when duration expires by default. Defaults to true. */
   shouldAutoDismiss?: boolean;
+  /** Instance-level default labels for the dismiss button and dialog buttons. */
+  labels?: ToastLabels;
   /** Dynamic CSS variables applied to all toasts inside this instance. */
   tokens?: ToastTokens;
   /**

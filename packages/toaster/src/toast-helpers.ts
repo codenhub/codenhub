@@ -38,19 +38,20 @@ export interface RemoveToastElementParams {
   onComplete: () => void;
 }
 
-export function removeToastElement(params: RemoveToastElementParams): void {
+/** @returns The running exit `Animation`, so a caller can cancel it early (see `Toast.destroyImmediately()`); `null` when nothing is animating. */
+export function removeToastElement(params: RemoveToastElementParams): Animation | null {
   const { element, parent, position, instanceId, onComplete } = params;
   const container = getContainer({ parent, position, instanceId });
   if (!container || !container.contains(element)) {
     onComplete();
-    return;
+    return null;
   }
   if (dismissingElements.has(element)) {
-    return;
+    return null;
   }
   dismissingElements.add(element);
 
-  animateOut({
+  return animateOut({
     element,
     position,
     onComplete: () => {

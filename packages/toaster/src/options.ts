@@ -1,5 +1,16 @@
 import { assertValidTokens, replaceTokens } from "./tokens";
-import type { ToastContent, ToastIcon, ToastPosition, ToastRole, ToastTokens, ToastUpdateOptions } from "./types";
+import type {
+  SemanticType,
+  ToastContent,
+  ToastIcon,
+  ToastLabels,
+  ToastPosition,
+  ToastRole,
+  ToastTokens,
+} from "./types";
+
+/** Built-in text this package renders with no per-call override of its own -- see `ToastLabels.dismiss`. */
+export const DEFAULT_DISMISS_LABEL = "Dismiss toast";
 
 /**
  * Resolved runtime configurations for a Toaster instance.
@@ -21,9 +32,13 @@ export interface ResolvedToastConfig {
   readonly margin?: string | { x?: string; y?: string };
   /** Extra CSS class name applied to every toast and dialog from this instance. */
   readonly className?: string;
+  /** Accessible label for a toast's dismiss button. */
+  readonly dismissLabel: string;
+  /** Instance-level default labels for dialog buttons (confirm/cancel/submit/ok). */
+  readonly dialogLabels: ToastLabels;
 }
 
-export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin"> = {
+export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "dialogLabels"> = {
   position: "top-right",
   duration: 4000,
   isDismissable: false,
@@ -70,6 +85,40 @@ export const TOAST_SHAPE_CLASS = "coden-toast";
  */
 export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
 
+/**
+ * Shared severity mappings for the four semantic categories, used both by
+ * `SemanticToast`'s construction-time preset (see `variants/semantic.ts`)
+ * and by `Toast.update()`'s `type` field so a toast can switch severity
+ * after it has already been dispatched (e.g. a loading toast completing
+ * into a success toast).
+ */
+export const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticType, string> = {
+  success: `${TOAST_SHAPE_CLASS} coden-toast-success`,
+  error: `${TOAST_SHAPE_CLASS} coden-toast-error`,
+  warning: `${TOAST_SHAPE_CLASS} coden-toast-warning`,
+  info: `${TOAST_SHAPE_CLASS} coden-toast-info`,
+};
+
+export const SEMANTIC_ICONS: Record<SemanticType, ToastIcon> = {
+  success: "success",
+  error: "error",
+  warning: "warning",
+  info: "info",
+};
+
+export const SEMANTIC_ROLES: Record<SemanticType, ToastRole> = {
+  success: "status",
+  error: "alert",
+  warning: "alert",
+  info: "status",
+};
+
+export function assertSemanticType(value: unknown): asserts value is SemanticType {
+  if (!Object.hasOwn(SEMANTIC_ROLES, value as PropertyKey)) {
+    throw new Error(`Invalid semantic toast type: ${String(value)}`);
+  }
+}
+
 export interface NormalizedToastOptions {
   readonly instanceId: string;
   readonly shouldAutoDismiss: boolean;
@@ -88,6 +137,8 @@ export interface NormalizedToastOptions {
   readonly instanceClassName?: string;
   readonly tokens: ToastTokens | null;
   readonly margin?: string | { x?: string; y?: string };
+  /** Accessible label for this toast's dismiss button, from `ResolvedToastConfig.dismissLabel`. */
+  readonly dismissLabel: string;
 }
 
 export interface ToastPresetOptions {
@@ -191,7 +242,7 @@ function sanitizeFragment(fragment: DocumentFragment): void {
   Array.from(fragment.children).forEach(sanitizeElement);
 }
 
-function resolveToastContent(content: ToastContent, documentRef: Document): readonly Node[] {
+export function resolveToastContent(content: ToastContent, documentRef: Document): readonly Node[] {
   const resolved = typeof content === "function" ? content() : content;
 
   if (typeof resolved === "string") {
@@ -202,6 +253,14 @@ function resolveToastContent(content: ToastContent, documentRef: Document): read
     template.innerHTML = resolved;
 
     sanitizeFragment(template.content);
+
+    // The input string was non-empty, but sanitization (e.g. a script-only
+    // string with every element stripped) can still leave nothing behind.
+    // Treated the same as an originally-empty string rather than silently
+    // rendering a blank toast.
+    if (template.content.childNodes.length === 0) {
+      throw new Error("Toast content must not be an empty string.");
+    }
 
     return Object.freeze(Array.from(template.content.childNodes));
   }
@@ -223,7 +282,7 @@ function resolveToastContent(content: ToastContent, documentRef: Document): read
   return Object.freeze([resolved]);
 }
 
-function assertDuration(duration: number | undefined): void {
+export function assertDuration(duration: number | undefined): void {
   if (duration === undefined) {
     return;
   }
@@ -292,21 +351,27 @@ export function normalizeToastOptions(params: {
     // boundary on a later update() call).
     tokens: options.tokens ? { ...options.tokens } : null,
     margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
+    dismissLabel: config.dismissLabel,
   });
 }
 
-export function applyUpdateToElement(element: HTMLDivElement, update: ToastUpdateOptions): void {
+/** A scoped token and/or extra-class update to apply to a live toast element. */
+export interface LiveStyleUpdate {
+  tokens?: ToastTokens;
+  className?: string;
+}
+
+/**
+ * Applies a scoped token and/or extra-class update to an already-rendered
+ * toast element. Message, content, icon, and severity updates are handled
+ * directly by `Toast` itself (see `toast-base.ts`), since they need to read
+ * and mutate the toast's own current-state fields, not just the DOM.
+ */
+export function applyUpdateToElement(element: HTMLDivElement, update: LiveStyleUpdate): void {
   // Validate everything before mutating anything: a rejected update must be
   // atomic, not leave an earlier field in this same call already applied.
   if (update.tokens !== undefined) {
     assertValidTokens(update.tokens, element.ownerDocument);
-  }
-
-  if (update.message !== undefined) {
-    const messageEl = element.querySelector("[data-toast-message]");
-    if (messageEl) {
-      messageEl.textContent = update.message;
-    }
   }
 
   if (update.tokens !== undefined) {

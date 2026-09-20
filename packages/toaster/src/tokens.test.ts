@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyGlobalTokens } from "./tokens";
 
@@ -59,6 +59,27 @@ describe("tokens utilities", () => {
 
       applyGlobalTokens(null, TEST_STYLE_ID);
       expect(getOwnedStyle(TEST_STYLE_ID)).toBeNull();
+    });
+
+    it("should skip rewriting the rule when the same tokens object is reapplied unchanged", () => {
+      const tokens = { successBg: "purple" };
+      applyGlobalTokens(tokens, TEST_STYLE_ID);
+      const styleElement = getOwnedStyle(TEST_STYLE_ID)!;
+      const rule = styleElement.sheet!.cssRules[0] as CSSStyleRule;
+      const cssTextSetter = vi.spyOn(rule.style, "cssText", "set");
+
+      // Same object reference, same connected element: a dispatch reapplying
+      // unchanged instance tokens (see core.ts's getParent()) should not
+      // reset and rewrite the rule for nothing.
+      applyGlobalTokens(tokens, TEST_STYLE_ID);
+      expect(cssTextSetter).not.toHaveBeenCalled();
+      expect(getOwnedStyle(TEST_STYLE_ID)).toBe(styleElement);
+
+      applyGlobalTokens({ successBg: "orange" }, TEST_STYLE_ID);
+      expect(cssTextSetter).toHaveBeenCalled();
+      expect(getStyleText(TEST_STYLE_ID)).toContain("--toast-color-success-bg: orange;");
+
+      cssTextSetter.mockRestore();
     });
 
     it("should scope style elements per styleId so instances do not clobber each other", () => {

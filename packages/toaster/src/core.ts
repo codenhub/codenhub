@@ -8,7 +8,7 @@ import type { LoadingContext, LoadingDispatcher } from "./managers/loading";
 import { createSemanticDispatcher } from "./managers/semantic";
 import type { SemanticContext, SemanticDispatcher } from "./managers/semantic";
 import { ModalController } from "./modal";
-import { DEFAULT_CONFIG, assertToastPosition } from "./options";
+import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, assertToastPosition } from "./options";
 import type { ResolvedToastConfig } from "./options";
 import type { Toast } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
@@ -34,6 +34,7 @@ function copyConfig(config: ToasterConfig): ToasterConfig {
     semantic: config.semantic ? { ...config.semantic } : undefined,
     loading: config.loading ? { ...config.loading } : undefined,
     custom: config.custom ? { ...config.custom } : undefined,
+    labels: config.labels ? { ...config.labels } : undefined,
     margin: typeof config.margin === "object" ? { ...config.margin } : config.margin,
   };
 }
@@ -237,9 +238,13 @@ class ToastManager implements Toaster {
     }
     this.isDestroyed = true;
 
-    this.semanticToasts.forEach((t) => t.hide());
-    this.loadingToasts.forEach((t) => t.hide());
-    this.customToasts.forEach((t) => t.hide());
+    // Immediate and synchronous, not the normal animated hide(): the
+    // containers below are removed out from under these toasts in this
+    // same call, so nothing would ever be left to see an exit animation
+    // play, and every handle should settle by the time destroy() returns.
+    this.semanticToasts.forEach((t) => t.destroyImmediately());
+    this.loadingToasts.forEach((t) => t.destroyImmediately());
+    this.customToasts.forEach((t) => t.destroyImmediately());
     this.semanticToasts.clear();
     this.loadingToasts.clear();
     this.customToasts.clear();
@@ -266,7 +271,12 @@ class ToastManager implements Toaster {
 
   private getModalController(): ModalController {
     if (!this.modalController) {
-      this.modalController = new ModalController(this.getParent(), this.instanceId, () => this.resolved.className);
+      this.modalController = new ModalController(
+        this.getParent(),
+        this.instanceId,
+        () => this.resolved.className,
+        () => this.resolved.dialogLabels,
+      );
     }
     return this.modalController;
   }
@@ -299,6 +309,8 @@ class ToastManager implements Toaster {
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
       className: config.className,
+      dismissLabel: config.labels?.dismiss ?? DEFAULT_DISMISS_LABEL,
+      dialogLabels: config.labels ?? {},
     };
   }
 

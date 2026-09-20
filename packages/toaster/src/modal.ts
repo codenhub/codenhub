@@ -4,7 +4,14 @@ import { DIALOG_CLASS, buildDialogContent } from "./modal-templates";
 import { closeDialog } from "./modal-transition";
 import { joinClassNames } from "./options";
 import { assertValidTokens } from "./tokens";
-import type { AlertOptions, ConfirmOptions, InteractiveToastHandle, PromptOptions, ToastState } from "./types";
+import type {
+  AlertOptions,
+  ConfirmOptions,
+  InteractiveToastHandle,
+  PromptOptions,
+  ToastLabels,
+  ToastState,
+} from "./types";
 
 interface ModalJob {
   run(): void;
@@ -39,13 +46,21 @@ export class ModalController {
     private readonly parent: HTMLElement,
     private readonly instanceId: string,
     private readonly getDefaultClassName: () => string | undefined = () => undefined,
+    private readonly getLabels: () => ToastLabels = () => ({}),
   ) {}
 
   public confirm(message: string, options: ConfirmOptions = {}): InteractiveToastHandle<boolean> {
+    const labels = this.getLabels();
     // Cloned before use: the renderer closure below reads label/type fields
     // lazily when the queued job eventually runs, not synchronously here, so
-    // a caller-owned object must not still be live at that point.
-    const snapshot: ConfirmOptions = { ...options };
+    // a caller-owned object must not still be live at that point. Instance
+    // label defaults are folded in here too, ahead of the caller's own
+    // options, so a per-call label still wins over them as it always has.
+    const snapshot: ConfirmOptions = {
+      confirmLabel: labels.confirm,
+      cancelLabel: labels.cancel,
+      ...options,
+    };
     return this.createModal<boolean>({
       message,
       options: snapshot,
@@ -55,7 +70,12 @@ export class ModalController {
   }
 
   public prompt(message: string, options: PromptOptions = {}): InteractiveToastHandle<string | null> {
-    const snapshot: PromptOptions = { ...options };
+    const labels = this.getLabels();
+    const snapshot: PromptOptions = {
+      submitLabel: labels.submit,
+      cancelLabel: labels.cancel,
+      ...options,
+    };
     return this.createModal<string | null>({
       message,
       options: snapshot,
@@ -65,7 +85,11 @@ export class ModalController {
   }
 
   public alert(message: string, options: AlertOptions = {}): InteractiveToastHandle<void> {
-    const snapshot: AlertOptions = { ...options };
+    const labels = this.getLabels();
+    const snapshot: AlertOptions = {
+      okLabel: labels.ok,
+      ...options,
+    };
     return this.createModal({
       message,
       options: snapshot,
@@ -156,6 +180,11 @@ export class ModalController {
       }
       abortController.abort();
       state = "hidden";
+      // Cleared as soon as this dialog is done with, not left sitting until
+      // the next open reuses the element: a prompt's draft input value, or
+      // any other rendered content, should not linger past the interaction
+      // it belonged to.
+      dialog?.replaceChildren();
       resolveSettled();
       this.complete(job);
       this.restoreFocusIfIdle();

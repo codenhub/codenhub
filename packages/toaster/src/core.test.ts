@@ -1,7 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createToaster } from "./core";
-import { flushAnimations, installAnimateMock, installDialogMocks, mockBackdropRect, clickBackdrop } from "./test-utils";
+import {
+  animations,
+  flushAnimations,
+  installAnimateMock,
+  installDialogMocks,
+  mockBackdropRect,
+  clickBackdrop,
+} from "./test-utils";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -51,6 +58,66 @@ describe("createToaster", () => {
     expect(texts.some((t) => t.includes("blue"))).toBe(true);
     t1.destroy();
     t2.destroy();
+  });
+});
+
+describe("deterministic destroy", () => {
+  it("settles every visible toast's handle synchronously, before an exit animation would normally finish", async () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Visible");
+    flushAnimations();
+    expect(handle.state).toBe("visible");
+
+    toaster.destroy();
+
+    expect(handle.state).toBe("hidden");
+    // No pending animation left for a later flushAnimations() to complete.
+    expect(animations.length).toBe(0);
+    await expect(handle.settled).resolves.toBeUndefined();
+  });
+
+  it("settles a still-queued toast's handle synchronously too", () => {
+    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    toaster.semantic.info("First");
+    const queued = toaster.semantic.info("Second");
+    expect(queued.state).toBe("queued");
+
+    toaster.destroy();
+    expect(queued.state).toBe("hidden");
+  });
+
+  it("fires every lifecycle event for a toast destroyed while still queued, including onShow", () => {
+    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    toaster.semantic.info("First");
+    const queued = toaster.semantic.info("Second");
+
+    const seen: string[] = [];
+    queued.onShow(() => seen.push("show"));
+    queued.onHide(() => seen.push("hide"));
+    queued.onHidden(() => seen.push("hidden"));
+
+    toaster.destroy();
+    expect(seen).toEqual(["show", "hide", "hidden"]);
+  });
+
+  it("cancels an in-flight entrance animation without firing shown or scheduling auto-dismiss", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 1000 });
+    const handle = toaster.semantic.success("Entering");
+    // Deliberately not flushed: the entrance animation is still in flight.
+
+    const onShown = vi.fn();
+    handle.onShown(onShown);
+
+    toaster.destroy();
+
+    expect(handle.state).toBe("hidden");
+    expect(onShown).not.toHaveBeenCalled();
+    // If a timer had wrongly been scheduled, this would throw or hide()
+    // would be invoked on an already-torn-down toast; neither happens.
+    vi.advanceTimersByTime(5000);
+
+    vi.useRealTimers();
   });
 });
 
@@ -513,6 +580,100 @@ describe("positioning and margins", () => {
   });
 });
 
+describe("stack insertion order for overflow scrolling", () => {
+  it("inserts new toasts at the start of a top-anchored stack, not the end", () => {
+    const toaster = createToaster({ position: "top-right", shouldAutoDismiss: false });
+    toaster.semantic.success("First");
+    toaster.semantic.success("Second");
+    toaster.semantic.success("Third");
+
+    const container = document.body.querySelector("[data-toast-container]")!;
+    const texts = Array.from(container.children).map((child) => child.textContent);
+    // Newest first: a top-anchored stack no longer uses
+    // `flex-direction: column-reverse` to achieve this (that direction
+    // cannot be scrolled via scrollTop in every engine), so the DOM order
+    // itself must already put the newest toast first.
+    expect(texts).toEqual(["Third", "Second", "First"]);
+
+    toaster.destroy();
+  });
+
+  it("appends new toasts to the end of a bottom-anchored stack", () => {
+    const toaster = createToaster({ position: "bottom-right", shouldAutoDismiss: false });
+    toaster.semantic.success("First");
+    toaster.semantic.success("Second");
+    toaster.semantic.success("Third");
+
+    const container = document.body.querySelector("[data-toast-container]")!;
+    const texts = Array.from(container.children).map((child) => child.textContent);
+    expect(texts).toEqual(["First", "Second", "Third"]);
+
+    toaster.destroy();
+  });
+});
+
+describe("focus restoration on dismiss", () => {
+  it("restores focus to whatever had it before the toast, if focus is still inside the toast at dismiss time", () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Focus me", { isDismissable: true });
+    flushAnimations();
+
+    const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
+    dismissButton.focus();
+    expect(document.activeElement).toBe(dismissButton);
+
+    handle.dismiss();
+    flushAnimations();
+
+    expect(document.activeElement).toBe(trigger);
+    toaster.destroy();
+    trigger.remove();
+  });
+
+  it("does not steal focus on dismiss when focus has already moved elsewhere", () => {
+    const trigger = document.createElement("button");
+    const elsewhere = document.createElement("button");
+    document.body.append(trigger, elsewhere);
+    trigger.focus();
+
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Not focused", { isDismissable: true, shouldAutoDismiss: false });
+    flushAnimations();
+
+    elsewhere.focus();
+    handle.dismiss();
+    flushAnimations();
+
+    expect(document.activeElement).toBe(elsewhere);
+    toaster.destroy();
+    trigger.remove();
+    elsewhere.remove();
+  });
+
+  it("does not restore focus to a restore target that no longer exists", () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Focus me", { isDismissable: true });
+    flushAnimations();
+
+    const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
+    dismissButton.focus();
+    trigger.remove();
+
+    expect(() => handle.dismiss()).not.toThrow();
+    flushAnimations();
+
+    toaster.destroy();
+  });
+});
+
 describe("Toast update", () => {
   it("should update message text dynamically", () => {
     const toaster = createToaster();
@@ -556,6 +717,265 @@ describe("Toast update", () => {
     handle.update({ className: "class-two" });
     expect(element?.className).toContain("class-two");
     expect(element?.className).not.toContain("class-one");
+
+    toaster.destroy();
+  });
+
+  it("completes a loading toast into a success toast: type, icon, and auto-dismiss together", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+    const handle = toaster.loading.show({ message: "Uploading…" });
+    flushAnimations();
+
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.className).toContain("coden-toast-default");
+
+    handle.update({ type: "success", message: "Uploaded", duration: 2000, shouldAutoDismiss: true });
+
+    expect(element.className).toContain("coden-toast-success");
+    expect(element.className).not.toContain("coden-toast-default");
+    expect(element.textContent).toContain("Uploaded");
+    // The success icon (a checkmark) is derived automatically from `type`
+    // since this update did not give its own `icon`.
+    expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
+
+    vi.advanceTimersByTime(2500);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("lets an explicit icon override the type's default icon in the same update() call", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Working");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+
+    handle.update({ type: "error", icon: "success" });
+
+    expect(element.className).toContain("coden-toast-error");
+    const icon = element.querySelector("svg.coden-toast-icon");
+    // "error"'s own default icon has 3 children (a circle and two paths);
+    // the explicit "success" override has 2 (a circle and one path).
+    // Checking the count is enough to prove the override took effect
+    // without depending on exact path data.
+    expect(icon?.children.length).toBe(2);
+
+    toaster.destroy();
+  });
+
+  it("removes the icon when updated to null", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Working");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
+
+    handle.update({ icon: null });
+    expect(element.querySelector("svg.coden-toast-icon")).toBeNull();
+
+    toaster.destroy();
+  });
+
+  it("replaces a message-based toast's content entirely via update({ content })", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Old message");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.textContent).toContain("Old message");
+
+    const replacement = document.createElement("span");
+    replacement.textContent = "Replaced";
+    handle.update({ content: replacement });
+
+    expect(element.textContent).toContain("Replaced");
+    expect(element.textContent).not.toContain("Old message");
+    expect(element.querySelector("[data-toast-message]")).toBeNull();
+
+    toaster.destroy();
+  });
+
+  it("restarts the auto-dismiss countdown from a new duration", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 4000 });
+    const handle = toaster.semantic.success("Countdown");
+    flushAnimations();
+
+    vi.advanceTimersByTime(1000);
+    handle.update({ duration: 500 });
+    vi.advanceTimersByTime(600);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("disables auto-dismiss on an already-visible toast via update()", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 1000 });
+    const handle = toaster.semantic.success("Stays");
+    flushAnimations();
+
+    handle.update({ shouldAutoDismiss: false });
+    vi.advanceTimersByTime(5000);
+    expect(handle.state).toBe("visible");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("rejects an invalid duration passed to update()", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Duration test");
+    flushAnimations();
+
+    expect(() => handle.update({ duration: -1 })).toThrow(/duration/i);
+
+    toaster.destroy();
+  });
+
+  it("rejects an unrecognized type passed to update()", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Type test");
+    flushAnimations();
+
+    expect(() => handle.update({ type: "not-a-type" as never })).toThrow(/type/i);
+
+    toaster.destroy();
+  });
+
+  it("rejects update({ content }) that sanitization empties out entirely", () => {
+    const toaster = createToaster();
+    const handle = toaster.semantic.success("Original");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+
+    expect(() => handle.update({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
+    // Rejected atomically: the toast keeps showing its original message.
+    expect(element.textContent).toContain("Original");
+
+    toaster.destroy();
+  });
+});
+
+describe("background-tab auto-dismiss pause", () => {
+  afterEach(() => {
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+  });
+
+  it("pauses the auto-dismiss timer while the tab is hidden and resumes with the remaining duration", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 1000 });
+    const handle = toaster.semantic.success("Backgrounded");
+    flushAnimations();
+
+    vi.advanceTimersByTime(400);
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // Well past the original 1000ms duration, but the tab has been hidden
+    // this whole time -- the toast must not have dismissed.
+    vi.advanceTimersByTime(5000);
+    expect(handle.state).toBe("visible");
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // Only ~600ms of its original 1000ms had elapsed when it was paused.
+    vi.advanceTimersByTime(500);
+    expect(handle.state).toBe("visible");
+    vi.advanceTimersByTime(200);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("does not let releasing hover resume the timer while the tab is still hidden", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 1000 });
+    const handle = toaster.semantic.success("Hover then hide");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    // Releasing hover while the tab is still hidden must not be enough on
+    // its own to resume the timer.
+    element.dispatchEvent(new MouseEvent("mouseleave"));
+
+    vi.advanceTimersByTime(5000);
+    expect(handle.state).toBe("visible");
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    vi.advanceTimersByTime(1500);
+    flushAnimations();
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+});
+
+describe("instance-level labels", () => {
+  it("applies the configured dismiss button label to every toast", () => {
+    const toaster = createToaster({ labels: { dismiss: "Fechar" }, isDismissable: true });
+    toaster.semantic.success("Localized");
+
+    const button = document.body.querySelector(".coden-toast-dismiss");
+    expect(button?.getAttribute("aria-label")).toBe("Fechar");
+
+    toaster.destroy();
+  });
+
+  it("falls back to the built-in dismiss label when none is configured", () => {
+    const toaster = createToaster({ isDismissable: true });
+    toaster.semantic.success("Default label");
+
+    const button = document.body.querySelector(".coden-toast-dismiss");
+    expect(button?.getAttribute("aria-label")).toBe("Dismiss toast");
+
+    toaster.destroy();
+  });
+
+  it("applies instance-level dialog label defaults to confirm/prompt/alert", async () => {
+    const toaster = createToaster({
+      labels: { confirm: "Sim", cancel: "Não", submit: "Enviar", ok: "Entendi" },
+    });
+
+    const confirmHandle = toaster.interactive.confirm("Continue?");
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Sim");
+    expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
+    confirmHandle.dismiss();
+    await confirmHandle.settled;
+
+    const promptHandle = toaster.interactive.prompt("Name?");
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
+    expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
+    promptHandle.dismiss();
+    await promptHandle.settled;
+
+    const alertHandle = toaster.interactive.alert("Done");
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Entendi");
+    alertHandle.dismiss();
+    await alertHandle.settled;
+
+    toaster.destroy();
+  });
+
+  it("lets a per-call dialog label override the instance-level default", async () => {
+    const toaster = createToaster({ labels: { confirm: "Sim" } });
+
+    const handle = toaster.interactive.confirm("Continue?", { confirmLabel: "Proceed" });
+    expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Proceed");
+    handle.dismiss();
+    await handle.settled;
 
     toaster.destroy();
   });
