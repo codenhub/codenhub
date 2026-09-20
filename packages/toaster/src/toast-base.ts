@@ -579,7 +579,6 @@ export class Toast {
       this.failRender(element, error);
       return;
     }
-    playStackShift(container, previousStackRects);
     // Keeps the newly-inserted toast in view when the stack has overflowed
     // into its own scroll area (see the stack's max-height/overflow-y in
     // index.css): the toast just dispatched -- the one a consumer most
@@ -588,8 +587,15 @@ export class Toast {
     // reveals it. Measured only now, after content population above, so
     // its final height (not the empty shell's) is what scrollHeight
     // reflects. Removal deliberately leaves scroll position alone instead,
-    // so it doesn't fight a user who scrolled to read an older toast.
+    // so it doesn't fight a user who scrolled to read an older toast. This
+    // must run before playStackShift: that call measures every existing
+    // sibling's "next" position to compute the push, and that measurement
+    // has to already reflect the final scroll offset -- changing scrollTop
+    // again afterward, once those positions (and the animations built from
+    // them) already exist, would shift an in-flight animation's rendered
+    // position out from under it by however much the scroll offset moved.
     container.scrollTop = isTopAnchored ? 0 : container.scrollHeight;
+    playStackShift(container, previousStackRects);
 
     this.currentAnimation = animateIn({
       element,
