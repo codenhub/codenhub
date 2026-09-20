@@ -201,6 +201,75 @@ test("scrolls an overflowing stack instead of running off-screen, keeping the ne
   await page.locator("#check-auto-dismiss").check();
 });
 
+test("hides the stack's own scrollbar chrome while still allowing it to scroll", async ({ page }) => {
+  // Short enough to force overflow, same as the scroll-to-reveal test above.
+  await page.setViewportSize({ width: 400, height: 120 });
+  await page.goto("/");
+  await page.locator("#select-position").selectOption("top-right");
+  await page.locator("#check-auto-dismiss").uncheck();
+
+  const trigger = page.getByRole("button", { name: "Success Toast" });
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+  await trigger.click();
+
+  const stack = page.locator("[data-toast-container]");
+  await expect.poll(() => stack.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+  // A platform scrollbar that reserves layout space (the classic, non-overlay
+  // kind) shrinks clientWidth below offsetWidth by its own track width;
+  // hiding the scrollbar's chrome leaves nothing to reserve, so the two stay
+  // equal even though the stack is still genuinely scrollable (asserted
+  // above via scrollHeight/clientHeight).
+  const widths = await stack.evaluate((el) => ({ offsetWidth: el.offsetWidth, clientWidth: el.clientWidth }));
+  expect(widths.clientWidth).toBe(widths.offsetWidth);
+
+  await page.locator("#check-auto-dismiss").check();
+});
+
+test("keeps a narrower toast flush against the stack's anchored edge when a wider sibling joins it", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.locator("#check-auto-dismiss").uncheck();
+
+  // Every toast's entrance animation must have finished before a bounding
+  // box is trustworthy -- mid-animation, an in-flight transform makes the
+  // read meaningless regardless of the fix this test is for.
+  const settled = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll(".coden-toast")).every((el) =>
+        el.getAnimations().every((animation) => animation.playState !== "running"),
+      ),
+    );
+
+  // Default position is Bottom Right, anchored via a physical `right`.
+  const successToast = page.getByRole("status").filter({ hasText: "Changes saved successfully!" });
+  await page.getByRole("button", { name: "Success Toast" }).click();
+  await expect(successToast).toBeVisible();
+  await expect.poll(settled).toBe(true);
+  const before = (await successToast.boundingBox())!;
+
+  // Longer message widens the stack's own shrink-to-fit width; the already-
+  // rendered, narrower toast must stay pinned to the physically anchored
+  // right edge instead of drifting left along with the stack's growing
+  // left edge (the bug: cross-axis default alignment left-aligns every
+  // toast to the stack, leaving a gap on the anchored side). Info, not
+  // Warning, so both toasts share the "status" role (warning is "alert")
+  // and the count assertion below actually covers both.
+  await page.getByRole("button", { name: "Info Toast" }).click();
+  await expect(page.getByRole("status")).toHaveCount(2);
+  await expect.poll(settled).toBe(true);
+  const after = (await successToast.boundingBox())!;
+
+  expect(after.x).toBeCloseTo(before.x, 0);
+  expect(after.width).toBeCloseTo(before.width, 0);
+
+  await page.locator("#check-auto-dismiss").check();
+});
+
 test.describe("reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
 

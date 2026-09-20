@@ -46,7 +46,13 @@
    `auto` rather than the `none` a fixed-position overlay would otherwise
    default to -- the container is already sized tightly to its toasts (no
    padding, gap-only spacing), so the only click-through lost is the few
-   pixels of gap between adjacent toasts, not any real dead zone. */
+   pixels of gap between adjacent toasts, not any real dead zone. The
+   scrollbar's own chrome is hidden (`scrollbar-width`/`-ms-overflow-style`
+   here, `::-webkit-scrollbar` below): a platform scrollbar track rendered
+   next to a floating, rounded toast stack reads as a rendering glitch
+   rather than a real scrollable panel, and wheel/touch/programmatic
+   scrolling (see the scroll-to-reveal-newest assignment in
+   `toast-base.ts`) all still work with the track invisible. */
 :where([data-toast-instance].coden-toast-stack) {
   position: fixed;
   z-index: 9999;
@@ -58,6 +64,12 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   pointer-events: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+:where([data-toast-instance].coden-toast-stack)::-webkit-scrollbar {
+  display: none;
 }
 
 /* The fallback (used only while `margin`/`ToasterConfig.margin` is unset)
@@ -97,6 +109,22 @@
   right: var(--toast-margin-x, max(1rem, env(safe-area-inset-right, 0px)));
   bottom: var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)));
   flex-direction: column;
+}
+
+/* A narrower toast still needs to sit flush against this stack's own
+   right edge, not drift toward the left edge whenever a wider sibling
+   grows the stack's shrink-to-fit width -- the flex cross-axis default
+   otherwise aligns every toast to the stack's cross-*start*, leaving a
+   gap on the anchored side (and visibly shifting an already-rendered
+   toast left as soon as a wider one joins it). This is a literal
+   physical push (`margin-left: auto`) rather than `align-items:
+   flex-end`: cross-axis start/end for a `flex-direction: column`
+   container follow `direction`, so `flex-end` would silently flip to the
+   physical *left* edge in a right-to-left document, away from the
+   physical `right` this stack is actually anchored to. */
+:where([data-toast-instance].coden-toast-stack-top-right) > .coden-toast,
+:where([data-toast-instance].coden-toast-stack-bottom-right) > .coden-toast {
+  margin-left: auto;
 }
 
 :where([data-toast-instance].coden-toast-stack-top-center) {
