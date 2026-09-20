@@ -1,7 +1,7 @@
 import { animateIn, animateStackChange, createToastShell, getOrCreateContainer, populateToastContent } from "./dom";
 import { applyUpdateToElement, normalizeToastOptions } from "./options";
 import type { NormalizedToastOptions, RawToastOptions, ResolvedToastConfig, ToastPresetOptions } from "./options";
-import { releaseSlot, removeToastElement, requestSlot, toastByElement } from "./toast-helpers";
+import { releaseSlot, removeToastElement, requestSlot, retryQueue, toastByElement } from "./toast-helpers";
 import { assertValidTokens } from "./tokens";
 import type { ToastHandle, ToastLifecycleSubscriber, ToastPosition, ToastState, ToastUpdateOptions } from "./types";
 
@@ -241,28 +241,41 @@ export class Toast {
       return;
     }
 
-    if (this.options.shouldAutoDismiss) {
-      element.addEventListener("mouseenter", () => {
-        this.isHovered = true;
-        this.pauseAutoDismiss();
-      });
-      element.addEventListener("mouseleave", () => {
-        this.isHovered = false;
-        if (!this.isFocused) {
-          this.resumeAutoDismiss();
-        }
-      });
-      element.addEventListener("focusin", () => {
-        this.isFocused = true;
-        this.pauseAutoDismiss();
-      });
-      element.addEventListener("focusout", () => {
-        this.isFocused = false;
-        if (!this.isHovered) {
-          this.resumeAutoDismiss();
-        }
-      });
-    }
+    // Tracked regardless of shouldAutoDismiss: isProtected (below) treats
+    // hover/focus as protection from eviction independently of auto-dismiss,
+    // so a persistent toast still needs these to know it's being interacted
+    // with. pauseAutoDismiss/resumeAutoDismiss are no-ops when there is no
+    // auto-dismiss timer to begin with.
+    element.addEventListener("mouseenter", () => {
+      this.isHovered = true;
+      this.pauseAutoDismiss();
+    });
+    element.addEventListener("mouseleave", () => {
+      this.isHovered = false;
+      if (!this.isFocused) {
+        this.resumeAutoDismiss();
+      }
+      this.retryQueueIfUnprotected();
+    });
+    element.addEventListener("focusin", () => {
+      this.isFocused = true;
+      this.pauseAutoDismiss();
+    });
+    element.addEventListener("focusout", (event) => {
+      // focusout bubbles from any descendant, unlike mouseleave: tabbing
+      // between two focusable elements inside the same toast (e.g. a link
+      // in custom content and the dismiss button) must not register as
+      // leaving the toast entirely.
+      const relatedTarget = (event as FocusEvent).relatedTarget;
+      if (relatedTarget instanceof Node && element.contains(relatedTarget)) {
+        return;
+      }
+      this.isFocused = false;
+      if (!this.isHovered) {
+        this.resumeAutoDismiss();
+      }
+      this.retryQueueIfUnprotected();
+    });
 
     this.element = element;
     this.internalState = "visible";
@@ -320,6 +333,12 @@ export class Toast {
       element.remove();
     }
     this.element = null;
+    // Idempotent if "show" already fired (the populateToastContent failure
+    // path notifies it before ever calling failRender): a subscriber added
+    // after an early failure -- before createToastShell/getOrCreateContainer
+    // even ran -- must still see the toast reach every lifecycle stage
+    // instead of hanging forever waiting for "show".
+    this.notify("show");
     this.internalState = "hiding";
     this.notify("hide");
     this.internalState = "done";
@@ -381,6 +400,19 @@ export class Toast {
       this.remainingDuration = Math.max(0, this.dismissDeadline - Date.now());
     }
     this.clearAutoDismiss();
+  }
+
+  /**
+   * Gives a queue stuck behind this toast a chance to progress once hover
+   * and focus both release it -- eviction otherwise only re-runs on a new
+   * dispatch, a settle, or configure(), so nothing would ever notice a
+   * persistent toast becoming eligible again.
+   */
+  private retryQueueIfUnprotected(): void {
+    if (this.isHovered || this.isFocused || this.internalState !== "visible") {
+      return;
+    }
+    retryQueue({ parent: this.parent, position: this.options.position, instanceId: this.options.instanceId });
   }
 
   private clearQueuedShow(): void {

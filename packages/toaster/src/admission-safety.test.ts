@@ -81,6 +81,115 @@ describe("overflow protection", () => {
     expect(second.state).toBe("queued");
     toaster.destroy();
   });
+
+  it("protects a persistent (shouldAutoDismiss: false) toast while hovered", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+
+    const second = toaster.semantic.success("Waiting");
+
+    expect(first.state).toBe("visible");
+    expect(second.state).toBe("queued");
+    toaster.destroy();
+  });
+
+  it("protects a persistent (shouldAutoDismiss: false) toast while focused", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    element.dispatchEvent(new FocusEvent("focusin"));
+
+    const second = toaster.semantic.success("Waiting");
+
+    expect(first.state).toBe("visible");
+    expect(second.state).toBe("queued");
+    toaster.destroy();
+  });
+
+  it("keeps focus protection when focus moves between two elements inside the same toast", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Interactive", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    // Simulates a second focusable element inside the toast, e.g. a link in
+    // custom content alongside the dismiss button.
+    const innerButton = document.createElement("button");
+    element.appendChild(innerButton);
+
+    element.dispatchEvent(new FocusEvent("focusin"));
+    const second = toaster.semantic.success("Waiting");
+    expect(second.state).toBe("queued");
+
+    // focusout bubbles from the descendant, but focus lands back inside the
+    // same toast -- this must not be treated as leaving it.
+    element.dispatchEvent(new FocusEvent("focusout", { relatedTarget: innerButton }));
+    expect(first.state).toBe("visible");
+    expect(second.state).toBe("queued");
+
+    // A genuine blur to something outside the toast still releases it.
+    element.dispatchEvent(new FocusEvent("focusout", { relatedTarget: document.body }));
+    expect(first.state).toBe("hiding");
+
+    toaster.destroy();
+  });
+
+  it("evicts a persistent toast as soon as it is unhovered, with no explicit dismiss or configure()", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+    const second = toaster.semantic.success("Waiting");
+    expect(second.state).toBe("queued");
+
+    element.dispatchEvent(new MouseEvent("mouseleave"));
+
+    expect(first.state).toBe("hiding");
+    flushAnimations();
+    expect(second.state).toBe("visible");
+    toaster.destroy();
+  });
+
+  it("re-evaluates the queue as soon as a long-duration toast is unhovered, not only once it times out", () => {
+    const toaster = createToaster({ maxVisible: 1, duration: 100000 });
+    const first = toaster.semantic.success("Hovered");
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+    const second = toaster.semantic.success("Waiting");
+    expect(second.state).toBe("queued");
+
+    element.dispatchEvent(new MouseEvent("mouseleave"));
+
+    expect(first.state).toBe("hiding");
+    flushAnimations();
+    expect(second.state).toBe("visible");
+    toaster.destroy();
+  });
+
+  it("does not release the slot while either hover or focus still protects it", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Both", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    element.dispatchEvent(new MouseEvent("mouseenter"));
+    element.dispatchEvent(new FocusEvent("focusin"));
+
+    const second = toaster.semantic.success("Waiting");
+    expect(second.state).toBe("queued");
+
+    element.dispatchEvent(new MouseEvent("mouseleave"));
+    expect(first.state).toBe("visible");
+    expect(second.state).toBe("queued");
+
+    element.dispatchEvent(new FocusEvent("focusout"));
+    expect(first.state).toBe("hiding");
+    toaster.destroy();
+  });
 });
 
 describe("runtime capacity reconciliation", () => {
@@ -150,6 +259,24 @@ describe("rendering failure rollback", () => {
     expect(next.state).toBe("visible");
     expect(document.body.textContent).toContain("Should still render");
 
+    toaster.destroy();
+  });
+
+  it("still fires onShow for a subscriber added after an early render failure", () => {
+    vi.stubGlobal("reportError", vi.fn());
+    const toaster = createToaster({ maxVisible: 1 });
+    const createElementSpy = vi.spyOn(document, "createElement").mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
+
+    const failed = toaster.semantic.success("Never renders");
+    createElementSpy.mockRestore();
+    expect(failed.state).toBe("hidden");
+
+    const onShow = vi.fn();
+    failed.onShow(onShow);
+
+    expect(onShow).toHaveBeenCalledOnce();
     toaster.destroy();
   });
 });
