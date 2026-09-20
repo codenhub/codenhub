@@ -52,14 +52,29 @@
    next to a floating, rounded toast stack reads as a rendering glitch
    rather than a real scrollable panel, and wheel/touch/programmatic
    scrolling (see the scroll-to-reveal-newest assignment in
-   `toast-base.ts`) all still work with the track invisible. */
+   `toast-base.ts`) all still work with the track invisible.
+
+   `max-height` sums the top and bottom fallback expressions separately
+   (each matching the position rules' own per-edge default below) rather
+   than doubling a single one: a device's top inset (a notch) and bottom
+   inset (a home indicator) are independent and usually different, so
+   doubling either one both over- and under-reserves space depending on
+   which edge a stack is actually anchored to. A tall enough stack would
+   otherwise be allowed to grow into whichever edge's inset the doubled
+   value didn't account for. Both expressions still collapse to the same
+   `var(--toast-margin-y)` -- and thus back to the old doubled value -- the
+   moment a consumer sets an explicit margin, since only its own value
+   remains reachable once the `env()` fallback is no longer selected. */
 :where([data-toast-instance].coden-toast-stack) {
   position: fixed;
   z-index: 9999;
   display: flex;
   gap: 0.5rem;
   max-width: calc(100vw - (2 * var(--toast-margin-x, 1rem)));
-  max-height: calc(100vh - (2 * var(--toast-margin-y, 1rem)));
+  max-height: calc(
+    100vh - var(--toast-margin-y, max(1rem, env(safe-area-inset-top, 0px))) -
+      var(--toast-margin-y, max(1rem, env(safe-area-inset-bottom, 0px)))
+  );
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;

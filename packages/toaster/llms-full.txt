@@ -236,7 +236,7 @@ First publish.
 - A closed dialog's rendered content (e.g. a prompt's draft input value) is cleared immediately instead of lingering until the dialog is reused.
 - Custom content that sanitization strips down to nothing (e.g. a script-only string) now throws the same "must not be empty" error a literally empty string would, instead of silently rendering a blank toast.
 - The dismiss button uses logical CSS properties so it sits at the correct trailing edge in right-to-left layouts instead of always the physical right.
-- A corner stack's default margin now floors at `env(safe-area-inset-*)`, so it no longer renders underneath a device notch or home indicator when no explicit `margin` is configured.
+- A corner stack's default margin now floors at `env(safe-area-inset-*)`, so it no longer renders underneath a device notch or home indicator when no explicit `margin` is configured. The stack's own scroll cap (`max-height`) now reserves the same, independently-computed top and bottom insets instead of doubling one of them, so a tall stack can no longer grow into whichever edge's inset the doubled value didn't account for.
 - A stack with more simultaneous toasts than fit the viewport (a short viewport, several toasts, or tall content) now scrolls internally instead of running off-screen with the extra toasts permanently unreachable.
 - A toast's width no longer floors or ceilings past what a large configured `margin` leaves available on a narrow viewport; it shrinks (wrapping its text) instead of overflowing past the margin.
 - Dismissing a toast whose own element currently holds keyboard focus now restores focus to whatever held it immediately before that toast rendered, instead of dropping it to `<body>`.
