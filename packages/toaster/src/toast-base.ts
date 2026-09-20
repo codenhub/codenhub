@@ -261,7 +261,15 @@ export class Toast {
       this.isFocused = true;
       this.pauseAutoDismiss();
     });
-    element.addEventListener("focusout", () => {
+    element.addEventListener("focusout", (event) => {
+      // focusout bubbles from any descendant, unlike mouseleave: tabbing
+      // between two focusable elements inside the same toast (e.g. a link
+      // in custom content and the dismiss button) must not register as
+      // leaving the toast entirely.
+      const relatedTarget = (event as FocusEvent).relatedTarget;
+      if (relatedTarget instanceof Node && element.contains(relatedTarget)) {
+        return;
+      }
       this.isFocused = false;
       if (!this.isHovered) {
         this.resumeAutoDismiss();

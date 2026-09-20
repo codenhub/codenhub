@@ -110,6 +110,33 @@ describe("overflow protection", () => {
     toaster.destroy();
   });
 
+  it("keeps focus protection when focus moves between two elements inside the same toast", () => {
+    const toaster = createToaster({ maxVisible: 1 });
+    const first = toaster.semantic.success("Interactive", { shouldAutoDismiss: false });
+    flushAnimations();
+    const element = document.body.querySelector("[role='status']") as HTMLDivElement;
+    // Simulates a second focusable element inside the toast, e.g. a link in
+    // custom content alongside the dismiss button.
+    const innerButton = document.createElement("button");
+    element.appendChild(innerButton);
+
+    element.dispatchEvent(new FocusEvent("focusin"));
+    const second = toaster.semantic.success("Waiting");
+    expect(second.state).toBe("queued");
+
+    // focusout bubbles from the descendant, but focus lands back inside the
+    // same toast -- this must not be treated as leaving it.
+    element.dispatchEvent(new FocusEvent("focusout", { relatedTarget: innerButton }));
+    expect(first.state).toBe("visible");
+    expect(second.state).toBe("queued");
+
+    // A genuine blur to something outside the toast still releases it.
+    element.dispatchEvent(new FocusEvent("focusout", { relatedTarget: document.body }));
+    expect(first.state).toBe("hiding");
+
+    toaster.destroy();
+  });
+
   it("evicts a persistent toast as soon as it is unhovered, with no explicit dismiss or configure()", () => {
     const toaster = createToaster({ maxVisible: 1 });
     const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
