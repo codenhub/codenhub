@@ -174,6 +174,29 @@ export function releaseSlot(params: Omit<RequestSlotParams, "onAvailable" | "max
   }
 }
 
+export interface RetryQueueParams {
+  parent: HTMLElement;
+  position: ToastPosition;
+  instanceId: string;
+}
+
+/**
+ * Re-evaluates one stack's overflow pressure with no owner added or
+ * released -- used when a toast's hover/focus protection ends, so a queue
+ * stuck behind a now-eligible owner gets the same chance to progress that
+ * admission and release already trigger. A no-op if the owner is still
+ * protected some other way (e.g. a loader) or nothing is queued.
+ */
+export function retryQueue(params: RetryQueueParams): void {
+  const parentStates = stackStates.get(params.parent);
+  const state = parentStates?.get(getStackKey(params.instanceId, params.position));
+  if (!state) {
+    return;
+  }
+  promoteQueued(state);
+  evictForQueue(state);
+}
+
 export interface ReconcileCapacityParams {
   parent: HTMLElement;
   instanceId: string;
