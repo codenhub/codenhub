@@ -24,9 +24,9 @@ describe("listTags", () => {
     await expect(listTags("/repo", git)).resolves.toEqual(["@codenhub/error@0.3.0", "@codenhub/error@0.2.0"]);
   });
 
-  it("returns nothing when git fails", async () => {
+  it("throws when git fails, rather than reporting an empty tag list", async () => {
     const git = vi.fn<GitRunner>().mockResolvedValue({ isSuccess: false, stdout: "" });
-    await expect(listTags("/repo", git)).resolves.toEqual([]);
+    await expect(listTags("/repo", git)).rejects.toThrow("Could not list git tags");
   });
 });
 

@@ -18,9 +18,11 @@ describe("listFilesAtRef", () => {
     );
   });
 
-  it("returns nothing when git fails", async () => {
+  it("throws when the ref cannot be read, rather than reporting no files", async () => {
     const git = vi.fn<GitContentReader>().mockResolvedValue({ isSuccess: false, stdout: "" });
-    await expect(listFilesAtRef("/repo", "missing-tag", "packages/error/docs", git)).resolves.toEqual([]);
+    await expect(listFilesAtRef("/repo", "missing-tag", "packages/error/docs", git)).rejects.toThrow(
+      "Could not read missing-tag",
+    );
   });
 });
 

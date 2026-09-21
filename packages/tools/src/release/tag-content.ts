@@ -13,11 +13,19 @@ const runGit: GitContentReader = async (args, cwd) => {
 
 /**
  * Lists every file git tracked under a path at a given ref.
+ *
+ * A `treePath` matching nothing at `ref` is a legitimate result — `git
+ * ls-tree` exits successfully with empty output for that, which is exactly
+ * how a package with no docs yet at its latest tag is told apart from one
+ * with docs. The ref itself being unreadable is different and throws:
+ * treating it the same as "no docs at this tag" would fall back to live,
+ * unreleased content for a package that has, in fact, published.
  * @param cwd Repository directory to run `git` in.
  * @param ref Tag or commit to read from.
  * @param treePath Repository-relative POSIX path to list, such as `packages/error/docs`.
  * @param git Git runner, defaulting to a real `git ls-tree`.
  * @returns Repository-relative POSIX paths of every file under `treePath` at `ref`.
+ * @throws When `ref` cannot be read at all.
  */
 export async function listFilesAtRef(
   cwd: string,
@@ -27,7 +35,7 @@ export async function listFilesAtRef(
 ): Promise<string[]> {
   const outcome = await git(["ls-tree", "-r", "--name-only", ref, "--", treePath], cwd);
   if (!outcome.isSuccess) {
-    return [];
+    throw new Error(`Could not read ${ref} in ${cwd}.`);
   }
   return outcome.stdout
     .split("\n")

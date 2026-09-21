@@ -29,14 +29,22 @@ export async function fetchReleaseTags(cwd: string, git: GitRunner = runGit): Pr
 
 /**
  * Lists every tag in the local repository.
+ *
+ * Zero tags is a legitimate result — a repository can genuinely have none —
+ * so it is returned as an empty list rather than treated as failure. A git
+ * command that fails outright throws instead: a caller that treated it the
+ * same as "no tags" would resolve every package as unpublished and fall back
+ * to live, unreleased content, which is the one outcome this whole mechanism
+ * exists to prevent.
  * @param cwd Repository directory to run `git` in.
  * @param git Git runner, defaulting to a real `git tag --list`.
  * @returns Every local tag name, in no particular order.
+ * @throws When the underlying `git tag --list` command fails.
  */
 export async function listTags(cwd: string, git: GitRunner = runGit): Promise<string[]> {
   const outcome = await git(["tag", "--list"], cwd);
   if (!outcome.isSuccess) {
-    return [];
+    throw new Error(`Could not list git tags in ${cwd}.`);
   }
   return outcome.stdout
     .split("\n")
