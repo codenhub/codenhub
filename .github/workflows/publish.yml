@@ -128,7 +128,7 @@ jobs:
             echo "::warning::CLOUDFLARE_DOCS_DEPLOY_HOOK_URL is not set; trigger a codenhub-docs rebuild by hand."
             exit 0
           fi
-          if ! curl --fail --silent --show-error --request POST "$DEPLOY_HOOK_URL"; then
+          if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --request POST "$DEPLOY_HOOK_URL"; then
             echo "::warning::Could not reach the codenhub-docs deploy hook; trigger a rebuild by hand."
           fi
 
