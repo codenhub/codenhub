@@ -22,7 +22,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons` and `styles` have one, so the deployed surface shows two of thirteen public packages.
 - **Bootstrap the unpublished packages.** `components`, `i18n`, `kbd`, `toaster`, `tauri-plugin-webview`, and `tauri-plugin-window` have never been published; each needs one manual `hub publish` from a maintainer's machine before its trusted publisher can be configured on npm.
 - **Documentation MCP server.**
-- **Documentation versioning, then localization.** Keep docs for past package versions, then localize with `@codenhub/i18n`. Both thread a content dimension through routing, the catalog loader, and the search index; the version-by-locale shape should be designed once, before either is built. Open questions: snapshot-on-publish vs. build-from-git-tags, and the URL scheme.
+- **Documentation versioning, then localization.** Keep docs for past package versions, then localize with `@codenhub/i18n`. Both thread a content dimension through routing, the catalog loader, and the search index; the version-by-locale shape should be designed once, before either is built. `apps/docs` already resolves each package's _current_ docs from its latest release tag rather than the working tree (`docs/ci.md`, "Publish-scoped content"), which settled the snapshot-on-publish-vs-build-from-git-tags question for that narrower problem — it took the git-tag route. Versioning is a different, larger step: browsing a _past_ version concurrently with the current one, not just keeping the live site in step with the latest release. Open question: the URL scheme.
 - **Per-package feature work.**
   - `@codenhub/error`: canonical translation map for built-in registry message keys; framework error-boundary adapters.
   - `@codenhub/i18n`: pluralization and ICU formatting.
@@ -45,7 +45,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Notes
 
-- **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and nothing else: no deploy workflow, no credentials. `docs/ci.md` records each project's build watch-path excludes and the reasoning.
+- **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and, for `codenhub-docs` alone, one deploy-hook secret that lets a publish trigger a rebuild directly instead of waiting on a merge (`docs/ci.md`, "Publish-scoped content" and "Credentials"). `docs/ci.md` records each project's build watch-path excludes and the reasoning.
 - **Release model.** A maintainer authorizes a release by pushing a `<package name>@<version>` tag; `.github/workflows/publish.yml` publishes through trusted publishing (OIDC, provenance), refusing a tag whose version disagrees with the manifest. The first release of a name is manual, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` and `docs/ci.md` own the rules.
 - **Unlisted packages.** `router`, `store`, `theme`, the plugins, and `ui-kit` are internal, WIP, deprecated, or evaluated separately, and are absent from the per-package list above by intent.
 

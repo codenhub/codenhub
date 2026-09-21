@@ -11,13 +11,20 @@ import { createDocumentationIntegration } from "./src/lib/documentation-integrat
 import { createCodeBlockTransformer } from "./src/lib/markdown/code-blocks";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
+import { createPublishedDocsSnapshotIntegration } from "./src/lib/published-docs-snapshot-integration";
 import { siteConfig } from "./src/site-config";
 
-const packagesRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../packages");
+const appRoot = path.dirname(fileURLToPath(import.meta.url));
+const packagesRoot = path.resolve(appRoot, "../../packages");
+const repoRoot = path.resolve(packagesRoot, "..");
+const publishedDocsSnapshotRoot = path.resolve(appRoot, ".codenhub-published-docs");
 
 export default defineConfig({
   site: siteConfig.siteUrl,
-  integrations: [createDocumentationIntegration({ packagesRoot })],
+  integrations: [
+    createDocumentationIntegration({ packagesRoot }),
+    createPublishedDocsSnapshotIntegration({ repoRoot, snapshotRoot: publishedDocsSnapshotRoot }),
+  ],
   markdown: {
     processor: unified({
       rehypePlugins: [rehypeHeadingIds, rehypeMarkdownEnhancements],

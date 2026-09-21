@@ -9,7 +9,9 @@
   "type": "module",
   "exports": {
     "./documentation": "./src/documentation/index.ts",
-    "./generators": "./src/generators/index.ts"
+    "./generators": "./src/generators/index.ts",
+    "./release": "./src/release/index.ts",
+    "./workspace": "./src/workspace/index.ts"
   },
   "scripts": {
     "build": "esbuild src/cli.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/cli.js --external:node:*",
