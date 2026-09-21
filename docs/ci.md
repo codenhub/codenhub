@@ -118,30 +118,7 @@ The figures below come from replaying the same window of merges into `main` thro
 The `codenhub` project, serving `apps/www/dist`. `apps/www` is the entry point a visitor reaches first, so it takes the shortest project name; the documentation project moved to `codenhub-docs` when this one was added. These are the paths its Build watch paths setting excludes:
 
 ```
-.github/*
-.githooks/*
-docs/*
-apps/docs/*
-apps/demo/*
-AGENTS.md
-CLAUDE.md
-CONTRIBUTING.md
-README.md
-LICENSE
-.oxlintrc.json
-.oxfmtrc.json
-.editorconfig
-.gitattributes
-.gitignore
-packages/*/README.md
-packages/*/LICENSE
-packages/*/llms.txt
-packages/*/llms-full.txt
-packages/*/docs/*
-packages/*/tests/*
-packages/*/dev/*
-packages/*/debug/*
-packages/*/demo/*
+.github/*,.githooks/*,docs/*,apps/docs/*,apps/demo/*,AGENTS.md,CLAUDE.md,CONTRIBUTING.md,README.md,LICENSE,.oxlintrc.json,.oxfmtrc.json,.editorconfig,.gitattributes,.gitignore,packages/*/README.md,packages/*/LICENSE,packages/*/llms.txt,packages/*/llms-full.txt,packages/*/docs/*,packages/*/tests/*,packages/*/dev/*,packages/*/debug/*,packages/*/demo/*
 ```
 
 The index reads one input only: `apps/www/src/lib/catalog.ts` globs `packages/**/package.json` for names, descriptions, statuses, and `homepage`, and derives each documentation slug from the presence of `packages/**/docs/**/*.md` without reading any of it. So the list excludes package `docs/` wholesale like the demo list does, plus each package's `README.md`, `LICENSE`, and `llms*.txt`, and both other apps. What it keeps is `packages/*/package.json` and the `src/` rule shared by all three — `@codenhub/app-shell`, `@codenhub/styles`, `@codenhub/icons`, and `@codenhub/tools` are build inputs here.
@@ -151,26 +128,7 @@ The index reads one input only: `apps/www/src/lib/catalog.ts` globs `packages/**
 The `codenhub-docs` project, serving `apps/docs/dist`. These are the paths its Build watch paths setting excludes:
 
 ```
-.github/*
-.githooks/*
-docs/*
-apps/demo/*
-apps/www/*
-AGENTS.md
-CLAUDE.md
-CONTRIBUTING.md
-README.md
-LICENSE
-.oxlintrc.json
-.oxfmtrc.json
-.editorconfig
-.gitattributes
-.gitignore
-packages/*/docs/internal/*
-packages/*/tests/*
-packages/*/dev/*
-packages/*/debug/*
-packages/*/demo/*
+.github/*,.githooks/*,docs/*,apps/demo/*,apps/www/*,AGENTS.md,CLAUDE.md,CONTRIBUTING.md,README.md,LICENSE,.oxlintrc.json,.oxfmtrc.json,.editorconfig,.gitattributes,.gitignore,packages/*/docs/internal/*,packages/*/tests/*,packages/*/dev/*,packages/*/debug/*,packages/*/demo/*
 ```
 
 Each entry is excluded because the site provably cannot read it. The site's content comes from `packages/` alone: `apps/docs/astro.config.ts` points the documentation integration at that root, and `src/lib/catalog.ts` globs `packages/**/package.json` and public `packages/**/docs/**/*.md` from it. Root `docs/`, `README.md`, and `CONTRIBUTING.md` are repository governance, not site content. `docs/internal/**` is already outside the catalog glob. The `dev`, `debug`, and `demo` workspaces are `private: true`, and private manifests are filtered out of the public package summaries. `apps/demo/*` and `apps/www/*` are the other apps, which nothing here reads.
@@ -200,29 +158,7 @@ Expect the filter to skip roughly a sixth of merges, not most of them. Over the 
 The `codenhub-demo` project, serving `apps/demo/dist`. `apps/demo/docs/internal/architecture.md` owns how that output is built; this is what triggers the build. These are the paths its Build watch paths setting excludes:
 
 ```
-.github/*
-.githooks/*
-docs/*
-apps/docs/*
-apps/www/*
-AGENTS.md
-CLAUDE.md
-CONTRIBUTING.md
-README.md
-LICENSE
-.oxlintrc.json
-.oxfmtrc.json
-.editorconfig
-.gitattributes
-.gitignore
-packages/*/README.md
-packages/*/LICENSE
-packages/*/llms.txt
-packages/*/llms-full.txt
-packages/*/docs/*
-packages/*/tests/*
-packages/*/dev/*
-packages/*/debug/*
+.github/*,.githooks/*,docs/*,apps/docs/*,apps/www/*,AGENTS.md,CLAUDE.md,CONTRIBUTING.md,README.md,LICENSE,.oxlintrc.json,.oxfmtrc.json,.editorconfig,.gitattributes,.gitignore,packages/*/README.md,packages/*/LICENSE,packages/*/llms.txt,packages/*/llms-full.txt,packages/*/docs/*,packages/*/tests/*,packages/*/dev/*,packages/*/debug/*
 ```
 
 It is close to the inverse of the documentation list. `packages/*/demo/*` moves from excluded to the thing that should trigger a build — it is what this site serves — and `apps/docs/*` and `apps/www/*` join the excludes, since a change to either of the other apps cannot reach this one.
