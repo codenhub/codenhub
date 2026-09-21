@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -13,7 +13,7 @@ function createPackage(root: string, location: string, name: string): WorkspaceP
     directoryName: location.slice(location.lastIndexOf("/") + 1),
     isPrivate: false,
     location,
-    manifest: { name },
+    manifest: { codenhub: { docs: { label: name, status: "active" } }, name },
     name,
     scripts: {},
     unscopedName: name.slice(name.lastIndexOf("/") + 1),
@@ -24,11 +24,15 @@ function createPackage(root: string, location: string, name: string): WorkspaceP
 async function writeManifest(root: string, location: string, name: string): Promise<void> {
   const directory = path.join(root, location);
   await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, "package.json"), JSON.stringify({ name }), "utf8");
+  await writeFile(
+    path.join(directory, "package.json"),
+    JSON.stringify({ codenhub: { docs: { label: name, status: "active" } }, name }),
+    "utf8",
+  );
 }
 
-async function writeLiveDoc(root: string, location: string, relativePath: string, content: string): Promise<void> {
-  const filePath = path.join(root, location, "docs", relativePath);
+async function writeLiveFile(root: string, location: string, relativePath: string, content: string): Promise<void> {
+  const filePath = path.join(root, location, relativePath);
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, content, "utf8");
 }
@@ -41,8 +45,19 @@ async function createTempDir(): Promise<string> {
   return directory;
 }
 
+function defaultDeps(overrides: Partial<PublishedDocsSnapshotDeps> = {}): PublishedDocsSnapshotDeps {
+  return {
+    discoverWorkspace: vi.fn(),
+    fetchReleaseTags: vi.fn().mockResolvedValue(true),
+    listFilesAtRef: vi.fn().mockResolvedValue([]),
+    listTags: vi.fn().mockResolvedValue([]),
+    readFileAtRef: vi.fn(),
+    resolveLatestPublishedTag: vi.fn().mockReturnValue(undefined),
+    ...overrides,
+  };
+}
+
 afterEach(async () => {
-  const { rm } = await import("node:fs/promises");
   await Promise.all(tempDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })));
 });
 
@@ -51,20 +66,19 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     await writeManifest(repoRoot, "packages/error", "@codenhub/error");
-    await writeLiveDoc(repoRoot, "packages/error", "index.md", "# Error (unreleased draft)\n");
+    await writeLiveFile(repoRoot, "packages/error", "docs/index.md", "# Error (unreleased draft)\n");
 
     const workspace: Workspace = {
       packages: [createPackage(repoRoot, "packages/error", "@codenhub/error")],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
+    const deps = defaultDeps({
       discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn().mockResolvedValue(true),
       listFilesAtRef: vi.fn().mockResolvedValue(["packages/error/docs/index.md"]),
       listTags: vi.fn().mockResolvedValue(["@codenhub/error@0.3.0"]),
       readFileAtRef: vi.fn().mockResolvedValue("# Error\n\nPublished content.\n"),
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
-    };
+    });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
@@ -77,20 +91,13 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     await writeManifest(repoRoot, "packages/error", "@codenhub/error");
-    await writeLiveDoc(repoRoot, "packages/error", "index.md", "# Error\n");
+    await writeLiveFile(repoRoot, "packages/error", "docs/index.md", "# Error\n");
 
     const workspace: Workspace = {
       packages: [createPackage(repoRoot, "packages/error", "@codenhub/error")],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
-      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn().mockResolvedValue(true),
-      listFilesAtRef: vi.fn().mockResolvedValue([]),
-      listTags: vi.fn().mockResolvedValue([]),
-      readFileAtRef: vi.fn(),
-      resolveLatestPublishedTag: vi.fn().mockReturnValue(undefined),
-    };
+    const deps = defaultDeps({ discoverWorkspace: vi.fn().mockResolvedValue(workspace) });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
@@ -104,20 +111,13 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     await writeManifest(repoRoot, "packages/icons", "@codenhub/icons");
-    await writeLiveDoc(repoRoot, "packages/icons", "index.md", "# Icons (live)\n");
+    await writeLiveFile(repoRoot, "packages/icons", "docs/index.md", "# Icons (live)\n");
 
     const workspace: Workspace = {
       packages: [createPackage(repoRoot, "packages/icons", "@codenhub/icons")],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
-      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn().mockResolvedValue(true),
-      listFilesAtRef: vi.fn(),
-      listTags: vi.fn().mockResolvedValue([]),
-      readFileAtRef: vi.fn(),
-      resolveLatestPublishedTag: vi.fn().mockReturnValue(undefined),
-    };
+    const deps = defaultDeps({ discoverWorkspace: vi.fn().mockResolvedValue(workspace) });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
@@ -129,20 +129,17 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     await writeManifest(repoRoot, "packages/icons", "@codenhub/icons");
-    await writeLiveDoc(repoRoot, "packages/icons", "index.md", "# Icons (added after 0.1.0)\n");
+    await writeLiveFile(repoRoot, "packages/icons", "docs/index.md", "# Icons (added after 0.1.0)\n");
 
     const workspace: Workspace = {
       packages: [createPackage(repoRoot, "packages/icons", "@codenhub/icons")],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
+    const deps = defaultDeps({
       discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn().mockResolvedValue(true),
-      listFilesAtRef: vi.fn().mockResolvedValue([]),
       listTags: vi.fn().mockResolvedValue(["@codenhub/icons@0.1.0"]),
-      readFileAtRef: vi.fn(),
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/icons@0.1.0"),
-    };
+    });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
@@ -154,21 +151,14 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     await writeManifest(repoRoot, "packages/icons", "@codenhub/icons");
-    await writeLiveDoc(repoRoot, "packages/icons", "index.md", "# Icons\n");
-    await writeLiveDoc(repoRoot, "packages/icons", "internal/architecture.md", "# Internal\n");
+    await writeLiveFile(repoRoot, "packages/icons", "docs/index.md", "# Icons\n");
+    await writeLiveFile(repoRoot, "packages/icons", "docs/internal/architecture.md", "# Internal\n");
 
     const workspace: Workspace = {
       packages: [createPackage(repoRoot, "packages/icons", "@codenhub/icons")],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
-      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn().mockResolvedValue(true),
-      listFilesAtRef: vi.fn(),
-      listTags: vi.fn().mockResolvedValue([]),
-      readFileAtRef: vi.fn(),
-      resolveLatestPublishedTag: vi.fn().mockReturnValue(undefined),
-    };
+    const deps = defaultDeps({ discoverWorkspace: vi.fn().mockResolvedValue(workspace) });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
@@ -176,22 +166,108 @@ describe("buildPublishedDocsSnapshot", () => {
     expect(entries).toEqual(["index.md"]);
   });
 
-  it("does nothing when no workspace package has docs", async () => {
+  it("resolves a published package's tag even when its live docs/ no longer exists", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    // No live docs/ at all — only the manifest exists on disk.
+    await writeManifest(repoRoot, "packages/error", "@codenhub/error");
+
+    const workspace: Workspace = {
+      packages: [createPackage(repoRoot, "packages/error", "@codenhub/error")],
+      root: repoRoot,
+    };
+    const deps = defaultDeps({
+      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
+      listFilesAtRef: vi.fn().mockResolvedValue(["packages/error/docs/index.md"]),
+      listTags: vi.fn().mockResolvedValue(["@codenhub/error@0.3.0"]),
+      readFileAtRef: vi.fn().mockResolvedValue("# Error\n\nPublished content.\n"),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
+    });
+
+    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+
+    const written = await readFile(path.join(snapshotRoot, "packages/error/docs/index.md"), "utf8");
+    expect(written).toBe("# Error\n\nPublished content.\n");
+  });
+
+  it("does not snapshot a package with no codenhub.docs opt-in, even with a live docs/ folder", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    await mkdir(path.join(repoRoot, "packages/tools"), { recursive: true });
+    await writeFile(path.join(repoRoot, "packages/tools", "package.json"), JSON.stringify({ name: "@codenhub/tools" }));
+    await writeLiveFile(repoRoot, "packages/tools", "docs/internal/architecture.md", "# Internal only\n");
+
+    const workspace: Workspace = {
+      packages: [
+        {
+          ...createPackage(repoRoot, "packages/tools", "@codenhub/tools"),
+          manifest: { name: "@codenhub/tools" },
+        },
+      ],
+      root: repoRoot,
+    };
+    const deps = defaultDeps({ discoverWorkspace: vi.fn().mockResolvedValue(workspace) });
+
+    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+
+    // Nothing eligible, so the snapshot root is cleared and never recreated.
+    await expect(readdir(snapshotRoot)).rejects.toThrow("ENOENT");
+  });
+
+  it("fails the build when tags cannot be fetched, rather than treating every package as unpublished", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    await writeManifest(repoRoot, "packages/error", "@codenhub/error");
+    await writeLiveFile(repoRoot, "packages/error", "docs/index.md", "# Error\n");
+
+    const workspace: Workspace = {
+      packages: [createPackage(repoRoot, "packages/error", "@codenhub/error")],
+      root: repoRoot,
+    };
+    const deps = defaultDeps({
+      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
+      fetchReleaseTags: vi.fn().mockResolvedValue(false),
+    });
+
+    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+      "Could not fetch release tags",
+    );
+  });
+
+  it("fails the build when a file listed at a tag cannot actually be read", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    await writeManifest(repoRoot, "packages/error", "@codenhub/error");
+    await writeLiveFile(repoRoot, "packages/error", "docs/index.md", "# Error (live)\n");
+
+    const workspace: Workspace = {
+      packages: [createPackage(repoRoot, "packages/error", "@codenhub/error")],
+      root: repoRoot,
+    };
+    const deps = defaultDeps({
+      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
+      listFilesAtRef: vi.fn().mockResolvedValue(["packages/error/docs/index.md"]),
+      listTags: vi.fn().mockResolvedValue(["@codenhub/error@0.3.0"]),
+      readFileAtRef: vi.fn().mockResolvedValue(undefined),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
+    });
+
+    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+      "was listed at @codenhub/error@0.3.0 but could not be read",
+    );
+  });
+
+  it("does nothing when no workspace package opts into public docs", async () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
 
     const workspace: Workspace = {
-      packages: [createPackage(repoRoot, "packages/tools", "@codenhub/tools")],
+      packages: [
+        { ...createPackage(repoRoot, "packages/tools", "@codenhub/tools"), manifest: { name: "@codenhub/tools" } },
+      ],
       root: repoRoot,
     };
-    const deps: PublishedDocsSnapshotDeps = {
-      discoverWorkspace: vi.fn().mockResolvedValue(workspace),
-      fetchReleaseTags: vi.fn(),
-      listFilesAtRef: vi.fn(),
-      listTags: vi.fn(),
-      readFileAtRef: vi.fn(),
-      resolveLatestPublishedTag: vi.fn(),
-    };
+    const deps = defaultDeps({ discoverWorkspace: vi.fn().mockResolvedValue(workspace) });
 
     await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
 
