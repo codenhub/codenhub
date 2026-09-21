@@ -4,7 +4,7 @@ title: Overview
 
 # Show toasts and dialogs
 
-`@codenhub/toaster` creates isolated managers for semantic, loading, and custom browser toasts plus native confirm, prompt, and alert dialogs. Each manager owns its stacks, queues, DOM, timers, listeners, and token stylesheet.
+`@codenhub/toaster` provides zero-boilerplate singletons and isolated instances for neutral, semantic, loading, custom, and promise-driven browser toasts, plus native confirm, prompt, and alert dialogs. Each toaster manages its own stacks, queues, DOM, timers, listeners, and token stylesheet.
 
 ## Setup
 
@@ -19,21 +19,39 @@ pnpm add @codenhub/toaster
 Import the required global stylesheet once in the browser entrypoint:
 
 ```ts
-import { createToaster } from "@codenhub/toaster";
+import { toast, dialog } from "@codenhub/toaster";
 import "@codenhub/toaster/styles";
 
-const toaster = createToaster();
-const saving = toaster.loading.show({ message: "Saving..." });
+// Dispatch neutral or semantic notifications
+toast("File uploaded");
+toast.success("Changes saved");
 
-await saveChanges();
-saving.dismiss();
-toaster.semantic.success("Changes saved");
+// Bind to promise lifecycles with automatic state transitions
+await toast.promise(saveChanges(), {
+  loading: "Saving...",
+  success: "Changes saved",
+  error: (err) => `Save failed: ${err.message}`,
+});
+
+// Await native interactive modal dialogs directly
+if (await dialog.confirm("Are you sure?")) {
+  doAction();
+}
+```
+
+For isolated DOM containers, micro-frontends, or custom scopes:
+
+```ts
+import { createToaster } from "@codenhub/toaster";
+
+const toaster = createToaster({ maxVisible: 3 });
+toaster.success("Custom instance toast");
 
 // Release DOM, timers, listeners, dialogs, and token styles on teardown.
 toaster.destroy();
 ```
 
-Retain handles when a toast must be updated or dismissed. Call `destroy()` when the owning application scope is torn down; later calls on that manager throw.
+Retain handles when a toast must be updated or dismissed programmatically. Call `destroy()` when an isolated instance is torn down; later calls on that instance throw.
 
 ### Configuration
 

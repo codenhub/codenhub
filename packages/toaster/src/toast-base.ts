@@ -30,6 +30,7 @@ import { releaseSlot, removeToastElement, requestSlot, retryQueue, toastByElemen
 import { assertValidTokens } from "./tokens";
 import type {
   SemanticType,
+  ToastAction,
   ToastHandle,
   ToastIcon,
   ToastLifecycleSubscriber,
@@ -41,12 +42,16 @@ import type {
 
 /** `Toast.update()`'s fields, resolved and validated once up front so applying them is infallible. */
 interface NormalizedUpdate {
+  title?: string;
   message?: string;
+  description?: string;
+  action?: ToastAction | null;
   content?: readonly Node[];
   icon?: ToastIcon | null;
-  type?: SemanticType;
+  type?: SemanticType | "default";
   duration?: number;
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
+  dismissible?: boolean;
   tokens?: LiveStyleUpdate["tokens"];
   className?: string;
 }
@@ -89,7 +94,7 @@ function createLifecycleSubscribers(): Record<ToastLifecycleEventName, Set<Toast
 export class Toast {
   protected readonly options: Readonly<NormalizedToastOptions>;
   private readonly subscribers = createLifecycleSubscribers();
-  private handle: ToastHandle | null = null;
+  private _handle: ToastHandle | null = null;
   private readonly reachedEvents = new Set<ToastLifecycleEventName>();
   private dismissTimeoutId: number | null = null;
   private dismissDeadline: number | null = null;
@@ -105,8 +110,12 @@ export class Toast {
   private currentIcon: ToastIcon | null;
   private currentRootClassName: string;
   private currentRole: ToastRole;
-  private currentShouldAutoDismiss: boolean;
+  private currentAutoDismiss: boolean;
+  private currentDismissible: boolean;
+  private currentTitle: string | null;
   private currentMessage: string | null;
+  private currentDescription: string | null;
+  private currentAction: ToastAction | null;
   private currentContent: readonly Node[] | null;
   /** The in-flight entrance or exit `Animation`, if any -- canceled by `destroyImmediately()` instead of left to finish on its own. */
   private currentAnimation: Animation | null = null;
@@ -137,31 +146,51 @@ export class Toast {
     const { options, config, parent } = params;
     this.parent = parent;
     this.maxVisible = config.maxVisible;
+    this._settled = new Promise<void>((resolve) => {
+      this.settledResolve = resolve;
+    });
+    const settledPromise = this._settled;
+    const getPublicState = () => this.publicState;
+    this._handle = {
+      dismiss: () => this.hide(),
+      update: (opts: ToastUpdateOptions) => this.update(opts),
+      get settled(): Promise<void> {
+        return settledPromise;
+      },
+      get state() {
+        return getPublicState();
+      },
+      onShow: (sub) => this.onShow(sub),
+      onShown: (sub) => this.onShown(sub),
+      onHide: (sub) => this.onHide(sub),
+      onHidden: (sub) => this.onHidden(sub),
+    };
     this.options = normalizeToastOptions({
       options,
       preset: (this.constructor as typeof Toast).getPresetOptions(options),
       config,
       documentRef: parent.ownerDocument,
+      handle: this._handle,
     });
     this.remainingDuration = this.options.duration;
     this.currentIcon = this.options.icon;
     this.currentRootClassName = this.options.rootClassName;
     this.currentRole = this.options.role;
-    this.currentShouldAutoDismiss = this.options.shouldAutoDismiss;
+    this.currentAutoDismiss = this.options.autoDismiss;
+    this.currentDismissible = this.options.dismissible;
+    this.currentTitle = this.options.title;
     this.currentMessage = this.options.message;
+    this.currentDescription = this.options.description;
+    this.currentAction = this.options.action;
     this.currentContent = this.options.content;
-    this._settled = new Promise<void>((resolve) => {
-      this.settledResolve = resolve;
-    });
   }
 
-  /**
-   * Connects the public ToastHandle instance to this toast.
-   *
-   * @param handle The public control handle.
-   */
   public setHandle(handle: ToastHandle): void {
-    this.handle = handle;
+    this._handle = handle;
+  }
+
+  public get handle(): ToastHandle {
+    return this._handle!;
   }
 
   /**
@@ -247,16 +276,36 @@ export class Toast {
     const normalized = this.normalizeUpdate(updateOpts);
     const previousIcon = this.currentIcon;
     const previousRootClassName = this.currentRootClassName;
+    const wasLoader = previousIcon === "loader";
 
     if (normalized.content !== undefined) {
       // Content and message/icon are mutually exclusive, the same rule
       // construction itself applies -- see normalizeToastOptions.
       this.currentContent = normalized.content;
+      this.currentTitle = null;
       this.currentMessage = null;
+      this.currentDescription = null;
+      this.currentAction = null;
       this.currentIcon = null;
     } else {
+      if (normalized.title !== undefined) {
+        this.currentTitle = normalized.title;
+        this.currentContent = null;
+      }
       if (normalized.message !== undefined) {
         this.currentMessage = normalized.message;
+        this.currentContent = null;
+        if (normalized.title === undefined && this.currentDescription === null) {
+          this.currentTitle = null;
+        }
+      }
+      if (normalized.description !== undefined) {
+        this.currentDescription = normalized.description;
+        this.currentContent = null;
+      }
+      if (normalized.action !== undefined) {
+        this.currentAction = normalized.action;
+        this.currentContent = null;
       }
       if (normalized.icon !== undefined) {
         this.currentIcon = normalized.icon;
@@ -269,11 +318,22 @@ export class Toast {
       this.currentRootClassName = SEMANTIC_ROOT_CLASS_NAMES[normalized.type];
       this.currentRole = SEMANTIC_ROLES[normalized.type];
     }
+    if (normalized.dismissible !== undefined) {
+      this.currentDismissible = normalized.dismissible;
+    }
+
+    const transitionedFromLoader = wasLoader && this.currentIcon !== "loader";
+
+    if (normalized.autoDismiss !== undefined) {
+      this.currentAutoDismiss = normalized.autoDismiss;
+    } else if (transitionedFromLoader) {
+      this.currentAutoDismiss = true;
+    }
+
     if (normalized.duration !== undefined) {
       this.remainingDuration = normalized.duration;
-    }
-    if (normalized.shouldAutoDismiss !== undefined) {
-      this.currentShouldAutoDismiss = normalized.shouldAutoDismiss;
+    } else if (transitionedFromLoader) {
+      this.remainingDuration = this.options.duration;
     }
 
     if (this.internalState === "queued") {
@@ -289,7 +349,7 @@ export class Toast {
       return;
     }
 
-    this.applyVisibleUpdate(normalized, previousIcon, previousRootClassName);
+    this.applyVisibleUpdate(normalized, previousIcon, previousRootClassName, transitionedFromLoader);
   }
 
   /**
@@ -310,13 +370,19 @@ export class Toast {
     }
 
     return {
+      title: update.title,
       message: update.message,
+      description: update.description,
+      action: update.action,
       content:
-        update.content !== undefined ? resolveToastContent(update.content, this.parent.ownerDocument) : undefined,
+        update.content !== undefined
+          ? resolveToastContent(update.content, this.parent.ownerDocument, this.handle ?? undefined)
+          : undefined,
       icon: update.icon,
       type: update.type,
       duration: update.duration,
-      shouldAutoDismiss: update.shouldAutoDismiss,
+      autoDismiss: update.autoDismiss,
+      dismissible: update.dismissible,
       // Snapshotted rather than referenced: the same boundary
       // normalizeToastOptions draws for construction-time tokens, so a
       // caller mutation after this call cannot change what gets applied.
@@ -325,30 +391,35 @@ export class Toast {
     };
   }
 
-  /** Applies an already-normalized update to a currently-visible toast's live DOM element and, for duration/shouldAutoDismiss, its running timer. */
+  /** Applies an already-normalized update to a currently-visible toast's live DOM element and, for duration/autoDismiss, its running timer. */
   private applyVisibleUpdate(
     normalized: NormalizedUpdate,
     previousIcon: ToastIcon | null,
     previousRootClassName: string,
+    transitionedFromLoader: boolean,
   ): void {
     const element = this.element;
     if (element === null) {
       return;
     }
 
-    if (normalized.content !== undefined) {
+    const needsFullContentRebuild =
+      normalized.content !== undefined ||
+      normalized.title !== undefined ||
+      normalized.description !== undefined ||
+      normalized.action !== undefined ||
+      normalized.dismissible !== undefined ||
+      this.currentDescription !== null ||
+      this.currentAction !== null;
+
+    if (needsFullContentRebuild) {
       element.replaceChildren();
       populateToastContent(
         element,
-        {
-          content: this.currentContent,
-          dismissLabel: this.options.dismissLabel,
-          icon: null,
-          isDismissable: this.options.isDismissable,
-          message: null,
-        },
+        this.contentOptions,
         () => this.hide(),
         this.parent.ownerDocument,
+        this.handle ?? undefined,
       );
     } else {
       if (normalized.message !== undefined) {
@@ -372,7 +443,7 @@ export class Toast {
       applyUpdateToElement(element, { tokens: normalized.tokens, className: normalized.className });
     }
 
-    if (normalized.duration !== undefined || normalized.shouldAutoDismiss !== undefined) {
+    if (normalized.duration !== undefined || normalized.autoDismiss !== undefined || transitionedFromLoader) {
       this.restartAutoDismissIfShown();
     }
   }
@@ -389,7 +460,7 @@ export class Toast {
       return;
     }
     this.clearAutoDismiss();
-    if (this.currentShouldAutoDismiss) {
+    if (this.currentAutoDismiss) {
       this.scheduleAutoDismiss(this.element);
     }
   }
@@ -444,14 +515,17 @@ export class Toast {
   /** `populateToastContent`'s input, reading the mutable content/icon/message fields `update()` can change instead of the frozen construction-time baseline. */
   private get contentOptions(): Pick<
     NormalizedToastOptions,
-    "content" | "dismissLabel" | "icon" | "isDismissable" | "message"
+    "action" | "content" | "description" | "dismissible" | "dismissLabel" | "icon" | "message" | "title"
   > {
     return {
+      action: this.currentAction,
       content: this.currentContent,
+      description: this.currentDescription,
+      dismissible: this.currentDismissible,
       dismissLabel: this.options.dismissLabel,
       icon: this.currentIcon,
-      isDismissable: this.options.isDismissable,
       message: this.currentMessage,
+      title: this.currentTitle,
     };
   }
 
@@ -486,7 +560,7 @@ export class Toast {
       return;
     }
 
-    // Tracked regardless of shouldAutoDismiss: isProtected (below) treats
+    // Tracked regardless of autoDismiss: isProtected (below) treats
     // hover/focus as protection from eviction independently of auto-dismiss,
     // so a persistent toast still needs these to know it's being interacted
     // with. pauseAutoDismiss/resumeAutoDismiss are no-ops when there is no
@@ -570,7 +644,13 @@ export class Toast {
     }
 
     try {
-      populateToastContent(element, this.contentOptions, () => this.hide(), this.parent.ownerDocument);
+      populateToastContent(
+        element,
+        this.contentOptions,
+        () => this.hide(),
+        this.parent.ownerDocument,
+        this.handle ?? undefined,
+      );
       if (this.pendingStyleUpdate) {
         applyUpdateToElement(element, this.pendingStyleUpdate);
         this.pendingStyleUpdate = null;
@@ -817,7 +897,7 @@ export class Toast {
   }
 
   private scheduleAutoDismiss(element: HTMLDivElement): void {
-    if (!this.currentShouldAutoDismiss || this.isHovered || this.isFocused || this.isPageHidden) {
+    if (!this.currentAutoDismiss || this.isHovered || this.isFocused || this.isPageHidden) {
       return;
     }
     if (typeof window === "undefined") {
@@ -836,7 +916,7 @@ export class Toast {
 
   private resumeAutoDismiss(): void {
     if (
-      !this.currentShouldAutoDismiss ||
+      !this.currentAutoDismiss ||
       this.internalState !== "visible" ||
       this.element === null ||
       !this.reachedEvents.has("shown")

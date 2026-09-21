@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createToaster } from "./core";
+import { createToaster, dialog as defaultDialog, toast as defaultToast } from ".";
 import {
   animations,
+  clickBackdrop,
   flushAnimations,
   installAnimateMock,
   installDialogMocks,
   mockBackdropRect,
-  clickBackdrop,
 } from "./test-utils";
 
 beforeEach(() => {
@@ -64,7 +64,7 @@ describe("createToaster", () => {
 describe("deterministic destroy", () => {
   it("settles every visible toast's handle synchronously, before an exit animation would normally finish", async () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Visible");
+    const handle = toaster.success("Visible");
     flushAnimations();
     expect(handle.state).toBe("visible");
 
@@ -77,9 +77,9 @@ describe("deterministic destroy", () => {
   });
 
   it("settles a still-queued toast's handle synchronously too", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Second");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Second");
     expect(queued.state).toBe("queued");
 
     toaster.destroy();
@@ -87,9 +87,9 @@ describe("deterministic destroy", () => {
   });
 
   it("fires every lifecycle event for a toast destroyed while still queued, including onShow", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Second");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Second");
 
     const seen: string[] = [];
     queued.onShow(() => seen.push("show"));
@@ -103,7 +103,7 @@ describe("deterministic destroy", () => {
   it("cancels an in-flight entrance animation without firing shown or scheduling auto-dismiss", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 1000 });
-    const handle = toaster.semantic.success("Entering");
+    const handle = toaster.success("Entering");
     // Deliberately not flushed: the entrance animation is still in flight.
 
     const onShown = vi.fn();
@@ -142,7 +142,7 @@ describe("configure", () => {
     const toaster = createToaster({ duration: 1000 });
     toaster.configure({ duration: 5000 });
 
-    const handle = toaster.semantic.success("Config Test");
+    const handle = toaster.success("Config Test");
     flushAnimations();
 
     vi.advanceTimersByTime(1500);
@@ -162,7 +162,7 @@ describe("configure", () => {
 describe("instance-level className", () => {
   it("applies the config-level className to a toast with no per-call className", () => {
     const toaster = createToaster({ className: "glass" });
-    toaster.semantic.success("Styled");
+    toaster.success("Styled");
 
     const element = document.body.querySelector("[role='status']");
     expect(element?.className).toContain("glass");
@@ -171,7 +171,7 @@ describe("instance-level className", () => {
 
   it("appends the config-level className with the per-call className, config first", () => {
     const toaster = createToaster({ className: "glass" });
-    toaster.semantic.success("Styled", { className: "urgent" });
+    toaster.success("Styled", { className: "urgent" });
 
     const element = document.body.querySelector<HTMLDivElement>("[role='status']");
     expect(element?.className).toContain("glass");
@@ -182,7 +182,7 @@ describe("instance-level className", () => {
 
   it("applies the config-level className to an interactive dialog", async () => {
     const toaster = createToaster({ className: "glass" });
-    const handle = toaster.interactive.alert("Notice!");
+    const handle = toaster.dialog.alert("Notice!");
 
     const dialog = document.body.querySelector("dialog");
     expect(dialog?.className).toContain("glass");
@@ -194,7 +194,7 @@ describe("instance-level className", () => {
 
   it("appends the config-level className with a per-call dialog className", async () => {
     const toaster = createToaster({ className: "glass" });
-    const handle = toaster.interactive.confirm("Delete?", { className: "danger-dialog" });
+    const handle = toaster.dialog.confirm("Delete?", { className: "danger-dialog" });
 
     const dialog = document.body.querySelector("dialog");
     expect(dialog?.className).toContain("glass");
@@ -207,7 +207,7 @@ describe("instance-level className", () => {
 
   it("keeps the config-level className after handle.update() replaces the per-call className", () => {
     const toaster = createToaster({ className: "glass" });
-    const handle = toaster.semantic.success("Styled", { className: "class-one" });
+    const handle = toaster.success("Styled", { className: "class-one" });
 
     const element = document.body.querySelector("[role='status']");
     expect(element?.className).toContain("glass");
@@ -222,71 +222,213 @@ describe("instance-level className", () => {
   });
 });
 
-describe("toaster.semantic", () => {
-  it("show() renders a toast and returns a handle", () => {
+describe("callable toaster and neutral notifications", () => {
+  it("dispatches default neutral notification when invoked as a function", () => {
     const toaster = createToaster();
-    const h = toaster.semantic.show({ message: "Hello", type: "success" });
-    expect(document.body.innerHTML).toContain("Hello");
+    const handle = toaster("Default neutral message");
+    expect(document.body.innerHTML).toContain("Default neutral message");
+    const element = document.body.querySelector("[data-toast-message]");
+    expect(element).not.toBeNull();
+    const root = element?.closest(".coden-toast");
+    expect(root?.classList.contains("coden-toast-default")).toBe(true);
+    handle.dismiss();
+    toaster.destroy();
+  });
+
+  it("singleton toast export dispatches directly", () => {
+    const handle = defaultToast("Singleton message");
+    expect(document.body.innerHTML).toContain("Singleton message");
+    handle.dismiss();
+  });
+
+  it("singleton dialog export is defined and functional", () => {
+    expect(defaultDialog).toBeDefined();
+    expect(typeof defaultDialog.confirm).toBe("function");
+    expect(typeof defaultDialog.prompt).toBe("function");
+    expect(typeof defaultDialog.alert).toBe("function");
+  });
+});
+
+describe("structured content and actions", () => {
+  it("renders structured title and description", () => {
+    const toaster = createToaster();
+    const handle = toaster.success("Title text", {
+      description: "Detailed description of what occurred",
+    });
+
+    const titleEl = document.body.querySelector("[data-toast-title]");
+    const descEl = document.body.querySelector("[data-toast-description]");
+    expect(titleEl?.textContent).toBe("Title text");
+    expect(descEl?.textContent).toBe("Detailed description of what occurred");
+
+    handle.dismiss();
+    toaster.destroy();
+  });
+
+  it("renders inline action button and triggers onClick with handle", () => {
+    const toaster = createToaster();
+    const onClick = vi.fn();
+    const handle = toaster.success("File deleted", {
+      action: {
+        label: "Undo",
+        onClick,
+      },
+    });
+
+    const actionBtn = document.body.querySelector<HTMLButtonElement>("[data-toast-action]");
+    expect(actionBtn).not.toBeNull();
+    expect(actionBtn?.textContent).toBe("Undo");
+
+    actionBtn?.click();
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(onClick.mock.calls[0][1]).toBe(handle);
+    // Action click must not automatically dismiss
+    expect(handle.state).toBe("visible");
+
+    handle.dismiss();
+    toaster.destroy();
+  });
+});
+
+describe("toast.promise", () => {
+  it("manages promise success lifecycle with autoDismiss re-arming", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+
+    let resolvePromise!: (val: { name: string }) => void;
+    const promise = new Promise<{ name: string }>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    const toastPromise = toaster.promise(promise, {
+      loading: "Saving...",
+      success: (data) => `Saved ${data.name}!`,
+      error: "Failed",
+    });
+
+    expect(document.body.textContent).toContain("Saving...");
+    const loaderRoot = document.body.querySelector(".coden-toast");
+    expect(loaderRoot?.classList.contains("coden-toast-default")).toBe(true);
+
+    resolvePromise({ name: "Doc" });
+    const result = await toastPromise;
+    expect(result).toEqual({ name: "Doc" });
+
+    flushAnimations();
+    expect(document.body.textContent).toContain("Saved Doc!");
+    const successRoot = document.body.querySelector(".coden-toast");
+    expect(successRoot?.classList.contains("coden-toast-success")).toBe(true);
+
+    // Re-armed auto-dismiss should dismiss it after default duration
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.textContent).not.toContain("Saved Doc!");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("manages promise error lifecycle and re-throws error", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+
+    let rejectPromise!: (err: Error) => void;
+    const promise = new Promise<void>((_, reject) => {
+      rejectPromise = reject;
+    });
+
+    const toastPromise = toaster.promise(promise, {
+      loading: "Connecting...",
+      success: "Connected",
+      error: (err: unknown) => `Error: ${(err as Error).message}`,
+    });
+
+    expect(document.body.textContent).toContain("Connecting...");
+
+    rejectPromise(new Error("Network timeout"));
+    await expect(toastPromise).rejects.toThrow("Network timeout");
+
+    flushAnimations();
+    expect(document.body.textContent).toContain("Error: Network timeout");
+    const errorRoot = document.body.querySelector(".coden-toast");
+    expect(errorRoot?.classList.contains("coden-toast-error")).toBe(true);
+
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.textContent).not.toContain("Error: Network timeout");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+});
+
+describe("toaster semantic variants", () => {
+  it("success() renders a success toast", () => {
+    const toaster = createToaster();
+    const h = toaster.success("Saved");
+    expect(document.body.innerHTML).toContain("Saved");
+    const el = document.body.querySelector(".coden-toast-success");
+    expect(el).not.toBeNull();
     h.dismiss();
     toaster.destroy();
   });
 
-  it("clear() hides only semantic toasts", () => {
+  it("error() renders an error toast", () => {
     const toaster = createToaster();
-    toaster.semantic.success("S1");
-    toaster.semantic.error("S2");
-    toaster.loading.show({ message: "L1" });
+    const h = toaster.error("Failed");
+    expect(document.body.innerHTML).toContain("Failed");
+    const el = document.body.querySelector(".coden-toast-error");
+    expect(el).not.toBeNull();
+    h.dismiss();
+    toaster.destroy();
+  });
 
-    toaster.semantic.clear();
-    flushAnimations();
+  it("warning() renders a warning toast", () => {
+    const toaster = createToaster();
+    const h = toaster.warning("Warning");
+    expect(document.body.innerHTML).toContain("Warning");
+    const el = document.body.querySelector(".coden-toast-warning");
+    expect(el).not.toBeNull();
+    h.dismiss();
+    toaster.destroy();
+  });
 
-    expect(document.body.innerHTML).not.toContain("S1");
-    expect(document.body.innerHTML).not.toContain("S2");
-    expect(document.body.innerHTML).toContain("L1");
+  it("info() renders an info toast", () => {
+    const toaster = createToaster();
+    const h = toaster.info("Info");
+    expect(document.body.innerHTML).toContain("Info");
+    const el = document.body.querySelector(".coden-toast-info");
+    expect(el).not.toBeNull();
+    h.dismiss();
     toaster.destroy();
   });
 });
 
 describe("toaster.loading", () => {
-  it("show() renders a loading toast and does not auto-dismiss", () => {
+  it("renders a loading toast and does not auto-dismiss", () => {
     const toaster = createToaster();
-    const h = toaster.loading.show({ message: "Fetching…" });
+    const h = toaster.loading("Fetching…");
     expect(document.body.innerHTML).toContain("Fetching…");
     expect(h.state).toBe("visible");
     h.dismiss();
     toaster.destroy();
   });
-
-  it("clear() hides only loading toasts", () => {
-    const toaster = createToaster();
-    toaster.semantic.success("Keep me");
-    toaster.loading.show({ message: "Remove me" });
-
-    toaster.loading.clear();
-    flushAnimations();
-
-    expect(document.body.innerHTML).toContain("Keep me");
-    expect(document.body.innerHTML).not.toContain("Remove me");
-    toaster.destroy();
-  });
 });
 
 describe("toaster.custom", () => {
-  it("show() renders arbitrary content", () => {
+  it("renders arbitrary DOM node content", () => {
     const toaster = createToaster();
     const node = document.createElement("span");
     node.textContent = "Custom!";
-    const h = toaster.custom.show({ content: node });
+    const h = toaster.custom(node);
     expect(document.body.innerHTML).toContain("Custom!");
     h.dismiss();
     toaster.destroy();
   });
 
-  it("show() sanitizes dangerous scripts and event attributes", () => {
+  it("sanitizes dangerous scripts and event attributes", () => {
     const toaster = createToaster();
-    const h = toaster.custom.show({
-      content: '<span onclick="alert(1)">Custom!</span><script>alert(2)</script>',
-    });
+    const h = toaster.custom('<span onclick="alert(1)">Custom!</span><script>alert(2)</script>');
     const html = document.body.innerHTML;
     expect(html).toContain("<span>Custom!</span>");
     expect(html).not.toContain("onclick");
@@ -296,12 +438,12 @@ describe("toaster.custom", () => {
   });
 });
 
-describe("toaster.clear()", () => {
-  it("hides all non-interactive toasts", () => {
+describe("toaster.clear() and dismiss()", () => {
+  it("clear() hides all active toasts", () => {
     const toaster = createToaster();
-    toaster.semantic.success("T1");
-    toaster.semantic.error("T2");
-    toaster.loading.show({ message: "L1" });
+    toaster.success("T1");
+    toaster.error("T2");
+    toaster.loading("L1");
 
     toaster.clear();
     flushAnimations();
@@ -309,12 +451,37 @@ describe("toaster.clear()", () => {
     expect(document.body.querySelector("[role='status'], [role='alert']")).toBeNull();
     toaster.destroy();
   });
+
+  it("dismiss() without argument clears all active toasts", () => {
+    const toaster = createToaster();
+    toaster.success("T1");
+    toaster.error("T2");
+
+    toaster.dismiss();
+    flushAnimations();
+
+    expect(document.body.querySelector("[role='status'], [role='alert']")).toBeNull();
+    toaster.destroy();
+  });
+
+  it("dismiss(handle) dismisses only the specific handle", () => {
+    const toaster = createToaster();
+    const h1 = toaster.success("T1");
+    toaster.error("T2");
+
+    toaster.dismiss(h1);
+    flushAnimations();
+
+    expect(document.body.textContent).not.toContain("T1");
+    expect(document.body.textContent).toContain("T2");
+    toaster.destroy();
+  });
 });
 
 describe("destroy()", () => {
   it("removes toast containers from DOM", () => {
     const toaster = createToaster();
-    toaster.semantic.success("Bye");
+    toaster.success("Bye");
     expect(document.body.querySelector("[data-toast-container]")).not.toBeNull();
 
     toaster.destroy();
@@ -332,7 +499,7 @@ describe("destroy()", () => {
   it("subsequent calls after destroy() throw", () => {
     const toaster = createToaster();
     toaster.destroy();
-    expect(() => toaster.semantic.success("Ghost")).toThrow(/destroyed/);
+    expect(() => toaster.success("Ghost")).toThrow(/destroyed/);
     expect(() => toaster.clear()).toThrow(/destroyed/);
     expect(() => toaster.configure({})).toThrow(/destroyed/);
   });
@@ -346,10 +513,10 @@ describe("destroy()", () => {
   });
 });
 
-describe("interactive.confirm", () => {
+describe("dialog.confirm", () => {
   it("resolves true when confirm button clicked", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.confirm("Delete?");
+    const handle = toaster.dialog.confirm("Delete?");
 
     const confirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     expect(confirmBtn).toBeTruthy();
@@ -359,25 +526,37 @@ describe("interactive.confirm", () => {
     toaster.destroy();
   });
 
+  it("implements thenable PromiseLike directly", async () => {
+    const toaster = createToaster();
+    const confirmPromise = toaster.dialog.confirm("Are you sure?");
+
+    const confirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
+    confirmBtn!.click();
+
+    const result = await confirmPromise;
+    expect(result).toBe(true);
+    toaster.destroy();
+  });
+
   it("resolves false and closes the dialog when dismissed programmatically", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.confirm("Delete?");
+    const handle = toaster.dialog.confirm("Delete?");
 
-    const dialog = document.body.querySelector("dialog");
-    expect(dialog?.open).toBe(true);
+    const dialogEl = document.body.querySelector("dialog");
+    expect(dialogEl?.open).toBe(true);
 
     handle.dismiss();
 
     await expect(handle.result).resolves.toBe(false);
-    expect(dialog?.open).toBe(false);
+    expect(dialogEl?.open).toBe(false);
     toaster.destroy();
   });
 });
 
-describe("interactive.prompt", () => {
+describe("dialog.prompt", () => {
   it("resolves with typed value when submitted", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.prompt("Your name?", { defaultValue: "Gustavo" });
+    const handle = toaster.dialog.prompt("Your name?", { defaultValue: "Gustavo" });
 
     const input = document.body.querySelector<HTMLInputElement>("input");
     expect(input?.value).toBe("Gustavo");
@@ -392,7 +571,7 @@ describe("interactive.prompt", () => {
 
   it("resolves null when cancelled", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.prompt("Name?");
+    const handle = toaster.dialog.prompt("Name?");
 
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
@@ -402,10 +581,10 @@ describe("interactive.prompt", () => {
   });
 });
 
-describe("interactive.alert", () => {
+describe("dialog.alert", () => {
   it("resolves void when OK clicked", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.alert("Notice!", { okLabel: "Got it" });
+    const handle = toaster.dialog.alert("Notice!", { okLabel: "Got it" });
 
     const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     okBtn!.click();
@@ -419,11 +598,11 @@ describe("interactive shared behaviors", () => {
   it("should clean up event listeners on dialog reuse via AbortController", async () => {
     const toaster = createToaster();
 
-    const handle1 = toaster.interactive.confirm("First confirm?");
+    const handle1 = toaster.dialog.confirm("First confirm?");
     handle1.dismiss();
     await handle1.settled;
 
-    const handle2 = toaster.interactive.confirm("Second confirm?");
+    const handle2 = toaster.dialog.confirm("Second confirm?");
     const cancelBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-cancel");
     cancelBtn!.click();
 
@@ -434,21 +613,21 @@ describe("interactive shared behaviors", () => {
   it("applies correct button semantic class depending on type option", async () => {
     const toaster = createToaster();
 
-    const handleConfirm = toaster.interactive.confirm("Delete danger?", { type: "danger" });
-    const dangerConfirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-danger");
-    expect(dangerConfirmBtn).toBeTruthy();
-    expect(dangerConfirmBtn?.className).toContain("toast-dialog-btn-danger");
+    const handleConfirm = toaster.dialog.confirm("Delete danger?", { type: "error" });
+    const errorConfirmBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-error");
+    expect(errorConfirmBtn).toBeTruthy();
+    expect(errorConfirmBtn?.className).toContain("toast-dialog-btn-error");
     handleConfirm.dismiss();
     await handleConfirm.settled;
 
-    const handlePrompt = toaster.interactive.prompt("Name secondary?", { type: "secondary" });
+    const handlePrompt = toaster.dialog.prompt("Name secondary?", { type: "secondary" });
     const secondarySubmitBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-secondary");
     expect(secondarySubmitBtn).toBeTruthy();
     expect(secondarySubmitBtn?.className).toContain("toast-dialog-btn-secondary");
     handlePrompt.dismiss();
     await handlePrompt.settled;
 
-    const handleAlert = toaster.interactive.alert("Success alert!", { type: "success" });
+    const handleAlert = toaster.dialog.alert("Success alert!", { type: "success" });
     const successOkBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-success");
     expect(successOkBtn).toBeTruthy();
     expect(successOkBtn?.className).toContain("toast-dialog-btn-success");
@@ -460,56 +639,65 @@ describe("interactive shared behaviors", () => {
 });
 
 describe("container isolation", () => {
-  it("destroying one toaster should not remove containers or toasts of another instance", () => {
-    const t1 = createToaster();
-    const t2 = createToaster();
+  it("toasters bound to different containers render inside their respective containers", () => {
+    const c1 = document.createElement("div");
+    const c2 = document.createElement("div");
+    document.body.append(c1, c2);
 
-    t1.semantic.success("Toaster 1 Success");
-    t2.semantic.success("Toaster 2 Success");
+    const t1 = createToaster({ container: c1 });
+    const t2 = createToaster({ container: c2 });
 
-    expect(document.body.innerHTML).toContain("Toaster 1 Success");
-    expect(document.body.innerHTML).toContain("Toaster 2 Success");
+    t1.success("Toaster 1 Success");
+    t2.success("Toaster 2 Success");
+
+    expect(c1.innerHTML).toContain("Toaster 1 Success");
+    expect(c1.innerHTML).not.toContain("Toaster 2 Success");
+    expect(c2.innerHTML).toContain("Toaster 2 Success");
+    expect(c2.innerHTML).not.toContain("Toaster 1 Success");
 
     t1.destroy();
-
-    expect(document.body.innerHTML).not.toContain("Toaster 1 Success");
-    expect(document.body.innerHTML).toContain("Toaster 2 Success");
-
     t2.destroy();
-    expect(document.body.innerHTML).not.toContain("Toaster 2 Success");
   });
 });
 
 describe("SSR compatibility", () => {
-  it("should not access document/window during initialization to be SSR safe", () => {
-    const originalDocument = globalThis.document;
-    const originalWindow = globalThis.window;
+  it("can instantiate and configure without throwing when document is undefined", () => {
+    const originalDoc = globalThis.document;
+    // @ts-expect-error simulating SSR
+    delete globalThis.document;
 
-    try {
-      delete (globalThis as Record<string, unknown>).document;
-      delete (globalThis as Record<string, unknown>).window;
-
+    expect(() => {
       const toaster = createToaster();
-      expect(toaster).toBeDefined();
-    } finally {
-      globalThis.document = originalDocument;
-      globalThis.window = originalWindow;
-    }
+      toaster.destroy();
+    }).not.toThrow();
+
+    globalThis.document = originalDoc;
+  });
+
+  it("throws friendly error when calling show methods without DOM", () => {
+    const originalDoc = globalThis.document;
+    // @ts-expect-error simulating SSR
+    delete globalThis.document;
+
+    const toaster = createToaster();
+    expect(() => toaster.success("SSR")).toThrow(/browser environment/);
+
+    toaster.destroy();
+    globalThis.document = originalDoc;
   });
 });
 
 describe("positioning and margins", () => {
   it("should support top-center, bottom-center, and center positions", () => {
     const toaster = createToaster();
-    const h1 = toaster.semantic.success("Top Center", { position: "top-center" });
-    const h2 = toaster.semantic.success("Bottom Center", { position: "bottom-center" });
-    const h3 = toaster.semantic.success("Center", { position: "center" });
+    const h1 = toaster.success("Top Center", { position: "top-center" });
+    const h2 = toaster.success("Bottom Center", { position: "bottom-center" });
+    const h3 = toaster.success("Center", { position: "center" });
 
     const topCenterContainer = document.body.querySelector("[data-toast-container*='top-center']") as HTMLDivElement;
     const bottomCenterContainer = document.body.querySelector(
       "[data-toast-container*='bottom-center']",
     ) as HTMLDivElement;
-    // Query exact container for center position
     const centerContainer = document.body.querySelector(".coden-toast-stack-center") as HTMLDivElement;
 
     expect(topCenterContainer).not.toBeNull();
@@ -528,7 +716,7 @@ describe("positioning and margins", () => {
 
   it("should apply margin as css variable on containers", () => {
     const toaster = createToaster({ margin: "24px" });
-    toaster.semantic.success("Margin Test", { position: "top-left" });
+    toaster.success("Margin Test", { position: "top-left" });
 
     const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
     expect(container).not.toBeNull();
@@ -540,7 +728,7 @@ describe("positioning and margins", () => {
 
   it("should apply granular margins (x and y) as css variables on containers", () => {
     const toaster = createToaster({ margin: { x: "15px", y: "30px" } });
-    toaster.semantic.success("Granular Margin Test", { position: "top-left" });
+    toaster.success("Granular Margin Test", { position: "top-left" });
 
     const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
     expect(container).not.toBeNull();
@@ -552,7 +740,7 @@ describe("positioning and margins", () => {
 
   it("should support dynamic margin updates via configure()", () => {
     const toaster = createToaster({ margin: "10px" });
-    toaster.semantic.success("Dynamic Margin", { position: "top-left" });
+    toaster.success("Dynamic Margin", { position: "top-left" });
 
     const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
     expect(container.style.getPropertyValue("--toast-margin-x")).toBe("10px");
@@ -566,12 +754,12 @@ describe("positioning and margins", () => {
 
   it("does not clear an explicit per-toast margin when an unrelated toast dispatches without one", () => {
     const toaster = createToaster();
-    toaster.semantic.success("Custom margin", { position: "top-left", margin: "50px" });
+    toaster.success("Custom margin", { position: "top-left", margin: "50px" });
 
     const container = document.body.querySelector("[data-toast-container*='top-left']") as HTMLDivElement;
     expect(container.style.getPropertyValue("--toast-margin-x")).toBe("50px");
 
-    toaster.semantic.info("No opinion on margin", { position: "top-left" });
+    toaster.info("No opinion on margin", { position: "top-left" });
 
     expect(container.style.getPropertyValue("--toast-margin-x")).toBe("50px");
     expect(container.style.getPropertyValue("--toast-margin-y")).toBe("50px");
@@ -582,27 +770,23 @@ describe("positioning and margins", () => {
 
 describe("stack insertion order for overflow scrolling", () => {
   it("inserts new toasts at the start of a top-anchored stack, not the end", () => {
-    const toaster = createToaster({ position: "top-right", shouldAutoDismiss: false });
-    toaster.semantic.success("First");
-    toaster.semantic.success("Second");
-    toaster.semantic.success("Third");
+    const toaster = createToaster({ position: "top-right", autoDismiss: false });
+    toaster.success("First");
+    toaster.success("Second");
+    toaster.success("Third");
 
     const container = document.body.querySelector("[data-toast-container]")!;
     const texts = Array.from(container.children).map((child) => child.textContent);
-    // Newest first: a top-anchored stack no longer uses
-    // `flex-direction: column-reverse` to achieve this (that direction
-    // cannot be scrolled via scrollTop in every engine), so the DOM order
-    // itself must already put the newest toast first.
     expect(texts).toEqual(["Third", "Second", "First"]);
 
     toaster.destroy();
   });
 
   it("appends new toasts to the end of a bottom-anchored stack", () => {
-    const toaster = createToaster({ position: "bottom-right", shouldAutoDismiss: false });
-    toaster.semantic.success("First");
-    toaster.semantic.success("Second");
-    toaster.semantic.success("Third");
+    const toaster = createToaster({ position: "bottom-right", autoDismiss: false });
+    toaster.success("First");
+    toaster.success("Second");
+    toaster.success("Third");
 
     const container = document.body.querySelector("[data-toast-container]")!;
     const texts = Array.from(container.children).map((child) => child.textContent);
@@ -619,7 +803,7 @@ describe("focus restoration on dismiss", () => {
     trigger.focus();
 
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Focus me", { isDismissable: true });
+    const handle = toaster.success("Focus me", { dismissible: true });
     flushAnimations();
 
     const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
@@ -641,7 +825,7 @@ describe("focus restoration on dismiss", () => {
     trigger.focus();
 
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Not focused", { isDismissable: true, shouldAutoDismiss: false });
+    const handle = toaster.success("Not focused", { dismissible: true, autoDismiss: false });
     flushAnimations();
 
     elsewhere.focus();
@@ -660,7 +844,7 @@ describe("focus restoration on dismiss", () => {
     trigger.focus();
 
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Focus me", { isDismissable: true });
+    const handle = toaster.success("Focus me", { dismissible: true });
     flushAnimations();
 
     const dismissButton = document.body.querySelector<HTMLButtonElement>(".coden-toast-dismiss")!;
@@ -677,7 +861,7 @@ describe("focus restoration on dismiss", () => {
 describe("Toast update", () => {
   it("should update message text dynamically", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Initial message");
+    const handle = toaster.success("Initial message");
 
     const element = document.body.querySelector("[role='status']");
     expect(element?.textContent).toContain("Initial message");
@@ -691,7 +875,7 @@ describe("Toast update", () => {
 
   it("should update token overrides dynamically", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Tokens test", {
+    const handle = toaster.success("Tokens test", {
       tokens: { successBg: "red" },
     });
 
@@ -706,7 +890,7 @@ describe("Toast update", () => {
 
   it("should replace custom class name dynamically without accumulating", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Class test", {
+    const handle = toaster.success("Class test", {
       className: "class-one",
     });
 
@@ -724,19 +908,17 @@ describe("Toast update", () => {
   it("completes a loading toast into a success toast: type, icon, and auto-dismiss together", () => {
     vi.useFakeTimers();
     const toaster = createToaster();
-    const handle = toaster.loading.show({ message: "Uploading…" });
+    const handle = toaster.loading("Uploading…");
     flushAnimations();
 
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
     expect(element.className).toContain("coden-toast-default");
 
-    handle.update({ type: "success", message: "Uploaded", duration: 2000, shouldAutoDismiss: true });
+    handle.update({ type: "success", message: "Uploaded", duration: 2000, autoDismiss: true });
 
     expect(element.className).toContain("coden-toast-success");
     expect(element.className).not.toContain("coden-toast-default");
     expect(element.textContent).toContain("Uploaded");
-    // The success icon (a checkmark) is derived automatically from `type`
-    // since this update did not give its own `icon`.
     expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
 
     vi.advanceTimersByTime(2500);
@@ -747,9 +929,28 @@ describe("Toast update", () => {
     toaster.destroy();
   });
 
+  it("automatically re-arms autoDismiss when loader updates to semantic variant without explicit autoDismiss", () => {
+    vi.useFakeTimers();
+    const toaster = createToaster({ duration: 3000 });
+    const handle = toaster.loading("Processing...");
+    flushAnimations();
+
+    // Transition to success without passing autoDismiss
+    handle.update({ type: "success", message: "Completed" });
+
+    expect(handle.state).toBe("visible");
+    vi.advanceTimersByTime(3500);
+    flushAnimations();
+    // Must auto-dismiss to prevent stuck loader
+    expect(handle.state).toBe("hidden");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
   it("lets an explicit icon override the type's default icon in the same update() call", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Working");
+    const handle = toaster.success("Working");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
 
@@ -757,10 +958,6 @@ describe("Toast update", () => {
 
     expect(element.className).toContain("coden-toast-error");
     const icon = element.querySelector("svg.coden-toast-icon");
-    // "error"'s own default icon has 3 children (a circle and two paths);
-    // the explicit "success" override has 2 (a circle and one path).
-    // Checking the count is enough to prove the override took effect
-    // without depending on exact path data.
     expect(icon?.children.length).toBe(2);
 
     toaster.destroy();
@@ -768,7 +965,7 @@ describe("Toast update", () => {
 
   it("removes the icon when updated to null", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Working");
+    const handle = toaster.success("Working");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
     expect(element.querySelector("svg.coden-toast-icon")).not.toBeNull();
@@ -781,7 +978,7 @@ describe("Toast update", () => {
 
   it("replaces a message-based toast's content entirely via update({ content })", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Old message");
+    const handle = toaster.success("Old message");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
     expect(element.textContent).toContain("Old message");
@@ -800,7 +997,7 @@ describe("Toast update", () => {
   it("restarts the auto-dismiss countdown from a new duration", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 4000 });
-    const handle = toaster.semantic.success("Countdown");
+    const handle = toaster.success("Countdown");
     flushAnimations();
 
     vi.advanceTimersByTime(1000);
@@ -816,10 +1013,10 @@ describe("Toast update", () => {
   it("disables auto-dismiss on an already-visible toast via update()", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 1000 });
-    const handle = toaster.semantic.success("Stays");
+    const handle = toaster.success("Stays");
     flushAnimations();
 
-    handle.update({ shouldAutoDismiss: false });
+    handle.update({ autoDismiss: false });
     vi.advanceTimersByTime(5000);
     expect(handle.state).toBe("visible");
 
@@ -829,7 +1026,7 @@ describe("Toast update", () => {
 
   it("rejects an invalid duration passed to update()", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Duration test");
+    const handle = toaster.success("Duration test");
     flushAnimations();
 
     expect(() => handle.update({ duration: -1 })).toThrow(/duration/i);
@@ -839,7 +1036,7 @@ describe("Toast update", () => {
 
   it("rejects an unrecognized type passed to update()", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Type test");
+    const handle = toaster.success("Type test");
     flushAnimations();
 
     expect(() => handle.update({ type: "not-a-type" as never })).toThrow(/type/i);
@@ -849,12 +1046,11 @@ describe("Toast update", () => {
 
   it("rejects update({ content }) that sanitization empties out entirely", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Original");
+    const handle = toaster.success("Original");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
 
     expect(() => handle.update({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
-    // Rejected atomically: the toast keeps showing its original message.
     expect(element.textContent).toContain("Original");
 
     toaster.destroy();
@@ -869,22 +1065,19 @@ describe("background-tab auto-dismiss pause", () => {
   it("pauses the auto-dismiss timer while the tab is hidden and resumes with the remaining duration", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 1000 });
-    const handle = toaster.semantic.success("Backgrounded");
+    const handle = toaster.success("Backgrounded");
     flushAnimations();
 
     vi.advanceTimersByTime(400);
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
 
-    // Well past the original 1000ms duration, but the tab has been hidden
-    // this whole time -- the toast must not have dismissed.
     vi.advanceTimersByTime(5000);
     expect(handle.state).toBe("visible");
 
     Object.defineProperty(document, "hidden", { value: false, configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
 
-    // Only ~600ms of its original 1000ms had elapsed when it was paused.
     vi.advanceTimersByTime(500);
     expect(handle.state).toBe("visible");
     vi.advanceTimersByTime(200);
@@ -898,15 +1091,13 @@ describe("background-tab auto-dismiss pause", () => {
   it("does not let releasing hover resume the timer while the tab is still hidden", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 1000 });
-    const handle = toaster.semantic.success("Hover then hide");
+    const handle = toaster.success("Hover then hide");
     flushAnimations();
     const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
     Object.defineProperty(document, "hidden", { value: true, configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
-    // Releasing hover while the tab is still hidden must not be enough on
-    // its own to resume the timer.
     element.dispatchEvent(new MouseEvent("mouseleave"));
 
     vi.advanceTimersByTime(5000);
@@ -925,8 +1116,8 @@ describe("background-tab auto-dismiss pause", () => {
 
 describe("instance-level labels", () => {
   it("applies the configured dismiss button label to every toast", () => {
-    const toaster = createToaster({ labels: { dismiss: "Fechar" }, isDismissable: true });
-    toaster.semantic.success("Localized");
+    const toaster = createToaster({ labels: { dismiss: "Fechar" }, dismissible: true });
+    toaster.success("Localized");
 
     const button = document.body.querySelector(".coden-toast-dismiss");
     expect(button?.getAttribute("aria-label")).toBe("Fechar");
@@ -935,8 +1126,8 @@ describe("instance-level labels", () => {
   });
 
   it("falls back to the built-in dismiss label when none is configured", () => {
-    const toaster = createToaster({ isDismissable: true });
-    toaster.semantic.success("Default label");
+    const toaster = createToaster({ dismissible: true });
+    toaster.success("Default label");
 
     const button = document.body.querySelector(".coden-toast-dismiss");
     expect(button?.getAttribute("aria-label")).toBe("Dismiss toast");
@@ -949,19 +1140,19 @@ describe("instance-level labels", () => {
       labels: { confirm: "Sim", cancel: "Não", submit: "Enviar", ok: "Entendi" },
     });
 
-    const confirmHandle = toaster.interactive.confirm("Continue?");
+    const confirmHandle = toaster.dialog.confirm("Continue?");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Sim");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
     confirmHandle.dismiss();
     await confirmHandle.settled;
 
-    const promptHandle = toaster.interactive.prompt("Name?");
+    const promptHandle = toaster.dialog.prompt("Name?");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Enviar");
     expect(document.body.querySelector(".toast-dialog-btn-cancel")?.textContent).toBe("Não");
     promptHandle.dismiss();
     await promptHandle.settled;
 
-    const alertHandle = toaster.interactive.alert("Done");
+    const alertHandle = toaster.dialog.alert("Done");
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Entendi");
     alertHandle.dismiss();
     await alertHandle.settled;
@@ -972,7 +1163,7 @@ describe("instance-level labels", () => {
   it("lets a per-call dialog label override the instance-level default", async () => {
     const toaster = createToaster({ labels: { confirm: "Sim" } });
 
-    const handle = toaster.interactive.confirm("Continue?", { confirmLabel: "Proceed" });
+    const handle = toaster.dialog.confirm("Continue?", { confirmLabel: "Proceed" });
     expect(document.body.querySelector(".toast-dialog-btn-primary")?.textContent).toBe("Proceed");
     handle.dismiss();
     await handle.settled;
@@ -997,11 +1188,11 @@ describe("Interactive Dialog Transition Queue", () => {
       return style;
     });
 
-    toaster.interactive.alert("First alert");
-    const handle2 = toaster.interactive.alert("Second alert");
+    toaster.dialog.alert("First alert");
+    const handle2 = toaster.dialog.alert("Second alert");
 
-    const dialog = document.body.querySelector("dialog");
-    expect(dialog?.open).toBe(true);
+    const dialogEl = document.body.querySelector("dialog");
+    expect(dialogEl?.open).toBe(true);
     expect(document.body.innerHTML).toContain("First alert");
     expect(document.body.innerHTML).not.toContain("Second alert");
 
@@ -1012,7 +1203,7 @@ describe("Interactive Dialog Transition Queue", () => {
     expect(document.body.innerHTML).toContain("First alert");
     expect(document.body.innerHTML).not.toContain("Second alert");
 
-    dialog!.dispatchEvent(new Event("transitionend"));
+    dialogEl!.dispatchEvent(new Event("transitionend"));
 
     await new Promise((r) => setTimeout(r, 0));
 
@@ -1042,17 +1233,15 @@ describe("Interactive Dialog Transition Queue", () => {
       return style;
     });
 
-    toaster.interactive.alert("First alert");
-    const handle2 = toaster.interactive.alert("Second alert");
+    toaster.dialog.alert("First alert");
+    const handle2 = toaster.dialog.alert("Second alert");
 
     const okBtn = document.body.querySelector<HTMLButtonElement>(".toast-dialog-btn-primary");
     okBtn!.click();
 
-    // Fallback: 150ms + 50ms buffer = 200ms. At 50ms, it should still show first alert.
     await new Promise((r) => setTimeout(r, 50));
     expect(document.body.innerHTML).toContain("First alert");
 
-    // At 250ms, the fallback timeout should have fired and loaded the second alert.
     await new Promise((r) => setTimeout(r, 200));
     expect(document.body.innerHTML).toContain("Second alert");
 
@@ -1067,57 +1256,57 @@ describe("Interactive Dialog Transition Queue", () => {
 describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
   it("should dismiss confirm modal on backdrop click by default", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.confirm("Confirm message");
+    const handle = toaster.dialog.confirm("Confirm message");
 
-    const dialog = document.body.querySelector("dialog")!;
-    expect(dialog.open).toBe(true);
+    const dialogEl = document.body.querySelector("dialog")!;
+    expect(dialogEl.open).toBe(true);
 
-    mockBackdropRect(dialog);
-    clickBackdrop(dialog);
+    mockBackdropRect(dialogEl);
+    clickBackdrop(dialogEl);
 
     const result = await handle.result;
     expect(result).toBe(false);
-    expect(dialog.open).toBe(false);
+    expect(dialogEl.open).toBe(false);
 
     toaster.destroy();
   });
 
   it("should dismiss prompt modal on backdrop click by default", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.prompt("Prompt message");
+    const handle = toaster.dialog.prompt("Prompt message");
 
-    const dialog = document.body.querySelector("dialog")!;
-    expect(dialog.open).toBe(true);
+    const dialogEl = document.body.querySelector("dialog")!;
+    expect(dialogEl.open).toBe(true);
 
-    mockBackdropRect(dialog);
-    clickBackdrop(dialog);
+    mockBackdropRect(dialogEl);
+    clickBackdrop(dialogEl);
 
     const result = await handle.result;
     expect(result).toBeNull();
-    expect(dialog.open).toBe(false);
+    expect(dialogEl.open).toBe(false);
 
     toaster.destroy();
   });
 
   it("should dismiss alert modal on backdrop click by default", async () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.alert("Alert message");
+    const handle = toaster.dialog.alert("Alert message");
 
-    const dialog = document.body.querySelector("dialog")!;
-    expect(dialog.open).toBe(true);
+    const dialogEl = document.body.querySelector("dialog")!;
+    expect(dialogEl.open).toBe(true);
 
-    mockBackdropRect(dialog);
-    clickBackdrop(dialog);
+    mockBackdropRect(dialogEl);
+    clickBackdrop(dialogEl);
 
     await handle.result;
-    expect(dialog.open).toBe(false);
+    expect(dialogEl.open).toBe(false);
 
     toaster.destroy();
   });
 
-  it("should NOT dismiss confirm modal on backdrop click if shouldBackdropDismiss: false is passed", async () => {
+  it("should NOT dismiss confirm modal on backdrop click if backdropDismiss: false is passed", async () => {
     const toaster = createToaster();
-    const handleConfirm = toaster.interactive.confirm("Confirm message", { shouldBackdropDismiss: false });
+    const handleConfirm = toaster.dialog.confirm("Confirm message", { backdropDismiss: false });
     const dialogConfirm = document.body.querySelector("dialog")!;
     mockBackdropRect(dialogConfirm);
     clickBackdrop(dialogConfirm);
@@ -1127,9 +1316,9 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
     toaster.destroy();
   });
 
-  it("should NOT dismiss prompt modal on backdrop click if shouldBackdropDismiss: false is passed", async () => {
+  it("should NOT dismiss prompt modal on backdrop click if backdropDismiss: false is passed", async () => {
     const toaster = createToaster();
-    const handlePrompt = toaster.interactive.prompt("Prompt message", { shouldBackdropDismiss: false });
+    const handlePrompt = toaster.dialog.prompt("Prompt message", { backdropDismiss: false });
     const dialogPrompt = document.body.querySelector("dialog")!;
     mockBackdropRect(dialogPrompt);
     clickBackdrop(dialogPrompt);
@@ -1142,21 +1331,21 @@ describe("Interactive Dialog Backdrop Dismiss and Title Options", () => {
   it("should render title in interactive dialogs when provided", async () => {
     const toaster = createToaster();
 
-    const h1 = toaster.interactive.confirm("Message 1", { title: "Title 1" });
+    const h1 = toaster.dialog.confirm("Message 1", { title: "Title 1" });
     let titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 1");
     h1.dismiss();
     await h1.settled;
 
-    const h2 = toaster.interactive.prompt("Message 2", { title: "Title 2" });
+    const h2 = toaster.dialog.prompt("Message 2", { title: "Title 2" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 2");
     h2.dismiss();
     await h2.settled;
 
-    const h3 = toaster.interactive.alert("Message 3", { title: "Title 3" });
+    const h3 = toaster.dialog.alert("Message 3", { title: "Title 3" });
     titleEl = document.body.querySelector(".toast-dialog-title");
     expect(titleEl).not.toBeNull();
     expect(titleEl?.textContent).toBe("Title 3");
@@ -1170,7 +1359,7 @@ describe("WCAG Accessibility", () => {
   it("should pause auto-dismiss on hover and resume on leave", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
-    const handle = toaster.semantic.success("Hover Test");
+    const handle = toaster.success("Hover Test");
     flushAnimations();
 
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
@@ -1197,7 +1386,7 @@ describe("WCAG Accessibility", () => {
   it("should pause auto-dismiss on focus and resume on blur", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
-    const handle = toaster.semantic.success("Focus Test");
+    const handle = toaster.success("Focus Test");
     flushAnimations();
 
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;

@@ -8,7 +8,7 @@ import type { SemanticToastOptions, SemanticType } from "../types";
  */
 export interface SemanticRawOptions extends SemanticToastOptions {
   /** The semantic category type. Defaults to "success". */
-  type?: SemanticType;
+  type?: SemanticType | "default";
 }
 
 /**
@@ -17,7 +17,7 @@ export interface SemanticRawOptions extends SemanticToastOptions {
  */
 export class SemanticToast extends Toast {
   protected static override getPresetOptions(options: SemanticRawOptions) {
-    const type: SemanticType = options.type ?? "success";
+    const type: SemanticType | "default" = options.type ?? "success";
     assertSemanticType(type);
     return {
       icon: SEMANTIC_ICONS[type],

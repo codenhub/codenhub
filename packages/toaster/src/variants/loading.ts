@@ -12,7 +12,7 @@ const LOADING_ROOT_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
 export class LoadingToast extends Toast {
   protected static override getPresetOptions() {
     return {
-      shouldAutoDismiss: false,
+      autoDismiss: false,
       icon: "loader",
       role: "status",
       rootClassName: LOADING_ROOT_CLASS,
