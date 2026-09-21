@@ -419,6 +419,43 @@ describe("toast.promise", () => {
     vi.useRealTimers();
     toaster.destroy();
   });
+
+  it("preserves options.duration across loading options merge on resolution", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+
+    let resolvePromise!: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    toaster.promise(promise, {
+      duration: 8000,
+      loading: { message: "Loading...", duration: 1000 },
+      success: "Finished!",
+      error: "Error",
+    });
+
+    expect(document.body.textContent).toContain("Loading...");
+    resolvePromise();
+    await Promise.resolve();
+    flushAnimations();
+
+    expect(document.body.textContent).toContain("Finished!");
+
+    // Advance 5000ms (past 1000ms loading duration and 5000ms default duration)
+    vi.advanceTimersByTime(5000);
+    flushAnimations();
+    expect(document.body.textContent).toContain("Finished!");
+
+    // Advance remaining 3000ms to reach 8000ms
+    vi.advanceTimersByTime(3000);
+    flushAnimations();
+    expect(document.body.textContent).not.toContain("Finished!");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
 });
 
 describe("toaster semantic variants", () => {

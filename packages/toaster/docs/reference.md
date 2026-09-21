@@ -37,7 +37,7 @@ Construction validates positions, finite non-negative durations, positive intege
 
 `Toaster` is a callable function (`toast("Message")` or `toast({ message: "..." })`) that also exposes methods for variants (`success`, `error`, `warning`, `info`), states (`loading`, `custom`, `promise`), queue management (`clear`, `dismiss`), and dialogs (`dialog`).
 
-`clear()` dismisses all visible toasts. `dismiss(handle?)` dismisses the specified toast when given a handle, or all active toasts when called without arguments.
+`clear()` dismisses all visible and queued toasts. `dismiss(handle?)` dismisses the specified toast when given a handle, or all active toasts when called without arguments.
 
 `destroy()` is idempotent; it dismisses active/queued work, closes dialogs, restores focus when possible, removes owned DOM/listeners/timers/styles, and makes later calls throw. Dismissal through `destroy()` is immediate and synchronous: every handle settles (`state` becomes `"hidden"` and `settled` resolves) before `destroy()` returns, canceling any in-flight entrance or exit animation rather than waiting for one that nothing is left to see complete on its own -- unlike a normal `dismiss()`/`hide()`, which still animates.
 
@@ -108,11 +108,12 @@ If more simultaneous toasts are showing at one position than fit in the viewport
 
 `ToastTokens` exposes optional colors for semantic variants:
 
-- Success: `successBg`, `successFg`, `successEdge`, `successBtnBg`, `successBtnFg`, `successBtnEdge`
-- Error: `errorBg`, `errorFg`, `errorEdge`, `errorBtnBg`, `errorBtnFg`, `errorBtnEdge`
-- Warning: `warningBg`, `warningFg`, `warningEdge`, `warningBtnBg`, `warningBtnFg`, `warningBtnEdge`
-- Info: `infoBg`, `infoFg`, `infoEdge`, `infoBtnBg`, `infoBtnFg`, `infoBtnEdge`
-- Common: `surface`, `border`, `text`, `primaryBtnBg`, `primaryBtnFg`, `primaryEdge`, `secondaryBtnBg`, `secondaryBtnFg`, `secondaryEdge`
+- Default: `defaultBg`, `defaultFg`, `defaultEdge`
+- Success: `successBg`, `successFg`, `successEdge`, `successBtnBg`, `successBtnFg`, `successBtnBgHover`, `successBtnEdge`
+- Error: `errorBg`, `errorFg`, `errorEdge`, `errorBtnBg`, `errorBtnFg`, `errorBtnBgHover`, `errorBtnEdge`
+- Warning: `warningBg`, `warningFg`, `warningEdge`
+- Info: `infoBg`, `infoFg`, `infoEdge`
+- Common: `surface`, `border`, `text`, `primaryBg`, `primaryFg`, `primaryBgHover`, `primaryEdge`, `secondaryBg`, `secondaryFg`, `secondaryBgHover`, `secondaryEdge`
 
 ## SSR and Browser Lifecycle
 

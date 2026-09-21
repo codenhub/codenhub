@@ -54,10 +54,12 @@ function parseToastArgs(
   return { message: messageOrOptions.message, options: messageOrOptions };
 }
 
+type InternalLoadingOptions = LoadingToastOptions & { duration?: number };
+
 function parseLoadingArgs(
-  messageOrOptions?: string | LoadingToastOptions,
-  options?: LoadingToastOptions,
-): { message?: string; options: LoadingToastOptions } {
+  messageOrOptions?: string | InternalLoadingOptions,
+  options?: InternalLoadingOptions,
+): { message?: string; options: InternalLoadingOptions } {
   if (typeof messageOrOptions === "string") {
     return { message: messageOrOptions, options: options ?? {} };
   }
@@ -235,7 +237,7 @@ class ToastManager {
     return this.registerToast(toast);
   }
 
-  public loading(messageOrOptions?: string | LoadingToastOptions, options?: LoadingToastOptions): ToastHandle {
+  public loading(messageOrOptions?: string | InternalLoadingOptions, options?: InternalLoadingOptions): ToastHandle {
     this.assertAlive();
     const { message, options: parsedOpts } = parseLoadingArgs(messageOrOptions, options);
     const rawOptions: RawToastOptions = {
@@ -277,6 +279,7 @@ class ToastManager {
     const handle = this.loading({
       ...options,
       ...loadingOpts,
+      duration: options.duration,
     });
 
     return Promise.resolve(promise).then(
