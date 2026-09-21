@@ -221,7 +221,7 @@ Construction validates positions, finite non-negative durations, positive intege
 
 `Toaster` is a callable function (`toast("Message")` or `toast({ message: "..." })`) that also exposes methods for variants (`success`, `error`, `warning`, `info`), states (`loading`, `custom`, `promise`), queue management (`clear`, `dismiss`), and dialogs (`dialog`).
 
-`clear(handle?)` dismisses all visible toasts when called with no arguments, or dismisses the specified toast when given a handle. `dismiss(handle?)` is an intuitive alias that calls `handle.dismiss()` when a handle is supplied or `clear()` when called without arguments.
+`clear()` dismisses all visible toasts. `dismiss(handle?)` dismisses the specified toast when given a handle, or all active toasts when called without arguments.
 
 `destroy()` is idempotent; it dismisses active/queued work, closes dialogs, restores focus when possible, removes owned DOM/listeners/timers/styles, and makes later calls throw. Dismissal through `destroy()` is immediate and synchronous: every handle settles (`state` becomes `"hidden"` and `settled` resolves) before `destroy()` returns, canceling any in-flight entrance or exit animation rather than waiting for one that nothing is left to see complete on its own -- unlike a normal `dismiss()`/`hide()`, which still animates.
 
@@ -240,8 +240,8 @@ The callable `Toaster` surface exposes:
 - `toaster.custom(content, options?)`: Dispatches a toast with custom HTML string, DOM Node, or node factory function.
 - `toaster.promise(promise, options)`: Binds notification state to a Promise lifecycle, automatically transitioning from loading to success or error and re-arming auto-dismiss. Returns the original Promise result.
 - `toaster.dialog`: Exposes interactive browser dialogs (`confirm`, `prompt`, `alert`).
-- `toaster.clear(handle?)`: Dismisses all visible toasts, or a specific toast if a handle is passed.
-- `toaster.dismiss(handle?)`: Alias for `handle.dismiss()` when a handle is passed or `clear()` when omitted.
+- `toaster.clear()`: Dismisses all visible and queued toasts.
+- `toaster.dismiss(handle?)`: Dismisses a specific toast if a handle is passed, or all active toasts when omitted.
 
 `DialogDispatcher` exposes:
 

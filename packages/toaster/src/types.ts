@@ -123,16 +123,16 @@ export interface ToastAction {
  * Options that can be dynamically updated on a live toast instance.
  */
 export interface ToastUpdateOptions {
-  /** Optional title to replace on the toast. */
-  title?: string;
+  /** Optional title to replace on the toast, or `null` to remove it. */
+  title?: string | null;
   /**
    * The new message text. Ignored if `content` is also given in this same
    * call; has no effect on a toast that was built from `content` rather
-   * than `message` (there is no message slot to write into).
+   * than `message` (there is no message slot to write into). Pass `null` to remove it.
    */
-  message?: string;
-  /** Optional secondary description text below the message or title. */
-  description?: string;
+  message?: string | null;
+  /** Optional secondary description text below the message or title, or `null` to remove it. */
+  description?: string | null;
   /** Replaces or removes the inline action button (`null` removes it). */
   action?: ToastAction | null;
   /**
@@ -651,7 +651,7 @@ export interface Toaster {
   /**
    * Displays custom HTML or DOM node content.
    */
-  custom(content: ToastContent, options?: CustomToastOptions): ToastHandle;
+  custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
   custom(options: CustomToastOptions): ToastHandle;
 
   /**

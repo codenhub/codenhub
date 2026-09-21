@@ -16,6 +16,7 @@ import {
   applyUpdateToElement,
   assertDuration,
   assertSemanticType,
+  hasNonEmptyString,
   normalizeToastOptions,
   resolveToastContent,
 } from "./options";
@@ -42,9 +43,9 @@ import type {
 
 /** `Toast.update()`'s fields, resolved and validated once up front so applying them is infallible. */
 interface NormalizedUpdate {
-  title?: string;
-  message?: string;
-  description?: string;
+  title?: string | null;
+  message?: string | null;
+  description?: string | null;
   action?: ToastAction | null;
   content?: readonly Node[];
   icon?: ToastIcon | null;
@@ -369,10 +370,20 @@ export class Toast {
       assertSemanticType(update.type);
     }
 
+    const title = update.title !== undefined ? (hasNonEmptyString(update.title) ? update.title : null) : undefined;
+    const message =
+      update.message !== undefined ? (hasNonEmptyString(update.message) ? update.message : null) : undefined;
+    const description =
+      update.description !== undefined
+        ? hasNonEmptyString(update.description)
+          ? update.description
+          : null
+        : undefined;
+
     return {
-      title: update.title,
-      message: update.message,
-      description: update.description,
+      title,
+      message,
+      description,
       action: update.action,
       content:
         update.content !== undefined
@@ -382,7 +393,7 @@ export class Toast {
       type: update.type,
       duration: update.duration,
       autoDismiss: update.autoDismiss,
-      dismissible: update.dismissible,
+      dismissible: update.dismissible ?? update.closeButton,
       // Snapshotted rather than referenced: the same boundary
       // normalizeToastOptions draws for construction-time tokens, so a
       // caller mutation after this call cannot change what gets applied.

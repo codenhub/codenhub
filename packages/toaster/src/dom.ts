@@ -204,9 +204,22 @@ function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
   return element;
 }
 
-/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class. */
+/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class, and never custom user-provided SVGs. */
 function findToastIcon(container: HTMLDivElement): Element | null {
-  return container.querySelector("svg.coden-toast-icon");
+  const main = Array.from(container.children).find((child) => child.classList.contains("coden-toast-main"));
+  if (main) {
+    for (const child of main.children) {
+      if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
+        return child;
+      }
+    }
+  }
+  for (const child of container.children) {
+    if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
+      return child;
+    }
+  }
+  return null;
 }
 
 /**

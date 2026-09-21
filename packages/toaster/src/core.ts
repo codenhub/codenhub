@@ -13,6 +13,7 @@ import type {
   LoadingToastOptions,
   PromiseToastOptions,
   PromptOptions,
+  SemanticType,
   ToastContent,
   ToastHandle,
   ToastOptions,
@@ -68,7 +69,7 @@ function parseLoadingArgs(
 
 function parseCustomArgs(
   contentOrOptions: ToastContent | CustomToastOptions,
-  options?: CustomToastOptions,
+  options?: Omit<CustomToastOptions, "content">,
 ): { content?: ToastContent; options: Omit<CustomToastOptions, "content"> } {
   if (
     typeof contentOrOptions === "string" ||
@@ -79,6 +80,31 @@ function parseCustomArgs(
   }
   const opts = (contentOrOptions ?? {}) as CustomToastOptions;
   return { content: opts.content, options: opts };
+}
+
+function toStructuredPromiseUpdate(result: string | ToastOptions, type: SemanticType): ToastUpdateOptions {
+  if (typeof result === "string") {
+    return {
+      type,
+      autoDismiss: true,
+      message: result,
+      title: null,
+      description: null,
+    };
+  }
+  return {
+    type,
+    autoDismiss: true,
+    message: result.message !== undefined ? result.message : null,
+    title: result.title !== undefined ? result.title : null,
+    description: result.description !== undefined ? result.description : null,
+    action: result.action !== undefined ? result.action : null,
+    icon: result.icon,
+    duration: result.duration,
+    dismissible: result.dismissible ?? result.closeButton,
+    className: result.className,
+    tokens: result.tokens,
+  };
 }
 
 class ToastManager {
@@ -226,7 +252,10 @@ class ToastManager {
     return this.registerToast(toast);
   }
 
-  public custom(contentOrOptions: ToastContent | CustomToastOptions, options?: CustomToastOptions): ToastHandle {
+  public custom(
+    contentOrOptions: ToastContent | CustomToastOptions,
+    options?: Omit<CustomToastOptions, "content">,
+  ): ToastHandle {
     this.assertAlive();
     const { content, options: parsedOpts } = parseCustomArgs(contentOrOptions, options);
     const rawOptions: RawToastOptions = {
@@ -245,8 +274,7 @@ class ToastManager {
   public promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T> {
     this.assertAlive();
     const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
-    const loadingMsg = loadingOpts.message ?? loadingOpts.title ?? "";
-    const handle = this.loading(loadingMsg, {
+    const handle = this.loading({
       ...options,
       ...loadingOpts,
     });
@@ -254,19 +282,13 @@ class ToastManager {
     return Promise.resolve(promise).then(
       (value) => {
         const successResult = typeof options.success === "function" ? options.success(value) : options.success;
-        const successOpts: ToastUpdateOptions =
-          typeof successResult === "string"
-            ? { message: successResult, title: successResult, type: "success", autoDismiss: true }
-            : { type: "success", autoDismiss: true, ...successResult };
+        const successOpts = toStructuredPromiseUpdate(successResult, "success");
         handle.update(successOpts);
         return value;
       },
       (error) => {
         const errorResult = typeof options.error === "function" ? options.error(error) : options.error;
-        const errorOpts: ToastUpdateOptions =
-          typeof errorResult === "string"
-            ? { message: errorResult, title: errorResult, type: "error", autoDismiss: true }
-            : { type: "error", autoDismiss: true, ...errorResult };
+        const errorOpts = toStructuredPromiseUpdate(errorResult, "error");
         handle.update(errorOpts);
         throw error;
       },
@@ -485,7 +507,7 @@ export function createToaster(config?: ToasterConfig): Toaster {
         manager.info(messageOrOptions, options),
       loading: (messageOrOptions?: string | LoadingToastOptions, options?: LoadingToastOptions) =>
         manager.loading(messageOrOptions, options),
-      custom: (contentOrOptions: ToastContent | CustomToastOptions, options?: CustomToastOptions) =>
+      custom: (contentOrOptions: ToastContent | CustomToastOptions, options?: Omit<CustomToastOptions, "content">) =>
         manager.custom(contentOrOptions, options),
       promise: <T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>) => manager.promise(promise, options),
       dialog: manager.dialog,

@@ -156,7 +156,7 @@ export interface ToastPresetOptions {
   readonly rootClassName?: string;
 }
 
-function hasNonEmptyString(value: string | undefined): value is string {
+export function hasNonEmptyString(value: string | undefined | null): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 

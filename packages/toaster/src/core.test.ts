@@ -360,6 +360,65 @@ describe("toast.promise", () => {
     vi.useRealTimers();
     toaster.destroy();
   });
+
+  it("preserves distinct title and message snapshots across transitions", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+
+    let resolvePromise!: (val: string) => void;
+    const promise = new Promise<string>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    toaster.promise(promise, {
+      loading: { title: "Saving", description: "Please wait" },
+      success: { title: "Saved" },
+      error: "Error",
+    });
+
+    const loadingMain = document.body.querySelector(".coden-toast-main")!;
+    expect(loadingMain.textContent).toContain("Saving");
+    expect(loadingMain.textContent).toContain("Please wait");
+
+    resolvePromise("ok");
+    await Promise.resolve();
+    flushAnimations();
+
+    const successMain = document.body.querySelector(".coden-toast-main")!;
+    expect(successMain.textContent).toContain("Saved");
+    expect(successMain.textContent).not.toContain("Please wait");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
+
+  it("clears loading title when resolved with a string success message", async () => {
+    vi.useFakeTimers();
+    const toaster = createToaster();
+
+    let resolvePromise!: () => void;
+    const promise = new Promise<void>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    toaster.promise(promise, {
+      loading: { title: "Working...", message: "Hang tight" },
+      success: "Finished!",
+      error: "Error",
+    });
+
+    resolvePromise();
+    await Promise.resolve();
+    flushAnimations();
+
+    const successMain = document.body.querySelector(".coden-toast-main")!;
+    expect(successMain.textContent).toContain("Finished!");
+    expect(successMain.textContent).not.toContain("Working...");
+    expect(successMain.textContent).not.toContain("Hang tight");
+
+    vi.useRealTimers();
+    toaster.destroy();
+  });
 });
 
 describe("toaster semantic variants", () => {
@@ -433,6 +492,17 @@ describe("toaster.custom", () => {
     expect(html).toContain("<span>Custom!</span>");
     expect(html).not.toContain("onclick");
     expect(html).not.toContain("<script>");
+    h.dismiss();
+    toaster.destroy();
+  });
+
+  it("accepts positional options omitting content field", () => {
+    const toaster = createToaster();
+    const node = document.createElement("span");
+    node.textContent = "Custom node";
+    const h = toaster.custom(node, { duration: 2500, className: "custom-opt" });
+    expect(document.body.innerHTML).toContain("Custom node");
+    expect(document.body.querySelector(".custom-opt")).not.toBeNull();
     h.dismiss();
     toaster.destroy();
   });
@@ -1052,6 +1122,53 @@ describe("Toast update", () => {
 
     expect(() => handle.update({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
     expect(element.textContent).toContain("Original");
+
+    toaster.destroy();
+  });
+
+  it("normalizes empty update title to absent and preserves existing message", () => {
+    const toaster = createToaster();
+    const handle = toaster("Persistent message");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.textContent).toContain("Persistent message");
+
+    handle.update({ title: "" });
+    expect(element.textContent).toContain("Persistent message");
+
+    toaster.destroy();
+  });
+
+  it("honors closeButton alias in update()", () => {
+    const toaster = createToaster({ dismissible: false });
+    const handle = toaster("No close button");
+    flushAnimations();
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.querySelector(".coden-toast-dismiss")).toBeNull();
+
+    handle.update({ closeButton: true });
+    expect(element.querySelector(".coden-toast-dismiss")).not.toBeNull();
+
+    toaster.destroy();
+  });
+
+  it("does not select or replace custom nested SVGs in custom toasts", () => {
+    const toaster = createToaster();
+    const customWrapper = document.createElement("div");
+    customWrapper.className = "custom-wrapper";
+    const nestedSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    nestedSvg.setAttribute("class", "coden-toast-icon");
+    nestedSvg.setAttribute("data-test", "user-icon");
+    customWrapper.appendChild(nestedSvg);
+
+    const handle = toaster.custom(customWrapper);
+    flushAnimations();
+
+    handle.update({ icon: "success" });
+
+    // The user's nested SVG must remain untouched
+    const userSvg = document.body.querySelector('[data-test="user-icon"]');
+    expect(userSvg).not.toBeNull();
 
     toaster.destroy();
   });
