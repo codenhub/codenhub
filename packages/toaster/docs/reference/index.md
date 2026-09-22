@@ -1705,10 +1705,10 @@ Category names for predefined styles.
 ### ToastContent
 
 ```ts
-export type ToastContent = ToastContentValue | ((handle: ToastHandle) => ToastContentValue) | (() => ToastContentValue);
+export type ToastContent = string | Node | ((handle: ToastHandle) => string | Node) | (() => string | Node);
 ```
 
-Supported custom content. Strings are sanitized by the package. DOM nodes are trusted application-owned content and are inserted without sanitizing. Can also be a function receiving the `ToastHandle`.
+Supported custom content. Strings are sanitized by the package. DOM nodes are trusted application-owned content and are inserted without sanitizing. Can also be a function receiving the `ToastHandle` or returning content directly.
 
 ### ToasterRuntimeConfig
 

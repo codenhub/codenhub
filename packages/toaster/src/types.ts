@@ -287,16 +287,11 @@ export interface InteractiveToastHandle<T> extends PromiseLike<T> {
 }
 
 /**
- * Union type representing the acceptable content values inside custom toasts.
- */
-type ToastContentValue = string | Node;
-
-/**
  * Supported custom content. Strings are sanitized by the package. DOM nodes
  * are trusted application-owned content and are inserted without sanitizing.
- * Can also be a function receiving the `ToastHandle`.
+ * Can also be a function receiving the `ToastHandle` or returning content directly.
  */
-export type ToastContent = ToastContentValue | ((handle: ToastHandle) => ToastContentValue) | (() => ToastContentValue);
+export type ToastContent = string | Node | ((handle: ToastHandle) => string | Node) | (() => string | Node);
 
 /**
  * Options for dispatching standard toast notifications.
