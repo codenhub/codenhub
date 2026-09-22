@@ -4,7 +4,7 @@ last_updated: 2026-09-04
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
-# Naming
+# Branding and naming
 
 This document explains the Coden and CodenHub brand model and how to name and title things that sit under it: packages, package titles, and the words used to describe them in READMEs, `package.json`, and the docs site. It is a guide for making and recording naming decisions, not a compliance checklist — structural README and metadata requirements stay in `docs/specs/packages-readme.md` and `docs/specs/packages-lifecycle.md`. This document only governs the words and brand attribution used within them.
 

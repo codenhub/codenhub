@@ -84,7 +84,7 @@ Documentation work MUST start by reviewing the package's public surface. An expo
 
 Packages MUST export only values, types, files, and subpaths intended for consumer use. Implementation details that consumers should not access MUST stay unexported from package entrypoints and `package.json` `exports`. Do not preserve an accidental export merely to document it.
 
-Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/code-guidelines.md`.
+Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/guidelines/code.md`.
 
 Complete coverage here means every import path is introduced and every consumer-facing capability is explained. It does not mean every exported symbol is enumerated in hand-authored prose. When a package ships a generated API reference (`docs/specs/packages-reference.md`), that reference is the exhaustive per-symbol catalogue, and the hand-authored docs are not required to repeat it; they still MUST cover the concepts, tasks, domain, and failure modes a first-time consumer needs, and MUST NOT shrink to a stub that only links to the reference.
 

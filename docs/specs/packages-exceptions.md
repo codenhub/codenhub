@@ -14,7 +14,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 
 ## `@codenhub/tauri-plugin-webview`: Rust-specific conventions
 
-- **Rules bypassed:** `docs/code-guidelines.md` (files and folders use kebab-case; variables and functions use camelCase).
+- **Rules bypassed:** `docs/guidelines/code.md` (files and folders use kebab-case; variables and functions use camelCase).
 - **Where it applies:** `packages/plugins/tauri/webview/src/webview_commands.rs` and associated Rust command and module identifiers, such as `webview_commands`, `navigate_webview`, and `reload_webview`.
 - **Why acceptable:** Companion Rust code must follow idiomatic Rust naming conventions (snake_case for files, functions, and modules) to prevent compiler warnings and stay consistent with Tauri Rust APIs.
 - **Temporary or permanent:** Permanent.

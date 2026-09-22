@@ -84,7 +84,7 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Prefer observable behavior over implementation details.
 - Update affected tests when changing behavior.
 
-For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](./specs/tests.md).
+For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](../specs/tests.md).
 
 ## Documentation
 

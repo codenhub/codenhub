@@ -1,6 +1,6 @@
 # Agent instructions
 
-This repository is docs-first. Before making non-trivial changes, read and follow the relevant source-of-truth documents in `docs/`, especially `docs/code-guidelines.md` and `docs/docs-guidelines.md`.
+This repository is docs-first. Before making non-trivial changes, read and follow the relevant source-of-truth documents in `docs/`, especially `docs/guidelines/code.md` and `docs/docs-guidelines.md`.
 
 ## Repository map
 
@@ -85,7 +85,7 @@ Read `CONTRIBUTING.md` before your first commit in a session. The summary above 
 - Prefer small, targeted changes.
 - Do not refactor outside the requested scope.
 - Update docs in the same change when behavior, public APIs, package exports, conventions, or lifecycle rules change.
-- Follow `docs/code-guidelines.md` for code style, architecture, TypeScript, testing, and source documentation requirements.
+- Follow `docs/guidelines/code.md` for code style, architecture, TypeScript, testing, and source documentation requirements.
 - Follow `docs/tooling.md` when changing root scripts, package scripts, or repository tooling.
 - Follow `docs/ci.md` when changing the workflows, the pinned toolchain, or anything CI runs.
 - Follow `docs/docs-guidelines.md` when creating, updating, interpreting, or making exceptions to durable documentation.

@@ -2,7 +2,7 @@
 
 This document covers how a change gets from a working tree into `main`: branches, commits, and pull requests. It applies to everyone, and it applies unchanged to AI agents — an agent that cannot follow it should not be committing here. `AGENTS.md` routes agents to it.
 
-What a change must contain, rather than how it lands, lives elsewhere: `docs/code-guidelines.md` for code, `docs/docs-guidelines.md` for documentation, and `docs/tooling.md` for the commands referenced below.
+What a change must contain, rather than how it lands, lives elsewhere: `docs/guidelines/code.md` for code, `docs/docs-guidelines.md` for documentation, and `docs/tooling.md` for the commands referenced below.
 
 ## Setup
 
