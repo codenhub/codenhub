@@ -6,7 +6,7 @@ scope: Approved exceptions for workspace packages.
 
 # Package exceptions
 
-This document is the central register for package-specific exceptions to repository guidelines and package specs. New exceptions MUST follow the exception rules in `docs/docs-guidelines.md`.
+This document is the central register for package-specific exceptions to repository guidelines and package specs. New exceptions MUST follow the exception rules in `docs/README.md`.
 
 An exception to a rule that `hub check` enforces MUST also declare a `Checks bypassed` bullet listing the affected check codes in backticks, as shown below. `hub check` reads that bullet, so a waiver cannot exist without being recorded here. Run `pnpm check --json` to see the code behind any finding.
 
@@ -14,7 +14,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 
 ## `@codenhub/tauri-plugin-webview`: Rust-specific conventions
 
-- **Rules bypassed:** `docs/code-guidelines.md` (files and folders use kebab-case; variables and functions use camelCase).
+- **Rules bypassed:** `docs/guidelines/code.md` (files and folders use kebab-case; variables and functions use camelCase).
 - **Where it applies:** `packages/plugins/tauri/webview/src/webview_commands.rs` and associated Rust command and module identifiers, such as `webview_commands`, `navigate_webview`, and `reload_webview`.
 - **Why acceptable:** Companion Rust code must follow idiomatic Rust naming conventions (snake_case for files, functions, and modules) to prevent compiler warnings and stay consistent with Tauri Rust APIs.
 - **Temporary or permanent:** Permanent.

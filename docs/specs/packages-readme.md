@@ -128,4 +128,4 @@ Experimental packages MUST state what is unstable: API shape, behavior, build ou
 
 ## Exceptions
 
-Exceptions to this spec MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Exceptions to this spec MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.

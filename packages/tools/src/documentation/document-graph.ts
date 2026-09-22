@@ -108,8 +108,8 @@ function normalizePath(filePath: string): string {
  * Reports whether a package-relative path is validated as public documentation.
  *
  * `docs/internal/` is validated separately, under its own governance model.
- * `docs/plans/` is neither -- it is a git-ignored planning aid (per
- * `docs/docs-guidelines.md`) that never reaches a real build, so it carries
+ * `docs/plans/` is neither -- it is a git-ignored planning aid (per the repository
+ * root `docs/README.md`) that never reaches a real build, so it carries
  * no frontmatter contract at all.
  * @param filePath Package-relative POSIX path.
  * @returns `true` for the README, LLM files, and public `docs/` Markdown.

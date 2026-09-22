@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-31
+last_updated: 2026-09-22
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -17,6 +17,13 @@ Every durable repository document in root `docs/` MUST start with YAML frontmatt
 
 Documents SHOULD include `scope` when the title alone does not make ownership clear.
 
+Allowed statuses:
+
+- `DRAFT`: Work in progress. Use as context, not as binding source of truth.
+- `APPROVED`: Agreed source of truth. Future work MUST follow it. Existing code may be non-compliant and should be treated as legacy until updated.
+- `IMPLEMENTED`: Agreed source of truth and current implementation is expected to comply. New exceptions MUST be documented or the document MUST be updated.
+- `SUPERSEDED`: Temporary. Being replaced by a refactor that lands across more than one change, while the code it describes is still live. The document MUST name its replacement in its first paragraph and MUST be deleted in the change that completes the replacement. It is never a way to keep a retired document around.
+
 ```yaml
 ---
 status: APPROVED
@@ -31,13 +38,7 @@ Templates that would copy repository governance metadata into consumer-facing ou
 
 Markdown in this repository is not hard-wrapped. Write each paragraph and list item as a single line and let the editor wrap it on screen. Markdown renders a lone newline inside a paragraph as a space, so wrapped and unwrapped source read identically once rendered, and leaving prose unwrapped keeps an edit to one word from reflowing a whole paragraph in the diff.
 
-`pnpm format` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, such as vendored icon attributions and adapted agent skills, is kept as received and is exempt.
-
-Allowed statuses:
-
-- `DRAFT`: Work in progress. Use as context, not as binding source of truth.
-- `APPROVED`: Agreed source of truth. Future work MUST follow it. Existing code may be non-compliant and should be treated as legacy until updated.
-- `IMPLEMENTED`: Agreed source of truth and current implementation is expected to comply. New exceptions MUST be documented or the document MUST be updated.
+`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, such as vendored icon attributions and adapted agent skills, is kept as received and is exempt.
 
 ## Source of truth
 
@@ -54,6 +55,8 @@ When APPROVED or IMPLEMENTED documentation conflicts with code, the documentatio
 When APPROVED or IMPLEMENTED documents conflict with each other, the conflict MUST be resolved in the same change if practical. If not practical, move the conflicting documents to `DRAFT` and add a short note explaining the conflict.
 
 Prefer updating existing documents over creating overlapping ones. Prefer updating documentation before changing code so intended direction is clear before implementation follows.
+
+Delete a document once it no longer describes current or intended direction, in the same change that makes it stale. Git keeps its history; an outdated document kept in the tree only competes with the current one in search and review.
 
 ## Exceptions
 
@@ -85,3 +88,13 @@ Do not use root `docs/` for temporary notes, TODO lists, or information better e
 Repository documentation is not consumer documentation by default. Catalogs, generated collections, and other publishing tools MUST include root documents only through an explicit selection rule; they MUST NOT treat all of root `docs/` as a public content source. Repository governance metadata also MUST NOT be interpreted as package stability or consumer support metadata.
 
 Plans and similar temporary documents MAY live in `docs/plans/`. This directory is git-ignored and should stay that way because these files are short-lived planning aids, not durable repository documentation.
+
+## Layout
+
+Root `docs/` is organized by what a document is for:
+
+- `docs/specs/`: contracts for a deliverable — what a package, its README, its tests, its errors, or a roadmap MUST contain. A spec is written so compliance can be checked, and `hub check` enforces part of them.
+- `docs/guidelines/`: conventions contributors apply by judgment while working — how to write code, how to name and brand a package. A guideline MAY contain enforced rules, but its main job is to shape decisions no checklist fully captures.
+- Root `docs/`: this README, which governs the whole tree, and references for one repository area or process, such as `tooling.md`, `ci.md`, `assets.md`, and `roadmap.md`.
+
+When a new document could fit more than one place, file it by its main job: rules a deliverable must satisfy go in `specs/`, how to work goes in `guidelines/`, and what exists and how to use it stays at the root. Do not add another folder until a group of documents fits none of these.

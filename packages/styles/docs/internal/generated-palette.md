@@ -6,7 +6,7 @@ scope: Decision to generate a flat, published output of `@codenhub/styles`' comp
 
 # A generated palette for consumers outside the Tailwind pipeline
 
-This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per `docs/docs-guidelines.md`'s `APPROVED` status.
+This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per the repository root `docs/README.md`'s `APPROVED` status.
 
 This document intentionally contains no example file contents or drop-in code, only the real, independently verifiable numbers that motivate it and the naming/structure rules an implementer derives the actual output from -- see [`.progress` gains presentation](./progress-presentation-axes.md) for why a prescriptive snippet here would go stale and get trusted over the real generator output.
 

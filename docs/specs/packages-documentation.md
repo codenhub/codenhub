@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-10
+last_updated: 2026-09-22
 scope: Documentation for public workspace packages.
 ---
 
@@ -84,7 +84,7 @@ Documentation work MUST start by reviewing the package's public surface. An expo
 
 Packages MUST export only values, types, files, and subpaths intended for consumer use. Implementation details that consumers should not access MUST stay unexported from package entrypoints and `package.json` `exports`. Do not preserve an accidental export merely to document it.
 
-Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/code-guidelines.md`.
+Public docs MUST provide complete coverage at the public entrypoint and API surface level. Every supported import path and consumer-facing surface must be discoverable and explained. Source JSDoc/TSDoc remains responsible for detailed per-symbol behavior as required by `docs/guidelines/code.md`.
 
 Complete coverage here means every import path is introduced and every consumer-facing capability is explained. It does not mean every exported symbol is enumerated in hand-authored prose. When a package ships a generated API reference (`docs/specs/packages-reference.md`), that reference is the exhaustive per-symbol catalogue, and the hand-authored docs are not required to repeat it; they still MUST cover the concepts, tasks, domain, and failure modes a first-time consumer needs, and MUST NOT shrink to a stub that only links to the reference.
 
@@ -125,7 +125,7 @@ docs/
   troubleshooting.md
 ```
 
-Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/README.md`; `docs/index.md` owns the documentation entrypoint.
+Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/README.md`; `docs/index.md` owns the documentation entrypoint. The repository's root `docs/README.md` is outside this rule: root `docs/` is never published, and a README is what a repository browser shows first.
 
 Public documentation paths MUST be deterministic and portable:
 
@@ -190,7 +190,7 @@ docs/internal/
   debugging.md
 ```
 
-These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/docs-guidelines.md` because they may describe approved future direction as well as current implementation.
+These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/README.md` because they may describe approved future direction as well as current implementation.
 
 Do not use `docs/internal/` for scratch notes, short-lived plans, TODO lists, or information better expressed in code comments or issue tracking.
 
@@ -249,4 +249,4 @@ Link validation MUST cover `README.md`, public `docs/**/*.md`, `llms.txt`, and t
 
 ## Exceptions
 
-Package documentation exceptions MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Package documentation exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.

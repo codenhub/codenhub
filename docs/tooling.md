@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-08
+last_updated: 2026-09-22
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -30,6 +30,7 @@ Root scripts map directly onto it:
 | `pnpm check`         | `hub check`         |
 | `pnpm clean`         | `hub clean`         |
 | `pnpm cloc`          | `hub cloc`          |
+| `pnpm format`        | `hub format`        |
 | `pnpm format:check`  | `hub format`        |
 | `pnpm format:fix`    | `hub format --fix`  |
 | `pnpm generate`      | `hub generate`      |
@@ -45,6 +46,8 @@ Root scripts map directly onto it:
 | `pnpm test:watch`    | `hub test:watch`    |
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
+
+`pnpm format` duplicates `pnpm format:check` on purpose. When a name matches no script, pnpm runs the executable of that name from `PATH` instead, and on Windows `format` is the system disk formatter; the alias keeps the obvious name pointed at the repository's formatter.
 
 `hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, and `hub preview:deploy` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
@@ -142,7 +145,7 @@ Package runs are killed when they exceed `--timeout`. This is what keeps one han
 
 `lint`, `format`, and `cloc` run from the repository root over resolved paths rather than once per package. Selecting nothing falls back to the whole repository, which is why `pnpm cloc` needs no argument.
 
-`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/docs-guidelines.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists — vendored icon attributions and adapted agent skills — is left as received.
+`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/README.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists — vendored icon attributions and adapted agent skills — is left as received.
 
 ## Browser tests
 

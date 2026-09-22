@@ -36,7 +36,7 @@ A pull request checks what it changed, which is what makes the run fast enough t
 
 Runs for the same pull request cancel each other, because only the newest push is worth a verdict. Runs on `main` never cancel: each merge is the authoritative check of that commit.
 
-The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. Pull requests check the changed packages against their base branch; pushes to `main` check the whole workspace. The scope and remaining review responsibilities are defined in `docs/code-guidelines.md`.
+The verification sequence builds declarations before `hub check` inspects them. Its `undocumented-export/missing-jsdoc` errors fail the `Verify` job when a selected package exposes a top-level typed export without JSDoc/TSDoc. Pull requests check the changed packages against their base branch; pushes to `main` check the whole workspace. The scope and remaining review responsibilities are defined in `docs/guidelines/code.md`.
 
 ## Jobs
 

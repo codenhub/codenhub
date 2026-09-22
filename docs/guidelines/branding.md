@@ -1,10 +1,10 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-04
+last_updated: 2026-09-22
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
-# Naming
+# Branding and naming
 
 This document explains the Coden and CodenHub brand model and how to name and title things that sit under it: packages, package titles, and the words used to describe them in READMEs, `package.json`, and the docs site. It is a guide for making and recording naming decisions, not a compliance checklist — structural README and metadata requirements stay in `docs/specs/packages-readme.md` and `docs/specs/packages-lifecycle.md`. This document only governs the words and brand attribution used within them.
 
@@ -95,4 +95,4 @@ Before naming a new package or writing its README title:
 1. Apply the branding test above and decide branded or neutral.
 2. If branded, use "Coden [Name]."
 3. If neutral, check whether the package name already reads as a name and not a description on its own. If not, pick one descriptor from the shared vocabulary in [Naming the neutral cases](#naming-the-neutral-cases) and fuse it with the singular package name (e.g. `IconKit`). Either way, build the title as `<Name>, <descriptor-based functional description>`.
-4. Record the decision in the [Existing packages](#existing-packages) table once that table is built.
+4. Record the decision in the [Existing packages](#existing-packages) table.

@@ -227,7 +227,7 @@ Build-time consumers — the scanner, the CSS generator, both plugins — stay o
 
 ## Breaking changes
 
-The package is pre-1.0. The rewrite breaks freely and documents what breaks; no compatibility shims are kept, per `docs/code-guidelines.md`.
+The package is pre-1.0. The rewrite breaks freely and documents what breaks; no compatibility shims are kept, per `docs/guidelines/code.md`.
 
 - `lucideIconSet` and `lucideProvider` are removed. Family data moves to `@codenhub/icons/data/lucide`.
 - `IconProvider` and `registerProvider` are removed in favor of `registerFamily`/`registerLoader`.

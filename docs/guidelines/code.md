@@ -1,6 +1,6 @@
 ---
-status: APPROVED
-last_updated: 2026-09-10
+status: IMPLEMENTED
+last_updated: 2026-09-22
 ---
 
 # Coding guidelines
@@ -84,7 +84,7 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Prefer observable behavior over implementation details.
 - Update affected tests when changing behavior.
 
-For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](./specs/tests.md).
+For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](../specs/tests.md).
 
 ## Documentation
 
@@ -124,5 +124,5 @@ Oxlint validates JSDoc structure and tag quality where supported. `hub check` re
 - Code MUST pass `pnpm format:check`.
 - Code MUST pass `pnpm lint:check`.
 - Code MUST pass `pnpm typecheck` for changed packages or the full workspace when practical.
-- Formatting is owned by Oxfmt. Do not manually fight formatter output.
+- Formatting is owned by `oxfmt` for code and Prettier for Markdown. Do not manually fight formatter output.
 - Lint rules are enforceable project policy. Change the rule or document an exception instead of ignoring it broadly.
