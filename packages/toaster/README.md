@@ -12,7 +12,7 @@ pnpm add @codenhub/toaster
 
 ## Usage
 
-Import the required stylesheet once in the browser entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
+Import the required stylesheet once in your client entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
 
 ```ts
 import { toast, dialog } from "@codenhub/toaster";
@@ -61,9 +61,15 @@ scopedToaster.destroy();
 
 ## Documentation
 
-- [Documentation overview](docs/index.md)
-- [API, CSS, and lifecycle reference](docs/reference.md)
-- [Accessibility and custom content](docs/accessibility-and-content.md)
+- [Documentation overview](docs/index.md): Entrypoint to all guides, architecture, and quick start.
+- [Concepts](docs/concepts.md): Dual-layer architecture, lifecycle handles, and thenables.
+- [Toasts guide](docs/toasts.md): Neutral, semantic, loading, structured, and promise notifications.
+- [Dialogs guide](docs/dialogs.md): Confirmations, prompts, alerts, and label localization.
+- [Styling guide](docs/styling.md): Design tokens, `@codenhub/styles` live composition, presentation classes, and CSP.
+- [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and content sanitization.
+- [Scoped instances](docs/instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
+- [API reference](docs/reference/index.md): Complete TypeScript symbol catalogue compiled from declarations.
+- [Changelog](docs/changelog/index.md): Version history, breaking changes, and migration notes.
 
 ## Requirements
 

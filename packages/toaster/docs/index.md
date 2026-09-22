@@ -1,14 +1,28 @@
 ---
 title: Overview
+description: Overview, architecture, quick start, and documentation guide for @codenhub/toaster.
 ---
 
-# Show toasts and dialogs
+# Toaster documentation
 
-`@codenhub/toaster` provides zero-boilerplate singletons and isolated instances for neutral, semantic, loading, custom, and promise-driven browser toasts, plus native confirm, prompt, and alert dialogs. Each toaster manages its own stacks, queues, DOM, timers, listeners, and token stylesheet.
+`@codenhub/toaster` provides browser notifications and native interactive modal dialogs with zero-boilerplate singletons, isolated container instances, live `@codenhub/styles` token composition, and strict Content Security Policy compliance.
+
+## Why Toaster?
+
+Modern applications frequently balance transient notifications (build status, sync alerts) and synchronous user interruptions (confirming destructive actions, entering credentials). Most libraries compromise on either accessibility, styling flexibility, or memory safety.
+
+`@codenhub/toaster` coordinates both feedback models through specialized browser primitives:
+
+- **Dual-layer architecture**: Floating toast stacks render in light DOM containers with FLIP animations and FIFO eviction, while confirmation and prompt dialogs render into the browser's native top layer using HTML5 `<dialog>`.
+- **Zero-boilerplate singletons**: Import `toast` and `dialog` directly for application-wide notifications, or use `createToaster()` for isolated containers and micro-frontends.
+- **First-class Promise workflows**: `toast.promise` coordinates pending, success, and error transitions with automatic timer re-arming; dialog methods return `InteractiveToastHandle<T>` implementing `PromiseLike<T>` so you can `await dialog.confirm(...)` directly.
+- **Live token composition**: Toast colors, presentation axes (`.solid`, `.soft`, `.ghost`, `.edged`), and dark mode compose live with `@codenhub/styles` or fall back to standalone generated defaults.
 
 ## Setup
 
 ### Installation
+
+Install the package using your package manager:
 
 ```sh
 pnpm add @codenhub/toaster
@@ -16,59 +30,61 @@ pnpm add @codenhub/toaster
 
 ### Quick start
 
-Import the required global stylesheet once in the browser entrypoint:
+Import the required global stylesheet once in your client entrypoint, then use the pre-configured singletons anywhere in your application:
 
 ```ts
 import { toast, dialog } from "@codenhub/toaster";
 import "@codenhub/toaster/styles";
 
-// Dispatch neutral or semantic notifications
-toast("File uploaded");
-toast.success("Changes saved");
+// 1. Plain neutral or semantic notifications
+toast("Draft saved to cache");
+toast.success("Profile updated");
+toast.error("Failed to sync database");
 
-// Bind to promise lifecycles with automatic state transitions
-await toast.promise(saveChanges(), {
-  loading: "Saving...",
-  success: "Changes saved",
-  error: (err) => `Save failed: ${err.message}`,
+// 2. Structured notification with action button
+toast.success("Branch merged", {
+  description: "Pull request #42 was merged into main.",
+  action: {
+    label: "Undo",
+    onClick: (_event, handle) => {
+      revertMerge();
+      handle.dismiss();
+    },
+  },
 });
 
-// Await native interactive modal dialogs directly
-if (await dialog.confirm("Are you sure?")) {
-  doAction();
+// 3. Automated Promise lifecycle binding
+await toast.promise(publishArticle(), {
+  loading: "Publishing article...",
+  success: "Article published live!",
+  error: (err) => `Publication failed: ${err.message}`,
+});
+
+// 4. Interactive modal dialogs with native await
+if (await dialog.confirm("Delete this workspace permanently?")) {
+  await deleteWorkspace();
 }
 ```
 
-For isolated DOM containers, micro-frontends, or custom scopes:
+## Documentation guide
 
-```ts
-import { createToaster } from "@codenhub/toaster";
+Explore the focused guides below to master every aspect of the package:
 
-const toaster = createToaster({ maxVisible: 3 });
-toaster.success("Custom instance toast");
+| Guide                               | Description                                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [Concepts](concepts.md)             | The dual-layer mental model, lifecycle states (`queued`, `visible`, `hiding`, `hidden`), settled promises, and thenables. |
+| [Toasts](toasts.md)                 | Complete guide to dispatching neutral, semantic, loading, structured, and promise-driven notifications.                   |
+| [Dialogs](dialogs.md)               | Deep dive into native modal confirmations, prompts, alerts, thenable handles, and label localization.                     |
+| [Styling](styling.md)               | CSS custom property composition with `@codenhub/styles`, presentation classes, standalone fallback, dark mode, and CSP.   |
+| [Accessibility](accessibility.md)   | ARIA live regions, ARIA22 technique, native dialog focus trapping, reduced motion, and content sanitization.              |
+| [Scoped Instances](instances.md)    | Creating isolated instances with `createToaster()`, custom DOM containers, micro-frontends, and SSR safety.               |
+| [API Reference](reference/index.md) | Complete TypeScript API catalogue generated automatically from package declarations.                                      |
+| [Changelog](changelog/index.md)     | Release history, breaking changes, and migration notes across versions.                                                   |
 
-// Release DOM, timers, listeners, dialogs, and token styles on teardown.
-toaster.destroy();
-```
+## Requirements and runtime compatibility
 
-Retain handles when a toast must be updated or dismissed programmatically. Call `destroy()` when an isolated instance is torn down; later calls on that instance throw.
-
-### Configuration
-
-Pass `ToasterConfig` to `createToaster()` to set position, visible capacity, duration, margins, category defaults, color tokens, or a fixed container. Runtime changes use `configure()`, but the container cannot change. Configuration values are validated and invalid values throw synchronously.
-
-## Requirements
-
-- Rendering requires a browser DOM and `@codenhub/toaster/styles`.
-- Construction is SSR-safe unless initial tokens need the DOM. Rendering and DOM-dependent configuration throw without a document.
-- Interactive APIs require native `<dialog>` support. No polyfill or non-modal fallback is included.
-- `@codenhub/styles >=0.3.0` is an optional peer, and consumers do not need Tailwind configuration either way. Every toast and dialog color composes live against `@codenhub/styles`' own tokens — `--color-<intent>`, the presentation axis (`--ui-fill`/`--ui-border`), and the aesthetic axis (`--ui-clip`, `--ui-shadow-*`, `--ui-elevation`) — using the same fill/edge formula its own components run, so a runtime change to a `--color-*` token or an active aesthetic class reaches an already-rendered toast the same way it reaches a `.alert` or a `.btn`. When `@codenhub/styles` isn't installed, the identical formula runs against this package's own generated, uncomposed color inputs (`generated-defaults.css`), so standalone rendering stays usable with nothing left to drift from the real thing. The toast body composes like `.alert`'s own unstyled default (a soft, edged surface grounded on the page); the dialog's action buttons compose like `.btn`'s (a solid, edgeless, raised control).
-- Presentation (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) works the same way it does on a real styles component: declared as a plain, inheriting custom-property class, so one on the toast or dialog element itself always wins over one only an ancestor carries. A consumer's own `ToastTokens` color always wins over the composed result for the property it sets.
-- A restrictive `style-src` Content Security Policy that blocks unnonced inline styles can supply `ToasterConfig.nonce`, applied to the `<style>` element instance color tokens are written through.
-- If also using `@codenhub/styles`' classless native-element mappings (`@codenhub/styles/native` or `/tw/native`), import them before `@codenhub/toaster/styles`: that stylesheet resets every bare `<button>` to the neutral intent at the same zero specificity toaster's dialog buttons use, and import order decides which wins.
-- Dark-mode styling activates under a `.dark` class or `data-theme="dark"` attribute on an ancestor (usually `<html>`) — the same DOM contract `@codenhub/theme` produces. Toaster has no dependency on `@codenhub/theme`; any mechanism that sets those attributes works. Theme resolution is nested: a `.light`/`.dark` section inside an oppositely-themed ancestor resolves its own colors correctly, standalone or not.
-
-## Next steps
-
-- [API, CSS, and lifecycle reference](reference.md): Complete entrypoints, configuration, dispatchers, handles, queueing, validation, SSR, and cleanup.
-- [Accessibility and custom content](accessibility-and-content.md): Roles, message guidance, dialogs, reduced motion, focus, trusted DOM nodes, and string sanitization.
+- **Browser DOM**: Rendering notifications and modal dialogs requires a browser DOM environment. Construction is SSR-safe, but invoking rendering methods in Node.js or SSR runtimes throws an error.
+- **Native `<dialog>`**: Interactive dialogs require browser support for `HTMLDialogElement.showModal()`.
+- **CSS Import**: `@codenhub/toaster/styles` must be loaded once in the application to render layout, positioning, and animation rules.
+- **Styles Integration**: `@codenhub/styles >=0.3.0` is an optional peer dependency. When present, toaster colors and presentation axes compose live; when absent, toaster renders using built-in standalone palette defaults.
+- **Content Security Policy**: Applications with strict CSP `style-src` restrictions can pass a `nonce` in `ToasterConfig` to authorize token `<style>` injection.
