@@ -10,6 +10,7 @@
     "build": "hub build",
     "check": "hub check",
     "clean": "hub clean",
+    "format": "hub format",
     "format:check": "hub format",
     "format:fix": "hub format --fix",
     "generate": "hub generate",

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-08
+last_updated: 2026-09-22
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -30,6 +30,7 @@ Root scripts map directly onto it:
 | `pnpm check`         | `hub check`         |
 | `pnpm clean`         | `hub clean`         |
 | `pnpm cloc`          | `hub cloc`          |
+| `pnpm format`        | `hub format`        |
 | `pnpm format:check`  | `hub format`        |
 | `pnpm format:fix`    | `hub format --fix`  |
 | `pnpm generate`      | `hub generate`      |
@@ -45,6 +46,8 @@ Root scripts map directly onto it:
 | `pnpm test:watch`    | `hub test:watch`    |
 | `pnpm typecheck`     | `hub typecheck`     |
 | `pnpm verify`        | `hub verify`        |
+
+`pnpm format` duplicates `pnpm format:check` on purpose. When a name matches no script, pnpm runs the executable of that name from `PATH` instead, and on Windows `format` is the system disk formatter; the alias keeps the obvious name pointed at the repository's formatter.
 
 `hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, and `hub preview:deploy` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
