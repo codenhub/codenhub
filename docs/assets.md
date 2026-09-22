@@ -1,27 +1,27 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-27
+last_updated: 2026-09-22
 scope: Repository-wide static assets under root `assets/`.
 ---
 
 # Assets
 
-This document catalogs files under `assets/` and explains how to select and use them. Paths are relative to repository root.
+This document catalogs the files under `assets/` and explains how to select and use them. Paths are relative to the repository root.
 
 `assets/` contains Coden brand artwork and bundled fonts. Coden is the agency behind CodenHub and owns the logo, mark, and favicon artwork. Bundled fonts remain owned by their authors and subject to their respective licenses.
 
 ## Image naming
 
-`light` and `dark` describe image color scheme, not application theme:
+`light` and `dark` describe the image's color scheme, not the application theme:
 
 - `*-light.svg` is bright artwork. Place it on a dark background.
 - `*-dark.svg` is dark artwork. Place it on a bright background.
 
-Select image from actual background behind it. Do not select solely from a theme name or user color-scheme preference.
+Select an image from the actual background behind it. Do not select it solely from a theme name or the user's color-scheme preference.
 
 ## Logos
 
-Logo files are transparent SVG artwork. Preserve aspect ratio when resizing.
+Logo files are transparent SVG artwork. Preserve the aspect ratio when resizing.
 
 | File                         | Artwork                   | Dimensions | Use                                              |
 | ---------------------------- | ------------------------- | ---------- | ------------------------------------------------ |
@@ -32,7 +32,7 @@ Logo files are transparent SVG artwork. Preserve aspect ratio when resizing.
 
 ### Previews
 
-Bright artwork shown on dark background:
+Bright artwork shown on a dark background:
 
 <table>
   <tr>
@@ -41,7 +41,7 @@ Bright artwork shown on dark background:
   </tr>
 </table>
 
-Dark artwork shown on bright background:
+Dark artwork shown on a bright background:
 
 <table>
   <tr>
@@ -50,7 +50,7 @@ Dark artwork shown on bright background:
   </tr>
 </table>
 
-Use full logo when space permits and name must remain visible. Use compact mark when available space cannot accommodate full logo. Example:
+Use the full logo when space permits and the name must remain visible. Use the compact mark when the available space cannot accommodate the full logo. For example:
 
 ```html
 <img src="/assets/logo/logo-light.svg" alt="Coden" width="246" height="64" />
@@ -60,7 +60,7 @@ This URL assumes a consumer placed the file at `/assets/logo/logo-light.svg` in 
 
 ## Favicons
 
-`favicon.ico` is default favicon. Size-specific files are alternatives for consumers requiring explicit dimensions.
+`favicon.ico` is the default favicon. The size-specific files are alternatives for consumers that require explicit dimensions.
 
 | File                             | Size    | Use                                  |
 | -------------------------------- | ------- | ------------------------------------ |
@@ -80,7 +80,7 @@ The URL depends on where the consuming package places the file, the same as for 
 
 ## Fonts
 
-Inter is body typeface. Monomaniac One is display typeface for brand and other special text.
+Inter is the body typeface. Monomaniac One is the display typeface for brand and other special text.
 
 For web delivery, prefer WOFF2 and retain WOFF as fallback where required. TTF files support environments or tools that require TrueType input; avoid serving them when web formats are accepted.
 
@@ -96,7 +96,7 @@ For web delivery, prefer WOFF2 and retain WOFF as fallback where required. TTF f
 | `assets/fonts/inter/Inter-Italic-Variable.ttf`   | Italic  | TTF    |
 | `assets/fonts/inter/LICENSE.txt`                 | License | Text   |
 
-Load upright and italic files as separate faces, then apply Inter to body text:
+Load the upright and italic files as separate faces, then apply Inter to body text:
 
 ```css
 @font-face {
@@ -133,7 +133,7 @@ body {
 | `assets/fonts/monomaniac-one/MonomaniacOne-Regular.ttf`   | Regular | TTF    |
 | `assets/fonts/monomaniac-one/LICENSE.txt`                 | License | Text   |
 
-Load regular face and apply it only to display, brand, or special text:
+Load the regular face and apply it only to display, brand, or special text:
 
 ```css
 @font-face {
@@ -152,8 +152,8 @@ Load regular face and apply it only to display, brand, or special text:
 }
 ```
 
-URLs in font examples assume the same consumer-chosen placement described for logos.
+The URLs in the font examples assume the same consumer-chosen placement described for logos.
 
 ### Font licenses
 
-Both font families use SIL Open Font License 1.1. Keep corresponding `LICENSE.txt` with each family when bundling, embedding, or redistributing font files. License files contain complete terms and take precedence over this summary.
+Both font families use the SIL Open Font License 1.1. Keep the corresponding `LICENSE.txt` with each family when bundling, embedding, or redistributing the font files. The license files contain the complete terms and take precedence over this summary.
