@@ -8,8 +8,12 @@ as trusted content, and call `destroy()` to release all owned resources.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Purpose, status, and starting points.
-- [API, CSS, and lifecycle reference](docs/reference.md): Complete entrypoints,
-  exports, dispatchers, handles, SSR, failures, and cleanup.
-- [Accessibility and custom content](docs/accessibility-and-content.md): Roles,
-  native dialogs, focus, reduced motion, sanitizer behavior, and trust boundary.
+- [Documentation overview](docs/index.md): Entrypoint to all guides, architecture, and quick start.
+- [Concepts](docs/concepts.md): Dual-layer architecture, lifecycle handles, and thenables.
+- [Toasts guide](docs/toasts.md): Neutral, semantic, loading, structured, and promise notifications.
+- [Dialogs guide](docs/dialogs.md): Confirmations, prompts, alerts, and label localization.
+- [Styling guide](docs/styling.md): Design tokens, @codenhub/styles live composition, presentation classes, and CSP.
+- [Accessibility and security](docs/accessibility.md): ARIA live regions, focus restoration, reduced motion, and content sanitization.
+- [Scoped instances](docs/instances.md): Multi-instance coordination, custom containers, and lifecycle teardown.
+- [API reference](docs/reference/index.md): Complete TypeScript symbol catalogue compiled from declarations.
+- [Changelog](docs/changelog/index.md): Release history, breaking changes, and migration notes.
