@@ -6,7 +6,7 @@ scope: Decision to give `.progress`'s track a real presentation (fill and edge),
 
 # `.progress` gains presentation; the other indicators don't
 
-This is agreed direction. Future work on `.progress` and on the indicator group MUST follow it; existing code is legacy until updated, per `docs/docs-guidelines.md`'s `APPROVED` status.
+This is agreed direction. Future work on `.progress` and on the indicator group MUST follow it; existing code is legacy until updated, per the repository root `docs/README.md`'s `APPROVED` status.
 
 This document intentionally contains no diffs or drop-in code. It states the decision and the reasoning behind it; the implementer derives the actual change from the referenced precedent in source, the same way every other component in the package was written. A prescriptive snippet here would go stale the moment the real implementation diverges from it, and would then be trusted over the real code -- see [Model](./model.md#seams-not-rewrites) on why a composed result, once written down somewhere else, stops being the thing anyone actually reads.
 
@@ -49,7 +49,7 @@ Presentation is two independent axes, so six combinations exist in the abstract.
 ## What else changes because of this
 
 - **`registry.json`**: `.progress`'s entry needs `axes` populated, a `default` naming the fill/edge pair, a `compositionReason` that no longer says "has no box presentation," and an `unsupported` entry for `.solid` on the fill axis. Mirror `.quote`'s entry shape, not a fresh design.
-- **[Model](./model.md)'s Defaults table** currently groups `.progress` with `.loader`/`.skeleton`/`.divider` as `n/a`. That row stops being accurate for `.progress` once it reads axes; `.loader`/`.skeleton`/`.divider` stay `n/a` (see below). `docs/docs-guidelines.md` requires documentation to update in the same change as the behavior it describes.
+- **[Model](./model.md)'s Defaults table** currently groups `.progress` with `.loader`/`.skeleton`/`.divider` as `n/a`. That row stops being accurate for `.progress` once it reads axes; `.loader`/`.skeleton`/`.divider` stay `n/a` (see below). The repository root `docs/README.md` requires documentation to update in the same change as the behavior it describes.
 - **Versioning**: this changes a shipped default's rendered output for every existing `.progress` consumer, not just new ones. `roadmap.md` already established the precedent for this exact situation -- the prior `--progress-surface` fix shipped as `0.2.0`, a minor bump, specifically because "several change default token values... that affect every consumer already using `.progress`... which is a real behavior change and not patch-level even pre-1.0." This should ship the same way, with a changelog entry, not as a patch.
 
 ## Why `.loader`, `.skeleton`, and `.divider` are not part of this decision

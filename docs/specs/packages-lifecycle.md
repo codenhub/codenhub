@@ -195,6 +195,6 @@ Package pack checks MUST confirm that the README, public `docs/`, `llms.txt`, an
 
 ## Exceptions
 
-Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
 
 A valid lifecycle exception MUST name the package, the skipped rule, and why the package remains safe to build, test, or publish.

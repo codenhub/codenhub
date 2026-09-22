@@ -152,4 +152,4 @@ Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, 
 
 ## Exceptions
 
-Exceptions to this spec MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`. An exception to the `reference` check MUST declare a `Checks bypassed` bullet with the affected codes, per that register.
+Exceptions to this spec MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`. An exception to the `reference` check MUST declare a `Checks bypassed` bullet with the affected codes, per that register.

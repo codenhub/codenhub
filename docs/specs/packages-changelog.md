@@ -98,4 +98,4 @@ date: 2026-09-05
 
 ## Exceptions
 
-Exceptions to this spec MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Exceptions to this spec MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.

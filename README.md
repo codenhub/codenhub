@@ -95,7 +95,7 @@ This repository is docs-first: durable decisions live in `docs/` and code should
 
 Read these before changing package behavior, public APIs, or project conventions:
 
-- `docs/docs-guidelines.md`: repository documentation structure, status model, and exception rules.
+- `docs/README.md`: repository documentation structure, status model, and exception rules.
 - `docs/tooling.md`: root scripts, the `hub` CLI, and package script rules.
 - `docs/ci.md`: the pinned toolchain and the pull-request workflow.
 - `docs/guidelines/code.md`: coding conventions and enforceable quality rules.

@@ -193,6 +193,6 @@ export const myPackageErrors = {
 
 ## Exceptions
 
-Exceptions MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
 
 A valid exception MUST name the package, the skipped rule, and why the package remains safe to publish.

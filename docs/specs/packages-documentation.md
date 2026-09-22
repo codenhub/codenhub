@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-10
+last_updated: 2026-09-22
 scope: Documentation for public workspace packages.
 ---
 
@@ -125,7 +125,7 @@ docs/
   troubleshooting.md
 ```
 
-Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/README.md`; `docs/index.md` owns the documentation entrypoint.
+Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/README.md`; `docs/index.md` owns the documentation entrypoint. The repository's root `docs/README.md` is outside this rule: root `docs/` is never published, and a README is what a repository browser shows first.
 
 Public documentation paths MUST be deterministic and portable:
 
@@ -190,7 +190,7 @@ docs/internal/
   debugging.md
 ```
 
-These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/docs-guidelines.md` because they may describe approved future direction as well as current implementation.
+These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/README.md` because they may describe approved future direction as well as current implementation.
 
 Do not use `docs/internal/` for scratch notes, short-lived plans, TODO lists, or information better expressed in code comments or issue tracking.
 
@@ -249,4 +249,4 @@ Link validation MUST cover `README.md`, public `docs/**/*.md`, `llms.txt`, and t
 
 ## Exceptions
 
-Package documentation exceptions MUST follow `docs/docs-guidelines.md` and be recorded in `docs/specs/packages-exceptions.md`.
+Package documentation exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.

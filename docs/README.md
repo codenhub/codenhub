@@ -95,6 +95,6 @@ Root `docs/` is organized by what a document is for:
 
 - `docs/specs/`: contracts for a deliverable — what a package, its README, its tests, its errors, or a roadmap MUST contain. A spec is written so compliance can be checked, and `hub check` enforces part of them.
 - `docs/guidelines/`: conventions contributors apply by judgment while working — how to write code, how to name and brand a package. A guideline MAY contain enforced rules, but its main job is to shape decisions no checklist fully captures.
-- Root `docs/`: this document, which governs the whole tree, and references for one repository area or process, such as `tooling.md`, `ci.md`, `assets.md`, and `roadmap.md`.
+- Root `docs/`: this README, which governs the whole tree, and references for one repository area or process, such as `tooling.md`, `ci.md`, `assets.md`, and `roadmap.md`.
 
 When a new document could fit more than one place, file it by its main job: rules a deliverable must satisfy go in `specs/`, how to work goes in `guidelines/`, and what exists and how to use it stays at the root. Do not add another folder until a group of documents fits none of these.
