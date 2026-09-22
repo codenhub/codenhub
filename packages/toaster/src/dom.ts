@@ -350,35 +350,42 @@ export function populateToastContent(
     mainWrapper.appendChild(createIcon(options.icon, documentRef));
   }
 
-  const titleText = options.title ?? options.message;
-  const hasDescription = options.description !== null;
+  const resolvedTitle = options.title ?? (options.description !== null ? options.message : null);
+  const resolvedDescription = options.description ?? (options.title !== null ? options.message : null);
+  const hasStructuredContent = resolvedDescription !== null;
 
-  if (hasDescription) {
+  if (hasStructuredContent) {
     const contentWrapper = documentRef.createElement("div");
     contentWrapper.className = "coden-toast-content";
     contentWrapper.setAttribute("data-toast-content", "");
 
-    if (titleText !== null) {
+    if (resolvedTitle !== null) {
       const titleEl = documentRef.createElement("div");
       titleEl.className = "coden-toast-title";
       titleEl.setAttribute("data-toast-title", "");
       titleEl.setAttribute("data-toast-message", "");
-      titleEl.textContent = titleText;
+      titleEl.textContent = resolvedTitle;
       contentWrapper.appendChild(titleEl);
     }
 
     const descEl = documentRef.createElement("div");
     descEl.className = "coden-toast-description";
     descEl.setAttribute("data-toast-description", "");
-    descEl.textContent = options.description;
+    if (resolvedTitle === null) {
+      descEl.setAttribute("data-toast-message", "");
+    }
+    descEl.textContent = resolvedDescription;
     contentWrapper.appendChild(descEl);
 
     mainWrapper.appendChild(contentWrapper);
-  } else if (titleText !== null) {
-    const messageSpan = documentRef.createElement("span");
-    messageSpan.setAttribute("data-toast-message", "");
-    messageSpan.textContent = titleText;
-    mainWrapper.appendChild(messageSpan);
+  } else {
+    const singleText = options.title ?? options.message;
+    if (singleText !== null) {
+      const messageSpan = documentRef.createElement("span");
+      messageSpan.setAttribute("data-toast-message", "");
+      messageSpan.textContent = singleText;
+      mainWrapper.appendChild(messageSpan);
+    }
   }
 
   container.appendChild(mainWrapper);

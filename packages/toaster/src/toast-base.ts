@@ -294,11 +294,11 @@ export class Toast {
         this.currentContent = null;
       }
       if (normalized.message !== undefined) {
-        this.currentMessage = normalized.message;
-        this.currentContent = null;
-        if (normalized.title === undefined && this.currentDescription === null) {
+        if (normalized.title === undefined && this.currentDescription === null && this.currentMessage === null) {
           this.currentTitle = null;
         }
+        this.currentMessage = normalized.message;
+        this.currentContent = null;
       }
       if (normalized.description !== undefined) {
         this.currentDescription = normalized.description;
@@ -414,14 +414,20 @@ export class Toast {
       return;
     }
 
-    const needsFullContentRebuild =
+    const hasExistingStructuredDom =
+      element.querySelector("[data-toast-content]") !== null || element.querySelector("[data-toast-action]") !== null;
+
+    const willHaveStructuredContent =
+      this.currentTitle !== null || this.currentDescription !== null || this.currentAction !== null;
+
+    const touchesStructure =
       normalized.content !== undefined ||
       normalized.title !== undefined ||
       normalized.description !== undefined ||
       normalized.action !== undefined ||
-      normalized.dismissible !== undefined ||
-      this.currentDescription !== null ||
-      this.currentAction !== null;
+      normalized.dismissible !== undefined;
+
+    const needsFullContentRebuild = hasExistingStructuredDom || willHaveStructuredContent || touchesStructure;
 
     if (needsFullContentRebuild) {
       element.replaceChildren();

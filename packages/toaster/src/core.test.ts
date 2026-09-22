@@ -288,6 +288,37 @@ describe("structured content and actions", () => {
     handle.dismiss();
     toaster.destroy();
   });
+
+  it("renders structured layout when both title and message are provided without description", () => {
+    const toaster = createToaster();
+    const handle = toaster.success("All 12 files backed up", {
+      title: "Backup Complete",
+    });
+
+    const titleEl = document.body.querySelector("[data-toast-title]");
+    const descEl = document.body.querySelector("[data-toast-description]");
+    expect(titleEl?.textContent).toBe("Backup Complete");
+    expect(descEl?.textContent).toBe("All 12 files backed up");
+
+    handle.dismiss();
+    toaster.destroy();
+  });
+
+  it("renders structured layout when options object supplies both title and message", () => {
+    const toaster = createToaster();
+    const handle = toaster.info({
+      title: "Sync Status",
+      message: "Connected to server",
+    });
+
+    const titleEl = document.body.querySelector("[data-toast-title]");
+    const descEl = document.body.querySelector("[data-toast-description]");
+    expect(titleEl?.textContent).toBe("Sync Status");
+    expect(descEl?.textContent).toBe("Connected to server");
+
+    handle.dismiss();
+    toaster.destroy();
+  });
 });
 
 describe("toast.promise", () => {
@@ -1206,6 +1237,41 @@ describe("Toast update", () => {
     // The user's nested SVG must remain untouched
     const userSvg = document.body.querySelector('[data-test="user-icon"]');
     expect(userSvg).not.toBeNull();
+
+    toaster.destroy();
+  });
+
+  it("rebuilds layout cleanly when updating message on title-only toast", () => {
+    const toaster = createToaster();
+    const handle = toaster({ title: "Title Only" });
+    flushAnimations();
+
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    expect(element.textContent).toContain("Title Only");
+    expect(element.querySelector("[data-toast-content]")).toBeNull();
+
+    handle.update({ message: "Simple message" });
+    expect(element.textContent).toContain("Simple message");
+    expect(element.textContent).not.toContain("Title Only");
+    expect(element.querySelector("[data-toast-content]")).toBeNull();
+
+    toaster.destroy();
+  });
+
+  it("preserves title when updating message on toast with both title and message", () => {
+    const toaster = createToaster();
+    const handle = toaster("Initial body", { title: "Preserved Title" });
+    flushAnimations();
+
+    const element = document.body.querySelector<HTMLDivElement>("[role='status']")!;
+    const titleEl = element.querySelector("[data-toast-title]");
+    const descEl = element.querySelector("[data-toast-description]");
+    expect(titleEl?.textContent).toBe("Preserved Title");
+    expect(descEl?.textContent).toBe("Initial body");
+
+    handle.update({ message: "Updated body" });
+    expect(element.querySelector("[data-toast-title]")?.textContent).toBe("Preserved Title");
+    expect(element.querySelector("[data-toast-description]")?.textContent).toBe("Updated body");
 
     toaster.destroy();
   });
