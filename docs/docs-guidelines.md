@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-31
+last_updated: 2026-09-22
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -17,6 +17,12 @@ Every durable repository document in root `docs/` MUST start with YAML frontmatt
 
 Documents SHOULD include `scope` when the title alone does not make ownership clear.
 
+Allowed statuses:
+
+- `DRAFT`: Work in progress. Use as context, not as binding source of truth.
+- `APPROVED`: Agreed source of truth. Future work MUST follow it. Existing code may be non-compliant and should be treated as legacy until updated.
+- `IMPLEMENTED`: Agreed source of truth and current implementation is expected to comply. New exceptions MUST be documented or the document MUST be updated.
+
 ```yaml
 ---
 status: APPROVED
@@ -31,13 +37,7 @@ Templates that would copy repository governance metadata into consumer-facing ou
 
 Markdown in this repository is not hard-wrapped. Write each paragraph and list item as a single line and let the editor wrap it on screen. Markdown renders a lone newline inside a paragraph as a space, so wrapped and unwrapped source read identically once rendered, and leaving prose unwrapped keeps an edit to one word from reflowing a whole paragraph in the diff.
 
-`pnpm format` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, such as vendored icon attributions and adapted agent skills, is kept as received and is exempt.
-
-Allowed statuses:
-
-- `DRAFT`: Work in progress. Use as context, not as binding source of truth.
-- `APPROVED`: Agreed source of truth. Future work MUST follow it. Existing code may be non-compliant and should be treated as legacy until updated.
-- `IMPLEMENTED`: Agreed source of truth and current implementation is expected to comply. New exceptions MUST be documented or the document MUST be updated.
+`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, such as vendored icon attributions and adapted agent skills, is kept as received and is exempt.
 
 ## Source of truth
 
