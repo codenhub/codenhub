@@ -44,7 +44,7 @@ describe("configuration boundaries", () => {
     const toaster = createToaster(config);
 
     config.container = replacementContainer;
-    toaster.semantic.success("Owned config");
+    toaster.success("Owned config");
 
     expect(originalContainer.textContent).toContain("Owned config");
     expect(replacementContainer.textContent).not.toContain("Owned config");
@@ -61,14 +61,14 @@ describe("configuration boundaries", () => {
   it("should reject invalid runtime enum values", () => {
     expect(() => createToaster({ position: "sideways" as never })).toThrow(/position/);
     const toaster = createToaster();
-    expect(() => toaster.semantic.success("Invalid", { role: "log" as never })).toThrow(/role/);
-    expect(() => toaster.semantic.show({ message: "Invalid", type: "critical" as never })).toThrow(/type/);
+    expect(() => toaster.success("Invalid", { role: "log" as never })).toThrow(/role/);
+    expect(() => toaster("Invalid", { type: "critical" as never })).toThrow(/type/);
     toaster.destroy();
   });
 
   it("should honor a semantic role override", () => {
     const toaster = createToaster();
-    toaster.semantic.error("Recoverable", { role: "status" });
+    toaster.error("Recoverable", { role: "status" });
 
     expect(document.body.querySelector("[role='status']")?.textContent).toContain("Recoverable");
     toaster.destroy();
@@ -78,7 +78,7 @@ describe("configuration boundaries", () => {
 describe("toast lifecycle", () => {
   it("should notify late subscribers when a lifecycle phase already happened", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Saved");
+    const handle = toaster.success("Saved");
     const onShow = vi.fn();
 
     handle.onShow(onShow);
@@ -95,7 +95,7 @@ describe("toast lifecycle", () => {
     const onHide = vi.fn();
     const onHidden = vi.fn();
 
-    const handle = toaster.semantic.success("Info");
+    const handle = toaster.success("Info");
     handle.onShow(onShow);
     handle.onShown(onShown);
     handle.onHide(onHide);
@@ -120,7 +120,7 @@ describe("toast lifecycle", () => {
     const reportError = vi.fn();
     vi.stubGlobal("reportError", reportError);
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Saved");
+    const handle = toaster.success("Saved");
     handle.onHide(() => {
       throw new Error("consumer callback failed");
     });
@@ -135,10 +135,10 @@ describe("toast lifecycle", () => {
   });
 
   it("should expose queued state and preserve FIFO admission", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    const first = toaster.semantic.info("First");
-    const second = toaster.semantic.info("Second");
-    const third = toaster.semantic.info("Third");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    const first = toaster.info("First");
+    const second = toaster.info("Second");
+    const third = toaster.info("Third");
 
     expect(first.state).toBe("hiding");
     expect(second.state).toBe("queued");
@@ -155,9 +155,9 @@ describe("toast lifecycle", () => {
   });
 
   it("should complete terminal lifecycle when a queued toast is dismissed", async () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Queued");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Queued");
     const onHidden = vi.fn();
 
     queued.dismiss();
@@ -172,7 +172,7 @@ describe("toast lifecycle", () => {
   it("should resume auto-dismiss using remaining duration", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
-    const handle = toaster.semantic.success("Timed");
+    const handle = toaster.success("Timed");
     flushAnimations();
     const element = document.body.querySelector("[role='status']")!;
 
@@ -190,7 +190,7 @@ describe("toast lifecycle", () => {
   it("should not start auto-dismiss before entrance completes", () => {
     vi.useFakeTimers();
     const toaster = createToaster({ duration: 2000 });
-    const handle = toaster.semantic.success("Entering");
+    const handle = toaster.success("Entering");
     const element = document.body.querySelector("[role='status']")!;
 
     element.dispatchEvent(new MouseEvent("mouseenter"));
@@ -216,14 +216,14 @@ describe("content and token security", () => {
     const toaster = createToaster();
     const tokens = { successBg: "red; } body { display: none" };
 
-    expect(() => toaster.semantic.success("Unsafe", { tokens })).toThrow(/color/);
-    expect(() => toaster.interactive.confirm("Unsafe", { tokens })).toThrow(/color/);
+    expect(() => toaster.success("Unsafe", { tokens })).toThrow(/color/);
+    expect(() => toaster.dialog.confirm("Unsafe", { tokens })).toThrow(/color/);
     toaster.destroy();
   });
 
   it("should reject invalid token colors during updates", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Safe");
+    const handle = toaster.success("Safe");
 
     expect(() => handle.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
     toaster.destroy();
@@ -231,9 +231,7 @@ describe("content and token security", () => {
 
   it("should remove active styling and enforce safe blank links in HTML content", () => {
     const toaster = createToaster();
-    toaster.custom.show({
-      content: '<a id="unsafe" style="position:fixed" target="_BLANK" href="https://example.com">Open</a>',
-    });
+    toaster.custom('<a id="unsafe" style="position:fixed" target="_BLANK" href="https://example.com">Open</a>');
     const link = document.body.querySelector("a")!;
 
     expect(link.hasAttribute("id")).toBe(false);
@@ -243,10 +241,10 @@ describe("content and token security", () => {
   });
 
   it("should reject content that sanitization empties out entirely, rather than rendering a blank toast", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
 
-    expect(() => toaster.custom.show({ content: "<script>alert(1)</script>" })).toThrow(/empty/);
-    expect(() => toaster.semantic.success("Still available")).not.toThrow();
+    expect(() => toaster.custom("<script>alert(1)</script>")).toThrow(/empty/);
+    expect(() => toaster.success("Still available")).not.toThrow();
     expect(document.body.textContent).toContain("Still available");
     toaster.destroy();
   });
@@ -257,7 +255,7 @@ describe("content and token security", () => {
     document.body.appendChild(container);
     const toaster = createToaster({ container });
 
-    expect(() => toaster.semantic.success("Safe selector")).not.toThrow();
+    expect(() => toaster.success("Safe selector")).not.toThrow();
     toaster.destroy();
   });
 
@@ -271,7 +269,7 @@ describe("content and token security", () => {
     content.textContent = "Cross realm";
     const toaster = createToaster({ container, margin: "8px" });
 
-    toaster.custom.show({ content });
+    toaster.custom(content);
     toaster.configure({ margin: "24px" });
     const stack = container.querySelector<HTMLElement>("[data-toast-container]")!;
 
@@ -281,10 +279,10 @@ describe("content and token security", () => {
   });
 
   it("should reject unsupported node types before reserving a stack slot", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
 
-    expect(() => toaster.custom.show({ content: document })).toThrow(/Node/);
-    expect(() => toaster.semantic.success("Still available")).not.toThrow();
+    expect(() => toaster.custom(document as never)).toThrow(/Node/);
+    expect(() => toaster.success("Still available")).not.toThrow();
     expect(document.body.textContent).toContain("Still available");
     toaster.destroy();
   });
@@ -293,17 +291,17 @@ describe("content and token security", () => {
 describe("interactive dialogs", () => {
   it("should expose an honest interactive handle", () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.confirm("Continue?");
+    const handle = toaster.dialog.confirm("Continue?");
 
     expect(handle.state).toBe("visible");
-    expect(Object.keys(handle).sort()).toEqual(["dismiss", "result", "settled", "state"]);
+    expect(Object.keys(handle).sort()).toEqual(["catch", "dismiss", "finally", "result", "settled", "state", "then"]);
     handle.dismiss();
     toaster.destroy();
   });
 
   it("should associate dialog text and prompt labels", () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.prompt("Project name", { title: "Create project" });
+    const handle = toaster.dialog.prompt("Project name", { title: "Create project" });
     const dialog = document.body.querySelector("dialog")!;
     const input = dialog.querySelector("input")!;
 
@@ -324,8 +322,8 @@ describe("interactive dialogs", () => {
         this.setAttribute("open", "");
       });
     const toaster = createToaster();
-    const failed = toaster.interactive.confirm("First");
-    const next = toaster.interactive.confirm("Second");
+    const failed = toaster.dialog.confirm("First");
+    const next = toaster.dialog.confirm("Second");
 
     await expect(failed.result).rejects.toThrow("Detached");
     expect(showModal).toHaveBeenCalledTimes(2);
@@ -336,7 +334,7 @@ describe("interactive dialogs", () => {
 
   it("should ignore Enter while prompt input is composing", () => {
     const toaster = createToaster();
-    const handle = toaster.interactive.prompt("Name");
+    const handle = toaster.dialog.prompt("Name");
     const input = document.body.querySelector("input")!;
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true }));
@@ -351,8 +349,8 @@ describe("interactive dialogs", () => {
     document.body.appendChild(opener);
     opener.focus();
     const toaster = createToaster();
-    const first = toaster.interactive.alert("First");
-    const second = toaster.interactive.alert("Second");
+    const first = toaster.dialog.alert("First");
+    const second = toaster.dialog.alert("Second");
 
     first.dismiss();
     await first.settled;

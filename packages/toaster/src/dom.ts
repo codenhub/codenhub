@@ -1,14 +1,17 @@
 import type { NormalizedToastOptions } from "./options";
 import { applyTokens } from "./tokens";
-import type { ToastIcon, ToastPosition } from "./types";
+import type { ToastHandle, ToastIcon, ToastPosition } from "./types";
 
 type ToastElementOptions = Pick<
   NormalizedToastOptions,
   | "content"
   | "dismissLabel"
   | "icon"
-  | "isDismissable"
+  | "dismissible"
+  | "title"
   | "message"
+  | "description"
+  | "action"
   | "role"
   | "rootClassName"
   | "className"
@@ -201,13 +204,22 @@ function createIcon(icon: ToastIcon, documentRef: Document): SVGElement {
   return element;
 }
 
-/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class. */
+/** Finds the message-icon `<svg>` created by {@link createIcon}, if any -- never the dismiss button's own icon, which carries no `coden-toast-icon` class, and never custom user-provided SVGs. */
 function findToastIcon(container: HTMLDivElement): Element | null {
-  return (
-    Array.from(container.children).find(
-      (child) => child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon"),
-    ) ?? null
-  );
+  const main = Array.from(container.children).find((child) => child.classList.contains("coden-toast-main"));
+  if (main) {
+    for (const child of main.children) {
+      if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
+        return child;
+      }
+    }
+  }
+  for (const child of container.children) {
+    if (child.tagName.toLowerCase() === "svg" && child.classList.contains("coden-toast-icon")) {
+      return child;
+    }
+  }
+  return null;
 }
 
 /**
@@ -232,9 +244,23 @@ export function updateToastIcon(container: HTMLDivElement, icon: ToastIcon | nul
     return;
   }
 
-  const messageEl = container.querySelector("[data-toast-message]");
-  if (messageEl) {
-    container.insertBefore(next, messageEl);
+  const targetParent = container.querySelector<HTMLElement>(".coden-toast-main") ?? container;
+  const contentEl =
+    targetParent.querySelector("[data-toast-content]") ?? targetParent.querySelector("[data-toast-message]");
+  if (contentEl) {
+    if (contentEl.parentElement === targetParent) {
+      targetParent.insertBefore(next, contentEl);
+    } else {
+      let directChild: Node = contentEl;
+      while (directChild.parentNode && directChild.parentNode !== targetParent) {
+        directChild = directChild.parentNode;
+      }
+      targetParent.insertBefore(next, directChild);
+    }
+  } else if (targetParent.firstChild) {
+    targetParent.insertBefore(next, targetParent.firstChild);
+  } else {
+    targetParent.appendChild(next);
   }
 }
 
@@ -300,25 +326,94 @@ export function createToastShell(
  */
 export function populateToastContent(
   container: HTMLDivElement,
-  options: Pick<ToastElementOptions, "content" | "dismissLabel" | "icon" | "isDismissable" | "message">,
+  options: Pick<
+    ToastElementOptions,
+    "action" | "content" | "description" | "dismissible" | "dismissLabel" | "icon" | "message" | "title"
+  >,
   onDismiss: () => void,
   documentRef: Document,
+  handle?: ToastHandle,
 ): void {
   if (options.content !== null) {
     container.append(...options.content);
-  } else if (options.message !== null) {
-    if (options.icon !== null) {
-      container.appendChild(createIcon(options.icon, documentRef));
+    if (options.dismissible) {
+      container.appendChild(createDismissButton(onDismiss, documentRef, options.dismissLabel));
     }
-
-    const messageSpan = documentRef.createElement("span");
-    messageSpan.setAttribute("data-toast-message", "");
-    messageSpan.textContent = options.message;
-    container.appendChild(messageSpan);
+    return;
   }
 
-  if (options.isDismissable) {
-    container.appendChild(createDismissButton(onDismiss, documentRef, options.dismissLabel));
+  const mainWrapper = documentRef.createElement("div");
+  mainWrapper.className = "coden-toast-main";
+  mainWrapper.setAttribute("data-toast-main", "");
+
+  if (options.icon !== null) {
+    mainWrapper.appendChild(createIcon(options.icon, documentRef));
+  }
+
+  const resolvedTitle = options.title ?? (options.description !== null ? options.message : null);
+  const resolvedDescription = options.description ?? (options.title !== null ? options.message : null);
+  const hasStructuredContent = resolvedDescription !== null;
+
+  if (hasStructuredContent) {
+    const contentWrapper = documentRef.createElement("div");
+    contentWrapper.className = "coden-toast-content";
+    contentWrapper.setAttribute("data-toast-content", "");
+
+    if (resolvedTitle !== null) {
+      const titleEl = documentRef.createElement("div");
+      titleEl.className = "coden-toast-title";
+      titleEl.setAttribute("data-toast-title", "");
+      titleEl.setAttribute("data-toast-message", "");
+      titleEl.textContent = resolvedTitle;
+      contentWrapper.appendChild(titleEl);
+    }
+
+    const descEl = documentRef.createElement("div");
+    descEl.className = "coden-toast-description";
+    descEl.setAttribute("data-toast-description", "");
+    if (resolvedTitle === null) {
+      descEl.setAttribute("data-toast-message", "");
+    }
+    descEl.textContent = resolvedDescription;
+    contentWrapper.appendChild(descEl);
+
+    mainWrapper.appendChild(contentWrapper);
+  } else {
+    const singleText = options.title ?? options.message;
+    if (singleText !== null) {
+      const messageSpan = documentRef.createElement("span");
+      messageSpan.setAttribute("data-toast-message", "");
+      messageSpan.textContent = singleText;
+      mainWrapper.appendChild(messageSpan);
+    }
+  }
+
+  container.appendChild(mainWrapper);
+
+  if (options.action || options.dismissible) {
+    const actionsWrapper = documentRef.createElement("div");
+    actionsWrapper.className = "coden-toast-actions";
+    actionsWrapper.setAttribute("data-toast-actions", "");
+
+    if (options.action) {
+      const actionButton = documentRef.createElement("button");
+      actionButton.type = "button";
+      actionButton.className = "coden-toast-action";
+      actionButton.setAttribute("data-toast-action", "");
+      actionButton.textContent = options.action.label;
+      actionButton.addEventListener("click", (event) => {
+        if (handle) {
+          options.action?.onClick(event, handle);
+        }
+      });
+      actionsWrapper.appendChild(actionButton);
+    }
+
+    if (options.dismissible) {
+      actionsWrapper.appendChild(createDismissButton(onDismiss, documentRef, options.dismissLabel));
+    }
+
+    container.appendChild(actionsWrapper);
   }
 }
 

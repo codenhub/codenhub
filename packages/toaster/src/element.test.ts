@@ -48,23 +48,24 @@ function renderToast(toast: Toast): HTMLDivElement {
 
 describe("toast public surface", () => {
   it("should only expose public runtime exports from the barrel", () => {
-    expect(Object.keys(toastModule)).toEqual(["createToaster"]);
+    expect(Object.keys(toastModule).sort()).toEqual(["createToaster", "dialog", "toast"]);
   });
 });
 
 describe("Toast rendering", () => {
-  it("should render toast content on a single root element", () => {
-    const element = renderToast(makeToast({ message: "Saved successfully", isDismissable: true }));
+  it("should render toast content with main and actions regions", () => {
+    const element = renderToast(makeToast({ message: "Saved successfully", dismissible: true }));
 
     expect(element.children).toHaveLength(2);
-    expect(element.querySelector("div")).toBeNull();
+    expect(element.querySelector(".coden-toast-main")).not.toBeNull();
+    expect(element.querySelector(".coden-toast-actions")).not.toBeNull();
     expect(element.getAttribute("role")).toBe("status");
     expect(element.getAttribute("aria-live")).toBe("polite");
     expect(element.getAttribute("aria-atomic")).toBe("true");
   });
 
   it("should use a compact dismiss button with a larger close icon", () => {
-    const element = renderToast(makeToast({ message: "Saved successfully", isDismissable: true }));
+    const element = renderToast(makeToast({ message: "Saved successfully", dismissible: true }));
     const dismissButton = element.querySelector("button");
     const dismissIcon = dismissButton?.querySelector("svg");
 
@@ -80,7 +81,7 @@ describe("Toast rendering", () => {
 
     expect(icon).toBeInstanceOf(SVGElement);
     expect(icon?.getAttribute("class")).toContain("coden-toast-icon");
-    expect(element.firstElementChild).toBe(icon);
+    expect(element.querySelector(".coden-toast-main")?.firstElementChild).toBe(icon);
   });
 
   it("should append className as the only public style hook", () => {

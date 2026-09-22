@@ -12,21 +12,51 @@ pnpm add @codenhub/toaster
 
 ## Usage
 
-Import the required stylesheet once in the browser entrypoint.
+Import the required stylesheet once in the browser entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
+
+```ts
+import { toast, dialog } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
+
+// Neutral or semantic notifications
+toast("File uploaded");
+toast.success("Changes saved", {
+  description: "Updated 4 files across 2 repositories.",
+  action: {
+    label: "Undo",
+    onClick: (_event, handle) => {
+      revertChanges();
+      handle.dismiss();
+    },
+  },
+});
+
+// Promise lifecycle binding
+await toast.promise(saveChanges(), {
+  loading: "Saving changes...",
+  success: "Changes saved",
+  error: (err) => `Save failed: ${err.message}`,
+});
+
+// Interactive modal dialogs
+if (await dialog.confirm("Delete workspace?")) {
+  await deleteWorkspace();
+}
+```
+
+For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
-import "@codenhub/toaster/styles";
 
-const toaster = createToaster();
-const saving = toaster.loading.show({ message: "Saving..." });
+const scopedToaster = createToaster({
+  container: document.getElementById("modal-overlay")!,
+  maxVisible: 3,
+});
 
-await saveChanges();
-saving.dismiss();
-toaster.semantic.success("Changes saved");
-
-// Release DOM, timers, listeners, dialogs, and token styles on teardown.
-toaster.destroy();
+scopedToaster.success("Scoped notification");
+await scopedToaster.dialog.confirm("Proceed?");
+scopedToaster.destroy();
 ```
 
 ## Documentation

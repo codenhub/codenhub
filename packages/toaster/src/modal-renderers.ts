@@ -35,7 +35,7 @@ export function createConfirmRenderer(
     const actions = createHTMLElement("div", ACTIONS_CLASS, documentRef);
     actions.append(cancelButton, confirmButton);
     container.appendChild(actions);
-    return { initialFocus: options.type === "danger" ? cancelButton : confirmButton };
+    return { initialFocus: options.type === "error" ? cancelButton : confirmButton };
   };
 }
 

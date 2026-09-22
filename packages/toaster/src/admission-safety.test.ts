@@ -19,12 +19,12 @@ afterEach(() => {
 describe("overflow protection", () => {
   it("queues a new toast instead of evicting a hovered one", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Hovered");
+    const first = toaster.success("Hovered");
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
 
     expect(first.state).toBe("visible");
     expect(second.state).toBe("queued");
@@ -33,12 +33,12 @@ describe("overflow protection", () => {
 
   it("queues a new toast instead of evicting a focused one", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Focused");
+    const first = toaster.success("Focused");
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
 
     expect(first.state).toBe("visible");
     expect(second.state).toBe("queued");
@@ -47,8 +47,8 @@ describe("overflow protection", () => {
 
   it("queues a new toast instead of evicting a persistent loader", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const loader = toaster.loading.show({ message: "Working…" });
-    const next = toaster.semantic.success("Waiting");
+    const loader = toaster.loading("Working…");
+    const next = toaster.success("Waiting");
 
     expect(loader.state).toBe("visible");
     expect(next.state).toBe("queued");
@@ -57,11 +57,11 @@ describe("overflow protection", () => {
 
   it("admits queued work once protection is released", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Hovered");
+    const first = toaster.success("Hovered");
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
 
     element.dispatchEvent(new MouseEvent("mouseleave"));
@@ -73,37 +73,37 @@ describe("overflow protection", () => {
   });
 
   it("still evicts the oldest unprotected toast normally", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    const first = toaster.semantic.info("First");
-    const second = toaster.semantic.info("Second");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    const first = toaster.info("First");
+    const second = toaster.info("Second");
 
     expect(first.state).toBe("hiding");
     expect(second.state).toBe("queued");
     toaster.destroy();
   });
 
-  it("protects a persistent (shouldAutoDismiss: false) toast while hovered", () => {
+  it("protects a persistent (autoDismiss: false) toast while hovered", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
 
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
 
     expect(first.state).toBe("visible");
     expect(second.state).toBe("queued");
     toaster.destroy();
   });
 
-  it("protects a persistent (shouldAutoDismiss: false) toast while focused", () => {
+  it("protects a persistent (autoDismiss: false) toast while focused", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new FocusEvent("focusin"));
 
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
 
     expect(first.state).toBe("visible");
     expect(second.state).toBe("queued");
@@ -112,7 +112,7 @@ describe("overflow protection", () => {
 
   it("keeps focus protection when focus moves between two elements inside the same toast", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Interactive", { shouldAutoDismiss: false });
+    const first = toaster.success("Interactive", { autoDismiss: false });
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     // Simulates a second focusable element inside the toast, e.g. a link in
@@ -121,7 +121,7 @@ describe("overflow protection", () => {
     element.appendChild(innerButton);
 
     element.dispatchEvent(new FocusEvent("focusin"));
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
 
     // focusout bubbles from the descendant, but focus lands back inside the
@@ -139,11 +139,11 @@ describe("overflow protection", () => {
 
   it("evicts a persistent toast as soon as it is unhovered, with no explicit dismiss or configure()", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Persistent", { shouldAutoDismiss: false });
+    const first = toaster.success("Persistent", { autoDismiss: false });
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
 
     element.dispatchEvent(new MouseEvent("mouseleave"));
@@ -156,11 +156,11 @@ describe("overflow protection", () => {
 
   it("re-evaluates the queue as soon as a long-duration toast is unhovered, not only once it times out", () => {
     const toaster = createToaster({ maxVisible: 1, duration: 100000 });
-    const first = toaster.semantic.success("Hovered");
+    const first = toaster.success("Hovered");
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
 
     element.dispatchEvent(new MouseEvent("mouseleave"));
@@ -173,13 +173,13 @@ describe("overflow protection", () => {
 
   it("does not release the slot while either hover or focus still protects it", () => {
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.semantic.success("Both", { shouldAutoDismiss: false });
+    const first = toaster.success("Both", { autoDismiss: false });
     flushAnimations();
     const element = document.body.querySelector("[role='status']") as HTMLDivElement;
     element.dispatchEvent(new MouseEvent("mouseenter"));
     element.dispatchEvent(new FocusEvent("focusin"));
 
-    const second = toaster.semantic.success("Waiting");
+    const second = toaster.success("Waiting");
     expect(second.state).toBe("queued");
 
     element.dispatchEvent(new MouseEvent("mouseleave"));
@@ -194,10 +194,10 @@ describe("overflow protection", () => {
 
 describe("runtime capacity reconciliation", () => {
   it("evicts down to a newly lowered maxVisible", () => {
-    const toaster = createToaster({ maxVisible: 3, shouldAutoDismiss: false });
-    const first = toaster.semantic.info("A");
-    const second = toaster.semantic.info("B");
-    const third = toaster.semantic.info("C");
+    const toaster = createToaster({ maxVisible: 3, autoDismiss: false });
+    const first = toaster.info("A");
+    const second = toaster.info("B");
+    const third = toaster.info("C");
     expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
 
     toaster.configure({ maxVisible: 1 });
@@ -212,8 +212,8 @@ describe("runtime capacity reconciliation", () => {
     // Both loaders, so neither is evicted just to relieve queue pressure --
     // isolating the capacity-increase behavior from ordinary eviction.
     const toaster = createToaster({ maxVisible: 1 });
-    const first = toaster.loading.show({ message: "A" });
-    const second = toaster.loading.show({ message: "B" });
+    const first = toaster.loading("A");
+    const second = toaster.loading("B");
     expect(first.state).toBe("visible");
     expect(second.state).toBe("queued");
 
@@ -226,8 +226,8 @@ describe("runtime capacity reconciliation", () => {
 
   it("does not evict a protected toast to satisfy a lowered maxVisible", () => {
     const toaster = createToaster({ maxVisible: 2 });
-    const loader = toaster.loading.show({ message: "Working…" });
-    const regular = toaster.semantic.success("Other", { shouldAutoDismiss: false });
+    const loader = toaster.loading("Working…");
+    const regular = toaster.success("Other", { autoDismiss: false });
     expect([loader.state, regular.state]).toEqual(["visible", "visible"]);
 
     toaster.configure({ maxVisible: 1 });
@@ -250,12 +250,12 @@ describe("rendering failure rollback", () => {
       throw new Error("boom");
     });
 
-    const failed = toaster.semantic.success("Never renders");
+    const failed = toaster.success("Never renders");
     expect(failed.state).toBe("hidden");
     expect(reportError).toHaveBeenCalledOnce();
     createElementSpy.mockRestore();
 
-    const next = toaster.semantic.success("Should still render");
+    const next = toaster.success("Should still render");
     expect(next.state).toBe("visible");
     expect(document.body.textContent).toContain("Should still render");
 
@@ -269,7 +269,7 @@ describe("rendering failure rollback", () => {
       throw new Error("boom");
     });
 
-    const failed = toaster.semantic.success("Never renders");
+    const failed = toaster.success("Never renders");
     createElementSpy.mockRestore();
     expect(failed.state).toBe("hidden");
 
@@ -300,10 +300,10 @@ describe("token stylesheet CSP compatibility", () => {
   });
 
   it("does not partially apply a configure() call when its token stylesheet fails", () => {
-    const toaster = createToaster({ maxVisible: 3, shouldAutoDismiss: false });
-    const first = toaster.semantic.info("A");
-    const second = toaster.semantic.info("B");
-    const third = toaster.semantic.info("C");
+    const toaster = createToaster({ maxVisible: 3, autoDismiss: false });
+    const first = toaster.info("A");
+    const second = toaster.info("B");
+    const third = toaster.info("C");
     expect([first.state, second.state, third.state]).toEqual(["visible", "visible", "visible"]);
 
     const sheetSpy = vi.spyOn(HTMLStyleElement.prototype, "sheet", "get").mockReturnValue(null);
@@ -344,7 +344,7 @@ describe("live region announcement ordering", () => {
     const observer = new MutationObserver(() => {});
     observer.observe(document.body, { childList: true, subtree: true });
 
-    toaster.semantic.success("Announced");
+    toaster.success("Announced");
 
     const records = observer.takeRecords();
     observer.disconnect();
@@ -363,9 +363,9 @@ describe("live region announcement ordering", () => {
 
 describe("queued toast updates", () => {
   it("applies an update sent while queued once the toast is admitted", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Before");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Before");
     expect(queued.state).toBe("queued");
 
     queued.update({ message: "After" });
@@ -382,18 +382,18 @@ describe("queued toast updates", () => {
   });
 
   it("rejects an invalid queued update immediately rather than storing it", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Second");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Second");
 
     expect(() => queued.update({ tokens: { successBg: "red; } body { display: none" } })).toThrow(/color/);
     toaster.destroy();
   });
 
   it("applies a type/icon update sent while queued once the toast is admitted", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.loading.show({ message: "Working" });
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.loading("Working");
     expect(queued.state).toBe("queued");
 
     queued.update({ type: "success", message: "Done" });
@@ -407,9 +407,9 @@ describe("queued toast updates", () => {
   });
 
   it("applies a content update sent while queued once the toast is admitted", () => {
-    const toaster = createToaster({ maxVisible: 1, shouldAutoDismiss: false });
-    toaster.semantic.info("First");
-    const queued = toaster.semantic.info("Second");
+    const toaster = createToaster({ maxVisible: 1, autoDismiss: false });
+    toaster.info("First");
+    const queued = toaster.info("Second");
 
     const replacement = document.createElement("span");
     replacement.textContent = "Queued replacement";
@@ -426,7 +426,7 @@ describe("option mutation safety", () => {
   it("is not affected by mutating the caller's token object after dispatch", () => {
     const toaster = createToaster();
     const tokens = { successBg: "red" };
-    toaster.semantic.success("Snapshot test", { tokens });
+    toaster.success("Snapshot test", { tokens });
 
     tokens.successBg = "blue";
 
@@ -437,7 +437,7 @@ describe("option mutation safety", () => {
 
   it("does not apply a partial update when token validation fails", () => {
     const toaster = createToaster();
-    const handle = toaster.semantic.success("Original message");
+    const handle = toaster.success("Original message");
     const element = document.body.querySelector("[role='status']");
 
     expect(() =>

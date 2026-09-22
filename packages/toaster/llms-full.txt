@@ -14,21 +14,51 @@ pnpm add @codenhub/toaster
 
 ## Usage
 
-Import the required stylesheet once in the browser entrypoint.
+Import the required stylesheet once in the browser entrypoint. Use the pre-configured singletons for zero-boilerplate notifications and dialogs:
+
+```ts
+import { toast, dialog } from "@codenhub/toaster";
+import "@codenhub/toaster/styles";
+
+// Neutral or semantic notifications
+toast("File uploaded");
+toast.success("Changes saved", {
+  description: "Updated 4 files across 2 repositories.",
+  action: {
+    label: "Undo",
+    onClick: (_event, handle) => {
+      revertChanges();
+      handle.dismiss();
+    },
+  },
+});
+
+// Promise lifecycle binding
+await toast.promise(saveChanges(), {
+  loading: "Saving changes...",
+  success: "Changes saved",
+  error: (err) => `Save failed: ${err.message}`,
+});
+
+// Interactive modal dialogs
+if (await dialog.confirm("Delete workspace?")) {
+  await deleteWorkspace();
+}
+```
+
+For isolated DOM containers, micro-frontends, or custom instances, use `createToaster()`:
 
 ```ts
 import { createToaster } from "@codenhub/toaster";
-import "@codenhub/toaster/styles";
 
-const toaster = createToaster();
-const saving = toaster.loading.show({ message: "Saving..." });
+const scopedToaster = createToaster({
+  container: document.getElementById("modal-overlay")!,
+  maxVisible: 3,
+});
 
-await saveChanges();
-saving.dismiss();
-toaster.semantic.success("Changes saved");
-
-// Release DOM, timers, listeners, dialogs, and token styles on teardown.
-toaster.destroy();
+scopedToaster.success("Scoped notification");
+await scopedToaster.dialog.confirm("Proceed?");
+scopedToaster.destroy();
 ```
 
 ## Documentation
@@ -61,7 +91,7 @@ Bundled Lucide SVG icons use the ISC License. See [NOTICE](NOTICE).
 
 # Show toasts and dialogs
 
-`@codenhub/toaster` creates isolated managers for semantic, loading, and custom browser toasts plus native confirm, prompt, and alert dialogs. Each manager owns its stacks, queues, DOM, timers, listeners, and token stylesheet.
+`@codenhub/toaster` provides zero-boilerplate singletons and isolated instances for neutral, semantic, loading, custom, and promise-driven browser toasts, plus native confirm, prompt, and alert dialogs. Each toaster manages its own stacks, queues, DOM, timers, listeners, and token stylesheet.
 
 ## Setup
 
@@ -76,21 +106,39 @@ pnpm add @codenhub/toaster
 Import the required global stylesheet once in the browser entrypoint:
 
 ```ts
-import { createToaster } from "@codenhub/toaster";
+import { toast, dialog } from "@codenhub/toaster";
 import "@codenhub/toaster/styles";
 
-const toaster = createToaster();
-const saving = toaster.loading.show({ message: "Saving..." });
+// Dispatch neutral or semantic notifications
+toast("File uploaded");
+toast.success("Changes saved");
 
-await saveChanges();
-saving.dismiss();
-toaster.semantic.success("Changes saved");
+// Bind to promise lifecycles with automatic state transitions
+await toast.promise(saveChanges(), {
+  loading: "Saving...",
+  success: "Changes saved",
+  error: (err) => `Save failed: ${err.message}`,
+});
+
+// Await native interactive modal dialogs directly
+if (await dialog.confirm("Are you sure?")) {
+  doAction();
+}
+```
+
+For isolated DOM containers, micro-frontends, or custom scopes:
+
+```ts
+import { createToaster } from "@codenhub/toaster";
+
+const toaster = createToaster({ maxVisible: 3 });
+toaster.success("Custom instance toast");
 
 // Release DOM, timers, listeners, dialogs, and token styles on teardown.
 toaster.destroy();
 ```
 
-Retain handles when a toast must be updated or dismissed. Call `destroy()` when the owning application scope is torn down; later calls on that manager throw.
+Retain handles when a toast must be updated or dismissed programmatically. Call `destroy()` when an isolated instance is torn down; later calls on that instance throw.
 
 ### Configuration
 
@@ -142,7 +190,7 @@ Use text messages for untrusted plain content. Use custom HTML only when the all
 
 ## Public Entrypoints
 
-- `@codenhub/toaster` exports `createToaster` and all public types.
+- `@codenhub/toaster` exports default singletons `toast` and `dialog`, instance factory `createToaster`, and all public types.
 - `@codenhub/toaster/styles` exports required prebuilt CSS for layout, variants, dialogs, animation, and responsive behavior.
 
 Import the stylesheet once. The optional `@codenhub/styles >=0.3.0` peer can supply shared variables; this package's own generated defaults allow standalone use. No Tailwind consumer configuration is required. When `@codenhub/styles` is present, every radius and border-width reads its base token first (`--radius-control`, `--radius-surface`, `--border-width`) — matching `box.css`/`surface.css`'s own fallback chain — before falling back further to toaster's own fixed values when `@codenhub/styles` isn't installed at all. An active aesthetic (e.g. `.glass`, `.neobrutalism`) layers its material tokens (`--ui-radius`, `--ui-border-width`, `--ui-surface-shadow`, `--ui-clip`, `--ui-elevation`) on top of that base, generically: toaster's CSS reads the same `--ui-*` custom properties any real styles component reads, so it needs no per-aesthetic code to pick them up.
@@ -151,7 +199,7 @@ Every color composes live, the same formula `@codenhub/styles`' own `box.css` ru
 
 The toast body composes like `.alert`'s own unstyled default: a soft (12%), edged surface grounded on the page background, no elevation. The dialog's action buttons compose like `.btn`'s own unstyled default instead: solid (100%), edgeless, raised (elevation 1), grounded on transparent. Neither is toaster's own choice to make up; both mirror the same registry defaults `.alert` and `.btn` themselves declare.
 
-Presentation (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) is a plain, inheriting custom-property class matching `@codenhub/styles`' own `presentation.css` exactly (`.solid` sets `--ui-fill: 100%`, and so on) — restated as a standalone shim so it also works with no `@codenhub/styles` on the page. Because it is an ordinary custom property, a class on the toast or dialog element itself always wins over one only an ancestor carries, the same rule any real styles component follows, and arbitrary `--ui-fill`/`--ui-border` percentages set directly (not only these five named classes) are honored too. A consumer's own `ToastTokens` color always wins over the composed result for the property it sets. The dialog container and its cancel button carry no severity of their own, so they read a flat, live-first surface/text/border token instead of running the intent formula. The dialog's action buttons additionally each expose their own edge token (`primaryEdge`/`secondaryEdge`/`successBtnEdge`/`destructiveBtnEdge`) that wins over the composed edge under `.edged`, matching the toast body's own per-severity edge tokens; the cancel button gets the same `.edged` treatment via the flat border token. Two further surfaces opt out for legibility: the dialog's text input keeps its border regardless of `.edgeless` and its background stays transparent regardless of presentation, and its `:focus-visible` ring reuses the primary action button's own color chain rather than a hand-picked literal. Toast entrance/exit animation duration and easing read `--motion-duration-slow`/`--motion-ease` live too, falling back to this package's own default timing when unset.
+Presentation (`.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`) is a plain, inheriting custom-property class matching `@codenhub/styles`' own `presentation.css` exactly (`.solid` sets `--ui-fill: 100%`, and so on) — restated as a standalone shim so it also works with no `@codenhub/styles` on the page. Because it is an ordinary custom property, a class on the toast or dialog element itself always wins over one only an ancestor carries, the same rule any real styles component follows, and arbitrary `--ui-fill`/`--ui-border` percentages set directly (not only these five named classes) are honored too. A consumer's own `ToastTokens` color always wins over the composed result for the property it sets. The dialog container and its cancel button carry no severity of their own, so they read a flat, live-first surface/text/border token instead of running the intent formula. The dialog's action buttons additionally each expose their own edge token (`primaryEdge`/`secondaryEdge`/`successBtnEdge`/`errorBtnEdge`) that wins over the composed edge under `.edged`, matching the toast body's own per-severity edge tokens; the cancel button gets the same `.edged` treatment via the flat border token. Two further surfaces opt out for legibility: the dialog's text input keeps its border regardless of `.edgeless` and its background stays transparent regardless of presentation, and its `:focus-visible` ring reuses the primary action button's own color chain rather than a hand-picked literal. Toast entrance/exit animation duration and easing read `--motion-duration-slow`/`--motion-ease` live too, falling back to this package's own default timing when unset.
 
 The dialog's action buttons render as native `<button>` elements. If a consumer also loads `@codenhub/styles`' classless native-element mappings (`@codenhub/styles/native` or `@codenhub/styles/tw/native`), that stylesheet resets every bare `button` to the neutral intent at zero specificity — the same specificity toaster's own dialog-button rules use. Import order decides which wins: import the native mappings before `@codenhub/toaster/styles`, not after, or a dialog button's intent styling is silently reset to neutral.
 
@@ -171,47 +219,99 @@ Unlike `position` and `duration`, a config-level `className` is not overridden b
 
 Construction validates positions, finite non-negative durations, positive integer capacity, and CSS color tokens. Invalid values throw. `configure()` validates runtime changes; attempting to change `container` throws. Configuring tokens or margins needs a DOM.
 
-`Toaster` exposes `semantic`, `loading`, `interactive`, and `custom` dispatchers. `clear()` dismisses non-interactive categories only. `destroy()` is idempotent; it dismisses active/queued work, closes dialogs, restores focus when possible, removes owned DOM/listeners/timers/styles, and makes later calls throw. Dismissal through `destroy()` is immediate and synchronous: every handle settles (`state` becomes `"hidden"` and `settled` resolves) before `destroy()` returns, canceling any in-flight entrance or exit animation rather than waiting for one that nothing is left to see complete on its own -- unlike a normal `dismiss()`/`hide()`, which still animates.
+`Toaster` is a callable function (`toast("Message")` or `toast({ message: "..." })`) that also exposes methods for variants (`success`, `error`, `warning`, `info`), states (`loading`, `custom`, `promise`), queue management (`clear`, `dismiss`), and dialogs (`dialog`).
+
+`clear()` dismisses all visible and queued toasts. `dismiss(handle?)` dismisses the specified toast when given a handle, or all active toasts when called without arguments.
+
+`destroy()` is idempotent; it dismisses active/queued work, closes dialogs, restores focus when possible, removes owned DOM/listeners/timers/styles, and makes later calls throw. Dismissal through `destroy()` is immediate and synchronous: every handle settles (`state` becomes `"hidden"` and `settled` resolves) before `destroy()` returns, canceling any in-flight entrance or exit animation rather than waiting for one that nothing is left to see complete on its own -- unlike a normal `dismiss()`/`hide()`, which still animates.
 
 Each instance owns a fully separate stack, dialog controller, and DOM, with no coordination between instances: two instances configured to the same position render two independent, potentially overlapping stacks, and two instances can each open a native dialog at the same time (each is a real top-layer modal, so both are visible and independently focusable). Reaching for two `Toaster` instances in the same app -- rather than one, configured per dispatch with a per-call `position`/`container` override -- is what produces this; keeping them at different positions/containers avoids the overlap, and there is no dedicated cross-instance API for it. A toast rendered outside the top layer is subject to the platform's own modal semantics while any dialog (from the same instance or another) is open with `showModal()`: the browser makes the rest of the document inert, so a background toast's dismiss button stops being clickable and assistive technology stops reaching it, resuming once every open dialog closes. This is standard `<dialog>` behavior, not something toaster adds or can opt out of.
 
-## Dispatchers
+## Toast Methods and Dispatchers
 
-`SemanticDispatcher` provides `show()` and `success()`, `error()`, `warning()`, and `info()` helpers plus category `clear()`. `SemanticType` contains those four variants. Success/info default to role `status`; error/warning default to `alert`.
+The callable `Toaster` surface exposes:
 
-`LoadingDispatcher.show(LoadingToastOptions)` creates a `status` toast that does not auto-dismiss; `clear()` dismisses loading toasts. `CustomDispatcher.show()` accepts `CustomToastOptions`; its `clear()` affects only custom toasts.
+- `toaster(message, options?)` / `toaster(options)`: Dispatches a neutral default toast.
+- `toaster.success(message, options?)`: Dispatches a success toast (default role `status`, green intent).
+- `toaster.error(message, options?)`: Dispatches an error toast (default role `alert`, red intent).
+- `toaster.warning(message, options?)`: Dispatches a warning toast (default role `alert`, yellow intent).
+- `toaster.info(message, options?)`: Dispatches an info toast (default role `status`, blue intent).
+- `toaster.loading(message?, options?)`: Dispatches a persistent loading toast with an SVG spinner (`status` role, does not auto-dismiss).
+- `toaster.custom(content, options?)`: Dispatches a toast with custom HTML string, DOM Node, or node factory function.
+- `toaster.promise(promise, options)`: Binds notification state to a Promise lifecycle, automatically transitioning from loading to success or error and re-arming auto-dismiss. Returns the original Promise result.
+- `toaster.dialog`: Exposes interactive browser dialogs (`confirm`, `prompt`, `alert`).
+- `toaster.clear()`: Dismisses all visible and queued toasts.
+- `toaster.dismiss(handle?)`: Dismisses a specific toast if a handle is passed, or all active toasts when omitted.
 
-`InteractiveDispatcher` exposes `confirm`, `prompt`, and `alert`. Calls require a non-empty message and queue FIFO behind one native `<dialog>`. Their `ConfirmOptions`, `PromptOptions`, and `AlertOptions` configure labels, title, backdrop dismissal (default true), action type, classes, and tokens. Prompt adds default value and placeholder.
+`DialogDispatcher` exposes:
 
-Queued/visible dismissal resolves confirm as `false`, prompt as `null`, and alert as `undefined`. Native dialog setup failures reject `result`, clean up, and allow the next queued dialog to run.
+- `dialog.confirm(message, options?)`: Shows a modal confirm dialog, resolving to `boolean`.
+- `dialog.prompt(message, options?)`: Shows a modal input prompt, resolving to `string | null`.
+- `dialog.alert(message, options?)`: Shows a modal alert, resolving to `void`.
+
+All dialog methods return an `InteractiveToastHandle<T>` implementing `PromiseLike<T>`, enabling both direct `await dialog.confirm(...)` and capturing the handle for programmatic dismissal or state tracking.
+
+## Structured Content and Actions
+
+Toasts support rich structured options:
+
+- `title?: string`: Primary heading line.
+- `message?: string`: Core message text. When `description` is absent, `title ?? message` serves as the primary text.
+- `description?: string`: Secondary detail text rendered beneath the title.
+- `action?: ToastAction`: An inline button with `{ label: string, onClick: (event: MouseEvent, handle: ToastHandle) => void }`. Explicitly calling `handle.dismiss()` closes the toast.
+- `dismissible?: boolean`: Whether to render a close button (aliased as `closeButton`).
+- `autoDismiss?: boolean`: Whether the toast closes automatically after `duration`.
 
 ## Handles and Queueing
 
-`ToastHandle` provides `dismiss()`, `update(ToastUpdateOptions)`, `settled`, `state`, and `onShow`/`onShown`/`onHide`/`onHidden` subscriptions. Lifecycle subscriptions return unsubscribe functions; late registration after an event runs immediately. `update()` can replace the message or content, swap the icon, switch the severity `type` (recoloring the toast and updating its role to match -- e.g. turning a loading toast into a success toast with `update({ type: "success" })`), change `duration` or `shouldAutoDismiss`, and replace tokens or consumer classes; sent to a visible toast, it applies immediately, and sent to a still-queued one, it is stored and applied once a slot opens rather than discarded. `content` supersedes `message` and `icon` in the same call, the same mutual exclusivity construction itself applies; when `type` is given without its own `icon`, the icon matching that type is used automatically. `update()` has no effect once the toast has settled, and throws under the same conditions construction does: an invalid token color, a negative/non-finite `duration`, an unrecognized `type`, or `content` that resolves to nothing renderable.
+`ToastHandle` provides:
 
-`InteractiveToastHandle<T>` provides `dismiss()`, `settled`, `state`, and `result`. `ToastState` is `"queued" | "visible" | "hiding" | "hidden"`.
+- `dismiss()`: Starts toast exit animation.
+- `update(ToastUpdateOptions)`: Replaces text (`title`, `message`, `description`), `action`, `content`, `icon`, severity `type`, `duration`, `autoDismiss`, `dismissible`, `tokens`, or `className`.
+- `settled`: Promise resolving when the toast exits and is removed from the DOM.
+- `state`: Public lifecycle state (`"queued" | "visible" | "hiding" | "hidden"`).
+- `onShow(fn)`, `onShown(fn)`, `onHide(fn)`, `onHidden(fn)`: Lifecycle event listeners.
 
-At capacity, a new non-interactive toast queues and the oldest _eligible_ active toast is dismissed to make room; admission is FIFO. A toast that is a loader, hovered, or focused is protected and never evicted for this — if every active toast is protected, the new one simply waits queued instead. Lowering `maxVisible` at runtime through `configure()` reconciles existing occupancy the same way: eligible toasts are dismissed down to the new limit, but a limit lowered below the number of currently protected toasts is not enforced by evicting one of them, and any newly-freed slots admit queued work immediately. Queued toasts can be dismissed before rendering. Auto-dismiss starts after entrance, pauses for hover, focus, or the document's tab being in the background (`document.visibilityState === "hidden"`), and resumes with the remaining duration once every pausing condition clears. `settled` resolves after removal and cleanup.
+`InteractiveToastHandle<T>` implements `PromiseLike<T>` and provides:
 
-If more simultaneous toasts are showing at one position than fit in the viewport (a short viewport, several toasts, or tall content can each produce this), the stack scrolls internally instead of running off-screen with no way back; a newly dispatched toast always scrolls into view on arrival, and dismissing one leaves the stack's current scroll position alone rather than fighting a consumer who scrolled to read an older one. The stack's own scrollbar chrome is hidden, since a platform scrollbar track next to a floating, rounded toast reads as a rendering artifact rather than a real scrollable panel; wheel, touch, and the scroll-to-reveal behavior above all still work. A toast anchored to `top-right`/`bottom-right` stays flush against that physical edge regardless of how wide its siblings are, instead of drifting toward the opposite edge as a wider sibling grows the stack. Dismissing a toast whose own element currently holds keyboard focus (e.g. its dismiss button) restores focus to whatever held it immediately before that toast last rendered, if that element still exists — the same restoration `InteractiveDispatcher` dialogs already do.
+- `then()`, `catch()`, `finally()`: Direct awaitable promise interface.
+- `dismiss()`: Closes the dialog, settling the result promise with the cancel fallback (`false`, `null`, `undefined`).
+- `settled`: Promise resolving when dialog DOM cleanup completes.
+- `state`: Lifecycle state (`"queued" | "visible" | "hiding" | "hidden"`).
+- `result`: Raw promise resolving to `T`.
+
+At capacity (`maxVisible`), a new non-interactive toast queues FIFO and the oldest eligible active toast is dismissed to make room. Toasts marked as loaders, hovered, or focused are protected from eviction.
+
+If more simultaneous toasts are showing at one position than fit in the viewport, the stack scrolls internally without showing scrollbars. Anchored toasts stay flush against the viewport edge. Dismissing a focused toast restores focus to the prior active element.
 
 ## Options and Tokens
 
-`SemanticToastOptions`, `LoadingToastOptions`, and `CustomToastOptions` provide their required message/content and applicable `ToastPosition`, duration, dismissal, `ToastRole`, margin, class, and token fields. Messages and string content must be non-empty; durations must be finite and at least zero. Category fallback types are `SemanticDefaults`, `LoadingDefaults`, and `CustomDefaults`.
+`ToastOptions` provides optional structured fields (`title`, `description`, `action`), positioning, duration, dismissal, role, margin, class, and token overrides.
 
-`ToastPosition` supports corners, top/bottom center, and center. `ToastTokens` exposes optional colors for semantic variants (including their edge/border), surface/border/text, and dialog action fill, hover, and edge/border states. Values are validated with `CSS.supports` when available and declaration delimiters are always rejected. Instance tokens use an owned scoped stylesheet; per-toast/dialog tokens stay element-scoped.
+`ToastPosition` supports corners (`top-left`, `top-right`, `bottom-left`, `bottom-right`), top/bottom center (`top-center`, `bottom-center`), and `center`.
+
+`ToastTokens` exposes optional colors for semantic variants:
+
+- Default: `defaultBg`, `defaultFg`, `defaultEdge`
+- Success: `successBg`, `successFg`, `successEdge`, `successBtnBg`, `successBtnFg`, `successBtnBgHover`, `successBtnEdge`
+- Error: `errorBg`, `errorFg`, `errorEdge`, `errorBtnBg`, `errorBtnFg`, `errorBtnBgHover`, `errorBtnEdge`
+- Warning: `warningBg`, `warningFg`, `warningEdge`
+- Info: `infoBg`, `infoFg`, `infoEdge`
+- Common: `surface`, `border`, `text`, `primaryBg`, `primaryFg`, `primaryBgHover`, `primaryEdge`, `secondaryBg`, `secondaryFg`, `secondaryBgHover`, `secondaryEdge`
 
 ## SSR and Browser Lifecycle
 
-Construction is SSR-safe unless it must apply initial tokens. Rendering, interactive calls, and DOM-dependent reconfiguration require a document and throw without one. The configured container determines the owner document and cannot change. Interactive APIs require native `HTMLDialogElement.showModal()` and `close()`; prompt focus requires `requestAnimationFrame`, and listener cleanup uses `AbortController`.
+Construction is SSR-safe unless initial tokens need the DOM. Rendering, interactive calls, and DOM-dependent reconfiguration require a document and throw without one. Interactive APIs require native `HTMLDialogElement.showModal()` and `close()`.
 
-Animations use the Web Animations API when available and complete immediately when it is absent or throws. `matchMedia`, when available, disables motion for `prefers-reduced-motion: reduce`. A canceled animation (entrance or exit) completes the same lifecycle step a finished one would, rather than leaving the toast stuck mid-transition.
+Animations use the Web Animations API when available and complete immediately when it is absent or throws. `matchMedia`, when available, disables motion for `prefers-reduced-motion: reduce`.
 
-Built-in icons and the dismiss control are constructed with DOM APIs rather than parsed from a markup string, so they render under a host `require-trusted-types-for 'script'` Content Security Policy with no default policy configured. A rendering failure — including one a host security policy causes — releases the toast's reserved stack slot and reports the error rather than leaving the slot permanently unavailable. The custom-content string path (see [Accessibility and custom content](docs/accessibility-and-content.md)) still parses markup and needs its own Trusted Types policy under that same enforcement.
+Built-in icons and the dismiss control are constructed with DOM APIs rather than parsed from markup strings, rendering safely under strict Content Security Policies.
 
 ## Public Exports
 
-The root exports `createToaster`; `Toaster`, `SemanticDispatcher`, `LoadingDispatcher`, `InteractiveDispatcher`, `CustomDispatcher`, `ToasterConfig`, `ToasterRuntimeConfig`, `ToastHandle`, `InteractiveToastHandle`, `ToastUpdateOptions`, `ToastState`, `ToastPosition`, `ToastRole`, `ToastLifecycleSubscriber`, `ToastTokens`, `ToastLabels`, `SemanticToastOptions`, `SemanticType`, `LoadingToastOptions`, `CustomToastOptions`, `ConfirmOptions`, `PromptOptions`, `AlertOptions`, `SemanticDefaults`, `LoadingDefaults`, `CustomDefaults`, and `ToastContent` are public types.
+The root exports `toast`, `dialog`, and `createToaster`.
+
+Public types include `Toaster`, `DialogDispatcher`, `ToasterConfig`, `ToasterRuntimeConfig`, `ToastHandle`, `InteractiveToastHandle`, `ToastUpdateOptions`, `ToastOptions`, `ToastAction`, `PromiseToastOptions`, `ToastState`, `ToastPosition`, `ToastRole`, `ToastLifecycleSubscriber`, `ToastTokens`, `ToastLabels`, `SemanticType`, `LoadingToastOptions`, `CustomToastOptions`, `ConfirmOptions`, `PromptOptions`, `AlertOptions`, `SemanticDefaults`, `LoadingDefaults`, `CustomDefaults`, and `ToastContent`.
 
 <!-- Source: docs/changelog/0.1.0.md -->
 

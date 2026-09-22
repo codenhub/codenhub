@@ -1,24 +1,29 @@
 import { removeInstanceContainers } from "./dom";
-import { createCustomDispatcher } from "./managers/custom";
-import type { CustomContext, CustomDispatcher } from "./managers/custom";
-import { createInteractiveDispatcher } from "./managers/interactive";
-import type { InteractiveDispatcher } from "./managers/interactive";
-import { createLoadingDispatcher } from "./managers/loading";
-import type { LoadingContext, LoadingDispatcher } from "./managers/loading";
-import { createSemanticDispatcher } from "./managers/semantic";
-import type { SemanticContext, SemanticDispatcher } from "./managers/semantic";
 import { ModalController } from "./modal";
 import { DEFAULT_CONFIG, DEFAULT_DISMISS_LABEL, assertToastPosition } from "./options";
-import type { ResolvedToastConfig } from "./options";
-import type { Toast } from "./toast-base";
+import type { RawToastOptions, ResolvedToastConfig } from "./options";
+import { Toast } from "./toast-base";
 import { reconcileCapacity } from "./toast-helpers";
 import { applyGlobalTokens, assertValidTokens, removeGlobalTokens } from "./tokens";
-import type { ToasterConfig, ToasterRuntimeConfig, ToastHandle, ToastUpdateOptions } from "./types";
-
-export type { SemanticDispatcher } from "./managers/semantic";
-export type { LoadingDispatcher } from "./managers/loading";
-export type { CustomDispatcher } from "./managers/custom";
-export type { InteractiveDispatcher } from "./managers/interactive";
+import type {
+  AlertOptions,
+  ConfirmOptions,
+  CustomToastOptions,
+  DialogDispatcher,
+  LoadingToastOptions,
+  PromiseToastOptions,
+  PromptOptions,
+  SemanticType,
+  ToastContent,
+  ToastHandle,
+  ToastOptions,
+  Toaster,
+  ToasterConfig,
+  ToasterRuntimeConfig,
+  ToastUpdateOptions,
+} from "./types";
+import { LoadingToast } from "./variants/loading";
+import { SemanticToast } from "./variants/semantic";
 
 let instanceCounter = 0;
 function generateInstanceId(): string {
@@ -35,90 +40,97 @@ function copyConfig(config: ToasterConfig): ToasterConfig {
     loading: config.loading ? { ...config.loading } : undefined,
     custom: config.custom ? { ...config.custom } : undefined,
     labels: config.labels ? { ...config.labels } : undefined,
-    margin: typeof config.margin === "object" ? { ...config.margin } : config.margin,
+    margin: typeof config.margin === "object" && config.margin !== null ? { ...config.margin } : config.margin,
   };
 }
 
-export interface BaseContext {
-  assertAlive(): void;
-  getParent(): HTMLElement;
-  registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle;
-  readonly config: ToasterConfig;
-  readonly resolved: ResolvedToastConfig;
+function parseToastArgs(
+  messageOrOptions: string | ToastOptions,
+  options?: ToastOptions,
+): { message?: string; options: ToastOptions } {
+  if (typeof messageOrOptions === "string") {
+    return { message: messageOrOptions, options: options ?? {} };
+  }
+  return { message: messageOrOptions.message, options: messageOrOptions };
 }
 
-function makeHandle(toast: Toast): ToastHandle {
-  const handle: ToastHandle = {
-    dismiss: () => toast.hide(),
-    update: (opts: ToastUpdateOptions) => toast.update(opts),
-    get settled(): Promise<void> {
-      return toast.settled;
-    },
-    get state() {
-      return toast.publicState;
-    },
-    onShow: (sub) => toast.onShow(sub),
-    onShown: (sub) => toast.onShown(sub),
-    onHide: (sub) => toast.onHide(sub),
-    onHidden: (sub) => toast.onHidden(sub),
+type InternalLoadingOptions = LoadingToastOptions & { duration?: number };
+
+function parseLoadingArgs(
+  messageOrOptions?: string | InternalLoadingOptions,
+  options?: InternalLoadingOptions,
+): { message?: string; options: InternalLoadingOptions } {
+  if (typeof messageOrOptions === "string") {
+    return { message: messageOrOptions, options: options ?? {} };
+  }
+  if (messageOrOptions) {
+    return { message: messageOrOptions.message, options: messageOrOptions };
+  }
+  return { message: undefined, options: {} };
+}
+
+function parseCustomArgs(
+  contentOrOptions: ToastContent | CustomToastOptions,
+  options?: Omit<CustomToastOptions, "content">,
+): { content?: ToastContent; options: Omit<CustomToastOptions, "content"> } {
+  if (
+    typeof contentOrOptions === "string" ||
+    typeof contentOrOptions === "function" ||
+    (typeof contentOrOptions === "object" && contentOrOptions !== null && "nodeType" in contentOrOptions)
+  ) {
+    return { content: contentOrOptions as ToastContent, options: options ?? {} };
+  }
+  const opts = (contentOrOptions ?? {}) as CustomToastOptions;
+  return { content: opts.content, options: opts };
+}
+
+function toStructuredPromiseUpdate(result: string | ToastOptions, type: SemanticType): ToastUpdateOptions {
+  if (typeof result === "string") {
+    return {
+      type,
+      autoDismiss: true,
+      message: result,
+      title: null,
+      description: null,
+    };
+  }
+  return {
+    type,
+    autoDismiss: true,
+    message: result.message !== undefined ? result.message : null,
+    title: result.title !== undefined ? result.title : null,
+    description: result.description !== undefined ? result.description : null,
+    action: result.action !== undefined ? result.action : null,
+    icon: result.icon,
+    duration: result.duration,
+    dismissible: result.dismissible ?? result.closeButton,
+    className: result.className,
+    tokens: result.tokens,
   };
-  toast.setHandle(handle);
-  return handle;
 }
 
-/**
- * Represents the main Toaster instance controller.
- */
-export interface Toaster {
-  /** Semantic toast dispatcher. */
-  readonly semantic: SemanticDispatcher;
-  /** Loading indicator dispatcher. */
-  readonly loading: LoadingDispatcher;
-  /** Interactive native dialog dispatcher. */
-  readonly interactive: InteractiveDispatcher;
-  /** Custom DOM layout dispatcher. */
-  readonly custom: CustomDispatcher;
-
-  /**
-   * Clear all active, non-interactive toasts.
-   *
-   * @throws {Error} If the toaster instance has been destroyed.
-   */
-  clear(): void;
-
-  /**
-   * Reconfigure the toaster at runtime.
-   * The construction-time container cannot be changed.
-   *
-   * @param config Runtime configuration to validate and apply.
-   * @throws {Error} If the instance is destroyed or configuration is invalid.
-   */
-  configure(config: ToasterRuntimeConfig): void;
-
-  /**
-   * Fully tear down this toaster instance: dismisses all toasts, closes any
-   * open modal, removes all created DOM nodes and the injected style element.
-   * All subsequent calls on this instance will throw.
-   */
-  destroy(): void;
-}
-
-class ToastManager implements Toaster {
+class ToastManager {
   private config: ToasterConfig;
   private resolved: ResolvedToastConfig;
   private readonly instanceId: string;
   private isDestroyed = false;
-
-  private readonly semanticToasts = new Set<Toast>();
-  private readonly loadingToasts = new Set<Toast>();
-  private readonly customToasts = new Set<Toast>();
-
+  private readonly activeToasts = new Set<Toast>();
   private modalController: ModalController | null = null;
 
-  public readonly semantic: SemanticDispatcher;
-  public readonly loading: LoadingDispatcher;
-  public readonly interactive: InteractiveDispatcher;
-  public readonly custom: CustomDispatcher;
+  public readonly dialog: DialogDispatcher = {
+    confirm: (message: string, options?: ConfirmOptions) => {
+      this.assertAlive();
+      return this.getModalController().confirm(message, options);
+    },
+    prompt: (message: string, options?: PromptOptions) => {
+      this.assertAlive();
+      return this.getModalController().prompt(message, options);
+    },
+    alert: (message: string, options?: AlertOptions) => {
+      this.assertAlive();
+      return this.getModalController().alert(message, options);
+    },
+  };
 
   constructor(config: ToasterConfig = {}) {
     this.instanceId = generateInstanceId();
@@ -134,38 +146,171 @@ class ToastManager implements Toaster {
         this.config.nonce,
       );
     }
+  }
 
-    const getContextConfig = () => this.config;
-    const getContextResolved = () => this.resolved;
-    const buildContext = <T extends object>(extra: T): BaseContext & T => {
-      return {
-        assertAlive: () => this.assertAlive(),
-        getParent: () => this.getParent(),
-        registerToast: (toast: Toast, bucket: Set<Toast>) => this.registerToast(toast, bucket),
-        get config() {
-          return getContextConfig();
-        },
-        get resolved() {
-          return getContextResolved();
-        },
-        ...extra,
-      };
+  public show(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+      type: parsedOpts.type ?? "default",
     };
-
-    this.semantic = createSemanticDispatcher(buildContext({ semanticToasts: this.semanticToasts }) as SemanticContext);
-    this.loading = createLoadingDispatcher(buildContext({ loadingToasts: this.loadingToasts }) as LoadingContext);
-    this.custom = createCustomDispatcher(buildContext({ customToasts: this.customToasts }) as CustomContext);
-    this.interactive = createInteractiveDispatcher({
-      assertAlive: () => this.assertAlive(),
-      getModalController: () => this.getModalController(),
+    const toast = new Toast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
     });
+    return this.registerToast(toast);
+  }
+
+  public success(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.semantic,
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+      type: "success",
+    };
+    const toast = new SemanticToast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public error(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.semantic,
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+      type: "error",
+    };
+    const toast = new SemanticToast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public warning(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.semantic,
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+      type: "warning",
+    };
+    const toast = new SemanticToast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public info(messageOrOptions: string | ToastOptions, options?: ToastOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseToastArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.semantic,
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+      type: "info",
+    };
+    const toast = new SemanticToast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public loading(messageOrOptions?: string | InternalLoadingOptions, options?: InternalLoadingOptions): ToastHandle {
+    this.assertAlive();
+    const { message, options: parsedOpts } = parseLoadingArgs(messageOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.loading,
+      ...parsedOpts,
+      message,
+      title: parsedOpts.title,
+    };
+    const toast = new LoadingToast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public custom(
+    contentOrOptions: ToastContent | CustomToastOptions,
+    options?: Omit<CustomToastOptions, "content">,
+  ): ToastHandle {
+    this.assertAlive();
+    const { content, options: parsedOpts } = parseCustomArgs(contentOrOptions, options);
+    const rawOptions: RawToastOptions = {
+      ...this.config.custom,
+      ...parsedOpts,
+      content,
+    };
+    const toast = new Toast({
+      options: rawOptions,
+      config: this.resolved,
+      parent: this.getParent(),
+    });
+    return this.registerToast(toast);
+  }
+
+  public promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T> {
+    this.assertAlive();
+    const loadingOpts = typeof options.loading === "string" ? { message: options.loading } : options.loading;
+    const handle = this.loading({
+      ...options,
+      ...loadingOpts,
+      duration: options.duration,
+    });
+
+    return Promise.resolve(promise).then(
+      (value) => {
+        const successResult = typeof options.success === "function" ? options.success(value) : options.success;
+        const successOpts = toStructuredPromiseUpdate(successResult, "success");
+        handle.update(successOpts);
+        return value;
+      },
+      (error) => {
+        const errorResult = typeof options.error === "function" ? options.error(error) : options.error;
+        const errorOpts = toStructuredPromiseUpdate(errorResult, "error");
+        handle.update(errorOpts);
+        throw error;
+      },
+    );
   }
 
   public clear(): void {
     this.assertAlive();
-    this.semantic.clear();
-    this.loading.clear();
-    this.custom.clear();
+    this.activeToasts.forEach((t) => t.hide());
+    this.activeToasts.clear();
+  }
+
+  public dismiss(handle?: ToastHandle): void {
+    this.assertAlive();
+    if (handle) {
+      handle.dismiss();
+    } else {
+      this.clear();
+    }
   }
 
   public configure(config: ToasterRuntimeConfig): void {
@@ -177,10 +322,6 @@ class ToastManager implements Toaster {
     this.validateConfig(merged);
     const nextConfig = copyConfig(merged);
 
-    // Applied against the not-yet-committed config, before anything below is
-    // assigned: a host policy that rejects the stylesheet must reject the
-    // whole call, not leave unrelated fields bundled in the same call (e.g.
-    // `maxVisible`) already in effect.
     if (config.tokens !== undefined) {
       applyGlobalTokens(
         nextConfig.tokens,
@@ -238,16 +379,8 @@ class ToastManager implements Toaster {
     }
     this.isDestroyed = true;
 
-    // Immediate and synchronous, not the normal animated hide(): the
-    // containers below are removed out from under these toasts in this
-    // same call, so nothing would ever be left to see an exit animation
-    // play, and every handle should settle by the time destroy() returns.
-    this.semanticToasts.forEach((t) => t.destroyImmediately());
-    this.loadingToasts.forEach((t) => t.destroyImmediately());
-    this.customToasts.forEach((t) => t.destroyImmediately());
-    this.semanticToasts.clear();
-    this.loadingToasts.clear();
-    this.customToasts.clear();
+    this.activeToasts.forEach((t) => t.destroyImmediately());
+    this.activeToasts.clear();
 
     if (this.modalController) {
       this.modalController.destroy();
@@ -261,12 +394,11 @@ class ToastManager implements Toaster {
     removeGlobalTokens(this.instanceId);
   }
 
-  private registerToast(toast: Toast, bucket: Set<Toast>): ToastHandle {
-    bucket.add(toast);
-    void this.removeWhenSettled(toast, bucket);
-    const handle = makeHandle(toast);
+  private registerToast(toast: Toast): ToastHandle {
+    this.activeToasts.add(toast);
+    void this.removeWhenSettled(toast, this.activeToasts);
     toast.show();
-    return handle;
+    return toast.handle;
   }
 
   private getModalController(): ModalController {
@@ -304,8 +436,8 @@ class ToastManager implements Toaster {
       instanceId: this.instanceId,
       position: config.position ?? DEFAULT_CONFIG.position,
       duration: config.duration ?? DEFAULT_CONFIG.duration,
-      isDismissable: config.isDismissable ?? DEFAULT_CONFIG.isDismissable,
-      shouldAutoDismiss: config.shouldAutoDismiss ?? DEFAULT_CONFIG.shouldAutoDismiss,
+      dismissible: config.dismissible ?? config.closeButton ?? DEFAULT_CONFIG.dismissible,
+      autoDismiss: config.autoDismiss ?? DEFAULT_CONFIG.autoDismiss,
       maxVisible: config.maxVisible ?? DEFAULT_CONFIG.maxVisible,
       margin: config.margin,
       className: config.className,
@@ -356,12 +488,44 @@ class ToastManager implements Toaster {
  * Creates a new independent toaster instance.
  *
  * Each call returns a fresh instance.
- * Consumers who want a singleton are responsible for maintaining it.
+ * Consumers who want a singleton can use the default `toast` export.
  *
  * @param config Optional initial configuration overrides for the toaster.
  * @returns An independent Toaster instance controller.
  * @throws {Error} If duration, max-visible count, or token colors are invalid.
  */
 export function createToaster(config?: ToasterConfig): Toaster {
-  return new ToastManager(config);
+  const manager = new ToastManager(config);
+
+  const toaster = Object.assign(
+    (messageOrOptions: string | ToastOptions, options?: ToastOptions) => manager.show(messageOrOptions, options),
+    {
+      success: (messageOrOptions: string | ToastOptions, options?: ToastOptions) =>
+        manager.success(messageOrOptions, options),
+      error: (messageOrOptions: string | ToastOptions, options?: ToastOptions) =>
+        manager.error(messageOrOptions, options),
+      warning: (messageOrOptions: string | ToastOptions, options?: ToastOptions) =>
+        manager.warning(messageOrOptions, options),
+      info: (messageOrOptions: string | ToastOptions, options?: ToastOptions) =>
+        manager.info(messageOrOptions, options),
+      loading: (messageOrOptions?: string | LoadingToastOptions, options?: LoadingToastOptions) =>
+        manager.loading(messageOrOptions, options),
+      custom: (contentOrOptions: ToastContent | CustomToastOptions, options?: Omit<CustomToastOptions, "content">) =>
+        manager.custom(contentOrOptions, options),
+      promise: <T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>) => manager.promise(promise, options),
+      dialog: manager.dialog,
+      clear: () => manager.clear(),
+      dismiss: (handle?: ToastHandle) => manager.dismiss(handle),
+      configure: (runtimeConfig: ToasterRuntimeConfig) => manager.configure(runtimeConfig),
+      destroy: () => manager.destroy(),
+    },
+  );
+
+  return toaster as Toaster;
 }
+
+/** Pre-configured default browser singleton for notifications. */
+export const toast: Toaster = createToaster();
+
+/** Pre-configured default browser singleton for interactive dialogs. */
+export const dialog: DialogDispatcher = toast.dialog;

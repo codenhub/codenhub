@@ -21,6 +21,7 @@ interface ModalJob {
 
 interface ModalOptions {
   title?: string;
+  backdropDismiss?: boolean;
   shouldBackdropDismiss?: boolean;
   tokens?: ConfirmOptions["tokens"];
   className?: string;
@@ -125,9 +126,14 @@ export class ModalController {
     // while before its job runs, and a caller-owned options object mutated
     // in that window must not reach the eventually-rendered dialog (the
     // same boundary `normalizeToastOptions` in options.ts applies to toasts).
+    const backdropDismiss =
+      params.options.backdropDismiss !== undefined
+        ? params.options.backdropDismiss
+        : params.options.shouldBackdropDismiss;
     const options: ModalOptions = {
       title: params.options.title,
-      shouldBackdropDismiss: params.options.shouldBackdropDismiss,
+      backdropDismiss,
+      shouldBackdropDismiss: backdropDismiss,
       tokens: params.options.tokens ? { ...params.options.tokens } : undefined,
       className: params.options.className,
     };
@@ -264,7 +270,7 @@ export class ModalController {
         // `close()` itself is idempotent through `closeDialog`'s own
         // already-closed fast path, so replaying it here is safe.
         dialog.addEventListener("close", () => close(params.cancelValue), { signal: abortController.signal });
-        if (options.shouldBackdropDismiss !== false) {
+        if (options.backdropDismiss !== false && options.shouldBackdropDismiss !== false) {
           dialog.addEventListener(
             "click",
             (event) => {
@@ -312,6 +318,16 @@ export class ModalController {
         return state;
       },
       result,
+      // eslint-disable-next-line unicorn/no-thenable
+      then(onfulfilled, onrejected) {
+        return result.then(onfulfilled, onrejected);
+      },
+      catch(onrejected) {
+        return result.catch(onrejected);
+      },
+      finally(onfinally) {
+        return result.finally(onfinally);
+      },
     };
   }
 

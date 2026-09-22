@@ -4,9 +4,9 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   successBg: "--toast-color-success-bg",
   successFg: "--toast-color-success-fg",
   successEdge: "--toast-color-success-edge",
-  destructiveBg: "--toast-color-destructive-bg",
-  destructiveFg: "--toast-color-destructive-fg",
-  destructiveEdge: "--toast-color-destructive-edge",
+  errorBg: "--toast-color-error-bg",
+  errorFg: "--toast-color-error-fg",
+  errorEdge: "--toast-color-error-edge",
   warningBg: "--toast-color-warning-bg",
   warningFg: "--toast-color-warning-fg",
   warningEdge: "--toast-color-warning-edge",
@@ -31,10 +31,10 @@ const TOKEN_MAP: Record<keyof ToastTokens, string> = {
   successBtnFg: "--toast-color-success-btn-fg",
   successBtnBgHover: "--toast-color-success-btn-bg-hover",
   successBtnEdge: "--toast-color-success-btn-edge",
-  destructiveBtnBg: "--toast-color-destructive-btn-bg",
-  destructiveBtnFg: "--toast-color-destructive-btn-fg",
-  destructiveBtnBgHover: "--toast-color-destructive-btn-bg-hover",
-  destructiveBtnEdge: "--toast-color-destructive-btn-edge",
+  errorBtnBg: "--toast-color-error-btn-bg",
+  errorBtnFg: "--toast-color-error-btn-fg",
+  errorBtnBgHover: "--toast-color-error-btn-bg-hover",
+  errorBtnEdge: "--toast-color-error-btn-edge",
 };
 
 interface OwnedStyleEntry {

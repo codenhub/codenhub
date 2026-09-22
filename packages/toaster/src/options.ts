@@ -1,7 +1,9 @@
 import { assertValidTokens, replaceTokens } from "./tokens";
 import type {
   SemanticType,
+  ToastAction,
   ToastContent,
+  ToastHandle,
   ToastIcon,
   ToastLabels,
   ToastPosition,
@@ -23,9 +25,9 @@ export interface ResolvedToastConfig {
   /** Default visibility duration in milliseconds. */
   readonly duration: number;
   /** Whether toasts show a close button by default. */
-  readonly isDismissable: boolean;
+  readonly dismissible: boolean;
   /** Whether toasts automatically dismiss after duration. */
-  readonly shouldAutoDismiss: boolean;
+  readonly autoDismiss: boolean;
   /** Maximum number of active toasts displayed simultaneously. */
   readonly maxVisible: number;
   /** Viewport margin configurations. */
@@ -41,8 +43,8 @@ export interface ResolvedToastConfig {
 export const DEFAULT_CONFIG: Omit<ResolvedToastConfig, "instanceId" | "margin" | "dismissLabel" | "dialogLabels"> = {
   position: "top-right",
   duration: 4000,
-  isDismissable: false,
-  shouldAutoDismiss: true,
+  dismissible: false,
+  autoDismiss: true,
   maxVisible: 5,
 };
 
@@ -92,28 +94,31 @@ export const DEFAULT_TOAST_CLASS = `${TOAST_SHAPE_CLASS} coden-toast-default`;
  * after it has already been dispatched (e.g. a loading toast completing
  * into a success toast).
  */
-export const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticType, string> = {
+export const SEMANTIC_ROOT_CLASS_NAMES: Record<SemanticType | "default", string> = {
   success: `${TOAST_SHAPE_CLASS} coden-toast-success`,
   error: `${TOAST_SHAPE_CLASS} coden-toast-error`,
   warning: `${TOAST_SHAPE_CLASS} coden-toast-warning`,
   info: `${TOAST_SHAPE_CLASS} coden-toast-info`,
+  default: `${TOAST_SHAPE_CLASS} coden-toast-default`,
 };
 
-export const SEMANTIC_ICONS: Record<SemanticType, ToastIcon> = {
+export const SEMANTIC_ICONS: Record<SemanticType | "default", ToastIcon | null> = {
   success: "success",
   error: "error",
   warning: "warning",
   info: "info",
+  default: null,
 };
 
-export const SEMANTIC_ROLES: Record<SemanticType, ToastRole> = {
+export const SEMANTIC_ROLES: Record<SemanticType | "default", ToastRole> = {
   success: "status",
   error: "alert",
   warning: "alert",
   info: "status",
+  default: "status",
 };
 
-export function assertSemanticType(value: unknown): asserts value is SemanticType {
+export function assertSemanticType(value: unknown): asserts value is SemanticType | "default" {
   if (!Object.hasOwn(SEMANTIC_ROLES, value as PropertyKey)) {
     throw new Error(`Invalid semantic toast type: ${String(value)}`);
   }
@@ -121,12 +126,15 @@ export function assertSemanticType(value: unknown): asserts value is SemanticTyp
 
 export interface NormalizedToastOptions {
   readonly instanceId: string;
-  readonly shouldAutoDismiss: boolean;
+  readonly autoDismiss: boolean;
   readonly content: readonly Node[] | null;
   readonly duration: number;
   readonly icon: ToastIcon | null;
-  readonly isDismissable: boolean;
+  readonly dismissible: boolean;
+  readonly title: string | null;
   readonly message: string | null;
+  readonly description: string | null;
+  readonly action: ToastAction | null;
   readonly position: ToastPosition;
   readonly role: ToastRole;
   readonly rootClassName: string;
@@ -142,13 +150,13 @@ export interface NormalizedToastOptions {
 }
 
 export interface ToastPresetOptions {
-  readonly shouldAutoDismiss?: boolean;
-  readonly icon?: ToastIcon;
+  readonly autoDismiss?: boolean;
+  readonly icon?: ToastIcon | null;
   readonly role?: ToastRole;
   readonly rootClassName?: string;
 }
 
-function hasNonEmptyString(value: string | undefined): value is string {
+export function hasNonEmptyString(value: string | undefined | null): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
@@ -242,8 +250,12 @@ function sanitizeFragment(fragment: DocumentFragment): void {
   Array.from(fragment.children).forEach(sanitizeElement);
 }
 
-export function resolveToastContent(content: ToastContent, documentRef: Document): readonly Node[] {
-  const resolved = typeof content === "function" ? content() : content;
+export function resolveToastContent(
+  content: ToastContent,
+  documentRef: Document,
+  handle?: ToastHandle,
+): readonly Node[] {
+  const resolved = typeof content === "function" ? content(handle!) : content;
 
   if (typeof resolved === "string") {
     if (!hasNonEmptyString(resolved)) {
@@ -292,13 +304,18 @@ export function assertDuration(duration: number | undefined): void {
 }
 
 export interface RawToastOptions {
+  type?: SemanticType | "default";
+  title?: string;
   message?: string;
+  description?: string;
+  action?: ToastAction;
   content?: ToastContent;
-  icon?: ToastIcon;
+  icon?: ToastIcon | null;
   position?: ToastPosition;
   duration?: number;
-  isDismissable?: boolean;
-  shouldAutoDismiss?: boolean;
+  dismissible?: boolean;
+  closeButton?: boolean;
+  autoDismiss?: boolean;
   tokens?: ToastTokens;
   className?: string;
   role?: ToastRole;
@@ -310,12 +327,13 @@ export function normalizeToastOptions(params: {
   preset: ToastPresetOptions | null;
   config: ResolvedToastConfig;
   documentRef: Document;
+  handle?: ToastHandle;
 }): Readonly<NormalizedToastOptions> {
-  const { options, preset, config, documentRef } = params;
-  const { content, message } = options;
+  const { options, preset, config, documentRef, handle } = params;
+  const { content, message, title, description, action } = options;
 
   if (content === undefined) {
-    if (!hasNonEmptyString(message)) {
+    if (!hasNonEmptyString(message) && !hasNonEmptyString(title)) {
       throw new Error("Toast requires a non-empty message or content.");
     }
   } else if (typeof content === "string" && !hasNonEmptyString(content)) {
@@ -324,31 +342,52 @@ export function normalizeToastOptions(params: {
 
   assertDuration(options.duration);
   assertValidTokens(options.tokens, documentRef);
+  if (options.type !== undefined) {
+    assertSemanticType(options.type);
+  }
+
+  const typePreset = options.type
+    ? {
+        role: SEMANTIC_ROLES[options.type],
+        icon: SEMANTIC_ICONS[options.type],
+        rootClassName: SEMANTIC_ROOT_CLASS_NAMES[options.type],
+      }
+    : null;
 
   const position = options.position ?? config.position;
-  const role = options.role ?? preset?.role ?? DEFAULT_ROLE;
+  const role = options.role ?? preset?.role ?? typePreset?.role ?? DEFAULT_ROLE;
   assertToastPosition(position);
   assertToastRole(role);
 
   const margin = options.margin ?? config.margin;
+  const dismissible = options.dismissible ?? options.closeButton ?? config.dismissible;
+  const autoDismiss = options.autoDismiss ?? preset?.autoDismiss ?? config.autoDismiss;
+
+  const resolvedTitle = hasNonEmptyString(title) ? title : null;
+  const resolvedMessage = hasNonEmptyString(message) ? message : null;
+  const resolvedDescription = hasNonEmptyString(description) ? description : null;
 
   return Object.freeze({
     instanceId: config.instanceId,
-    shouldAutoDismiss: options.shouldAutoDismiss ?? preset?.shouldAutoDismiss ?? config.shouldAutoDismiss,
-    content: content === undefined ? null : resolveToastContent(content, documentRef),
+    autoDismiss,
+    content: content === undefined ? null : resolveToastContent(content, documentRef, handle),
     duration: options.duration ?? config.duration,
-    icon: content === undefined ? (preset?.icon ?? options.icon ?? null) : null,
-    isDismissable: options.isDismissable ?? config.isDismissable,
-    message: content === undefined ? (message ?? "") : null,
+    icon:
+      content === undefined
+        ? options.icon !== undefined
+          ? options.icon
+          : (preset?.icon ?? typePreset?.icon ?? null)
+        : null,
+    dismissible,
+    title: content === undefined ? resolvedTitle : null,
+    message: content === undefined ? resolvedMessage : null,
+    description: content === undefined ? resolvedDescription : null,
+    action: content === undefined ? (action ?? null) : null,
     position,
     role,
-    rootClassName: preset?.rootClassName ?? DEFAULT_TOAST_CLASS,
+    rootClassName: preset?.rootClassName ?? typePreset?.rootClassName ?? DEFAULT_TOAST_CLASS,
     className: joinClassNames(config.className, options.className),
     instanceClassName: config.className,
-    // Snapshotted rather than referenced: a caller-owned object mutated
-    // after this call must not reach an already-admitted or still-queued
-    // toast (see toast-base.ts's queued-update path for the same
-    // boundary on a later update() call).
     tokens: options.tokens ? { ...options.tokens } : null,
     margin: typeof margin === "object" && margin !== null ? { ...margin } : margin,
     dismissLabel: config.dismissLabel,

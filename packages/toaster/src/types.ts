@@ -43,11 +43,11 @@ export interface ToastTokens {
   /** Border color for the toast-success variant. */
   successEdge?: string;
   /** Background color for the toast-error variant. */
-  destructiveBg?: string;
+  errorBg?: string;
   /** Foreground (text/icon) color for the toast-error variant. */
-  destructiveFg?: string;
+  errorFg?: string;
   /** Border color for the toast-error variant. */
-  destructiveEdge?: string;
+  errorEdge?: string;
   /** Background color for the toast-warning variant. */
   warningBg?: string;
   /** Foreground (text/icon) color for the toast-warning variant. */
@@ -96,26 +96,45 @@ export interface ToastTokens {
   successBtnBgHover?: string;
   /** Border color for the success dialog action button when `.edged` is active. */
   successBtnEdge?: string;
-  /** Background color for the destructive dialog action button. */
-  destructiveBtnBg?: string;
-  /** Foreground color for the destructive dialog action button. */
-  destructiveBtnFg?: string;
-  /** Hover background color for the destructive dialog action button. */
-  destructiveBtnBgHover?: string;
-  /** Border color for the destructive dialog action button when `.edged` is active. */
-  destructiveBtnEdge?: string;
+  /** Background color for the error dialog action button. */
+  errorBtnBg?: string;
+  /** Foreground color for the error dialog action button. */
+  errorBtnFg?: string;
+  /** Hover background color for the error dialog action button. */
+  errorBtnBgHover?: string;
+  /** Border color for the error dialog action button when `.edged` is active. */
+  errorBtnEdge?: string;
+}
+
+/**
+ * Inline action button rendered inside a toast notification.
+ */
+export interface ToastAction {
+  /** Text label displayed on the action button. */
+  label: string;
+  /**
+   * Callback invoked when the user clicks the action button.
+   * To close the toast upon action execution, call `handle.dismiss()`.
+   */
+  onClick: (event: MouseEvent, handle: ToastHandle) => void;
 }
 
 /**
  * Options that can be dynamically updated on a live toast instance.
  */
 export interface ToastUpdateOptions {
+  /** Optional title to replace on the toast, or `null` to remove it. */
+  title?: string | null;
   /**
    * The new message text. Ignored if `content` is also given in this same
    * call; has no effect on a toast that was built from `content` rather
-   * than `message` (there is no message slot to write into).
+   * than `message` (there is no message slot to write into). Pass `null` to remove it.
    */
-  message?: string;
+  message?: string | null;
+  /** Optional secondary description text below the message or title, or `null` to remove it. */
+  description?: string | null;
+  /** Replaces or removes the inline action button (`null` removes it). */
+  action?: ToastAction | null;
   /**
    * Replaces the toast's content entirely. Follows the same rules as
    * construction: a string is sanitized, a DOM node is trusted and used
@@ -135,11 +154,15 @@ export interface ToastUpdateOptions {
    * dispatched with -- so e.g. a loading toast can complete into a success
    * toast: `update({ type: "success" })`.
    */
-  type?: SemanticType;
+  type?: SemanticType | "default";
   /** New visibility duration in milliseconds, applied the next time an auto-dismiss timer would run. */
   duration?: number;
   /** Enables or disables automatic dismissal after `duration`. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
+  /** Enables or disables the dismiss button. */
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Scoped design token color overrides. */
   tokens?: ToastTokens;
   /** Extra CSS classes to append. */
@@ -221,8 +244,30 @@ export interface ToastHandle {
 
 /**
  * Control handle returned by interactive (confirm / prompt / alert) modals.
+ * Implements `PromiseLike<T>` so callers can directly `await dialog.confirm(...)`
+ * while retaining access to control methods (`dismiss`, `state`, `settled`).
  */
-export interface InteractiveToastHandle<T> {
+export interface InteractiveToastHandle<T> extends PromiseLike<T> {
+  /**
+   * Attaches callbacks for the resolution and/or rejection of the dialog result.
+   */
+  then<TResult1 = T, TResult2 = never>(
+    onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): Promise<TResult1 | TResult2>;
+
+  /**
+   * Attaches a callback for only the rejection of the dialog result.
+   */
+  catch<TResult = never>(
+    onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null,
+  ): Promise<T | TResult>;
+
+  /**
+   * Attaches a callback that is executed when the dialog result is settled.
+   */
+  finally(onfinally?: (() => void) | null): Promise<T>;
+
   /** Dismisses an active or queued dialog. Safe to call more than once. */
   dismiss(): void;
 
@@ -249,23 +294,32 @@ type ToastContentValue = string | Node;
 /**
  * Supported custom content. Strings are sanitized by the package. DOM nodes
  * are trusted application-owned content and are inserted without sanitizing.
+ * Can also be a function receiving the `ToastHandle`.
  */
-export type ToastContent = ToastContentValue | (() => ToastContentValue);
+export type ToastContent = ToastContentValue | ((handle: ToastHandle) => ToastContentValue) | (() => ToastContentValue);
 
 /**
- * Options for dispatching a semantic notification (success/error/warning/info).
+ * Options for dispatching standard toast notifications.
  */
-export interface SemanticToastOptions {
+export interface ToastOptions {
+  /** Optional title to display above the message or as primary heading. */
+  title?: string;
   /** The message text to display. */
-  message: string;
+  message?: string;
+  /** Optional secondary description text below the message or title. */
+  description?: string;
+  /** Optional inline action button control. */
+  action?: ToastAction;
   /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
   /** Visibility duration in milliseconds. Defaults to toaster configuration. */
   duration?: number;
   /** Whether to render a close button. Defaults to toaster configuration. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Whether to automatically close after the duration. Defaults to toaster configuration. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
   /** Instance token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
@@ -281,7 +335,16 @@ export interface SemanticToastOptions {
    * margin unchanged. Toasts at the same position always share one margin.
    */
   margin?: string | { x?: string; y?: string };
+  /** Severity variant or "default" neutral. */
+  type?: SemanticType | "default";
+  /** Icon glyph override, or `null` to render no icon. */
+  icon?: ToastIcon | null;
 }
+
+/**
+ * Options for dispatching a semantic notification (success/error/warning/info).
+ */
+export type SemanticToastOptions = ToastOptions;
 
 /**
  * Category names for predefined styles.
@@ -292,23 +355,25 @@ export type SemanticType = "success" | "error" | "warning" | "info";
  * Options for dispatching a loading toast notification.
  */
 export interface LoadingToastOptions {
+  /** Optional title to display above the progress message. */
+  title?: string;
   /** The progress message. */
-  message: string;
+  message?: string;
+  /** Optional secondary description text below the progress message. */
+  description?: string;
   /** Placement on the screen. Defaults to toaster configuration. */
   position?: ToastPosition;
   /** Whether the user can manually close it. Defaults to false. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
-   * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent explicit
-   * value dispatched to a given position applies to every toast already
-   * showing there, and a dispatch that omits it leaves the stack's current
-   * margin unchanged. Toasts at the same position always share one margin.
+   * "24px", "1.5rem") or an object.
    */
   margin?: string | { x?: string; y?: string };
 }
@@ -324,9 +389,11 @@ export interface CustomToastOptions {
   /** Visibility duration in milliseconds. Defaults to toaster configuration. */
   duration?: number;
   /** Whether to render a close button. Defaults to toaster configuration. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Whether to automatically close after duration. Defaults to toaster configuration. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
@@ -335,11 +402,7 @@ export interface CustomToastOptions {
   role?: ToastRole;
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
-   * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent explicit
-   * value dispatched to a given position applies to every toast already
-   * showing there, and a dispatch that omits it leaves the stack's current
-   * margin unchanged. Toasts at the same position always share one margin.
+   * "24px", "1.5rem") or an object.
    */
   margin?: string | { x?: string; y?: string };
 }
@@ -355,13 +418,15 @@ export interface ConfirmOptions {
   /** Label for the negative action button. Defaults to "Cancel". */
   cancelLabel?: string;
   /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
+  backdropDismiss?: boolean;
+  /** Deprecated alias for `backdropDismiss`. */
   shouldBackdropDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
-  type?: "primary" | "secondary" | "success" | "danger";
+  type?: "primary" | "secondary" | "success" | "error";
 }
 
 /**
@@ -379,13 +444,15 @@ export interface PromptOptions {
   /** Label for the cancel button. Defaults to "Cancel". */
   cancelLabel?: string;
   /** Whether clicking the backdrop overlay cancels the modal. Defaults to true. */
+  backdropDismiss?: boolean;
+  /** Deprecated alias for `backdropDismiss`. */
   shouldBackdropDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
-  type?: "primary" | "secondary" | "success" | "danger";
+  type?: "primary" | "secondary" | "success" | "error";
 }
 
 /**
@@ -397,13 +464,15 @@ export interface AlertOptions {
   /** Label for the confirmation button. Defaults to "OK". */
   okLabel?: string;
   /** Whether clicking the backdrop overlay closes the alert. Defaults to true. */
+  backdropDismiss?: boolean;
+  /** Deprecated alias for `backdropDismiss`. */
   shouldBackdropDismiss?: boolean;
   /** Color token overrides. */
   tokens?: ToastTokens;
   /** Extra CSS class name. */
   className?: string;
   /** Color semantic type for the main action button. */
-  type?: "primary" | "secondary" | "success" | "danger";
+  type?: "primary" | "secondary" | "success" | "error";
 }
 
 /**
@@ -435,9 +504,11 @@ export interface SemanticDefaults {
   /** Default duration in milliseconds before auto-dismissal. */
   duration?: number;
   /** Whether semantic toasts show a close button by default. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Whether semantic toasts automatically dismiss after duration. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
 }
 
 /**
@@ -447,7 +518,9 @@ export interface LoadingDefaults {
   /** Default screen placement for loading toasts. */
   position?: ToastPosition;
   /** Whether loading toasts show a close button by default. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
 }
 
 /**
@@ -459,9 +532,166 @@ export interface CustomDefaults {
   /** Default duration in milliseconds before auto-dismissal. */
   duration?: number;
   /** Whether custom toasts show a close button by default. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Whether custom toasts automatically dismiss after duration. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
+}
+
+/**
+ * Options for binding toasts to promise lifecycles via `toast.promise()`.
+ */
+export interface PromiseToastOptions<T> {
+  /** Content to display while the promise is pending. */
+  loading: string | ToastOptions;
+  /** Content to display when the promise successfully resolves. */
+  success: string | ToastOptions | ((data: T) => string | ToastOptions);
+  /** Content to display when the promise rejects. */
+  error: string | ToastOptions | ((error: unknown) => string | ToastOptions);
+  /** Viewport position for the toast. */
+  position?: ToastPosition;
+  /** Visibility duration in milliseconds for the resolved state. */
+  duration?: number;
+  /** Whether to render a close button. */
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
+  /** Scoped design tokens. */
+  tokens?: ToastTokens;
+  /** Extra CSS classes. */
+  className?: string;
+  /** Viewport margin configurations. */
+  margin?: string | { x?: string; y?: string };
+}
+
+/**
+ * Dispatcher interface for displaying interactive browser-native modal dialogs.
+ */
+export interface DialogDispatcher {
+  /**
+   * Displays a confirmation modal dialog with confirm and cancel buttons.
+   *
+   * @param message The confirmation message or question text.
+   * @param options Configuration options for labels and backdrop behavior.
+   * @returns An interactive handle containing the user decision promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   */
+  confirm(message: string, options?: ConfirmOptions): InteractiveToastHandle<boolean>;
+
+  /**
+   * Displays a prompt input dialog requesting user text input.
+   *
+   * @param message Label description for the text input.
+   * @param options Prefilled default value, placeholder text, and cancel behavior options.
+   * @returns An interactive handle containing the input value promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   */
+  prompt(message: string, options?: PromptOptions): InteractiveToastHandle<string | null>;
+
+  /**
+   * Displays a blocking informational alert modal dialog.
+   *
+   * @param message The alert warning or notification statement.
+   * @param options Custom OK button labels and backdrop click closing options.
+   * @returns An interactive handle containing the acknowledgement promise.
+   * @throws {Error} If the instance is destroyed, the message is empty, or no DOM is available.
+   */
+  alert(message: string, options?: AlertOptions): InteractiveToastHandle<void>;
+}
+
+/**
+ * Represents the Toaster instance controller.
+ */
+export interface Toaster {
+  /**
+   * Dispatches a default neutral notification.
+   *
+   * @param message Message text to display.
+   * @param options Scoped options including duration, position, dismissible, etc.
+   */
+  (message: string, options?: ToastOptions): ToastHandle;
+  /**
+   * Dispatches a default neutral notification via options object.
+   *
+   * @param options Scoped options including message, title, duration, etc.
+   */
+  (options: ToastOptions): ToastHandle;
+
+  /**
+   * Displays a success notification.
+   */
+  success(message: string, options?: ToastOptions): ToastHandle;
+  success(options: ToastOptions): ToastHandle;
+
+  /**
+   * Displays an error notification.
+   */
+  error(message: string, options?: ToastOptions): ToastHandle;
+  error(options: ToastOptions): ToastHandle;
+
+  /**
+   * Displays a warning notification.
+   */
+  warning(message: string, options?: ToastOptions): ToastHandle;
+  warning(options: ToastOptions): ToastHandle;
+
+  /**
+   * Displays an informational notification.
+   */
+  info(message: string, options?: ToastOptions): ToastHandle;
+  info(options: ToastOptions): ToastHandle;
+
+  /**
+   * Displays a stateful progress loader toast. By default, loading toasts do not auto-dismiss.
+   */
+  loading(message: string, options?: LoadingToastOptions): ToastHandle;
+  loading(options?: LoadingToastOptions): ToastHandle;
+
+  /**
+   * Displays custom HTML or DOM node content.
+   */
+  custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
+  custom(options: CustomToastOptions): ToastHandle;
+
+  /**
+   * Binds a notification to a Promise lifecycle, automatically managing transition
+   * states and auto-dismissal.
+   *
+   * @param promise The Promise or PromiseLike to track.
+   * @param options State configurations for loading, success, and error.
+   * @returns The original Promise result.
+   */
+  promise<T>(promise: PromiseLike<T>, options: PromiseToastOptions<T>): Promise<T>;
+
+  /** Interactive native dialog dispatcher. */
+  readonly dialog: DialogDispatcher;
+
+  /**
+   * Clears all active and queued non-interactive toasts.
+   *
+   * @throws {Error} If the toaster instance has been destroyed.
+   */
+  clear(): void;
+
+  /**
+   * Dismisses a specific toast handle, or all active toasts if handle is omitted.
+   *
+   * @param handle Optional handle of the toast to dismiss.
+   */
+  dismiss(handle?: ToastHandle): void;
+
+  /**
+   * Reconfigures the toaster at runtime.
+   *
+   * @param config Runtime configuration to validate and apply.
+   */
+  configure(config: ToasterRuntimeConfig): void;
+
+  /**
+   * Fully tears down this toaster instance.
+   */
+  destroy(): void;
 }
 
 /**
@@ -477,9 +707,11 @@ export interface ToasterConfig {
   /** Default timeout in milliseconds. Defaults to 4000. */
   duration?: number;
   /** Render close button by default. Defaults to false. */
-  isDismissable?: boolean;
+  dismissible?: boolean;
+  /** Intuitive alias for `dismissible`. */
+  closeButton?: boolean;
   /** Dismiss automatically when duration expires by default. Defaults to true. */
-  shouldAutoDismiss?: boolean;
+  autoDismiss?: boolean;
   /** Instance-level default labels for the dismiss button and dialog buttons. */
   labels?: ToastLabels;
   /** Dynamic CSS variables applied to all toasts inside this instance. */
@@ -496,18 +728,12 @@ export interface ToasterConfig {
   custom?: CustomDefaults;
   /**
    * Margin from the border of the viewport. Can be a CSS length (e.g.
-   * "24px", "1.5rem") or an object. This is a property of the shared stack
-   * at this position, not of an individual toast: the most recent explicit
-   * value dispatched to a given position applies to every toast already
-   * showing there, and a dispatch that omits it leaves the stack's current
-   * margin unchanged. Toasts at the same position always share one margin.
+   * "24px", "1.5rem") or an object.
    */
   margin?: string | { x?: string; y?: string };
   /**
    * Extra CSS class name applied to every toast and dialog dispatched from
-   * this instance. Unlike `duration` and `position` above, this does not get
-   * overridden by a per-call `className` — the two are appended together
-   * (instance default first, then the call's own class).
+   * this instance.
    */
   className?: string;
 }
