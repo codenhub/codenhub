@@ -126,7 +126,7 @@ The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. On
 | `--cyber-cut`            | `.cyber`        | Largest cut, on controls and surfaces alike; the default shapes cap it at 25% of the element. | `0.625rem`                         |
 | `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right) |
 | `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left) |
-| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `10px`                             |
+| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `8px`                              |
 | `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
 | `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
 

@@ -1464,18 +1464,18 @@ test.describe("aesthetics", () => {
       const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
 
       /* Offsetless and blurred: the glow sits evenly around the silhouette. */
-      expect(button["box-shadow"], "button glows").toMatch(/\b0px 0px 10px 0px\b/);
-      expect(card["box-shadow"], "card glows").toMatch(/\b0px 0px 10px 0px\b/);
-      expect(raised, "a raised badge glows").toMatch(/\b0px 0px 10px 0px\b/);
+      expect(button["box-shadow"], "button glows").toMatch(/\b0px 0px 8px 0px\b/);
+      expect(card["box-shadow"], "card glows").toMatch(/\b0px 0px 8px 0px\b/);
+      expect(raised, "a raised badge glows").toMatch(/\b0px 0px 8px 0px\b/);
       expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
       expect(field["box-shadow"], "field").toMatch(/\b0px 0px 0px 0px\b/);
 
       /* The glow is the intent colour itself, thinned: a transparent depth colour
-         turns 55% ink into 55% alpha rather than into a darker shade. */
+         turns 40% ink into 40% alpha rather than into a darker shade. */
       const glow = readSrgb(readShadowColor(button["box-shadow"]!));
       const intent = readSrgb(success);
 
-      expect(glow.alpha, "glow alpha").toBeCloseTo(0.55, 2);
+      expect(glow.alpha, "glow alpha").toBeCloseTo(0.4, 2);
       expect(
         channelDistance([glow.red, glow.green, glow.blue], [intent.red, intent.green, intent.blue]),
         "glow hue",

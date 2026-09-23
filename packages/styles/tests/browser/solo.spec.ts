@@ -113,7 +113,7 @@ test.describe("solo utilities", () => {
     expect(tile["box-shadow"], "tile bar").toMatch(/\b0px 4px 0px 0px\b/);
 
     expect(cyber["border-top-width"], "cyber line").toBe("1px");
-    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 10px 0px\b/);
+    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 8px 0px\b/);
     /* A pane takes the surface diagonal: top-right and bottom-left. */
     expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
     if (browserName === "chromium") {

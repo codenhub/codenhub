@@ -722,7 +722,7 @@ Bevelled corners, a thin bright edge, and a glow in the component's own colour. 
 - What is fully round cuts to points through `--ui-radius-pill` -- a diamond radio, switch knob, and tooltip icon, a pointed hexagon for a pill or a badge -- and chips square through `--ui-radius-tight: 0`, which keeps the checkbox distinct from the radio.
 - Where `corner-shape` is not supported the control and surface radii go to zero, so those corners square rather than round; what is fully round stays round.
 - 1px edges in `--ui-ink`, which is the `--cyber-ink` knob over the theme-following neutral neobrutalism and pixel use. Hue stays with intent.
-- The glow is `--ui-shadow-ink: 55%` toward a transparent `--elevation-color` -- the intent colour at 55% alpha -- blurred by `--cyber-glow` (`10px`) with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
+- The glow is `--ui-shadow-ink: 40%` toward a transparent `--elevation-color` -- the intent colour at 40% alpha -- blurred by `--cyber-glow` (`8px`) with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
 - The press is the base `scale(0.97)`, restated, and `none` under reduced motion. The glow holds still on hover and on press.
 - Reads `--font-cyber` and falls back to monospace.
 - Every other aesthetic declares `--ui-corner-shape: round` and clears `--ui-radius-pill` and `--ui-radius-tight`, so a region nested inside `.cyber` inherits none of its corners.

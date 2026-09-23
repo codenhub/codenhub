@@ -127,7 +127,7 @@ Bevelled corners, a 1px edge, and a glow in the component's own colour: a succes
 
 Controls and surfaces take the cut on opposite diagonals, so a button and the card around it read as the same material and as different things: buttons and fields cut top-left and bottom-right, cards, panels, and alerts top-right and bottom-left. Anything fully round cuts to points -- a radio, a switch knob, and the tooltip icon become diamonds, a pill button or a badge a pointed hexagon -- and chips square, so the checkbox reads as a plain square beside the diamond radio.
 
-`--cyber-cut` is the largest cut, `0.625rem`: the default shapes cap it at a quarter of the element's own box, so a normal button or a card takes the full cut and a small icon button a smaller one rather than losing its corners. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `10px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+`--cyber-cut` is the largest cut, `0.625rem`: the default shapes cap it at a quarter of the element's own box, so a normal button or a card takes the full cut and a small icon button a smaller one rather than losing its corners. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `8px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
 
 ```html
 <section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">

@@ -25,7 +25,7 @@
      button the cut runs slightly shallower than 45 degrees; at those sizes that
      is not visible. A shape set through the knob is taken as written. */
   --_cyber-cut: var(--cyber-cut, 0.625rem);
-  --_cyber-glow: var(--cyber-glow, 10px);
+  --_cyber-glow: var(--cyber-glow, 8px);
   --_cyber-shape: var(--cyber-shape, min(var(--_cyber-cut), 25%) 0 / min(var(--_cyber-cut), 25%) 0);
   --_cyber-shape-surface: var(--cyber-shape-surface, 0 min(var(--_cyber-cut), 25%) / 0 min(var(--_cyber-cut), 25%));
 
@@ -52,13 +52,13 @@
 
   /* The glow: the component's own ink, blurred, with no offset. `box` mixes
      depth as `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
-     var(--elevation-color))`, so a transparent depth colour turns 55% ink into
-     the intent colour at 55% alpha rather than into a darker shade of it.
+     var(--elevation-color))`, so a transparent depth colour turns 40% ink into
+     the intent colour at 40% alpha rather than into a darker shade of it.
      Elevation scales the blur like every shadow, so the glow lights what rests
      above zero -- buttons and cards -- and anything raised, and leaves fields
      and chips crisp. */
   --elevation-color: transparent;
-  --ui-shadow-ink: 55%;
+  --ui-shadow-ink: 40%;
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: var(--_cyber-glow);
@@ -127,7 +127,7 @@
   corner-shape: bevel;
   /* Always lit: the elevation gate the aesthetic class answers to is `box`'s,
      and a solo element is one the consumer chose to light up. */
-  box-shadow: 0 0 var(--cyber-glow, 10px) 0 color-mix(in oklab, var(--_cyber-ink) 55%, transparent);
+  box-shadow: 0 0 var(--cyber-glow, 8px) 0 color-mix(in oklab, var(--_cyber-ink) 40%, transparent);
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
