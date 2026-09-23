@@ -1,12 +1,12 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-23
 scope: Decision to ship a self-contained `-solo` utility beside every aesthetic, for elements this package does not style.
 ---
 
 # Solo utilities: an aesthetic on one element, without the package
 
-This is a proposal awaiting approval. Nothing here is agreed direction until the status reads `APPROVED`.
+This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per the repository root `docs/README.md`'s `APPROVED` status.
 
 Like [`.progress` gains presentation](./progress-presentation-axes.md), it states the decision and the reasoning, not drop-in code: the values below are the ones the implementation must reproduce, and the source is where they are written.
 
@@ -38,7 +38,7 @@ A solo class reproduces what its aesthetic contributes: edge width and ink, corn
 
 Each colour is the one the token class uses, read through the same foundation token and falling back to that token's shipped literal value. Neobrutalism's ink is `light-dark(var(--color-neutral-950, <literal>), var(--color-neutral-50, <literal>))`, glass's ground mixes `var(--color-background, <literal>)`, and so on. With the package's theme loaded, a solo element follows it; without it, the element still renders the shipped look.
 
-It does not read `--intent-*` or `--ui-*`. `--ui-*` belongs to whichever aesthetic is in scope, so reading it would let an ancestor `.pixel` region zero a `.glass-solo`'s corners. `currentColor` was considered for the ink and rejected: the aesthetics define their ink as a theme-following neutral, and tying it to text colour would make the solo look diverge from the token-class look it is named after.
+It does not read `--intent-*`, `--ui-*`, or `--elevation-color`. The last two belong to whichever aesthetic is in scope, so reading them would let an ancestor `.pixel` region zero a `.glass-solo`'s corners, or an ancestor `.chunky-tile` (whose depth colour is black) darken its shadow. Glass's shadow colour is therefore the theme's shipped depth colour written as a literal. `currentColor` was considered for the ink and rejected: the aesthetics define their ink as a theme-following neutral, and tying it to text colour would make the solo look diverge from the token-class look it is named after.
 
 ### S3. Knobs are the only tuning surface
 

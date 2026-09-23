@@ -1,12 +1,12 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-23
 scope: Decision to ship a `.cyber` aesthetic, and the `--ui-corner-shape` material token it needs.
 ---
 
 # Cyber: bevelled corners, a neon edge, and a glow
 
-This is a proposal awaiting approval. Nothing here is agreed direction until the status reads `APPROVED`.
+This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per the repository root `docs/README.md`'s `APPROVED` status.
 
 It states the decision and the values the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives.
 
