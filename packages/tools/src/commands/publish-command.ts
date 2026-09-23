@@ -1,11 +1,16 @@
 import { mapSeries } from "../process/concurrency.ts";
 import {
+  checkReleaseTag,
   distTagForVersion,
+  isVersionPublished,
   readPublishedVersion,
+  releaseTagFor,
   resolveTagTarget,
   runNpmPublish,
   type PublishRunner,
   type RegistryReader,
+  type RevisionResolver,
+  type VersionLookup,
 } from "../release/publish.ts";
 import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -23,6 +28,10 @@ export interface PublishOptions {
   publish?: PublishRunner;
   /** Reader for the post-publish registry confirmation, defaulting to `npm view`. */
   readPublished?: RegistryReader;
+  /** Lookup for whether a tagged version is already on npm, defaulting to `npm view`. */
+  isPublished?: VersionLookup;
+  /** Resolver for the release-tag precondition, defaulting to `git rev-parse`. */
+  resolveRevision?: RevisionResolver;
 }
 
 function readTagFlag(passthrough: readonly string[]): string | undefined | { error: string } {
@@ -43,14 +52,16 @@ function readTagFlag(passthrough: readonly string[]): string | undefined | { err
  * @param context Command context for this invocation.
  * @returns Packages to publish, or the message explaining why there are none.
  */
-function resolveTargets(context: CommandContext): { packages: WorkspacePackage[] } | { error: string } {
+function resolveTargets(
+  context: CommandContext,
+): { isFromTag: boolean; packages: WorkspacePackage[] } | { error: string } {
   const tag = readTagFlag(context.passthrough);
   if (typeof tag === "object" && tag !== undefined) {
     return tag;
   }
   if (tag !== undefined) {
     const resolved = resolveTagTarget(tag, context.workspace.packages);
-    return "package" in resolved ? { packages: [resolved.package] } : { error: resolved.detail };
+    return "package" in resolved ? { isFromTag: true, packages: [resolved.package] } : { error: resolved.detail };
   }
   if (context.selection.isImplicit) {
     return { error: `Name the package to publish, as "pnpm hub publish error".` };
@@ -58,7 +69,7 @@ function resolveTargets(context: CommandContext): { packages: WorkspacePackage[]
   const packages = context.selection.targets
     .map(({ package: workspacePackage }) => workspacePackage)
     .filter(({ isPrivate }) => !isPrivate);
-  return packages.length === 0 ? { error: "No selected package is published." } : { packages };
+  return packages.length === 0 ? { error: "No selected package is published." } : { isFromTag: false, packages };
 }
 
 function reportPreflight(context: CommandContext, readiness: PackageReadiness): boolean {
@@ -86,6 +97,11 @@ function reportPreflight(context: CommandContext, readiness: PackageReadiness): 
  * outright. `docs/specs/packages-lifecycle.md` owns the rule it implements —
  * a person authorizes a release by pushing its tag, and CI performs it.
  *
+ * Every published version has a tag. A manual publish refuses to run unless
+ * `<name>@<version>` names the commit being published, and a tag whose version
+ * npm already has succeeds without publishing, so pushing the tag afterwards
+ * records the release instead of failing on it.
+ *
  * Authentication is never configured here. In the workflow it comes from npm
  * trusted publishing, which exchanges the job's OIDC token for a short-lived
  * credential; on a maintainer's machine it comes from their own `npm login`.
@@ -103,7 +119,21 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
         context.reporter.error(resolved.error);
         return EXIT_FAILURE;
       }
-      const { packages } = resolved;
+      const { isFromTag, packages } = resolved;
+
+      // A tag for a version npm already has is a record, not a request: it is
+      // how a manually published first release gets its tag. Answering it with
+      // success rather than a refused publish is what lets the rest of the
+      // workflow — the release entry and the documentation rebuild — run for it.
+      const [tagged] = packages;
+      if (isFromTag && tagged !== undefined) {
+        const isPublished = await (options.isPublished ?? isVersionPublished)(tagged, context.options.timeoutMs);
+        if (isPublished) {
+          context.reporter.info(`${releaseTagFor(tagged)} is already on npm; nothing to publish.`);
+          return EXIT_SUCCESS;
+        }
+      }
+
       const selection = {
         ...context.selection,
         isImplicit: false,
@@ -129,10 +159,11 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
           return;
         }
         context.reporter.blank();
-        const readiness = await readPackageReadiness(workspacePackage, {
-          timeoutMs: context.options.timeoutMs,
-          ...options.readiness,
-        });
+        const [report, tagCheck] = await Promise.all([
+          readPackageReadiness(workspacePackage, { timeoutMs: context.options.timeoutMs, ...options.readiness }),
+          checkReleaseTag(workspacePackage, options.resolveRevision),
+        ]);
+        const readiness = { ...report, checks: [...report.checks, tagCheck] };
         if (!reportPreflight(context, readiness)) {
           context.reporter.blank();
           context.reporter.error(`${workspacePackage.name} is not ready to publish; nothing was published.`);
@@ -172,6 +203,13 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
             ? `         the registry serves ${version}`
             : `         the registry serves ${served ?? "nothing yet"}; metadata may still be propagating`,
         );
+        if (!isFromTag) {
+          // Pushing is left to the person: it is outward-facing, and it runs the
+          // publish workflow, which finds this version on npm and records it.
+          context.reporter.info(
+            `  push the tag to record the release: git push origin "${releaseTagFor(workspacePackage)}"`,
+          );
+        }
       });
 
       return hasFailed ? EXIT_FAILURE : EXIT_SUCCESS;

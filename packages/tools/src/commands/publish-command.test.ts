@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
-import type { PublishRunner } from "../release/publish.ts";
+import type { PublishRunner, RevisionResolver } from "../release/publish.ts";
 import type { ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -45,6 +45,8 @@ async function runPublish(
     publishSucceeds?: boolean;
     readiness?: ReadinessOptions;
     servedVersion?: string;
+    isAlreadyPublished?: boolean;
+    revisions?: Record<string, string | undefined>;
   } = {},
 ): Promise<RunResult> {
   const lines: string[] = [];
@@ -82,8 +84,13 @@ async function runPublish(
     workspace: { packages, root: "/repo" },
   };
 
+  // By default every revision resolves to one commit: the tag exists and names HEAD.
+  const resolveRevision: RevisionResolver = async (revision) =>
+    overrides.revisions === undefined ? "abc1234def" : overrides.revisions[revision];
   const command = createPublishCommand(resolver, {
+    isPublished: async () => overrides.isAlreadyPublished ?? false,
     publish,
+    resolveRevision,
     readiness: overrides.readiness ?? readiness,
     readPublished: async () => overrides.servedVersion,
   });
@@ -255,6 +262,68 @@ describe("hub publish", () => {
     expect(result.output).toContain("metadata may still be propagating");
     expect(result.published).toEqual(["@codenhub/error"]);
     expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("succeeds without publishing or verifying when the tagged version is already on npm", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"], {
+      isAlreadyPublished: true,
+      verifyExitCode: EXIT_FAILURE,
+    });
+
+    expect(result.output).toContain("@codenhub/error@1.0.0 is already on npm; nothing to publish.");
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("still refuses a selector naming a version npm already has", async () => {
+    const stale: ReadinessOptions = {
+      readPack: async () => new Set(["dist/index.js"]),
+      run: async (command) =>
+        command === "npm" ? { isSuccess: true, stdout: JSON.stringify("1.0.0") } : { isSuccess: true, stdout: "" },
+    };
+
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["error"], {
+      isAlreadyPublished: true,
+      readiness: stale,
+    });
+
+    expect(result.output).toContain("is not newer than the published 1.0.0");
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("refuses a manual publish when the release tag does not exist", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["error"], {
+      revisions: { HEAD: "abc1234def" },
+    });
+
+    expect(result.output).toContain(
+      'no @codenhub/error@1.0.0 tag; tag the commit being published: git tag "@codenhub/error@1.0.0"',
+    );
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("refuses a manual publish when the release tag names another commit", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["error"], {
+      revisions: { HEAD: "abc1234def", "refs/tags/@codenhub/error@1.0.0": "9876543fed" },
+    });
+
+    expect(result.output).toContain("names 9876543, but HEAD is abc1234");
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("reminds the maintainer to push the tag after a manual publish", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["error"]);
+
+    expect(result.published).toEqual(["@codenhub/error"]);
+    expect(result.output).toContain('push the tag to record the release: git push origin "@codenhub/error@1.0.0"');
+  });
+
+  it("does not ask to push a tag the workflow was started from", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"]);
+
+    expect(result.output).not.toContain("push the tag");
   });
 
   it("skips verification on request", async () => {

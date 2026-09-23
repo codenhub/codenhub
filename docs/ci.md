@@ -223,6 +223,10 @@ Trusted publishing needs npm 11.5.1 or newer. The pinned Node ships one well pas
 
 A package's **first** release cannot go through it. npm has no trusted publisher to configure for a name that does not exist yet, so the first version of a package is published by a maintainer running `hub publish <package>` against their own `npm login`, and the trusted publisher is configured afterwards. Every release after the first goes through the workflow.
 
+The first release still ends in the workflow, though, because it still needs its tag. `hub publish <package>` refuses to run until `<name>@<version>` names the commit being published, and the maintainer pushes that tag once npm has the version. The workflow then runs on it, finds the version already on npm, and succeeds without publishing, so the GitHub release is created and the documentation site rebuilds exactly as they do for a workflow publish.
+
+A tag push runs this workflow, and `hub publish`, as they were at the tagged commit, so that no-op exists only for tags on commits that carry it. A tag added to an older commit, to record a version published before tags were kept, runs whatever that commit had: nothing at all before this workflow existed, and a refused publish between then and the no-op. Such a tag still does its real job — the documentation site reads it on its next build — but it does not trigger that build, and a refused run it starts can be cancelled.
+
 A tag can be pushed by anyone with write access, from any commit. The job therefore runs in the `npm` environment, which is where a required reviewer is configured. Until one is, the environment exists with no protection rules and the workflow runs unimpeded; the environment is what gives that decision somewhere to live.
 
 ## Not covered yet

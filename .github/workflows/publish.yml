@@ -101,6 +101,10 @@ jobs:
       # the package, runs the publish preflight, asserts the tag matches the
       # manifest, and only then publishes.
       #
+      # A tag for a version npm already has succeeds here without publishing:
+      # that is the tag of a manual first release being recorded. The steps
+      # below still run for it.
+      #
       # `--skip=test:browser` for the same reason `ci.yml`'s verify job skips it:
       # the browser matrix owns those suites, and `browser-result` is a required
       # check on `main`, so a tag on a merged commit has already passed all three
