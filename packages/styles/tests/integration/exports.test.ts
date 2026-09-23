@@ -149,7 +149,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {
     target: "dist/aesthetics/index.css",
-    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/],
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/],
   },
   "./aesthetics/neobrutalism": {
     target: "dist/aesthetics/neobrutalism.css",
@@ -162,6 +162,10 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./aesthetics/pixel": {
     target: "dist/aesthetics/pixel.css",
     patterns: [/\.pixel\{/, /--ui-clip:polygon/, /--ui-shadow-inset:/],
+  },
+  "./aesthetics/chunky-tile": {
+    target: "dist/aesthetics/chunky-tile.css",
+    patterns: [/\.chunky-tile\{/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
