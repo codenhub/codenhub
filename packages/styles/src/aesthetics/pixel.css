@@ -79,9 +79,12 @@
   --ui-clip-tight: none;
 
   /* Square corners already, but a radius of zero draws no shape; it is
-     restated so a region nested inside `.cyber` does not inherit its bevel
-     onto anything that sets a radius of its own. */
+     restated, and the pill and chip corners cleared back to `--ui-radius`, so
+     a region nested inside `.cyber` does not inherit its bevel onto anything
+     that sets a radius of its own. */
   --ui-corner-shape: round;
+  --ui-radius-pill: initial;
+  --ui-radius-tight: initial;
 
   --ui-hover-transform: none;
   --ui-active-transform: none;

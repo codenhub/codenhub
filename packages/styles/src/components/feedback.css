@@ -94,8 +94,10 @@
   @apply box inline-flex min-h-6 w-fit items-center gap-1 px-2.5 text-xs font-bold;
 
   /* Pill by default, but an aesthetic that declares no radius has to mean it, so
-     the round corner is this component's fallback rather than a hardcoded value. */
-  border-radius: var(--ui-radius, calc(infinity * 1px));
+     the round corner is this component's fallback rather than a hardcoded value.
+     An aesthetic that keeps pills distinct from its control corner says so
+     through `--ui-radius-pill` first. */
+  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
 
@@ -162,8 +164,8 @@
   background-color: var(--progress-surface, var(--_progress-surface));
   border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
-     its fill together. */
-  border-radius: var(--ui-radius, calc(infinity * 1px));
+     its fill together, and a pill corner reaches both first. */
+  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
   /* Not a box either, and the fill below restates it, so a bevelled track
      carries a bevelled fill rather than a pill inside a cut frame. */
   corner-shape: var(--ui-corner-shape, round);
@@ -172,7 +174,7 @@
     content: "";
     @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
-    border-radius: var(--ui-radius, calc(infinity * 1px));
+    border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
     corner-shape: var(--ui-corner-shape, round);
     background-color: var(--progress-color, var(--intent-color));
     width: var(--progress-value, 0%);

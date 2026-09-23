@@ -138,6 +138,6 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  border-radius: var(--ui-radius, calc(infinity * 1px));
+  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
   clip-path: none;
 }

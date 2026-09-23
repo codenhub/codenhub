@@ -73,9 +73,12 @@
      `.btn`. */
   --ui-clip: none;
   --ui-clip-tight: none;
-  /* Round corners, said explicitly: a region nested inside `.cyber` would
-     otherwise inherit its bevel. */
+  /* Round corners, said explicitly, and the pill and chip corners cleared back
+     to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
+     its bevel, its diamond pills, and its square chips. */
   --ui-corner-shape: round;
+  --ui-radius-pill: initial;
+  --ui-radius-tight: initial;
   --ui-shadow-inset: ;
   --ui-shadow-edge: initial;
   --ui-backdrop: none;
