@@ -1276,4 +1276,232 @@ test.describe("aesthetics", () => {
       expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
     });
   });
+
+  test.describe("cyber", () => {
+    /* Every corner the aesthetic radius reaches, built fresh under the preview
+       root so one list covers the box components and the four sites that set a
+       radius without `box` -- skeleton, the progress track and its fill, and the
+       switch knob. `.btn.pill` and `.radio` are the two shapes an author or the
+       control itself chose, and they stay round. */
+    const CORNERS = [
+      { className: "btn" },
+      { className: "card" },
+      { className: "badge" },
+      { className: "ipt", tag: "input" },
+      { className: "skeleton" },
+      { className: "tooltip-icon" },
+      { className: "progress", pseudo: "::after" },
+      { className: "progress" },
+      { className: "switch", pseudo: "::after", tag: "input", type: "checkbox" },
+      { className: "switch", tag: "input", type: "checkbox" },
+    ] as const;
+
+    const readCorners = (
+      page: Page,
+      entries: readonly { className: string; pseudo?: string; tag?: string; type?: string }[],
+    ) =>
+      page.evaluate((list) => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+
+        return list.map(({ className, pseudo, tag, type }) => {
+          const element = document.createElement(tag ?? "div");
+
+          element.className = className;
+          if (type) {
+            element.setAttribute("type", type);
+          }
+          host.append(element);
+
+          const styles = getComputedStyle(element, pseudo ?? null);
+          const measured = {
+            name: `${className}${pseudo ?? ""}`,
+            radius: styles.borderTopLeftRadius,
+            shape: styles.getPropertyValue("corner-shape"),
+          };
+
+          element.remove();
+          return measured;
+        });
+      }, entries);
+
+    /* Only Chromium draws `corner-shape` today, so the engine split is the
+       contract rather than a skip: a bevel where the engine can draw one, and a
+       square where it cannot -- never a round corner, which reads as a
+       different aesthetic. */
+    test("bevels every corner the aesthetic radius reaches, and squares it where no bevel is drawn", async ({
+      page,
+      browserName,
+    }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "cyber"));
+
+      const corners = await readCorners(page, CORNERS);
+      const capped = await readCorners(page, [
+        { className: "checkbox", tag: "input", type: "checkbox" },
+        { className: "kbd", tag: "kbd" },
+        { className: "code", tag: "code" },
+      ]);
+
+      for (const corner of corners) {
+        if (browserName === "chromium") {
+          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+          expect(corner.radius, `${corner.name} cut`).toBe("8px");
+        } else {
+          expect(corner.radius, `${corner.name} squares`).toBe("0px");
+        }
+      }
+
+      /* The chips that cap their corner at `--radius-small` cap the cut the same
+         way, and still take the bevel. */
+      for (const corner of capped) {
+        if (browserName === "chromium") {
+          expect(corner.shape, `${corner.name} shape`).toBe("bevel");
+        }
+        expect(corner.radius, `${corner.name} capped cut`).toBe(browserName === "chromium" ? "4px" : "0px");
+      }
+    });
+
+    test("keeps a radio and a pill round", async ({ page, browserName }) => {
+      test.skip(
+        browserName !== "chromium",
+        "Only Chromium draws corner-shape; elsewhere nothing bevels to begin with.",
+      );
+      await page.goto(withAesthetic(SURFACES_URL, "cyber"));
+
+      const [radio, pill] = await readCorners(page, [
+        { className: "radio", tag: "input", type: "radio" },
+        { className: "btn pill" },
+      ]);
+
+      /* A bevel on a full radius draws a diamond, which reads as neither a radio
+         nor a pill. */
+      expect(radio!.shape, "radio").toBe("round");
+      expect(pill!.shape, "pill").toBe("round");
+    });
+
+    /* The glow is depth, so it answers elevation like every shadow: the two
+       components the registry rests above zero light up, anything a consumer
+       raises lights up, and fields and chips stay crisp. */
+    test("glows buttons and cards in their own intent, and leaves fields and chips crisp", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
+
+      const button = await readStyles(page, "btn-default-success", ["box-shadow"]);
+      const success = await resolveToken(page, "--color-success");
+
+      await page.goto(withAesthetic(SURFACES_URL, "cyber"));
+
+      const card = await readStyles(page, "card-default-none", ["box-shadow"]);
+
+      await page.goto(withAesthetic(FEEDBACK_URL, "cyber"));
+
+      const badge = await readStyles(page, "badge-default-none", ["box-shadow"]);
+      const raised = await page.evaluate(() => {
+        const badgeElement = document.createElement("span");
+
+        badgeElement.className = "badge raised";
+        document.querySelector('[data-testid="preview-root"]')!.append(badgeElement);
+
+        const shadow = getComputedStyle(badgeElement).boxShadow;
+
+        badgeElement.remove();
+        return shadow;
+      });
+
+      await page.goto(withAesthetic(FORMS_URL, "cyber"));
+
+      const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
+
+      /* Offsetless and blurred: the glow sits evenly around the silhouette. */
+      expect(button["box-shadow"], "button glows").toMatch(/\b0px 0px 12px 0px\b/);
+      expect(card["box-shadow"], "card glows").toMatch(/\b0px 0px 12px 0px\b/);
+      expect(raised, "a raised badge glows").toMatch(/\b0px 0px 12px 0px\b/);
+      expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
+      expect(field["box-shadow"], "field").toMatch(/\b0px 0px 0px 0px\b/);
+
+      /* The glow is the intent colour itself, thinned: a transparent depth colour
+         turns 70% ink into 70% alpha rather than into a darker shade. */
+      const glow = readSrgb(readShadowColor(button["box-shadow"]!));
+      const intent = readSrgb(success);
+
+      expect(glow.alpha, "glow alpha").toBeCloseTo(0.7, 2);
+      expect(
+        channelDistance([glow.red, glow.green, glow.blue], [intent.red, intent.green, intent.blue]),
+        "glow hue",
+      ).toBeLessThan(2);
+    });
+
+    test("takes its cut, glow, and ink from knobs an ancestor can reach", async ({ page, browserName }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "cyber"));
+
+      const measured = await page.evaluate(() => {
+        const ancestor = document.createElement("div");
+        const host = document.createElement("div");
+        const card = document.createElement("div");
+
+        ancestor.style.setProperty("--cyber-cut", "4px");
+        ancestor.style.setProperty("--cyber-glow", "20px");
+        ancestor.style.setProperty("--cyber-ink", "rgb(0 255 255)");
+        host.className = "cyber";
+        card.className = "card";
+        host.append(card);
+        ancestor.append(host);
+        document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
+
+        const styles = getComputedStyle(card);
+        const result = { border: styles.borderTopColor, radius: styles.borderTopLeftRadius, shadow: styles.boxShadow };
+
+        ancestor.remove();
+        return result;
+      });
+
+      expect(measured.radius, "cut").toBe(browserName === "chromium" ? "4px" : "0px");
+      expect(measured.shadow, "glow").toMatch(/\b0px 0px 20px 0px\b/);
+      /* A card with no intent draws its line in the neutral ink, so the ink knob
+         is what colours it. */
+      expectSameColor(measured.border, "rgb(0, 255, 255)", "ink");
+    });
+
+    /* Every shipped aesthetic declares its corner shape, because an aesthetic
+       nested inside another negotiates each token separately and one it leaves
+       undeclared is inherited -- a glass card inside a cyber region would come
+       out bevelled at glass's 16px. */
+    test("keeps the corners of an aesthetic nested inside it round", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "Only Chromium computes corner-shape.");
+      await page.goto(withAesthetic(SURFACES_URL, "cyber"));
+
+      const shapes = await page.evaluate(() =>
+        ["glass", "neobrutalism", "pixel", "chunky-tile"].map((aesthetic) => {
+          const region = document.createElement("div");
+          const card = document.createElement("div");
+
+          region.className = aesthetic;
+          card.className = "card";
+          region.append(card);
+          document.querySelector('[data-testid="preview-root"]')!.append(region);
+
+          const shape = getComputedStyle(card).getPropertyValue("corner-shape");
+
+          region.remove();
+          return [aesthetic, shape] as const;
+        }),
+      );
+
+      for (const [aesthetic, shape] of shapes) {
+        expect(shape, aesthetic).toBe("round");
+      }
+    });
+
+    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
+
+      const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform", "--ui-hover-transform"]);
+
+      await page.emulateMedia({ reducedMotion: "reduce" });
+
+      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
+
+      expect(resting["--ui-active-transform"].trim(), "press").toBe("scale(.97)");
+      expect(resting["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
+      expect(reduced["--ui-active-transform"].trim(), "reduced motion").toBe("none");
+    });
+  });
 });

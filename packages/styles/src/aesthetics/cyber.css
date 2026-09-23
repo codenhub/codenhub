@@ -1,0 +1,82 @@
+/* Cyber: bevelled corners, a thin bright edge, and a glow in the component's own
+   colour. See docs/internal/cyber-aesthetic.md for the decision.
+
+   Tier 1 only. The bevel is `corner-shape`, not `clip-path`: a clip removes
+   every outer shadow, so a clipped chamfer has nothing left to glow, and an
+   inset ring cannot follow a diagonal cut the way `.pixel`'s follows its square
+   one. `corner-shape` draws the corner itself, and the border, the glow, and the
+   focus outline all follow it. Load after the base stylesheet. */
+.cyber {
+  /* Knobs, read with a fallback so an ancestor can set them (R8; see
+     model.md#rules-for-aesthetics). One cut for controls and surfaces alike:
+     the cut is a fixed motif, and one size is what makes a button and the card
+     around it read as the same material. */
+  --_cyber-cut: var(--cyber-cut, 0.5rem);
+  --_cyber-glow: var(--cyber-glow, 12px);
+
+  /* The neutral line. A neon hue is the look's signature, but hue is intent's
+     (R1), so the default follows the theme the way neobrutalism's and pixel's
+     ink does, and `--cyber-ink` lets an application choose a neon neutral
+     without the aesthetic imposing one on every palette. A named intent keeps
+     its own edge colour. */
+  --ui-ink: var(--cyber-ink, light-dark(var(--color-neutral-950), var(--color-neutral-50)));
+
+  --ui-corner-shape: bevel;
+  --ui-radius: var(--_cyber-cut);
+  --ui-radius-surface: var(--_cyber-cut);
+  --ui-border-width: 1px;
+  --ui-border-max: 100px;
+
+  /* The glow: the component's own ink, blurred, with no offset. `box` mixes
+     depth as `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
+     var(--elevation-color))`, so a transparent depth colour turns 70% ink into
+     the intent colour at 70% alpha rather than into a darker shade of it.
+     Elevation scales the blur like every shadow, so the glow lights what rests
+     above zero -- buttons and cards -- and anything raised, and leaves fields
+     and chips crisp. */
+  --elevation-color: transparent;
+  --ui-shadow-ink: 70%;
+  --ui-shadow-x: 0px;
+  --ui-shadow-y: 0px;
+  --ui-shadow-blur: var(--_cyber-glow);
+  --ui-shadow-spread: 0px;
+
+  /* The glow holds still under the pointer and under a press; the press is the
+     base scale, restated because a region nested inside another aesthetic must
+     not inherit that one's travel. Reduced motion drops it below. */
+  --ui-hover-transform: none;
+  --ui-active-shadow-x: 0px;
+  --ui-active-shadow-y: 0px;
+  --ui-active-transform: scale(0.97);
+
+  /* Nothing here clips, blurs, thins its fill, or draws its edge as a ring, and
+     an aesthetic nested inside one that does has to say so rather than inherit
+     it. */
+  --ui-clip: none;
+  --ui-clip-tight: none;
+  --ui-shadow-inset: ;
+  --ui-shadow-edge: initial;
+  --ui-backdrop: none;
+  --ui-bg-alpha: 1;
+
+  /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships
+     no font binary; the monospace stack is the closest technical face every
+     platform already has. */
+  font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+}
+
+/* Firefox and Safari do not draw `corner-shape` yet, and there the radius would
+   round the corners instead. A rounded cyber element reads as a different
+   aesthetic; a square one reads as the same aesthetic simplified. */
+@supports not (corner-shape: bevel) {
+  .cyber {
+    --ui-radius: 0;
+    --ui-radius-surface: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber {
+    --ui-active-transform: none;
+  }
+}

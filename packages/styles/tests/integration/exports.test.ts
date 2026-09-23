@@ -94,7 +94,9 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     candidates: "stack data-table",
     patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
   },
-  "./tw/aesthetics": { patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/] },
+  "./tw/aesthetics": {
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/],
+  },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
   /* The bar is a shade of the element rather than a repeat of it, which takes the
@@ -102,6 +104,11 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      either one alone leaves the bar invisible. */
   "./tw/aesthetics/chunky-tile": {
     patterns: [/\.chunky-tile\{/, /--tile-radius,/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
+  },
+  /* The bevel is a corner shape rather than a clip, and it has to fall back to a
+     square where an engine cannot draw it; both halves are asserted. */
+  "./tw/aesthetics/cyber": {
+    patterns: [/\.cyber\{/, /--cyber-cut,/, /--ui-corner-shape:\s*bevel/, /@supports not \(corner-shape:\s*bevel\)/],
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
@@ -149,7 +156,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {
     target: "dist/aesthetics/index.css",
-    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/],
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/],
   },
   "./aesthetics/neobrutalism": {
     target: "dist/aesthetics/neobrutalism.css",
@@ -166,6 +173,10 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./aesthetics/chunky-tile": {
     target: "dist/aesthetics/chunky-tile.css",
     patterns: [/\.chunky-tile\{/, /--elevation-color:/, /--ui-shadow-ink:/, /--ui-active-transform:/],
+  },
+  "./aesthetics/cyber": {
+    target: "dist/aesthetics/cyber.css",
+    patterns: [/\.cyber\{/, /--ui-corner-shape:bevel/, /@supports not \(corner-shape:bevel\)/],
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
