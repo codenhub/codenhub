@@ -153,6 +153,13 @@
   color: var(--_fg);
   border: var(--_width) solid var(--_edge);
   border-radius: var(--ui-radius, var(--radius-control));
+  /* What the radius draws: a round arc by default, a straight cut under an
+     aesthetic that bevels (`.cyber`). `round` is the property's initial value,
+     so with no aesthetic in scope this is a no-op, and an engine without
+     `corner-shape` drops the line at parse time. A component that overrides the
+     radius after `@apply box` keeps this, so it bevels by the same amount it
+     rounds. See model.md#material-tokens. */
+  corner-shape: var(--ui-corner-shape, round);
   box-shadow: var(--_shadow);
   clip-path: var(--ui-clip, none);
   transition:

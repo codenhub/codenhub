@@ -115,6 +115,8 @@
   background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
   background-size: 200% 100%;
   border-radius: var(--ui-radius, var(--radius-control));
+  /* Not a box, so it reads the corner shape itself, beside the radius. */
+  corner-shape: var(--ui-corner-shape, round);
 }
 
 /* The track is a box, the fill is not: `box.css`'s formula composes the frame,
@@ -162,12 +164,16 @@
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together. */
   border-radius: var(--ui-radius, calc(infinity * 1px));
+  /* Not a box either, and the fill below restates it, so a bevelled track
+     carries a bevelled fill rather than a pill inside a cut frame. */
+  corner-shape: var(--ui-corner-shape, round);
 
   &::after {
     content: "";
     @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
     border-radius: var(--ui-radius, calc(infinity * 1px));
+    corner-shape: var(--ui-corner-shape, round);
     background-color: var(--progress-color, var(--intent-color));
     width: var(--progress-value, 0%);
     z-index: 2;

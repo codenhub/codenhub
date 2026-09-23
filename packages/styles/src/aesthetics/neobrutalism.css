@@ -43,6 +43,9 @@
      say so rather than inherit it. */
   --ui-clip: none;
   --ui-clip-tight: none;
+  /* Round corners, said explicitly: a region nested inside `.cyber` would
+     otherwise inherit its bevel. */
+  --ui-corner-shape: round;
   --ui-shadow-inset: ;
   /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
      button keeps it. Cleared rather than omitted, because a neobrutalist region

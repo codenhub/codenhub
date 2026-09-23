@@ -73,6 +73,9 @@
      `.btn`. */
   --ui-clip: none;
   --ui-clip-tight: none;
+  /* Round corners, said explicitly: a region nested inside `.cyber` would
+     otherwise inherit its bevel. */
+  --ui-corner-shape: round;
   --ui-shadow-inset: ;
   --ui-shadow-edge: initial;
   --ui-backdrop: none;

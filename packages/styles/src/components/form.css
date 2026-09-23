@@ -545,6 +545,9 @@
   --_ss: min(var(--ui-shadow-spread, 0px), var(--ui-border-width, var(--border-width)));
 
   clip-path: none;
+  /* The same refusal for a bevel: a cut corner on a full radius draws a
+     diamond, which reads as neither a radio nor a checkbox. */
+  corner-shape: round;
 
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
@@ -637,6 +640,9 @@
        other two toggles. */
     background-color: var(--color-text-secondary);
     border-radius: var(--ui-radius, calc(infinity * 1px));
+    /* A pseudo-element is not a box: the knob takes the track's corner shape
+       itself, so the two stay the same shape. */
+    corner-shape: var(--ui-corner-shape, round);
     content: "";
     height: var(--switch-knob);
     width: var(--switch-knob);

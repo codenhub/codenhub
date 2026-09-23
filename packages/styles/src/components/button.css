@@ -91,7 +91,12 @@
     }
   }
 
+  /* A pill is a shape the author asked for, so it outranks the aesthetic's
+     radius already; it outranks a bevel the same way, or a cut on a full
+     radius turns the ends into points. */
   &.pill {
     @apply rounded-full;
+
+    corner-shape: round;
   }
 }
